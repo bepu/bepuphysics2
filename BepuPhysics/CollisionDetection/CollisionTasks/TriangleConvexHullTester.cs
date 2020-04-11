@@ -156,7 +156,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 //Test each triangle edge against the hull face.
                 //Note that we do not use the faceNormal x edgeOffset edge plane, but rather edgeOffset x localNormal.
-                //The faces are wound counterclockwise.
+                //The faces are wound counterclockwise in right handed coordinates.
                 //Note that the triangle edges are packed into a Vector4. Historically, there were some minor codegen issues with Vector3.
                 //May not matter anymore, but it costs ~nothing to use a dead slot.
                 ref var aSlot = ref GatherScatter.GetOffsetInstance(ref triangleA, slotIndex);
@@ -202,7 +202,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var hullEdgeOffsetY = new Vector4(hullEdgeOffset.Y);
                     var hullEdgeOffsetZ = new Vector4(hullEdgeOffset.Z);
                     //Containment of a triangle vertex is tested by checking the sign of the triangle vertex against the hull's edge plane normal.
-                    //Hull edges wound counterclockwise; edge plane normal points outward.
+                    //Hull edges wound counterclockwise in right handed coordinates; edge plane normal points outward.
                     //vertexOutsideEdgePlane = dot(hullEdgeOffset x slotLocalNormal, triangleVertex - hullEdgeStart) > 0
                     var hullEdgePlaneNormal = Vector3.Cross(hullEdgeOffset, slotLocalNormal);
                     var hullEdgePlaneNormalX = new Vector4(hullEdgePlaneNormal.X);

@@ -8,7 +8,7 @@ using BepuPhysics.CollisionDetection;
 namespace BepuPhysics.Collidables
 {
     /// <summary>
-    /// Collision shape representing an individual triangle. Triangle collisions and ray tests are one-sided; only tests which see the triangle as wound clockwise will generate contacts.
+    /// Collision shape representing an individual triangle. Triangle collisions and ray tests are one-sided; only tests which see the triangle as wound clockwise in right handed coordinates or counterclockwise in left handed coordinates will generate contacts.
     /// </summary>
     public struct Triangle : IConvexShape
     {
@@ -59,7 +59,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool RayTest(in Vector3 a, in Vector3 b, in Vector3 c, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
-            //Note that this assumes clockwise winding. Rays coming from the opposite direction pass through; triangles are one sided.
+            //Note that this assumes clockwise-in-right-hand winding. Rays coming from the opposite direction pass through; triangles are one sided.
             var ab = b - a;
             var ac = c - a;
             normal = Vector3.Cross(ac, ab);

@@ -44,7 +44,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public Buffer<HullBoundingPlanes> BoundingPlanes;
         /// <summary>
-        /// Combined set of vertices used by each face. Use FaceToVertexIndicesStart to index into this for a particular face.
+        /// Combined set of vertices used by each face. Use FaceToVertexIndicesStart to index into this for a particular face. Indices stored in counterclockwise winding in right handed space, clockwise in left handed space.
         /// </summary>
         public Buffer<HullVertexIndex> FaceVertexIndices;
         /// <summary>
@@ -164,8 +164,10 @@ namespace BepuPhysics.Collidables
                 {
                     hull.GetVertexIndicesForFace(faceIndex, out var faceIndices);
                     hull.GetPoint(faceIndices[0], out a);
-                    hull.GetPoint(faceIndices[subtriangleIndex - 1], out b);
-                    hull.GetPoint(faceIndices[subtriangleIndex], out c);
+                    //Note flip of c and b; the MeshInertiaHelper expects counterclockwise externally visible triangles in right handed coordinates.
+                    //ConvexHull has the opposite convention for no particular reason.
+                    hull.GetPoint(faceIndices[subtriangleIndex - 1], out c);
+                    hull.GetPoint(faceIndices[subtriangleIndex], out b);
                     ++subtriangleIndex;
                     if (subtriangleIndex == faceIndices.Length)
                     {

@@ -82,7 +82,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Test each face edge plane against the capsule edge.
                 //Note that we do not use the faceNormal x edgeOffset edge plane, but rather edgeOffset x localNormal.
                 //(In other words, testing the *projected* capsule axis on the surface of the convex hull face.)
-                //The faces are wound counterclockwise.
+                //The faces are wound counterclockwise in right handed coordinates.
                 aSlot.GetVertexIndicesForFace(bestFaceIndexA, out var faceVertexIndicesA);
                 bSlot.GetVertexIndicesForFace(bestFaceIndexB, out var faceVertexIndicesB);
 

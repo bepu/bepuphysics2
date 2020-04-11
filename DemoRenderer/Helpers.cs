@@ -60,7 +60,7 @@ namespace DemoRenderer
             uint baseVertex = 0;
             for (int glyphIndexStart = 0; glyphIndexStart < indexData.Length; glyphIndexStart += 6)
             {
-                //Front facing triangles are counter clockwise.
+                //Front facing triangles are counterclockwise.
                 //Quad layout: 
                 // 0____1
                 // |  / |

@@ -94,7 +94,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 //Test each face edge plane against the box face.
                 //Note that we do not use the faceNormal x edgeOffset edge plane, but rather edgeOffset x localNormal.
-                //The faces are wound counterclockwise.
+                //The faces are wound counterclockwise in right handed coordinates.
                 //X is 00->10; Y is 10->11; Z is 11->01; W is 01->00.
                 ref var v00Slot = ref GatherScatter.GetOffsetInstance(ref v00, slotIndex);
                 ref var v10Slot = ref GatherScatter.GetOffsetInstance(ref v10, slotIndex);
@@ -139,7 +139,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var hullEdgeOffsetY = new Vector4(hullEdgeOffset.Y);
                     var hullEdgeOffsetZ = new Vector4(hullEdgeOffset.Z);
                     //Containment of a box vertex is tested by checking the sign of the box vertex against the hull's edge plane normal.
-                    //Hull edges wound counterclockwise; edge plane normal points outward.
+                    //Hull edges wound counterclockwise in right handed coordinates; edge plane normal points outward.
                     //vertexOutsideEdgePlane = dot(hullEdgeOffset x slotLocalNormal, boxVertex - hullEdgeStart) > 0
                     var hullEdgePlaneNormal = Vector3.Cross(hullEdgeOffset, slotLocalNormal);
                     var hullEdgePlaneNormalX = new Vector4(hullEdgePlaneNormal.X);

@@ -15,7 +15,7 @@ namespace BepuPhysics.Constraints
     {
         /// <summary>
         /// Local space basis attached to body A against which to measure body B's transformed axis. Expressed as a 3x3 rotation matrix, the X axis corresponds with 0 degrees, 
-        /// the Y axis corresponds to 90 degrees, and the -Z axis is the twist axis. When viewed along the twist axis, positive change in angle causes counter clockwise rotation.
+        /// the Y axis corresponds to 90 degrees, and the -Z axis is the twist axis. When viewed along the twist axis, positive change in angle causes counterclockwise rotation in right handed coordinates.
         /// </summary>
         public Quaternion LocalBasisA;
         /// <summary>

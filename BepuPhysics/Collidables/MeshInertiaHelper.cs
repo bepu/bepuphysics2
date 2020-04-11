@@ -102,6 +102,7 @@ namespace BepuPhysics.Collidables
 
         /// <summary>
         /// Computes the signed volume of a tetrahedron where the fourth vertex is at the origin.
+        /// Triangles visible from outside the shape are assumed to have clockwise winding in right handed coordinates or counterclockwise winding in left handed coordinates.
         /// </summary>
         /// <param name="a">First vertex of the tetrahedron.</param>
         /// <param name="b">Second vertex of the tetrahedron.</param>
@@ -110,7 +111,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float ComputeTetrahedronVolume(in Vector3 a, in Vector3 b, in Vector3 c)
         {
-            return (1f / 6f) * Vector3.Dot(Vector3.Cross(a, b), c);
+            return (1f / 6f) * Vector3.Dot(Vector3.Cross(b, a), c);
         }
 
         /// <summary>
@@ -128,7 +129,8 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
-        /// Computes the inertia of a closed mesh. Assumes counterclockwise winding.
+        /// Computes the inertia of a closed mesh.
+        /// Triangles visible from outside the shape are assumed to have clockwise winding in right handed coordinates or counterclockwise winding in left handed coordinates.
         /// </summary>
         /// <typeparam name="TTriangleSource">Type of the triangle source.</typeparam>
         /// <param name="triangleSource">Source from which to retrieve a sequence of triangles.</param>
@@ -149,7 +151,8 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
-        /// Computes the inertia of a closed mesh. Assumes counterclockwise winding.
+        /// Computes the inertia of a closed mesh.
+        /// Triangles visible from outside the shape are assumed to have clockwise winding in right handed coordinates or counterclockwise winding in left handed coordinates.
         /// </summary>
         /// <typeparam name="TTriangleSource">Type of the triangle source.</typeparam>
         /// <param name="triangleSource">Source from which to retrieve a sequence of triangles.</param>
