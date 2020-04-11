@@ -15,10 +15,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     }
 
     public class ConvexPairSweepTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester> : SweepTask
-            where TShapeA : struct, IConvexShape
-            where TShapeB : struct, IConvexShape
-            where TShapeWideA : struct, IShapeWide<TShapeA>
-            where TShapeWideB : struct, IShapeWide<TShapeB>
+            where TShapeA : unmanaged, IConvexShape
+            where TShapeB : unmanaged, IConvexShape
+            where TShapeWideA : unmanaged, IShapeWide<TShapeA>
+            where TShapeWideB : unmanaged, IShapeWide<TShapeB>
             where TPairDistanceTester : struct, IPairDistanceTester<TShapeWideA, TShapeWideB>
     {
         public ConvexPairSweepTask()
@@ -274,7 +274,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             ref TSweepModifier sweepModifier,
             out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
-            where TSweepModifier : ISweepModifier
+            where TSweepModifier : struct, ISweepModifier
         {
             ref var shapeA = ref Unsafe.AsRef<TShapeA>(shapeDataA);
             ref var shapeB = ref Unsafe.AsRef<TShapeB>(shapeDataB);

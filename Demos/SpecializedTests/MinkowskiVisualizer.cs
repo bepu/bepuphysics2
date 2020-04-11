@@ -62,12 +62,12 @@ namespace Demos.SpecializedTests
             in TShapeA a, in TShapeB b, in RigidPose poseA, in RigidPose poseB, int sampleCount,
             float lineLength, in Vector3 lineColor,
             float originLength, in Vector3 originColor, in Vector3 backgroundColor, in Vector3 basePosition, BufferPool pool)
-            where TShapeA : IConvexShape
-            where TShapeWideA : IShapeWide<TShapeA>
-            where TSupportFinderA : ISupportFinder<TShapeA, TShapeWideA>
-            where TShapeB : IConvexShape
-            where TShapeWideB : IShapeWide<TShapeB>
-            where TSupportFinderB : ISupportFinder<TShapeB, TShapeWideB>
+            where TShapeA : unmanaged, IConvexShape
+            where TShapeWideA : unmanaged, IShapeWide<TShapeA>
+            where TSupportFinderA : struct, ISupportFinder<TShapeA, TShapeWideA>
+            where TShapeB : unmanaged, IConvexShape
+            where TShapeWideB : unmanaged, IShapeWide<TShapeB>
+            where TSupportFinderB : struct, ISupportFinder<TShapeB, TShapeWideB>
         {
             var aWide = default(TShapeWideA);
             var bWide = default(TShapeWideB);

@@ -96,7 +96,7 @@ namespace BepuPhysics.CollisionDetection
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
             where TCallbacks : struct, INarrowPhaseCallbacks
-            where TCollisionCache : IPairCacheEntry;
+            where TCollisionCache : unmanaged, IPairCacheEntry;
 
         /// <summary>
         /// Extracts references to data from a contact constraint of the accessor's type.
@@ -214,7 +214,7 @@ namespace BepuPhysics.CollisionDetection
         protected static unsafe void UpdateConstraint<TCallbacks, TCollisionCache, TCallBodyHandles>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TConstraintCache constraintCache, ref TCollisionCache collisionCache, ref TConstraintDescription description, TCallBodyHandles bodyHandles)
-            where TCallbacks : struct, INarrowPhaseCallbacks where TCollisionCache : IPairCacheEntry
+            where TCallbacks : struct, INarrowPhaseCallbacks where TCollisionCache : unmanaged, IPairCacheEntry
         {
             //Note that we let the user pass in a body handles type to a generic function, rather than requiring that the top level abstract class define the type.
             //That allows a type inconsistency, but it's easy to catch.

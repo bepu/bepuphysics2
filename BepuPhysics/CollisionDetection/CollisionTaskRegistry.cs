@@ -8,7 +8,7 @@ namespace BepuPhysics.CollisionDetection
     public interface ICollisionCallbacks
     {
         //TODO: In the future, continuations will need to be able to take typed collision caches. The PairCache will store cached separating axes for hull-hull acceleration and similar things.
-        unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : struct, IContactManifold<TManifold>;
+        unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : unmanaged, IContactManifold<TManifold>;
 
         /// <summary>
         /// Provides control over subtask generated results before they are reported to the parent task.
@@ -215,8 +215,8 @@ namespace BepuPhysics.CollisionDetection
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref CollisionTaskReference GetTaskReference<TShapeA, TShapeB>()
-            where TShapeA : struct, IShape
-            where TShapeB : struct, IShape
+            where TShapeA : unmanaged, IShape
+            where TShapeB : unmanaged, IShape
         {
             return ref GetTaskReference(default(TShapeA).TypeId, default(TShapeB).TypeId);
         }

@@ -49,7 +49,7 @@ namespace Demos.SpecializedTests
 
             }
 
-            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : struct, IContactManifold<TManifold>
+            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 if (manifold.Convex)
                 {

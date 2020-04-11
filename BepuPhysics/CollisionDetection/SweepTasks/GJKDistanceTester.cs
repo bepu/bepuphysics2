@@ -8,8 +8,8 @@ using System.Runtime.CompilerServices;
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public struct GJKDistanceTester<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB> : IPairDistanceTester<TShapeWideA, TShapeWideB>
-        where TShapeA : IConvexShape where TShapeB : IConvexShape
-        where TShapeWideA : IShapeWide<TShapeA> where TShapeWideB : IShapeWide<TShapeB>
+        where TShapeA : unmanaged, IConvexShape where TShapeB : unmanaged, IConvexShape
+        where TShapeWideA : unmanaged, IShapeWide<TShapeA> where TShapeWideB : unmanaged, IShapeWide<TShapeB>
         where TSupportFinderA : struct, ISupportFinder<TShapeA, TShapeWideA>
         where TSupportFinderB : struct, ISupportFinder<TShapeB, TShapeWideB>
     {

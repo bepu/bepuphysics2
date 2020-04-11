@@ -31,12 +31,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     }
 
     public class ConvexCollisionTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPair, TPairWide, TManifoldWide, TPairTester> : CollisionTask
-            where TShapeA : struct, IShape where TShapeB : struct, IShape
-            where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
-            where TPair : struct, ICollisionPair<TPair>
-            where TPairWide : struct, ICollisionPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPair, TPairWide>
+            where TShapeA : unmanaged, IShape where TShapeB : unmanaged, IShape
+            where TShapeWideA : unmanaged, IShapeWide<TShapeA> where TShapeWideB : unmanaged, IShapeWide<TShapeB>
+            where TPair : unmanaged, ICollisionPair<TPair>
+            where TPairWide : unmanaged, ICollisionPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPair, TPairWide>
             where TPairTester : struct, IPairTester<TShapeWideA, TShapeWideB, TManifoldWide>
-            where TManifoldWide : struct, IContactManifoldWide
+            where TManifoldWide : unmanaged, IContactManifoldWide
     {
         public ConvexCollisionTask()
         {

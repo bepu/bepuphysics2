@@ -95,7 +95,7 @@ namespace BepuPhysics.CollisionDetection
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static void AddToSimulationSpeculative<TBodyHandles, TDescription, TContactImpulses>(
                 ref PendingConstraint<TBodyHandles, TDescription, TContactImpulses> constraint, int batchIndex, Simulation simulation, PairCache pairCache)
-                where TDescription : IConstraintDescription<TDescription>
+                where TDescription : struct, IConstraintDescription<TDescription>
             {
                 //This function takes full responsibility for what a Simulation.Add would do, plus the need to complete the constraint add in the pair cache.
                 //1) Allocate in solver batch and type batch.
@@ -145,7 +145,7 @@ namespace BepuPhysics.CollisionDetection
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static unsafe void SequentialAddToSimulationSpeculative<TBodyHandles, TDescription, TContactImpulses>(
                 ref UntypedList list, int narrowPhaseConstraintTypeId, ref Buffer<Buffer<ushort>> speculativeBatchIndices, Simulation simulation, PairCache pairCache)
-                where TDescription : IConstraintDescription<TDescription>
+                where TDescription : struct, IConstraintDescription<TDescription>
             {
                 if (list.Buffer.Allocated)
                 {
@@ -177,7 +177,7 @@ namespace BepuPhysics.CollisionDetection
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static unsafe void DeterministicAdd<TBodyHandles, TDescription, TContactImpulses>(
                 int typeIndex, ref SortConstraintTarget target, OverlapWorker[] overlapWorkers, Simulation simulation, ref PairCache pairCache)
-                where TDescription : IConstraintDescription<TDescription>
+                where TDescription : struct, IConstraintDescription<TDescription>
             {
                 ref var cache = ref overlapWorkers[target.WorkerIndex].PendingConstraints;
                 ref var constraint = ref Unsafe.As<byte, PendingConstraint<TBodyHandles, TDescription, TContactImpulses>>(

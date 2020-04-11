@@ -711,7 +711,7 @@ namespace BepuPhysics
 
         }
 
-        void ExecuteMultithreaded<TTypeBatchSolveFilter>(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate) where TTypeBatchSolveFilter : ITypeBatchSolveFilter
+        void ExecuteMultithreaded<TTypeBatchSolveFilter>(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate) where TTypeBatchSolveFilter : struct, ITypeBatchSolveFilter
         {
             var filter = default(TTypeBatchSolveFilter);
             var workerCount = context.WorkerCount = threadDispatcher.ThreadCount;

@@ -884,7 +884,7 @@ namespace BepuPhysics
         }
 
         public void GetDescription<TConstraintDescription, TTypeBatch>(ref ConstraintReference constraintReference, out TConstraintDescription description)
-            where TConstraintDescription : IConstraintDescription<TConstraintDescription>
+            where TConstraintDescription : struct, IConstraintDescription<TConstraintDescription>
             where TTypeBatch : TypeProcessor
         {
             //Note that the inlining behavior of the BuildDescription function is critical for efficiency here.
@@ -895,7 +895,7 @@ namespace BepuPhysics
         }
 
         public void GetDescription<TConstraintDescription>(int handle, out TConstraintDescription description)
-            where TConstraintDescription : IConstraintDescription<TConstraintDescription>
+            where TConstraintDescription : struct, IConstraintDescription<TConstraintDescription>
         {
             //Note that the inlining behavior of the BuildDescription function is critical for efficiency here.
             //If the compiler can prove that the BuildDescription function never references any of the instance fields, it will elide the (potentially expensive) initialization.

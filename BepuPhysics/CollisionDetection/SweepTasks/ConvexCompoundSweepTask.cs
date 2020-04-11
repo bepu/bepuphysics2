@@ -7,9 +7,9 @@ using BepuUtilities.Memory;
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public class ConvexCompoundSweepTask<TShapeA, TShapeWideA, TCompound, TOverlapFinder> : SweepTask
-        where TShapeA : struct, IConvexShape
-        where TShapeWideA : struct, IShapeWide<TShapeA>
-        where TCompound : struct, ICompoundShape
+        where TShapeA : unmanaged, IConvexShape
+        where TShapeWideA : unmanaged, IShapeWide<TShapeA>
+        where TCompound : unmanaged, ICompoundShape
         where TOverlapFinder : struct, IConvexCompoundSweepOverlapFinder<TShapeA, TCompound>
     {
         public ConvexCompoundSweepTask()

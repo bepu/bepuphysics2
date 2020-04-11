@@ -127,7 +127,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifoldReference) where TManifold : struct, IContactManifold<TManifold>
+            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifoldReference) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 var todoTestCollisionCache = default(EmptyCollisionCache);
                 CCDContinuationIndex continuationId = new CCDContinuationIndex(pairId);

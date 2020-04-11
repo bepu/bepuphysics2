@@ -31,10 +31,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     }
 
     public class CompoundPairCollisionTask<TCompoundA, TCompoundB, TOverlapFinder, TContinuationHandler, TContinuation> : CollisionTask
-        where TCompoundA : struct, IShape, IBoundsQueryableCompound
-        where TCompoundB : struct, IShape, IBoundsQueryableCompound
+        where TCompoundA : unmanaged, IShape, IBoundsQueryableCompound
+        where TCompoundB : unmanaged, IShape, IBoundsQueryableCompound
         where TOverlapFinder : struct, ICompoundPairOverlapFinder
-        where TContinuationHandler : ICompoundPairContinuationHandler<TContinuation>
+        where TContinuationHandler : struct, ICompoundPairContinuationHandler<TContinuation>
         where TContinuation : struct, ICollisionTestContinuation
     {
         public CompoundPairCollisionTask()

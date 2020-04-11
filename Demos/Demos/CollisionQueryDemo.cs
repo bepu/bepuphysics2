@@ -74,7 +74,7 @@ namespace Demos.Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : struct, IContactManifold<TManifold>
+            public void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 //This function hands off the completed manifold with all postprocessing (NonconvexReduction, MeshReduction, etc.) complete.
                 //For the purposes of this demo, we're interested in boolean collision testing.

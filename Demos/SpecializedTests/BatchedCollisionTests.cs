@@ -21,7 +21,7 @@ namespace Demos.SpecializedTests
         {
             public int* Count;
 
-            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : struct, IContactManifold<TManifold>
+            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 manifold.GetContact(0, out var offset, out var normal, out var depth, out var featureId);
                 var extra = 1e-16 * (depth + offset.X + normal.X);
@@ -93,9 +93,9 @@ namespace Demos.SpecializedTests
 
         unsafe static void Test<TA, TAWide, TB, TBWide, TDistanceTester>(in TA a, in TB b,
             ref Buffer<RigidPose> posesA, ref Buffer<RigidPose> posesB, int iterationCount)
-            where TA : IShape where TB : IShape
-            where TAWide : struct, IShapeWide<TA> where TBWide : struct, IShapeWide<TB>
-            where TDistanceTester : IPairDistanceTester<TAWide, TBWide>
+            where TA : unmanaged, IShape where TB : unmanaged, IShape
+            where TAWide : unmanaged, IShapeWide<TA> where TBWide : unmanaged, IShapeWide<TB>
+            where TDistanceTester : struct, IPairDistanceTester<TAWide, TBWide>
         {
             TAWide aWide = default;
             aWide.Broadcast(a);
