@@ -110,7 +110,6 @@ namespace BepuPhysics.CollisionDetection
         int preflushJobIndex;
         QuickList<PreflushJob> preflushJobs;
         Action<int> preflushWorkerLoop;
-        SpinLock constraintAddLock = new SpinLock();
         void PreflushWorkerLoop(int workerIndex)
         {
             int jobIndex;

@@ -39,7 +39,7 @@ namespace BepuPhysics
         {
             this.bodies = bodies;
             this.pool = pool == null ? bodies.Pool : pool;
-            pool.TakeAtLeast(bodies.HandleToLocation.Length, out data);
+            this.pool.TakeAtLeast(bodies.HandleToLocation.Length, out data);
         }
 
         /// <summary>

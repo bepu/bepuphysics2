@@ -162,6 +162,7 @@ namespace BepuPhysics.CollisionDetection
             where TConstraintCache : unmanaged, IPairCacheEntry
             where TCollisionCache : unmanaged, IPairCacheEntry
             where TDescription : struct, IConstraintDescription<TDescription>
+            where TContactImpulses : unmanaged
         {
             var index = PairCache.IndexOf(ref pair);
             if (index >= 0)
