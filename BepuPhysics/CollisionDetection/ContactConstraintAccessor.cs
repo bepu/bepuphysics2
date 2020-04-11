@@ -146,6 +146,7 @@ namespace BepuPhysics.CollisionDetection
     //Note that the vast majority of the 'work' done by these accessor implementations is just type definitions used to call back into some other functions that need that type knowledge.
     public abstract class ContactConstraintAccessor<TConstraintDescription, TBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> : ContactConstraintAccessor
         where TConstraintDescription : unmanaged, IConstraintDescription<TConstraintDescription>
+        where TContactImpulses : unmanaged
         where TConstraintCache : unmanaged, IPairCacheEntry
         where TPrestepData : unmanaged
     {
@@ -275,6 +276,7 @@ namespace BepuPhysics.CollisionDetection
     public class ConvexOneBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
         ContactConstraintAccessor<TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
         where TConstraintDescription : unmanaged, IConvexOneBodyContactConstraintDescription<TConstraintDescription>
+        where TContactImpulses : unmanaged
         where TConstraintCache : unmanaged, IPairCacheEntry
         where TPrestepData : unmanaged, IConvexContactPrestep<TPrestepData>
         where TAccumulatedImpulses : unmanaged, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
@@ -334,6 +336,7 @@ namespace BepuPhysics.CollisionDetection
     public class ConvexTwoBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
         ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
         where TConstraintDescription : unmanaged, IConvexTwoBodyContactConstraintDescription<TConstraintDescription>
+        where TContactImpulses : unmanaged
         where TConstraintCache : unmanaged, IPairCacheEntry
         where TPrestepData : unmanaged, ITwoBodyConvexContactPrestep<TPrestepData>
         where TAccumulatedImpulses : unmanaged, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
@@ -403,6 +406,7 @@ namespace BepuPhysics.CollisionDetection
     public class NonconvexOneBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
         ContactConstraintAccessor<TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
         where TConstraintDescription : unmanaged, INonconvexOneBodyContactConstraintDescription<TConstraintDescription>
+        where TContactImpulses : unmanaged
         where TConstraintCache : unmanaged, IPairCacheEntry
         where TPrestepData : unmanaged, INonconvexContactPrestep<TPrestepData>
         where TAccumulatedImpulses : unmanaged, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
@@ -450,6 +454,7 @@ namespace BepuPhysics.CollisionDetection
     public class NonconvexTwoBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
         ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
         where TConstraintDescription : unmanaged, INonconvexTwoBodyContactConstraintDescription<TConstraintDescription>
+        where TContactImpulses : unmanaged
         where TConstraintCache : unmanaged, IPairCacheEntry
         where TPrestepData : unmanaged, ITwoBodyNonconvexContactPrestep<TPrestepData>
         where TAccumulatedImpulses : unmanaged, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
