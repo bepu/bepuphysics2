@@ -241,6 +241,69 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Gets a copy of the body's bounding box. If the body has no shape, the bounding box has a min at float.MaxValue and a max at float.MinValue.
+        /// </summary>
+        public unsafe BoundingBox BoundingBox
+        {
+            get
+            {
+                BoundingBox box;
+                if (GetBoundsReferencesFromBroadPhase(out var min, out var max))
+                {
+                    box.Min = *min;
+                    box.Max = *max;
+                }
+                else
+                {
+                    box.Min = new Vector3(float.MaxValue);
+                    box.Max = new Vector3(float.MinValue);
+                }
+                return box;
+            }
+        }
+
+        /// <summary>
+        /// Gets direct pointers to the body's bounding box minimum and maximum in the broad phase. Outputs null if the body has no shape.
+        /// </summary>
+        /// <param name="min">Pointer to the bounding box minimum in the broad phase. Null if the body has no shape.</param>
+        /// <param name="max">Pointer to the bounding box maximum in the broad phase. Null if the body has no shape.</param>
+        /// <returns>True if the shape has a shape and bounds, false otherwise.</returns>
+        public unsafe bool GetBoundsReferencesFromBroadPhase(out Vector3* min, out Vector3* max)
+        {
+            ref var location = ref Location;
+            ref var collidable = ref Bodies.Sets[location.SetIndex].Collidables[location.Index];
+            if (collidable.Shape.Exists)
+            {
+                if (location.SetIndex == 0)
+                {
+                    Bodies.broadPhase.GetActiveBoundsPointers(collidable.BroadPhaseIndex, out min, out max);
+                }
+                else
+                {
+                    Bodies.broadPhase.GetStaticBoundsPointers(collidable.BroadPhaseIndex, out min, out max);
+                }
+                return true;
+            }
+            else
+            {
+                //There is no shape, so there can be no bounds.
+                min = null;
+                max = null;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Updates the body's bounds in the broad phase for its current state. Does not include velocity expansion. Does nothing if the body has no shape.
+        /// </summary>
+        /// <remarks>Can be useful if you made modifications to the body's state that you want reflected in the broad phase before the next timestep.
+        /// For example, if you want to perform ray casts against the broad phase after moving objects around directly, their bounds must be updated or else the broad phase bounds will be out of date and the ray will likely miss.</remarks>
+        public void UpdateBounds()
+        {
+            Bodies.UpdateBounds(Handle);
+        }
+
+        /// <summary>
         /// Applies an impulse to a body by index. Does not wake the body up.
         /// </summary>
         /// <param name="pose">Pose of the body to apply impulse to.</param>

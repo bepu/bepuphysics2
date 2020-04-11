@@ -103,6 +103,29 @@ namespace BepuPhysics
             this.sleeper = sleeper;
         }
 
+        /// <summary>
+        /// Updates the bounds held within the broad phase for the body's current state. Does not expand the bounding box by velocity. If there is no shape associated with the body, this does nothing.
+        /// </summary>
+        public void UpdateBounds(int bodyHandle)
+        {
+            ref var location = ref HandleToLocation[bodyHandle];
+            ref var set = ref Sets[location.SetIndex];
+            ref var collidable = ref set.Collidables[location.Index];
+            if (collidable.Shape.Exists)
+            {
+                shapes.UpdateBounds(set.Poses[location.Index], ref collidable.Shape, out var bodyBounds);
+                if (location.SetIndex == 0)
+                {
+                    broadPhase.UpdateActiveBounds(collidable.BroadPhaseIndex, bodyBounds.Min, bodyBounds.Max);
+                }
+                else
+                {
+                    broadPhase.UpdateStaticBounds(collidable.BroadPhaseIndex, bodyBounds.Min, bodyBounds.Max);
+                }
+            }
+
+        }
+
         void AddCollidableToBroadPhase(int bodyHandle, in RigidPose pose, in BodyInertia localInertia, ref Collidable collidable)
         {
             Debug.Assert(collidable.Shape.Exists);
@@ -283,7 +306,7 @@ namespace BepuPhysics
             {
                 //The solver's connected bodies enumeration directly provides the constraint-stored reference, which is an index in the active set for active constraints and a handle for inactive constraints.
                 //We forced the dynamic active at the beginning of BecomeKinematic, so we don't have to worry about the inactive side of things.
-                if (!Bodies.IsKinematic(Bodies.ActiveSet.LocalInertias[bodyIndex]))
+                if (!IsKinematic(Bodies.ActiveSet.LocalInertias[bodyIndex]))
                     ++DynamicCount;
             }
         }
@@ -305,7 +328,7 @@ namespace BepuPhysics
                     broadPhase.staticLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
                 }
             }
-            if(newlyKinematic)
+            if (newlyKinematic)
             {
                 ref var constraints = ref set.Constraints[location.Index];
                 ConnectedDynamicCounter enumerator;

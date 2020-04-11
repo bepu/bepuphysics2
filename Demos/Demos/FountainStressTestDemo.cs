@@ -375,7 +375,8 @@ namespace Demos.Demos
                     //Occasionally make a dynamic kinematic.
                     newDescription.LocalInertia = default;
                 }
-                Simulation.Bodies.ApplyDescription(handle, newDescription);                
+                Simulation.Bodies.ApplyDescription(handle, newDescription);
+                Simulation.Bodies.UpdateBounds(handle);
             }
 
             base.Update(window, camera, input, dt);
