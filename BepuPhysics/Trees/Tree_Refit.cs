@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees
 {
@@ -14,16 +15,16 @@ namespace BepuPhysics.Trees
         public unsafe void RefitForNodeBoundsChange(int nodeIndex)
         {
             //Note that no attempt is made to refit the root node. Note that the root node is the only node that can have a number of children less than 2.
-            var node = nodes + nodeIndex;
-            var metanode = metanodes + nodeIndex;
-            while (metanode->Parent >= 0)
+            ref var node = ref Nodes[nodeIndex];
+            ref var metanode = ref Metanodes[nodeIndex];
+            while (metanode.Parent >= 0)
             {
                 //Compute the new bounding box for this node.
-                var parent = nodes + metanode->Parent;
-                ref var childInParent = ref (&parent->A)[metanode->IndexInParent];
-                BoundingBox.CreateMerged(node->A.Min, node->A.Max, node->B.Min, node->B.Max, out childInParent.Min, out childInParent.Max);
-                node = parent;
-                metanode = metanodes + metanode->Parent;
+                ref var parent = ref Nodes[metanode.Parent];
+                ref var childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
+                BoundingBox.CreateMerged(node.A.Min, node.A.Max, node.B.Min, node.B.Max, out childInParent.Min, out childInParent.Max);
+                node = ref parent;
+                metanode = ref Metanodes[metanode.Parent];
             }
         }
 
