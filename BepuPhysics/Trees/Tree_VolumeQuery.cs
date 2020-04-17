@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 namespace BepuPhysics.Trees
 {
     partial struct Tree
-    {       
+    {
         unsafe void GetOverlaps<TEnumerator>(int nodeIndex, in Vector3 min, in Vector3 max, int* stack, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
             Debug.Assert((nodeIndex >= 0 && nodeIndex < nodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < leafCount));
@@ -28,24 +28,24 @@ namespace BepuPhysics.Trees
                 }
                 else
                 {
-                    var node = nodes + nodeIndex;
-                    var aIntersected = BoundingBox.Intersects(node->A.Min, node->A.Max, min, max);
-                    var bIntersected = BoundingBox.Intersects(node->B.Min, node->B.Max, min, max);
+                    ref var node = ref Nodes[nodeIndex];
+                    var aIntersected = BoundingBox.Intersects(node.A.Min, node.A.Max, min, max);
+                    var bIntersected = BoundingBox.Intersects(node.B.Min, node.B.Max, min, max);
 
                     if (aIntersected)
                     {
-                        nodeIndex = node->A.Index;
+                        nodeIndex = node.A.Index;
                         if (bIntersected)
                         {
                             //Visit the earlier AABB intersection first.
                             Debug.Assert(stackEnd < TraversalStackCapacity - 1, "At the moment, we use a fixed size stack. Until we have explicitly tracked depths, watch out for excessive depth traversals.");
-                            stack[stackEnd++] = node->B.Index;
+                            stack[stackEnd++] = node.B.Index;
 
                         }
                     }
                     else if (bIntersected)
                     {
-                        nodeIndex = node->B.Index;
+                        nodeIndex = node.B.Index;
                     }
                     else
                     {
@@ -69,10 +69,10 @@ namespace BepuPhysics.Trees
             }
             else if (leafCount == 1)
             {
-                Debug.Assert(nodes->A.Index < 0, "If the root only has one child, it must be a leaf.");
-                if (BoundingBox.Intersects(min, max, nodes->A.Min, nodes->A.Max))
+                Debug.Assert(Nodes[0].A.Index < 0, "If the root only has one child, it must be a leaf.");
+                if (BoundingBox.Intersects(min, max, Nodes[0].A.Min, Nodes[0].A.Max))
                 {
-                    leafEnumerator.LoopBody(Encode(nodes->A.Index));
+                    leafEnumerator.LoopBody(Encode(Nodes[0].A.Index));
                 }
                 return;
             }

@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace BepuPhysics.Trees
@@ -105,15 +106,15 @@ namespace BepuPhysics.Trees
                     }
                     Debug.Assert(index < RefinementCandidates[currentCandidatesIndex].Count && index >= 0);
                     var nodeIndex = RefinementCandidates[currentCandidatesIndex][index];
-                    Debug.Assert(Tree.metanodes[nodeIndex].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
+                    Debug.Assert(Tree.Metanodes[nodeIndex].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
                     RefinementTargets.AddUnsafely(nodeIndex);
-                    Tree.metanodes[nodeIndex].RefineFlag = 1;
+                    Tree.Metanodes[nodeIndex].RefineFlag = 1;
                 }
                 //Note that the root node is only refined if it was not picked as a target earlier.
-                if (Tree.metanodes->RefineFlag != 1)
+                if (Tree.Metanodes[0].RefineFlag != 1)
                 {
                     RefinementTargets.AddUnsafely(0);
-                    Tree.metanodes->RefineFlag = 1;
+                    Tree.Metanodes[0].RefineFlag = 1;
                 }
                 RefineIndex = -1;
 
@@ -122,7 +123,7 @@ namespace BepuPhysics.Trees
                 //it would introduce nondeterminism by allowing refines to progress based on their order of completion.
                 for (int i = 0; i < RefinementTargets.Count; ++i)
                 {
-                    Tree.metanodes[RefinementTargets[i]].RefineFlag = 0;
+                    Tree.Metanodes[RefinementTargets[i]].RefineFlag = 0;
                 }
 
                 //To multithread this, give each worker a contiguous chunk of nodes. You want to do the biggest chunks possible to chain decent cache behavior as far as possible.
@@ -175,19 +176,19 @@ namespace BepuPhysics.Trees
                 int multithreadingLeafCountThreshold, ref QuickList<int> refitAndMarkTargets,
                 int refinementLeafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool, BufferPool threadPool)
             {
-                var node = Tree.nodes + nodeIndex;
-                var metanode = Tree.metanodes + nodeIndex;
-                var children = &node->A;
-                Debug.Assert(metanode->RefineFlag == 0);
+                ref var node = ref Tree.Nodes[nodeIndex];
+                ref var metanode = ref Tree.Metanodes[nodeIndex];
+                ref var children = ref node.A;
+                Debug.Assert(metanode.RefineFlag == 0);
                 Debug.Assert(Tree.leafCount > 2);
                 for (int i = 0; i < 2; ++i)
                 {
-                    ref var child = ref children[i];
+                    ref var child = ref Unsafe.Add(ref children, i);
                     if (child.Index >= 0)
                     {
                         //Each node stores how many children are involved in the multithreaded refit.
                         //This allows the postphase to climb the tree in a thread safe way.
-                        ++metanode->RefineFlag;
+                        ++metanode.RefineFlag;
                         if (child.LeafCount <= multithreadingLeafCountThreshold)
                         {
                             if (child.LeafCount <= refinementLeafCountThreshold)
@@ -233,20 +234,20 @@ namespace BepuPhysics.Trees
                         shouldUseMark = true;
                     }
 
-                    var node = Tree.nodes + nodeIndex;
-                    var metanode = Tree.metanodes + nodeIndex;
-                    Debug.Assert(metanode->Parent >= 0, "The root should not be marked for refit.");
-                    var parent = Tree.nodes + metanode->Parent;
-                    var childInParent = &parent->A + metanode->IndexInParent;
+                    ref var node = ref Tree.Nodes[nodeIndex];
+                    ref var metanode = ref Tree.Metanodes[nodeIndex];
+                    Debug.Assert(metanode.Parent >= 0, "The root should not be marked for refit.");
+                    ref var parent = ref Tree.Nodes[metanode.Parent];
+                    ref var childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
                     if (shouldUseMark)
                     {
-                        var costChange = Tree.RefitAndMark(ref *childInParent, RefinementLeafCountThreshold, ref RefinementCandidates[workerIndex], threadPool);
-                        metanode->LocalCostChange = costChange;
+                        var costChange = Tree.RefitAndMark(ref childInParent, RefinementLeafCountThreshold, ref RefinementCandidates[workerIndex], threadPool);
+                        metanode.LocalCostChange = costChange;
                     }
                     else
                     {
-                        var costChange = Tree.RefitAndMeasure(ref *childInParent);
-                        metanode->LocalCostChange = costChange;
+                        var costChange = Tree.RefitAndMeasure(ref childInParent);
+                        metanode.LocalCostChange = costChange;
                     }
 
 
@@ -255,32 +256,32 @@ namespace BepuPhysics.Trees
 
 
                     //Walk up the tree.
-                    node = parent;
-                    metanode = Tree.metanodes + metanode->Parent;
+                    node = ref parent;
+                    metanode = ref Tree.Metanodes[metanode.Parent];
                     while (true)
                     {
 
-                        if (Interlocked.Decrement(ref metanode->RefineFlag) == 0)
+                        if (Interlocked.Decrement(ref metanode.RefineFlag) == 0)
                         {
                             //Compute the child contributions to this node's volume change.
-                            var children = &node->A;
-                            metanode->LocalCostChange = 0;
+                            ref var children = ref node.A;
+                            metanode.LocalCostChange = 0;
                             for (int i = 0; i < 2; ++i)
                             {
-                                ref var child = ref children[i];
+                                ref var child = ref Unsafe.Add(ref children, i);
                                 if (child.Index >= 0)
                                 {
-                                    var childMetadata = Tree.metanodes + child.Index;
-                                    metanode->LocalCostChange += childMetadata->LocalCostChange;
+                                    ref var childMetadata = ref Tree.Metanodes[child.Index];
+                                    metanode.LocalCostChange += childMetadata.LocalCostChange;
                                     //Clear the refine flag (unioned).
-                                    childMetadata->RefineFlag = 0;
+                                    childMetadata.RefineFlag = 0;
 
                                 }
                             }
 
                             //This thread is the last thread to visit this node, so it must handle this node.
                             //Merge all the child bounding boxes into one. 
-                            if (metanode->Parent < 0)
+                            if (metanode.Parent < 0)
                             {
                                 //Root node.
                                 //Don't bother including the root's change in volume.
@@ -290,34 +291,34 @@ namespace BepuPhysics.Trees
                                 var merged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
                                 for (int i = 0; i < 2; ++i)
                                 {
-                                    ref var child = ref children[i];
+                                    ref var child = ref Unsafe.Add(ref children, i);
                                     BoundingBox.CreateMerged(child.Min, child.Max, merged.Min, merged.Max, out merged.Min, out merged.Max);
                                 }
                                 var postmetric = ComputeBoundsMetric(ref merged);
                                 if (postmetric > 1e-9f)
-                                    RefitCostChange = metanode->LocalCostChange / postmetric;
+                                    RefitCostChange = metanode.LocalCostChange / postmetric;
                                 else
                                     RefitCostChange = 0;
                                 //Clear the root's refine flag (unioned).
-                                metanode->RefineFlag = 0;
+                                metanode.RefineFlag = 0;
                                 break;
                             }
                             else
                             {
-                                parent = Tree.nodes + metanode->Parent;
-                                childInParent = &parent->A + metanode->IndexInParent;
-                                var premetric = ComputeBoundsMetric(ref childInParent->Min, ref childInParent->Max);
-                                childInParent->Min = new Vector3(float.MaxValue);
-                                childInParent->Max = new Vector3(float.MinValue);
+                                parent = ref Tree.Nodes[metanode.Parent];
+                                childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
+                                var premetric = ComputeBoundsMetric(ref childInParent.Min, ref childInParent.Max);
+                                childInParent.Min = new Vector3(float.MaxValue);
+                                childInParent.Max = new Vector3(float.MinValue);
                                 for (int i = 0; i < 2; ++i)
                                 {
-                                    ref var child = ref children[i];
-                                    BoundingBox.CreateMerged(child.Min, child.Max,  childInParent->Min, childInParent->Max, out childInParent->Min, out childInParent->Max);
+                                    ref var child = ref Unsafe.Add(ref children, i);
+                                    BoundingBox.CreateMerged(child.Min, child.Max, childInParent.Min, childInParent.Max, out childInParent.Min, out childInParent.Max);
                                 }
-                                var postmetric = ComputeBoundsMetric(ref childInParent->Min, ref childInParent->Max);
-                                metanode->LocalCostChange += postmetric - premetric;
-                                node = parent;
-                                metanode = Tree.metanodes + metanode->Parent;
+                                var postmetric = ComputeBoundsMetric(ref childInParent.Min, ref childInParent.Max);
+                                metanode.LocalCostChange += postmetric - premetric;
+                                node = ref parent;
+                                metanode = ref Tree.Metanodes[metanode.Parent];
                             }
                         }
                         else
@@ -372,11 +373,11 @@ namespace BepuPhysics.Trees
 
         unsafe void CheckForRefinementOverlaps(int nodeIndex, ref QuickList<int> refinementTargets)
         {
-            var node = nodes + nodeIndex;
-            var children = &node->A;
+            ref var node = ref Nodes[nodeIndex];
+            ref var children = ref node.A;
             for (int childIndex = 0; childIndex < 2; ++childIndex)
             {
-                ref var child = ref children[childIndex];
+                ref var child = ref Unsafe.Add(ref children, childIndex);
                 if (child.Index >= 0)
                 {
                     for (int i = 0; i < refinementTargets.Count; ++i)

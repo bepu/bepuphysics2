@@ -162,10 +162,10 @@ namespace BepuPhysics.Trees
             Debug.Assert(count >= 2);
             FindPartition(ref leaves, start, count, out int splitIndex, out BoundingBox aBounds, out BoundingBox bBounds, out int leafCountA, out int leafCountB);
 
-            var node = nodes + nodeIndex;
+            ref var node = ref Nodes[nodeIndex];
 
-            ref var a = ref node->A;
-            ref var b = ref node->B;
+            ref var a = ref node.A;
+            ref var b = ref node.B;
             a.Min = aBounds.Min;
             a.Max = aBounds.Max;
             b.Min = bBounds.Min;
@@ -183,7 +183,7 @@ namespace BepuPhysics.Trees
                 Debug.Assert(leafCountA == 1);
                 //Only one leaf. Don't create another node.
                 var leafIndex = leaves.IndexMap[start];
-                this.leaves[leafIndex] = new Leaf(nodeIndex, 0);
+                Leaves[leafIndex] = new Leaf(nodeIndex, 0);
                 a.Index = Encode(leafIndex);
             }
             if (leafCountB > 1)
@@ -195,7 +195,7 @@ namespace BepuPhysics.Trees
                 Debug.Assert(leafCountB == 1);
                 //Only one leaf. Don't create another node.
                 var leafIndex = leaves.IndexMap[splitIndex];
-                this.leaves[leafIndex] = new Leaf(nodeIndex, 1);
+                Leaves[leafIndex] = new Leaf(nodeIndex, 1);
                 b.Index = Encode(leafIndex);
             }
         }
@@ -204,22 +204,22 @@ namespace BepuPhysics.Trees
             ref SweepResources leaves, int start, int count)
         {
             var nodeIndex = AllocateNode();
-            var metanode = metanodes + nodeIndex;
-            metanode->Parent = parentIndex;
-            metanode->IndexInParent = indexInParent;
-            metanode->RefineFlag = 0;
+            ref var metanode = ref Metanodes[nodeIndex];
+            metanode.Parent = parentIndex;
+            metanode.IndexInParent = indexInParent;
+            metanode.RefineFlag = 0;
 
             if (count <= 2)
             {
                 //No need to do any sorting. This node can fit every remaining subtree.
-                var children = &nodes[nodeIndex].A;
+                ref var children = ref Nodes[nodeIndex].A;
                 for (int i = 0; i < count; ++i)
                 {
                     //The sweep builder preallocated space for leaves and set the leafCount to match.
                     //The index map tells us which of those original leaves to create.
                     var leafIndex = leaves.IndexMap[i + start];
-                    this.leaves[leafIndex] = new Leaf(nodeIndex, i);
-                    ref var child = ref children[i];
+                    Leaves[leafIndex] = new Leaf(nodeIndex, i);
+                    ref var child = ref Unsafe.Add(ref children, i);
                     child.Min = leaves.Bounds[leafIndex].Min;
                     child.Max = leaves.Bounds[leafIndex].Max;
                     child.Index = Encode(leafIndex);

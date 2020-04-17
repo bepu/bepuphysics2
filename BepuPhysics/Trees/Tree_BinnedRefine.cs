@@ -356,7 +356,7 @@ namespace BepuPhysics.Trees
                 }
 
             }
-           
+
 
             int* bestBinSubtreeCounts;
             int* bestSubtreeBinIndices;
@@ -496,11 +496,11 @@ namespace BepuPhysics.Trees
             ref QuickList<int> subtrees, ref QuickList<int> treeletInternalNodes, ref int nextInternalNodeIndexToUse)
         {
             Debug.Assert(subtrees.Count > 1);
-            var internalNode = nodes + internalNodeIndex;
-            var internalNodeChildren = &internalNode->A;
+            ref var internalNode = ref Nodes[internalNodeIndex];
+            ref var internalNodeChildren = ref internalNode.A;
             for (int i = 0; i < 2; ++i)
             {
-                ref var child = ref internalNodeChildren[i];
+                ref var child = ref Unsafe.Add(ref internalNodeChildren, i);
                 if (child.Index >= 0)
                 {
                     child.Index = ReifyStagingNode(internalNodeIndex, i, stagingNodes, child.Index,
@@ -515,9 +515,9 @@ namespace BepuPhysics.Trees
                     {
                         Debug.Assert(subtreeIndex >= 0 && subtreeIndex < nodeCount);
                         //Subtree is an internal node. Update its parent pointers.
-                        var metanode = metanodes + subtreeIndex;
-                        metanode->IndexInParent = i;
-                        metanode->Parent = internalNodeIndex;
+                        ref var metanode = ref Metanodes[subtreeIndex];
+                        metanode.IndexInParent = i;
+                        metanode.Parent = internalNodeIndex;
 
                     }
                     else
@@ -525,8 +525,7 @@ namespace BepuPhysics.Trees
                         //Subtree is a leaf node. Update its parent pointers.
                         var leafIndex = Encode(subtreeIndex);
                         Debug.Assert(leafIndex >= 0 && leafIndex < LeafCount);
-                        var leaf = leaves + leafIndex;
-                        *leaf = new Leaf(internalNodeIndex, i);
+                        Leaves[leafIndex] = new Leaf(internalNodeIndex, i);
                     }
                 }
             }
@@ -536,7 +535,6 @@ namespace BepuPhysics.Trees
            ref QuickList<int> subtrees, ref QuickList<int> treeletInternalNodes,
            ref int nextInternalNodeIndexToUse)
         {
-
             int internalNodeIndex;
             Debug.Assert(nextInternalNodeIndexToUse < treeletInternalNodes.Count,
                 "Binary trees should never run out of available internal nodes when reifying staging nodes; no nodes are created or destroyed during the process.");
@@ -550,13 +548,13 @@ namespace BepuPhysics.Trees
             //Copy the staging node into the real tree.
             //We take the staging node's child bounds, child indices, leaf counts, and child count.
             //The parent and index in parent are provided by the caller.
-            var stagingNode = stagingNodes + stagingNodeIndex;
-            var internalNode = nodes + internalNodeIndex;
-            *internalNode = *stagingNode;
-            var metanode = metanodes + internalNodeIndex;
-            metanode->RefineFlag = 0; //The staging node could have contained arbitrary refine flag data.
-            metanode->Parent = parent;
-            metanode->IndexInParent = indexInParent;
+            ref var stagingNode = ref stagingNodes[stagingNodeIndex];
+            ref var internalNode = ref Nodes[internalNodeIndex];
+            internalNode = stagingNode;
+            ref var metanode = ref Metanodes[internalNodeIndex];
+            metanode.RefineFlag = 0; //The staging node could have contained arbitrary refine flag data.
+            metanode.Parent = parent;
+            metanode.IndexInParent = indexInParent;
 
 
             ReifyChildren(internalNodeIndex, stagingNodes, ref subtrees, ref treeletInternalNodes, ref nextInternalNodeIndexToUse);
@@ -569,9 +567,9 @@ namespace BepuPhysics.Trees
             //We take the staging node's child bounds, child indices, leaf counts, and child count.
             //The parent and index in parent of the treelet root CANNOT BE TOUCHED.
             //When running on multiple threads, another thread may modify the Parent and IndexInParent of the treelet root.
-            var internalNode = nodes + treeletRootIndex;
-            internalNode->A = stagingNodes->A;
-            internalNode->B = stagingNodes->B;
+            ref var internalNode = ref Nodes[treeletRootIndex];
+            internalNode.A = stagingNodes->A;
+            internalNode.B = stagingNodes->B;
             ReifyChildren(treeletRootIndex, stagingNodes, ref subtrees, ref treeletInternalNodes, ref nextInternalNodeIndexToUse);
         }
 
@@ -602,9 +600,9 @@ namespace BepuPhysics.Trees
                 if (subtreeReferences[i] >= 0)
                 {
                     //It's an internal node.
-                    var subtreeMetanode = metanodes + subtreeReferences[i];
-                    var parentNode = nodes + subtreeMetanode->Parent;
-                    ref var owningChild = ref (&parentNode->A)[subtreeMetanode->IndexInParent];
+                    ref var subtreeMetanode = ref Metanodes[subtreeReferences[i]];
+                    ref var parentNode = ref Nodes[subtreeMetanode.Parent];
+                    ref var owningChild = ref Unsafe.Add(ref parentNode.A, subtreeMetanode.IndexInParent);
                     ref var targetBounds = ref resources.BoundingBoxes[i];
                     targetBounds.Min = owningChild.Min;
                     targetBounds.Max = owningChild.Max;
@@ -614,8 +612,8 @@ namespace BepuPhysics.Trees
                 else
                 {
                     //It's a leaf node.
-                    var leaf = leaves + Encode(subtreeReferences[i]);
-                    ref var owningChild = ref (&nodes[leaf->NodeIndex].A)[leaf->ChildIndex];
+                    ref var leaf = ref Leaves[Encode(subtreeReferences[i])];
+                    ref var owningChild = ref Unsafe.Add(ref Nodes[leaf.NodeIndex].A, leaf.ChildIndex);
                     ref var targetBounds = ref resources.BoundingBoxes[i];
                     targetBounds.Min = owningChild.Min;
                     targetBounds.Max = owningChild.Max;
@@ -632,7 +630,7 @@ namespace BepuPhysics.Trees
 
             CreateStagingNodeBinned(ref resources, 0, subtreeReferences.Count, ref stagingNodeCount, out float newTreeletCost);
             //Copy the refine flag over from the treelet root so that it persists.
-            resources.RefineFlags[0] = metanodes[nodeIndex].RefineFlag;
+            resources.RefineFlags[0] = Metanodes[nodeIndex].RefineFlag;
 
 
             //ValidateStaging(stagingNodes, sweepSubtrees, ref subtreeReferences, parent, indexInParent);

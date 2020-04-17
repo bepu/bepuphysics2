@@ -85,7 +85,7 @@ namespace BepuPhysics.CollisionDetection
         public static void GetBoundsPointers(int broadPhaseIndex, ref Tree tree, out Vector3* minPointer, out Vector3* maxPointer)
         {
             var leaf = tree.Leaves[broadPhaseIndex];
-            var nodeChild = (&tree.NodesPointer[leaf.NodeIndex].A) + leaf.ChildIndex;
+            var nodeChild = (&tree.Nodes.Memory[leaf.NodeIndex].A) + leaf.ChildIndex;
             minPointer = &nodeChild->Min;
             maxPointer = &nodeChild->Max;
         }

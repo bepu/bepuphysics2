@@ -25,12 +25,12 @@ namespace BepuPhysics.Trees
         }
 
 
-        public unsafe void Insert(Node* node, Node* nodes, ref QuickList<int> subtrees)
+        public unsafe void Insert(ref Node node, ref QuickList<int> subtrees)
         {
-            var children = &node->A;
+            ref var children = ref node.A;
             for (int childIndex = 0; childIndex < 2; ++childIndex)
             {
-                ref var child = ref children[childIndex];
+                ref var child = ref Unsafe.Add(ref children, childIndex);
                 if (child.Index >= 0)
                 {
                     int index = Count;
@@ -129,7 +129,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryPop(Metanode* metanodes, ref int remainingSubtreeSpace, ref QuickList<int> subtrees, out int index, out float cost)
+        public bool TryPop(ref Buffer<Metanode> metanodes, ref int remainingSubtreeSpace, ref QuickList<int> subtrees, out int index, out float cost)
         {
             while (Count > 0)
             {
@@ -137,7 +137,6 @@ namespace BepuPhysics.Trees
                 //Given the unique access nature, the fact that you're destroying the heap when there's not much space left doesn't matter.
                 //In the event that you consume all the nodes, that just means there aren't any entries which would fit in the subtree set anymore.
                 Pop(out SubtreeHeapEntry entry);
-                var metanode = metanodes + entry.Index;
                 //Choose to expand this node, or not.
                 //Only choose to expand if its children will fit.
                 //Any time a node is expanded, the existing node is removed from the set of potential subtrees stored in the priorityQueue.
@@ -182,13 +181,13 @@ namespace BepuPhysics.Trees
             //or perhaps constraining the generation process to leave room for the unaffected nodes.)
 
 
-            var node = nodes + nodeIndex;
+            ref var node = ref Nodes[nodeIndex];
             Debug.Assert(maximumSubtrees >= 2, "Can't only consider some of a node's children, but specified maximumSubtrees precludes the treelet root's children.");
             //All of treelet root's children are included immediately. (Follows from above requirement.)
 
             var priorityQueue = new SubtreeBinaryHeap(entries);
 
-            priorityQueue.Insert(node, nodes, ref subtrees);
+            priorityQueue.Insert(ref node, ref subtrees);
 
             //Note that the treelet root is NOT added to the internal nodes list.
 
@@ -196,15 +195,15 @@ namespace BepuPhysics.Trees
             //That's because the treelet root cannot change.
             treeletCost = 0;
             int remainingSubtreeSpace = maximumSubtrees - priorityQueue.Count - subtrees.Count;
-            while (priorityQueue.TryPop(metanodes, ref remainingSubtreeSpace, ref subtrees, out int highestIndex, out float highestCost))
+            while (priorityQueue.TryPop(ref Metanodes, ref remainingSubtreeSpace, ref subtrees, out int highestIndex, out float highestCost))
             {
                 treeletCost += highestCost;
                 internalNodes.AddUnsafely(highestIndex);
 
                 //Add all the children to the set of subtrees.
                 //This is safe because we pre-validated the number of children in the node.
-                var expandedNode = nodes + highestIndex;
-                priorityQueue.Insert(expandedNode, nodes, ref subtrees);
+                ref var expandedNode = ref Nodes[highestIndex];
+                priorityQueue.Insert(ref expandedNode, ref subtrees);
             }
 
             for (int i = 0; i < priorityQueue.Count; ++i)
@@ -239,7 +238,7 @@ namespace BepuPhysics.Trees
                 throw new Exception("Bad treelet parent.");
             if (treeletIndexInParent < -1 || (treeletParent >= 0 && treeletIndexInParent >= 2))
                 throw new Exception("Bad treelet index in parent.");
-            if (treeletParent >= 0 && (&nodes[treeletParent].A)[treeletIndexInParent].LeafCount != foundLeafCount)
+            if (treeletParent >= 0 && Unsafe.Add(ref Nodes[treeletParent].A, treeletIndexInParent).LeafCount != foundLeafCount)
             {
                 throw new Exception("Bad leaf count.");
             }
@@ -284,11 +283,11 @@ namespace BepuPhysics.Trees
                     //Rather than looking up the shuffled SweepSubtree for information, just go back to the source.
                     if (subtreeNodePointer >= 0)
                     {
-                        var node = nodes + subtreeNodePointer;
+                        ref var node = ref Nodes[subtreeNodePointer];
                         var totalLeafCount = 0;
                         for (int childIndex = 0; childIndex < 2; ++childIndex)
                         {
-                            totalLeafCount += (&node->A)[childIndex].LeafCount;
+                            totalLeafCount += Unsafe.Add(ref node.A, childIndex).LeafCount;
                         }
 
                         if (child.LeafCount != totalLeafCount)

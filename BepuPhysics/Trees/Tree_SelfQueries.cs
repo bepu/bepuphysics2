@@ -33,9 +33,9 @@ namespace BepuPhysics.Trees
         unsafe void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, ref TOverlapHandler results)
             where TOverlapHandler : IOverlapHandler
         {
-            var node = nodes + nodeIndex;
-            ref var a = ref node->A;
-            ref var b = ref node->B;
+            ref var node = ref Nodes[nodeIndex];
+            ref var a = ref node.A;
+            ref var b = ref node.B;
             //Despite recursion, leafBounds should remain in L1- it'll be used all the way down the recursion from here.
             //However, while we likely loaded child B when we loaded child A, there's no guarantee that it will stick around.
             //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
@@ -60,7 +60,7 @@ namespace BepuPhysics.Trees
             {
                 if (b.Index >= 0)
                 {
-                    GetOverlapsBetweenDifferentNodes(nodes + a.Index, nodes + b.Index, ref results);
+                    GetOverlapsBetweenDifferentNodes(ref Nodes[a.Index], ref Nodes[b.Index], ref results);
                 }
                 else
                 {
@@ -86,13 +86,13 @@ namespace BepuPhysics.Trees
             return BoundingBox.Intersects(a.Min, a.Max, b.Min, b.Max);
         }
 
-        unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(Node* a, Node* b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(ref Node a, ref Node b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             //There are no shared children, so test them all.
-            ref var aa = ref a->A;
-            ref var ab = ref a->B;
-            ref var ba = ref b->A;
-            ref var bb = ref b->B;
+            ref var aa = ref a.A;
+            ref var ab = ref a.B;
+            ref var ba = ref b.A;
+            ref var bb = ref b.B;
             var aaIntersects = Intersects(aa, ba);
             var abIntersects = Intersects(aa, bb);
             var baIntersects = Intersects(ab, ba);
@@ -116,18 +116,18 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe void GetOverlapsInNode<TOverlapHandler>(Node* node, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        unsafe void GetOverlapsInNode<TOverlapHandler>(ref Node node, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
 
-            ref var a = ref node->A;
-            ref var b = ref node->B;
+            ref var a = ref node.A;
+            ref var b = ref node.B;
 
             var ab = Intersects(a, b);
 
             if (a.Index >= 0)
-                GetOverlapsInNode(nodes + a.Index, ref results);
+                GetOverlapsInNode(ref Nodes[a.Index], ref results);
             if (b.Index >= 0)
-                GetOverlapsInNode(nodes + b.Index, ref results);
+                GetOverlapsInNode(ref Nodes[b.Index], ref results);
 
             //Test all different nodes.
             if (ab)
@@ -144,7 +144,7 @@ namespace BepuPhysics.Trees
             if (LeafCount < 2)
                 return;
 
-            GetOverlapsInNode(nodes, ref results);
+            GetOverlapsInNode(ref Nodes[0], ref results);
         }
 
     }

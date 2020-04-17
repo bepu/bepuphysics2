@@ -10,10 +10,6 @@ namespace BepuPhysics.Trees
     {
         public Buffer<Node> Nodes;
         public Buffer<Metanode> Metanodes;
-        //We cache a raw pointer for now. Buffer indexing isn't completely free yet. Also, this implementation was originally developed on raw pointers, so changing it would require effort.
-        internal Node* nodes;
-        public Node* NodesPointer { get { return nodes; } }
-        internal Metanode* metanodes;
         int nodeCount;
         public int NodeCount
         {
@@ -23,10 +19,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        //Pointerized leaves don't really affect much. It just gets rid of the occasional bounds check, but that wasn't 
-        //anywhere close to a bottleneck before. The ability to index into children of nodes is far more important.
         public Buffer<Leaf> Leaves;
-        Leaf* leaves;
         int leafCount;
         public int LeafCount
         {
@@ -49,8 +42,7 @@ namespace BepuPhysics.Trees
         {
             Debug.Assert(leafCount < Leaves.Length,
                 "Any attempt to allocate a leaf should not overrun the allocated leaves. For all operations that allocate leaves, capacity should be preallocated.");
-            var leaf = leaves + leafCount;
-            *leaf = new Leaf(nodeIndex, childIndex);
+            Leaves[leafCount] = new Leaf(nodeIndex, childIndex);
             return leafCount++;
         }
 
@@ -90,12 +82,9 @@ namespace BepuPhysics.Trees
             pool.Take(leafCount, out Leaves);
             pool.Take(nodeCount, out Nodes);
             pool.Take(nodeCount, out Metanodes);
-            leaves = Leaves.Memory;
-            nodes = Nodes.Memory;
-            metanodes = Metanodes.Memory;
-            Unsafe.CopyBlockUnaligned(ref *(byte*)leaves, ref data[leavesStartIndex], (uint)leafByteCount);
-            Unsafe.CopyBlockUnaligned(ref *(byte*)nodes, ref data[nodesStartIndex], (uint)nodeByteCount);
-            Unsafe.CopyBlockUnaligned(ref *(byte*)metanodes, ref data[metanodesStartIndex], (uint)metanodeByteCount);
+            Unsafe.CopyBlockUnaligned(ref *(byte*)Leaves.Memory, ref data[leavesStartIndex], (uint)leafByteCount);
+            Unsafe.CopyBlockUnaligned(ref *(byte*)Nodes.Memory, ref data[nodesStartIndex], (uint)nodeByteCount);
+            Unsafe.CopyBlockUnaligned(ref *(byte*)Metanodes.Memory, ref data[metanodesStartIndex], (uint)metanodeByteCount);
         }
 
         /// <summary>
@@ -125,9 +114,9 @@ namespace BepuPhysics.Trees
             const int leavesStartIndex = 4;
             var nodesStartIndex = leavesStartIndex + leafByteCount;
             var metanodesStartIndex = nodesStartIndex + nodeByteCount;
-            Unsafe.CopyBlockUnaligned(ref bytes[4], ref *(byte*)leaves, (uint)leafByteCount);
-            Unsafe.CopyBlockUnaligned(ref bytes[nodesStartIndex], ref *(byte*)nodes, (uint)nodeByteCount);
-            Unsafe.CopyBlockUnaligned(ref bytes[metanodesStartIndex], ref *(byte*)metanodes, (uint)metanodeByteCount);
+            Unsafe.CopyBlockUnaligned(ref bytes[4], ref *(byte*)Leaves.Memory, (uint)leafByteCount);
+            Unsafe.CopyBlockUnaligned(ref bytes[nodesStartIndex], ref *(byte*)Nodes.Memory, (uint)nodeByteCount);
+            Unsafe.CopyBlockUnaligned(ref bytes[metanodesStartIndex], ref *(byte*)Metanodes.Memory, (uint)metanodeByteCount);
         }
 
 
@@ -142,8 +131,9 @@ namespace BepuPhysics.Trees
         {
             //The root always exists, even if there are no children in it. Makes some bookkeeping simpler.
             nodeCount = 1;
-            metanodes->Parent = -1;
-            metanodes->IndexInParent = -1;
+            ref var rootMetanode = ref Metanodes[0];
+            rootMetanode.Parent = -1;
+            rootMetanode.IndexInParent = -1;
         }
 
         /// <summary>
@@ -164,12 +154,10 @@ namespace BepuPhysics.Trees
             if (leafCapacityForTarget != Leaves.Length)
             {
                 pool.ResizeToAtLeast(ref Leaves, leafCapacityForTarget, leafCount);
-                leaves = Leaves.Memory;
             }
             if (nodeCapacityForTarget != Nodes.Length)
             {
                 pool.ResizeToAtLeast(ref Nodes, nodeCapacityForTarget, nodeCount);
-                nodes = Nodes.Memory;
             }
             if (metanodeCapacityForTarget != Metanodes.Length)
             {
@@ -177,7 +165,6 @@ namespace BepuPhysics.Trees
                 //A node's RefineFlag must be 0, so just clear out the node set. 
                 //TODO: This won't be necessary if we get rid of refineflags as a concept.
                 Metanodes.Clear(nodeCount, Nodes.Length - nodeCount);
-                metanodes = Metanodes.Memory;
             }
             if (!wasAllocated)
             {
@@ -220,7 +207,7 @@ namespace BepuPhysics.Trees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Equals(in Tree a, in Tree b)
         {
-            return a.nodes == b.nodes && a.nodeCount == b.nodeCount;
+            return a.Nodes.Memory == b.Nodes.Memory && a.nodeCount == b.nodeCount;
         }
 
     }
