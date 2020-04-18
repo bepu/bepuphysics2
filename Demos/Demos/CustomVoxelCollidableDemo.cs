@@ -221,7 +221,7 @@ namespace Demos.Demos
                 ref var pair = ref pairs[i];
                 ref var voxelsSet = ref Unsafe.AsRef<Voxels>(pair.Container);
                 enumerator.Overlaps = Unsafe.AsPointer(ref overlaps.GetOverlapsForPair(i));
-                Tree.GetOverlaps(pair.Min, pair.Max, ref enumerator);
+                voxelsSet.Tree.GetOverlaps(pair.Min, pair.Max, ref enumerator);
             }
         }
 
