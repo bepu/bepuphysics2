@@ -22,12 +22,12 @@ namespace Demos.Demos.Characters
     /// </remarks>
     public struct CharacterInput
     {
-        int bodyHandle;
+        BodyHandle bodyHandle;
         CharacterControllers characters;
         float speed;
         Capsule shape;
 
-        public int BodyHandle { get { return bodyHandle; } }
+        public BodyHandle BodyHandle { get { return bodyHandle; } }
 
         public CharacterInput(CharacterControllers characters, Vector3 initialPosition, Capsule shape,
             float speculativeMargin, float mass, float maximumHorizontalForce, float maximumVerticalGlueForce,

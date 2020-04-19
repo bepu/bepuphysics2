@@ -330,14 +330,14 @@ namespace BepuPhysics.CollisionDetection
                 {
                     //Two bodies.
                     Debug.Assert(pair.A.Mobility != CollidableMobility.Static && pair.B.Mobility != CollidableMobility.Static);
-                    var bodyHandles = new TwoBodyHandles { A = pair.A.Handle.Value, B = pair.B.Handle.Value };
+                    var bodyHandles = new TwoBodyHandles { A = pair.A.BodyHandle.Value, B = pair.B.BodyHandle.Value };
                     UpdateConstraintForManifold(workerIndex, ref pair, ref manifold, ref collisionCache, ref pairMaterial, bodyHandles);
                 }
                 else
                 {
                     //One of the two collidables is static.
                     Debug.Assert(pair.A.Mobility != CollidableMobility.Static && pair.B.Mobility == CollidableMobility.Static);
-                    UpdateConstraintForManifold(workerIndex, ref pair, ref manifold, ref collisionCache, ref pairMaterial, pair.A.Handle);
+                    UpdateConstraintForManifold(workerIndex, ref pair, ref manifold, ref collisionCache, ref pairMaterial, pair.A.BodyHandle);
                 }
                 //In the event that there are no contacts in the new manifold, the pair is left in a stale state. It will be removed by the stale removal post process. 
             }

@@ -8,7 +8,7 @@ namespace Demos.Demos.Cars
 {
     struct SimpleCar
     {
-        public int Body;
+        public BodyHandle Body;
         public WheelHandles FrontLeftWheel;
         public WheelHandles FrontRightWheel;
         public WheelHandles BackLeftWheel;
@@ -36,7 +36,7 @@ namespace Demos.Demos.Cars
         }
 
         public static WheelHandles CreateWheel(Simulation simulation, BodyProperty<CarBodyProperties> properties, in RigidPose bodyPose,
-            TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, int bodyHandle, ref SubgroupCollisionFilter bodyFilter, in Vector3 bodyToWheelSuspension, in Vector3 suspensionDirection, float suspensionLength,
+            TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, BodyHandle bodyHandle, ref SubgroupCollisionFilter bodyFilter, in Vector3 bodyToWheelSuspension, in Vector3 suspensionDirection, float suspensionLength,
             in AngularHinge hingeDescription, in SpringSettings suspensionSettings, in Quaternion localWheelOrientation)
         {
             RigidPose wheelPose;
@@ -73,7 +73,7 @@ namespace Demos.Demos.Cars
             handles.Hinge = simulation.Solver.Add(bodyHandle, handles.Wheel, hingeDescription);
             //The demos SubgroupCollisionFilter is pretty simple and only tests one direction, so we make the non-colliding relationship symmetric.
             ref var wheelProperties = ref properties.Allocate(handles.Wheel);
-            wheelProperties = new CarBodyProperties { Filter = new SubgroupCollisionFilter(bodyHandle, 1), Friction = wheelFriction };
+            wheelProperties = new CarBodyProperties { Filter = new SubgroupCollisionFilter(bodyHandle.Value, 1), Friction = wheelFriction };
             SubgroupCollisionFilter.DisableCollision(ref wheelProperties.Filter, ref bodyFilter);
 
             return handles;
@@ -87,7 +87,7 @@ namespace Demos.Demos.Cars
             SimpleCar car;
             car.Body = simulation.Bodies.Add(BodyDescription.CreateDynamic(pose, bodyInertia, new CollidableDescription(bodyShape, 0.1f), new BodyActivityDescription(0.01f)));
             ref var bodyProperties = ref properties.Allocate(car.Body);
-            bodyProperties = new CarBodyProperties { Friction = bodyFriction, Filter = new SubgroupCollisionFilter(car.Body, 0) };
+            bodyProperties = new CarBodyProperties { Friction = bodyFriction, Filter = new SubgroupCollisionFilter(car.Body.Value, 0) };
             QuaternionEx.TransformUnitY(localWheelOrientation, out var wheelAxis);
             car.hingeDescription = new AngularHinge
             {

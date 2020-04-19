@@ -98,14 +98,14 @@ namespace BepuPhysics
         {
             BroadPhase broadPhase;
             BufferPool pool;
-            public QuickList<int> InactiveBodyHandles;
+            public QuickList<BodyHandle> InactiveBodyHandles;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public InactiveBodyCollector(BroadPhase broadPhase, BufferPool pool)
             {
                 this.pool = pool;
                 this.broadPhase = broadPhase;
-                InactiveBodyHandles = new QuickList<int>(32, pool);
+                InactiveBodyHandles = new QuickList<BodyHandle>(32, pool);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -120,7 +120,7 @@ namespace BepuPhysics
                 ref var leaf = ref broadPhase.staticLeaves[leafIndex];
                 if (leaf.Mobility != CollidableMobility.Static)
                 {
-                    InactiveBodyHandles.Add(leaf.Handle, pool);
+                    InactiveBodyHandles.Add(leaf.BodyHandle, pool);
                 }
                 return true;
             }
@@ -173,12 +173,12 @@ namespace BepuPhysics
                 if (movedLeaf.Mobility == CollidableMobility.Static)
                 {
                     //This is a static collidable, not a body.
-                    Collidables[HandleToIndex[movedLeaf.Handle]].BroadPhaseIndex = removedBroadPhaseIndex;
+                    Collidables[HandleToIndex[movedLeaf.StaticHandle]].BroadPhaseIndex = removedBroadPhaseIndex;
                 }
                 else
                 {
                     //This is an inactive body.
-                    bodies.UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, removedBroadPhaseIndex);
+                    bodies.UpdateCollidableBroadPhaseIndex(movedLeaf.BodyHandle, removedBroadPhaseIndex);
                 }
             }
 

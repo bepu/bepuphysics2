@@ -315,7 +315,7 @@ namespace BepuPhysics.CollisionDetection
             BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
             //Active constraints store body indices as references; inactive constraints store handles.
             var bodyReference = Buffer<Vector<int>>.Get(ref typeBatch.BodyReferences, bundleIndex)[innerIndex];
-            var bodyHandle = constraintLocation.SetIndex == 0 ? solver.bodies.ActiveSet.IndexToHandle[bodyReference] : bodyReference;
+            var bodyHandle = constraintLocation.SetIndex == 0 ? solver.bodies.ActiveSet.IndexToHandle[bodyReference] : new BodyHandle(bodyReference);
             ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
             ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
             extractor.ConvexOneBody(bodyHandle, ref prestep, ref impulses);
@@ -375,7 +375,7 @@ namespace BepuPhysics.CollisionDetection
             ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
             ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
 
-            int bodyHandleA, bodyHandleB;
+            BodyHandle bodyHandleA, bodyHandleB;
             ref var bodyReferences = ref GatherScatter.GetOffsetInstance(ref Buffer<TwoBodyReferences>.Get(ref typeBatch.BodyReferences, bundleIndex), innerIndex);
             //Active constraints store body indices as references; inactive constraints store handles.
             if (constraintLocation.SetIndex == 0)
@@ -385,8 +385,8 @@ namespace BepuPhysics.CollisionDetection
             }
             else
             {
-                bodyHandleA = bodyReferences.IndexA[0];
-                bodyHandleB = bodyReferences.IndexB[0];
+                bodyHandleA = new BodyHandle(bodyReferences.IndexA[0]);
+                bodyHandleB = new BodyHandle(bodyReferences.IndexB[0]);
             }
             extractor.ConvexTwoBody(bodyHandleA, bodyHandleB, ref prestep, ref impulses);
         }
@@ -433,7 +433,7 @@ namespace BepuPhysics.CollisionDetection
             BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
             //Active constraints store body indices as references; inactive constraints store handles.
             var bodyReference = Buffer<Vector<int>>.Get(ref typeBatch.BodyReferences, bundleIndex)[innerIndex];
-            var bodyHandle = constraintLocation.SetIndex == 0 ? solver.bodies.ActiveSet.IndexToHandle[bodyReference] : bodyReference;
+            var bodyHandle = constraintLocation.SetIndex == 0 ? solver.bodies.ActiveSet.IndexToHandle[bodyReference] : new BodyHandle(bodyReference);
             ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
             ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
             extractor.NonconvexOneBody(bodyHandle, ref prestep, ref impulses);
@@ -482,7 +482,7 @@ namespace BepuPhysics.CollisionDetection
             ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
             ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
 
-            int bodyHandleA, bodyHandleB;
+            BodyHandle bodyHandleA, bodyHandleB;
             ref var bodyReferences = ref GatherScatter.GetOffsetInstance(ref Buffer<TwoBodyReferences>.Get(ref typeBatch.BodyReferences, bundleIndex), innerIndex);
             //Active constraints store body indices as references; inactive constraints store handles.
             if (constraintLocation.SetIndex == 0)
@@ -492,8 +492,8 @@ namespace BepuPhysics.CollisionDetection
             }
             else
             {
-                bodyHandleA = bodyReferences.IndexA[0];
-                bodyHandleB = bodyReferences.IndexB[0];
+                bodyHandleA = new BodyHandle(bodyReferences.IndexA[0]);
+                bodyHandleB = new BodyHandle(bodyReferences.IndexB[0]);
             }
             extractor.NonconvexTwoBody(bodyHandleA, bodyHandleB, ref prestep, ref impulses);
         }

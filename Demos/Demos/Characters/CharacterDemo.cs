@@ -160,7 +160,7 @@ namespace Demos.Demos.Characters
 
         struct MovingPlatform
         {
-            public int BodyHandle;
+            public BodyHandle BodyHandle;
             public float InverseGoalSatisfactionTime;
             public double TimeOffset;
             public Func<double, RigidPose> PoseCreator;
@@ -175,7 +175,7 @@ namespace Demos.Demos.Characters
 
             public void Update(Simulation simulation, double time)
             {
-                var body = new BodyReference(BodyHandle, simulation.Bodies);
+                var body = simulation.Bodies.GetBodyReference(BodyHandle);
                 ref var pose = ref body.Pose;
                 ref var velocity = ref body.Velocity;
                 var targetPose = PoseCreator(time + TimeOffset);

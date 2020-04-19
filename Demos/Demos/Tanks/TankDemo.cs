@@ -275,13 +275,13 @@ namespace Demos.Demos.Tanks
                 explosion.Scale = 1f;
                 explosion.Color = new Vector3(1f, 0.5f, 0);
                 Simulation.Bodies.Remove(impact.ProjectileHandle);
-                if (impact.ImpactedTankBodyHandle >= 0)
+                if (impact.ImpactedTankBodyHandle.Value >= 0)
                 {
                     //The projectile hit a tank. Hurt it!
                     for (int aiIndex = 0; aiIndex < aiTanks.Count; ++aiIndex)
                     {
                         ref var aiTank = ref aiTanks[aiIndex];
-                        if (aiTank.Controller.Tank.Body == impact.ImpactedTankBodyHandle)
+                        if (aiTank.Controller.Tank.Body.Value == impact.ImpactedTankBodyHandle.Value)
                         {
                             --aiTank.HitPoints;
                             if (aiTank.HitPoints == 0)

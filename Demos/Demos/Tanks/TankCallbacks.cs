@@ -39,11 +39,11 @@ namespace Demos.Demos.Tanks
         /// <summary>
         /// Handle of the projectile body associated with this impact.
         /// </summary>
-        public int ProjectileHandle;
+        public BodyHandle ProjectileHandle;
         /// <summary>
         /// Handle of the tank body associated with whatever the projectile hit. If the projectile didn't hit a tank, this is -1.
         /// </summary>
-        public int ImpactedTankBodyHandle;
+        public BodyHandle ImpactedTankBodyHandle;
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ namespace Demos.Demos.Tanks
             //It's impossible for two statics to collide, and pairs are sorted such that bodies always come before statics.
             if (b.Mobility != CollidableMobility.Static)
             {
-                return SubgroupCollisionFilter.AllowCollision(Properties[a.Handle].Filter, Properties[b.Handle].Filter);
+                return SubgroupCollisionFilter.AllowCollision(Properties[a.BodyHandle].Filter, Properties[b.BodyHandle].Filter);
             }
             return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
         }
@@ -79,7 +79,7 @@ namespace Demos.Demos.Tanks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void TryAddProjectileImpact(int projectileHandle, CollidableReference impactedCollidable)
+        void TryAddProjectileImpact(BodyHandle projectileHandle, CollidableReference impactedCollidable)
         {
             bool lockTaken = false;
             ProjectileLock.Enter(ref lockTaken);
@@ -90,7 +90,7 @@ namespace Demos.Demos.Tanks
                 {
                     ref var impact = ref ProjectileImpacts[i];
                     //If the projectile has already been handled, ignore it.
-                    if (impact.ProjectileHandle == projectileHandle)
+                    if (impact.ProjectileHandle.Value == projectileHandle.Value)
                         return;
                 }
                 //The exploding projectiles list should have been sized ahead of time to hold all projectiles, so no dynamic allocations should be required.
@@ -99,13 +99,13 @@ namespace Demos.Demos.Tanks
                 if (impactedCollidable.Mobility != CollidableMobility.Static)
                 {
                     //The filter's group id is the tank's main body handle. We use that to find the tank (if this body is related to a tank at all).
-                    ref var properties = ref Properties[impactedCollidable.Handle];
-                    newImpact.ImpactedTankBodyHandle = properties.TankPart ? properties.Filter.GroupId : -1;
+                    ref var properties = ref Properties[impactedCollidable.BodyHandle];
+                    newImpact.ImpactedTankBodyHandle = new BodyHandle(properties.TankPart ? properties.Filter.GroupId : -1);
                 }
                 else
                 {
                     //It hit a static; tank's aren't static.
-                    newImpact.ImpactedTankBodyHandle = -1;
+                    newImpact.ImpactedTankBodyHandle = new BodyHandle(-1);
                 }
             }
             finally
@@ -119,12 +119,12 @@ namespace Demos.Demos.Tanks
         public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
         {
             //Different tank parts have different friction values. Wheels tend to stick more than the body of the tank.
-            ref var propertiesA = ref Properties[pair.A.Handle];
+            ref var propertiesA = ref Properties[pair.A.BodyHandle];
             pairMaterial.FrictionCoefficient = propertiesA.Friction;
             if (pair.B.Mobility != CollidableMobility.Static)
             {
                 //If two bodies collide, just average the friction. Other options include min(a, b) or a * b.
-                ref var propertiesB = ref Properties[pair.B.Handle];
+                ref var propertiesB = ref Properties[pair.B.BodyHandle];
                 pairMaterial.FrictionCoefficient = (pairMaterial.FrictionCoefficient + propertiesB.Friction) * 0.5f;
             }
             //These are just some nice standard values. Higher maximum velocities can result in more energy being introduced during deep contact.
@@ -132,7 +132,7 @@ namespace Demos.Demos.Tanks
             pairMaterial.MaximumRecoveryVelocity = 2f;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);
 
-            if (propertiesA.Projectile || (pair.B.Mobility != CollidableMobility.Static && Properties[pair.B.Handle].Projectile))
+            if (propertiesA.Projectile || (pair.B.Mobility != CollidableMobility.Static && Properties[pair.B.BodyHandle].Projectile))
             {
                 for (int i = 0; i < manifold.Count; ++i)
                 {
@@ -148,12 +148,12 @@ namespace Demos.Demos.Tanks
                         //An actual collision was found. 
                         if (propertiesA.Projectile)
                         {
-                            TryAddProjectileImpact(pair.A.Handle, pair.B);
+                            TryAddProjectileImpact(pair.A.BodyHandle, pair.B);
                         }
-                        if (pair.B.Mobility != CollidableMobility.Static && Properties[pair.B.Handle].Projectile)
+                        if (pair.B.Mobility != CollidableMobility.Static && Properties[pair.B.BodyHandle].Projectile)
                         {
                             //Could technically combine the locks in the case that both bodies are projectiles, but that's not exactly common.
-                            TryAddProjectileImpact(pair.B.Handle, pair.A);
+                            TryAddProjectileImpact(pair.B.BodyHandle, pair.A);
                         }
                         break;
                     }

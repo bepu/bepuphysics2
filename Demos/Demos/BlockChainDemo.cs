@@ -32,7 +32,7 @@ namespace Demos.Demos
             var boxIndex = Simulation.Shapes.Add(boxShape);
             const int forkCount = 20;
             const int blocksPerChain = 20;
-            int[] blockHandles = new int[blocksPerChain];
+            BodyHandle[] blockHandles = new BodyHandle[blocksPerChain];
             for (int forkIndex = 0; forkIndex < forkCount; ++forkIndex)
             {
                 //Build the blocks.

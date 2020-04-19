@@ -13,7 +13,7 @@
         /// <param name="bodyHandle">Body handle referenced by the constraint.</param>
         /// <param name="prestep">Prestep data associated with the constraint.</param>
         /// <param name="impulses">Accumulated impulses associated with the constraint.</param>
-        void ConvexOneBody<TPrestep, TAccumulatedImpulses>(int bodyHandle, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+        void ConvexOneBody<TPrestep, TAccumulatedImpulses>(BodyHandle bodyHandle, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
             where TPrestep : struct, IConvexContactPrestep<TPrestep>
             where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>;
 
@@ -26,7 +26,7 @@
         /// <param name="bodyHandleB">Second body handle referenced by the constraint.</param>
         /// <param name="prestep">Prestep data associated with the constraint.</param>
         /// <param name="impulses">Accumulated impulses associated with the constraint.</param>
-        void ConvexTwoBody<TPrestep, TAccumulatedImpulses>(int bodyHandleA, int bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+        void ConvexTwoBody<TPrestep, TAccumulatedImpulses>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
             where TPrestep : struct, ITwoBodyConvexContactPrestep<TPrestep>
             where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>;
 
@@ -39,7 +39,7 @@
         /// <param name="bodyHandle">Body handle referenced by the constraint.</param>
         /// <param name="prestep">Prestep data associated with the constraint.</param>
         /// <param name="impulses">Accumulated impulses associated with the constraint.</param>
-        void NonconvexOneBody<TPrestep, TAccumulatedImpulses>(int bodyHandle, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+        void NonconvexOneBody<TPrestep, TAccumulatedImpulses>(BodyHandle bodyHandle, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
             where TPrestep : struct, INonconvexContactPrestep<TPrestep>
             where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>;
 
@@ -52,7 +52,7 @@
         /// <param name="bodyHandleB">Second body handle referenced by the constraint.</param>
         /// <param name="prestep">Prestep data associated with the constraint.</param>
         /// <param name="impulses">Accumulated impulses associated with the constraint.</param>
-        void NonconvexTwoBody<TPrestep, TAccumulatedImpulses>(int bodyHandleA, int bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+        void NonconvexTwoBody<TPrestep, TAccumulatedImpulses>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
             where TPrestep : struct, ITwoBodyNonconvexContactPrestep<TPrestep>
             where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>;
     }

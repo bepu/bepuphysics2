@@ -19,9 +19,9 @@ namespace Demos
     public struct LatticeBodyGetter
     {
         int width, height, length;
-        int[] bodyHandles;
+        BodyHandle[] bodyHandles;
         Bodies bodies;
-        public LatticeBodyGetter(int width, int height, int length, int[] bodyHandles, Bodies bodies)
+        public LatticeBodyGetter(int width, int height, int length, BodyHandle[] bodyHandles, Bodies bodies)
         {
             this.width = width;
             this.height = height;
@@ -39,11 +39,11 @@ namespace Demos
             id = sliceIndex * (height * width) + rowIndex * width + columnIndex;
             return true;
         }
-        public bool GetBody(int columnIndex, int rowIndex, int sliceIndex, out int handle, out BodyDescription bodyDescription)
+        public bool GetBody(int columnIndex, int rowIndex, int sliceIndex, out BodyHandle handle, out BodyDescription bodyDescription)
         {
             if (!TryGetId(columnIndex, rowIndex, sliceIndex, out var id))
             {
-                handle = -1;
+                handle = new BodyHandle(-1);
                 bodyDescription = new BodyDescription();
                 return false;
             }
@@ -55,17 +55,17 @@ namespace Demos
 
     public struct ConstraintAdder
     {
-        public int LocalBodyHandle;
+        public BodyHandle LocalBodyHandle;
         Simulation simulation;
         public List<int> ConstraintHandles;
         public ConstraintAdder(Simulation simulation, List<int> constraintHandles)
         {
             this.simulation = simulation;
             this.ConstraintHandles = constraintHandles;
-            LocalBodyHandle = 0;
+            LocalBodyHandle = default;
         }
 
-        public void Add<T>(ref T description, int otherBodyHandle) where T : ITwoBodyConstraintDescription<T>
+        public void Add<T>(ref T description, BodyHandle otherBodyHandle) where T : ITwoBodyConstraintDescription<T>
         {
             var constraintHandle = simulation.Solver.Add(LocalBodyHandle, otherBodyHandle, ref description);
             ConstraintHandles.Add(constraintHandle);
@@ -94,10 +94,10 @@ namespace Demos
         }
 
         public static void BuildLattice<TBodyBuilder, TConstraintBuilder>(TBodyBuilder bodyBuilder, TConstraintBuilder constraintBuilder, int width, int height, int length, Simulation simulation,
-            out int[] bodyHandles, out int[] constraintHandles) where TBodyBuilder : IBodyBuilder where TConstraintBuilder : IConstraintBuilder
+            out BodyHandle[] bodyHandles, out int[] constraintHandles) where TBodyBuilder : IBodyBuilder where TConstraintBuilder : IConstraintBuilder
         {
             var bodyCount = width * height * length;
-            bodyHandles = new int[bodyCount];
+            bodyHandles = new BodyHandle[bodyCount];
 
             var bodyGetter = new LatticeBodyGetter(width, height, length, bodyHandles, simulation.Bodies);
 
@@ -135,7 +135,7 @@ namespace Demos
 
         public static void BuildLattice<TBodyBuilder, TConstraintBuilder>(TBodyBuilder bodyBuilder, TConstraintBuilder constraintBuilder, int width, int height, int length,
             out Simulation simulation,
-            out int[] bodyHandles, out int[] constraintHandles) where TBodyBuilder : IBodyBuilder where TConstraintBuilder : IConstraintBuilder
+            out BodyHandle[] bodyHandles, out int[] constraintHandles) where TBodyBuilder : IBodyBuilder where TConstraintBuilder : IConstraintBuilder
         {
             var bodyCount = width * height * length;
             simulation = Simulation.Create(

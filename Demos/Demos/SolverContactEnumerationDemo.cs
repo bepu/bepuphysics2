@@ -19,7 +19,7 @@ namespace Demos.Demos
     /// </summary>
     public class SolverContactEnumerationDemo : Demo
     {
-        int sensorBodyHandle;
+        BodyHandle sensorBodyHandle;
         public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 5, 25);
@@ -76,11 +76,11 @@ namespace Demos.Demos
         struct ConstraintContacts
         {
             public QuickList<Contact> Contacts;
-            public int BodyA;
+            public BodyHandle BodyA;
             //For one body constraints, this will be -1.
-            public int BodyB;
+            public BodyHandle BodyB;
 
-            public ConstraintContacts(BufferPool pool, int a, int b)
+            public ConstraintContacts(BufferPool pool, BodyHandle a, BodyHandle b)
             {
                 //Nonconvex manifolds will never have less than the convex count, so we'll preallocate enough space for a nonconvex manifold.
                 Contacts = new QuickList<Contact>(NonconvexContactManifold.MaximumContactCount, pool);
@@ -88,7 +88,7 @@ namespace Demos.Demos
                 BodyB = b;
             }
 
-            public ConstraintContacts(BufferPool pool, int a) : this(pool, a, -1) { }
+            public ConstraintContacts(BufferPool pool, BodyHandle a) : this(pool, a, new BodyHandle(-1)) { }
         }
 
         struct Extractor : ISolverContactDataExtractor
@@ -147,7 +147,7 @@ namespace Demos.Demos
                 }
             }
 
-            public void ConvexOneBody<TPrestep, TAccumulatedImpulses>(int bodyHandle, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+            public void ConvexOneBody<TPrestep, TAccumulatedImpulses>(BodyHandle bodyHandle, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
                 where TPrestep : struct, IConvexContactPrestep<TPrestep>
                 where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
             {
@@ -156,7 +156,7 @@ namespace Demos.Demos
                 ExtractConvexData(ref constraintContacts, ref prestep, ref impulses);
             }
 
-            public void ConvexTwoBody<TPrestep, TAccumulatedImpulses>(int bodyHandleA, int bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+            public void ConvexTwoBody<TPrestep, TAccumulatedImpulses>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
                 where TPrestep : struct, ITwoBodyConvexContactPrestep<TPrestep>
                 where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
             {
@@ -185,7 +185,7 @@ namespace Demos.Demos
                 }
             }
 
-            public void NonconvexOneBody<TPrestep, TAccumulatedImpulses>(int bodyHandle, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+            public void NonconvexOneBody<TPrestep, TAccumulatedImpulses>(BodyHandle bodyHandle, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
                 where TPrestep : struct, INonconvexContactPrestep<TPrestep>
                 where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
             {
@@ -194,7 +194,7 @@ namespace Demos.Demos
                 ExtractNonconvexData(ref constraintContacts, ref prestep, ref impulses);
             }
 
-            public void NonconvexTwoBody<TPrestep, TAccumulatedImpulses>(int bodyHandleA, int bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+            public void NonconvexTwoBody<TPrestep, TAccumulatedImpulses>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
                 where TPrestep : struct, ITwoBodyNonconvexContactPrestep<TPrestep>
                 where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
             {

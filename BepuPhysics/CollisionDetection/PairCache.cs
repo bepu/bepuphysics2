@@ -14,7 +14,6 @@ using static BepuPhysics.CollisionDetection.WorkerPairCache;
 
 namespace BepuPhysics.CollisionDetection
 {
-    //would you care for some generics
     using OverlapMapping = QuickDictionary<CollidablePair, CollidablePairPointers, CollidablePairComparer>;
 
     [StructLayout(LayoutKind.Explicit, Size = 8)]
@@ -34,7 +33,7 @@ namespace BepuPhysics.CollisionDetection
 
         public override string ToString()
         {
-            return $"<{A.Mobility}[{A.Handle}], {B.Mobility}[{B.Handle}]>";
+            return $"<{A}, {B}>";
         }
     }
 

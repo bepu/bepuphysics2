@@ -450,7 +450,7 @@ namespace BepuPhysics
                             ref var inactiveConstraintSet = ref solver.Sets[setIndex];
                             for (int bodyIndex = 0; bodyIndex < inactiveBodySet.Count; ++bodyIndex)
                             {
-                                ref var location = ref bodies.HandleToLocation[inactiveBodySet.IndexToHandle[bodyIndex]];
+                                ref var location = ref bodies.HandleToLocation[inactiveBodySet.IndexToHandle[bodyIndex].Value];
                                 Debug.Assert(location.SetIndex == 0, "At this point, the sleep hasn't gone through so the set should still be 0.");
                                 constraintRemover.TryRemoveAllConstraintsForBodyFromFallbackBatch(location.Index);
                                 bodies.RemoveFromActiveSet(location.Index);
@@ -522,11 +522,11 @@ namespace BepuPhysics
 
         struct HandleComparer : IComparerRef<int>
         {
-            public Buffer<int> Handles;
+            public Buffer<BodyHandle> Handles;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(ref int a, ref int b)
             {
-                return Handles[a].CompareTo(Handles[b]);
+                return Handles[a].Value.CompareTo(Handles[b].Value);
             }
         }
 
@@ -573,7 +573,7 @@ namespace BepuPhysics
                             ref solverBatch.TypeBatches[solverBatch.TypeIndexToTypeBatchIndex[location.TypeId]], location.IndexInTypeBatch, ref bodyIndexEnumerator);
                         for (int i = 0; i < typeProcessor.BodiesPerConstraint; ++i)
                         {
-                            constraintReferencedBodyHandles.AddRef(ref bodies.ActiveSet.IndexToHandle[references[i]], pool);
+                            constraintReferencedBodyHandles.AddRef(ref bodies.ActiveSet.IndexToHandle[references[i]].Value, pool);
                         }
                         Console.Write($"{handle}, ");
                     }

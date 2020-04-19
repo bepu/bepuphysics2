@@ -30,10 +30,10 @@ namespace Demos.Demos
             const int width = 128;
             const int length = 128;
             const float spacing = 1.75f;
-            int[][] nodeHandles = new int[width][];
+            BodyHandle[][] nodeHandles = new BodyHandle[width][];
             for (int i = 0; i < width; ++i)
             {
-                nodeHandles[i] = new int[length];
+                nodeHandles[i] = new BodyHandle[length];
                 for (int j = 0; j < length; ++j)
                 {
                     var location = new Vector3(0, 30, 0) + new Vector3(spacing, 0, spacing) * (new Vector3(i, 0, j) + new Vector3(-width * 0.5f, 0, -length * 0.5f));
@@ -136,7 +136,7 @@ namespace Demos.Demos
             };
             Simulation.Bodies.Add(groundDescription);
         }
-        int bigBallHandle;
+        BodyHandle bigBallHandle;
         float timeAccumulator;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {

@@ -42,7 +42,7 @@ namespace Demos.SpecializedTests
 
             int constraintTestCount = Vector<float>.Count * 128;
 
-            int[] constraintBodyHandles = new int[constraintTypeBodyCount];
+            BodyHandle[] constraintBodyHandles = new BodyHandle[constraintTypeBodyCount];
             int[] constraintHandles = new int[constraintTestCount];
             T[] sources = new T[constraintTestCount];
 
@@ -53,7 +53,7 @@ namespace Demos.SpecializedTests
             {
                 for (int indexInConstraint = 0; indexInConstraint < constraintTypeBodyCount; ++indexInConstraint)
                 {
-                    int bodyHandleForConstraint;
+                    BodyHandle bodyHandleForConstraint;
                     do
                     {
                         bodyHandleForConstraint = simulation.Bodies.ActiveSet.IndexToHandle[random.Next(simulation.Bodies.ActiveSet.Count)];
@@ -64,7 +64,7 @@ namespace Demos.SpecializedTests
 
                 ref var source = ref sources[constraintTestIndex];
                 FillWithRandomBytes(ref source, random);
-                constraintHandles[constraintTestIndex] = simulation.Solver.Add(ref constraintBodyHandles[0], constraintTypeBodyCount, ref source);
+                constraintHandles[constraintTestIndex] = simulation.Solver.Add(constraintBodyHandles, ref source);
 
             }
             for (int constraintTestIndex = 0; constraintTestIndex < constraintTestCount; ++constraintTestIndex)

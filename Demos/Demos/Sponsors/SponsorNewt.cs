@@ -14,7 +14,7 @@ namespace Demos.Demos.Sponsors
     public struct SponsorNewt
     {
         public int SponsorIndex;
-        public int BodyHandle;
+        public BodyHandle BodyHandle;
         public SponsorNewt(Simulation simulation, TypedIndex shape, float height, in Vector2 arenaMin, in Vector2 arenaMax, Random random, int sponsorIndex) : this()
         {
             var arenaSpan = arenaMax - arenaMin;

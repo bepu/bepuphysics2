@@ -6,6 +6,7 @@ using BepuUtilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -88,7 +89,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void LoopBody(int connectedBodyIndex)
             {
-                var entryIndex = HandlesToIdentity[Bodies.ActiveSet.IndexToHandle[connectedBodyIndex]];
+                var entryIndex = HandlesToIdentity[Bodies.ActiveSet.IndexToHandle[connectedBodyIndex].Value];
                 if (IndexInConstraint == 0)
                     IdentityA = entryIndex;
                 else
@@ -116,7 +117,7 @@ namespace Demos.SpecializedTests
                 //The body in this constraint should both:
                 //1) have a handle associated with it, and 
                 //2) the constraint graph list for the body should include the constraint handle.
-                Debug.Assert(Simulation.Bodies.ActiveSet.IndexToHandle[bodyIndex] >= 0);
+                Debug.Assert(Simulation.Bodies.ActiveSet.IndexToHandle[bodyIndex].Value >= 0);
                 Debug.Assert(Simulation.Bodies.ActiveSet.BodyIsConstrainedBy(bodyIndex, ConstraintHandle));
             }
         }
@@ -184,7 +185,7 @@ namespace Demos.SpecializedTests
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void ChurnAddBody(Simulation simulation, BodyDescription[] bodyDescriptions, int[] bodyHandles, int[] bodyHandlesToIdentity,
+        private static void ChurnAddBody(Simulation simulation, BodyDescription[] bodyDescriptions, BodyHandle[] bodyHandles, int[] bodyHandlesToIdentity,
             int originalConstraintCount, List<int> removedConstraints, List<int> removedBodies, Random random)
         {
             //Add a body.
@@ -192,14 +193,14 @@ namespace Demos.SpecializedTests
             var toAdd = removedBodies[toAddIndex];
             FastRemoveAt(removedBodies, toAddIndex);
             var bodyHandle = simulation.Bodies.Add(bodyDescriptions[toAdd]);
-            bodyHandlesToIdentity[bodyHandle] = toAdd;
+            bodyHandlesToIdentity[bodyHandle.Value] = toAdd;
             bodyHandles[toAdd] = bodyHandle;
             WriteLine($"Added body, handle: {bodyHandle}");
             Validate(simulation, removedConstraints, removedBodies, bodyHandles.Length, originalConstraintCount);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void ChurnRemoveBody<T>(Simulation simulation, int[] bodyHandles, int[] bodyHandlesToIdentity, int[] constraintHandles,
+        private static void ChurnRemoveBody<T>(Simulation simulation, BodyHandle[] bodyHandles, int[] bodyHandlesToIdentity, int[] constraintHandles,
             int[] constraintHandlesToIdentity, CachedConstraint<T>[] constraintDescriptions,
             List<int> removedConstraints, List<int> removedBodies, Random random) where T : IConstraintDescription<T>
         {
@@ -217,15 +218,15 @@ namespace Demos.SpecializedTests
 #endif
             var handle = simulation.Bodies.ActiveSet.IndexToHandle[removedBodyIndex];
             simulation.Bodies.Remove(handle);
-            bodyHandles[bodyHandlesToIdentity[handle]] = -1;
-            removedBodies.Add(bodyHandlesToIdentity[handle]);
-            bodyHandlesToIdentity[handle] = -1;
+            bodyHandles[bodyHandlesToIdentity[handle.Value]] = new BodyHandle(-1);
+            removedBodies.Add(bodyHandlesToIdentity[handle.Value]);
+            bodyHandlesToIdentity[handle.Value] = -1;
             WriteLine($"Removed body, former handle: {handle}");
             Validate(simulation, removedConstraints, removedBodies, bodyHandles.Length, constraintHandles.Length);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void ChurnAddConstraint<T>(Simulation simulation, int[] bodyHandles, int[] constraintHandles, int[] constraintHandlesToIdentity,
+        private static void ChurnAddConstraint<T>(Simulation simulation, BodyHandle[] bodyHandles, int[] constraintHandles, int[] constraintHandlesToIdentity,
             CachedConstraint<T>[] constraintDescriptions, List<int> removedConstraints, List<int> removedBodies, Random random) where T : ITwoBodyConstraintDescription<T>
         {
             //Add a constraint.
@@ -237,8 +238,9 @@ namespace Demos.SpecializedTests
                 var constraintIdentityIndex = random.Next(removedConstraints.Count);
                 var constraintIdentity = removedConstraints[constraintIdentityIndex];
                 ref var constraint = ref constraintDescriptions[constraintIdentity];
-                int handleA, handleB;
-                if ((handleA = bodyHandles[constraint.BodyA]) >= 0 && (handleB = bodyHandles[constraint.BodyB]) >= 0)
+                var handleA = bodyHandles[constraint.BodyA];
+                var handleB = bodyHandles[constraint.BodyB];
+                if (handleA.Value >= 0 && handleB.Value >= 0)
                 {
                     //The constraint is addable.
                     var constraintHandle = simulation.Solver.Add(handleA, handleB, ref constraint.Description);
@@ -277,7 +279,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        public static double AddRemoveChurn<T>(Simulation simulation, int iterations, int[] bodyHandles, int[] constraintHandles) where T : struct, ITwoBodyConstraintDescription<T>
+        public static double AddRemoveChurn<T>(Simulation simulation, int iterations, BodyHandle[] bodyHandles, int[] constraintHandles) where T : struct, ITwoBodyConstraintDescription<T>
         {
             //There are three levels of 'index' for each object in this test:
             //1) The top level 'identity'. Even when a body or constraint gets readded, the slot in the top level array maintains a pointer to the new handle.
@@ -305,7 +307,7 @@ namespace Demos.SpecializedTests
                 ref var bodyDescription = ref bodyDescriptions[i];
                 var handle = bodyHandles[i];
                 simulation.Bodies.GetDescription(handle, out bodyDescription);
-                bodyHandlesToIdentity[handle] = i;
+                bodyHandlesToIdentity[handle.Value] = i;
             }
 
             for (int i = 0; i < constraintHandles.Length; ++i)

@@ -13,7 +13,7 @@ namespace BepuPhysics
         /// Index in the handle-to-memory mapping table used to look up the current memory location of the body. 
         /// This value will not (and must not) change during the body's lifespan, but the memory that the table points to could change.
         /// </summary>
-        public readonly int Value;
+        public int Value;
 
         public BodyHandle(int index)
         {
@@ -30,7 +30,7 @@ namespace BepuPhysics
         /// Index in the handle-to-memory mapping table used to look up the current memory location of the constraint. 
         /// This value will not (and must not) change during the constraint's lifespan, but the memory that the table points to could change.
         /// </summary>
-        public readonly int Value;
+        public int Value;
 
         public ConstraintHandle(int index)
         {

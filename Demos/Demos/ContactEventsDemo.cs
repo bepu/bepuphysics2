@@ -209,7 +209,7 @@ namespace Demos.Demos
                 var collidable = listeners.Keys[i];
                 //Pairs involved with inactive bodies do not need to be checked for freshness. If we did, it would result in inactive manifolds being considered a removal, and 
                 //more contact added events would fire when the bodies woke up.
-                if (collidable.Mobility != CollidableMobility.Static && bodies.HandleToLocation[collidable.Handle].SetIndex > 0)
+                if (collidable.Mobility != CollidableMobility.Static && bodies.HandleToLocation[collidable.BodyHandle.Value].SetIndex > 0)
                     continue;
                 ref var collisions = ref listeners.Values[i];
                 //Note reverse order. We remove during iteration.
@@ -217,7 +217,7 @@ namespace Demos.Demos
                 {
                     ref var collision = ref collisions[j];
                     //Again, any pair involving inactive bodies does not need to be examined.
-                    if (collision.Collidable.Mobility != CollidableMobility.Static && bodies.HandleToLocation[collision.Collidable.Handle].SetIndex > 0)
+                    if (collision.Collidable.Mobility != CollidableMobility.Static && bodies.HandleToLocation[collision.Collidable.BodyHandle.Value].SetIndex > 0)
                         continue;
                     if (!collision.Fresh)
                     {
@@ -342,8 +342,8 @@ namespace Demos.Demos
 
                     //Contact data is calibrated according to the order of the pair, so using A's position is important.
                     particle.Position = contactOffset + (pair.A.Mobility == CollidableMobility.Static ?
-                        new StaticReference(pair.A.Handle, Simulation.Statics).Pose.Position :
-                        new BodyReference(pair.A.Handle, Simulation.Bodies).Pose.Position);
+                        new StaticReference(pair.A.StaticHandle, Simulation.Statics).Pose.Position :
+                        new BodyReference(pair.A.BodyHandle, Simulation.Bodies).Pose.Position);
                     particle.Age = 0;
                     particle.Normal = contactNormal;
                 }

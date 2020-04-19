@@ -29,7 +29,7 @@ namespace Demos.Demos.Cars
             //It's impossible for two statics to collide, and pairs are sorted such that bodies always come before statics.
             if (b.Mobility != CollidableMobility.Static)
             {
-                return SubgroupCollisionFilter.AllowCollision(Properties[a.Handle].Filter, Properties[b.Handle].Filter);
+                return SubgroupCollisionFilter.AllowCollision(Properties[a.BodyHandle].Filter, Properties[b.BodyHandle].Filter);
             }
             return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
         }
@@ -43,11 +43,11 @@ namespace Demos.Demos.Cars
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
         {
-            pairMaterial.FrictionCoefficient = Properties[pair.A.Handle].Friction;
+            pairMaterial.FrictionCoefficient = Properties[pair.A.BodyHandle].Friction;
             if (pair.B.Mobility != CollidableMobility.Static)
             {
                 //If two bodies collide, just average the friction.
-                pairMaterial.FrictionCoefficient = (pairMaterial.FrictionCoefficient + Properties[pair.B.Handle].Friction) * 0.5f;
+                pairMaterial.FrictionCoefficient = (pairMaterial.FrictionCoefficient + Properties[pair.B.BodyHandle].Friction) * 0.5f;
             }
             pairMaterial.MaximumRecoveryVelocity = 2f;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);

@@ -61,7 +61,7 @@ namespace Demos.Demos
         {
             if (a.Mobility != CollidableMobility.Static && b.Mobility != CollidableMobility.Static)
             {
-                return ClothCollisionFilter.Test(Filters[a.Handle], Filters[b.Handle]);
+                return ClothCollisionFilter.Test(Filters[a.BodyHandle], Filters[b.BodyHandle]);
             }
             return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
         }
@@ -100,7 +100,7 @@ namespace Demos.Demos
     {
         delegate bool KinematicDecider(int rowIndex, int columnIndex, int width, int height);
 
-        int[,] CreateBodyGrid(in Vector3 position, in Quaternion orientation, int width, int height, float spacing, float bodyRadius, float massPerBody,
+        BodyHandle[,] CreateBodyGrid(in Vector3 position, in Quaternion orientation, int width, int height, float spacing, float bodyRadius, float massPerBody,
             int instanceId, BodyProperty<ClothCollisionFilter> filters, KinematicDecider isKinematic)
         {
             var description = new BodyDescription
@@ -111,7 +111,7 @@ namespace Demos.Demos
                 Pose = new RigidPose(default, orientation)
             };
             var inverseMass = 1f / massPerBody;
-            int[,] handles = new int[height, width];
+            BodyHandle[,] handles = new BodyHandle[height, width];
             for (int rowIndex = 0; rowIndex < height; ++rowIndex)
             {
                 for (int columnIndex = 0; columnIndex < width; ++columnIndex)
@@ -128,7 +128,7 @@ namespace Demos.Demos
             return handles;
         }
 
-        void CreateAreaConstraints(int[,] bodyHandles, SpringSettings springSettings)
+        void CreateAreaConstraints(BodyHandle[,] bodyHandles, SpringSettings springSettings)
         {
             for (int rowIndex = 0; rowIndex < bodyHandles.GetLength(0) - 1; ++rowIndex)
             {
@@ -149,9 +149,9 @@ namespace Demos.Demos
                 }
             }
         }
-        void CreateDistanceConstraints(int[,] bodyHandles, SpringSettings springSettings)
+        void CreateDistanceConstraints(BodyHandle[,] bodyHandles, SpringSettings springSettings)
         {
-            void CreateConstraintBetweenBodies(int aHandle, int bHandle)
+            void CreateConstraintBetweenBodies(BodyHandle aHandle, BodyHandle bHandle)
             {
                 var a = new BodyReference(aHandle, Simulation.Bodies);
                 var b = new BodyReference(bHandle, Simulation.Bodies);

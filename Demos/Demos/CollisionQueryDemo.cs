@@ -117,13 +117,13 @@ namespace Demos.Demos
             //Collidables can be associated with either bodies or statics. We have to look in a different place depending on which it is.
             if (reference.Mobility == CollidableMobility.Static)
             {
-                var staticIndex = Simulation.Statics.HandleToIndex[reference.Handle];
+                var staticIndex = Simulation.Statics.HandleToIndex[reference.StaticHandle];
                 pose = Simulation.Statics.Poses[staticIndex];
                 shapeIndex = Simulation.Statics.Collidables[staticIndex].Shape;
             }
             else
             {
-                var bodyReference = Simulation.Bodies.GetBodyReference(reference.Handle);
+                var bodyReference = Simulation.Bodies.GetBodyReference(reference.BodyHandle);
                 pose = bodyReference.Pose;
                 shapeIndex = bodyReference.Collidable.Shape;
             }

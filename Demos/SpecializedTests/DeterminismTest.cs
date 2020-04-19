@@ -36,7 +36,7 @@ namespace Demos.SpecializedTests
                 {
                     for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
                     {
-                        motionStates.Add(set.IndexToHandle[bodyIndex], new MotionState { Pose = set.Poses[bodyIndex], Velocity = set.Velocities[bodyIndex] });
+                        motionStates.Add(set.IndexToHandle[bodyIndex].Value, new MotionState { Pose = set.Poses[bodyIndex], Velocity = set.Velocities[bodyIndex] });
                     }
                 }
             }

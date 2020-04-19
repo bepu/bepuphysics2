@@ -35,7 +35,7 @@ namespace Demos.Demos.Characters
         /// <summary>
         /// Handle of the body associated with the character.
         /// </summary>
-        public int BodyHandle;
+        public BodyHandle BodyHandle;
         /// <summary>
         /// Character's up direction in the local space of the character's body.
         /// </summary>
@@ -165,10 +165,10 @@ namespace Demos.Demos.Characters
         /// <param name="bodyHandle">Body handle of the character to look up.</param>
         /// <returns>Reference to the character associated with the given body handle.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref CharacterController GetCharacterByBodyHandle(int bodyHandle)
+        public ref CharacterController GetCharacterByBodyHandle(BodyHandle bodyHandle)
         {
-            Debug.Assert(bodyHandle >= 0 && bodyHandle < bodyHandleToCharacterIndex.Length && bodyHandleToCharacterIndex[bodyHandle] >= 0, "Can only look up indices for body handles associated with characters in this CharacterControllers instance.");
-            return ref characters[bodyHandleToCharacterIndex[bodyHandle]];
+            Debug.Assert(bodyHandle.Value >= 0 && bodyHandle.Value < bodyHandleToCharacterIndex.Length && bodyHandleToCharacterIndex[bodyHandle.Value] >= 0, "Can only look up indices for body handles associated with characters in this CharacterControllers instance.");
+            return ref characters[bodyHandleToCharacterIndex[bodyHandle.Value]];
         }
 
         /// <summary>
@@ -176,17 +176,17 @@ namespace Demos.Demos.Characters
         /// </summary>
         /// <param name="bodyHandle">Body handle associated with the character.</param>
         /// <returns>Reference to the allocated character.</returns>
-        public ref CharacterController AllocateCharacter(int bodyHandle)
+        public ref CharacterController AllocateCharacter(BodyHandle bodyHandle)
         {
-            Debug.Assert(bodyHandle >= 0 && (bodyHandle >= bodyHandleToCharacterIndex.Length || bodyHandleToCharacterIndex[bodyHandle] == -1),
+            Debug.Assert(bodyHandle.Value >= 0 && (bodyHandle.Value >= bodyHandleToCharacterIndex.Length || bodyHandleToCharacterIndex[bodyHandle.Value] == -1),
                 "Cannot allocate more than one character for the same body handle.");
-            if (bodyHandle >= bodyHandleToCharacterIndex.Length)
-                ResizeBodyHandleCapacity(Math.Max(bodyHandle + 1, bodyHandleToCharacterIndex.Length * 2));
+            if (bodyHandle.Value >= bodyHandleToCharacterIndex.Length)
+                ResizeBodyHandleCapacity(Math.Max(bodyHandle.Value + 1, bodyHandleToCharacterIndex.Length * 2));
             var characterIndex = characters.Count;
             ref var character = ref characters.Allocate(pool);
             character = default;
             character.BodyHandle = bodyHandle;
-            bodyHandleToCharacterIndex[bodyHandle] = characterIndex;
+            bodyHandleToCharacterIndex[bodyHandle.Value] = characterIndex;
             return ref character;
         }
 
@@ -198,14 +198,14 @@ namespace Demos.Demos.Characters
         {
             Debug.Assert(characterIndex >= 0 && characterIndex < characters.Count, "Character index must exist in the set of characters.");
             ref var character = ref characters[characterIndex];
-            Debug.Assert(character.BodyHandle >= 0 && character.BodyHandle < bodyHandleToCharacterIndex.Length && bodyHandleToCharacterIndex[character.BodyHandle] == characterIndex,
+            Debug.Assert(character.BodyHandle.Value >= 0 && character.BodyHandle.Value < bodyHandleToCharacterIndex.Length && bodyHandleToCharacterIndex[character.BodyHandle.Value] == characterIndex,
                 "Character must exist in the set of characters.");
-            bodyHandleToCharacterIndex[character.BodyHandle] = -1;
+            bodyHandleToCharacterIndex[character.BodyHandle.Value] = -1;
             characters.FastRemoveAt(characterIndex);
             //If the removal moved a character, update the body handle mapping.
             if (characters.Count > characterIndex)
             {
-                bodyHandleToCharacterIndex[characters[characterIndex].BodyHandle] = characterIndex;
+                bodyHandleToCharacterIndex[characters[characterIndex].BodyHandle.Value] = characterIndex;
             }
         }
 
@@ -213,11 +213,11 @@ namespace Demos.Demos.Characters
         /// Removes a character from the character controllers set by the body handle associated with the character.
         /// </summary>
         /// <param name="bodyHandle">Body handle associated with the character to remove.</param>
-        public void RemoveCharacterByBodyHandle(int bodyHandle)
+        public void RemoveCharacterByBodyHandle(BodyHandle bodyHandle)
         {
-            Debug.Assert(bodyHandle >= 0 && bodyHandle < bodyHandleToCharacterIndex.Length && bodyHandleToCharacterIndex[bodyHandle] >= 0,
+            Debug.Assert(bodyHandle.Value >= 0 && bodyHandle.Value < bodyHandleToCharacterIndex.Length && bodyHandleToCharacterIndex[bodyHandle.Value] >= 0,
                 "Removing a character by body handle requires that a character associated with the given body handle actually exists.");
-            RemoveCharacterByIndex(bodyHandleToCharacterIndex[bodyHandle]);
+            RemoveCharacterByIndex(bodyHandleToCharacterIndex[bodyHandle.Value]);
         }
 
         struct SupportCandidate
@@ -255,10 +255,10 @@ namespace Demos.Demos.Characters
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         bool TryReportContacts<TManifold>(CollidableReference characterCollidable, CollidableReference supportCollidable, CollidablePair pair, ref TManifold manifold, int workerIndex) where TManifold : struct, IContactManifold<TManifold>
         {
-            if (characterCollidable.Mobility == CollidableMobility.Dynamic && characterCollidable.Handle < bodyHandleToCharacterIndex.Length)
+            if (characterCollidable.Mobility == CollidableMobility.Dynamic && characterCollidable.BodyHandle.Value < bodyHandleToCharacterIndex.Length)
             {
-                var characterBodyHandle = characterCollidable.Handle;
-                var characterIndex = bodyHandleToCharacterIndex[characterBodyHandle];
+                var characterBodyHandle = characterCollidable.BodyHandle;
+                var characterIndex = bodyHandleToCharacterIndex[characterBodyHandle.Value];
                 if (characterIndex >= 0)
                 {
                     //This is actually a character.
@@ -277,7 +277,7 @@ namespace Demos.Demos.Characters
 
                     //Note that the body may be inactive during this callback even though it will be activated by new constraints after the narrow phase flushes.
                     //Have to take into account the current potentially inactive location.
-                    ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[character.BodyHandle];
+                    ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[character.BodyHandle.Value];
                     ref var set = ref Simulation.Bodies.Sets[bodyLocation.SetIndex];
                     ref var pose = ref set.Poses[bodyLocation.Index];
                     QuaternionEx.Transform(character.LocalUp, pose.Orientation, out var up);
@@ -549,7 +549,7 @@ namespace Demos.Demos.Characters
                 //Note that this iterates over both active and inactive characters rather than segmenting inactive characters into their own collection.
                 //This demands branching, but the expectation is that the vast majority of characters will be active, so there is less value in copying them into stasis.                
                 ref var character = ref characters[characterIndex];
-                ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[character.BodyHandle];
+                ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[character.BodyHandle.Value];
                 if (bodyLocation.SetIndex == 0)
                 {
                     var supportCandidate = contactCollectionWorkerCaches[0].SupportCandidates[characterIndex];
@@ -601,7 +601,7 @@ namespace Demos.Demos.Characters
                         //Instead, jumping targets a velocity change necessary to reach character.JumpVelocity along the up axis.
                         if (character.Support.Mobility != CollidableMobility.Static)
                         {
-                            ref var supportingBodyLocation = ref Simulation.Bodies.HandleToLocation[character.Support.Handle];
+                            ref var supportingBodyLocation = ref Simulation.Bodies.HandleToLocation[character.Support.BodyHandle.Value];
                             Debug.Assert(supportingBodyLocation.SetIndex == 0, "If the character is active, any support should be too.");
                             ref var supportVelocity = ref Simulation.Bodies.ActiveSet.Velocities[supportingBodyLocation.Index];
                             var wxr = Vector3.Cross(supportVelocity.Angular, supportCandidate.OffsetFromSupport);
@@ -822,7 +822,7 @@ namespace Demos.Demos.Characters
                         ref var pendingConstraint = ref workerCache.DynamicConstraintsToAdd[i];
                         ref var character = ref characters[pendingConstraint.CharacterIndex];
                         Debug.Assert(character.Support.Mobility != CollidableMobility.Static);
-                        character.MotionConstraintHandle = Simulation.Solver.Add(character.BodyHandle, character.Support.Handle, ref pendingConstraint.Description);
+                        character.MotionConstraintHandle = Simulation.Solver.Add(character.BodyHandle, character.Support.BodyHandle, ref pendingConstraint.Description);
                     }
                     ref var activeSet = ref Simulation.Bodies.ActiveSet;
                     for (int i = 0; i < workerCache.Jumps.Count; ++i)

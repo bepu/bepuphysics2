@@ -106,7 +106,7 @@ namespace Demos.Demos
             //It's impossible for two statics to collide, and pairs are sorted such that bodies always come before statics.
             if (b.Mobility != CollidableMobility.Static)
             {
-                return SubgroupCollisionFilter.AllowCollision(CollisionFilters[a.Handle], CollisionFilters[b.Handle]);
+                return SubgroupCollisionFilter.AllowCollision(CollisionFilters[a.BodyHandle], CollisionFilters[b.BodyHandle]);
             }
             return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
         }
@@ -140,7 +140,7 @@ namespace Demos.Demos
 
     public class RagdollDemo : Demo
     {
-        static int AddBody<TShape>(TShape shape, float mass, in RigidPose pose, Simulation simulation) where TShape : unmanaged, IConvexShape
+        static BodyHandle AddBody<TShape>(TShape shape, float mass, in RigidPose pose, Simulation simulation) where TShape : unmanaged, IConvexShape
         {
             //Note that this always registers a new shape instance. You could be more clever/efficient and share shapes, but the goal here is to show the most basic option.
             //Also, the cost of registering different shapes isn't that high for tiny implicit shapes.
@@ -189,7 +189,7 @@ namespace Demos.Demos
             return new AngularMotor { TargetVelocityLocalA = new Vector3(), Settings = new MotorSettings(float.MaxValue, 0.01f) };
         }
 
-        static RagdollArmHandles AddArm(float sign, Vector3 localShoulder, RigidPose localChestPose, int chestHandle, ref SubgroupCollisionFilter chestMask,
+        static RagdollArmHandles AddArm(float sign, Vector3 localShoulder, RigidPose localChestPose, BodyHandle chestHandle, ref SubgroupCollisionFilter chestMask,
             int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyProperty<SubgroupCollisionFilter> filters, SpringSettings constraintSpringSettings, Simulation simulation)
         {
             RagdollArmHandles handles;
@@ -294,7 +294,7 @@ namespace Demos.Demos
             return handles;
         }
 
-        static RagdollLegHandles AddLeg(Vector3 localHip, RigidPose localHipsPose, int hipsHandle, ref SubgroupCollisionFilter hipsFilter,
+        static RagdollLegHandles AddLeg(Vector3 localHip, RigidPose localHipsPose, BodyHandle hipsHandle, ref SubgroupCollisionFilter hipsFilter,
             int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyProperty<SubgroupCollisionFilter> filters, SpringSettings constraintSpringSettings, Simulation simulation)
         {
             RagdollLegHandles handles;
@@ -392,22 +392,22 @@ namespace Demos.Demos
 
         public struct RagdollArmHandles
         {
-            public int UpperArm;
-            public int LowerArm;
-            public int Hand;
+            public BodyHandle UpperArm;
+            public BodyHandle LowerArm;
+            public BodyHandle Hand;
         }
         public struct RagdollLegHandles
         {
-            public int UpperLeg;
-            public int LowerLeg;
-            public int Foot;
+            public BodyHandle UpperLeg;
+            public BodyHandle LowerLeg;
+            public BodyHandle Foot;
         }
         public struct RagdollHandles
         {
-            public int Head;
-            public int Chest;
-            public int Abdomen;
-            public int Hips;
+            public BodyHandle Head;
+            public BodyHandle Chest;
+            public BodyHandle Abdomen;
+            public BodyHandle Hips;
             public RagdollArmHandles LeftArm;
             public RagdollArmHandles RightArm;
             public RagdollLegHandles LeftLeg;

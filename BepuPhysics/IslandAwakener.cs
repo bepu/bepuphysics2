@@ -345,13 +345,13 @@ namespace BepuPhysics
                                     {
                                         if (movedLeaf.Mobility == Collidables.CollidableMobility.Static)
                                         {
-                                            statics.Collidables[statics.HandleToIndex[movedLeaf.Handle.Value]].BroadPhaseIndex = staticBroadPhaseIndexToRemove;
+                                            statics.Collidables[statics.HandleToIndex[movedLeaf.StaticHandle]].BroadPhaseIndex = staticBroadPhaseIndexToRemove;
                                         }
                                         else
                                         {
                                             //Note that the moved leaf cannot refer to one of the collidables that we've already moved into the active set, because all such collidables
                                             //have already been removed. 
-                                            bodies.UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, staticBroadPhaseIndexToRemove);
+                                            bodies.UpdateCollidableBroadPhaseIndex(movedLeaf.BodyHandle, staticBroadPhaseIndexToRemove);
                                         }
                                     }
                                 }

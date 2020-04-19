@@ -49,7 +49,7 @@ namespace Demos.SpecializedTests
                         ref var velocity = ref set.Velocities[bodyIndex];
                         var poseHash = ComputeHash(ref pose.Position, 89) + ComputeHash(ref pose.Orientation.X, 107) + ComputeHash(ref pose.Orientation.Y, 113) + ComputeHash(ref pose.Orientation.Z, 131) + ComputeHash(ref pose.Orientation.W, 149);
                         var velocityHash = ComputeHash(ref velocity.Linear, 211) + ComputeHash(ref velocity.Angular, 397);
-                        hash += set.IndexToHandle[bodyIndex] * (poseHash + velocityHash);
+                        hash += set.IndexToHandle[bodyIndex].Value * (poseHash + velocityHash);
                     }
                 }
             }

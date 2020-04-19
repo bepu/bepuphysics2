@@ -34,31 +34,73 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
-        /// Gets the handle of the owner of the collidable referred to by this instance.
+        /// Gets the body handle of the owner of the collidable referred to by this instance.
         /// </summary>
-        public BodyHandle Handle
+        public BodyHandle BodyHandle
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return new BodyHandle((int)(Packed & 0x3FFFFFFF)); }
+            get
+            {
+                Debug.Assert(Mobility == CollidableMobility.Dynamic || Mobility == CollidableMobility.Kinematic, "Extracting a body handle from a collidable reference requires that the collidable is owned by a body.");
+                return new BodyHandle((int)(Packed & 0x3FFFFFFF));
+            }
         }
 
-        
+
+        /// <summary>
+        /// Gets the static handle of the owner of the collidable referred to by this instance.
+        /// </summary>
+        public int StaticHandle
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                Debug.Assert(Mobility == CollidableMobility.Dynamic || Mobility == CollidableMobility.Kinematic, "Extracting a static handle from a collidable reference requires that the collidable is owned by a static.");
+                return (int)(Packed & 0x3FFFFFFF);
+            }
+        }
+
+
         /// <summary>
         /// Creates a collidable reference.
         /// </summary>
         /// <param name="mobility">Mobility type of the owner of the collidable.</param>
         /// <param name="handle">Handle of the owner of the collidable.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public CollidableReference(CollidableMobility mobility, BodyHandle handle)
+        internal CollidableReference(CollidableMobility mobility, int handle)
         {
             Debug.Assert((int)mobility >= 0 && (int)mobility <= 2, "Hey you, that mobility type doesn't exist. Or we changed something and this needs to be updated.");
-            Debug.Assert(handle.Value >= 0 && handle.Value < 1 << 30, "Do you actually have more than 2^30 collidables? That seems unlikely.");
-            Packed = ((uint)mobility << 30) | (uint)handle.Value;
+            Debug.Assert(handle >= 0 && handle < 1 << 30, "Do you actually have more than 2^30 collidables? That seems unlikely.");
+            Packed = ((uint)mobility << 30) | (uint)handle;
+        }
+
+        /// <summary>
+        /// Creates a collidable reference for a body.
+        /// </summary>
+        /// <param name="mobility">Mobility type of the owner of the collidable.</param>
+        /// <param name="handle">Handle of the owner of the collidable.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public CollidableReference(CollidableMobility mobility, BodyHandle handle)
+            : this(mobility, handle.Value)
+        {
+            Debug.Assert(mobility == CollidableMobility.Dynamic || mobility == CollidableMobility.Kinematic, "Creating a collidable reference associated with a body requires a body-related mobility.");
+        }
+
+        /// <summary>
+        /// Creates a collidable reference for a static.
+        /// </summary>
+        /// <param name="mobility">Mobility type of the owner of the collidable.</param>
+        /// <param name="handle">Handle of the owner of the collidable.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public CollidableReference(int handle)
+            : this(CollidableMobility.Static, handle)
+        {
         }
 
         public override string ToString()
         {
-            return $"{Mobility}: {Handle}";
+            var handle = (Mobility == CollidableMobility.Static) ? StaticHandle : BodyHandle.Value;
+            return $"{Mobility}[{handle}]";
         }
     }
 

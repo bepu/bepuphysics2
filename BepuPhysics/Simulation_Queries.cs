@@ -122,13 +122,13 @@ namespace BepuPhysics
         {
             if (reference.Mobility == CollidableMobility.Static)
             {
-                var index = Statics.HandleToIndex[reference.Handle];
+                var index = Statics.HandleToIndex[reference.StaticHandle];
                 pose = Statics.Poses.Memory + index;
                 shape = Statics.Collidables[index].Shape;
             }
             else
             {
-                ref var location = ref Bodies.HandleToLocation[reference.Handle];
+                ref var location = ref Bodies.HandleToLocation[reference.StaticHandle];
                 ref var set = ref Bodies.Sets[location.SetIndex];
                 pose = set.Poses.Memory + location.Index;
                 shape = set.Collidables[location.Index].Shape;

@@ -97,7 +97,7 @@ namespace Demos
                 {
                     //Found something to grab!
                     t = hitHandler.T;
-                    body = new BodyReference(hitHandler.HitCollidable.Handle, simulation.Bodies);
+                    body = simulation.Bodies.GetBodyReference(hitHandler.HitCollidable.BodyHandle);
                     var hitLocation = camera.Position + rayDirection * t;
                     RigidPose.TransformByInverse(hitLocation, body.Pose, out localGrabPoint);
                     targetOrientation = body.Pose.Orientation;

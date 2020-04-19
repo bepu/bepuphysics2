@@ -157,7 +157,7 @@ namespace Demos.Demos.Cars
             for (int i = 0; i < aiControllers.Length; ++i)
             {
                 ref var ai = ref aiControllers[i];
-                var body = new BodyReference(ai.Controller.Car.Body, Simulation.Bodies);
+                var body = Simulation.Bodies.GetBodyReference(ai.Controller.Car.Body);
                 ref var pose = ref body.Pose;
                 Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
                 var forwardVelocity = Vector3.Dot(orientation.Z, body.Velocity.Linear);

@@ -11,7 +11,7 @@ namespace Demos.SpecializedTests
 {
     static class MemoryResizeTests
     {
-        static void Resize(Simulation simulation, Random random, int[] bodyHandles, int[] constraintHandles)
+        static void Resize(Simulation simulation, Random random, BodyHandle[] bodyHandles, int[] constraintHandles)
         {
             var scale = 4 * random.NextDouble();
             var sizes = new SimulationAllocationSizes
@@ -94,7 +94,7 @@ namespace Demos.SpecializedTests
             SimulationScrambling.AddRemoveChurn<BallSocket>(simulation, 1000, bodyHandles, constraintHandles);
 
             
-            ref var location = ref simulation.Bodies.HandleToLocation[bodyHandles[width]];
+            ref var location = ref simulation.Bodies.HandleToLocation[bodyHandles[width].Value];
             Debug.Assert(location.SetIndex == 0, "Nothing above should result in inactive objects.");
             simulation.Bodies.ActiveSet.Velocities[location.Index].Linear = new Vector3(0.1f, 0, 0.1f);
 

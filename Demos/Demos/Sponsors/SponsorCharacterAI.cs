@@ -11,7 +11,7 @@ namespace Demos.Demos.Sponsors
 {
     public struct SponsorCharacterAI
     {
-        int bodyHandle;
+        BodyHandle bodyHandle;
         Vector2 targetLocation;
         public SponsorCharacterAI(CharacterControllers characters, in CollidableDescription characterCollidable, in Vector3 initialPosition, in Vector2 targetLocation)
         {

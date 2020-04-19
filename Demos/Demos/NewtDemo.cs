@@ -538,7 +538,7 @@ namespace Demos.Demos
         {
             if (a.Mobility == CollidableMobility.Dynamic && b.Mobility == CollidableMobility.Dynamic)
             {
-                return DeformableCollisionFilter.Test(Filters[a.Handle], Filters[b.Handle]);
+                return DeformableCollisionFilter.Test(Filters[a.BodyHandle], Filters[b.BodyHandle]);
             }
             return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
         }
@@ -655,7 +655,7 @@ namespace Demos.Demos
             var edgeCountForInternalVertex = CreateHexahedralUniqueEdgesList(ref cellVertexIndices, ref vertexEdgeCounts, pool, ref edges);
             //var edgeCountForInternalVertex = CreateTetrahedralUniqueEdgesList(ref tetrahedraVertexIndices, ref vertexEdgeCounts, ref cellEdgePool, ref intPool, ref edges);
 
-            pool.TakeAtLeast<int>(vertices.Length, out var vertexHandles);
+            pool.TakeAtLeast<BodyHandle>(vertices.Length, out var vertexHandles);
             var vertexShape = new Sphere(cellSize * 0.7f);
             var massPerVertex = density * (cellSize * cellSize * cellSize);
             vertexShape.ComputeInertia(massPerVertex, out var vertexInertia);

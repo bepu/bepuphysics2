@@ -19,9 +19,9 @@ namespace Demos.Demos
     /// </summary>
     public class RopeStabilityDemo : Demo
     {
-        static int[] BuildRopeBodies(Simulation simulation, in Vector3 start, int bodyCount, float bodySize, float bodySpacing, float massPerBody, float inverseInertiaScale)
+        static BodyHandle[] BuildRopeBodies(Simulation simulation, in Vector3 start, int bodyCount, float bodySize, float bodySpacing, float massPerBody, float inverseInertiaScale)
         {
-            int[] handles = new int[bodyCount + 1];
+            BodyHandle[] handles = new BodyHandle[bodyCount + 1];
             var ropeShape = new Sphere(bodySize);
             ropeShape.ComputeInertia(massPerBody, out var ropeInertia);
             Symmetric3x3.Scale(ropeInertia.InverseInertiaTensor, inverseInertiaScale, out ropeInertia.InverseInertiaTensor);
@@ -42,7 +42,7 @@ namespace Demos.Demos
 
             return handles;
         }
-        public static int[] BuildRope(Simulation simulation, in Vector3 start, int bodyCount, float bodySize, float bodySpacing, float constraintOffsetLength, float massPerBody, float inverseInertiaScale, SpringSettings springSettings)
+        public static BodyHandle[] BuildRope(Simulation simulation, in Vector3 start, int bodyCount, float bodySize, float bodySpacing, float constraintOffsetLength, float massPerBody, float inverseInertiaScale, SpringSettings springSettings)
         {
             var handles = BuildRopeBodies(simulation, start, bodyCount, bodySize, bodySpacing, massPerBody, inverseInertiaScale);
             var maximumDistance = 2 * bodySize + bodySpacing - 2 * constraintOffsetLength;
@@ -54,7 +54,7 @@ namespace Demos.Demos
             return handles;
         }
 
-        static int CreateWreckingBall(Simulation simulation, int[] bodyHandles, float ropeBodyRadius, float bodySpacing, float wreckingBallRadius, BodyInertia wreckingBallInertia, TypedIndex wreckingBallShapeIndex)
+        static BodyHandle CreateWreckingBall(Simulation simulation, BodyHandle[] bodyHandles, float ropeBodyRadius, float bodySpacing, float wreckingBallRadius, BodyInertia wreckingBallInertia, TypedIndex wreckingBallShapeIndex)
         {
             var lastBodyReference = new BodyReference(bodyHandles[bodyHandles.Length - 1], simulation.Bodies);
             var wreckingBallPosition = lastBodyReference.Pose.Position - new Vector3(0, ropeBodyRadius + bodySpacing + wreckingBallRadius, 0);
@@ -65,9 +65,9 @@ namespace Demos.Demos
             return wreckingBallBodyHandle;
         }
 
-        public static int AttachWreckingBall(Simulation simulation, int[] bodyHandles, float ropeBodyRadius, float bodySpacing, float constraintOffsetLength, float wreckingBallRadius, BodyInertia wreckingBallInertia, TypedIndex wreckingBallShapeIndex, SpringSettings springSettings)
+        public static BodyHandle AttachWreckingBall(Simulation simulation, BodyHandle[] bodyHandles, float ropeBodyRadius, float bodySpacing, float constraintOffsetLength, float wreckingBallRadius, BodyInertia wreckingBallInertia, TypedIndex wreckingBallShapeIndex, SpringSettings springSettings)
         {
-            int wreckingBallBodyHandle = CreateWreckingBall(simulation, bodyHandles, ropeBodyRadius, bodySpacing, wreckingBallRadius, wreckingBallInertia, wreckingBallShapeIndex);
+            BodyHandle wreckingBallBodyHandle = CreateWreckingBall(simulation, bodyHandles, ropeBodyRadius, bodySpacing, wreckingBallRadius, wreckingBallInertia, wreckingBallShapeIndex);
             var maximumDistance = bodySpacing + ropeBodyRadius - constraintOffsetLength;
             simulation.Solver.Add(bodyHandles[bodyHandles.Length - 1], wreckingBallBodyHandle,
                 new DistanceLimit(new Vector3(0, -constraintOffsetLength, 0), new Vector3(0, wreckingBallRadius, 0), maximumDistance * 0.1f, maximumDistance, springSettings));

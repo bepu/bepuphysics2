@@ -238,7 +238,7 @@ namespace DemoRenderer.ShapeDrawing
             ref var activity = ref set.Activity[indexInSet];
             ref var inertia = ref set.LocalInertias[indexInSet];
             Vector3 color;
-            Helpers.UnpackColor((uint)HashHelper.Rehash(handle), out Vector3 colorVariation);
+            Helpers.UnpackColor((uint)HashHelper.Rehash(handle.Value), out Vector3 colorVariation);
             if (Bodies.IsKinematic(inertia))
             {
                 var kinematicBase = new Vector3(0, 0.609f, 0.37f);

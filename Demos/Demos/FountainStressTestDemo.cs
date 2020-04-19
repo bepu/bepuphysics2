@@ -15,7 +15,7 @@ namespace Demos.Demos
     public class FountainStressTestDemo : Demo
     {
         QuickQueue<StaticDescription> removedStatics;
-        QuickQueue<int> dynamicHandles;
+        QuickQueue<BodyHandle> dynamicHandles;
         Random random;
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
@@ -79,7 +79,7 @@ namespace Demos.Demos
             var kinematicCount = 64;
             var anglePerKinematic = MathHelper.TwoPi / kinematicCount;
             var startingRadius = 256;
-            kinematicHandles = new int[kinematicCount];
+            kinematicHandles = new BodyHandle[kinematicCount];
             for (int i = 0; i < kinematicCount; ++i)
             {
                 var angle = anglePerKinematic * i;
@@ -104,14 +104,14 @@ namespace Demos.Demos
                 kinematicHandles[i] = Simulation.Bodies.Add(description);
             }
 
-            dynamicHandles = new QuickQueue<int>(65536, BufferPool);
+            dynamicHandles = new QuickQueue<BodyHandle>(65536, BufferPool);
             removedStatics = new QuickQueue<StaticDescription>(512, BufferPool);
             random = new Random(5);
         }
 
         double time;
         double t;
-        int[] kinematicHandles;
+        BodyHandle[] kinematicHandles;
 
         void AddConvexShape<TConvex>(in TConvex convex, out TypedIndex shapeIndex, out BodyInertia inertia) where TConvex : unmanaged, IConvexShape
         {
@@ -264,7 +264,7 @@ namespace Demos.Demos
             var inverseDt = 1f / timestepDuration;
             for (int i = 0; i < kinematicHandles.Length; ++i)
             {
-                ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[kinematicHandles[i]];
+                ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[kinematicHandles[i].Value];
 
                 ref var set = ref Simulation.Bodies.Sets[bodyLocation.SetIndex];
                 var angle = anglePerKinematic * i;
@@ -350,7 +350,7 @@ namespace Demos.Demos
             {
                 if (dynamicHandles.TryDequeue(out var handle))
                 {
-                    ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[handle];
+                    ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[handle.Value];
                     //Every body has a unique shape, so we need to remove shapes with bodies.
                     var shapeIndex = Simulation.Bodies.Sets[bodyLocation.SetIndex].Collidables[bodyLocation.Index].Shape;
                     Simulation.Bodies.Remove(handle);
