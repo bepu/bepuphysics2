@@ -55,7 +55,7 @@ namespace BepuPhysics.Collidables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                Debug.Assert(Mobility == CollidableMobility.Dynamic || Mobility == CollidableMobility.Kinematic, "Extracting a static handle from a collidable reference requires that the collidable is owned by a static.");
+                Debug.Assert(Mobility == CollidableMobility.Static, "Extracting a static handle from a collidable reference requires that the collidable is owned by a static.");
                 return (int)(Packed & 0x3FFFFFFF);
             }
         }

@@ -418,7 +418,7 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(aMobility != CollidableMobility.Static && bMobility == CollidableMobility.Static);
                 ref var bodyLocation = ref Bodies.HandleToLocation[a.BodyHandle.Value];
                 Debug.Assert(bodyLocation.SetIndex == 0, "The body of a body-static pair must be active.");
-                var staticIndex = Statics.HandleToIndex[b.BodyHandle.Value];
+                var staticIndex = Statics.HandleToIndex[b.StaticHandle];
 
                 //TODO: Ideally, the compiler would see this and optimize away the relevant math in AddBatchEntries. That's a longshot, though. May want to abuse some generics to force it.
                 var zeroVelocity = default(BodyVelocity);
