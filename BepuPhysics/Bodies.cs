@@ -106,9 +106,9 @@ namespace BepuPhysics
         /// <summary>
         /// Updates the bounds held within the broad phase for the body's current state. Does not expand the bounding box by velocity. If there is no shape associated with the body, this does nothing.
         /// </summary>
-        public void UpdateBounds(int bodyHandle)
+        public void UpdateBounds(BodyHandle bodyHandle)
         {
-            ref var location = ref HandleToLocation[bodyHandle];
+            ref var location = ref HandleToLocation[bodyHandle.Value];
             ref var set = ref Sets[location.SetIndex];
             ref var collidable = ref set.Collidables[location.Index];
             if (collidable.Shape.Exists)
@@ -126,7 +126,7 @@ namespace BepuPhysics
 
         }
 
-        void AddCollidableToBroadPhase(int bodyHandle, in RigidPose pose, in BodyInertia localInertia, ref Collidable collidable)
+        void AddCollidableToBroadPhase(BodyHandle bodyHandle, in RigidPose pose, in BodyInertia localInertia, ref Collidable collidable)
         {
             Debug.Assert(collidable.Shape.Exists);
             //This body has a collidable; stick it in the broadphase.
@@ -141,9 +141,9 @@ namespace BepuPhysics
                     ref bodyBounds);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void UpdateCollidableBroadPhaseIndex(int handle, int newBroadPhaseIndex)
+        internal void UpdateCollidableBroadPhaseIndex(BodyHandle handle, int newBroadPhaseIndex)
         {
-            ref var movedOriginalLocation = ref HandleToLocation[handle];
+            ref var movedOriginalLocation = ref HandleToLocation[handle.Value];
             Sets[movedOriginalLocation.SetIndex].Collidables[movedOriginalLocation.Index].BroadPhaseIndex = newBroadPhaseIndex;
         }
         void RemoveCollidableFromBroadPhase(int activeBodyIndex, ref Collidable collidable)
@@ -164,13 +164,13 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="description">Description of the body to add.</param>
         /// <returns>Handle of the created body.</returns>
-        public unsafe int Add(in BodyDescription description)
+        public unsafe BodyHandle Add(in BodyDescription description)
         {
             Debug.Assert(HandleToLocation.Allocated, "The backing memory of the bodies set should be initialized before use.");
-            var handle = HandlePool.Take();
-            Debug.Assert(handle <= HandleToLocation.Length, "It should be impossible for a new handle to end up more than one slot beyond the current handle to index array. " +
+            var handleIndex = HandlePool.Take();
+            Debug.Assert(handleIndex <= HandleToLocation.Length, "It should be impossible for a new handle to end up more than one slot beyond the current handle to index array. " +
                 "This would imply some form of resize or compaction bug.");
-            if (handle == HandleToLocation.Length)
+            if (handleIndex == HandleToLocation.Length)
             {
                 //Out of room; need to resize.
                 ResizeHandles(HandleToLocation.Length << 1);
@@ -179,8 +179,9 @@ namespace BepuPhysics
 
             //All new bodies are active for simplicity. Someday, it may be worth offering an optimized path for inactives, but it adds complexity.
             //(Directly adding inactive bodies can be helpful in some networked open world scenarios.)
+            var handle = new BodyHandle(handleIndex);
             var index = ActiveSet.Add(description, handle, MinimumConstraintCapacityPerBody, Pool);
-            HandleToLocation[handle] = new BodyLocation { SetIndex = 0, Index = index };
+            HandleToLocation[handleIndex] = new BodyLocation { SetIndex = 0, Index = index };
 
             if (description.Collidable.Shape.Exists)
             {
@@ -189,7 +190,7 @@ namespace BepuPhysics
             return handle;
         }
 
-        internal int RemoveFromActiveSet(int activeBodyIndex)
+        internal BodyHandle RemoveFromActiveSet(int activeBodyIndex)
         {
             //Note that this is separated from the main removal because of sleeping. Sleeping doesn't want to truly remove from the *simulation*, just the active set.
             //The constraints, and references to the constraints, are left untouched.
@@ -204,13 +205,13 @@ namespace BepuPhysics
                 RemoveCollidableFromBroadPhase(activeBodyIndex, ref collidable);
             }
 
-            var bodyMoved = set.RemoveAt(activeBodyIndex, Pool, out var handle, out var movedBodyIndex, out var movedBodyHandle);
+            var bodyMoved = set.RemoveAt(activeBodyIndex, out var handle, out var movedBodyIndex, out var movedBodyHandle);
             if (bodyMoved)
             {
                 //While the removed body doesn't have any constraints associated with it, the body that gets moved to fill its slot might!
                 solver.UpdateForBodyMemoryMove(movedBodyIndex, activeBodyIndex);
-                Debug.Assert(HandleToLocation[movedBodyHandle].SetIndex == 0 && HandleToLocation[movedBodyHandle].Index == movedBodyIndex);
-                HandleToLocation[movedBodyHandle].Index = activeBodyIndex;
+                Debug.Assert(HandleToLocation[movedBodyHandle.Value].SetIndex == 0 && HandleToLocation[movedBodyHandle.Value].Index == movedBodyIndex);
+                HandleToLocation[movedBodyHandle.Value].Index = activeBodyIndex;
             }
             return handle;
 
@@ -231,8 +232,8 @@ namespace BepuPhysics
 
             var handle = RemoveFromActiveSet(activeBodyIndex);
 
-            HandlePool.Return(handle, Pool);
-            ref var removedBodyLocation = ref HandleToLocation[handle];
+            HandlePool.Return(handle.Value, Pool);
+            ref var removedBodyLocation = ref HandleToLocation[handle.Value];
             removedBodyLocation.SetIndex = -1;
             removedBodyLocation.Index = -1;
         }
@@ -242,11 +243,11 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the body to remove.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Remove(int handle)
+        public void Remove(BodyHandle handle)
         {
             ValidateExistingHandle(handle);
             awakener.AwakenBody(handle);
-            RemoveAt(HandleToLocation[handle].Index);
+            RemoveAt(HandleToLocation[handle.Value].Index);
         }
 
         /// <summary>
@@ -312,7 +313,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void UpdateForKinematicStateChange(int handle, ref BodyLocation location, ref BodySet set, bool newlyKinematic)
+        void UpdateForKinematicStateChange(BodyHandle handle, ref BodyLocation location, ref BodySet set, bool newlyKinematic)
         {
             Debug.Assert(location.SetIndex == 0, "If we're changing kinematic state, we should have already awoken the body.");
             ref var collidable = ref set.Collidables[location.Index];
@@ -358,9 +359,9 @@ namespace BepuPhysics
         /// This function is only necessary when the inertia change could potentially result in a transition between dynamic and kinematic states.
         /// If it is guaranteed to be dynamic before and after the change, the inertia can be directly modified without issue.
         /// </remarks>
-        public void SetLocalInertia(int handle, in BodyInertia localInertia)
+        public void SetLocalInertia(BodyHandle handle, in BodyInertia localInertia)
         {
-            ref var location = ref HandleToLocation[handle];
+            ref var location = ref HandleToLocation[handle.Value];
             if (location.SetIndex > 0)
             {
                 //The body is inactive. Wake it up.
@@ -374,7 +375,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void UpdateForShapeChange(int handle, int activeBodyIndex, TypedIndex oldShape, TypedIndex newShape)
+        void UpdateForShapeChange(BodyHandle handle, int activeBodyIndex, TypedIndex oldShape, TypedIndex newShape)
         {
             if (oldShape.Exists != newShape.Exists)
             {
@@ -396,9 +397,9 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the body to change the shape of.</param>
         /// <param name="newShape">Index of the new shape to use for the body.</param>
-        public void SetShape(int handle, TypedIndex newShape)
+        public void SetShape(BodyHandle handle, TypedIndex newShape)
         {
-            ref var location = ref HandleToLocation[handle];
+            ref var location = ref HandleToLocation[handle.Value];
             if (location.SetIndex > 0)
             {
                 //The body is inactive. Wake it up.
@@ -419,10 +420,10 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the body to receive the description.</param>
         /// <param name="description">Description to apply to the body.</param>
-        public void ApplyDescription(int handle, in BodyDescription description)
+        public void ApplyDescription(BodyHandle handle, in BodyDescription description)
         {
             ValidateExistingHandle(handle);
-            ref var location = ref HandleToLocation[handle];
+            ref var location = ref HandleToLocation[handle.Value];
             if (location.SetIndex > 0)
             {
                 //The body is inactive. Wake it up.
@@ -443,10 +444,10 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the body to look up.</param>
         /// <param name="description">Description of the body.</param>
-        public void GetDescription(int handle, out BodyDescription description)
+        public void GetDescription(BodyHandle handle, out BodyDescription description)
         {
             ValidateExistingHandle(handle);
-            ref var location = ref HandleToLocation[handle];
+            ref var location = ref HandleToLocation[handle.Value];
             ref var set = ref Sets[location.SetIndex];
             set.GetDescription(location.Index, out description);
         }
@@ -456,7 +457,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the body to grab a reference of.</param>
         /// <returns>Reference to the desired body.</returns>
-        public BodyReference GetBodyReference(int handle)
+        public BodyReference GetBodyReference(BodyHandle handle)
         {
             ValidateExistingHandle(handle);
             return new BodyReference(handle, this);
@@ -468,25 +469,25 @@ namespace BepuPhysics
         /// <param name="bodyHandle">Handle to check for.</param>
         /// <returns>True if the handle exists in the collection, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool BodyExists(int bodyHandle)
+        public bool BodyExists(BodyHandle bodyHandle)
         {
             //A negative set index marks a body handle as unused.
-            return bodyHandle >= 0 && bodyHandle < HandleToLocation.Length && HandleToLocation[bodyHandle].SetIndex >= 0;
+            return bodyHandle.Value >= 0 && bodyHandle.Value < HandleToLocation.Length && HandleToLocation[bodyHandle.Value].SetIndex >= 0;
         }
 
         [Conditional("DEBUG")]
-        internal void ValidateExistingHandle(int handle)
+        internal void ValidateExistingHandle(BodyHandle handle)
         {
-            Debug.Assert(handle >= 0, "Handles must be nonnegative.");
-            Debug.Assert(handle <= HandlePool.HighestPossiblyClaimedId && HandlePool.HighestPossiblyClaimedId < HandleToLocation.Length,
+            Debug.Assert(handle.Value >= 0, "Handles must be nonnegative.");
+            Debug.Assert(handle.Value <= HandlePool.HighestPossiblyClaimedId && HandlePool.HighestPossiblyClaimedId < HandleToLocation.Length,
                 "Existing handles must fit within the body handle->index mapping.");
-            ref var location = ref HandleToLocation[handle];
+            ref var location = ref HandleToLocation[handle.Value];
             Debug.Assert(location.SetIndex >= 0 && location.SetIndex < Sets.Length, "Body set index must be nonnegative and within the sets buffer length.");
             ref var set = ref Sets[location.SetIndex];
             Debug.Assert(set.Allocated);
             Debug.Assert(set.Count <= set.IndexToHandle.Length);
             Debug.Assert(location.Index >= 0 && location.Index < set.Count, "Body index must fall within the existing body set.");
-            Debug.Assert(set.IndexToHandle[location.Index] == handle, "Handle->index must match index->handle map.");
+            Debug.Assert(set.IndexToHandle[location.Index].Value == handle.Value, "Handle->index must match index->handle map.");
             Debug.Assert(BodyExists(handle), "Body must exist according to the BodyExists test.");
         }
 
@@ -1075,7 +1076,7 @@ namespace BepuPhysics
             }
 
         }
-        struct ActiveConstraintBodyHandleEnumerator<TInnerEnumerator> : IForEach<int> where TInnerEnumerator : IForEach<int>
+        struct ActiveConstraintBodyHandleEnumerator<TInnerEnumerator> : IForEach<int> where TInnerEnumerator : IForEach<BodyHandle>
         {
             public Bodies bodies;
             public TInnerEnumerator InnerEnumerator;
@@ -1094,19 +1095,20 @@ namespace BepuPhysics
 
         }
         //Note that inactive constraints reference bodies by handles rather than indices.
-        struct InactiveConstraintBodyHandleEnumerator<TInnerEnumerator> : IForEach<int> where TInnerEnumerator : IForEach<int>
+        //The solver, however, stores them by integer value, rather than typed BodyHandles. That's a little bit gross, but we can do the translation here.
+        struct InactiveConstraintBodyHandleEnumerator<TInnerEnumerator> : IForEach<int> where TInnerEnumerator : IForEach<BodyHandle>
         {
             public TInnerEnumerator InnerEnumerator;
-            public int SourceBodyHandle;
+            public BodyHandle SourceBodyHandle;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void LoopBody(int connectedBodyHandle)
             {
-                if (SourceBodyHandle != connectedBodyHandle)
+                if (SourceBodyHandle.Value != connectedBodyHandle)
                 {
                     //Since this enumerator is associated with inactive constraints, which directly store body handles rather than body indices, 
                     //we can directly pass the solver-provided handle.
-                    InnerEnumerator.LoopBody(connectedBodyHandle);
+                    InnerEnumerator.LoopBody(new BodyHandle(connectedBodyHandle));
                 }
             }
 
@@ -1148,9 +1150,9 @@ namespace BepuPhysics
         /// <param name="enumerator">Enumerator instance to run on each connected body.</param>
         /// <param name="solver">Solver from which to pull constraint body references.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnumerateConnectedBodies<TEnumerator>(int bodyHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        public void EnumerateConnectedBodies<TEnumerator>(BodyHandle bodyHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<BodyHandle>
         {
-            ref var bodyLocation = ref HandleToLocation[bodyHandle];
+            ref var bodyLocation = ref HandleToLocation[bodyHandle.Value];
             ref var set = ref Sets[bodyLocation.SetIndex];
             ref var list = ref set.Constraints[bodyLocation.Index];
             //In the loops below, we still make use of the reversed iteration. Removing from within the context of an enumerator is a dangerous move, but it is permitted if the user 
@@ -1160,7 +1162,7 @@ namespace BepuPhysics
                 //The body is active. Use the active enumerator.
                 ActiveConstraintBodyHandleEnumerator<TEnumerator> constraintBodiesEnumerator;
                 constraintBodiesEnumerator.InnerEnumerator = enumerator;
-                constraintBodiesEnumerator.SourceBodyIndex = bodyHandle;
+                constraintBodiesEnumerator.SourceBodyIndex = bodyLocation.Index;
                 constraintBodiesEnumerator.bodies = this;
 
                 for (int i = list.Count - 1; i >= 0; --i)

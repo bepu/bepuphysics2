@@ -138,6 +138,7 @@ namespace BepuPhysics
             ActiveConstraintBodyHandleCollector handleAccumulator;
             handleAccumulator.Bodies = Bodies;
             handleAccumulator.Handles = bodyHandles;
+            var bodyHandlesSpan = new Span<int>(bodyHandles, bodiesPerConstraint);
             for (int i = region.StartIndexInTypeBatch; i < region.EndIndexInTypeBatch; ++i)
             {
                 //Check if this constraint can be removed.
@@ -146,7 +147,7 @@ namespace BepuPhysics
                 for (int batchIndex = 0; batchIndex < nextBatchIndex; ++batchIndex)
                 {
                     //The batch index will never be the fallback batch, since the fallback batch is the very last batch (if it exists at all). So uses batch referenced handles is safe.
-                    if (Solver.batchReferencedHandles[batchIndex].CanFit(ref *bodyHandles, bodiesPerConstraint))
+                    if (Solver.batchReferencedHandles[batchIndex].CanFit(bodyHandlesSpan))
                     {
                         compressions.Add(new Compression { ConstraintHandle = typeBatch.IndexToHandle[i], TargetBatch = batchIndex }, pool);
                         break;
@@ -187,7 +188,7 @@ namespace BepuPhysics
                 handleAccumulator.Handles = bodyHandles;
                 handleAccumulator.Index = 0;
                 Solver.EnumerateConnectedBodies(compression.ConstraintHandle, ref handleAccumulator);
-                if (!Solver.batchReferencedHandles[compression.TargetBatch].CanFit(ref *bodyHandles, typeProcessor.BodiesPerConstraint))
+                if (!Solver.batchReferencedHandles[compression.TargetBatch].CanFit(new Span<int>(bodyHandles, typeProcessor.BodiesPerConstraint)))
                 {
                     //Another compression from the fallback batch has blocked this compression.
                     //Note that this isn't really a problem- batch compression is an incremental process. If some other compression was possible, a future frame will find it pretty quickly.

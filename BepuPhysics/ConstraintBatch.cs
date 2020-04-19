@@ -143,16 +143,16 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe void Allocate(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
+        public unsafe void Allocate(int handle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
             int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool, out ConstraintReference reference)
         {
             //Add all the constraint's body handles to the batch we found (or created) to block future references to the same bodies.
             //Also, convert the handle into a memory index. Constraints store a direct memory reference for performance reasons.
-            var bodyIndices = stackalloc int[bodyCount];
-            for (int j = 0; j < bodyCount; ++j)
+            var bodyIndices = stackalloc int[constraintBodyHandles.Length];
+            for (int j = 0; j < constraintBodyHandles.Length; ++j)
             {
-                var bodyHandle = Unsafe.Add(ref constraintBodyHandles, j);
-                ref var location = ref bodies.HandleToLocation[bodyHandle];
+                var bodyHandle = constraintBodyHandles[j];
+                ref var location = ref bodies.HandleToLocation[bodyHandle.Value];
                 Debug.Assert(location.SetIndex == 0, "Creating a new constraint should have forced the connected bodies awake.");
                 bodyIndices[j] = location.Index;
             }
@@ -184,7 +184,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void LoopBody(int bodyIndex)
             {
-                Handles->Remove(Bodies.ActiveSet.IndexToHandle[bodyIndex]);
+                Handles->Remove(Bodies.ActiveSet.IndexToHandle[bodyIndex].Value);
             }
         }
 

@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection;
 using BepuUtilities;
+using System.Runtime.InteropServices;
 
 namespace BepuPhysics
 {
@@ -290,7 +291,7 @@ namespace BepuPhysics
                 for (int i = 0; i < bodies.ActiveSet.Count; ++i)
                 {
                     var handle = bodies.ActiveSet.IndexToHandle[i];
-                    if (handles.Contains(handle))
+                    if (handles.Contains(handle.Value))
                         ValidateBodyReference(i, 1, ref batch);
                     else
                         ValidateBodyReference(i, 0, ref batch);
@@ -303,7 +304,7 @@ namespace BepuPhysics
                     {
                         for (int i = 0; i < bodySet.Count; ++i)
                         {
-                            Debug.Assert(!handles.Contains(bodySet.IndexToHandle[i]), "Bodies in an inactive set should not show up in the active solver set's referenced body handles.");
+                            Debug.Assert(!handles.Contains(bodySet.IndexToHandle[i].Value), "Bodies in an inactive set should not show up in the active solver set's referenced body handles.");
                         }
                     }
                 }
@@ -376,7 +377,7 @@ namespace BepuPhysics
                             enumerator.Index = 0;
                             processor.EnumerateConnectedBodyIndices(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
                             //Active constraints refer to bodies by index; inactive constraints use handles.
-                            int bodyReference = setIndex == 0 ? bodyIndex : bodySet.IndexToHandle[bodyIndex];
+                            int bodyReference = setIndex == 0 ? bodyIndex : bodySet.IndexToHandle[bodyIndex].Value;
                             Debug.Assert(constraintBodyReferences[constraintList[constraintIndex].BodyIndexInConstraint] == bodyReference,
                                 "If a body refers to a constraint, the constraint should refer to the body.");
                         }
@@ -438,39 +439,40 @@ namespace BepuPhysics
         /// <returns>Index of the batch that the constraint would fit in.</returns>
         /// <remarks>This is used by the narrowphase's multithreaded constraint adders to locate a spot for a new constraint without requiring a lock. Only after a candidate is located
         /// do those systems attempt an actual claim, limiting the duration of locks and increasing potential parallelism.</remarks>
-        internal unsafe int FindCandidateBatch(ref int bodyHandles, int bodyCount)
+        internal unsafe int FindCandidateBatch(Span<BodyHandle> bodyHandles)
         {
             ref var set = ref ActiveSet;
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
+            var bodyHandlesAsIntegers = MemoryMarshal.Cast<BodyHandle, int>(bodyHandles);
             for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
             {
-                if (batchReferencedHandles[batchIndex].CanFit(ref bodyHandles, bodyCount))
+                if (batchReferencedHandles[batchIndex].CanFit(bodyHandlesAsIntegers))
                     return batchIndex;
             }
             //No synchronized batch worked. Either there's a fallback batch or there aren't yet enough batches to warrant a fallback batch and none of the existing batches could fit the handles.
             return synchronizedBatchCount;
         }
 
-        internal unsafe void AllocateInBatch(int targetBatchIndex, int constraintHandle, ref int bodyHandles, int bodyCount, int typeId, out ConstraintReference reference)
+        internal unsafe void AllocateInBatch(int targetBatchIndex, int constraintHandle, Span<BodyHandle> bodyHandles, int typeId, out ConstraintReference reference)
         {
             ref var batch = ref ActiveSet.Batches[targetBatchIndex];
-            batch.Allocate(constraintHandle, ref bodyHandles, bodyCount, bodies, typeId, TypeProcessors[typeId], GetMinimumCapacityForType(typeId), pool, out reference);
+            batch.Allocate(constraintHandle, bodyHandles, bodies, typeId, TypeProcessors[typeId], GetMinimumCapacityForType(typeId), pool, out reference);
             if (targetBatchIndex < FallbackBatchThreshold)
             {
                 ref var handlesSet = ref batchReferencedHandles[targetBatchIndex];
-                for (int j = 0; j < bodyCount; ++j)
+                for (int j = 0; j < bodyHandles.Length; ++j)
                 {
-                    handlesSet.Add(Unsafe.Add(ref bodyHandles, j), pool);
+                    handlesSet.Add(bodyHandles[j].Value, pool);
                 }
             }
             else
             {
                 Debug.Assert(targetBatchIndex == FallbackBatchThreshold);
-                ActiveSet.Fallback.AllocateForActive(constraintHandle, ref bodyHandles, bodyCount, bodies, typeId, pool);
+                ActiveSet.Fallback.AllocateForActive(constraintHandle, bodyHandles, bodies, typeId, pool);
             }
         }
 
-        internal unsafe bool TryAllocateInBatch(int typeId, int targetBatchIndex, ref int bodyHandles, int bodyCount, out int constraintHandle, out ConstraintReference reference)
+        internal unsafe bool TryAllocateInBatch(int typeId, int targetBatchIndex, Span<BodyHandle> bodyHandles, out int constraintHandle, out ConstraintReference reference)
         {
             ref var set = ref ActiveSet;
             Debug.Assert(targetBatchIndex <= set.Batches.Count,
@@ -496,7 +498,7 @@ namespace BepuPhysics
                 if (targetBatchIndex < FallbackBatchThreshold)
                 {
                     //A non-fallback constraint batch already exists here. This may fail.
-                    if (!batchReferencedHandles[targetBatchIndex].CanFit(ref bodyHandles, bodyCount))
+                    if (!batchReferencedHandles[targetBatchIndex].CanFit(MemoryMarshal.Cast<BodyHandle, int>(bodyHandles)))
                     {
                         //This batch cannot hold the constraint.
                         constraintHandle = -1;
@@ -506,7 +508,7 @@ namespace BepuPhysics
                 }
             }
             constraintHandle = HandlePool.Take();
-            AllocateInBatch(targetBatchIndex, constraintHandle, ref bodyHandles, bodyCount, typeId, out reference);
+            AllocateInBatch(targetBatchIndex, constraintHandle, bodyHandles, typeId, out reference);
 
             if (constraintHandle >= HandleToConstraint.Length)
             {
@@ -515,9 +517,9 @@ namespace BepuPhysics
             }
             ref var constraintLocation = ref HandleToConstraint[constraintHandle];
             //Note that new constraints are always active. It is assumed at this point that all connected bodies have been forced active.
-            for (int i = 0; i < bodyCount; ++i)
+            for (int i = 0; i < bodyHandles.Length; ++i)
             {
-                ref var bodyLocation = ref bodies.HandleToLocation[Unsafe.Add(ref bodyHandles, i)];
+                ref var bodyLocation = ref bodies.HandleToLocation[bodyHandles[i].Value];
                 Debug.Assert(bodyLocation.SetIndex == 0, "New constraints should only be created involving already-activated bodies.");
             }
             constraintLocation.SetIndex = 0;
@@ -598,13 +600,13 @@ namespace BepuPhysics
             ApplyDescription(constraintHandle, ref description);
         }
 
-        void Add<TDescription>(ref int bodyHandles, int bodyCount, ref TDescription description, out int handle)
+        void Add<TDescription>(Span<BodyHandle> bodyHandles, ref TDescription description, out int handle)
             where TDescription : IConstraintDescription<TDescription>
         {
             ref var set = ref ActiveSet;
             for (int i = 0; i <= set.Batches.Count; ++i)
             {
-                if (TryAllocateInBatch(description.ConstraintTypeId, i, ref bodyHandles, bodyCount, out handle, out var reference))
+                if (TryAllocateInBatch(description.ConstraintTypeId, i, bodyHandles, out handle, out var reference))
                 {
                     ApplyDescriptionWithoutWaking(ref reference, ref description);
                     return;
@@ -618,28 +620,27 @@ namespace BepuPhysics
         /// Allocates a constraint slot and sets up a constraint with the specified description.
         /// </summary>
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandles">First body handle in a list of body handles used by the constraint.</param>
-        /// <param name="bodyCount">Number of bodies used by the constraint.</param>
+        /// <param name="bodyHandles">Body handles used by the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public int Add<TDescription>(ref int bodyHandles, int bodyCount, ref TDescription description)
+        public int Add<TDescription>(Span<BodyHandle> bodyHandles, ref TDescription description)
             where TDescription : IConstraintDescription<TDescription>
         {
             Debug.Assert(description.ConstraintTypeId >= 0 && description.ConstraintTypeId < TypeProcessors.Length &&
                 TypeProcessors[description.ConstraintTypeId].GetType() == description.TypeProcessorType,
                 "The description's constraint type and type processor don't match what has been registered in the solver. Did you forget to register the constraint type?");
-            Debug.Assert(bodyCount == TypeProcessors[description.ConstraintTypeId].BodiesPerConstraint,
+            Debug.Assert(bodyHandles.Length == TypeProcessors[description.ConstraintTypeId].BodiesPerConstraint,
                 "The number of bodies supplied to a constraint add must match the expected number of bodies involved in that constraint type. Did you use the wrong Solver.Add overload?");
             //Adding a constraint assumes that the involved bodies are active, so wake up anything that is sleeping.
-            for (int i = 0; i < bodyCount; ++i)
+            for (int i = 0; i < bodyHandles.Length; ++i)
             {
-                awakener.AwakenBody(Unsafe.Add(ref bodyHandles, i));
+                awakener.AwakenBody(bodyHandles[i]);
             }
-            Add(ref bodyHandles, bodyCount, ref description, out int constraintHandle);
-            for (int i = 0; i < bodyCount; ++i)
+            Add(bodyHandles, ref description, out int constraintHandle);
+            for (int i = 0; i < bodyHandles.Length; ++i)
             {
-                var bodyHandle = Unsafe.Add(ref bodyHandles, i);
+                var bodyHandle = bodyHandles[i];
                 bodies.ValidateExistingHandle(bodyHandle);
-                bodies.AddConstraint(bodies.HandleToLocation[bodyHandle].Index, constraintHandle, i);
+                bodies.AddConstraint(bodies.HandleToLocation[bodyHandle.Value].Index, constraintHandle, i);
             }
             return constraintHandle;
         }
@@ -648,64 +649,62 @@ namespace BepuPhysics
         /// Allocates a constraint slot and sets up a constraint with the specified description.
         /// </summary>
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandles">First body handle in a list of body handles used by the constraint.</param>
-        /// <param name="bodyCount">Number of bodies used by the constraint.</param>
+        /// <param name="bodyHandles">Body handles referenced by the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public int Add<TDescription>(ref int bodyHandles, int bodyCount, TDescription description)
+        public int Add<TDescription>(Span<BodyHandle> bodyHandles, TDescription description)
             where TDescription : IConstraintDescription<TDescription>
         {
-            return Add(ref bodyHandles, bodyCount, ref description);
+            return Add(bodyHandles, ref description);
         }
 
         /// <summary>
         /// Allocates a one-body constraint slot and sets up a constraint with the specified description.
         /// </summary>
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandle">First body of the pair.</param>
+        /// <param name="bodyHandle">Body connected to the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe int Add<TDescription>(int bodyHandle, ref TDescription description)
+        public unsafe int Add<TDescription>(BodyHandle bodyHandle, ref TDescription description)
             where TDescription : IOneBodyConstraintDescription<TDescription>
         {
-            return Add(ref bodyHandle, 1, ref description);
+            Span<BodyHandle> bodyHandles = stackalloc BodyHandle[] { bodyHandle };
+            return Add(bodyHandles, ref description);
         }
 
         /// <summary>
         /// Allocates a one-body constraint slot and sets up a constraint with the specified description.
         /// </summary>
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandle">First body of the pair.</param>
+        /// <param name="bodyHandle">First body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe int Add<TDescription>(int bodyHandle, TDescription description)
+        public unsafe int Add<TDescription>(BodyHandle bodyHandle, TDescription description)
             where TDescription : IOneBodyConstraintDescription<TDescription>
         {
-            return Add(ref bodyHandle, 1, ref description);
+            Span<BodyHandle> bodyHandles = stackalloc BodyHandle[] { bodyHandle };
+            return Add(bodyHandles, ref description);
         }
 
         /// <summary>
         /// Allocates a two-body constraint slot and sets up a constraint with the specified description.
         /// </summary>
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandleA">First body of the pair.</param>
-        /// <param name="bodyHandleB">Second body of the pair.</param>
+        /// <param name="bodyHandleA">First body of the constraint.</param>
+        /// <param name="bodyHandleB">Second body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, ref TDescription description)
+        public unsafe int Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, ref TDescription description)
             where TDescription : ITwoBodyConstraintDescription<TDescription>
         {
-            //Don't really want to take a dependency on the stack layout of parameters, so...
-            var bodyReferences = stackalloc int[2];
-            bodyReferences[0] = bodyHandleA;
-            bodyReferences[1] = bodyHandleB;
-            return Add(ref bodyReferences[0], 2, ref description);
+            Span<BodyHandle> bodyHandles = stackalloc BodyHandle[] { bodyHandleA, bodyHandleB };
+            return Add(bodyHandles, ref description);
         }
 
         /// <summary>
         /// Allocates a two-body constraint slot and sets up a constraint with the specified description.
         /// </summary>
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandleA">First body of the pair.</param>
-        /// <param name="bodyHandleB">Second body of the pair.</param>
+        /// <param name="bodyHandleA">First body of the constraint.</param>
+        /// <param name="bodyHandleB">Second body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, TDescription description)
+        public unsafe int Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, TDescription description)
             where TDescription : ITwoBodyConstraintDescription<TDescription>
         {
             return Add(bodyHandleA, bodyHandleB, ref description);
@@ -719,15 +718,11 @@ namespace BepuPhysics
         /// <param name="bodyHandleB">Second body of the constraint.</param>
         /// <param name="bodyHandleC">Third body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, int bodyHandleC, ref TDescription description)
+        public unsafe int Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, ref TDescription description)
             where TDescription : IThreeBodyConstraintDescription<TDescription>
         {
-            //Don't really want to take a dependency on the stack layout of parameters, so...
-            var bodyReferences = stackalloc int[3];
-            bodyReferences[0] = bodyHandleA;
-            bodyReferences[1] = bodyHandleB;
-            bodyReferences[2] = bodyHandleC;
-            return Add(ref bodyReferences[0], 3, ref description);
+            Span<BodyHandle> bodyHandles = stackalloc BodyHandle[] { bodyHandleA, bodyHandleB, bodyHandleC };
+            return Add(bodyHandles, ref description);
         }
 
         /// <summary>
@@ -738,7 +733,7 @@ namespace BepuPhysics
         /// <param name="bodyHandleB">Second body of the constraint.</param>
         /// <param name="bodyHandleC">Third body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, int bodyHandleC, TDescription description)
+        public unsafe int Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, TDescription description)
             where TDescription : IThreeBodyConstraintDescription<TDescription>
         {
             return Add(bodyHandleA, bodyHandleB, bodyHandleC, ref description);
@@ -753,16 +748,11 @@ namespace BepuPhysics
         /// <param name="bodyHandleC">Third body of the constraint.</param>
         /// <param name="bodyHandleD">Fourth body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, int bodyHandleC, int bodyHandleD, ref TDescription description)
+        public unsafe int Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, BodyHandle bodyHandleD, ref TDescription description)
             where TDescription : IFourBodyConstraintDescription<TDescription>
         {
-            //Don't really want to take a dependency on the stack layout of parameters, so...
-            var bodyReferences = stackalloc int[4];
-            bodyReferences[0] = bodyHandleA;
-            bodyReferences[1] = bodyHandleB;
-            bodyReferences[2] = bodyHandleC;
-            bodyReferences[3] = bodyHandleD;
-            return Add(ref bodyReferences[0], 4, ref description);
+            Span<BodyHandle> bodyHandles = stackalloc BodyHandle[] { bodyHandleA, bodyHandleB, bodyHandleC, bodyHandleD };
+            return Add(bodyHandles, ref description);
         }
 
         /// <summary>
@@ -774,7 +764,7 @@ namespace BepuPhysics
         /// <param name="bodyHandleC">Third body of the constraint.</param>
         /// <param name="bodyHandleD">Fourth body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, int bodyHandleC, int bodyHandleD, TDescription description)
+        public unsafe int Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, BodyHandle bodyHandleD, TDescription description)
             where TDescription : IFourBodyConstraintDescription<TDescription>
         {
             return Add(bodyHandleA, bodyHandleB, bodyHandleC, bodyHandleD, ref description);

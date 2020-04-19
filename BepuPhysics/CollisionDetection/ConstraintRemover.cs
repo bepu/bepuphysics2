@@ -156,7 +156,7 @@ namespace BepuPhysics.CollisionDetection
                     target.ConstraintHandle = constraintHandle;
 
                     target.BatchIndex = typeBatchIndex.Batch;
-                    target.BodyHandle = bodies.ActiveSet.IndexToHandle[target.BodyIndex];
+                    target.BodyHandle = bodies.ActiveSet.IndexToHandle[target.BodyIndex].Value;
                 }
             }
 

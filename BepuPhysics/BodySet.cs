@@ -33,7 +33,7 @@ namespace BepuPhysics
         /// <summary>
         /// Remaps a body index to its handle.
         /// </summary>
-        public Buffer<int> IndexToHandle;
+        public Buffer<BodyHandle> IndexToHandle;
 
         public Buffer<RigidPose> Poses;
         public Buffer<BodyVelocity> Velocities;
@@ -64,7 +64,7 @@ namespace BepuPhysics
             InternalResize(initialCapacity, pool);
         }
 
-        internal int Add(in BodyDescription bodyDescription, int handle, int minimumConstraintCapacity, BufferPool pool)
+        internal int Add(in BodyDescription bodyDescription, BodyHandle handle, int minimumConstraintCapacity, BufferPool pool)
         {
             var index = Count;
             if (index == IndexToHandle.Length)
@@ -79,7 +79,7 @@ namespace BepuPhysics
             return index;
         }
 
-        internal bool RemoveAt(int bodyIndex, BufferPool pool, out int handle, out int movedBodyIndex, out int movedBodyHandle)
+        internal bool RemoveAt(int bodyIndex, out BodyHandle handle, out int movedBodyIndex, out BodyHandle movedBodyHandle)
         {
             handle = IndexToHandle[bodyIndex];
             //Move the last body into the removed slot.
@@ -106,7 +106,7 @@ namespace BepuPhysics
             else
             {
                 movedBodyIndex = -1;
-                movedBodyHandle = -1;
+                movedBodyHandle = new BodyHandle(-1);
             }
             return bodyMoved;
         }
@@ -206,8 +206,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Swap(int slotA, int slotB, ref Buffer<BodyLocation> handleToIndex)
         {
-            handleToIndex[IndexToHandle[slotA]].Index = slotB;
-            handleToIndex[IndexToHandle[slotB]].Index = slotA;
+            handleToIndex[IndexToHandle[slotA].Value].Index = slotB;
+            handleToIndex[IndexToHandle[slotB].Value].Index = slotA;
             Helpers.Swap(ref IndexToHandle[slotA], ref IndexToHandle[slotB]);
             Helpers.Swap(ref Collidables[slotA], ref Collidables[slotB]);
             Helpers.Swap(ref Poses[slotA], ref Poses[slotB]);

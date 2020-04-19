@@ -36,10 +36,10 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Gets the handle of the owner of the collidable referred to by this instance.
         /// </summary>
-        public int Handle
+        public BodyHandle Handle
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)(Packed & 0x3FFFFFFF); }
+            get { return new BodyHandle((int)(Packed & 0x3FFFFFFF)); }
         }
 
         
@@ -49,11 +49,11 @@ namespace BepuPhysics.Collidables
         /// <param name="mobility">Mobility type of the owner of the collidable.</param>
         /// <param name="handle">Handle of the owner of the collidable.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public CollidableReference(CollidableMobility mobility, int handle)
+        public CollidableReference(CollidableMobility mobility, BodyHandle handle)
         {
             Debug.Assert((int)mobility >= 0 && (int)mobility <= 2, "Hey you, that mobility type doesn't exist. Or we changed something and this needs to be updated.");
-            Debug.Assert(handle >= 0 && handle < 1 << 30, "Do you actually have more than 2^30 collidables? That seems unlikely.");
-            Packed = ((uint)mobility << 30) | (uint)handle;
+            Debug.Assert(handle.Value >= 0 && handle.Value < 1 << 30, "Do you actually have more than 2^30 collidables? That seems unlikely.");
+            Packed = ((uint)mobility << 30) | (uint)handle.Value;
         }
 
         public override string ToString()

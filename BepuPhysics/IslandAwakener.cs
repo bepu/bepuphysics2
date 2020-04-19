@@ -42,10 +42,10 @@ namespace BepuPhysics
         /// If the body is already awake, this does nothing.
         /// </summary>
         /// <param name="bodyHandle">Handle of the body to awaken.</param>
-        public void AwakenBody(int bodyHandle)
+        public void AwakenBody(BodyHandle bodyHandle)
         {
             bodies.ValidateExistingHandle(bodyHandle);
-            AwakenSet(bodies.HandleToLocation[bodyHandle].SetIndex);
+            AwakenSet(bodies.HandleToLocation[bodyHandle.Value].SetIndex);
         }
 
         /// <summary>
@@ -327,7 +327,7 @@ namespace BepuPhysics
                             for (int j = 0; j < sleepingBodySet.Count; ++j)
                             {
                                 //Note that we have to go grab the active version of the collidable, since the active version is potentially modified by removals.
-                                ref var bodyLocation = ref bodies.HandleToLocation[sleepingBodySet.IndexToHandle[j]];
+                                ref var bodyLocation = ref bodies.HandleToLocation[sleepingBodySet.IndexToHandle[j].Value];
                                 Debug.Assert(bodyLocation.SetIndex == 0);
                                 //The broad phase index value is currently the static index, either copied from the sleeping set or modified by a removal below.
                                 //We'll update it, so just take a reference.
@@ -345,7 +345,7 @@ namespace BepuPhysics
                                     {
                                         if (movedLeaf.Mobility == Collidables.CollidableMobility.Static)
                                         {
-                                            statics.Collidables[statics.HandleToIndex[movedLeaf.Handle]].BroadPhaseIndex = staticBroadPhaseIndexToRemove;
+                                            statics.Collidables[statics.HandleToIndex[movedLeaf.Handle.Value]].BroadPhaseIndex = staticBroadPhaseIndexToRemove;
                                         }
                                         else
                                         {
@@ -667,7 +667,7 @@ namespace BepuPhysics
                         {
                             var sourceIndex = job.SourceStart + j;
                             var targetIndex = job.TargetStart + j;
-                            ref var bodyLocation = ref bodies.HandleToLocation[sourceSet.IndexToHandle[sourceIndex]];
+                            ref var bodyLocation = ref bodies.HandleToLocation[sourceSet.IndexToHandle[sourceIndex].Value];
                             bodyLocation.SetIndex = 0;
                             bodyLocation.Index = targetIndex;
                         }

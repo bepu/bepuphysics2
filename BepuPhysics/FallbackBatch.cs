@@ -64,14 +64,14 @@ namespace BepuPhysics
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void Allocate<TBodyReferenceGetter>(int constraintHandle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
+        unsafe void Allocate<TBodyReferenceGetter>(int constraintHandle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
            int typeId, BufferPool pool, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity, int minimumReferenceCapacity)
             where TBodyReferenceGetter : struct, IBodyReferenceGetter
         {
-            EnsureCapacity(Math.Max(bodyConstraintReferences.Count + bodyCount, minimumBodyCapacity), pool);
-            for (int i = 0; i < bodyCount; ++i)
+            EnsureCapacity(Math.Max(bodyConstraintReferences.Count + constraintBodyHandles.Length, minimumBodyCapacity), pool);
+            for (int i = 0; i < constraintBodyHandles.Length; ++i)
             {
-                var bodyReference = bodyReferenceGetter.GetBodyReference(bodies, Unsafe.Add(ref constraintBodyHandles, i));
+                var bodyReference = bodyReferenceGetter.GetBodyReference(bodies, constraintBodyHandles[i]);
 
                 var bodyAlreadyListed = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var elementIndex);
                 //If an entry for this body does not yet exist, we'll create one.
@@ -94,15 +94,15 @@ namespace BepuPhysics
 
         interface IBodyReferenceGetter
         {
-            int GetBodyReference(Bodies bodies, int handle);
+            int GetBodyReference(Bodies bodies, BodyHandle handle);
         }
 
         struct ActiveSetGetter : IBodyReferenceGetter
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int GetBodyReference(Bodies bodies, int bodyHandle)
+            public int GetBodyReference(Bodies bodies, BodyHandle bodyHandle)
             {
-                ref var bodyLocation = ref bodies.HandleToLocation[bodyHandle];
+                ref var bodyLocation = ref bodies.HandleToLocation[bodyHandle.Value];
                 Debug.Assert(bodyLocation.SetIndex == 0, "When creating a fallback batch for the active set, all bodies associated with it must be active.");
                 return bodyLocation.Index;
             }
@@ -110,25 +110,25 @@ namespace BepuPhysics
         struct InactiveSetGetter : IBodyReferenceGetter
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int GetBodyReference(Bodies bodies, int bodyHandle)
+            public int GetBodyReference(Bodies bodies, BodyHandle bodyHandle)
             {
-                return bodyHandle;
+                return bodyHandle.Value;
             }
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe void AllocateForActive(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
+        internal unsafe void AllocateForActive(int handle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
            int typeId, BufferPool pool, int minimumBodyCapacity = 8, int minimumReferenceCapacity = 8)
         {
-            Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, pool, new ActiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
+            Allocate(handle, constraintBodyHandles, bodies, typeId, pool, new ActiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void AllocateForInactive(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
+        internal void AllocateForInactive(int handle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
           int typeId, BufferPool pool, int minimumBodyCapacity = 8, int minimumReferenceCapacity = 8)
         {
-            Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, pool, new InactiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
+            Allocate(handle, constraintBodyHandles, bodies, typeId, pool, new InactiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
         }
 
 

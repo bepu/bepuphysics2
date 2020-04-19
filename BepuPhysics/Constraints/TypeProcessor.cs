@@ -337,7 +337,7 @@ namespace BepuPhysics.Constraints
                 "Constraint transfers should never target the fallback batch. It doesn't have any body handles so attempting to allocate in the same way wouldn't turn out well.");
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
             var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
-            solver.AllocateInBatch(targetBatchIndex, constraintHandle, ref bodyHandles[0], bodiesPerConstraint, typeId, out var targetReference);
+            solver.AllocateInBatch(targetBatchIndex, constraintHandle, new Span<BodyHandle>(bodyHandles, bodiesPerConstraint), typeId, out var targetReference);
 
             BundleIndexing.GetBundleIndices(targetReference.IndexInTypeBatch, out var targetBundle, out var targetInner);
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var sourceBundle, out var sourceInner);
@@ -540,7 +540,7 @@ namespace BepuPhysics.Constraints
                 var offset = 0;
                 for (int j = 0; j < bodiesPerConstraint; ++j)
                 {
-                    Unsafe.Add(ref targetReferencesLaneStart, offset) = activeBodySet.IndexToHandle[Unsafe.Add(ref sourceReferencesLaneStart, offset)];
+                    Unsafe.Add(ref targetReferencesLaneStart, offset) = activeBodySet.IndexToHandle[Unsafe.Add(ref sourceReferencesLaneStart, offset)].Value;
                     offset += Vector<int>.Count;
                 }
             }

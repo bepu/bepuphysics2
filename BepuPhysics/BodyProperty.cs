@@ -61,13 +61,13 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bodyHandle">Body handle to retrieve the collision mask of.</param>
         /// <returns>Collision mask associated with a body handle.</returns>
-        public ref T this[int bodyHandle]
+        public ref T this[BodyHandle bodyHandle]
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
                 Debug.Assert(bodies.BodyExists(bodyHandle));
-                return ref data[bodyHandle];
+                return ref data[bodyHandle.Value];
             }
         }
 
@@ -77,16 +77,16 @@ namespace BepuPhysics
         /// <param name="bodyHandle">Body handle to allocate for.</param>
         /// <returns>Reference to the data for the given body.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref T Allocate(int bodyHandle)
+        public ref T Allocate(BodyHandle bodyHandle)
         {
             Debug.Assert(bodies.BodyExists(bodyHandle), "The body handle should have been allocated in the bodies set before any attempt to create a property for it.");
-            if (bodyHandle >= data.Length)
+            if (bodyHandle.Value >= data.Length)
             {
                 var targetCount = BufferPool.GetCapacityForCount<T>(bodies.HandlePool.HighestPossiblyClaimedId + 1);
                 Debug.Assert(targetCount > data.Length, "Given what just happened, we must require a resize.");
                 pool.ResizeToAtLeast(ref data, targetCount, Math.Min(bodies.HandlePool.HighestPossiblyClaimedId + 1, data.Length));
             }
-            return ref data[bodyHandle];
+            return ref data[bodyHandle.Value];
         }
 
         /// <summary>

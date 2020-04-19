@@ -330,7 +330,7 @@ namespace BepuPhysics.CollisionDetection
                 {
                     //Two bodies.
                     Debug.Assert(pair.A.Mobility != CollidableMobility.Static && pair.B.Mobility != CollidableMobility.Static);
-                    var bodyHandles = new TwoBodyHandles { A = pair.A.Handle, B = pair.B.Handle };
+                    var bodyHandles = new TwoBodyHandles { A = pair.A.Handle.Value, B = pair.B.Handle.Value };
                     UpdateConstraintForManifold(workerIndex, ref pair, ref manifold, ref collisionCache, ref pairMaterial, bodyHandles);
                 }
                 else

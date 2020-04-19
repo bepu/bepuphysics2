@@ -385,7 +385,7 @@ namespace BepuPhysics.CollisionDetection
             //If one of the two objects is static, stick it in the second slot.       
             var aMobility = a.Mobility;
             var bMobility = b.Mobility;
-            if ((aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static && a.Handle > b.Handle) ||
+            if ((aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static && a.Handle.Value > b.Handle.Value) ||
                 aMobility == CollidableMobility.Static)
             {
                 var temp = b;
@@ -400,8 +400,8 @@ namespace BepuPhysics.CollisionDetection
             if (aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static)
             {
                 //Both references are bodies.
-                ref var bodyLocationA = ref Bodies.HandleToLocation[a.Handle];
-                ref var bodyLocationB = ref Bodies.HandleToLocation[b.Handle];
+                ref var bodyLocationA = ref Bodies.HandleToLocation[a.Handle.Value];
+                ref var bodyLocationB = ref Bodies.HandleToLocation[b.Handle.Value];
                 Debug.Assert(bodyLocationA.SetIndex == 0 || bodyLocationB.SetIndex == 0, "One of the two bodies must be active. Otherwise, something is busted!");
                 ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
                 ref var setB = ref Bodies.Sets[bodyLocationB.SetIndex];
@@ -416,9 +416,9 @@ namespace BepuPhysics.CollisionDetection
                 //Further, we know that the body must be an *active* body, because inactive bodies and statics exist within the same static/inactive broad phase tree and are not tested
                 //against each other.
                 Debug.Assert(aMobility != CollidableMobility.Static && bMobility == CollidableMobility.Static);
-                ref var bodyLocation = ref Bodies.HandleToLocation[a.Handle];
+                ref var bodyLocation = ref Bodies.HandleToLocation[a.Handle.Value];
                 Debug.Assert(bodyLocation.SetIndex == 0, "The body of a body-static pair must be active.");
-                var staticIndex = Statics.HandleToIndex[b.Handle];
+                var staticIndex = Statics.HandleToIndex[b.Handle.Value];
 
                 //TODO: Ideally, the compiler would see this and optimize away the relevant math in AddBatchEntries. That's a longshot, though. May want to abuse some generics to force it.
                 var zeroVelocity = default(BodyVelocity);
@@ -480,8 +480,8 @@ namespace BepuPhysics.CollisionDetection
                     //Given that this should be a pretty rarely used loose optimization, we'll instead make use of the bounding boxes to create an estimate.
                     //Note that the broad phase already touched this data on this thread, so it's still available in L1. (This function is called from broad phase collision testing.)
                     //TODO: May want to reconsider this approach if you end up caching more properties on the shape (or if profiling suggests it is a concern).
-                    var aInStaticTree = pair.A.Mobility == CollidableMobility.Static || Simulation.Bodies.HandleToLocation[pair.A.Handle].SetIndex > 0;
-                    var bInStaticTree = pair.B.Mobility == CollidableMobility.Static || Simulation.Bodies.HandleToLocation[pair.B.Handle].SetIndex > 0;
+                    var aInStaticTree = pair.A.Mobility == CollidableMobility.Static || Simulation.Bodies.HandleToLocation[pair.A.Handle.Value].SetIndex > 0;
+                    var bInStaticTree = pair.B.Mobility == CollidableMobility.Static || Simulation.Bodies.HandleToLocation[pair.B.Handle.Value].SetIndex > 0;
                     ref var aTree = ref aInStaticTree ? ref Simulation.BroadPhase.StaticTree : ref Simulation.BroadPhase.ActiveTree;
                     ref var bTree = ref bInStaticTree ? ref Simulation.BroadPhase.StaticTree : ref Simulation.BroadPhase.ActiveTree;
                     BroadPhase.GetBoundsPointers(aCollidable.BroadPhaseIndex, ref aTree, out var aMin, out var aMax);

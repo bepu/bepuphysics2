@@ -19,7 +19,7 @@ namespace BepuPhysics
         /// <summary>
         /// Handle of the body that this reference refers to.
         /// </summary>
-        public int Handle;
+        public BodyHandle Handle;
         /// <summary>
         /// The bodies collection containing the body.
         /// </summary>
@@ -30,7 +30,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the body to refer to.</param>
         /// <param name="bodies">Collection containing the body.</param>
-        public BodyReference(int handle, Bodies bodies)
+        public BodyReference(BodyHandle handle, Bodies bodies)
         {
             Handle = handle;
             Bodies = bodies;
@@ -59,7 +59,7 @@ namespace BepuPhysics
             get
             {
                 Bodies.ValidateExistingHandle(Handle);
-                return ref Bodies.HandleToLocation[Handle];
+                return ref Bodies.HandleToLocation[Handle.Value];
             }
         }
 
@@ -107,7 +107,7 @@ namespace BepuPhysics
         /// </summary>
         public ref RigidPose Pose
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            [MethodImpl(MethodImplOptions.NoInlining)]
             get
             {
                 ref var location = ref Location;
