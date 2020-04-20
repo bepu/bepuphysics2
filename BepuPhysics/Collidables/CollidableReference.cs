@@ -42,7 +42,7 @@ namespace BepuPhysics.Collidables
             get
             {
                 Debug.Assert(Mobility == CollidableMobility.Dynamic || Mobility == CollidableMobility.Kinematic, "Extracting a body handle from a collidable reference requires that the collidable is owned by a body.");
-                return new BodyHandle((int)(Packed & 0x3FFFFFFF));
+                return new BodyHandle(RawHandleValue);
             }
         }
 
@@ -50,12 +50,24 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Gets the static handle of the owner of the collidable referred to by this instance.
         /// </summary>
-        public int StaticHandle
+        public StaticHandle StaticHandle
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
                 Debug.Assert(Mobility == CollidableMobility.Static, "Extracting a static handle from a collidable reference requires that the collidable is owned by a static.");
+                return new StaticHandle(RawHandleValue);
+            }
+        }
+
+        /// <summary>
+        /// Gets the integer value of the handle of the owner of the collidable referred to by this instance.
+        /// </summary>
+        public int RawHandleValue
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
                 return (int)(Packed & 0x3FFFFFFF);
             }
         }
@@ -92,14 +104,14 @@ namespace BepuPhysics.Collidables
         /// <param name="mobility">Mobility type of the owner of the collidable.</param>
         /// <param name="handle">Handle of the owner of the collidable.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public CollidableReference(int handle)
-            : this(CollidableMobility.Static, handle)
+        public CollidableReference(StaticHandle handle)
+            : this(CollidableMobility.Static, handle.Value)
         {
         }
 
         public override string ToString()
         {
-            var handle = (Mobility == CollidableMobility.Static) ? StaticHandle : BodyHandle.Value;
+            var handle = (Mobility == CollidableMobility.Static) ? StaticHandle.Value : BodyHandle.Value;
             return $"{Mobility}[{handle}]";
         }
     }

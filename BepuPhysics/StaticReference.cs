@@ -1,12 +1,5 @@
 ﻿using BepuPhysics.Collidables;
-using BepuUtilities;
-using BepuUtilities.Collections;
-using BepuUtilities.Memory;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace BepuPhysics
 {
@@ -19,7 +12,7 @@ namespace BepuPhysics
         /// <summary>
         /// Handle of the body that this reference refers to.
         /// </summary>
-        public int Handle;
+        public StaticHandle Handle;
         /// <summary>
         /// The bodies collection containing the body.
         /// </summary>
@@ -30,7 +23,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the static to refer to.</param>
         /// <param name="statics">Collection containing the static.</param>
-        public StaticReference(int handle, Statics statics)
+        public StaticReference(StaticHandle handle, Statics statics)
         {
             Handle = handle;
             Statics = statics;
@@ -43,9 +36,9 @@ namespace BepuPhysics
         {
             get
             {
-                if (Statics == null || Handle < 0 || Handle >= Statics.HandleToIndex.Length)
+                if (Statics == null || Handle.Value < 0 || Handle.Value >= Statics.HandleToIndex.Length)
                     return false;
-                return Statics.IndexToHandle[Statics.HandleToIndex[Handle]] == Handle;
+                return Statics.IndexToHandle[Statics.HandleToIndex[Handle.Value]].Value == Handle.Value;
             }
         }
 
@@ -56,7 +49,7 @@ namespace BepuPhysics
         public int Index
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Statics.HandleToIndex[Handle]; }
+            get { return Statics.HandleToIndex[Handle.Value]; }
         }
         
         /// <summary>
@@ -67,7 +60,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return ref Statics.Poses[Statics.HandleToIndex[Handle]];
+                return ref Statics.Poses[Statics.HandleToIndex[Handle.Value]];
             }
         }
 
@@ -79,7 +72,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return ref Statics.Collidables[Statics.HandleToIndex[Handle]];
+                return ref Statics.Collidables[Statics.HandleToIndex[Handle.Value]];
             }
         }
         

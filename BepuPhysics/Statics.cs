@@ -18,14 +18,14 @@ namespace BepuPhysics
     public class Statics
     {
         /// <summary>
-        /// Remaps a static handle to the actual array index of the static.
+        /// Remaps a static handle integer value to the actual array index of the static.
         /// The backing array index may change in response to cache optimization.
         /// </summary>
         public Buffer<int> HandleToIndex;
         /// <summary>
         /// Remaps a static index to its handle.
         /// </summary>
-        public Buffer<int> IndexToHandle;
+        public Buffer<StaticHandle> IndexToHandle;
         /// <summary>
         /// The set of collidables owned by each static. Speculative margins, continuity settings, and shape indices can be changed directly.
         /// Shape indices cannot transition between pointing at a shape and pointing at nothing or vice versa without notifying the broad phase of the collidable addition or removal.
@@ -74,23 +74,23 @@ namespace BepuPhysics
         /// <summary>
         /// Checks whether a static handle is currently registered with the statics set.
         /// </summary>
-        /// <param name="staticHandle">Handle to check for.</param>
+        /// <param name="handle">Handle to check for.</param>
         /// <returns>True if the handle exists in the collection, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool StaticExists(int staticHandle)
+        public bool StaticExists(StaticHandle handle)
         {
-            if (staticHandle < 0 || staticHandle >= HandleToIndex.Length)
+            if (handle.Value < 0 || handle.Value >= HandleToIndex.Length)
                 return false;
             //A negative index marks a static handle as unused.
-            return HandleToIndex[staticHandle] >= 0;
+            return HandleToIndex[handle.Value] >= 0;
         }
 
         [Conditional("DEBUG")]
-        public void ValidateExistingHandle(int handle)
+        public void ValidateExistingHandle(StaticHandle handle)
         {
             Debug.Assert(StaticExists(handle), "Handle must exist according to the StaticExists test.");
-            Debug.Assert(handle >= 0, "Handles must be nonnegative.");
-            Debug.Assert(handle < HandleToIndex.Length && HandleToIndex[handle] >= 0 && IndexToHandle[HandleToIndex[handle]] == handle,
+            Debug.Assert(handle.Value >= 0, "Handles must be nonnegative.");
+            Debug.Assert(handle.Value < HandleToIndex.Length && HandleToIndex[handle.Value] >= 0 && IndexToHandle[HandleToIndex[handle.Value]].Value == handle.Value,
                 "This static handle doesn't seem to exist, or the mappings are out of sync. If a handle exists, both directions should match.");
         }
 
@@ -173,7 +173,7 @@ namespace BepuPhysics
                 if (movedLeaf.Mobility == CollidableMobility.Static)
                 {
                     //This is a static collidable, not a body.
-                    Collidables[HandleToIndex[movedLeaf.StaticHandle]].BroadPhaseIndex = removedBroadPhaseIndex;
+                    Collidables[HandleToIndex[movedLeaf.StaticHandle.Value]].BroadPhaseIndex = removedBroadPhaseIndex;
                 }
                 else
                 {
@@ -197,21 +197,21 @@ namespace BepuPhysics
                 Collidables[index] = Collidables[movedStaticOriginalIndex];
                 //Point the static handles at the new location.
                 var lastHandle = IndexToHandle[movedStaticOriginalIndex];
-                HandleToIndex[lastHandle] = index;
+                HandleToIndex[lastHandle.Value] = index;
                 IndexToHandle[index] = lastHandle;
             }
-            HandlePool.Return(handle, pool);
-            HandleToIndex[handle] = -1;
+            HandlePool.Return(handle.Value, pool);
+            HandleToIndex[handle.Value] = -1;
 
         }
         /// <summary>
         /// Removes a static from the set. Any inactive bodies with bounding boxes overlapping the removed static's bounding box will be forced active.
         /// </summary>
         /// <param name="handle">Handle of the static to remove.</param>
-        public void Remove(int handle)
+        public void Remove(StaticHandle handle)
         {
             ValidateExistingHandle(handle);
-            var removedIndex = HandleToIndex[handle];
+            var removedIndex = HandleToIndex[handle.Value];
             RemoveAt(removedIndex);
         }
 
@@ -235,7 +235,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="description">Description of the static to add.</param>
         /// <returns>Handle of the new static.</returns>
-        public int Add(in StaticDescription description)
+        public StaticHandle Add(in StaticDescription description)
         {
             if (Count == HandleToIndex.Length)
             {
@@ -245,13 +245,13 @@ namespace BepuPhysics
                 InternalResize(newSize);
             }
             Debug.Assert(Math.Abs(description.Pose.Orientation.Length() - 1) < 1e-6f, "Orientation should be initialized to a unit length quaternion.");
-            var handle = HandlePool.Take();
+            var handle = new StaticHandle(HandlePool.Take());
             var index = Count++;
-            HandleToIndex[handle] = index;
+            HandleToIndex[handle.Value] = index;
             IndexToHandle[index] = handle;
             ApplyDescriptionByIndexWithoutBroadPhaseModification(index, description, out var bounds);
             //This is a new add, so we need to add it to the broad phase.
-            Collidables[index].BroadPhaseIndex = broadPhase.AddStatic(new CollidableReference(CollidableMobility.Static, handle), ref bounds);
+            Collidables[index].BroadPhaseIndex = broadPhase.AddStatic(new CollidableReference(handle), ref bounds);
             return handle;
         }
 
@@ -260,10 +260,10 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the static to apply the description to.</param>
         /// <param name="description">Description to apply to the static.</param>
-        public unsafe void ApplyDescription(int handle, in StaticDescription description)
+        public unsafe void ApplyDescription(StaticHandle handle, in StaticDescription description)
         {
             ValidateExistingHandle(handle);
-            var index = HandleToIndex[handle];
+            var index = HandleToIndex[handle.Value];
             Debug.Assert(description.Collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
             //Wake all bodies up in the old bounds AND the new bounds. Inactive bodies that may have been resting on the old static need to be aware of the new environment.
             AwakenBodiesInExistingBounds(ref Collidables[index]);
@@ -278,10 +278,10 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the static to look up the description of.</param>
         /// <param name="description">Gathered description of the handle-referenced static.</param>
-        public void GetDescription(int handle, out StaticDescription description)
+        public void GetDescription(StaticHandle handle, out StaticDescription description)
         {
             ValidateExistingHandle(handle);
-            var index = HandleToIndex[handle];
+            var index = HandleToIndex[handle.Value];
             BundleIndexing.GetBundleIndices(index, out var bundleIndex, out var innerIndex);
             description.Pose = Poses[index];
             ref var collidable = ref Collidables[index];

@@ -29,7 +29,7 @@ namespace BepuPhysics
     public class Bodies
     {
         /// <summary>
-        /// Remaps a body handle to the actual array index of the body.
+        /// Remaps a body handle integer value to the actual array index of the body.
         /// The backing array index may change in response to cache optimization.
         /// </summary>
         public Buffer<BodyLocation> HandleToLocation;

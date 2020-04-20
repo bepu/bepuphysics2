@@ -30,7 +30,7 @@ namespace Demos.Demos.Sponsors
         List<Sponsor> sponsors3 = new List<Sponsor>();
 
         QuickList<SponsorNewt> newts;
-        int overlordNewtHandle;
+        StaticHandle overlordNewtHandle;
 
         RenderableImage CreateRewardImage(string rewardImagePath, ContentArchive content, RenderSurface surface)
         {
@@ -220,7 +220,7 @@ namespace Demos.Demos.Sponsors
         double simulationTime;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            const float simulationDt = 1 / 60f; 
+            const float simulationDt = 1 / 60f;
             Simulation.Timestep(simulationDt, ThreadDispatcher);
             for (int i = 0; i < newts.Count; ++i)
             {
@@ -245,7 +245,7 @@ namespace Demos.Demos.Sponsors
 
             //We'll hardcode the overlord newts. Not going to be a problem, I suspect.
             {
-                var worldTextPosition = Simulation.Statics.Poses[Simulation.Statics.HandleToIndex[overlordNewtHandle]].Position + new Vector3(0, 48, 0);
+                var worldTextPosition = Simulation.Statics.Poses[Simulation.Statics.HandleToIndex[overlordNewtHandle.Value]].Position + new Vector3(0, 48, 0);
                 Helpers.GetScreenLocation(worldTextPosition, viewProjection, resolution, out var screenspacePosition);
                 const float nameHeight = 14;
                 var name = sponsors3[0].Name;

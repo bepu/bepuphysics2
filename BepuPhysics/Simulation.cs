@@ -140,7 +140,7 @@ namespace BepuPhysics
                 {
                     Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < tree.LeafCount);
                     ref var leaf = ref leaves[collidable.BroadPhaseIndex];
-                    Debug.Assert(leaf.StaticHandle == bodySet.IndexToHandle[i].Value);
+                    Debug.Assert(leaf.StaticHandle.Value == bodySet.IndexToHandle[i].Value);
                     Debug.Assert(leaf.Mobility == CollidableMobility.Dynamic || leaf.Mobility == CollidableMobility.Kinematic);
                     ++shapefulBodyCount;
                 }
@@ -173,7 +173,7 @@ namespace BepuPhysics
 
                 Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < BroadPhase.StaticTree.LeafCount);
                 ref var leaf = ref BroadPhase.staticLeaves[collidable.BroadPhaseIndex];
-                Debug.Assert(leaf.StaticHandle == Statics.IndexToHandle[i]);
+                Debug.Assert(leaf.StaticHandle.Value == Statics.IndexToHandle[i].Value);
                 Debug.Assert(leaf.Mobility == CollidableMobility.Static);
             }
 

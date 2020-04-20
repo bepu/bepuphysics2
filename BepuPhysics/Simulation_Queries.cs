@@ -122,7 +122,7 @@ namespace BepuPhysics
         {
             if (reference.Mobility == CollidableMobility.Static)
             {
-                var index = Statics.HandleToIndex[reference.StaticHandle];
+                var index = Statics.HandleToIndex[reference.StaticHandle.Value];
                 pose = Statics.Poses.Memory + index;
                 shape = Statics.Collidables[index].Shape;
             }

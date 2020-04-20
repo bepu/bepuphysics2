@@ -345,7 +345,7 @@ namespace BepuPhysics
                                     {
                                         if (movedLeaf.Mobility == Collidables.CollidableMobility.Static)
                                         {
-                                            statics.Collidables[statics.HandleToIndex[movedLeaf.StaticHandle]].BroadPhaseIndex = staticBroadPhaseIndexToRemove;
+                                            statics.Collidables[statics.HandleToIndex[movedLeaf.StaticHandle.Value]].BroadPhaseIndex = staticBroadPhaseIndexToRemove;
                                         }
                                         else
                                         {

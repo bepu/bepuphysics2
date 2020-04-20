@@ -274,7 +274,7 @@ namespace DemoRenderer.ShapeDrawing
         {
             var handle = statics.IndexToHandle[index];
             //Statics don't have any activity states. Just some simple variation on a central static color.
-            Helpers.UnpackColor((uint)HashHelper.Rehash(handle), out Vector3 colorVariation);
+            Helpers.UnpackColor((uint)HashHelper.Rehash(handle.Value), out Vector3 colorVariation);
             var staticBase = new Vector3(0.1f, 0.057f, 0.014f);
             var staticVariationSpan = new Vector3(0.07f, 0.07f, 0.03f);
             var color = staticBase + staticVariationSpan * colorVariation;
