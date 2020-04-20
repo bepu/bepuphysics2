@@ -99,11 +99,11 @@ namespace Demos.SpecializedTests
         }
 
 
-        static void RemoveConstraint(Simulation simulation, int constraintHandle, int[] constraintHandlesToIdentity, int[] constraintHandles, List<int> removedConstraints)
+        static void RemoveConstraint(Simulation simulation, ConstraintHandle constraintHandle, int[] constraintHandlesToIdentity, ConstraintHandle[] constraintHandles, List<int> removedConstraints)
         {
-            var constraintIdentity = constraintHandlesToIdentity[constraintHandle];
-            constraintHandlesToIdentity[constraintHandle] = -1;
-            constraintHandles[constraintIdentity] = -1;
+            var constraintIdentity = constraintHandlesToIdentity[constraintHandle.Value];
+            constraintHandlesToIdentity[constraintHandle.Value] = -1;
+            constraintHandles[constraintIdentity] = new ConstraintHandle(-1);
             simulation.Solver.Remove(constraintHandle);
             removedConstraints.Add(constraintIdentity);
         }
@@ -111,7 +111,7 @@ namespace Demos.SpecializedTests
         struct ConstraintBodyValidationEnumerator : IForEach<int>
         {
             public Simulation Simulation;
-            public int ConstraintHandle;
+            public ConstraintHandle ConstraintHandle;
             public void LoopBody(int bodyIndex)
             {
                 //The body in this constraint should both:
@@ -149,7 +149,7 @@ namespace Demos.SpecializedTests
                     for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
                     {
                         var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
-                        var constraintLocation = simulation.Solver.HandleToConstraint[constraintHandle];
+                        var constraintLocation = simulation.Solver.HandleToConstraint[constraintHandle.Value];
                         Debug.Assert(
                             constraintLocation.IndexInTypeBatch == indexInTypeBatch &&
                             batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId] == typeBatchIndex &&
@@ -200,7 +200,7 @@ namespace Demos.SpecializedTests
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void ChurnRemoveBody<T>(Simulation simulation, BodyHandle[] bodyHandles, int[] bodyHandlesToIdentity, int[] constraintHandles,
+        private static void ChurnRemoveBody<T>(Simulation simulation, BodyHandle[] bodyHandles, int[] bodyHandlesToIdentity, ConstraintHandle[] constraintHandles,
             int[] constraintHandlesToIdentity, CachedConstraint<T>[] constraintDescriptions,
             List<int> removedConstraints, List<int> removedBodies, Random random) where T : IConstraintDescription<T>
         {
@@ -226,7 +226,7 @@ namespace Demos.SpecializedTests
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void ChurnAddConstraint<T>(Simulation simulation, BodyHandle[] bodyHandles, int[] constraintHandles, int[] constraintHandlesToIdentity,
+        private static void ChurnAddConstraint<T>(Simulation simulation, BodyHandle[] bodyHandles, ConstraintHandle[] constraintHandles, int[] constraintHandlesToIdentity,
             CachedConstraint<T>[] constraintDescriptions, List<int> removedConstraints, List<int> removedBodies, Random random) where T : ITwoBodyConstraintDescription<T>
         {
             //Add a constraint.
@@ -245,7 +245,7 @@ namespace Demos.SpecializedTests
                     //The constraint is addable.
                     var constraintHandle = simulation.Solver.Add(handleA, handleB, ref constraint.Description);
                     constraintHandles[constraintIdentity] = constraintHandle;
-                    constraintHandlesToIdentity[constraintHandle] = constraintIdentity;
+                    constraintHandlesToIdentity[constraintHandle.Value] = constraintIdentity;
                     WriteLine($"Added constraint, handle: {constraintHandle}");
                     FastRemoveAt(removedConstraints, constraintIdentityIndex);
                     break;
@@ -256,7 +256,7 @@ namespace Demos.SpecializedTests
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ChurnRemoveConstraint<T>(Simulation simulation, int originalBodyCount,
-            int[] constraintHandlesToIdentity, int[] constraintHandles, CachedConstraint<T>[] constraintDescriptions, List<int> removedConstraints, List<int> removedBodies, Random random)
+            int[] constraintHandlesToIdentity, ConstraintHandle[] constraintHandles, CachedConstraint<T>[] constraintDescriptions, List<int> removedConstraints, List<int> removedBodies, Random random)
             where T : IConstraintDescription<T>
         {
             //Remove a constraint.
@@ -279,7 +279,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        public static double AddRemoveChurn<T>(Simulation simulation, int iterations, BodyHandle[] bodyHandles, int[] constraintHandles) where T : struct, ITwoBodyConstraintDescription<T>
+        public static double AddRemoveChurn<T>(Simulation simulation, int iterations, BodyHandle[] bodyHandles, ConstraintHandle[] constraintHandles) where T : struct, ITwoBodyConstraintDescription<T>
         {
             //There are three levels of 'index' for each object in this test:
             //1) The top level 'identity'. Even when a body or constraint gets readded, the slot in the top level array maintains a pointer to the new handle.
@@ -313,7 +313,7 @@ namespace Demos.SpecializedTests
             for (int i = 0; i < constraintHandles.Length; ++i)
             {
                 var constraintHandle = constraintHandles[i];
-                constraintHandlesToIdentity[constraintHandle] = i;
+                constraintHandlesToIdentity[constraintHandle.Value] = i;
                 simulation.Solver.GetDescription(constraintHandle, out constraintDescriptions[i].Description);
                 simulation.Solver.GetConstraintReference(constraintHandle, out var reference);
 

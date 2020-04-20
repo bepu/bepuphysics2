@@ -180,7 +180,7 @@ namespace BepuPhysics
             public Buffer<int> SortedSourceIndices;
             public Buffer<int> ScratchKeys;
             public Buffer<int> ScratchValues;
-            public Buffer<int> IndexToHandleCache;
+            public Buffer<ConstraintHandle> IndexToHandleCache;
             public RawBuffer PrestepDataCache;
             public RawBuffer AccumulatesImpulsesCache;
             public int KeyUpperBound;

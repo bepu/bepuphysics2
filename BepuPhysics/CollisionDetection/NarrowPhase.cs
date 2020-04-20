@@ -136,9 +136,9 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="constraintHandle">Constraint to try to extract data from.</param>
         /// <param name="extractor">Extractor used to collect contact data from the solver.</param>
         /// <returns>True if the constraint was a contact type, false otherwise.</returns>
-        public bool TryExtractSolverContactData<TExtractor>(int constraintHandle, ref TExtractor extractor) where TExtractor : struct, ISolverContactDataExtractor
+        public bool TryExtractSolverContactData<TExtractor>(ConstraintHandle constraintHandle, ref TExtractor extractor) where TExtractor : struct, ISolverContactDataExtractor
         {
-            ref var constraintLocation = ref Solver.HandleToConstraint[constraintHandle];
+            ref var constraintLocation = ref Solver.HandleToConstraint[constraintHandle.Value];
             if (TryGetContactConstraintAccessor(constraintLocation.TypeId, out var accessor))
             {
                 accessor.ExtractContactData(constraintLocation, Solver, ref extractor);
@@ -154,9 +154,9 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="constraintHandle">Constraint to try to extract data from.</param>
         /// <param name="extractor">Extractor used to collect contact data from the solver.</param>
         /// <returns>True if the constraint was a contact type, false otherwise.</returns>
-        public bool TryExtractSolverContactPrestepAndImpulses<TExtractor>(int constraintHandle, ref TExtractor extractor) where TExtractor : struct, ISolverContactPrestepAndImpulsesExtractor
+        public bool TryExtractSolverContactPrestepAndImpulses<TExtractor>(ConstraintHandle constraintHandle, ref TExtractor extractor) where TExtractor : struct, ISolverContactPrestepAndImpulsesExtractor
         {
-            ref var constraintLocation = ref Solver.HandleToConstraint[constraintHandle];
+            ref var constraintLocation = ref Solver.HandleToConstraint[constraintHandle.Value];
             if (TryGetContactConstraintAccessor(constraintLocation.TypeId, out var accessor))
             {
                 accessor.ExtractContactPrestepAndImpulses(constraintLocation, Solver, ref extractor);

@@ -18,8 +18,8 @@ namespace Demos
         float t;
         Vector3 localGrabPoint;
         Quaternion targetOrientation;
-        int linearMotorHandle;
-        int angularMotorHandle;
+        ConstraintHandle linearMotorHandle;
+        ConstraintHandle angularMotorHandle;
 
         struct RayHitHandler : IRayHitHandler
         {

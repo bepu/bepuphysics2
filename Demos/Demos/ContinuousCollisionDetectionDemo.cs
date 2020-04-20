@@ -12,11 +12,11 @@ namespace Demos.Demos
 {
     public class ContinuousCollisionDetectionDemo : Demo
     {
-        int spinnerMotorA;
-        int spinnerMotorB;
+        ConstraintHandle spinnerMotorA;
+        ConstraintHandle spinnerMotorB;
         RolloverInfo rolloverInfo;
 
-        int BuildSpinner(Vector3 initialPosition, float rotationSpeed)
+        ConstraintHandle BuildSpinner(Vector3 initialPosition, float rotationSpeed)
         {
             var spinnerBase = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1e-2f }, new CollidableDescription(Simulation.Shapes.Add(new Box(2, 2, 2)), 0.1f), new BodyActivityDescription(0.01f)));
             var bladeShape = new Box(5, 0.01f, 1);

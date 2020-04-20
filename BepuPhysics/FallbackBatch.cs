@@ -30,7 +30,7 @@ namespace BepuPhysics
     {
         public struct FallbackReference
         {
-            public int ConstraintHandle;
+            public ConstraintHandle ConstraintHandle;
             public int IndexInConstraint;
             public override string ToString()
             {
@@ -54,17 +54,17 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(ref FallbackReference a, ref FallbackReference b)
             {
-                return a.ConstraintHandle == b.ConstraintHandle;
+                return a.ConstraintHandle.Value == b.ConstraintHandle.Value;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Hash(ref FallbackReference item)
             {
-                return item.ConstraintHandle;
+                return item.ConstraintHandle.Value;
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void Allocate<TBodyReferenceGetter>(int constraintHandle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
+        unsafe void Allocate<TBodyReferenceGetter>(ConstraintHandle constraintHandle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
            int typeId, BufferPool pool, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity, int minimumReferenceCapacity)
             where TBodyReferenceGetter : struct, IBodyReferenceGetter
         {
@@ -118,21 +118,21 @@ namespace BepuPhysics
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe void AllocateForActive(int handle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
+        internal unsafe void AllocateForActive(ConstraintHandle handle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
            int typeId, BufferPool pool, int minimumBodyCapacity = 8, int minimumReferenceCapacity = 8)
         {
             Allocate(handle, constraintBodyHandles, bodies, typeId, pool, new ActiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void AllocateForInactive(int handle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
+        internal void AllocateForInactive(ConstraintHandle handle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
           int typeId, BufferPool pool, int minimumBodyCapacity = 8, int minimumReferenceCapacity = 8)
         {
             Allocate(handle, constraintBodyHandles, bodies, typeId, pool, new InactiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
         }
 
 
-        internal unsafe void Remove(int bodyReference, int constraintHandle, ref QuickList<int> allocationIdsToFree)
+        internal unsafe void Remove(int bodyReference, ConstraintHandle constraintHandle, ref QuickList<int> allocationIdsToFree)
         {
             var bodyPresent = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex);
             Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
@@ -160,7 +160,7 @@ namespace BepuPhysics
         }
 
 
-        internal unsafe void Remove(Solver solver, BufferPool bufferPool, ref ConstraintBatch batch, int constraintHandle, int typeId, int indexInTypeBatch)
+        internal unsafe void Remove(Solver solver, BufferPool bufferPool, ref ConstraintBatch batch, ConstraintHandle constraintHandle, int typeId, int indexInTypeBatch)
         {
             var typeProcessor = solver.TypeProcessors[typeId];
             var bodyCount = typeProcessor.BodiesPerConstraint;
@@ -326,9 +326,9 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        unsafe static void ValidateBodyConstraintReference(Solver solver, int setIndex, int bodyReference, int constraintHandle, int expectedIndexInConstraint)
+        unsafe static void ValidateBodyConstraintReference(Solver solver, int setIndex, int bodyReference, ConstraintHandle constraintHandle, int expectedIndexInConstraint)
         {
-            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle];
+            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle.Value];
             Debug.Assert(constraintLocation.SetIndex == setIndex);
             Debug.Assert(constraintLocation.BatchIndex == solver.FallbackBatchThreshold, "Should only be working on constraints which are members of the active fallback batch.");
             var debugReferences = stackalloc int[solver.TypeProcessors[constraintLocation.TypeId].BodiesPerConstraint];
@@ -376,7 +376,7 @@ namespace BepuPhysics
                             var constraintIndexInBodySet = references.IndexOf(new FallbackReference { ConstraintHandle = constraintHandle });
                             Debug.Assert(constraintIndexInBodySet >= 0, "Any constraint in the fallback batch should be in all connected bodies' constraint handle listings.");
                             ref var reference = ref references[constraintIndexInBodySet];
-                            Debug.Assert(reference.ConstraintHandle == constraintHandle && reference.IndexInConstraint == i);
+                            Debug.Assert(reference.ConstraintHandle.Value == constraintHandle.Value && reference.IndexInConstraint == i);
                         }
                     }
                 }
@@ -407,7 +407,7 @@ namespace BepuPhysics
                     //using platform intrinsics (like many other places). The benefit of true gather instructions here is more than some other places since it's likely all in L3 cache
                     //(if it's a shared L3, anyway).
                     ref var reference = ref constraintReferences[j];
-                    ref var constraintLocation = ref solver.HandleToConstraint[reference.ConstraintHandle];
+                    ref var constraintLocation = ref solver.HandleToConstraint[reference.ConstraintHandle.Value];
                     //ValidateReferences(solver, bodyIndex, reference.ConstraintHandle, reference.IndexInConstraint);
                     var typeBatchIndex = fallbackBatch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId];
                     ref var typeBatchVelocities = ref velocities[typeBatchIndex];

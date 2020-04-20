@@ -173,7 +173,7 @@ namespace BepuPhysics.CollisionDetection
 
                 var constraintCacheIndex = pointers.ConstraintCache;
                 var oldConstraintCachePointer = PairCache.GetOldConstraintCachePointer(index);
-                var constraintHandle = *(int*)oldConstraintCachePointer;
+                var constraintHandle = *(ConstraintHandle*)oldConstraintCachePointer;
                 Solver.GetConstraintReference(constraintHandle, out var constraintReference);
                 Debug.Assert(
                     constraintReference.typeBatchPointer != null &&
@@ -201,7 +201,7 @@ namespace BepuPhysics.CollisionDetection
                     //to update the constraint cache's constraint handle. The good news is that we already have a valid constraint handle from the pre-existing constraint.
                     //It's exactly the same type, so we can just overwrite its properties without worry.
                     //Note that we rely on the constraint handle being stored in the first 4 bytes of the constraint cache.
-                    Unsafe.As<TConstraintCache, int>(ref newConstraintCache) = constraintHandle;
+                    Unsafe.As<TConstraintCache, ConstraintHandle>(ref newConstraintCache) = constraintHandle;
                     PairCache.Update(workerIndex, index, ref pointers, ref collisionCache, ref newConstraintCache);
                     //There exists a constraint and it has the same type as the manifold. Directly apply the new description and impulses.
                     Solver.ApplyDescriptionWithoutWaking(ref constraintReference, ref description);

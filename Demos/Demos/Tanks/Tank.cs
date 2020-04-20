@@ -30,11 +30,11 @@ namespace Demos.Demos.Tanks
         /// <summary>
         /// Constraint handle of the turret swivel servo.
         /// </summary>
-        public int TurretServo;
+        public ConstraintHandle TurretServo;
         /// <summary>
         /// Constraint handle of the barrel pitch servo.
         /// </summary>
-        public int BarrelServo;
+        public ConstraintHandle BarrelServo;
         /// <summary>
         /// List of all wheel body handles associated with the tank.
         /// </summary>
@@ -42,15 +42,15 @@ namespace Demos.Demos.Tanks
         /// <summary>
         /// List of all constraint handles associated with the tank. Includes motors.
         /// </summary>
-        public Buffer<int> Constraints;
+        public Buffer<ConstraintHandle> Constraints;
         /// <summary>
         /// List of constraint handles associated with the left tread's drive motors.
         /// </summary>
-        public Buffer<int> LeftMotors;
+        public Buffer<ConstraintHandle> LeftMotors;
         /// <summary>
         /// List of constraint handles associated with the right tread's drive motors.
         /// </summary>
-        public Buffer<int> RightMotors;
+        public Buffer<ConstraintHandle> RightMotors;
 
         /// <summary>
         /// Transforms directions from body local space to turret basis local space. Used for computing aiming angles.
@@ -85,7 +85,7 @@ namespace Demos.Demos.Tanks
         TwistServo BarrelServoDescription;
         TwistServo TurretServoDescription;
 
-        public void SetSpeed(Simulation simulation, Buffer<int> motors, float speed, float maximumForce)
+        public void SetSpeed(Simulation simulation, Buffer<ConstraintHandle> motors, float speed, float maximumForce)
         {
             //This sets all properties of a motor at once; it's possible to create a custom description that only assigns a subset of properties if you find this to be somehow expensive.
             var motorDescription = new AngularAxisMotor
@@ -184,7 +184,7 @@ namespace Demos.Demos.Tanks
         static BodyHandle CreateWheel(Simulation simulation, BodyProperty<TankDemoBodyProperties> properties, in RigidPose tankPose, in RigidPose bodyLocalPose,
             TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, BodyHandle bodyHandle, ref SubgroupCollisionFilter bodyFilter, in Vector3 bodyToWheelSuspension, float suspensionLength,
             in SpringSettings suspensionSettings, in Quaternion localWheelOrientation,
-            ref QuickList<BodyHandle> wheelHandles, ref QuickList<int> constraints, ref QuickList<int> motors)
+            ref QuickList<BodyHandle> wheelHandles, ref QuickList<ConstraintHandle> constraints, ref QuickList<ConstraintHandle> motors)
         {
             RigidPose wheelPose;
             QuaternionEx.TransformUnitX(localWheelOrientation, out var suspensionDirection);
@@ -262,9 +262,9 @@ namespace Demos.Demos.Tanks
         public static Tank Create(Simulation simulation, BodyProperty<TankDemoBodyProperties> properties, BufferPool pool, in RigidPose pose, in TankDescription description)
         {
             var wheelHandles = new QuickList<BodyHandle>(description.WheelCountPerTread * 2, pool);
-            var constraints = new QuickList<int>(description.WheelCountPerTread * 2 * 6 + 4, pool);
-            var leftMotors = new QuickList<int>(description.WheelCountPerTread, pool);
-            var rightMotors = new QuickList<int>(description.WheelCountPerTread, pool);
+            var constraints = new QuickList<ConstraintHandle>(description.WheelCountPerTread * 2 * 6 + 4, pool);
+            var leftMotors = new QuickList<ConstraintHandle>(description.WheelCountPerTread, pool);
+            var rightMotors = new QuickList<ConstraintHandle>(description.WheelCountPerTread, pool);
             Tank tank;
             ref var bodyFilter = ref CreatePart(simulation, description.Body, pose, properties, out tank.Body);
             ref var turretFilter = ref CreatePart(simulation, description.Turret, pose, properties, out tank.Turret);

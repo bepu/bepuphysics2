@@ -11,7 +11,7 @@ namespace Demos.SpecializedTests
 {
     static class MemoryResizeTests
     {
-        static void Resize(Simulation simulation, Random random, BodyHandle[] bodyHandles, int[] constraintHandles)
+        static void Resize(Simulation simulation, Random random, BodyHandle[] bodyHandles, ConstraintHandle[] constraintHandles)
         {
             var scale = 4 * random.NextDouble();
             var sizes = new SimulationAllocationSizes

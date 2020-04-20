@@ -256,7 +256,7 @@ namespace BepuPhysics
         /// <param name="bodyIndex">Index of the body to add the constraint to.</param>
         /// <param name="constraintHandle">Handle of the constraint to add.</param>
         /// <param name="indexInConstraint">Index of the body in the constraint.</param>
-        internal void AddConstraint(int bodyIndex, int constraintHandle, int indexInConstraint)
+        internal void AddConstraint(int bodyIndex, ConstraintHandle constraintHandle, int indexInConstraint)
         {
             ActiveSet.AddConstraint(bodyIndex, constraintHandle, indexInConstraint, Pool);
         }
@@ -266,7 +266,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bodyIndex">Index of the active body.</param>
         /// <param name="constraintHandle">Handle of the constraint to remove.</param>
-        internal void RemoveConstraintReference(int bodyIndex, int constraintHandle)
+        internal void RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle)
         {
             ActiveSet.RemoveConstraintReference(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, Pool);
         }

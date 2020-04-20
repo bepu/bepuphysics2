@@ -100,7 +100,7 @@ namespace BepuPhysics.CollisionDetection
                         for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
                         {
                             var handle = typeBatch.IndexToHandle[indexInTypeBatch];
-                            ref var pairLocation = ref ConstraintHandleToPair[handle];
+                            ref var pairLocation = ref ConstraintHandleToPair[handle.Value];
                             Mapping.GetTableIndices(ref pairLocation.Pair, out var tableIndex, out var elementIndex);
                             ref var cacheLocations = ref Mapping.Values[elementIndex];
                             Debug.Assert(cacheLocations.ConstraintCache.Exists);
@@ -179,11 +179,11 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        internal void RemoveReferenceIfContactConstraint(int handle, int typeId)
+        internal void RemoveReferenceIfContactConstraint(ConstraintHandle handle, int typeId)
         {
             if (NarrowPhase.IsContactConstraintType(typeId))
             {
-                var removed = Mapping.FastRemoveRef(ref ConstraintHandleToPair[handle].Pair);
+                var removed = Mapping.FastRemoveRef(ref ConstraintHandleToPair[handle.Value].Pair);
                 Debug.Assert(removed, "If a contact constraint is being directly removed, it must exist within the pair mapping- " +
                     "all *active* contact constraints do, and it's not valid to attempt to remove an inactive constraint.");
             }

@@ -73,7 +73,7 @@ namespace BepuPhysics
         }
         struct Compression
         {
-            public int ConstraintHandle;
+            public ConstraintHandle ConstraintHandle;
             public int TargetBatch;
         }
         struct AnalysisRegion
@@ -160,14 +160,14 @@ namespace BepuPhysics
         {
             public ushort WorkerIndex;
             public ushort Index;
-            public int ConstraintHandle;
+            public ConstraintHandle ConstraintHandle;
         }
         struct CompressionComparer : IComparerRef<CompressionTarget>
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(ref CompressionTarget a, ref CompressionTarget b)
             {
-                return a.ConstraintHandle.CompareTo(b.ConstraintHandle);
+                return a.ConstraintHandle.Value.CompareTo(b.ConstraintHandle.Value);
             }
         }
 
@@ -175,7 +175,7 @@ namespace BepuPhysics
         private unsafe void ApplyCompression(int sourceBatchIndex, ref ConstraintBatch sourceBatch, ref Compression compression)
         {
             //Careful here: this is a reference for the sake of not doing pointless copies, but you cannot rely on it having the same values after the completion of the transfer.
-            ref var constraintLocation = ref Solver.HandleToConstraint[compression.ConstraintHandle];
+            ref var constraintLocation = ref Solver.HandleToConstraint[compression.ConstraintHandle.Value];
             var typeProcessor = Solver.TypeProcessors[constraintLocation.TypeId];
             if (sourceBatchIndex == Solver.FallbackBatchThreshold)
             {

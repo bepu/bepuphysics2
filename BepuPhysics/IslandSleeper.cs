@@ -133,7 +133,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         bool EnqueueUnvisitedNeighbors<TTraversalPredicate>(int bodyIndex,
             ref QuickList<int> bodyIndices,
-            ref QuickList<int> constraintHandles,
+            ref QuickList<ConstraintHandle> constraintHandles,
             ref IndexSet consideredBodies, ref IndexSet consideredConstraints,
             ref QuickList<int> visitationStack,
             ref ConstraintBodyEnumerator bodyEnumerator,
@@ -144,11 +144,11 @@ namespace BepuPhysics
             for (int i = 0; i < list.Count; ++i)
             {
                 ref var entry = ref list[i];
-                if (!consideredConstraints.Contains(entry.ConnectingConstraintHandle))
+                if (!consideredConstraints.Contains(entry.ConnectingConstraintHandle.Value))
                 {
                     //This constraint has not yet been traversed. Follow the constraint to every other connected body.
                     constraintHandles.Add(entry.ConnectingConstraintHandle, pool);
-                    consideredConstraints.AddUnsafely(entry.ConnectingConstraintHandle);
+                    consideredConstraints.AddUnsafely(entry.ConnectingConstraintHandle.Value);
                     bodyEnumerator.ConstraintBodyIndices.Count = 0;
                     solver.EnumerateConnectedBodies(entry.ConnectingConstraintHandle, ref bodyEnumerator);
                     for (int j = 0; j < bodyEnumerator.ConstraintBodyIndices.Count; ++j)
@@ -174,7 +174,7 @@ namespace BepuPhysics
         /// <returns>True if the simulation graph was traversed without ever finding a body that made the predicate return false. False if any body failed the predicate.
         /// The bodyIndices and constraintHandles lists will contain all traversed predicate-passing bodies and constraints.</returns>
         public bool CollectIsland<TTraversalPredicate>(BufferPool pool, int startingActiveBodyIndex, ref TTraversalPredicate predicate,
-            ref QuickList<int> bodyIndices, ref QuickList<int> constraintHandles) where TTraversalPredicate : IPredicate<int>
+            ref QuickList<int> bodyIndices, ref QuickList<ConstraintHandle> constraintHandles) where TTraversalPredicate : IPredicate<int>
         {
             Debug.Assert(startingActiveBodyIndex >= 0 && startingActiveBodyIndex < bodies.ActiveSet.Count);
             //We'll build the island by working depth-first. This means the bodies and constraints we accumulate will be stored in any inactive island by depth-first order,
@@ -275,7 +275,7 @@ namespace BepuPhysics
             ref var results = ref workerTraversalResults[workerIndex];
             results.Islands = new QuickList<IslandScaffold>(64, threadPool);
             var bodyIndices = new QuickList<int>(Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count), threadPool);
-            var constraintHandles = new QuickList<int>(Math.Min(InitialIslandConstraintCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), threadPool);
+            var constraintHandles = new QuickList<ConstraintHandle>(Math.Min(InitialIslandConstraintCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), threadPool);
 
             TraversalTest<TPredicate> traversalTest;
             traversalTest.Predicate = predicate;
@@ -379,7 +379,7 @@ namespace BepuPhysics
                     //Load a range of constraints from the active set and store them into the target inactive constraint set.
                     ref var targetTypeBatch = ref solver.Sets[job.TargetSetIndex].Batches[job.TargetBatchIndex].TypeBatches[job.TargetTypeBatchIndex];
                     //We can share a single virtual dispatch over all the constraints since they are of the same type. They may, however, be in different batches.
-                    solver.TypeProcessors[targetTypeBatch.TypeId].GatherActiveConstraints(bodies, solver, ref job.SourceIndices, job.StartIndex, job.EndIndex, ref targetTypeBatch);
+                    solver.TypeProcessors[targetTypeBatch.TypeId].GatherActiveConstraints(bodies, solver, ref Unsafe.As<QuickList<int>, QuickList<ConstraintHandle>>(ref job.SourceIndices), job.StartIndex, job.EndIndex, ref targetTypeBatch);
                     //Enqueue these constraints for later removal.
                     Debug.Assert(job.StartIndex >= 0 && job.EndIndex <= targetTypeBatch.ConstraintCount && job.StartIndex < job.EndIndex);
                     for (int indexInTypeBatch = job.StartIndex; indexInTypeBatch < job.EndIndex; ++indexInTypeBatch)
@@ -875,7 +875,7 @@ namespace BepuPhysics
                         for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
                         {
                             var handle = typeBatch.IndexToHandle[indexInTypeBatch];
-                            ref var constraintLocation = ref solver.HandleToConstraint[handle];
+                            ref var constraintLocation = ref solver.HandleToConstraint[handle.Value];
                             constraintLocation.SetIndex = setIndex;
                             constraintLocation.BatchIndex = batchIndex;
                             constraintLocation.IndexInTypeBatch = indexInTypeBatch;

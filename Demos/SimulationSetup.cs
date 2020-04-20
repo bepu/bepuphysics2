@@ -57,8 +57,8 @@ namespace Demos
     {
         public BodyHandle LocalBodyHandle;
         Simulation simulation;
-        public List<int> ConstraintHandles;
-        public ConstraintAdder(Simulation simulation, List<int> constraintHandles)
+        public List<ConstraintHandle> ConstraintHandles;
+        public ConstraintAdder(Simulation simulation, List<ConstraintHandle> constraintHandles)
         {
             this.simulation = simulation;
             this.ConstraintHandles = constraintHandles;
@@ -94,7 +94,7 @@ namespace Demos
         }
 
         public static void BuildLattice<TBodyBuilder, TConstraintBuilder>(TBodyBuilder bodyBuilder, TConstraintBuilder constraintBuilder, int width, int height, int length, Simulation simulation,
-            out BodyHandle[] bodyHandles, out int[] constraintHandles) where TBodyBuilder : IBodyBuilder where TConstraintBuilder : IConstraintBuilder
+            out BodyHandle[] bodyHandles, out ConstraintHandle[] constraintHandles) where TBodyBuilder : IBodyBuilder where TConstraintBuilder : IConstraintBuilder
         {
             var bodyCount = width * height * length;
             bodyHandles = new BodyHandle[bodyCount];
@@ -114,7 +114,7 @@ namespace Demos
                 }
             }
             
-            var constraintAdder = new ConstraintAdder(simulation, new List<int>(width * height * length * 3));
+            var constraintAdder = new ConstraintAdder(simulation, new List<ConstraintHandle>(width * height * length * 3));
             for (int sliceIndex = 0; sliceIndex < length; ++sliceIndex)
             {
                 //The bottom rows are all kinematic, so don't create connections between them.
@@ -135,7 +135,7 @@ namespace Demos
 
         public static void BuildLattice<TBodyBuilder, TConstraintBuilder>(TBodyBuilder bodyBuilder, TConstraintBuilder constraintBuilder, int width, int height, int length,
             out Simulation simulation,
-            out BodyHandle[] bodyHandles, out int[] constraintHandles) where TBodyBuilder : IBodyBuilder where TConstraintBuilder : IConstraintBuilder
+            out BodyHandle[] bodyHandles, out ConstraintHandle[] constraintHandles) where TBodyBuilder : IBodyBuilder where TConstraintBuilder : IConstraintBuilder
         {
             var bodyCount = width * height * length;
             simulation = Simulation.Create(

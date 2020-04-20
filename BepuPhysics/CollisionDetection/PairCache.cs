@@ -393,10 +393,10 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe int GetOldConstraintHandle(int pairIndex)
+        internal unsafe ConstraintHandle GetOldConstraintHandle(int pairIndex)
         {
             ref var constraintCacheIndex = ref Mapping.Values[pairIndex].ConstraintCache;
-            return *(int*)workerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex);
+            return *(ConstraintHandle*)workerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex);
         }
 
         /// <summary>
@@ -411,17 +411,17 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="pair">Collidable pair associated with the new constraint.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe void CompleteConstraintAdd<TContactImpulses>(NarrowPhase narrowPhase, Solver solver, ref TContactImpulses impulses, PairCacheIndex constraintCacheIndex,
-            int constraintHandle, ref CollidablePair pair)
+            ConstraintHandle constraintHandle, ref CollidablePair pair)
         {
             //Note that the update is being directed to the *next* worker caches. We have not yet performed the flush that swaps references.
             //Note that this assumes that the constraint handle is stored in the first 4 bytes of the constraint cache.
-            *(int*)NextWorkerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex) = constraintHandle;
+            *(ConstraintHandle*)NextWorkerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex) = constraintHandle;
             solver.GetConstraintReference(constraintHandle, out var reference);
             Debug.Assert(reference.IndexInTypeBatch >= 0 && reference.IndexInTypeBatch < reference.TypeBatch.ConstraintCount);
             narrowPhase.contactConstraintAccessors[reference.TypeBatch.TypeId].ScatterNewImpulses(ref reference, ref impulses);
             //This mapping entry had to be deferred until now because no constraint handle was known until now. Now that we have it,
             //we can fill in the pointers back to the overlap mapping.
-            ConstraintHandleToPair[constraintHandle].Pair = pair;
+            ConstraintHandleToPair[constraintHandle.Value].Pair = pair;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

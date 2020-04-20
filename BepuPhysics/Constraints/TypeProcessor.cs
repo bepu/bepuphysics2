@@ -54,7 +54,7 @@ namespace BepuPhysics.Constraints
         /// <param name="bodyIndices">Pointer to a list of body indices (not handles!) with count equal to the type batch's expected number of involved bodies.</param>
         /// <param name="pool">Allocation provider to use if the type batch has to be resized.</param>
         /// <returns>Index of the slot in the batch.</returns>
-        public unsafe abstract int Allocate(ref TypeBatch typeBatch, int handle, int* bodyIndices, BufferPool pool);
+        public unsafe abstract int Allocate(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool);
         public abstract void Remove(ref TypeBatch typeBatch, int index, ref Buffer<ConstraintLocation> handlesToConstraints);
 
         /// <summary>
@@ -100,15 +100,15 @@ namespace BepuPhysics.Constraints
             ref TypeBatch typeBatch,
             int bundleStart, int localBundleStart, int bundleCount,
             int constraintStart, int localConstraintStart, int constraintCount,
-            ref Buffer<int> indexToHandleCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache);
+            ref Buffer<ConstraintHandle> indexToHandleCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache);
 
         internal abstract void Regather(
             ref TypeBatch typeBatch,
             int constraintStart, int constraintCount, ref int firstSourceIndex,
-            ref Buffer<int> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
+            ref Buffer<ConstraintHandle> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
             ref Buffer<ConstraintLocation> handlesToConstraints);
 
-        internal unsafe abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<int> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
+        internal unsafe abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<ConstraintHandle> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
 
         internal unsafe abstract void CopySleepingToActive(
             int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
@@ -203,7 +203,7 @@ namespace BepuPhysics.Constraints
         }
 
 
-        public unsafe sealed override int Allocate(ref TypeBatch typeBatch, int handle, int* bodyIndices, BufferPool pool)
+        public unsafe sealed override int Allocate(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool)
         {
             Debug.Assert(typeBatch.BodyReferences.Allocated, "Should initialize the batch before allocating anything from it.");
             if (typeBatch.ConstraintCount == typeBatch.IndexToHandle.Length)
@@ -241,16 +241,16 @@ namespace BepuPhysics.Constraints
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static void Move(
-            ref TBodyReferences sourceReferencesBundle, ref TPrestepData sourcePrestepBundle, ref TAccumulatedImpulse sourceAccumulatedBundle, int sourceHandle,
+            ref TBodyReferences sourceReferencesBundle, ref TPrestepData sourcePrestepBundle, ref TAccumulatedImpulse sourceAccumulatedBundle, ConstraintHandle sourceHandle,
             int sourceInner,
-            ref TBodyReferences targetReferencesBundle, ref TPrestepData targetPrestepBundle, ref TAccumulatedImpulse targetAccumulatedBundle, ref int targetIndexToHandle,
+            ref TBodyReferences targetReferencesBundle, ref TPrestepData targetPrestepBundle, ref TAccumulatedImpulse targetAccumulatedBundle, ref ConstraintHandle targetIndexToHandle,
             int targetInner, int targetIndex, ref Buffer<ConstraintLocation> handlesToConstraints)
         {
             CopyConstraintData(
                 ref sourceReferencesBundle, ref sourcePrestepBundle, ref sourceAccumulatedBundle, sourceInner,
                 ref targetReferencesBundle, ref targetPrestepBundle, ref targetAccumulatedBundle, targetInner);
             targetIndexToHandle = sourceHandle;
-            handlesToConstraints[sourceHandle].IndexInTypeBatch = targetIndex;
+            handlesToConstraints[sourceHandle.Value].IndexInTypeBatch = targetIndex;
         }
 
 
@@ -261,7 +261,7 @@ namespace BepuPhysics.Constraints
             TPrestepData aPrestep = default;
             TAccumulatedImpulse aAccumulated = default;
             TBodyReferences aBodyReferences = default;
-            int aHandle;
+            ConstraintHandle aHandle;
 
             var prestepData = typeBatch.PrestepData.As<TPrestepData>();
             var accumulatedImpulses = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
@@ -363,7 +363,7 @@ namespace BepuPhysics.Constraints
             solver.RemoveFromBatch(constraintHandle, sourceBatchIndex, typeId, indexInTypeBatch);
 
             //Don't forget to keep the solver's pointers consistent! We bypassed the usual add procedure, so the solver hasn't been notified yet.
-            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle];
+            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle.Value];
             constraintLocation.BatchIndex = targetBatchIndex;
             constraintLocation.IndexInTypeBatch = targetReference.IndexInTypeBatch;
             constraintLocation.TypeId = typeId;
@@ -466,7 +466,7 @@ namespace BepuPhysics.Constraints
             ref TypeBatch typeBatch,
             int bundleStart, int localBundleStart, int bundleCount,
             int constraintStart, int localConstraintStart, int constraintCount,
-            ref Buffer<int> indexToHandleCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache)
+            ref Buffer<ConstraintHandle> indexToHandleCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache)
         {
             typeBatch.IndexToHandle.CopyTo(constraintStart, indexToHandleCache, localConstraintStart, constraintCount);
             Unsafe.CopyBlockUnaligned(
@@ -481,7 +481,7 @@ namespace BepuPhysics.Constraints
         internal sealed override void Regather(
             ref TypeBatch typeBatch,
             int constraintStart, int constraintCount, ref int firstSourceIndex,
-            ref Buffer<int> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
+            ref Buffer<ConstraintHandle> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
             ref Buffer<ConstraintLocation> handlesToConstraints)
         {
             var typedBodyReferencesCache = bodyReferencesCache.As<TBodyReferences>();
@@ -510,7 +510,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        internal unsafe sealed override void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<int> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch)
+        internal unsafe sealed override void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<ConstraintHandle> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch)
         {
             ref var activeConstraintSet = ref solver.ActiveSet;
             ref var activeBodySet = ref bodies.ActiveSet;
@@ -518,7 +518,7 @@ namespace BepuPhysics.Constraints
             {
                 var sourceHandle = sourceHandles[i];
                 targetTypeBatch.IndexToHandle[i] = sourceHandle;
-                ref var location = ref solver.HandleToConstraint[sourceHandle];
+                ref var location = ref solver.HandleToConstraint[sourceHandle.Value];
                 Debug.Assert(targetTypeBatch.TypeId == location.TypeId, "Can only gather from batches of the same type.");
                 Debug.Assert(location.SetIndex == 0, "Can only gather from the active set.");
 
@@ -617,7 +617,7 @@ namespace BepuPhysics.Constraints
                     offset += Vector<int>.Count;
                 }
                 var constraintHandle = sourceTypeBatch.IndexToHandle[sourceIndex];
-                ref var location = ref solver.HandleToConstraint[constraintHandle];
+                ref var location = ref solver.HandleToConstraint[constraintHandle.Value];
                 Debug.Assert(location.SetIndex == sourceSet);
                 location.SetIndex = 0;
                 location.BatchIndex = targetBatchIndex;

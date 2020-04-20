@@ -28,16 +28,16 @@ namespace BepuPhysics.CollisionDetection
         internal struct PerBodyRemovalTarget
         {
             public int BodyIndex;
-            public int ConstraintHandle;
+            public ConstraintHandle ConstraintHandle;
 
             public int BatchIndex;
-            public int BodyHandle;
+            public BodyHandle BodyHandle;
         }
 
 
         struct RemovalsForTypeBatch
         {
-            public QuickList<int> ConstraintHandlesToRemove;
+            public QuickList<ConstraintHandle> ConstraintHandlesToRemove;
             public QuickList<PerBodyRemovalTarget> PerBodyRemovalTargets;
         }
 
@@ -90,7 +90,7 @@ namespace BepuPhysics.CollisionDetection
                     pool.ResizeToAtLeast(ref RemovalsForTypeBatches, BatchCount, index);
                 TypeBatches[index] = typeBatchIndex;
                 ref var newSlot = ref RemovalsForTypeBatches[index];
-                newSlot.ConstraintHandlesToRemove = new QuickList<int>(Math.Max(constraintHandleCount, minimumCapacityPerBatch), pool);
+                newSlot.ConstraintHandlesToRemove = new QuickList<ConstraintHandle>(Math.Max(constraintHandleCount, minimumCapacityPerBatch), pool);
                 newSlot.PerBodyRemovalTargets = new QuickList<PerBodyRemovalTarget>(Math.Max(perBodyRemovalCount, minimumCapacityPerBatch), pool);
                 return index;
             }
@@ -124,9 +124,9 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void EnqueueForRemoval(int constraintHandle, Solver solver, Bodies bodies)
+            public unsafe void EnqueueForRemoval(ConstraintHandle constraintHandle, Solver solver, Bodies bodies)
             {
-                ref var constraint = ref solver.HandleToConstraint[constraintHandle];
+                ref var constraint = ref solver.HandleToConstraint[constraintHandle.Value];
                 Debug.Assert(constraint.SetIndex == 0, "The constraint remover requires that the target constraint is active.");
                 TypeBatchIndex typeBatchIndex;
                 //Parallel removes are guaranteed to not change the constraint indices until all removes complete, so we can precache the type batch index here.
@@ -156,7 +156,7 @@ namespace BepuPhysics.CollisionDetection
                     target.ConstraintHandle = constraintHandle;
 
                     target.BatchIndex = typeBatchIndex.Batch;
-                    target.BodyHandle = bodies.ActiveSet.IndexToHandle[target.BodyIndex].Value;
+                    target.BodyHandle = bodies.ActiveSet.IndexToHandle[target.BodyIndex];
                 }
             }
 
@@ -223,8 +223,8 @@ namespace BepuPhysics.CollisionDetection
             {
                 //Constraint handles take precedence, but we have to distinguish between body handles for a globally unique sort.
                 //(There are potentially multiple PerBodyRemovalTargets per constraint, since it creates one for each body associated with the constraint.)
-                var aLong = ((long)a.ConstraintHandle << 32) | (long)a.BodyHandle;
-                var bLong = ((long)b.ConstraintHandle << 32) | (long)b.BodyHandle;
+                var aLong = ((long)a.ConstraintHandle.Value << 32) | (long)a.BodyHandle.Value;
+                var bLong = ((long)b.ConstraintHandle.Value << 32) | (long)b.BodyHandle.Value;
                 return aLong.CompareTo(bLong);
             }
         }
@@ -286,7 +286,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int i = 0; i < batches.BatchCount; ++i)
                 {
                     ref var batchRemovals = ref batches.RemovalsForTypeBatches[i];
-                    QuickSort.Sort(ref batchRemovals.ConstraintHandlesToRemove.Span[0], 0, batchRemovals.ConstraintHandlesToRemove.Count - 1, ref constraintHandleComparer);
+                    QuickSort.Sort(ref batchRemovals.ConstraintHandlesToRemove.Span[0].Value, 0, batchRemovals.ConstraintHandlesToRemove.Count - 1, ref constraintHandleComparer);
                     QuickSort.Sort(ref batchRemovals.PerBodyRemovalTargets[0], 0, batchRemovals.PerBodyRemovalTargets.Count - 1, ref perBodyRemovalTargetComparer);
                 }
                 //Also sort the batches according to the type batch index. Note that batch indices/type batch indices are deterministic if the simulation is deterministic;
@@ -325,7 +325,7 @@ namespace BepuPhysics.CollisionDetection
                 ref var batchHandles = ref batches.RemovalsForTypeBatches[i].ConstraintHandlesToRemove;
                 for (int j = 0; j < batchHandles.Count; ++j)
                 {
-                    solver.HandlePool.ReturnUnsafely(batchHandles[j]);
+                    solver.HandlePool.ReturnUnsafely(batchHandles[j].Value);
                 }
             }
         }
@@ -359,7 +359,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int j = 0; j < removals.Count; ++j)
                 {
                     ref var target = ref removals[j];
-                    solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle);
+                    solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle.Value);
                 }
             }
         }
@@ -403,7 +403,7 @@ namespace BepuPhysics.CollisionDetection
                 //That's because removals can change the index, so caching indices would require sorting the indices for each type batch before removing.
                 //That's very much doable, but not doing it is simpler, and the performance difference is likely trivial.
                 //TODO: Likely worth testing.
-                typeProcessor.Remove(ref typeBatch, solver.HandleToConstraint[handle].IndexInTypeBatch, ref solver.HandleToConstraint);
+                typeProcessor.Remove(ref typeBatch, solver.HandleToConstraint[handle.Value].IndexInTypeBatch, ref solver.HandleToConstraint);
                 if (typeBatch.ConstraintCount == 0)
                 {
                     //This batch-typebatch needs to be removed.
@@ -437,7 +437,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int j = 0; j < batchHandles.Count; ++j)
                 {
                     //A negative set index is our marker for nonexistence.
-                    solver.HandleToConstraint[batchHandles[j]].SetIndex = -1;
+                    solver.HandleToConstraint[batchHandles[j].Value].SetIndex = -1;
                 }
             }
         }
@@ -490,7 +490,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnqueueRemoval(int workerIndex, int constraintHandle)
+        public void EnqueueRemoval(int workerIndex, ConstraintHandle constraintHandle)
         {
             workerCaches[workerIndex].EnqueueForRemoval(constraintHandle, solver, bodies);
         }

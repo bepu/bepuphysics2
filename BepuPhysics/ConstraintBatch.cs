@@ -143,7 +143,7 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe void Allocate(int handle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
+        public unsafe void Allocate(ConstraintHandle handle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
             int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool, out ConstraintReference reference)
         {
             //Add all the constraint's body handles to the batch we found (or created) to block future references to the same bodies.

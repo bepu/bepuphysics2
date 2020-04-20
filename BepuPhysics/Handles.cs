@@ -19,6 +19,11 @@ namespace BepuPhysics
         {
             Value = index;
         }
+
+        public override string ToString()
+        {
+            return Value.ToString();
+        }
     }
 
     /// <summary>
@@ -35,6 +40,11 @@ namespace BepuPhysics
         public ConstraintHandle(int index)
         {
             Value = index;
+        }
+
+        public override string ToString()
+        {
+            return Value.ToString();
         }
     }
 }

@@ -53,9 +53,9 @@ namespace BepuPhysics
         /// If all bodies associated with the constraint are already awake, this does nothing.
         /// </summary>
         /// <param name="constraintHandle">Handle of the constraint to awaken.</param>
-        public void AwakenConstraint(int constraintHandle)
+        public void AwakenConstraint(ConstraintHandle constraintHandle)
         {
-            AwakenSet(solver.HandleToConstraint[constraintHandle].SetIndex);
+            AwakenSet(solver.HandleToConstraint[constraintHandle.Value].SetIndex);
         }
 
         /// <summary>

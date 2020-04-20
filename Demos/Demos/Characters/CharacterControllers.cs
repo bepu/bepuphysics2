@@ -76,7 +76,7 @@ namespace Demos.Demos.Characters
         /// <summary>
         /// Handle of the character's motion constraint, if any. Only valid if Supported is true.
         /// </summary>
-        public int MotionConstraintHandle;
+        public ConstraintHandle MotionConstraintHandle;
     }
 
     /// <summary>
@@ -517,14 +517,14 @@ namespace Demos.Demos.Characters
         struct AnalyzeContactsWorkerCache
         {
             //The solver does not permit multithreaded removals and additions. We handle all of them in a sequential postpass.
-            public QuickList<int> ConstraintHandlesToRemove;
+            public QuickList<ConstraintHandle> ConstraintHandlesToRemove;
             public QuickList<PendingDynamicConstraint> DynamicConstraintsToAdd;
             public QuickList<PendingStaticConstraint> StaticConstraintsToAdd;
             public QuickList<Jump> Jumps;
 
             public AnalyzeContactsWorkerCache(int maximumCharacterCount, BufferPool pool)
             {
-                ConstraintHandlesToRemove = new QuickList<int>(maximumCharacterCount, pool);
+                ConstraintHandlesToRemove = new QuickList<ConstraintHandle>(maximumCharacterCount, pool);
                 DynamicConstraintsToAdd = new QuickList<PendingDynamicConstraint>(maximumCharacterCount, pool);
                 StaticConstraintsToAdd = new QuickList<PendingStaticConstraint>(maximumCharacterCount, pool);
                 Jumps = new QuickList<Jump>(maximumCharacterCount, pool);
@@ -568,8 +568,8 @@ namespace Demos.Demos.Characters
                         //If the constraint no longer exists at all, 
                         if (!Simulation.Solver.ConstraintExists(character.MotionConstraintHandle) ||
                             //or if the constraint does exist but is now used by a different constraint type,
-                            (Simulation.Solver.HandleToConstraint[character.MotionConstraintHandle].TypeId != DynamicCharacterMotionTypeProcessor.BatchTypeId &&
-                            Simulation.Solver.HandleToConstraint[character.MotionConstraintHandle].TypeId != StaticCharacterMotionTypeProcessor.BatchTypeId))
+                            (Simulation.Solver.HandleToConstraint[character.MotionConstraintHandle.Value].TypeId != DynamicCharacterMotionTypeProcessor.BatchTypeId &&
+                            Simulation.Solver.HandleToConstraint[character.MotionConstraintHandle.Value].TypeId != StaticCharacterMotionTypeProcessor.BatchTypeId))
                         {
                             //then the character isn't actually supported anymore.
                             character.Supported = false;

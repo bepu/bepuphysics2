@@ -11,7 +11,7 @@ namespace BepuPhysics
     //You could bitpack these two into 4 bytes, but the value of that is pretty darn questionable.
     public struct BodyConstraintReference
     {
-        public int ConnectingConstraintHandle;
+        public ConstraintHandle ConnectingConstraintHandle;
         public int BodyIndexInConstraint;
     }
 
@@ -144,7 +144,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void AddConstraint(int bodyIndex, int constraintHandle, int bodyIndexInConstraint, BufferPool pool)
+        internal void AddConstraint(int bodyIndex, ConstraintHandle constraintHandle, int bodyIndexInConstraint, BufferPool pool)
         {
             BodyConstraintReference constraint;
             constraint.ConnectingConstraintHandle = constraintHandle;
@@ -157,7 +157,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void RemoveConstraintReference(int bodyIndex, int constraintHandle, int minimumConstraintCapacityPerBody, BufferPool pool)
+        internal void RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle, int minimumConstraintCapacityPerBody, BufferPool pool)
         {
             //This uses a linear search. That's fine; bodies will rarely have more than a handful of constraints associated with them.
             //Attempting to use something like a hash set for fast removes would just introduce more constant overhead and slow it down on average.
@@ -165,7 +165,7 @@ namespace BepuPhysics
             for (int i = 0; i < list.Count; ++i)
             {
                 ref var element = ref list[i];
-                if (element.ConnectingConstraintHandle == constraintHandle)
+                if (element.ConnectingConstraintHandle.Value == constraintHandle.Value)
                 {
                     list.FastRemoveAt(i);
                     break;
@@ -184,12 +184,12 @@ namespace BepuPhysics
             }
         }
 
-        public bool BodyIsConstrainedBy(int bodyIndex, int constraintHandle)
+        public bool BodyIsConstrainedBy(int bodyIndex, ConstraintHandle constraintHandle)
         {
             ref var list = ref Constraints[bodyIndex];
             for (int i = 0; i < list.Count; ++i)
             {
-                if (list[i].ConnectingConstraintHandle == constraintHandle)
+                if (list[i].ConnectingConstraintHandle.Value == constraintHandle.Value)
                 {
                     return true;
                 }

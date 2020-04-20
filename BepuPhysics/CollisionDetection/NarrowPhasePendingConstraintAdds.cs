@@ -117,7 +117,7 @@ namespace BepuPhysics.CollisionDetection
                 //were computed. In order to make use of those best guesses, we basically created a custom overload. (In fact, if you end up needing this elsewhere, you should probably make it
                 //a custom overload instead!)
 
-                int constraintHandle;
+                ConstraintHandle constraintHandle;
                 ConstraintReference reference;
                 var handles = new Span<BodyHandle>(Unsafe.AsPointer(ref constraint.BodyHandles), typeof(TBodyHandles) == typeof(TwoBodyHandles) ? 2 : 1);
                 while (!simulation.Solver.TryAllocateInBatch(

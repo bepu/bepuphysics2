@@ -43,7 +43,7 @@ namespace Demos.SpecializedTests
             int constraintTestCount = Vector<float>.Count * 128;
 
             BodyHandle[] constraintBodyHandles = new BodyHandle[constraintTypeBodyCount];
-            int[] constraintHandles = new int[constraintTestCount];
+            ConstraintHandle[] constraintHandles = new ConstraintHandle[constraintTestCount];
             T[] sources = new T[constraintTestCount];
 
 
