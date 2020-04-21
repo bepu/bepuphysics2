@@ -267,7 +267,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="min">Pointer to the bounding box minimum in the broad phase. Null if the body has no shape.</param>
         /// <param name="max">Pointer to the bounding box maximum in the broad phase. Null if the body has no shape.</param>
-        /// <returns>True if the shape has a shape and bounds, false otherwise.</returns>
+        /// <returns>True if the body has a shape and bounds, false otherwise.</returns>
         public unsafe bool GetBoundsReferencesFromBroadPhase(out Vector3* min, out Vector3* max)
         {
             ref var location = ref Location;

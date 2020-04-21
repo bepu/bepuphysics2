@@ -24,8 +24,6 @@ namespace Demos
             {
                 content = ContentArchive.Load(stream);
             }
-            //HeadlessTest.Test<FountainStressTestDemo>(content, 8, 32, 8192);
-            //DeterminismTest<FountainStressTestDemo>.Test(content, 3, 4096);
             var demo = new DemoHarness(loop, content);
             loop.Run(demo);
             loop.Dispose();

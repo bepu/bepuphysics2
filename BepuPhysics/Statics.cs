@@ -39,7 +39,7 @@ namespace BepuPhysics
 
         Shapes shapes;
         Bodies bodies;
-        BroadPhase broadPhase;
+        internal BroadPhase broadPhase;
         internal IslandAwakener awakener;
 
         public unsafe Statics(BufferPool pool, Shapes shapes, Bodies bodies, BroadPhase broadPhase, int initialCapacity = 4096)
@@ -215,6 +215,24 @@ namespace BepuPhysics
             RemoveAt(removedIndex);
         }
 
+        /// <summary>
+        /// Updates the bounds held within the broad phase for the static's current state.
+        /// </summary>
+        public void UpdateBounds(StaticHandle handle)
+        {
+            var index = HandleToIndex[handle.Value];
+            ref var collidable = ref Collidables[index];
+            shapes.UpdateBounds(Poses[index], ref collidable.Shape, out var bodyBounds);
+            broadPhase.UpdateStaticBounds(collidable.BroadPhaseIndex, bodyBounds.Min, bodyBounds.Max);
+        }
+
+        void ComputeNewBoundsAndAwaken(in RigidPose pose, TypedIndex shape, out BoundingBox bounds)
+        {
+            Debug.Assert(shape.Exists, "Statics must have a shape.");
+            //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
+            shapes[shape.Type].ComputeBounds(shape.Index, pose, out bounds.Min, out bounds.Max);
+            AwakenBodiesInBounds(ref bounds);
+        }
 
         internal void ApplyDescriptionByIndexWithoutBroadPhaseModification(int index, in StaticDescription description, out BoundingBox bounds)
         {
@@ -225,9 +243,7 @@ namespace BepuPhysics
             collidable.SpeculativeMargin = description.Collidable.SpeculativeMargin;
             collidable.Shape = description.Collidable.Shape;
 
-            //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            shapes[description.Collidable.Shape.Type].ComputeBounds(description.Collidable.Shape.Index, description.Pose, out bounds.Min, out bounds.Max);
-            AwakenBodiesInBounds(ref bounds);
+            ComputeNewBoundsAndAwaken(description.Pose, description.Collidable.Shape, out bounds);
         }
 
         /// <summary>
@@ -253,6 +269,23 @@ namespace BepuPhysics
             //This is a new add, so we need to add it to the broad phase.
             Collidables[index].BroadPhaseIndex = broadPhase.AddStatic(new CollidableReference(handle), ref bounds);
             return handle;
+        }
+
+        /// <summary>
+        /// Changes the shape of a static.
+        /// </summary>
+        /// <param name="handle">Handle of the static to change the shape of.</param>
+        /// <param name="newShape">Index of the new shape to use for the static.</param>
+        public void SetShape(StaticHandle handle, TypedIndex newShape)
+        {
+            ValidateExistingHandle(handle);
+            Debug.Assert(newShape.Exists, "Statics must have a shape.");
+            var index = HandleToIndex[handle.Value];
+            ref var collidable = ref Collidables[index];
+            AwakenBodiesInExistingBounds(ref collidable);
+            //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
+            ComputeNewBoundsAndAwaken(Poses[index], newShape, out var bounds);
+            broadPhase.UpdateStaticBounds(collidable.BroadPhaseIndex, bounds.Min, bounds.Max);
         }
 
         /// <summary>
@@ -290,6 +323,16 @@ namespace BepuPhysics
             description.Collidable.SpeculativeMargin = collidable.SpeculativeMargin;
         }
 
+        /// <summary>
+        /// Gets a reference to a static by its handle.
+        /// </summary>
+        /// <param name="handle">Handle of the static to grab a reference of.</param>
+        /// <returns>Reference to the desired static.</returns>
+        public StaticReference GetStaticReference(StaticHandle handle)
+        {
+            ValidateExistingHandle(handle);
+            return new StaticReference(handle, this);
+        }
 
         /// <summary>
         /// Clears all bodies from the set without returning any memory to the pool.
