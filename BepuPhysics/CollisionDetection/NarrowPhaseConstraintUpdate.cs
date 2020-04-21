@@ -146,7 +146,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void RequestAddConstraint<TDescription, TBodyHandles, TContactImpulses>(int workerIndex, int manifoldConstraintType,
             ref CollidablePair pair, PairCacheIndex constraintCacheIndex, ref TContactImpulses newImpulses,
-            ref TDescription description, TBodyHandles bodyHandles) where TDescription : IConstraintDescription<TDescription>
+            ref TDescription description, TBodyHandles bodyHandles) where TDescription : unmanaged, IConstraintDescription<TDescription>
         {
             //Note that this branch is (was?) JIT constant.
             if (typeof(TBodyHandles) != typeof(TwoBodyHandles) && typeof(TBodyHandles) != typeof(int))
@@ -161,7 +161,7 @@ namespace BepuPhysics.CollisionDetection
             ref TDescription description, TBodyHandles bodyHandles)
             where TConstraintCache : unmanaged, IPairCacheEntry
             where TCollisionCache : unmanaged, IPairCacheEntry
-            where TDescription : struct, IConstraintDescription<TDescription>
+            where TDescription : unmanaged, IConstraintDescription<TDescription>
             where TContactImpulses : unmanaged
         {
             var index = PairCache.IndexOf(ref pair);

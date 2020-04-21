@@ -1,9 +1,14 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics;
+using BepuUtilities;
 using DemoContentLoader;
 using Demos.Demos;
 using Demos.SpecializedTests;
 using DemoUtilities;
 using OpenTK;
+using OpenTK.Platform.Windows;
+using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Demos
 {
@@ -20,7 +25,7 @@ namespace Demos
                 content = ContentArchive.Load(stream);
             }
             //HeadlessTest.Test<FountainStressTestDemo>(content, 8, 32, 8192);
-            DeterminismTest<FountainStressTestDemo>.Test(content, 3, 4096);
+            //DeterminismTest<FountainStressTestDemo>.Test(content, 3, 4096);
             var demo = new DemoHarness(loop, content);
             loop.Run(demo);
             loop.Dispose();

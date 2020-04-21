@@ -28,7 +28,7 @@ namespace Demos.SpecializedTests
                 Unsafe.Add(ref bytes, i) = (byte)random.Next(256);
             }
         }
-        public static void Test<T>(BufferPool pool, Random random, int constraintTypeBodyCount) where T : struct, IConstraintDescription<T>
+        public static void Test<T>(BufferPool pool, Random random, int constraintTypeBodyCount) where T : unmanaged, IConstraintDescription<T>
         {
             var simulation = Simulation.Create(pool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks());
 

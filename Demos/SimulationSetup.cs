@@ -65,7 +65,7 @@ namespace Demos
             LocalBodyHandle = default;
         }
 
-        public void Add<T>(ref T description, BodyHandle otherBodyHandle) where T : ITwoBodyConstraintDescription<T>
+        public void Add<T>(ref T description, BodyHandle otherBodyHandle) where T : unmanaged, ITwoBodyConstraintDescription<T>
         {
             var constraintHandle = simulation.Solver.Add(LocalBodyHandle, otherBodyHandle, ref description);
             ConstraintHandles.Add(constraintHandle);

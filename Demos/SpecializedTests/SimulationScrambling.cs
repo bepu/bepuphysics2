@@ -64,7 +64,7 @@ namespace Demos.SpecializedTests
         }
 
 
-        struct CachedConstraint<T> where T : IConstraintDescription<T>
+        struct CachedConstraint<T> where T : unmanaged, IConstraintDescription<T>
         {
             public T Description;
             public int BodyA;
@@ -202,7 +202,7 @@ namespace Demos.SpecializedTests
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ChurnRemoveBody<T>(Simulation simulation, BodyHandle[] bodyHandles, int[] bodyHandlesToIdentity, ConstraintHandle[] constraintHandles,
             int[] constraintHandlesToIdentity, CachedConstraint<T>[] constraintDescriptions,
-            List<int> removedConstraints, List<int> removedBodies, Random random) where T : IConstraintDescription<T>
+            List<int> removedConstraints, List<int> removedBodies, Random random) where T : unmanaged, IConstraintDescription<T>
         {
             //Remove a body.
             var removedBodyIndex = random.Next(simulation.Bodies.ActiveSet.Count);
@@ -227,7 +227,7 @@ namespace Demos.SpecializedTests
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ChurnAddConstraint<T>(Simulation simulation, BodyHandle[] bodyHandles, ConstraintHandle[] constraintHandles, int[] constraintHandlesToIdentity,
-            CachedConstraint<T>[] constraintDescriptions, List<int> removedConstraints, List<int> removedBodies, Random random) where T : ITwoBodyConstraintDescription<T>
+            CachedConstraint<T>[] constraintDescriptions, List<int> removedConstraints, List<int> removedBodies, Random random) where T : unmanaged, ITwoBodyConstraintDescription<T>
         {
             //Add a constraint.
             int attemptCount = 0;
@@ -257,7 +257,7 @@ namespace Demos.SpecializedTests
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ChurnRemoveConstraint<T>(Simulation simulation, int originalBodyCount,
             int[] constraintHandlesToIdentity, ConstraintHandle[] constraintHandles, CachedConstraint<T>[] constraintDescriptions, List<int> removedConstraints, List<int> removedBodies, Random random)
-            where T : IConstraintDescription<T>
+            where T : unmanaged, IConstraintDescription<T>
         {
             //Remove a constraint.
             ref var activeSet = ref simulation.Solver.ActiveSet;
@@ -279,7 +279,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        public static double AddRemoveChurn<T>(Simulation simulation, int iterations, BodyHandle[] bodyHandles, ConstraintHandle[] constraintHandles) where T : struct, ITwoBodyConstraintDescription<T>
+        public static double AddRemoveChurn<T>(Simulation simulation, int iterations, BodyHandle[] bodyHandles, ConstraintHandle[] constraintHandles) where T : unmanaged, ITwoBodyConstraintDescription<T>
         {
             //There are three levels of 'index' for each object in this test:
             //1) The top level 'identity'. Even when a body or constraint gets readded, the slot in the top level array maintains a pointer to the new handle.

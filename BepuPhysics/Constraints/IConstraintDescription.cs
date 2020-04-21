@@ -14,7 +14,7 @@ namespace BepuPhysics.Constraints
     /// </remarks>
     /// <typeparam name="TDescription">Type of the description object.</typeparam>
     public interface IConstraintDescription<TDescription>
-        where TDescription : IConstraintDescription<TDescription>
+        where TDescription : unmanaged, IConstraintDescription<TDescription>
     {
         /// <summary>
         /// Changes the batch-held memory at a given location to match the given description.
@@ -49,7 +49,7 @@ namespace BepuPhysics.Constraints
     /// </summary>
     /// <typeparam name="TDescription">Type of the description.</typeparam>
     /// <remarks>This and the other body-count aware interfaces exist to give the compiler a way to report errors when using Solver.Add with different body counts.</remarks>
-    public interface IOneBodyConstraintDescription<TDescription> : IConstraintDescription<TDescription> where TDescription : IOneBodyConstraintDescription<TDescription>
+    public interface IOneBodyConstraintDescription<TDescription> : IConstraintDescription<TDescription> where TDescription : unmanaged, IOneBodyConstraintDescription<TDescription>
     {
     }
 
@@ -58,7 +58,7 @@ namespace BepuPhysics.Constraints
     /// </summary>
     /// <typeparam name="TDescription">Type of the description.</typeparam>
     /// <remarks>This and the other body-count aware interfaces exist to give the compiler a way to report errors when using Solver.Add with different body counts.</remarks>
-    public interface ITwoBodyConstraintDescription<TDescription> : IConstraintDescription<TDescription> where TDescription : ITwoBodyConstraintDescription<TDescription>
+    public interface ITwoBodyConstraintDescription<TDescription> : IConstraintDescription<TDescription> where TDescription : unmanaged, ITwoBodyConstraintDescription<TDescription>
     {
     }
 
@@ -67,7 +67,7 @@ namespace BepuPhysics.Constraints
     /// </summary>
     /// <typeparam name="TDescription">Type of the description.</typeparam>
     /// <remarks>This and the other body-count aware interfaces exist to give the compiler a way to report errors when using Solver.Add with different body counts.</remarks>
-    public interface IThreeBodyConstraintDescription<TDescription> : IConstraintDescription<TDescription> where TDescription : IThreeBodyConstraintDescription<TDescription>
+    public interface IThreeBodyConstraintDescription<TDescription> : IConstraintDescription<TDescription> where TDescription : unmanaged, IThreeBodyConstraintDescription<TDescription>
     {
     }
 
@@ -76,7 +76,7 @@ namespace BepuPhysics.Constraints
     /// </summary>
     /// <typeparam name="TDescription">Type of the description.</typeparam>
     /// <remarks>This and the other body-count aware interfaces exist to give the compiler a way to report errors when using Solver.Add with different body counts.</remarks>
-    public interface IFourBodyConstraintDescription<TDescription> : IConstraintDescription<TDescription> where TDescription : IFourBodyConstraintDescription<TDescription>
+    public interface IFourBodyConstraintDescription<TDescription> : IConstraintDescription<TDescription> where TDescription : unmanaged, IFourBodyConstraintDescription<TDescription>
     {
     }
 }
