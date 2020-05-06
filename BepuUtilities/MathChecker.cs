@@ -11,15 +11,15 @@ namespace BepuUtilities
     public static class MathChecker
     {
         /// <summary>
-        /// Checks a single float for validity.  Separate from the extension method to avoid throwing exceptions deep in a call tree.
+        /// Checks a single float for validity.
         /// </summary>
         /// <param name="f">Value to validate.</param>
         /// <returns>True if the value is invalid, false if it is valid.</returns>
-        private static bool IsInvalid(float f)
+        public static bool IsInvalid(float f)
         {
             return float.IsNaN(f) || float.IsInfinity(f);
         }
-        
+
 
         /// <summary>
         /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
@@ -121,6 +121,21 @@ namespace BepuUtilities
         {
             r.Position.Validate();
             r.Orientation.Validate();
+        }
+
+        /// <summary>
+        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// This is only run when the CHECKMATH symbol is defined.
+        /// </summary>
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Symmetric3x3 m)
+        {
+            m.XX.Validate();
+            m.YX.Validate();
+            m.YY.Validate();
+            m.ZX.Validate();
+            m.ZY.Validate();
+            m.ZZ.Validate();
         }
 
         /// <summary>
