@@ -9,7 +9,7 @@ using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
     /// <summary>
-    /// Constrains points on two bodies to be on a line defined in the local space of one of the bodies.
+    /// Constrains a point on body B to be on a line attached to body A.
     /// </summary>
     public struct PointOnLineServo : ITwoBodyConstraintDescription<PointOnLineServo>
     {

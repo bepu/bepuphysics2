@@ -9,7 +9,7 @@ using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
     /// <summary>
-    /// Constrains points on two bodies to a range of offsets from each other along a direction.
+    /// Constrains points on two bodies to a range of offsets from each other along a direction anchored to body A.
     /// </summary>
     public struct LinearAxisLimit : ITwoBodyConstraintDescription<LinearAxisLimit>
     {

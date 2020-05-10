@@ -10,7 +10,7 @@ using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
     /// <summary>
-    /// Constrains two bodies to rotate around a local axis attached to the first body at a target velocity.
+    /// Constrains two bodies to rotate around a local axis attached to body A at a target velocity.
     /// </summary>
     public struct AngularAxisMotor : ITwoBodyConstraintDescription<AngularAxisMotor>
     {
