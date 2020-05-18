@@ -19,7 +19,7 @@ To build the source, you'll need a recent version of Visual Studio with the .NET
 - Linear and angular continuous collision detection
 - Extremely low cost sleep states for resting bodies
 - Efficient scene-wide ray and sweep queries
-- [Character controller example](Demos/Demos/CharacterDemo.cs)
+- [Character controller example](Demos/Demos/Characters/CharacterDemo.cs)
 - At least somewhat extensible collision pipeline, with [example custom voxel collidable](Demos/Demos/CustomVoxelCollidableDemo.cs)
 - Highly nonidiomatic APIs
 - Super speediness
