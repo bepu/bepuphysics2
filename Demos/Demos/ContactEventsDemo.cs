@@ -52,6 +52,10 @@ namespace Demos.Demos
             public CollidableReference Collidable;
             public bool Fresh;
             public int ContactCount;
+            //FeatureIds are identifiers encoding what features on the involved shapes contributed to the contact. We store up to 4 feature ids, one for each potential contact.
+            //A "feature" is things like a face, vertex, or edge. There is no single interpretation for what a feature is- the mapping is defined on a per collision pair level.
+            //In this demo, we only care to check whether a given contact in the current frame maps onto a contact from a previous frame.
+            //We can use this to only emit 'contact added' events when a new contact with an unrecognized id is reported.
             public int FeatureId0;
             public int FeatureId1;
             public int FeatureId2;
@@ -137,6 +141,8 @@ namespace Demos.Demos
 
         void HandleManifoldForCollidable<TManifold>(int workerIndex, CollidableReference source, CollidableReference other, CollidablePair pair, ref TManifold manifold) where TManifold : struct, IContactManifold<TManifold>
         {
+            //The "source" refers to the object that an event handler was (potentially) attached to, so we look for listeners registered for it.
+            //(This function is called for both orders of the pair, so we'll catch listeners for either.)
             if (listeners.GetTableIndices(ref source, out var tableIndex, out var listenerIndex))
             {
                 //This collidable is registered. Is the opposing collidable present?
@@ -145,12 +151,14 @@ namespace Demos.Demos
                 for (int i = 0; i < previousCollisions.Count; ++i)
                 {
                     ref var collision = ref previousCollisions[i];
+                    //Since the 'Packed' field contains both the handle type (dynamic, kinematic, or static) and the handle index packed into a single bitfield, an equal value guarantees we are dealing with the same collidable.
                     if (collision.Collidable.Packed == other.Packed)
                     {
                         previousCollisionIndex = i;
                         //This manifold is associated with an existing collision.
                         for (int contactIndex = 0; contactIndex < manifold.Count; ++contactIndex)
                         {
+                            //We can check if each contact was already present in the previous frame by looking at contact feature ids. See the 'PreviousCollisionData' for a little more info on FeatureIds.
                             var featureId = manifold.GetFeatureId(contactIndex);
                             var featureIdIsOld = false;
                             for (int previousContactIndex = 0; previousContactIndex < collision.ContactCount; ++previousContactIndex)

@@ -51,9 +51,9 @@ namespace BepuPhysics
 
 
         /// <summary>
-        /// Gets a reference to the body's location stored in the handle to location mapping.
+        /// Gets a reference to the body's memory location stored in the handle to location mapping.
         /// </summary>
-        public ref BodyLocation Location
+        public ref BodyMemoryLocation MemoryLocation
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -69,14 +69,14 @@ namespace BepuPhysics
         public bool Awake
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Location.SetIndex == 0; }
+            get { return MemoryLocation.SetIndex == 0; }
             set
             {
                 if (Awake)
                 {
                     if (!value)
                     {
-                        Bodies.sleeper.Sleep(Location.Index);
+                        Bodies.sleeper.Sleep(MemoryLocation.Index);
                     }
                 }
                 else
@@ -97,7 +97,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                ref var location = ref Location;
+                ref var location = ref MemoryLocation;
                 return ref Bodies.Sets[location.SetIndex].Velocities[location.Index];
             }
         }
@@ -110,7 +110,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.NoInlining)]
             get
             {
-                ref var location = ref Location;
+                ref var location = ref MemoryLocation;
                 return ref Bodies.Sets[location.SetIndex].Poses[location.Index];
             }
         }
@@ -123,7 +123,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                ref var location = ref Location;
+                ref var location = ref MemoryLocation;
                 return ref Bodies.Sets[location.SetIndex].Collidables[location.Index];
             }
         }
@@ -136,7 +136,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                ref var location = ref Location;
+                ref var location = ref MemoryLocation;
                 return ref Bodies.Sets[location.SetIndex].LocalInertias[location.Index];
             }
         }
@@ -149,7 +149,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                ref var location = ref Location;
+                ref var location = ref MemoryLocation;
                 return ref Bodies.Sets[location.SetIndex].Activity[location.Index];
             }
         }
@@ -162,7 +162,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                ref var location = ref Location;
+                ref var location = ref MemoryLocation;
                 return ref Bodies.Sets[location.SetIndex].Constraints[location.Index];
             }
         }
@@ -205,8 +205,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeInverseInertia(out Symmetric3x3 inverseInertia)
         {
-            ref var location = ref Location;
-            ref var set = ref Bodies.Sets[Location.SetIndex];
+            ref var location = ref MemoryLocation;
+            ref var set = ref Bodies.Sets[MemoryLocation.SetIndex];
             ref var localInertia = ref set.LocalInertias[location.Index];
             ref var pose = ref set.Poses[location.Index];
             PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out inverseInertia);
@@ -270,7 +270,7 @@ namespace BepuPhysics
         /// <returns>True if the body has a shape and bounds, false otherwise.</returns>
         public unsafe bool GetBoundsReferencesFromBroadPhase(out Vector3* min, out Vector3* max)
         {
-            ref var location = ref Location;
+            ref var location = ref MemoryLocation;
             ref var collidable = ref Bodies.Sets[location.SetIndex].Collidables[location.Index];
             if (collidable.Shape.Exists)
             {
@@ -369,7 +369,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ApplyImpulse(in Vector3 impulse, in Vector3 impulseOffset)
         {
-            ref var location = ref Location;
+            ref var location = ref MemoryLocation;
             ApplyImpulse(Bodies.Sets[location.SetIndex], location.Index, impulse, impulseOffset);
         }
 
@@ -380,7 +380,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ApplyLinearImpulse(in Vector3 impulse)
         {
-            ref var location = ref Location;
+            ref var location = ref MemoryLocation;
             ref var set = ref Bodies.Sets[location.SetIndex];
             ApplyLinearImpulse(impulse, set.LocalInertias[location.Index].InverseMass, ref set.Velocities[location.Index].Linear);
         }
@@ -403,7 +403,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ApplyAngularImpulse(in Vector3 angularImpulse)
         {
-            ref var location = ref Location;
+            ref var location = ref MemoryLocation;
             ref var set = ref Bodies.Sets[location.SetIndex];
             ref var localInertia = ref set.LocalInertias[location.Index];
             ref var pose = ref set.Poses[location.Index];

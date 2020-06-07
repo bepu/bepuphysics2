@@ -10,7 +10,7 @@ using BepuUtilities;
 
 namespace BepuPhysics
 {
-    public struct BodyLocation
+    public struct BodyMemoryLocation
     {
         /// <summary>
         /// Index of the set owning the body reference. If the island index is 0, the body is active.
@@ -32,7 +32,7 @@ namespace BepuPhysics
         /// Remaps a body handle integer value to the actual array index of the body.
         /// The backing array index may change in response to cache optimization.
         /// </summary>
-        public Buffer<BodyLocation> HandleToLocation;
+        public Buffer<BodyMemoryLocation> HandleToLocation;
         public IdPool HandlePool;
         /// <summary>
         /// The set of existing bodies. The slot at index 0 contains all active bodies. Later slots, if allocated, contain the bodies associated with inactive islands.
@@ -181,7 +181,7 @@ namespace BepuPhysics
             //(Directly adding inactive bodies can be helpful in some networked open world scenarios.)
             var handle = new BodyHandle(handleIndex);
             var index = ActiveSet.Add(description, handle, MinimumConstraintCapacityPerBody, Pool);
-            HandleToLocation[handleIndex] = new BodyLocation { SetIndex = 0, Index = index };
+            HandleToLocation[handleIndex] = new BodyMemoryLocation { SetIndex = 0, Index = index };
 
             if (description.Collidable.Shape.Exists)
             {
@@ -313,7 +313,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void UpdateForKinematicStateChange(BodyHandle handle, ref BodyLocation location, ref BodySet set, bool newlyKinematic)
+        void UpdateForKinematicStateChange(BodyHandle handle, ref BodyMemoryLocation location, ref BodySet set, bool newlyKinematic)
         {
             Debug.Assert(location.SetIndex == 0, "If we're changing kinematic state, we should have already awoken the body.");
             ref var collidable = ref set.Collidables[location.Index];
@@ -1200,7 +1200,7 @@ namespace BepuPhysics
                 if (set.Allocated)
                     set.Dispose(Pool);
             }
-            Unsafe.InitBlockUnaligned(HandleToLocation.Memory, 0xFF, (uint)(sizeof(BodyLocation) * HandleToLocation.Length));
+            Unsafe.InitBlockUnaligned(HandleToLocation.Memory, 0xFF, (uint)(sizeof(BodyMemoryLocation) * HandleToLocation.Length));
             HandlePool.Clear();
         }
 
@@ -1208,7 +1208,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void ResizeHandles(int newCapacity)
         {
-            newCapacity = BufferPool.GetCapacityForCount<BodyLocation>(newCapacity);
+            newCapacity = BufferPool.GetCapacityForCount<BodyMemoryLocation>(newCapacity);
             if (newCapacity != HandleToLocation.Length)
             {
                 var oldCapacity = HandleToLocation.Length;
@@ -1217,7 +1217,7 @@ namespace BepuPhysics
                 {
                     Unsafe.InitBlockUnaligned(
                       HandleToLocation.Memory + oldCapacity, 0xFF,
-                      (uint)(sizeof(BodyLocation) * (HandleToLocation.Length - oldCapacity)));
+                      (uint)(sizeof(BodyMemoryLocation) * (HandleToLocation.Length - oldCapacity)));
                 }
             }
         }

@@ -217,7 +217,7 @@ namespace BepuPhysics
         /// <param name="slotA">Memory slot of the first body to swap.</param>
         /// <param name="slotB">Memory slot of the second body to swap.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Swap(int slotA, int slotB, ref Buffer<BodyLocation> handleToIndex)
+        internal void Swap(int slotA, int slotB, ref Buffer<BodyMemoryLocation> handleToIndex)
         {
             handleToIndex[IndexToHandle[slotA].Value].Index = slotB;
             handleToIndex[IndexToHandle[slotB].Value].Index = slotA;
