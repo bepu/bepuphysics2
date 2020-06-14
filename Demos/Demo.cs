@@ -3,11 +3,8 @@ using DemoRenderer;
 using DemoUtilities;
 using BepuPhysics;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using DemoRenderer.UI;
 using DemoContentLoader;
-using Helpers = DemoRenderer.Helpers;
 
 namespace Demos
 {
@@ -34,9 +31,10 @@ namespace Demos
         {
             BufferPool = new BufferPool();
             //Generally, shoving as many threads as possible into the simulation won't produce the best results on systems with multiple logical cores per physical core.
-            //Environment.ProcessorCount reports logical core count only, so we'll use a simple heuristic here- it'll leave one out of eight logical cores idle.
-            //For the common Intel quad core with hyperthreading, this'll use 7 logical cores and leave the last one free to be used for other stuff.
+            //Environment.ProcessorCount reports logical core count only, so we'll use a simple heuristic here- it'll leave one or two logical cores idle.
+            //For the common Intel quad core with hyperthreading, this'll use six logical cores and leave two logical cores free to be used for other stuff.
             //This is by no means perfect. To maximize performance, you'll need to profile your simulation and target hardware.
+            //Note that issues can be magnified on older operating systems like Windows 7 if all logical cores are given work.
 
             //Generally, the more memory bandwidth you have relative to CPU compute throughput, and the more collision detection heavy the simulation is relative to solving,
             //the more benefit you get out of SMT/hyperthreading. 
@@ -44,7 +42,7 @@ namespace Demos
             //there won't be enough memory bandwidth to even feed half the physical cores. Using all 128 logical cores would just add overhead.
 
             //It may be worth using something like hwloc to extract extra information to reason about.
-            var targetThreadCount = Math.Max(1, (int)(Environment.ProcessorCount * (7f / 8f)));
+            var targetThreadCount = Math.Max(1, Environment.ProcessorCount > 4 ? Environment.ProcessorCount - 2 : Environment.ProcessorCount - 1);
             ThreadDispatcher = new SimpleThreadDispatcher(targetThreadCount);
         }
 
