@@ -3,7 +3,7 @@
 ### I'm seeing spikes in the time it takes to simulate a timestep, what's going on?
 
 If it quits happening a little while after application startup, it's probably JIT compilation. If it keeps happening, the operating system might be struggling with a bunch of threads competing for timeslices, resulting in stalls. In that case, try using fewer threads for the physics- leaving one free might be all it takes. See the 
-[Performance Tips](Documentation/PerformanceTips.md#general) for more.
+[Performance Tips](PerformanceTips.md#general) for more.
 
 ### How can I make a convex shape rotate around a point other than its volumetric center?
 
