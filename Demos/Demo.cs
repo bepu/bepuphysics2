@@ -33,7 +33,19 @@ namespace Demos
         protected Demo()
         {
             BufferPool = new BufferPool();
-            ThreadDispatcher = new SimpleThreadDispatcher(Environment.ProcessorCount);
+            //Generally, shoving as many threads as possible into the simulation won't produce the best results on systems with multiple logical cores per physical core.
+            //Environment.ProcessorCount reports logical core count only, so we'll use a simple heuristic here- it'll leave one out of eight logical cores idle.
+            //For the common Intel quad core with hyperthreading, this'll use 7 logical cores and leave the last one free to be used for other stuff.
+            //This is by no means perfect. To maximize performance, you'll need to profile your simulation and target hardware.
+
+            //Generally, the more memory bandwidth you have relative to CPU compute throughput, and the more collision detection heavy the simulation is relative to solving,
+            //the more benefit you get out of SMT/hyperthreading. 
+            //For example, if you're using the 64 core quad memory channel AMD 3990x on a scene composed of thousands of ragdolls, 
+            //there won't be enough memory bandwidth to even feed half the physical cores. Using all 128 logical cores would just add overhead.
+
+            //It may be worth using something like hwloc to extract extra information to reason about.
+            var targetThreadCount = Math.Max(1, (int)(Environment.ProcessorCount * (7f / 8f)));
+            ThreadDispatcher = new SimpleThreadDispatcher(targetThreadCount);
         }
 
         public virtual void LoadGraphicalContent(ContentArchive content, RenderSurface surface)
