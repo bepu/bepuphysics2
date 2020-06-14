@@ -208,9 +208,9 @@ namespace Demos.UI
             var yDataSpan = maxY - minY;
             var yIntervalCount = description.TargetVerticalTickCount + 1;
             var rawIntervalLength = yDataSpan / yIntervalCount;
-            var roundingOffset = 0.5 * Math.Pow(0.1, description.VerticalIntervalLabelRounding);
-            yDataSpan =  Math.Round(rawIntervalLength * description.VerticalIntervalValueScale + roundingOffset, description.VerticalIntervalLabelRounding) * 
-                (yIntervalCount / description.VerticalIntervalValueScale);
+            var scale = (int)Math.Log10(rawIntervalLength);
+            var withinScale = rawIntervalLength * Math.Pow(0.1, scale);
+            yDataSpan = yIntervalCount * Math.Pow(10, scale) * (withinScale < 0.2 ? 0.2 : withinScale < 0.5 ? 0.5 : 1); // 1, 2 or 5 within the power of 10
 
             //Draw the graph body axes.
             var lowerLeft = description.BodyMinimum + new Vector2(0, description.BodySpan.Y);
@@ -264,7 +264,7 @@ namespace Demos.UI
                 }
             }
             {
-                var yDataIntervalSize = yDataSpan / (description.TargetVerticalTickCount + 1f);
+                var yDataIntervalSize = yDataSpan / yIntervalCount;
                 var previousTickValue = double.MinValue;
                 //Note the inclusion of the scale. Rounding occurs post-scale; moving back to pixels requires undoing the scale.
                 var valueToPixels = description.BodySpan.Y / (yDataSpan * description.VerticalIntervalValueScale);
