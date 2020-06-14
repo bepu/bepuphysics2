@@ -1,5 +1,10 @@
 # Performance Tips
 
+## General
+-Large spikes in the time it takes to complete a timestep soon after application launch may be related to just-in-time compilation. If they become a problem, consider running a small simulation that hits all the relevant codepaths (like collision pairs and constraints) at load time. Using an ahead-of-time compilation toolchain would also work.
+
+-If spikes keep happening, and especially if the spikes arise in the solver, the operating system may be having trouble with thread oversubscription and scheduling. If one of the physics worker threads gets idled by the OS while another task runs, it'll stall the whole engine. This can cause especially nasty problems on older operating systems. In these cases, it can be helpful to reduce the number of threads used by the engine to leave room for other processing.
+
 ## Shape Optimization
 -Use simple shapes whenever possible. Spheres and capsules are fastest followed by boxes, triangles, cylinders, and finally convex hulls. While cylinders and convex hulls are not slow in an absolute sense, they can be an order of magnitude slower than spheres and capsules.
 
