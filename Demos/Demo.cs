@@ -112,7 +112,7 @@ namespace Demos
 #if DEBUG
         ~Demo()
         {
-            Helpers.CheckForUndisposed(disposed, this);
+            DemoRenderer.Helpers.CheckForUndisposed(disposed, this);
         }
 #endif
     }
