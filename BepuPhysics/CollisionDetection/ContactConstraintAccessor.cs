@@ -106,9 +106,9 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="solver">Solver in which the constraint lives.</param>
         /// <param name="extractor">Extractor to handle the extracted references.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ExtractContactData<TExtractor>(int constraintHandle, Solver solver, ref TExtractor extractor) where TExtractor : struct, ISolverContactDataExtractor
+        public void ExtractContactData<TExtractor>(ConstraintHandle constraintHandle, Solver solver, ref TExtractor extractor) where TExtractor : struct, ISolverContactDataExtractor
         {
-            ExtractContactData(solver.HandleToConstraint[constraintHandle], solver, ref extractor);
+            ExtractContactData(solver.HandleToConstraint[constraintHandle.Value], solver, ref extractor);
         }
         /// <summary>
         /// Extracts references to data from a contact constraint of the accessor's type.
@@ -127,9 +127,9 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="solver">Solver in which the constraint lives.</param>
         /// <param name="extractor">Extractor to handle the extracted references.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ExtractContactPrestepAndImpulses<TExtractor>(int constraintHandle, Solver solver, ref TExtractor extractor) where TExtractor : struct, ISolverContactPrestepAndImpulsesExtractor
+        public void ExtractContactPrestepAndImpulses<TExtractor>(ConstraintHandle constraintHandle, Solver solver, ref TExtractor extractor) where TExtractor : struct, ISolverContactPrestepAndImpulsesExtractor
         {
-            ExtractContactPrestepAndImpulses(solver.HandleToConstraint[constraintHandle], solver, ref extractor);
+            ExtractContactPrestepAndImpulses(solver.HandleToConstraint[constraintHandle.Value], solver, ref extractor);
         }
         /// <summary>
         /// Extracts references to data from a contact constraint of the accessor's type.

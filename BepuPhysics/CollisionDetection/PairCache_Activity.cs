@@ -69,14 +69,14 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [Conditional("DEBUG")]
-        internal unsafe void ValidateHandleCountInMapping(int constraintHandle, int expectedCount)
+        internal unsafe void ValidateHandleCountInMapping(ConstraintHandle constraintHandle, int expectedCount)
         {
             int count = 0;
             for (int i = 0; i < Mapping.Count; ++i)
             {
                 var existingCache = Mapping.Values[i].ConstraintCache;
                 var existingHandle = *(int*)(workerCaches[existingCache.Cache].constraintCaches[existingCache.Type].Buffer.Memory + existingCache.Index);
-                if (existingHandle == constraintHandle)
+                if (existingHandle == constraintHandle.Value)
                 {
                     ++count;
                     Debug.Assert(count <= expectedCount && count <= 1, "Expected count violated.");

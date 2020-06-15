@@ -132,10 +132,10 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [Conditional("DEBUG")]
-        unsafe void PrintRemovalInformation(int constraintHandle)
+        unsafe void PrintRemovalInformation(ConstraintHandle constraintHandle)
         {
             Console.Write($"Found STALE constraint handle: {constraintHandle}, body handles (constraints per body): ");
-            ref var location = ref constraintRemover.solver.HandleToConstraint[constraintHandle];
+            ref var location = ref constraintRemover.solver.HandleToConstraint[constraintHandle.Value];
             Debug.Assert(location.SetIndex == 0);
             ref var batch = ref constraintRemover.solver.ActiveSet.Batches[location.BatchIndex];
             ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[location.TypeId]];
