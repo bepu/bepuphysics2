@@ -873,14 +873,14 @@ namespace BepuPhysics
             HandlePool.Return(handle.Value, pool);
         }
 
-        public void GetDescription<TConstraintDescription, TTypeBatch>(ref ConstraintReference constraintReference, out TConstraintDescription description)
+        public void GetDescription<TConstraintDescription>(ConstraintReference constraintReference, out TConstraintDescription description)
             where TConstraintDescription : unmanaged, IConstraintDescription<TConstraintDescription>
-            where TTypeBatch : TypeProcessor
         {
             //Note that the inlining behavior of the BuildDescription function is critical for efficiency here.
             //If the compiler can prove that the BuildDescription function never references any of the instance fields, it will elide the (potentially expensive) initialization.
             //The BuildDescription and ConstraintTypeId members are basically static. It would be nice if C# could express that a little more cleanly with no overhead.
             BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
+            Debug.Assert(constraintReference.TypeBatch.TypeId == default(TConstraintDescription).ConstraintTypeId, "Constraint type associated with the TConstraintDescription generic type parameter must match the type of the constraint in the solver.");
             default(TConstraintDescription).BuildDescription(ref constraintReference.TypeBatch, bundleIndex, innerIndex, out description);
         }
 
@@ -891,10 +891,10 @@ namespace BepuPhysics
             //If the compiler can prove that the BuildDescription function never references any of the instance fields, it will elide the (potentially expensive) initialization.
             //The BuildDescription and ConstraintTypeId members are basically static. It would be nice if C# could express that a little more cleanly with no overhead.
             ref var location = ref HandleToConstraint[handle.Value];
-            var dummy = default(TConstraintDescription);
-            ref var typeBatch = ref Sets[location.SetIndex].Batches[location.BatchIndex].GetTypeBatch(dummy.ConstraintTypeId);
+            Debug.Assert(default(TConstraintDescription).ConstraintTypeId == location.TypeId, "Constraint type associated with the TConstraintDescription generic type parameter must match the type of the constraint in the solver.");
+            ref var typeBatch = ref Sets[location.SetIndex].Batches[location.BatchIndex].GetTypeBatch(location.TypeId);
             BundleIndexing.GetBundleIndices(location.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
-            dummy.BuildDescription(ref typeBatch, bundleIndex, innerIndex, out description);
+            default(TConstraintDescription).BuildDescription(ref typeBatch, bundleIndex, innerIndex, out description);
         }
 
 
