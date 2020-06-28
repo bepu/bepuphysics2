@@ -73,6 +73,7 @@ namespace Demos.Demos.Sponsors
             Add(sponsors1, "A. L.", @"Content\Sponsors\waryoctopus.png", content, surface);
             Add(sponsors1, "D. P.", @"Content\Sponsors\contentsluginthevoid.png", content, surface);
             Add(sponsors1, "Creative-House.org", @"Content\Sponsors\handicat.png", content, surface);
+            Add(sponsors1, "vietnt", @"Content\Sponsors\raisondetre.png", content, surface);
 
             //These supporters are those who gave 50 dollars a month (or historical backers of roughly equivalent or greater total contribution).
             //They get a larger entry, a bit more text if desired, and a physically simulated entry in this demo.
