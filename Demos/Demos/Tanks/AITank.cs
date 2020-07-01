@@ -30,7 +30,7 @@ namespace Demos.Demos.Tanks
         /// </summary>
         internal int HitPoints;
 
-        public void Update(Simulation simulation, BodyProperty<TankDemoBodyProperties> bodyProperties, Random random, long frameIndex, in Vector2 playAreaMin, in Vector2 playAreaMax, int aiIndex, ref QuickList<AITank> aiTanks, ref int projectileCount)
+        public void Update(Simulation simulation, CollidableProperty<TankDemoBodyProperties> bodyProperties, Random random, long frameIndex, in Vector2 playAreaMin, in Vector2 playAreaMax, int aiIndex, ref QuickList<AITank> aiTanks, ref int projectileCount)
         {
             ref var currentPose = ref simulation.Bodies.GetBodyReference(Controller.Tank.Body).Pose;
             //tankBodyPose = localTankBodyPose * tankPose

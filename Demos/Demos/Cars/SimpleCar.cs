@@ -35,7 +35,7 @@ namespace Demos.Demos.Cars
             });
         }
 
-        public static WheelHandles CreateWheel(Simulation simulation, BodyProperty<CarBodyProperties> properties, in RigidPose bodyPose,
+        public static WheelHandles CreateWheel(Simulation simulation, CollidableProperty<CarBodyProperties> properties, in RigidPose bodyPose,
             TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, BodyHandle bodyHandle, ref SubgroupCollisionFilter bodyFilter, in Vector3 bodyToWheelSuspension, in Vector3 suspensionDirection, float suspensionLength,
             in AngularHinge hingeDescription, in SpringSettings suspensionSettings, in Quaternion localWheelOrientation)
         {
@@ -79,7 +79,7 @@ namespace Demos.Demos.Cars
             return handles;
         }
 
-        public static SimpleCar Create(Simulation simulation, BodyProperty<CarBodyProperties> properties, in RigidPose pose,
+        public static SimpleCar Create(Simulation simulation, CollidableProperty<CarBodyProperties> properties, in RigidPose pose,
             TypedIndex bodyShape, BodyInertia bodyInertia, float bodyFriction, TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction,
             in Vector3 bodyToFrontLeftSuspension, in Vector3 bodyToFrontRightSuspension, in Vector3 bodyToBackLeftSuspension, in Vector3 bodyToBackRightSuspension,
             in Vector3 suspensionDirection, float suspensionLength, in SpringSettings suspensionSettings, in Quaternion localWheelOrientation)

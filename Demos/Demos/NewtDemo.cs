@@ -527,10 +527,10 @@ namespace Demos.Demos
 
     struct DeformableCallbacks : INarrowPhaseCallbacks
     {
-        public BodyProperty<DeformableCollisionFilter> Filters;
+        public CollidableProperty<DeformableCollisionFilter> Filters;
         public void Initialize(Simulation simulation)
         {
-            Filters.Initialize(simulation.Bodies);
+            Filters.Initialize(simulation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -645,7 +645,7 @@ namespace Demos.Demos
             return 6;
         }
 
-        internal unsafe static void CreateDeformable(Simulation simulation, in Vector3 position, in Quaternion orientation, float density, float cellSize, in SpringSettings weldSpringiness, in SpringSettings volumeSpringiness, int instanceId, BodyProperty<DeformableCollisionFilter> filters,
+        internal unsafe static void CreateDeformable(Simulation simulation, in Vector3 position, in Quaternion orientation, float density, float cellSize, in SpringSettings weldSpringiness, in SpringSettings volumeSpringiness, int instanceId, CollidableProperty<DeformableCollisionFilter> filters,
             ref Buffer<Vector3> vertices, ref CellSet vertexSpatialIndices, ref Buffer<CellVertexIndices> cellVertexIndices, ref Buffer<TetrahedronVertices> tetrahedraVertexIndices)
         {
             var pool = simulation.BufferPool;
@@ -706,7 +706,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi / 4;
             camera.Pitch = MathHelper.Pi * 0.15f;
 
-            var filters = new BodyProperty<DeformableCollisionFilter>();
+            var filters = new CollidableProperty<DeformableCollisionFilter>();
             Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");

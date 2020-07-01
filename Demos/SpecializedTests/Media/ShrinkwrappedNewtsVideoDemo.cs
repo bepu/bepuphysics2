@@ -20,7 +20,7 @@ namespace Demos.SpecializedTests
             camera.Yaw = MathHelper.Pi / 4;
             camera.Pitch = MathHelper.Pi * 0.15f;
 
-            var filters = new BodyProperty<DeformableCollisionFilter>();
+            var filters = new CollidableProperty<DeformableCollisionFilter>();
             Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");

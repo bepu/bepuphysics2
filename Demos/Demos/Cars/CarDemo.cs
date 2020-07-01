@@ -40,7 +40,7 @@ namespace Demos.Demos.Cars
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            var properties = new BodyProperty<CarBodyProperties>();
+            var properties = new CollidableProperty<CarBodyProperties>();
             Simulation = Simulation.Create(BufferPool, new CarCallbacks() { Properties = properties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);

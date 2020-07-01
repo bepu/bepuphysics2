@@ -19,7 +19,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(0, 9, -40);
             camera.Yaw = MathHelper.Pi;
             camera.Pitch = 0;
-            var filters = new BodyProperty<SubgroupCollisionFilter>();
+            var filters = new CollidableProperty<SubgroupCollisionFilter>();
             Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             int ragdollIndex = 0;

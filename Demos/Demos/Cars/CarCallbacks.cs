@@ -17,10 +17,10 @@ namespace Demos.Demos.Cars
     /// </summary>
     struct CarCallbacks : INarrowPhaseCallbacks
     {
-        public BodyProperty<CarBodyProperties> Properties;
+        public CollidableProperty<CarBodyProperties> Properties;
         public void Initialize(Simulation simulation)
         {
-            Properties.Initialize(simulation.Bodies);
+            Properties.Initialize(simulation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

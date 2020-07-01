@@ -20,7 +20,7 @@ namespace Demos.Demos
         delegate bool KinematicDecider(int rowIndex, int columnIndex, int width, int height);
 
         BodyHandle[,] CreateBodyGrid(in Vector3 position, in Quaternion orientation, int width, int height, float spacing, float bodyRadius, float massPerBody,
-            int instanceId, BodyProperty<ClothCollisionFilter> filters, KinematicDecider isKinematic)
+            int instanceId, CollidableProperty<ClothCollisionFilter> filters, KinematicDecider isKinematic)
         {
             var description = new BodyDescription
             {
@@ -112,7 +112,7 @@ namespace Demos.Demos
             camera.Yaw = -MathF.PI * 0.8f;
             camera.Pitch = MathF.PI * 0.1f;
 
-            var filters = new BodyProperty<ClothCollisionFilter>();
+            var filters = new CollidableProperty<ClothCollisionFilter>();
             Simulation = Simulation.Create(BufferPool, new ClothCallbacks() { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -50, 0)));
             rolloverInfo = new RolloverInfo();
 

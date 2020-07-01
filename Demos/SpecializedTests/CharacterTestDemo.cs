@@ -19,7 +19,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(20, 10, 20);
             camera.Yaw = MathHelper.Pi * -1f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
-            var masks = new BodyProperty<ulong>();
+            var masks = new CollidableProperty<ulong>();
             characters = new CharacterControllers(BufferPool);
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 

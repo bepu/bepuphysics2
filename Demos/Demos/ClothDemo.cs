@@ -50,10 +50,10 @@ namespace Demos.Demos
 
     struct ClothCallbacks : INarrowPhaseCallbacks
     {
-        public BodyProperty<ClothCollisionFilter> Filters;
+        public CollidableProperty<ClothCollisionFilter> Filters;
         public void Initialize(Simulation simulation)
         {
-            Filters.Initialize(simulation.Bodies);
+            Filters.Initialize(simulation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -101,7 +101,7 @@ namespace Demos.Demos
         delegate bool KinematicDecider(int rowIndex, int columnIndex, int width, int height);
 
         BodyHandle[,] CreateBodyGrid(in Vector3 position, in Quaternion orientation, int width, int height, float spacing, float bodyRadius, float massPerBody,
-            int instanceId, BodyProperty<ClothCollisionFilter> filters, KinematicDecider isKinematic)
+            int instanceId, CollidableProperty<ClothCollisionFilter> filters, KinematicDecider isKinematic)
         {
             var description = new BodyDescription
             {
@@ -193,7 +193,7 @@ namespace Demos.Demos
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            var filters = new BodyProperty<ClothCollisionFilter>();
+            var filters = new CollidableProperty<ClothCollisionFilter>();
             Simulation = Simulation.Create(BufferPool, new ClothCallbacks() { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
             rolloverInfo = new RolloverInfo();
 

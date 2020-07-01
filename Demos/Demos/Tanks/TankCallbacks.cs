@@ -51,12 +51,12 @@ namespace Demos.Demos.Tanks
     /// </summary>
     struct TankCallbacks : INarrowPhaseCallbacks
     {
-        public BodyProperty<TankDemoBodyProperties> Properties;
+        public CollidableProperty<TankDemoBodyProperties> Properties;
         public SpinLock ProjectileLock;
         public QuickList<ProjectileImpact> ProjectileImpacts;
         public void Initialize(Simulation simulation)
         {
-            Properties.Initialize(simulation.Bodies);
+            Properties.Initialize(simulation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

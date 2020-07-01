@@ -159,7 +159,7 @@ namespace Demos.Demos.Tanks
         /// <param name="simulation">Simulation that contains the tank.</param>
         /// <param name="bodyProperties">Body properties to allocate the projectile's properties in.</param>
         /// <returns>Handle of the created projectile body.</returns>
-        public BodyHandle Fire(Simulation simulation, BodyProperty<TankDemoBodyProperties> bodyProperties)
+        public BodyHandle Fire(Simulation simulation, CollidableProperty<TankDemoBodyProperties> bodyProperties)
         {
             var barrel = simulation.Bodies.GetBodyReference(Barrel);
             ref var barrelPose = ref barrel.Pose;
@@ -181,7 +181,7 @@ namespace Demos.Demos.Tanks
             return projectileHandle;
         }
 
-        static BodyHandle CreateWheel(Simulation simulation, BodyProperty<TankDemoBodyProperties> properties, in RigidPose tankPose, in RigidPose bodyLocalPose,
+        static BodyHandle CreateWheel(Simulation simulation, CollidableProperty<TankDemoBodyProperties> properties, in RigidPose tankPose, in RigidPose bodyLocalPose,
             TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, BodyHandle bodyHandle, ref SubgroupCollisionFilter bodyFilter, in Vector3 bodyToWheelSuspension, float suspensionLength,
             in SpringSettings suspensionSettings, in Quaternion localWheelOrientation,
             ref QuickList<BodyHandle> wheelHandles, ref QuickList<ConstraintHandle> constraints, ref QuickList<ConstraintHandle> motors)
@@ -241,7 +241,7 @@ namespace Demos.Demos.Tanks
             return wheelHandle;
         }
 
-        static ref SubgroupCollisionFilter CreatePart(Simulation simulation, in TankPartDescription part, RigidPose pose, BodyProperty<TankDemoBodyProperties> properties, out BodyHandle handle)
+        static ref SubgroupCollisionFilter CreatePart(Simulation simulation, in TankPartDescription part, RigidPose pose, CollidableProperty<TankDemoBodyProperties> properties, out BodyHandle handle)
         {
             RigidPose.MultiplyWithoutOverlap(part.Pose, pose, out var bodyPose);
             handle = simulation.Bodies.Add(BodyDescription.CreateDynamic(bodyPose, part.Inertia, new CollidableDescription(part.Shape, 0.1f), new BodyActivityDescription(0.01f)));
@@ -259,7 +259,7 @@ namespace Demos.Demos.Tanks
         /// <param name="pose">Pose of the tank.</param>
         /// <param name="description">Description of the tank.</param>
         /// <returns>Tank instance containing references to the simulation tank parts.</returns>
-        public static Tank Create(Simulation simulation, BodyProperty<TankDemoBodyProperties> properties, BufferPool pool, in RigidPose pose, in TankDescription description)
+        public static Tank Create(Simulation simulation, CollidableProperty<TankDemoBodyProperties> properties, BufferPool pool, in RigidPose pose, in TankDescription description)
         {
             var wheelHandles = new QuickList<BodyHandle>(description.WheelCountPerTread * 2, pool);
             var constraints = new QuickList<ConstraintHandle>(description.WheelCountPerTread * 2 * 6 + 4, pool);
@@ -403,7 +403,7 @@ namespace Demos.Demos.Tanks
             properties.TankPart = false;
         }
 
-        public void Explode(Simulation simulation, BodyProperty<TankDemoBodyProperties> properties, BufferPool pool)
+        public void Explode(Simulation simulation, CollidableProperty<TankDemoBodyProperties> properties, BufferPool pool)
         {
             //When the tank explodes, we just remove all the binding constraints and let it fall apart and reset body properties.
             for (int i =0; i < WheelHandles.Length; ++i)

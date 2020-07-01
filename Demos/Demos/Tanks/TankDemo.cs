@@ -16,7 +16,7 @@ namespace Demos.Demos.Tanks
 {
     public class TankDemo : Demo
     {
-        BodyProperty<TankDemoBodyProperties> bodyProperties;
+        CollidableProperty<TankDemoBodyProperties> bodyProperties;
         TankController playerController;
 
         QuickList<AITank> aiTanks;
@@ -48,7 +48,7 @@ namespace Demos.Demos.Tanks
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            bodyProperties = new BodyProperty<TankDemoBodyProperties>();
+            bodyProperties = new CollidableProperty<TankDemoBodyProperties>();
             Simulation = Simulation.Create(BufferPool, new TankCallbacks() { Properties = bodyProperties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);

@@ -94,10 +94,10 @@ namespace Demos.Demos
     /// </summary>
     struct SubgroupFilteredCallbacks : INarrowPhaseCallbacks
     {
-        public BodyProperty<SubgroupCollisionFilter> CollisionFilters;
+        public CollidableProperty<SubgroupCollisionFilter> CollisionFilters;
         public void Initialize(Simulation simulation)
         {
-            CollisionFilters.Initialize(simulation.Bodies);
+            CollisionFilters.Initialize(simulation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -190,7 +190,7 @@ namespace Demos.Demos
         }
 
         static RagdollArmHandles AddArm(float sign, Vector3 localShoulder, RigidPose localChestPose, BodyHandle chestHandle, ref SubgroupCollisionFilter chestMask,
-            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyProperty<SubgroupCollisionFilter> filters, SpringSettings constraintSpringSettings, Simulation simulation)
+            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, CollidableProperty<SubgroupCollisionFilter> filters, SpringSettings constraintSpringSettings, Simulation simulation)
         {
             RagdollArmHandles handles;
             var localElbow = localShoulder + new Vector3(sign * 0.45f, 0, 0);
@@ -295,7 +295,7 @@ namespace Demos.Demos
         }
 
         static RagdollLegHandles AddLeg(Vector3 localHip, RigidPose localHipsPose, BodyHandle hipsHandle, ref SubgroupCollisionFilter hipsFilter,
-            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyProperty<SubgroupCollisionFilter> filters, SpringSettings constraintSpringSettings, Simulation simulation)
+            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, CollidableProperty<SubgroupCollisionFilter> filters, SpringSettings constraintSpringSettings, Simulation simulation)
         {
             RagdollLegHandles handles;
             var localKnee = localHip - new Vector3(0, 0.5f, 0);
@@ -414,7 +414,7 @@ namespace Demos.Demos
             public RagdollLegHandles RightLeg;
         }
 
-        public static RagdollHandles AddRagdoll(Vector3 position, Quaternion orientation, int ragdollIndex, BodyProperty<SubgroupCollisionFilter> collisionFilters, Simulation simulation)
+        public static RagdollHandles AddRagdoll(Vector3 position, Quaternion orientation, int ragdollIndex, CollidableProperty<SubgroupCollisionFilter> collisionFilters, Simulation simulation)
         {
             var ragdollPose = new RigidPose { Position = position, Orientation = orientation };
             var horizontalOrientation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 0, 1), MathHelper.PiOver2);
@@ -533,7 +533,7 @@ namespace Demos.Demos
             camera.Position = new Vector3(-20, 10, -20);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
-            var collisionFilters = new BodyProperty<SubgroupCollisionFilter>();
+            var collisionFilters = new CollidableProperty<SubgroupCollisionFilter>();
             Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = collisionFilters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             int ragdollIndex = 0;

@@ -12,14 +12,14 @@ namespace Demos.SpecializedTests
 {
     public class NewtDemandingSacrificeVideoDemo : Demo
     {
-        BodyProperty<SubgroupCollisionFilter> filters;
+        CollidableProperty<SubgroupCollisionFilter> filters;
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-32f, 20.5f, 61f);
             camera.Yaw = MathHelper.Pi * 0.3f;
             camera.Pitch = MathHelper.Pi * -0.05f;
 
-            filters = new BodyProperty<SubgroupCollisionFilter>(BufferPool);
+            filters = new CollidableProperty<SubgroupCollisionFilter>(BufferPool);
             Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks() { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)), 0.1f)));
