@@ -18,7 +18,9 @@ jobs:
       with:
         dotnet-version: 3.1.200
     - name: Install dependencies
-      run: dotnet restore Demos
+      run: |
+        dotnet restore DemoContentBuilder
+        dotnet restore Demos
     - name: Build
       run: |
         dotnet build DemoContentBuilder --configuration Release --no-restore
