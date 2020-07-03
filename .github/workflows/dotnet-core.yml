@@ -1,0 +1,25 @@
+name: .NET Core
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.200
+    - name: Install dependencies
+      run: dotnet restore Demos
+    - name: Build
+      run: dotnet build Demos --configuration ReleaseStrip --no-restore
+    - name: Test
+      run: dotnet test --no-restore --verbosity normal

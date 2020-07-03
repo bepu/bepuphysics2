@@ -42,7 +42,7 @@ namespace Demos.SpecializedTests
             var poseBounds = new BoundingBox { Min = new Vector3(-20, 1, 5), Max = new Vector3(20, 10, 50) };
             for (int i = 0; i < 512; ++i)
             {
-                bodyDescription.Pose = PairDeterminismTests.CreateRandomPose(random, poseBounds);
+                bodyDescription.Pose = TestHelpers.CreateRandomPose(random, poseBounds);
                 Simulation.Bodies.Add(bodyDescription);
             }
 

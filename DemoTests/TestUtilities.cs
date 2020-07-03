@@ -8,11 +8,20 @@ using System.Numerics;
 using System.Text;
 using DemoContentLoader;
 using System.Runtime.CompilerServices;
+using Xunit;
 
 namespace Demos.SpecializedTests
 {
-    public static class DeterminismHashTest<T> where T : Demo, new()
+    public static class TestUtilities
     {
+        public static ContentArchive GetDemosContentArchive()
+        {
+            using (var stream = typeof(Demos.FountainStressTestDemo).Assembly.GetManifestResourceStream("Demos.Demos.contentarchive"))
+            {
+                return ContentArchive.Load(stream);
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long ComputeHash(ref float v, long constant)
         {
@@ -25,16 +34,13 @@ namespace Demos.SpecializedTests
             return constant * (ComputeHash(ref v.X, 13) + ComputeHash(ref v.Y, 31) + ComputeHash(ref v.Z, 53));
         }
 
-        static long ExecuteSimulation(ContentArchive content, int frameCount)
+        static long ExecuteSimulation<T>(ContentArchive content, int frameCount) where T : Demo, new()
         {
             var demo = new T();
             demo.Initialize(content, new DemoRenderer.Camera(1, 1, 1, 1));
-            Console.Write("Completed frames: ");
             for (int i = 0; i < frameCount; ++i)
             {
                 demo.Update(null, null, null, 1 / 60f);
-                if ((i + 1) % 32 == 0)
-                    Console.Write($"{i + 1}, ");
             }
             long hash = 0;
 
@@ -54,24 +60,18 @@ namespace Demos.SpecializedTests
                 }
             }
             demo.Dispose();
-            Console.WriteLine();
-            Console.WriteLine($"Simulation hash after {frameCount} frames: {hash}");
             return hash;
         }
 
-        public static void Test(ContentArchive archive, int runCount, int frameCount)
+        public static void TestDeterminism<T>(int runCount, int frameCount) where T : Demo, new()
         {
-            var originalHash = ExecuteSimulation(archive, frameCount);
-            Console.WriteLine($"Completed initial run.");
+            var archive = GetDemosContentArchive();
+            var originalHash = ExecuteSimulation<T>(archive, frameCount);
             for (int i = 0; i < runCount; ++i)
             {
-                var hash = ExecuteSimulation(archive, frameCount);
-                if (originalHash != hash)
-                {
-                    Console.WriteLine($"Local determinism failure.");
-                }
+                var hash = ExecuteSimulation<T>(archive, frameCount);
+                Assert.True(originalHash == hash, $"Local determinism failure for {typeof(T).Name}.");
             }
-            Console.WriteLine($"All runs complete.");
         }
     }
 }

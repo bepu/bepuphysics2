@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27004.2005
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30223.230
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Demos", "Demos\Demos.csproj", "{C4C313CF-0BBD-407F-AC30-C5E889206F55}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -23,6 +23,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BepuUtilities", "BepuUtilities\BepuUtilities.csproj", "{8D3FB6BE-2726-4479-8AF2-13F593314AC0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BepuPhysics", "BepuPhysics\BepuPhysics.csproj", "{5FBC743A-8911-4DE6-B136-C0B274E1B185}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DemoTests", "DemoTests\DemoTests.csproj", "{32BABF14-6971-41F8-A556-8E0F2D8C86B2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -268,6 +270,38 @@ Global
 		{5FBC743A-8911-4DE6-B136-C0B274E1B185}.ReleaseStripNoProfiling|x64.Build.0 = ReleaseStripNoProfiling|Any CPU
 		{5FBC743A-8911-4DE6-B136-C0B274E1B185}.ReleaseStripNoProfiling|x86.ActiveCfg = ReleaseStripNoProfiling|Any CPU
 		{5FBC743A-8911-4DE6-B136-C0B274E1B185}.ReleaseStripNoProfiling|x86.Build.0 = ReleaseStripNoProfiling|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Debug|ARM.Build.0 = Debug|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Debug|x64.Build.0 = Debug|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Debug|x86.Build.0 = Debug|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Release|ARM.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Release|ARM.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Release|x64.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Release|x64.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Release|x86.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.Release|x86.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStrip|Any CPU.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStrip|Any CPU.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStrip|ARM.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStrip|ARM.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStrip|x64.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStrip|x64.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStrip|x86.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStrip|x86.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStripNoProfiling|Any CPU.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStripNoProfiling|Any CPU.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStripNoProfiling|ARM.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStripNoProfiling|ARM.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStripNoProfiling|x64.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStripNoProfiling|x64.Build.0 = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStripNoProfiling|x86.ActiveCfg = Release|Any CPU
+		{32BABF14-6971-41F8-A556-8E0F2D8C86B2}.ReleaseStripNoProfiling|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

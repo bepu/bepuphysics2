@@ -45,7 +45,7 @@ namespace Demos.SpecializedTests
 
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            var pose = PairDeterminismTests.CreateRandomPose(random, new BoundingBox
+            var pose = TestHelpers.CreateRandomPose(random, new BoundingBox
             {
                 Min = new Vector3(-10, 5, 70),
                 Max = new Vector3(10, 15, 70)
