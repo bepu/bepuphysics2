@@ -20,6 +20,8 @@ jobs:
     - name: Install dependencies
       run: dotnet restore Demos
     - name: Build
-      run: dotnet build Demos --configuration ReleaseStrip --no-restore
+      run: |
+        dotnet build DemoContentBuilder --configuration Release --no-restore
+        dotnet build Demos --configuration ReleaseStrip --no-restore
     - name: Test
       run: dotnet test --no-restore --verbosity normal
