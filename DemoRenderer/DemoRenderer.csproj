@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
     <LangVersion>latest</LangVersion>
     <!--<RuntimeFrameworkVersion>2.1.0-preview2-25616-02</RuntimeFrameworkVersion>-->
@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Condition="'$(Configuration)'=='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\$(Configuration)\netcoreapp2.1\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot; -debug" />
-    <Exec Condition="'$(Configuration)'!='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\Release\netcoreapp2.1\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot;" />
+    <Exec Condition="'$(Configuration)'=='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\$(Configuration)\netcoreapp3.1\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot; -debug" />
+    <Exec Condition="'$(Configuration)'!='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\Release\netcoreapp3.1\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot;" />
   </Target>
   
   <ItemGroup>
