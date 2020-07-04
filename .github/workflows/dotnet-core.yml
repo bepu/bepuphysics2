@@ -9,7 +9,7 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -23,7 +23,7 @@ jobs:
         dotnet restore Demos
     - name: Build
       run: |
-        dotnet build DemoContentBuilder --configuration Release --no-restore
+        dotnet build DemoContentBuilder --configuration Release --no-restore /p:Platform=x64
         dotnet build Demos --configuration ReleaseStrip --no-restore
     - name: Test
-      run: dotnet test --no-restore --verbosity normal
+      run: dotnet test DemoTests -c Release --verbosity normal
