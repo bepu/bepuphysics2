@@ -6,8 +6,9 @@ using BepuUtilities.Memory;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using Xunit;
 
-namespace Demos.SpecializedTests
+namespace DemoTests
 {
     public interface IInertiaTester
     {
@@ -161,7 +162,7 @@ namespace Demos.SpecializedTests
 
     public static class InertiaTensorTests
     {
-        public static void CheckInertia<TInertiaTester>(ref TInertiaTester tester) where TInertiaTester : IInertiaTester
+        static void CheckInertia<TInertiaTester>(ref TInertiaTester tester) where TInertiaTester : IInertiaTester
         {
             tester.ComputeBounds(out var min, out var max);
             var span = max - min;
@@ -205,9 +206,9 @@ namespace Demos.SpecializedTests
                 !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZY, numericalLocalInverseInertia.ZY) ||
                 !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZZ, numericalLocalInverseInertia.ZZ))
             {
-                Console.WriteLine("Excessive error in numerical vs analytic inertia tensor.");
-                Console.WriteLine($"ANALYTIC:   {analyticInertia.InverseInertiaTensor} vs ");
-                Console.WriteLine($"NUMERICAL:  {numericalLocalInverseInertia}");
+                Assert.True(false, "Excessive error in numerical vs analytic inertia tensor.");
+                Console.WriteLine($"ANALYTIC INERTIA:   {analyticInertia.InverseInertiaTensor} vs ");
+                Console.WriteLine($"NUMERICAL INERTIA:  {numericalLocalInverseInertia}");
                 Symmetric3x3.Subtract(analyticInertia.InverseInertiaTensor, numericalLocalInverseInertia, out var difference);
                 Console.WriteLine($"DIFFERENCE: {difference}");
             }
@@ -220,6 +221,7 @@ namespace Demos.SpecializedTests
             return MathF.Abs(a - b) < 3e-2f || (ratio < (1 + ratioThreshold) && ratio > 1f / (1 + ratioThreshold));
         }
 
+        [Fact]
         public static void Test()
         {
             var random = new Random(5);

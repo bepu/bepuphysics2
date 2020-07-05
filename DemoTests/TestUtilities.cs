@@ -1,22 +1,16 @@
-﻿using BepuUtilities;
-using BepuUtilities.Memory;
-using BepuPhysics;
-using BepuPhysics.Collidables;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
+﻿using System.Numerics;
 using DemoContentLoader;
 using System.Runtime.CompilerServices;
 using Xunit;
+using Demos;
 
-namespace Demos.SpecializedTests
+namespace DemoTests
 {
     public static class TestUtilities
     {
         public static ContentArchive GetDemosContentArchive()
         {
-            using (var stream = typeof(Demos.FountainStressTestDemo).Assembly.GetManifestResourceStream("Demos.Demos.contentarchive"))
+            using (var stream = typeof(Demos.Demos.FountainStressTestDemo).Assembly.GetManifestResourceStream("Demos.Demos.contentarchive"))
             {
                 return ContentArchive.Load(stream);
             }

@@ -1,20 +1,15 @@
 ﻿using BepuUtilities.Memory;
 using BepuPhysics;
-using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using BepuUtilities;
 using BepuPhysics.Constraints.Contact;
+using Demos;
+using Xunit;
 
-namespace Demos.SpecializedTests
+namespace DemoTests
 {
 
     public unsafe class ConstraintDescriptionMappingTests
@@ -28,7 +23,7 @@ namespace Demos.SpecializedTests
                 Unsafe.Add(ref bytes, i) = (byte)random.Next(256);
             }
         }
-        public static void Test<T>(BufferPool pool, Random random, int constraintTypeBodyCount) where T : unmanaged, IConstraintDescription<T>
+        static void Test<T>(BufferPool pool, Random random, int constraintTypeBodyCount) where T : unmanaged, IConstraintDescription<T>
         {
             var simulation = Simulation.Create(pool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks());
 
@@ -46,8 +41,6 @@ namespace Demos.SpecializedTests
             ConstraintHandle[] constraintHandles = new ConstraintHandle[constraintTestCount];
             T[] sources = new T[constraintTestCount];
 
-
-            var size = Unsafe.SizeOf<T>();
             //Generate a set of constraints whose descriptions are filled with fuzzed data, referencing random bodies.
             for (int constraintTestIndex = 0; constraintTestIndex < constraintTestCount; ++constraintTestIndex)
             {
@@ -72,7 +65,7 @@ namespace Demos.SpecializedTests
                 simulation.Solver.GetDescription(constraintHandles[constraintTestIndex], out T description);
                 var aValue = (ValueType)description;
                 var bValue = (ValueType)sources[constraintTestIndex];
-                CheckEquality(typeof(T).Name, typeof(T), aValue, bValue);
+                Assert.True(CheckEquality(typeof(T).Name, typeof(T), aValue, bValue));
             }
             simulation.Dispose();
         }
@@ -100,7 +93,8 @@ namespace Demos.SpecializedTests
             return equals;
         }
 
-        public static void Test()
+        [Fact]
+        public static void TestMappings()
         {
             var pool = new BufferPool();            
             var random = new Random(5);

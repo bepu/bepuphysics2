@@ -4,7 +4,9 @@ using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using Demos;
 using Demos.Demos;
+using Demos.SpecializedTests;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -12,7 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Xunit;
 
-namespace Demos.SpecializedTests
+namespace DemoTests
 {
     public static class PairDeterminismTests
     {
