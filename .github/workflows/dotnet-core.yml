@@ -27,3 +27,10 @@ jobs:
         dotnet build Demos --configuration ReleaseStrip --no-restore
     - name: Test
       run: dotnet test DemoTests -c Release --verbosity normal
+    - name: Publish
+      run: |
+        dotnet nuget add source "https://nuget.pkg.github.com/bepu/index.json" --name "github" --username "rossnordby" --password "${{secrets.GITHUB_TOKEN}}"
+        dotnet pack "BepuPhysics" -c ReleaseStrip
+        dotnet pack "BepuUtilities" -c ReleaseStrip
+        dotnet nuget push "**/*.nupkg" -s "github" -k "${{secrets.GITHUB_TOKEN}}" --skip-duplicate
+        dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k "${{secrets.NUGET_KEY}}" --skip-duplicate
