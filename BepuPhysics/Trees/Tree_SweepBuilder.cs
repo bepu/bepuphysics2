@@ -80,8 +80,15 @@ namespace BepuPhysics.Trees
                 var subtreeIndex = indexMap[i];
                 BoundingBox.CreateMerged(bMerged, boundingBoxes[subtreeIndex], out bMerged);
 
-                var aCost = i * ComputeBoundsMetric(ref aMerged[aIndex]);
-                var bCost = (count - i) * ComputeBoundsMetric(ref bMerged);
+                //Note the modifications to the cost function compare to raw SAH.
+                //First, we include a very mildly quadratic term for the counts so that skewed distributions are penalized.
+                //This penalty is weak enough that it should effectively never come into play except in pathological cases, like all bounding boxes overlapping.
+                //Second, we include an extremely small (the smallest normal floating point number) baseline to the evaluated bounds metric.
+                //This ensures that even a set of perfectly overlapping zero bounds will use a midpoint split rather than a skewed split.
+                const float normalEpsilon = 1.1754943508e-38f;
+                var aCost = i * (1f + i * 0.001f) * (normalEpsilon + ComputeBoundsMetric(ref aMerged[aIndex]));
+                var bCount = count - i;
+                var bCost = bCount * (1f + bCount * 0.001f) * (normalEpsilon + ComputeBoundsMetric(ref bMerged));
 
                 var totalCost = aCost + bCost;
                 if (totalCost < cost)
