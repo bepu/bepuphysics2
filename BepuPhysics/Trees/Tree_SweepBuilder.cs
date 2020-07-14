@@ -80,7 +80,7 @@ namespace BepuPhysics.Trees
                 var subtreeIndex = indexMap[i];
                 BoundingBox.CreateMerged(bMerged, boundingBoxes[subtreeIndex], out bMerged);
 
-                //Note the modifications to the cost function compare to raw SAH.
+                //Note the modifications to the cost function compared to raw SAH.
                 //First, we include a very mildly quadratic term for the counts so that skewed distributions are penalized.
                 //This penalty is weak enough that it should effectively never come into play except in pathological cases, like all bounding boxes overlapping.
                 //Second, we include an extremely small (the smallest normal floating point number) baseline to the evaluated bounds metric.

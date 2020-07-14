@@ -71,7 +71,7 @@ namespace Demos.SpecializedTests.Media
             camera.Pitch = MathHelper.Pi * 0.2f;
 
             characters = new CharacterControllers(BufferPool);
-            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var ringBoxShape = new Box(0.5f, 1.5f, 3);
             ringBoxShape.ComputeInertia(1, out var ringBoxInertia);

@@ -26,7 +26,7 @@ namespace Demos.SpecializedTests
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             const int pointCount = 16;
             points = new QuickList<Vector3>(pointCount * 2, BufferPool);

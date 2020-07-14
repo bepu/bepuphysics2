@@ -172,8 +172,12 @@ namespace Demos.Demos
             //The buffer pool is a source of raw memory blobs for the engine to use.
             var bufferPool = new BufferPool();
             //Note that you can also control the order of internal stage execution using a different ITimestepper implementation.
-            //For the purposes of this demo, we just use the default by passing in nothing (which happens to be PositionFirstTimestepper at the time of writing).
-            var simulation = Simulation.Create(bufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            //The PositionFirstTimestepper is the simplest timestepping mode in a technical sense, but since it integrates velocity into position at the start of the frame, 
+            //directly modified velocities outside of the timestep will be integrated before collision detection or the solver has a chance to intervene.
+            //PositionLastTimestepper avoids that by running collision detection and the solver first at the cost of a tiny amount of overhead.
+            //(You could avoid the issue with PositionFirstTimestepper by modifying velocities in the PositionFirstTimestepper's BeforeCollisionDetection callback 
+            //instead of outside the timestep, too, but it's a little more complicated.)
+            var simulation = Simulation.Create(bufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionLastTimestepper());
 
             //Drop a ball on a big static box.
             var sphere = new Sphere(1);

@@ -25,7 +25,7 @@ namespace DemoTests
         }
         static void Test<T>(BufferPool pool, Random random, int constraintTypeBodyCount) where T : unmanaged, IConstraintDescription<T>
         {
-            var simulation = Simulation.Create(pool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks());
+            var simulation = Simulation.Create(pool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(), new PositionFirstTimestepper());
 
 
             const int bodyCount = 2048;

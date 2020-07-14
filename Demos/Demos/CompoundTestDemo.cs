@@ -15,7 +15,11 @@ namespace Demos.Demos
             camera.Position = new Vector3(-13f, 6, -13f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10f, 0)));
+
+            //The PositionFirstTimestepper is the simplest timestepping mode, but since it integrates velocity into position at the start of the frame, directly modified velocities outside of the timestep
+            //will be integrated before collision detection or the solver has a chance to intervene. That's fine in this demo. Other built-in options include the PositionLastTimestepper and the SubsteppingTimestepper.
+            //Note that the timestepper also has callbacks that you can use for executing logic between processing stages, like BeforeCollisionDetection.
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10f, 0)), new PositionFirstTimestepper());
 
             using (var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 8))
             {
@@ -34,20 +38,7 @@ namespace Demos.Demos
                     compoundBuilder.Add(boxChildShape, boxLocalPose, 1);
                     compoundBuilder.BuildDynamicCompound(out var compoundChildren, out var compoundInertia, out var compoundCenter);
                     compoundBuilder.Reset();
-                    var compound = new Compound(compoundChildren);
-                    var compoundDescription = new BodyDescription
-                    {
-                        Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
-                        Collidable = new CollidableDescription
-                        {
-                            Shape = Simulation.Shapes.Add(compound),
-                            SpeculativeMargin = 0.1f,
-                        },
-                        LocalInertia = compoundInertia,
-                        Pose = new RigidPose { Position = compoundCenter, Orientation = Quaternion.Identity },
-                    };
-
-                    Simulation.Bodies.Add(compoundDescription);
+                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(compoundCenter, compoundInertia, new CollidableDescription(Simulation.Shapes.Add(new Compound(compoundChildren)), 0.1f), new BodyActivityDescription(0.01f)));
                 }
 
                 //Build a stack of sphere grids to stress manifold reduction heuristics in a convex-ish situation.
@@ -62,36 +53,16 @@ namespace Demos.Demos
                     {
                         for (int j = 0; j < gridWidth; ++j)
                         {
-                            var localPose = new RigidPose
-                            {
-                                Orientation = Quaternion.Identity,
-                                Position = new Vector3(localPoseOffset, 0, localPoseOffset) + new Vector3(gridSpacing) * new Vector3(i, 0, j)
-                            };
-                            compoundBuilder.Add(gridShapeIndex, localPose, gridBoxInertia.InverseInertiaTensor, 1);
+                            compoundBuilder.Add(gridShapeIndex, new RigidPose(new Vector3(localPoseOffset, 0, localPoseOffset) + new Vector3(gridSpacing) * new Vector3(i, 0, j)), gridBoxInertia.InverseInertiaTensor, 1);
                         }
                     }
                     compoundBuilder.BuildDynamicCompound(out var gridChildren, out var gridInertia, out var center);
                     compoundBuilder.Reset();
                     var gridCompound = new Compound(gridChildren);
-                    var bodyDescription = new BodyDescription
-                    {
-                        Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
-                        Collidable = new CollidableDescription
-                        {
-                            Shape = Simulation.Shapes.Add(gridCompound),
-                            SpeculativeMargin = 0.1f,
-                        },
-                        LocalInertia = gridInertia,
-                        Pose = new RigidPose { Orientation = Quaternion.Identity }
-                    };
-
+                    var bodyDescription = BodyDescription.CreateDynamic(RigidPose.Identity, gridInertia, new CollidableDescription(Simulation.Shapes.Add(gridCompound), 0.1f), new BodyActivityDescription(0.01f));
                     for (int i = 0; i < 4; ++i)
                     {
                         bodyDescription.Pose.Position = new Vector3(0, 2 + i * 3, 0);
-                        //if (i == 0)
-                        //    gridDescription.LocalInertia = new BodyInertia();
-                        //else
-                        //    gridDescription.LocalInertia = gridInertia; 
                         Simulation.Bodies.Add(bodyDescription);
                     }
                 }
@@ -268,10 +239,10 @@ namespace Demos.Demos
             const int planeHeight = 48;
             DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
-                {
-                    Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
-                    return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.01f * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
-                }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
+                        {
+                            Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
+                            return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.01f * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
+                        }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(64, 4, 32), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
         }

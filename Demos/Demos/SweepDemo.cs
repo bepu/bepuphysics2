@@ -31,7 +31,7 @@ namespace Demos.Demos
             camera.Position = new Vector3(0, 10, 40);
             camera.Yaw = 0;
             camera.Pitch = 0;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var box = new Box(2f, 2f, 2f);
             var capsule = new Capsule(1f, 1f);
@@ -52,20 +52,8 @@ namespace Demos.Demos
                     for (int k = 0; k < length; ++k)
                     {
                         var location = new Vector3(5, 5, 5) * new Vector3(i, j, k) + new Vector3(-width * 2.5f, 2.5f, -length * 2.5f);
-                        var bodyDescription = new BodyDescription
-                        {
-                            Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.1f },
-                            Pose = new RigidPose
-                            {
-                                Orientation = Quaternion.Identity,
-                                Position = location
-                            },
-                            Collidable = new CollidableDescription
-                            {
-                                Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                                SpeculativeMargin = 0.1f
-                            }
-                        };
+                        //CreateKinematic is just a helper function that sets the inertia to all zeroes. We'll set the inertia to the actual value in the following switch.
+                        var bodyDescription = BodyDescription.CreateKinematic(location, new CollidableDescription(default, 0.1f), new BodyActivityDescription(0.1f));
                         switch (j % 3)
                         {
                             case 0:
@@ -93,7 +81,7 @@ namespace Demos.Demos
             var random = new Random(5);
             for (int i = 0; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3((float)random.NextDouble() - 0.5f,  (float)random.NextDouble() - 0.5f, (float)random.NextDouble() - 0.5f);
+                points.AllocateUnsafely() = new Vector3((float)random.NextDouble() - 0.5f, (float)random.NextDouble() - 0.5f, (float)random.NextDouble() - 0.5f);
             }
             ConvexHullHelper.CreateShape(points.Span.Slice(points.Count), BufferPool, out _, out hull);
             points.Dispose(BufferPool);

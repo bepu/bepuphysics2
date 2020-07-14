@@ -72,7 +72,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(0, 4, -6);
             camera.Yaw = MathHelper.Pi;
 
-            Simulation = Simulation.Create(BufferPool, new IndexReportingNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)));
+            Simulation = Simulation.Create(BufferPool, new IndexReportingNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)), new PositionFirstTimestepper());
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 4);
             builder.Add(new Sphere(0.5f), new RigidPose(new Vector3(-1, 0, 0)), 1);

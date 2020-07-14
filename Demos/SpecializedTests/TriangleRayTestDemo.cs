@@ -94,7 +94,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(-30, 8, -60);
             camera.Yaw = MathHelper.Pi * 3f / 4;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             Triangle triangle;
             triangle.A = new Vector3(0, 0, 0);

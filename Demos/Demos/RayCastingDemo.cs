@@ -46,7 +46,7 @@ namespace Demos
             {
                 pairMaterial = new PairMaterialProperties();
                 return false;
-            } 
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
@@ -63,7 +63,10 @@ namespace Demos
             camera.Position = new Vector3(-20f, 13, -20f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
-            Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            //The PositionFirstTimestepper is the simplest timestepping mode, but since it integrates velocity into position at the start of the frame, directly modified velocities outside of the timestep
+            //will be integrated before collision detection or the solver has a chance to intervene. That's fine in this demo. Other built-in options include the PositionLastTimestepper and the SubsteppingTimestepper.
+            //Note that the timestepper also has callbacks that you can use for executing logic between processing stages, like BeforeCollisionDetection.
+            Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var box = new Box(0.5f, 1.5f, 1f);
             var capsule = new Capsule(0, 0.5f);
@@ -112,42 +115,12 @@ namespace Demos
 
                         if ((i + j + k) % 2 == 1)
                         {
-                            var bodyDescription = new BodyDescription
-                            {
-                                Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = -0.1f },
-                                Pose = new RigidPose
-                                {
-                                    Orientation = orientation,
-                                    Position = location
-                                },
-                                Collidable = new CollidableDescription
-                                {
-                                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                                    SpeculativeMargin = 0.1f,
-                                    Shape = shapeIndex
-                                }
-                            };
-                            Simulation.Bodies.Add(bodyDescription);
+                            Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(location, orientation), new CollidableDescription(shapeIndex, 0.1f), new BodyActivityDescription(-0.1f)));
                         }
                         else
                         {
-                            var staticDescription = new StaticDescription
-                            {
-                                Pose = new RigidPose
-                                {
-                                    Orientation = orientation,
-                                    Position = location
-                                },
-                                Collidable = new CollidableDescription
-                                {
-                                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                                    SpeculativeMargin = 0.1f,
-                                    Shape = shapeIndex
-                                }
-                            };
-                            Simulation.Statics.Add(staticDescription);
+                            Simulation.Statics.Add(new StaticDescription(location, orientation, new CollidableDescription(shapeIndex, 0.1f)));
                         }
-
                     }
                 }
             }
@@ -160,7 +133,7 @@ namespace Demos
                     return new Vector3(x - planeWidth / 2, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y - planeHeight / 2);
                 }, new Vector3(1, 3, 1), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(
-                new Vector3(0, -10, 0), BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 4),
+                new Vector3(0, -10, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 4),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
             int raySourceCount = 3;

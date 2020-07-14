@@ -17,7 +17,7 @@ namespace Demos.SpecializedTests
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var startTime = Stopwatch.GetTimestamp();
             DemoMeshHelper.CreateDeformedPlane(1025, 1025, (x, y) => new Vector3(x * 0.125f, MathF.Sin(x) + MathF.Sin(y), y * 0.125f), Vector3.One, BufferPool, out var originalMesh);

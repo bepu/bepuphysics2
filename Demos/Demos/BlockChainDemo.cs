@@ -25,7 +25,10 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            //The PositionFirstTimestepper is the simplest timestepping mode, but since it integrates velocity into position at the start of the frame, directly modified velocities outside of the timestep
+            //will be integrated before collision detection or the solver has a chance to intervene. That's fine in this demo. Other built-in options include the PositionLastTimestepper and the SubsteppingTimestepper.
+            //Note that the timestepper also has callbacks that you can use for executing logic between processing stages, like BeforeCollisionDetection.
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var boxShape = new Box(1, 1, 1);
             boxShape.ComputeInertia(1, out var boxInertia);
@@ -38,20 +41,12 @@ namespace Demos.Demos
                 //Build the blocks.
                 for (int blockIndex = 0; blockIndex < blocksPerChain; ++blockIndex)
                 {
-                    var bodyDescription = new BodyDescription
-                    {
+                    var bodyDescription = BodyDescription.CreateDynamic(
+                        new Vector3(0, 5 + blockIndex * (boxShape.Height + 1), (forkIndex - forkCount * 0.5f) * (boxShape.Length + 4)),
                         //Make the uppermost block kinematic to hold up the rest of the chain.
-                        LocalInertia = blockIndex == blocksPerChain - 1 ? new BodyInertia() : boxInertia,
-                        Pose = new RigidPose
-                        {
-                            Position = new Vector3(0,
-                                5 + blockIndex * (boxShape.Height + 1),
-                                (forkIndex - forkCount * 0.5f) * (boxShape.Length + 4)),
-                            Orientation = Quaternion.Identity
-                        },
-                        Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = .01f },
-                        Collidable = new CollidableDescription { Shape = boxIndex, SpeculativeMargin = .1f },
-                    };
+                        blockIndex == blocksPerChain - 1 ? new BodyInertia() : boxInertia,
+                        new CollidableDescription(boxIndex, .1f),
+                        new BodyActivityDescription(.01f, 32));
                     blockHandles[blockIndex] = Simulation.Bodies.Add(bodyDescription);
                 }
                 //Build the chains.
@@ -67,24 +62,7 @@ namespace Demos.Demos
                 }
             }
 
-            var staticShape = new Box(200, 1, 200);
-            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
-
-            var staticDescription = new StaticDescription
-            {
-                Collidable = new CollidableDescription
-                {
-                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                    Shape = staticShapeIndex,
-                    SpeculativeMargin = 0.1f
-                },
-                Pose = new RigidPose
-                {
-                    Position = new Vector3(1, -0.5f, 1),
-                    Orientation = Quaternion.Identity
-                }
-            };
-            Simulation.Statics.Add(staticDescription);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(1, -0.5f, 1), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
 
             //Build the coin description for the ponz-I mean ICO.
             var coinShape = new Cylinder(1.5f, 0.2f);
@@ -114,7 +92,7 @@ namespace Demos.Demos
                     coinDescription.Velocity.Linear = direction * (5 + 30 * (float)random.NextDouble());
                     Simulation.Bodies.Add(coinDescription);
                 }
-            }            
+            }
             base.Update(window, camera, input, dt);
         }
 

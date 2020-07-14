@@ -89,13 +89,13 @@ namespace BepuPhysics
         /// <param name="bufferPool">Buffer pool used to fill persistent structures and main thread ephemeral resources across the engine.</param>
         /// <param name="narrowPhaseCallbacks">Callbacks to use in the narrow phase.</param>
         /// <param name="poseIntegratorCallbacks">Callbacks to use in the pose integrator.</param>
-        /// <param name="timestepper">Timestepper that defines how the simulation state should be updated. If null, defaults to PositionFirstTimestepper.</param>
+        /// <param name="timestepper">Timestepper that defines how the simulation state should be updated.</param>
         /// <param name="solverIterationCount">Number of iterations the solver should use.</param>
         /// <param name="solverFallbackBatchThreshold">Number of synchronized batches the solver should maintain before falling back to a lower quality jacobi hybrid solver.</param>
         /// <param name="initialAllocationSizes">Allocation sizes to initialize the simulation with. If left null, default values are chosen.</param>
         /// <returns>New simulation.</returns>
         public static Simulation Create<TNarrowPhaseCallbacks, TPoseIntegratorCallbacks>(
-            BufferPool bufferPool, TNarrowPhaseCallbacks narrowPhaseCallbacks, TPoseIntegratorCallbacks poseIntegratorCallbacks, ITimestepper timestepper = null,
+            BufferPool bufferPool, TNarrowPhaseCallbacks narrowPhaseCallbacks, TPoseIntegratorCallbacks poseIntegratorCallbacks, ITimestepper timestepper,
             int solverIterationCount = 8, int solverFallbackBatchThreshold = 64, SimulationAllocationSizes? initialAllocationSizes = null)
             where TNarrowPhaseCallbacks : struct, INarrowPhaseCallbacks
             where TPoseIntegratorCallbacks : struct, IPoseIntegratorCallbacks
@@ -113,7 +113,7 @@ namespace BepuPhysics
                 };
             }
 
-            var simulation = new Simulation(bufferPool, initialAllocationSizes.Value, solverIterationCount, solverFallbackBatchThreshold, timestepper == null ? new PositionFirstTimestepper() : timestepper);
+            var simulation = new Simulation(bufferPool, initialAllocationSizes.Value, solverIterationCount, solverFallbackBatchThreshold, timestepper);
             simulation.PoseIntegrator = new PoseIntegrator<TPoseIntegratorCallbacks>(simulation.Bodies, simulation.Shapes, simulation.BroadPhase, poseIntegratorCallbacks);
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation,
                 DefaultTypes.CreateDefaultCollisionTaskRegistry(), DefaultTypes.CreateDefaultSweepTaskRegistry(),

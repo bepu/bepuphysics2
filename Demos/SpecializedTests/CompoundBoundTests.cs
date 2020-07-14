@@ -18,7 +18,7 @@ namespace Demos.Demos
         {
             camera.Position = new Vector3(-10, 0, -10);
             camera.Yaw = MathHelper.Pi * 3f / 4;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
 
         }

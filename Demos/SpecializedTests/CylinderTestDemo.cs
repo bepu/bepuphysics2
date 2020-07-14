@@ -170,7 +170,7 @@ namespace Demos.SpecializedTests
             camera.Pitch = 0;
             camera.Yaw = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)), new PositionFirstTimestepper());
 
             var cylinderShape = new Cylinder(1f, .2f);
             cylinderShape.ComputeInertia(1, out var cylinderInertia);

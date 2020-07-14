@@ -20,7 +20,7 @@ namespace Demos.SpecializedTests
             camera.Pitch = MathHelper.Pi * -0.05f;
 
             filters = new CollidableProperty<SubgroupCollisionFilter>(BufferPool);
-            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks() { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks() { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionLastTimestepper());
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)), 0.1f)));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(70, 20, 80)), 0.1f)));

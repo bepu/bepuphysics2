@@ -19,7 +19,7 @@ namespace Demos.SpecializedTests
             //camera.Yaw = MathHelper.Pi ; 
             camera.Yaw = MathHelper.Pi * 3f / 4;
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var box = new Box(1f, 3f, 2f);
             var capsule = new Capsule(1f, 1f);

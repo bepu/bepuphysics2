@@ -41,7 +41,10 @@ namespace Demos.Demos.Cars
             camera.Pitch = 0;
 
             var properties = new CollidableProperty<CarBodyProperties>();
-            Simulation = Simulation.Create(BufferPool, new CarCallbacks() { Properties = properties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            //The PositionFirstTimestepper is the simplest timestepping mode, but since it integrates velocity into position at the start of the frame, directly modified velocities outside of the timestep
+            //will be integrated before collision detection or the solver has a chance to intervene. That's fine in this demo. Other built-in options include the PositionLastTimestepper and the SubsteppingTimestepper.
+            //Note that the timestepper also has callbacks that you can use for executing logic between processing stages, like BeforeCollisionDetection.
+            Simulation = Simulation.Create(BufferPool, new CarCallbacks() { Properties = properties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
             builder.Add(new Box(1.85f, 0.7f, 4.73f), RigidPose.Identity, 10);

@@ -21,7 +21,7 @@ namespace Demos.SpecializedTests
             camera.Pitch = MathHelper.Pi * 0.15f;
 
             var filters = new CollidableProperty<DeformableCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
             float cellSize = 0.1f;

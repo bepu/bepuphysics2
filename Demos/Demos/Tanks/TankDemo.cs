@@ -49,7 +49,9 @@ namespace Demos.Demos.Tanks
             camera.Pitch = 0;
 
             bodyProperties = new CollidableProperty<TankDemoBodyProperties>();
-            Simulation = Simulation.Create(BufferPool, new TankCallbacks() { Properties = bodyProperties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            //We assign velocities outside of the timestep to fire bullets, so using the PositionLastTimestepper avoids integrating those velocities into positions before the solver has a chance to intervene.
+            //We could have also modified velocities in the PositionFirstTimestepper's BeforeCollisionDetection callback, but it's just a little simpler to do this with very little cost.
+            Simulation = Simulation.Create(BufferPool, new TankCallbacks() { Properties = bodyProperties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionLastTimestepper());
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
             builder.Add(new Box(1.85f, 0.7f, 4.73f), RigidPose.Identity, 10);

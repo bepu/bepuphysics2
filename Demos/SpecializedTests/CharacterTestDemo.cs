@@ -21,7 +21,7 @@ namespace Demos.SpecializedTests
             camera.Pitch = MathHelper.Pi * 0.05f;
             var masks = new CollidableProperty<ulong>();
             characters = new CharacterControllers(BufferPool);
-            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var random = new Random(5);
             for (int i = 0; i < 8192; ++i)

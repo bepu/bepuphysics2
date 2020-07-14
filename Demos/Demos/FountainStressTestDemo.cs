@@ -23,7 +23,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
             //Using minimum sized allocations forces as many resizes as possible.
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), initialAllocationSizes:
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper(), initialAllocationSizes:
             new SimulationAllocationSizes
             {
                 Bodies = 1,
@@ -52,23 +52,11 @@ namespace Demos.Demos
             {
                 for (int j = 0; j < staticGridWidthInInstances; ++j)
                 {
-                    var staticDescription = new StaticDescription
-                    {
-                        Collidable = new CollidableDescription
-                        {
-                            Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                            Shape = staticShapeIndex,
-                            SpeculativeMargin = 0.1f
-                        },
-                        Pose = new RigidPose
-                        {
-                            Position = new Vector3(
+                    var staticDescription = new StaticDescription(new Vector3(
                             -staticGridWidthInInstances * staticSpacing * 0.5f + i * staticSpacing,
                             -4 + 4 * (float)Math.Cos(i * 0.3) + 4 * (float)Math.Cos(j * 0.3),
                             -staticGridWidthInInstances * staticSpacing * 0.5f + j * staticSpacing),
-                            Orientation = Quaternion.Identity
-                        }
-                    };
+                            new CollidableDescription(staticShapeIndex, 0.1f));
                     Simulation.Statics.Add(staticDescription);
                 }
             }
@@ -83,24 +71,12 @@ namespace Demos.Demos
             for (int i = 0; i < kinematicCount; ++i)
             {
                 var angle = anglePerKinematic * i;
-                var description = new BodyDescription
-                {
-                    Collidable = new CollidableDescription
-                    {
-                        Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                        Shape = kinematicShapeIndex,
-                        SpeculativeMargin = 0.1f
-                    },
-                    Pose = new RigidPose
-                    {
-                        Position = new Vector3(
+                var description = BodyDescription.CreateKinematic(new Vector3(
                             startingRadius * (float)Math.Cos(angle),
                             0,
                             startingRadius * (float)Math.Sin(angle)),
-                        Orientation = Quaternion.Identity
-                    },
-                    Activity = new BodyActivityDescription { SleepThreshold = 0, MinimumTimestepCountUnderThreshold = 4 },
-                };
+                            new CollidableDescription(kinematicShapeIndex, 0.1f),
+                            new BodyActivityDescription(0, 4));
                 kinematicHandles[i] = Simulation.Bodies.Add(description);
             }
 
@@ -370,7 +346,7 @@ namespace Demos.Demos
                 Simulation.Bodies.GetDescription(handle, out var description);
                 Simulation.Shapes.RecursivelyRemoveAndDispose(description.Collidable.Shape, BufferPool);
                 CreateBodyDescription(random, description.Pose, description.Velocity, out var newDescription);
-                if(random.NextDouble() < 0.1f)
+                if (random.NextDouble() < 0.1f)
                 {
                     //Occasionally make a dynamic kinematic.
                     newDescription.LocalInertia = default;

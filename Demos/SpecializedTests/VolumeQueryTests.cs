@@ -61,7 +61,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(-20f, 13, -20f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
-            Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks(), new DemoPoseIntegratorCallbacks());
+            Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks(), new DemoPoseIntegratorCallbacks(), new PositionFirstTimestepper());
 
             var sphere = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(sphere);
