@@ -117,17 +117,6 @@ namespace BepuUtilities
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
-        public static void Validate(this RigidTransform r)
-        {
-            r.Position.Validate();
-            r.Orientation.Validate();
-        }
-
-        /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
-        /// This is only run when the CHECKMATH symbol is defined.
-        /// </summary>
-        [Conditional("CHECKMATH")]
         public static void Validate(this Symmetric3x3 m)
         {
             m.XX.Validate();
