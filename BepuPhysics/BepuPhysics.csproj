@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>2.3.0-beta1</Version>
+    <Version>2.3.0-beta2</Version>
     <Company>Bepu Entertainment LLC</Company>
     <Authors>Ross Nordby</Authors>
     <Description>Speedy real time physics simulation library.</Description>
@@ -14,6 +14,10 @@
     <LangVersion>latest</LangVersion>
     <PackageTags>physics;3d;rigid body;real time;simulation</PackageTags>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    
+    <SignAssembly>true</SignAssembly>
+    <DelaySign>false</DelaySign>
+    <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
