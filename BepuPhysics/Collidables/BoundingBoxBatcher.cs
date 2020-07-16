@@ -75,7 +75,7 @@ namespace BepuPhysics
         public BoundsContinuation Continuation;
     }
 
-    public struct BoundingBoxInstanceWide<TShape, TShapeWide> where TShape : struct, IShape where TShapeWide : struct, IShapeWide<TShape>
+    public struct BoundingBoxInstanceWide<TShape, TShapeWide> where TShape : unmanaged, IShape where TShapeWide : unmanaged, IShapeWide<TShape>
     {
         public TShapeWide Shape;
         public Vector<float> MaximumExpansion;

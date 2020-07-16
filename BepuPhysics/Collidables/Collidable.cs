@@ -48,7 +48,7 @@ namespace BepuPhysics.Collidables
         [FieldOffset(8)]
         public float SweepConvergenceThreshold;
 
-        internal bool AllowExpansionBeyondSpeculativeMargin { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (uint)Mode > 0; } }
+        public bool AllowExpansionBeyondSpeculativeMargin { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (uint)Mode > 0; } }
 
         /// <summary>
         /// <para>No dedicated continuous detection will be performed. Default speculative contact generation will occur within the speculative margin.</para>
