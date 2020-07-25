@@ -11,7 +11,7 @@ using System.Numerics;
 namespace Demos.Demos
 {
     /// <summary>
-    /// A pyramid of boxes, because you can't have a physics engine without pyramids of boxes.
+    /// A colosseum made out of boxes that is sometimes hit by large purple hail.
     /// </summary>
     public class ColosseumDemo : Demo
     {
