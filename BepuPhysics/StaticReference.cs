@@ -13,11 +13,11 @@ namespace BepuPhysics
     public struct StaticReference
     {
         /// <summary>
-        /// Handle of the body that this reference refers to.
+        /// Handle of the static that this reference refers to.
         /// </summary>
         public StaticHandle Handle;
         /// <summary>
-        /// The bodies collection containing the body.
+        /// The collection containing the static.
         /// </summary>
         public Statics Statics;
 
@@ -80,19 +80,18 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Gets a description of the body.
+        /// Gets a description of the static.
         /// </summary>
-        /// <param name="description">Description of the body.</param>
+        /// <param name="description">Description of the static.</param>
         public void GetDescription(out StaticDescription description)
         {
             Statics.GetDescription(Handle, out description);
         }
 
         /// <summary>
-        /// Sets a body's properties according to a description. Properly handles any transitions between dynamic and kinematic and between shapeless and shapeful.
-        /// If the body is becoming kinematic, any constraints which only contain kinematic bodies will be removed. Wakes up the body.
+        /// Sets a static's properties according to a description.
         /// </summary>
-        /// <param name="description">Description of the body.</param>
+        /// <param name="description">Description of the static.</param>
         public void ApplyDescription(in StaticDescription description)
         {
             Statics.ApplyDescription(Handle, description);
@@ -123,7 +122,7 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Gets direct pointers to the body's bounding box minimum and maximum in the broad phase. Outputs null if the body has no shape.
+        /// Gets direct pointers to the static's bounding box minimum and maximum in the broad phase. Outputs null if the static has no shape.
         /// </summary>
         /// <param name="min">Pointer to the bounding box minimum in the broad phase.</param>
         /// <param name="max">Pointer to the bounding box maximum in the broad phase.</param>
@@ -136,9 +135,9 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Updates the body's bounds in the broad phase for its current state. Does not include velocity expansion. Does nothing if the body has no shape.
+        /// Updates the static's bounds in the broad phase for its current state. Does not include velocity expansion. Does nothing if the static has no shape.
         /// </summary>
-        /// <remarks>Can be useful if you made modifications to the body's state that you want reflected in the broad phase before the next timestep.
+        /// <remarks>Can be useful if you made modifications to the static's state that you want reflected in the broad phase before the next timestep.
         /// For example, if you want to perform ray casts against the broad phase after moving objects around directly, their bounds must be updated or else the broad phase bounds will be out of date and the ray will likely miss.</remarks>
         public void UpdateBounds()
         {
