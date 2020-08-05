@@ -11,8 +11,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         public int BatchSize => 16;
 
-        public unsafe void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
-        {
+        public unsafe void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold) {
+            manifold = default;
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var boxOrientation);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var hullOrientation);
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(boxOrientation, hullOrientation, out var hullLocalBoxOrientation);

@@ -68,8 +68,8 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="pose">Pose to invert.</param>
         /// <param name="inverse">Inverse of the pose.</param>
-        public static void Invert(in RigidPose pose, out RigidPose inverse)
-        {
+        public static void Invert(in RigidPose pose, out RigidPose inverse) {
+            inverse = default;
             QuaternionEx.Conjugate(pose.Orientation, out inverse.Orientation);
             QuaternionEx.Transform(-pose.Position, inverse.Orientation, out inverse.Position);
         }
@@ -81,8 +81,8 @@ namespace BepuPhysics
         /// <param name="b">Second transform to concatenate.</param>
         /// <param name="result">Result of the concatenation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void MultiplyWithoutOverlap(in RigidPose a, in RigidPose b, out RigidPose result)
-        {
+        public static void MultiplyWithoutOverlap(in RigidPose a, in RigidPose b, out RigidPose result) {
+            result = default;
             QuaternionEx.ConcatenateWithoutOverlap(a.Orientation, b.Orientation, out result.Orientation);
             QuaternionEx.Transform(a.Position, b.Orientation, out var rotatedTranslationA);
             result.Position = rotatedTranslationA + b.Position;
@@ -135,8 +135,8 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ReadFirst(in RigidPoses poses, out RigidPose pose)
-        {
+        public static void ReadFirst(in RigidPoses poses, out RigidPose pose) {
+            pose = default;
             Vector3Wide.ReadFirst(poses.Position, out pose.Position);
             QuaternionWide.ReadFirst(poses.Orientation, out pose.Orientation);
         }

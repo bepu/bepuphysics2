@@ -18,7 +18,7 @@ namespace BepuPhysics.CollisionDetection
             where TRaySource : IRaySource
             where TRayHitHandler : struct, IShapeRayHitHandler
         {
-            RayWide rayWide;
+            RayWide rayWide = default;
             TShapeWide wide;
             //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
             (*&wide).Broadcast(shape);

@@ -320,7 +320,7 @@ namespace BepuPhysics.Trees
             int bStart = stackPointerB;
             int a1Start = stackPointerA1;
             BroadcastNode(ref node, out var wideNode);
-            TreeRayWide rayBundle;
+            TreeRayWide rayBundle = default;
 
             for (int bundleStartIndex = 0; bundleStartIndex < raySource.RayCount; bundleStartIndex += Vector<float>.Count)
             {

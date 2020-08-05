@@ -400,8 +400,10 @@ namespace BepuPhysics
 
         //This looks a little different because it's used by AABB calculation, not constraint pairs.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void GatherDataForBounds(ref int start, int count, out RigidPoses poses, out Vector<int> shapeIndices, out Vector<float> maximumExpansion)
-        {
+        internal void GatherDataForBounds(ref int start, int count, out RigidPoses poses, out Vector<int> shapeIndices, out Vector<float> maximumExpansion) {
+            poses = default;
+            shapeIndices = default;
+            maximumExpansion = default;
             Debug.Assert(count <= Vector<float>.Count);
             ref var targetPositionBase = ref Unsafe.As<Vector<float>, float>(ref poses.Position.X);
             ref var targetOrientationBase = ref Unsafe.As<Vector<float>, float>(ref poses.Orientation.X);

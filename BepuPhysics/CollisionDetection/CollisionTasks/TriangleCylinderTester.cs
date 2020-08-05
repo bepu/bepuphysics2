@@ -57,7 +57,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var sum = Vector.GreaterThan(abDot, Vector<float>.Zero) + Vector.GreaterThan(bcDot, Vector<float>.Zero) + Vector.GreaterThan(caDot, Vector<float>.Zero);
 
             var contained = Vector.BitwiseAnd(allowContact, Vector.BitwiseOr(Vector.Equals(sum, Vector<int>.Zero), Vector.Equals(sum, new Vector<int>(-3))));
-            ManifoldCandidate candidate;
+            ManifoldCandidate candidate = default;
             candidate.X = point.X;
             candidate.Y = point.Y;
             candidate.FeatureId = featureId;
@@ -68,8 +68,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public unsafe void Test(
             ref TriangleWide a, ref CylinderWide b, ref Vector<float> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
-            out Convex4ContactManifoldWide manifold)
-        {
+            out Convex4ContactManifoldWide manifold) {
+            manifold = default;
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var worldRA);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var worldRB);
             //Work in b's local space.
