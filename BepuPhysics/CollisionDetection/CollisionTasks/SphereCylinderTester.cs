@@ -52,9 +52,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useDepthY = Vector.LessThanOrEqual(depthY, horizontalDepth);
             var useTopCapNormal = Vector.GreaterThan(cylinderLocalOffsetA.Y, Vector<float>.Zero);
             Vector3Wide localInternalNormal;
-            localInternalNormal.X = Vector.ConditionalSelect(useDepthY, Vector<float>.Zero, cylinderLocalOffsetA.X * inverseHorizontalOffsetLength);
+            var useHorizontalFallback = Vector.LessThanOrEqual(horizontalOffsetLength, b.Radius * new Vector<float>(1e-5f));
+            localInternalNormal.X = Vector.ConditionalSelect(useDepthY, Vector<float>.Zero, Vector.ConditionalSelect(useHorizontalFallback, Vector<float>.One, cylinderLocalOffsetA.X * inverseHorizontalOffsetLength));
             localInternalNormal.Y = Vector.ConditionalSelect(useDepthY, Vector.ConditionalSelect(useTopCapNormal, Vector<float>.One, new Vector<float>(-1)), Vector<float>.Zero);
-            localInternalNormal.Z = Vector.ConditionalSelect(useDepthY, Vector<float>.Zero, cylinderLocalOffsetA.Z * inverseHorizontalOffsetLength);
+            localInternalNormal.Z = Vector.ConditionalSelect(useDepthY, Vector<float>.Zero, Vector.ConditionalSelect(useHorizontalFallback, Vector<float>.Zero, cylinderLocalOffsetA.Z * inverseHorizontalOffsetLength));
 
             Vector3Wide.Length(sphereToContactLocalB, out var contactDistanceFromSphereCenter);
             //Note negation; normal points from B to A by convention.
