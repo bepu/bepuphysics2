@@ -133,6 +133,17 @@ namespace BepuPhysics.CollisionDetection
                 CCDContinuationIndex continuationId = new CCDContinuationIndex(pairId);
                 Debug.Assert(continuationId.Exists);
                 var continuationIndex = continuationId.Index;
+#if DEBUG && CHECKMATH
+                //Check all contact data for invalid data early so that we don't end up spewing NaNs all over the engine and catching in the broad phase or some other highly indirect location.
+                for (int i = 0; i < manifoldReference.Count; ++i)
+                {
+                    manifoldReference.GetDepth(ref manifoldReference, i).Validate();
+                    ref var normal = ref manifoldReference.GetNormal(ref manifoldReference, i);
+                    normal.Validate();
+                    Debug.Assert(Math.Abs(normal.LengthSquared() - 1) < 1e-5f, "Normals should be unit length. Something's gone wrong!");
+                    manifoldReference.GetOffset(ref manifoldReference, i).Validate();
+                }
+#endif
                 switch ((ConstraintGeneratorType)continuationId.Type)
                 {
                     case ConstraintGeneratorType.Discrete:

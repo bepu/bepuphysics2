@@ -506,7 +506,7 @@ namespace BepuPhysics
                         try
                         {
                             pose.Position.Validate();
-                            pose.Orientation.Validate();
+                            pose.Orientation.ValidateOrientation();
                             velocity.Linear.Validate();
                             velocity.Angular.Validate();
                         }

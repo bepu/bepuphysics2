@@ -84,6 +84,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Integrate(in Vector3 position, in Vector3 linearVelocity, float dt, out Vector3 integratedPosition)
         {
+            position.Validate();
+            linearVelocity.Validate();
             var displacement = linearVelocity * dt;
             integratedPosition = position + displacement;
         }
@@ -91,9 +93,10 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void Integrate(in Quaternion orientation, in Vector3 angularVelocity, float dt, out Quaternion integratedOrientation)
         {
+            orientation.ValidateOrientation();
+            angularVelocity.Validate();
             //Note that we don't bother with conservation of angular momentum or the gyroscopic term or anything else. All orientation integration assumes a series of piecewise linear integrations
             //That's not entirely correct, but it's a reasonable approximation that means we don't have to worry about conservation of angular momentum or gyroscopic terms when dealing with CCD sweeps.
-
             var speed = angularVelocity.Length();
             if (speed > 1e-15f)
             {
@@ -114,6 +117,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Integrate(in QuaternionWide start, in Vector3Wide angularVelocity, in Vector<float> halfDt, out QuaternionWide integrated)
         {
+            start.Validate();
+            angularVelocity.Validate();
             Vector3Wide.Length(angularVelocity, out var speed);
             var halfAngle = speed * halfDt;
             QuaternionWide q;
@@ -199,6 +204,9 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void IntegrateAngularVelocityConserving(in Quaternion previousOrientation, in RigidPose pose, in BodyInertia localInertia, in BodyInertia inertia, ref Vector3 angularVelocity, float dt)
         {
+            previousOrientation.ValidateOrientation();
+            pose.Orientation.ValidateOrientation();
+            angularVelocity.Validate();
 
             if (callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
             {
@@ -354,6 +362,10 @@ namespace BepuPhysics
             {
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
+                pose.Position.Validate();
+                pose.Orientation.ValidateOrientation();
+                velocity.Linear.Validate();
+                velocity.Angular.Validate();
 
                 UpdateSleepCandidacy(ref velocity, ref Unsafe.Add(ref baseActivity, i));
 
@@ -378,6 +390,10 @@ namespace BepuPhysics
             {
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
+                pose.Position.Validate();
+                pose.Orientation.ValidateOrientation();
+                velocity.Linear.Validate();
+                velocity.Angular.Validate();
 
                 UpdateSleepCandidacy(ref velocity, ref Unsafe.Add(ref baseActivity, i));
 
@@ -404,6 +420,10 @@ namespace BepuPhysics
             {
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
+                pose.Position.Validate();
+                pose.Orientation.ValidateOrientation();
+                velocity.Linear.Validate();
+                velocity.Angular.Validate();
 
                 ref var localInertia = ref Unsafe.Add(ref baseLocalInertia, i);
                 ref var inertia = ref Unsafe.Add(ref baseInertias, i);
@@ -423,6 +443,10 @@ namespace BepuPhysics
             {
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
+                pose.Position.Validate();
+                pose.Orientation.ValidateOrientation();
+                velocity.Linear.Validate();
+                velocity.Angular.Validate();
 
                 PoseIntegration.Integrate(pose, velocity, dt, out pose);
             }

@@ -117,6 +117,20 @@ namespace BepuUtilities
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
+        public static void ValidateOrientation(this Quaternion q)
+        {
+            var lengthSquared = q.LengthSquared();
+            if (IsInvalid(lengthSquared) && Math.Abs(1 - lengthSquared) < 1e-5f)
+            {
+                throw new InvalidOperationException("Invalid value.");
+            }
+        }
+
+        /// <summary>
+        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// This is only run when the CHECKMATH symbol is defined.
+        /// </summary>
+        [Conditional("CHECKMATH")]
         public static void Validate(this Symmetric3x3 m)
         {
             m.XX.Validate();
