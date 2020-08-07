@@ -175,10 +175,5 @@ namespace DemoUtilities
         {
             return new string(characters, 0, count);
         }
-
-        public TextBuilder Append(object trainingIteration, int v)
-        {
-            throw new NotImplementedException();
-        }
     }
 }
