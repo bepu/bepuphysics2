@@ -169,6 +169,9 @@ namespace BepuPhysics
             Vector3Wide.Add(max, maxExpansion, out max);
         }
 
+        //TODO: Compound-compound child bounds deserve another pass. The vectorized and nonvectorized paths are subtly different in a way that I'm pretty sure is just broken.
+        //Also, I'm pretty sure you can get tighter bounds out of doing an arc sweep on A and then arc sweeping those bounds for B's angular velocity.
+
         /// <summary>
         /// Expands the bounding box surrounding a shape A in the local space of some other collidable B.
         /// </summary>
@@ -211,41 +214,46 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Computes the bounding box of shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
+        /// Computes the bounding box of a child shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
         /// </summary>
-        public static unsafe void GetLocalBoundingBoxForSweep(TypedIndex shapeIndex, Shapes shapes, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+        public static unsafe void GetLocalBoundingBoxForSweep(TypedIndex shapeIndex, Shapes shapes, in RigidPose shapePoseLocalToA, in Quaternion orientationA, in BodyVelocity velocityA,
             in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
         {
             //TODO: For any significant amount of B angular velocity, the resulting bounding boxes can be enormous in local space.
             //You should strongly consider heuristically choosing a world space path. For tree-based compounds, this would require a dedicated slow world space traversal.
             //For a list compound, the world space test is always the right choice. IBoundsQueryableCompound could expose heuristically useful information.
             QuaternionEx.Conjugate(orientationB, out var inverseOrientationB);
-            QuaternionEx.TransformWithoutOverlap(velocityA.Linear - velocityB.Linear * dt, inverseOrientationB, out sweep);
+            QuaternionEx.TransformWithoutOverlap((velocityA.Linear - velocityB.Linear) * dt, inverseOrientationB, out sweep);
             QuaternionEx.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
-            QuaternionEx.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
-            Compound.GetRotatedChildPose(localPoseA, localOrientationA, out var pose);
+            QuaternionEx.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var orientationALocalToB);
+            Compound.GetRotatedChildPose(shapePoseLocalToA, orientationALocalToB, out var poseARotatedIntoBLocalSpace);
+            var localOriginToA = poseARotatedIntoBLocalSpace.Position - localOffsetB;
 
-            shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, pose.Orientation, out var maximumRadiusA, out var maximumAngularExpansionA, out min, out max);
-            BoundingBoxHelpers.GetAngularBoundsExpansion(velocityA.Angular, dt, maximumRadiusA, maximumAngularExpansionA, out var angularExpansionA);
-            //The furthest the convex can be from the compound is no further than the sweep pushing it directly away from the compound.
-            var worstCaseRadiusB = sweep.Length() + localOffsetB.Length();
+            shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, poseARotatedIntoBLocalSpace.Orientation, out var maximumRadiusA, out var maximumAngularExpansionA, out min, out max);
+            //Object A could rotate around its center.
+            var worstCaseRadiusA = shapePoseLocalToA.Position.Length();
+            BoundingBoxHelpers.GetAngularBoundsExpansion(velocityA.Angular, dt, worstCaseRadiusA + maximumRadiusA, worstCaseRadiusA + maximumAngularExpansionA, out var angularExpansionA);
+            //Rotation of object B could induce an arc in object A.
+            //The furthest the convex can be from the compound local origin is no further than the sweep pushing it directly away from the compound, while rotation swings A's local pose away.
+            var worstCaseRadiusB = sweep.Length() + localOffsetB.Length() + worstCaseRadiusA;
             BoundingBoxHelpers.GetAngularBoundsExpansion(velocityB.Angular, dt, worstCaseRadiusB + maximumRadiusA, worstCaseRadiusB + maximumAngularExpansionA, out var angularExpansionB);
             var combinedAngularExpansion = angularExpansionA + angularExpansionB;
 
-            min = min - localOffsetB - combinedAngularExpansion;
-            max = max - localOffsetB + combinedAngularExpansion;
+            min = localOriginToA + min - combinedAngularExpansion;
+            max = localOriginToA + max + combinedAngularExpansion;
         }
+
         /// <summary>
         /// Computes the bounding box of shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
         /// </summary>
-        public static unsafe void GetLocalBoundingBoxForSweep<TConvex>(ref TConvex shape, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+        public static unsafe void GetLocalBoundingBoxForSweep<TConvex>(ref TConvex shape, in Quaternion orientationA, in BodyVelocity velocityA,
             in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max) where TConvex : struct, IConvexShape
         {
             //TODO: For any significant amount of B angular velocity, the resulting bounding boxes can be enormous in local space.
             //You should strongly consider heuristically choosing a world space path. For tree-based compounds, this would require a dedicated slow world space traversal.
             //For a list compound, the world space test is always the right choice. IBoundsQueryableCompound could expose heuristically useful information.
             QuaternionEx.Conjugate(orientationB, out var inverseOrientationB);
-            QuaternionEx.TransformWithoutOverlap(velocityA.Linear - velocityB.Linear * dt, inverseOrientationB, out sweep);
+            QuaternionEx.TransformWithoutOverlap((velocityA.Linear - velocityB.Linear) * dt, inverseOrientationB, out sweep);
             QuaternionEx.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
             QuaternionEx.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
 

@@ -24,7 +24,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ref TCompoundB compoundB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             Shapes shapes, BufferPool pool, out ChildOverlapsCollection overlaps)
         {
-            BoundingBoxHelpers.GetLocalBoundingBoxForSweep(ref shapeA, default, orientationA, velocityA, offsetB, orientationB, velocityB, maximumT, out var sweep, out var min, out var max);
+            BoundingBoxHelpers.GetLocalBoundingBoxForSweep(ref shapeA, orientationA, velocityA, offsetB, orientationB, velocityB, maximumT, out var sweep, out var min, out var max);
             
             overlaps = default;
             compoundB.FindLocalOverlaps<ChildOverlapsCollection>(min, max, sweep, maximumT, pool, shapes, Unsafe.AsPointer(ref overlaps));

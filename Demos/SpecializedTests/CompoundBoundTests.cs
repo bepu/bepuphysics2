@@ -135,73 +135,101 @@ namespace Demos.Demos
             maxExpansion = maxExpansionA + maxExpansionB;
         }
 
+        Vector3 GetRandomVector(float width, Random random)
+        {
+            return new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * width - new Vector3(width * 0.5f);
+        }
+        Random random = new Random(5);
         public unsafe override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
-            var testBox = new Box(1, 1, 1);
-            var orientationA = Quaternion.Identity;
-            var orientationB = Quaternion.Identity;
-            var velocityA = new BodyVelocity(new Vector3(0, -2, 0), new Vector3(1));
-            var velocityB = new BodyVelocity(new Vector3(0, 2, 0), new Vector3(1f));
-            var offsetB = new Vector3(0, -10, 0);
-            var localPoseA = new RigidPose(new Vector3(1, 0, 0), Quaternion.Identity);
-            float dt = 10f;
-
-            const int pathPointCount = 512;
-            var localPathPoints = new Vector3[pathPointCount];
-
-            for (int i = 0; i < pathPointCount; ++i)
+            Vector3 basePosition = new Vector3();
+            for (int testIndex = 0; testIndex < 16; ++testIndex)
             {
-                var t = (dt * i) / (pathPointCount - 1);
-                //local point = (aPosition + aLinear * t - bPosition - bLinear * t + localOffsetA * (orientationA * rotate(angularA * t)) * inverse(orientationB * rotate(angularB * t))
+                var testShape = new Sphere(0);
+                var orientationA = Quaternion.Identity;
+                var orientationB = Quaternion.Identity;
 
-                PoseIntegration.Integrate(orientationA, velocityA.Angular, t, out var integratedA);
-                PoseIntegration.Integrate(orientationB, velocityB.Angular, t, out var integratedB);
-                var worldRotatedPoint = velocityA.Linear * t - velocityB.Linear * t - offsetB + QuaternionEx.Transform(localPoseA.Position, integratedA);
-                localPathPoints[i] = QuaternionEx.Transform(worldRotatedPoint, QuaternionEx.Conjugate(integratedB));
-            }
-            var referenceSweep = localPathPoints[pathPointCount - 1] - localPathPoints[0];
-            var sweepMin = Vector3.Min(localPathPoints[pathPointCount - 1], localPathPoints[0]);
-            var sweepMax = Vector3.Max(localPathPoints[pathPointCount - 1], localPathPoints[0]);
-            Vector3 referenceMin = new Vector3(float.MaxValue);
-            Vector3 referenceMax = new Vector3(float.MinValue);
-            for (int i = 0; i < pathPointCount; ++i)
-            {
-                referenceMin = Vector3.Min(referenceMin, localPathPoints[i]);
-                referenceMax = Vector3.Max(referenceMax, localPathPoints[i]);
-            }
-            var referenceMinExpansion = referenceMin - sweepMin;
-            var referenceMaxExpansion = referenceMax - sweepMax;
+                var velocityA = new BodyVelocity(GetRandomVector(2, random), GetRandomVector(1, random));
+                var velocityB = new BodyVelocity(GetRandomVector(2, random), GetRandomVector(1, random));
+                var offsetB = GetRandomVector(2, random);
+                var localPoseA = new RigidPose(GetRandomVector(2, random), Quaternion.Identity);
+                float dt = 10f;
 
-            for (int i = 0; i < localPathPoints.Length - 1; ++i)
-            {
-                renderer.Lines.Allocate() = new LineInstance(localPathPoints[i], localPathPoints[i + 1], new Vector3(1, 0, 0), new Vector3());
-            }
+                const int pathPointCount = 512;
+                var localPathPoints = new Vector3[pathPointCount];
 
-            BoundingBoxLineExtractor.WriteBoundsLines(referenceMin, referenceMax, new Vector3(0, 1, 0), new Vector3(), ref renderer.Lines.Allocate(12));
-            BoundingBoxLineExtractor.WriteBoundsLines(sweepMin, sweepMax, new Vector3(0, 0, 1), new Vector3(), ref renderer.Lines.Allocate(12));
-            var expansionOffset = new Vector3(15, 0, 0);
-            BoundingBoxLineExtractor.WriteBoundsLines(expansionOffset + new Vector3(-0.01f), expansionOffset + new Vector3(0.01f), new Vector3(0, 0, 0), new Vector3(), ref renderer.Lines.Allocate(12));
-            BoundingBoxLineExtractor.WriteBoundsLines(expansionOffset + referenceMinExpansion, expansionOffset + referenceMaxExpansion, new Vector3(1, 0, 1), new Vector3(), ref renderer.Lines.Allocate(12));
-
-            {
-                QuaternionWide.Broadcast(Quaternion.Identity, out var wideOrientation);
-                Vector3Wide.Broadcast(new Vector3(1, 1, 1), out var wideVelocity);
-                var halfDt = new Vector<float>(0.5f);
-                const int testCount = 1024;
-                var resultsSweep = stackalloc Vector3[testCount];
-                var resultsMin = stackalloc Vector3[testCount];
-                var resultsMax = stackalloc Vector3[testCount];
-                Box box = new Box(1, 1, 1);
-                var start = Stopwatch.GetTimestamp();
-                for (int i = 0; i < testCount; ++i)
+                for (int i = 0; i < pathPointCount; ++i)
                 {
-                    BoundingBoxHelpers.GetLocalBoundingBoxForSweep(ref box, localPoseA, orientationA, velocityA, offsetB, orientationB, velocityB, dt, out resultsSweep[i], out resultsMin[i], out resultsMax[i]);
+                    var t = (dt * i) / (pathPointCount - 1);
+                    //local point = (aPosition + aLinear * t - bPosition - bLinear * t + localOffsetA * (orientationA * rotate(angularA * t)) * inverse(orientationB * rotate(angularB * t))
 
-
+                    PoseIntegration.Integrate(orientationA, velocityA.Angular, t, out var integratedA);
+                    PoseIntegration.Integrate(orientationB, velocityB.Angular, t, out var integratedB);
+                    var worldRotatedPoint = velocityA.Linear * t - velocityB.Linear * t - offsetB + QuaternionEx.Transform(localPoseA.Position, integratedA);
+                    localPathPoints[i] = QuaternionEx.Transform(worldRotatedPoint, QuaternionEx.Conjugate(integratedB));
                 }
-                var end = Stopwatch.GetTimestamp();
-                Console.WriteLine($"Time per sweep bound test (ns): {(end - start) * (1e9 / (testCount * Stopwatch.Frequency))}");
+                var referenceSweep = localPathPoints[pathPointCount - 1] - localPathPoints[0];
+                var sweepMin = Vector3.Min(localPathPoints[pathPointCount - 1], localPathPoints[0]);
+                var sweepMax = Vector3.Max(localPathPoints[pathPointCount - 1], localPathPoints[0]);
+                Vector3 referenceMin = new Vector3(float.MaxValue);
+                Vector3 referenceMax = new Vector3(float.MinValue);
+                for (int i = 0; i < pathPointCount; ++i)
+                {
+                    referenceMin = Vector3.Min(referenceMin, localPathPoints[i]);
+                    referenceMax = Vector3.Max(referenceMax, localPathPoints[i]);
+                }
+                var referenceMinExpansion = referenceMin - sweepMin;
+                var referenceMaxExpansion = referenceMax - sweepMax;
+
+                var shapeIndex = Simulation.Shapes.Add(testShape);
+                BoundingBoxHelpers.GetLocalBoundingBoxForSweep(shapeIndex, Simulation.Shapes, localPoseA, orientationA, velocityA, offsetB, orientationB, velocityB, dt, out var naiveSweep, out var naiveMin, out var naiveMax);
+                naiveMin += Vector3.Min(naiveSweep, default);
+                naiveMax += Vector3.Max(naiveSweep, default);
+                Simulation.Shapes.Remove(shapeIndex);
+                BoundingBox.CreateMerged(naiveMin, naiveMax, referenceMin, referenceMax, out var combinedMin, out var combinedMax);
+                if ((combinedMin - naiveMin).LengthSquared() > 1e-5f || (combinedMax - naiveMax).LengthSquared() > 1e-5f)
+                {
+                    Console.WriteLine($"Naive fails to contain reference: min offset {combinedMin - naiveMin}, max offset {combinedMax - naiveMax}");
+                }
+
+                basePosition.X += 32 + MathF.Max(0, -combinedMin.X) + combinedMax.X - combinedMin.X;
+
+                for (int i = 0; i < localPathPoints.Length - 1; ++i)
+                {
+                    renderer.Lines.Allocate() = new LineInstance(basePosition + localPathPoints[i], basePosition + localPathPoints[i + 1], new Vector3(1, 0, 0), new Vector3());
+                }
+
+                BoundingBoxLineExtractor.WriteBoundsLines(basePosition + referenceMin, basePosition + referenceMax, new Vector3(0, 1, 0), new Vector3(), ref renderer.Lines.Allocate(12));
+                BoundingBoxLineExtractor.WriteBoundsLines(basePosition + sweepMin, basePosition + sweepMax, new Vector3(0, 0, 1), new Vector3(), ref renderer.Lines.Allocate(12));
+                var expansionOffset = new Vector3(0, 0, 65);
+                BoundingBoxLineExtractor.WriteBoundsLines(basePosition + expansionOffset + new Vector3(-0.01f), basePosition + expansionOffset + new Vector3(0.01f), new Vector3(0, 0, 0), new Vector3(), ref renderer.Lines.Allocate(12));
+                BoundingBoxLineExtractor.WriteBoundsLines(basePosition + expansionOffset + referenceMinExpansion, basePosition + expansionOffset + referenceMaxExpansion, new Vector3(1, 0, 1), new Vector3(), ref renderer.Lines.Allocate(12));
+
+                BoundingBoxLineExtractor.WriteBoundsLines(basePosition + naiveMin, basePosition + naiveMax, new Vector3(1, 1, 1), new Vector3(), ref renderer.Lines.Allocate(12));
+                BoundingBoxLineExtractor.WriteBoundsLines(basePosition + expansionOffset + naiveMin - sweepMin, basePosition + expansionOffset + naiveMax - sweepMax, new Vector3(0, 1, 1), new Vector3(), ref renderer.Lines.Allocate(12));
+
+
+                //{
+                //    QuaternionWide.Broadcast(Quaternion.Identity, out var wideOrientation);
+                //    Vector3Wide.Broadcast(new Vector3(1, 1, 1), out var wideVelocity);
+                //    var halfDt = new Vector<float>(0.5f);
+                //    const int testCount = 1024;
+                //    var resultsSweep = stackalloc Vector3[testCount];
+                //    var resultsMin = stackalloc Vector3[testCount];
+                //    var resultsMax = stackalloc Vector3[testCount];
+                //    Box box = new Box(1, 1, 1);
+                //    var start = Stopwatch.GetTimestamp();
+                //    for (int i = 0; i < testCount; ++i)
+                //    {
+                //        BoundingBoxHelpers.GetLocalBoundingBoxForSweep(ref box, localPoseA, orientationA, velocityA, offsetB, orientationB, velocityB, dt, out resultsSweep[i], out resultsMin[i], out resultsMax[i]);
+
+
+                //    }
+                //    var end = Stopwatch.GetTimestamp();
+                //    Console.WriteLine($"Time per sweep bound test (ns): {(end - start) * (1e9 / (testCount * Stopwatch.Frequency))}");
+                //}
             }
+
 
             base.Render(renderer, camera, input, text, font);
         }
