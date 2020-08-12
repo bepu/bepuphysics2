@@ -85,6 +85,7 @@ namespace Demos.Demos.Sponsors
             Add(sponsors2, @"Alex 'mcmonkey' Goodwin, @mcmonkey4eva on github and twitter", @"Content\Sponsors\mcmonkey.png", content, surface);
             Add(sponsors2, @"A. K. D.", @"Content\Sponsors\behattedpenguin.png", content, surface);
             Add(sponsors2, @"Cornmaiden xoxoxo", @"Content\Sponsors\healthyostrich.png", content, surface);
+            Add(sponsors2, @"F.", @"Content\Sponsors\tootbush.png", content, surface);
 
             //These supporters are those who gave 1000 dollars a month (or historical backers of roughly equivalent or greater total contribution).
             Add(sponsors3, @"K. H. & F.", @"Content\Sponsors\spooky.png", content, surface);
