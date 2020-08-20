@@ -428,8 +428,11 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Pool to return all shape resources to.</param>
         public void RecursivelyRemoveAndDispose(TypedIndex shapeIndex, BufferPool pool)
         {
-            Debug.Assert(RegisteredTypeSpan > shapeIndex.Type && batches[shapeIndex.Type] != null);
-            batches[shapeIndex.Type].RecursivelyRemoveAndDispose(shapeIndex.Index, this, pool);
+            if (shapeIndex.Exists)
+            {
+                Debug.Assert(RegisteredTypeSpan > shapeIndex.Type && batches[shapeIndex.Type] != null);
+                batches[shapeIndex.Type].RecursivelyRemoveAndDispose(shapeIndex.Index, this, pool);
+            }
         }
 
         /// <summary>
@@ -439,8 +442,11 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Pool to return all shape resources to.</param>
         public void RemoveAndDispose(TypedIndex shapeIndex, BufferPool pool)
         {
-            Debug.Assert(RegisteredTypeSpan > shapeIndex.Type && batches[shapeIndex.Type] != null);
-            batches[shapeIndex.Type].RemoveAndDispose(shapeIndex.Index, pool);
+            if (shapeIndex.Exists)
+            {
+                Debug.Assert(RegisteredTypeSpan > shapeIndex.Type && batches[shapeIndex.Type] != null);
+                batches[shapeIndex.Type].RemoveAndDispose(shapeIndex.Index, pool);
+            }
         }
 
         /// <summary>
@@ -449,8 +455,11 @@ namespace BepuPhysics.Collidables
         /// <param name="shapeIndex">Index of the shape to remove.</param>
         public void Remove(TypedIndex shapeIndex)
         {
-            Debug.Assert(RegisteredTypeSpan > shapeIndex.Type && batches[shapeIndex.Type] != null);
-            batches[shapeIndex.Type].Remove(shapeIndex.Index);
+            if (shapeIndex.Exists)
+            {
+                Debug.Assert(RegisteredTypeSpan > shapeIndex.Type && batches[shapeIndex.Type] != null);
+                batches[shapeIndex.Type].Remove(shapeIndex.Index);
+            }
         }
 
         /// <summary>

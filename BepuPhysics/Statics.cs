@@ -272,7 +272,7 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Changes the shape of a static.
+        /// Changes the shape of a static and updates its bounds in the broad phase.
         /// </summary>
         /// <param name="handle">Handle of the static to change the shape of.</param>
         /// <param name="newShape">Index of the new shape to use for the static.</param>
@@ -290,6 +290,7 @@ namespace BepuPhysics
 
         /// <summary>
         /// Applies a new description to an existing static object. All inactive bodies with bounding boxes overlapping the old or new static collidable are forced active.
+        /// Updates the bounds of the static in the broad phase.
         /// </summary>
         /// <param name="handle">Handle of the static to apply the description to.</param>
         /// <param name="description">Description to apply to the static.</param>
@@ -303,7 +304,6 @@ namespace BepuPhysics
             ApplyDescriptionByIndexWithoutBroadPhaseModification(index, description, out var bounds);
             //This applies to an existing static, so we should modify the static's bounds in the broad phase.
             broadPhase.UpdateStaticBounds(Collidables[index].BroadPhaseIndex, bounds.Min, bounds.Max);
-
         }
 
         /// <summary>

@@ -223,7 +223,7 @@ namespace BepuPhysics
 
         /// <summary>
         /// Sets a body's properties according to a description. Properly handles any transitions between dynamic and kinematic and between shapeless and shapeful.
-        /// If the body is becoming kinematic, any constraints which only contain kinematic bodies will be removed. Wakes up the body.
+        /// If the body is becoming kinematic, any constraints which only contain kinematic bodies will be removed. Wakes up the body and updates its bounds in the broad phase.
         /// </summary>
         /// <param name="description">Description of the body.</param>
         public void ApplyDescription(in BodyDescription description)
@@ -232,7 +232,7 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Changes the shape of a body. Properly handles the transition between shapeless and shapeful. If the body is inactive, it will be forced awake.
+        /// Changes the shape of a body. Properly handles the transition between shapeless and shapeful. If the body is inactive, it will be forced awake. Updates the bounds of the body in the broad phase.
         /// </summary>
         /// <param name="newShape">Index of the new shape to use for the body.</param>
         public void SetShape(TypedIndex newShape)

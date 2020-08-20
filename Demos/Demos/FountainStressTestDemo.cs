@@ -160,50 +160,59 @@ namespace Demos.Demos
             //For the sake of the stress test, every single body has its own shape that gets removed when the body is removed.
             TypedIndex shapeIndex;
             BodyInertia inertia;
-            switch (random.Next(0, 7))
+            if (random.NextDouble() < 0.005)
             {
-                default:
-                    {
-                        AddConvexShape(new Sphere(0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
-                    }
-                    break;
-                case 1:
-                    {
-                        AddConvexShape(new Capsule(
-                            0.35f + 0.35f * (float)random.NextDouble(),
-                            0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
-                    }
-                    break;
-                case 2:
-                    {
-                        AddConvexShape(new Box(
-                            0.35f + 0.6f * (float)random.NextDouble(),
-                            0.35f + 0.6f * (float)random.NextDouble(),
-                            0.35f + 0.6f * (float)random.NextDouble()), out shapeIndex, out inertia);
-                    }
-                    break;
-                case 3:
-                    {
-                        AddConvexShape(new Cylinder(0.1f + 0.5f * (float)random.NextDouble(), 0.2f + (float)random.NextDouble()), out shapeIndex, out inertia);
-                    }
-                    break;
-                case 4:
-                    {
-                        AddConvexShape(CreateRandomHull(), out shapeIndex, out inertia);
-                    }
-                    break;
-                case 5:
-                    {
-                        CreateRandomCompound(out var children, out inertia);
-                        shapeIndex = Simulation.Shapes.Add(new Compound(children));
-                    }
-                    break;
-                case 6:
-                    {
-                        CreateRandomCompound(out var children, out inertia);
-                        shapeIndex = Simulation.Shapes.Add(new BigCompound(children, Simulation.Shapes, BufferPool));
-                    }
-                    break;
+                //Occasionally request a shapeless body.
+                shapeIndex = default;
+                inertia = new BodyInertia { InverseMass = 1f, InverseInertiaTensor = new Symmetric3x3 { XX = 1, YY = 1, ZZ = 1 } };
+            }
+            else
+            {
+                switch (random.Next(0, 7))
+                {
+                    default:
+                        {
+                            AddConvexShape(new Sphere(0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                        }
+                        break;
+                    case 1:
+                        {
+                            AddConvexShape(new Capsule(
+                                0.35f + 0.35f * (float)random.NextDouble(),
+                                0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                        }
+                        break;
+                    case 2:
+                        {
+                            AddConvexShape(new Box(
+                                0.35f + 0.6f * (float)random.NextDouble(),
+                                0.35f + 0.6f * (float)random.NextDouble(),
+                                0.35f + 0.6f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                        }
+                        break;
+                    case 3:
+                        {
+                            AddConvexShape(new Cylinder(0.1f + 0.5f * (float)random.NextDouble(), 0.2f + (float)random.NextDouble()), out shapeIndex, out inertia);
+                        }
+                        break;
+                    case 4:
+                        {
+                            AddConvexShape(CreateRandomHull(), out shapeIndex, out inertia);
+                        }
+                        break;
+                    case 5:
+                        {
+                            CreateRandomCompound(out var children, out inertia);
+                            shapeIndex = Simulation.Shapes.Add(new Compound(children));
+                        }
+                        break;
+                    case 6:
+                        {
+                            CreateRandomCompound(out var children, out inertia);
+                            shapeIndex = Simulation.Shapes.Add(new BigCompound(children, Simulation.Shapes, BufferPool));
+                        }
+                        break;
+                }
             }
 
             description = new BodyDescription
@@ -352,7 +361,6 @@ namespace Demos.Demos
                     newDescription.LocalInertia = default;
                 }
                 Simulation.Bodies.ApplyDescription(handle, newDescription);
-                Simulation.Bodies.UpdateBounds(handle);
             }
 
             base.Update(window, camera, input, dt);

@@ -146,9 +146,8 @@ namespace BepuPhysics
             ref var movedOriginalLocation = ref HandleToLocation[handle.Value];
             Sets[movedOriginalLocation.SetIndex].Collidables[movedOriginalLocation.Index].BroadPhaseIndex = newBroadPhaseIndex;
         }
-        void RemoveCollidableFromBroadPhase(int activeBodyIndex, ref Collidable collidable)
+        void RemoveCollidableFromBroadPhase(ref Collidable collidable)
         {
-            Debug.Assert(collidable.Shape.Exists && collidable.BroadPhaseIndex >= 0);
             var removedBroadPhaseIndex = collidable.BroadPhaseIndex;
             //The below removes a body's collidable from the broad phase and adjusts the broad phase index of any moved leaf.
             if (broadPhase.RemoveActiveAt(removedBroadPhaseIndex, out var movedLeaf))
@@ -202,7 +201,7 @@ namespace BepuPhysics
             {
                 //The collidable exists, so it should be removed from the broadphase.
                 //This is true even when this function is used in the context of a sleep. The collidable will be readded to the static tree.
-                RemoveCollidableFromBroadPhase(activeBodyIndex, ref collidable);
+                RemoveCollidableFromBroadPhase(ref collidable);
             }
 
             var bodyMoved = set.RemoveAt(activeBodyIndex, out var handle, out var movedBodyIndex, out var movedBodyHandle);
@@ -388,12 +387,13 @@ namespace BepuPhysics
                 else
                 {
                     //Remove the now-unused collidable from the simulation.
-                    RemoveCollidableFromBroadPhase(activeBodyIndex, ref set.Collidables[activeBodyIndex]);
+                    RemoveCollidableFromBroadPhase(ref set.Collidables[activeBodyIndex]);
                 }
             }
         }
         /// <summary>
         /// Changes the shape of a body. Properly handles the transition between shapeless and shapeful. If the body is inactive, it will be forced awake.
+        /// Updates the bounds of the body in the broad phase.
         /// </summary>
         /// <param name="handle">Handle of the body to change the shape of.</param>
         /// <param name="newShape">Index of the new shape to use for the body.</param>
@@ -412,11 +412,13 @@ namespace BepuPhysics
             var oldShape = collidable.Shape;
             collidable.Shape = newShape;
             UpdateForShapeChange(handle, location.Index, oldShape, newShape);
+            UpdateBounds(handle);
         }
 
         /// <summary>
         /// Applies a description to a body. Properly handles any transitions between dynamic and kinematic and between shapeless and shapeful.
         /// If the body is becoming kinematic, any constraints which only contain kinematic bodies will be removed. Wakes up the body.
+        /// Updates the bounds of the body in the broad phase.
         /// </summary>
         /// <param name="handle">Handle of the body to receive the description.</param>
         /// <param name="description">Description to apply to the body.</param>
@@ -437,6 +439,7 @@ namespace BepuPhysics
             set.ApplyDescriptionByIndex(location.Index, description);
             UpdateForShapeChange(handle, location.Index, oldShape, description.Collidable.Shape);
             UpdateForKinematicStateChange(handle, ref location, ref set, newlyKinematic);
+            UpdateBounds(handle);
         }
 
         /// <summary>
