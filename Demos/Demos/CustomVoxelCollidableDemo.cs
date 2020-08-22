@@ -112,7 +112,7 @@ namespace Demos.Demos
             {
                 ref var voxelIndex = ref VoxelIndices[leafIndex];
                 //Note that you could make use of the voxel grid's regular structure to save some work dealing with orientations.
-                if (VoxelShape.RayTest(new RigidPose((voxelIndex + new Vector3(0.5f)) * VoxelSize), ray->Origin, ray->Direction, out var t, out var normal))
+                if (VoxelShape.RayTest(new RigidPose((voxelIndex + new Vector3(0.5f)) * VoxelSize), ray->Origin, ray->Direction, out var t, out var normal) && t <= *maximumT)
                 {
                     //Bring the ray normal back into world space.
                     Matrix3x3.Transform(normal, Orientation, out normal);

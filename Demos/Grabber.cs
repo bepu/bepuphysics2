@@ -42,17 +42,13 @@ namespace Demos
             {
                 //We are only interested in the earliest hit. This callback is executing within the traversal, so modifying maximumT informs the traversal
                 //that it can skip any AABBs which are more distant than the new maximumT.
-                if (t < maximumT)
-                    maximumT = t;
-                if (t < T)
-                {
-                    //Cache the earliest impact.
-                    T = t;
-                    HitCollidable = collidable;
-                }
+                maximumT = t;
+                //Cache the earliest impact.
+                T = t;
+                HitCollidable = collidable;
             }
         }
-        
+
         void CreateMotorDescription(in Vector3 target, float inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularServo angularDescription)
         {
             linearDescription = new OneBodyLinearServo

@@ -60,7 +60,9 @@ namespace BepuPhysics.CollisionDetection
                         if (intersected[j] < 0)
                         {
                             raySource.GetRay(i + j, out var ray, out var maximumT);
-                            rayHitHandler.OnRayHit(*ray, ref *maximumT, t[j], scalarNormal, 0);
+                            var tj = t[j];
+                            if (tj <= *maximumT)
+                                rayHitHandler.OnRayHit(*ray, ref *maximumT, tj, scalarNormal, 0);
                         }
                     }
                 }
