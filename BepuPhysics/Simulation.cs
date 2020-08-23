@@ -338,6 +338,8 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void Timestep(float dt, IThreadDispatcher threadDispatcher = null)
         {
+            if (dt <= 0)
+                throw new ArgumentException("Timestep duration must be positive.", "dt");
             profiler.Clear();
             profiler.Start(this);
 

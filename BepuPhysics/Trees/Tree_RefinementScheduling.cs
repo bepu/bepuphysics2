@@ -3,7 +3,6 @@ using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -162,8 +161,12 @@ namespace BepuPhysics.Trees
         void GetRefineTuning(int frameIndex, int refinementCandidatesCount, float refineAggressivenessScale, float costChange,
             out int targetRefinementCount, out int refinementPeriod, out int refinementOffset)
         {
-            Debug.Assert(!float.IsNaN(costChange) && !float.IsInfinity(costChange),
-            "If the change in heuristic cost hits invalid values, it's likely that there are invalid poses or velocities. A bugged velocity input or constraint triggering an explosion is likely.");
+            if (float.IsNaN(costChange) || float.IsInfinity(costChange))
+                throw new InvalidOperationException(
+                    "The change in tree cost is an invalid value, strongly implying the tree bounds have been corrupted by infinites or NaNs. " +
+                    "If this happened in the broad phase's use of the tree, it's likely that there are invalid poses or velocities in the simulation, " +
+                    "possibly as a result of bugged input state or constraint configuration. " + 
+                    "Try running the library with debug asserts enabled to narrow down where the NaNsplosion started.");
             var refineAggressiveness = Math.Max(0, costChange * refineAggressivenessScale);
             float refinePortion = Math.Min(1, refineAggressiveness * 0.25f);
 
