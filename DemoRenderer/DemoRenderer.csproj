@@ -1,9 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
     <LangVersion>latest</LangVersion>
-    <!--<RuntimeFrameworkVersion>2.1.0-preview2-25616-02</RuntimeFrameworkVersion>-->
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
