@@ -21,7 +21,7 @@ namespace BepuUtilities.Memory
         /// Computes the largest integer N such that 2^N is less than or equal to i.
         /// </summary>
         /// <param name="i">Integer to compute the power of.</param>
-        /// <returns>Loweset integer N such that 2^N is less than or equal to i.</returns>
+        /// <returns>Lowest integer N such that 2^N is less than or equal to i.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetPowerOf2(int i)
         {
@@ -56,7 +56,7 @@ namespace BepuUtilities.Memory
         /// Computes the lowest integer N such that 2^N >= i.
         /// </summary>
         /// <param name="i">Integer to compute the power of.</param>
-        /// <returns>Loweset integer N such that 2^N >= i.</returns>
+        /// <returns>Lowest integer N such that 2^N >= i.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetContainingPowerOf2(int i)
         {
