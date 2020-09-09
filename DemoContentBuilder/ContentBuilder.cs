@@ -67,7 +67,7 @@ namespace DemoContentBuilder
                             }
                             newBuildCache.Add(content.Path, newElement);
                             newContentBuilt = true;
-                            Console.WriteLine($"Content built: {content}");
+                            Console.WriteLine($"Content built: {content.Path}");
                         }
                         catch (Exception e)
                         {
