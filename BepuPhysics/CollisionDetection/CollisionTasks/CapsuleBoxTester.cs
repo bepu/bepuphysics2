@@ -319,8 +319,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector3Wide.Scale(capsuleAxis, tMin, out var localA0);
             Vector3Wide.Scale(capsuleAxis, tMax, out var localA1);
-            Vector3Wide.Add(localOffsetA, localA0, out var bToA0);
-            Vector3Wide.Add(localOffsetA, localA1, out var bToA1);
 
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;

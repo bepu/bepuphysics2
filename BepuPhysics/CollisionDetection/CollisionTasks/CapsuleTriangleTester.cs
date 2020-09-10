@@ -318,7 +318,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //In that case, we can simply use the flipped face normal.
             Vector3Wide.LengthSquared(capsuleAxisPlaneNormal, out var capsuleAxisPlaneNormalLengthSquared);
             Vector3Wide.Negate(localNormal, out var negatedNormal);
-            Vector3Wide.ConditionalSelect(Vector.LessThan(capsuleAxisPlaneNormalLengthSquared, new Vector<float>(1e-15f)), negatedNormal, capsuleAxisPlaneNormal, out capsuleAxisPlaneNormal);
+            Vector3Wide.ConditionalSelect(Vector.LessThan(capsuleAxisPlaneNormalLengthSquared, new Vector<float>(1e-10f)), negatedNormal, capsuleAxisPlaneNormal, out capsuleAxisPlaneNormal);
             //Given that we have a special case that creates a plane normal that isn't perpendicular to the capsule axis, we need to pick a center point for the capsule plane
             //which gives us the desired result- both contacts have the same depth matching the capsule endpoint closer to the triangle.
             Vector3Wide.Dot(capsuleAxisPlaneNormal, localCapsuleAxis, out var capsuleAxisPlaneDot);
