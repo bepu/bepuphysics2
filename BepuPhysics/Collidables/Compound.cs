@@ -15,6 +15,28 @@ namespace BepuPhysics.Collidables
         public RigidPose LocalPose;
     }
 
+    struct CompoundChildShapeTester : IShapeRayHitHandler
+    {
+        //We use a non-generic hit handler to capture the final result of a leaf test.
+        //This requires caching out the T and Normal for reading by whatever ended up calling this, but it's worth it to avoid AOT pipelines barfing on infinite recursion.
+        public float T;
+        public Vector3 Normal;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool AllowTest(int childIndex)
+        {
+            Debug.Assert(childIndex == 0, "Compounds can contain only convexes, so the child index is always zero.");
+            //The actual test filtering took place in the TestLeaf function, where we call Handler.AllowTest.
+            return true;
+        }
+
+        public void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex)
+        {
+            Debug.Assert(childIndex == 0, "Compounds can contain only convexes, so the child index is always zero.");
+            T = t;
+            Normal = normal;
+        }
+    }
+
     /// <summary>
     /// Minimalist compound shape containing a list of child shapes. Does not make use of any internal acceleration structure; should be used only with small groups of shapes.
     /// </summary>
@@ -156,61 +178,45 @@ namespace BepuPhysics.Collidables
             AddChildBoundsToBatcher(ref Children, ref batcher, pose, velocity, bodyIndex);
         }
 
-        struct WrappedHandler<TRayHitHandler> : IShapeRayHitHandler where TRayHitHandler : IShapeRayHitHandler
-        {
-            public TRayHitHandler HitHandler;
-            public int ChildIndex;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool AllowTest(int childIndex)
-            {
-                return HitHandler.AllowTest(childIndex);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex)
-            {
-                Debug.Assert(childIndex == 0, "All compound children should be convexes, so they should report a child index of 0.");
-                Debug.Assert(maximumT >= t, "Whatever generated this ray hit should have obeyed the current maximumT value.");
-                //Note the use of the child index given to the instance, not the parameter.
-                HitHandler.OnRayHit(ray, ref maximumT, t, normal, ChildIndex);
-            }
-        }
-
         public void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
-            WrappedHandler<TRayHitHandler> wrappedHandler;
-            wrappedHandler.HitHandler = hitHandler;
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
+            RayData localRay;
+            Matrix3x3.TransformTranspose(ray.Origin - pose.Position, orientation, out localRay.Origin);
+            Matrix3x3.TransformTranspose(ray.Direction, orientation, out localRay.Direction);
+            localRay.Id = 0;
+
             for (int i = 0; i < Children.Length; ++i)
             {
-                ref var child = ref Children[i];
-                wrappedHandler.ChildIndex = i;
-                GetRotatedChildPose(child.LocalPose, pose.Orientation, out var childPose);
-                //TODO: This is an area that has to be updated for high precision poses.
-                childPose.Position += pose.Position;
-                shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, childPose, ray, ref maximumT, ref wrappedHandler);
+                if (hitHandler.AllowTest(i))
+                {
+                    ref var child = ref Children[i];
+                    CompoundChildShapeTester tester;
+                    tester.T = -1;
+                    tester.Normal = default;
+                    shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, child.LocalPose, localRay, ref maximumT, ref tester);
+                    if (tester.T >= 0)
+                    {
+                        Debug.Assert(maximumT >= tester.T, "Whatever generated this ray hit should have obeyed the current maximumT value.");
+                        Matrix3x3.Transform(tester.Normal, orientation, out var rotatedNormal);
+                        hitHandler.OnRayHit(ray, ref maximumT, tester.T, rotatedNormal, i);
+                    }
+                }
             }
-            //Preserve any mutations.
-            hitHandler = wrappedHandler.HitHandler;
         }
 
-        public void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
-            WrappedHandler<TRayHitHandler> wrappedHandler;
-            wrappedHandler.HitHandler = hitHandler;
-            for (int i = 0; i < Children.Length; ++i)
+            //TODO: Note that we dispatch a bunch of scalar tests here. You could be more clever than this- batched tests are possible.
+            //It's relatively easy to do batching for this compound type since there is no hierarchy traversal, but we refactored things to avoid an infinite generic expansion issue in AOT compilation.
+            //There are plenty of ways to work around that, but right now our batched raytracing implementation is bad enough that spending extra work here is questionable. We'll avoid breaking it for now, but that's all.
+            for (int i = 0; i < rays.RayCount; ++i)
             {
-                ref var child = ref Children[i];
-                wrappedHandler.ChildIndex = i;
-                GetRotatedChildPose(child.LocalPose, pose.Orientation, out var childPose);
-                //TODO: This is an area that has to be updated for high precision poses.
-                childPose.Position += pose.Position;
-                shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, childPose, ref rays, ref wrappedHandler);
+                rays.GetRay(i, out var ray, out var maximumT);
+                RayTest(pose, *ray, ref *maximumT, shapeBatches, ref hitHandler);
             }
-            //Preserve any mutations.
-            hitHandler = wrappedHandler.HitHandler;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
         {
