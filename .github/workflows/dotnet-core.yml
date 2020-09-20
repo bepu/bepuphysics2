@@ -16,7 +16,7 @@ jobs:
     - name: Setup dotnet 2
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '2.x'
+        dotnet-version: '2.0.x'
     - name: Setup dotnet 3
       uses: actions/setup-dotnet@v1
       with:
