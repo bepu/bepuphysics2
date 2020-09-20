@@ -378,7 +378,7 @@ namespace Demos.SpecializedTests
                     LocalOffsetA = new Vector3(0, 1, 0),
                     LocalOffsetB = new Vector3(0, -1, 0),
                     SpringSettings = new SpringSettings(30, 1),
-                    ServoSettings = new ServoSettings(1, 0, 30)
+                    ServoSettings = new ServoSettings(100, 1, 100)
                 });
             }
 
