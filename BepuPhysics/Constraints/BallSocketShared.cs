@@ -129,7 +129,6 @@ namespace BepuPhysics.Constraints
             ComputeCorrectiveImpulse(ref velocityA, ref velocityB, ref offsetA, ref offsetB, ref biasVelocity, ref effectiveMass, ref softnessImpulseScale, ref accumulatedImpulse, out var correctiveImpulse);
             //This function DOES have a maximum impulse limit.
             ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulse, ref correctiveImpulse);
-            Vector3Wide.Add(accumulatedImpulse, correctiveImpulse, out accumulatedImpulse);
 
             ApplyImpulse(ref velocityA, ref velocityB, ref offsetA, ref offsetB, ref inertiaA, ref inertiaB, ref correctiveImpulse);
         }
