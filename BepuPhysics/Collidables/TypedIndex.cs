@@ -1,9 +1,10 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Collidables
 {
-    public struct TypedIndex
+    public struct TypedIndex : IEquatable<TypedIndex>
     {
         /// <summary>
         /// Bit packed representation of the typed index.
@@ -52,5 +53,14 @@ namespace BepuPhysics.Collidables
             return $"<{Type}, {Index}>";
         }
 
+        public bool Equals(TypedIndex other) => Packed == other.Packed;
+
+        public override bool Equals(object other) => other is TypedIndex otherTypedIndex && Equals(otherTypedIndex);
+
+        public static bool operator ==(TypedIndex x, TypedIndex y) => x.Packed == y.Packed;
+
+        public static bool operator !=(TypedIndex x, TypedIndex y) => x.Packed != y.Packed;
+
+        public override int GetHashCode() => (int)Packed;
     }
 }
