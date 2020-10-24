@@ -1,0 +1,89 @@
+#version 450
+#ifdef GL_ARB_shader_draw_parameters
+#extension GL_ARB_shader_draw_parameters : enable
+#endif
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+struct Instance
+{
+    vec3 Position;
+    uint PackedColor;
+    uvec2 PackedOrientation;
+    uint VertexStart;
+    uint VertexCount;
+    vec3 Scale;
+    float Padding;
+};
+
+layout(binding = 0, std140) uniform type_VertexConstants
+{
+    mat4 Projection;
+    vec3 CameraPosition;
+    float Padding0;
+    vec3 CameraRight;
+    float Padding1;
+    vec3 CameraUp;
+    float Padding2;
+    vec3 CameraBackward;
+} VertexConstants;
+
+layout(binding = 0, std430) readonly buffer type_StructuredBuffer_Instance
+{
+    Instance _m0[];
+} Instances;
+
+layout(binding = 1, std430) readonly buffer type_StructuredBuffer_v3float
+{
+    vec3 _m0[];
+} Vertices;
+
+#ifdef GL_ARB_shader_draw_parameters
+#define SPIRV_Cross_BaseInstance gl_BaseInstanceARB
+#else
+uniform int SPIRV_Cross_BaseInstance;
+#endif
+layout(location = 0) out vec3 varying_RayDirection;
+layout(location = 1) flat out vec3 varying_Position;
+layout(location = 2) flat out uint varying_PackedColor;
+layout(location = 3) flat out vec4 varying_Orientation;
+
+void main()
+{
+    uint _61 = uint((gl_InstanceID + SPIRV_Cross_BaseInstance)) - uint(SPIRV_Cross_BaseInstance);
+    vec3 _79 = Instances._m0[_61].Position - VertexConstants.CameraPosition;
+    uint _86 = (Instances._m0[_61].PackedOrientation.x & 32768u) << 16u;
+    uint _90 = Instances._m0[_61].PackedOrientation.x >> 16u;
+    uint _96 = (_90 & 32768u) << 16u;
+    uint _106 = (Instances._m0[_61].PackedOrientation.y & 32768u) << 16u;
+    uint _110 = Instances._m0[_61].PackedOrientation.y >> 16u;
+    uint _116 = (_110 & 32768u) << 16u;
+    vec4 _120 = vec4(uintBitsToFloat((floatBitsToUint(float(Instances._m0[_61].PackedOrientation.x & 32767u) * 3.0518509447574615478515625e-05) | _86) | _86), uintBitsToFloat((floatBitsToUint(float(_90 & 32767u) * 3.0518509447574615478515625e-05) | _96) | _96), uintBitsToFloat((floatBitsToUint(float(Instances._m0[_61].PackedOrientation.y & 32767u) * 3.0518509447574615478515625e-05) | _106) | _106), uintBitsToFloat((floatBitsToUint(float(_110 & 32767u) * 3.0518509447574615478515625e-05) | _116) | _116));
+    vec4 _123 = _120 / vec4(length(_120));
+    float _124 = _123.x;
+    float _125 = _124 + _124;
+    float _126 = _123.y;
+    float _127 = _126 + _126;
+    float _128 = _123.z;
+    float _129 = _128 + _128;
+    float _131 = _124 * _127;
+    float _132 = _124 * _129;
+    float _133 = _126 * _127;
+    float _134 = _126 * _129;
+    float _135 = _128 * _129;
+    float _136 = _123.w;
+    float _137 = _136 * _125;
+    float _138 = _136 * _127;
+    float _139 = _136 * _129;
+    float _145 = 1.0 - (_124 * _125);
+    vec3 _156 = _79 + (mat3(vec3((1.0 - _133) - _135, _131 + _139, _132 - _138), vec3(_131 - _139, _145 - _135, _134 + _137), vec3(_132 + _138, _134 - _137, _145 - _133)) * (Instances._m0[_61].Scale * Vertices._m0[uint(gl_VertexID) + Instances._m0[_61].VertexStart]));
+    gl_Position = VertexConstants.Projection * vec4(_156 * mat3(VertexConstants.CameraRight, VertexConstants.CameraUp, VertexConstants.CameraBackward), 1.0);
+    varying_RayDirection = _156;
+    varying_Position = _79;
+    varying_PackedColor = Instances._m0[_61].PackedColor;
+    varying_Orientation = _123;
+}
+

@@ -35,7 +35,12 @@ namespace Demos.Demos.Sponsors
         RenderableImage CreateRewardImage(string rewardImagePath, ContentArchive content, RenderSurface surface)
         {
             var textureContent = content.Load<Texture2DContent>(rewardImagePath);
-            return new RenderableImage(surface.Device, surface.Context, textureContent, debugName: Path.GetFileNameWithoutExtension(rewardImagePath));
+            return new RenderableImage(
+#if !OPENGL
+                surface.Device, surface.Context,
+#endif
+                textureContent, debugName: Path.GetFileNameWithoutExtension(rewardImagePath)
+            );
         }
         void Add(List<Sponsor> sponsors, string name, string rewardImagePath, ContentArchive content, RenderSurface surface)
         {

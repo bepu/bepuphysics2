@@ -59,7 +59,12 @@ namespace Demos
                 this.controls = Controls.Default;
 
             var fontContent = content.Load<FontContent>(@"Content\Carlito-Regular.ttf");
-            font = new Font(loop.Surface.Device, loop.Surface.Context, fontContent);
+            font = new Font(
+#if !OPENGL
+                loop.Surface.Device, loop.Surface.Context,
+#endif
+                fontContent
+            );
 
             timingGraph = new Graph(new GraphDescription
             {

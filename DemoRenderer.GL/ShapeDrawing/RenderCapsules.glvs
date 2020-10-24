@@ -1,0 +1,93 @@
+#version 450
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+struct CapsuleInstance
+{
+    vec3 Position;
+    float Radius;
+    uvec2 PackedOrientation;
+    float HalfLength;
+    uint PackedColor;
+};
+
+layout(binding = 0, std140) uniform type_VertexConstants
+{
+    mat4 Projection;
+    vec3 CameraPosition;
+    float NearClip;
+    vec3 CameraRight;
+    float Padding0;
+    vec3 CameraUp;
+    float Padding1;
+    vec3 CameraBackward;
+} VertexConstants;
+
+layout(binding = 0, std430) readonly buffer type_StructuredBuffer_CapsuleInstance
+{
+    CapsuleInstance _m0[];
+} Instances;
+
+layout(location = 0) out vec3 varying_RayDirection;
+layout(location = 1) flat out vec3 varying_Position;
+layout(location = 2) flat out float varying_Radius;
+layout(location = 3) flat out uvec2 varying_PackedOrientation;
+layout(location = 4) flat out float varying_HalfLength;
+layout(location = 5) flat out uint varying_PackedColor;
+
+void main()
+{
+    uint _62 = uint(int(uint(gl_VertexID) >> 3u));
+    vec3 _72 = Instances._m0[_62].Position - VertexConstants.CameraPosition;
+    vec3 _82 = vec3(float((uint(gl_VertexID) & 1u) << 1u), float(uint(gl_VertexID) & 2u), float((uint(gl_VertexID) & 4u) >> 1u)) - vec3(1.0);
+    mat3 _90 = transpose(mat3(VertexConstants.CameraRight, VertexConstants.CameraUp, VertexConstants.CameraBackward));
+    vec3 _91 = _90 * _72;
+    uint _98 = (Instances._m0[_62].PackedOrientation.x & 32768u) << 16u;
+    uint _102 = Instances._m0[_62].PackedOrientation.x >> 16u;
+    uint _108 = (_102 & 32768u) << 16u;
+    uint _118 = (Instances._m0[_62].PackedOrientation.y & 32768u) << 16u;
+    uint _122 = Instances._m0[_62].PackedOrientation.y >> 16u;
+    uint _128 = (_122 & 32768u) << 16u;
+    vec4 _132 = vec4(uintBitsToFloat((floatBitsToUint(float(Instances._m0[_62].PackedOrientation.x & 32767u) * 3.0518509447574615478515625e-05) | _98) | _98), uintBitsToFloat((floatBitsToUint(float(_102 & 32767u) * 3.0518509447574615478515625e-05) | _108) | _108), uintBitsToFloat((floatBitsToUint(float(Instances._m0[_62].PackedOrientation.y & 32767u) * 3.0518509447574615478515625e-05) | _118) | _118), uintBitsToFloat((floatBitsToUint(float(_122 & 32767u) * 3.0518509447574615478515625e-05) | _128) | _128));
+    vec4 _135 = _132 / vec4(length(_132));
+    float _136 = _135.x;
+    float _137 = _136 + _136;
+    float _138 = _135.y;
+    float _139 = _138 + _138;
+    float _140 = _135.z;
+    float _141 = _140 + _140;
+    float _143 = _136 * _139;
+    float _144 = _136 * _141;
+    float _145 = _138 * _139;
+    float _146 = _138 * _141;
+    float _147 = _140 * _141;
+    float _148 = _135.w;
+    float _149 = _148 * _137;
+    float _150 = _148 * _139;
+    float _151 = _148 * _141;
+    float _157 = 1.0 - (_136 * _137);
+    vec3 _172 = (abs((_90 * mat3(vec3((1.0 - _145) - _147, _143 + _151, _144 - _150), vec3(_143 - _151, _157 - _147, _146 + _149), vec3(_144 + _150, _146 - _149, _157 - _145)))[1]) * Instances._m0[_62].HalfLength) + vec3(Instances._m0[_62].Radius);
+    vec3 _174 = _91 + (_172 * _82);
+    vec3 _189;
+    if (_82.z > 0.0)
+    {
+        vec3 _188 = _174;
+        _188.z = max(min((-9.9999997473787516355514526367188e-06) - VertexConstants.NearClip, _174.z), _91.z - _172.z);
+        _189 = _188;
+    }
+    else
+    {
+        _189 = _174;
+    }
+    gl_Position = VertexConstants.Projection * vec4(_189, 1.0);
+    varying_RayDirection = ((VertexConstants.CameraRight * _189.x) + (VertexConstants.CameraUp * _189.y)) + (VertexConstants.CameraBackward * _189.z);
+    varying_Position = _72;
+    varying_Radius = Instances._m0[_62].Radius;
+    varying_PackedOrientation = Instances._m0[_62].PackedOrientation;
+    varying_HalfLength = Instances._m0[_62].HalfLength;
+    varying_PackedColor = Instances._m0[_62].PackedColor;
+}
+
