@@ -1,0 +1,16 @@
+#version 450
+
+layout(binding = 0, std140) uniform type_Constants
+{
+    float InverseGamma;
+} Constants;
+
+uniform sampler2D SPIRV_Cross_CombinedColorSPIRV_Cross_DummySampler;
+
+layout(location = 0) out vec4 out_var_SV_Target0;
+
+void main()
+{
+    out_var_SV_Target0 = vec4(clamp(pow(clamp(texelFetch(SPIRV_Cross_CombinedColorSPIRV_Cross_DummySampler, ivec2(uvec2(gl_FragCoord.xy)), int(0u)).xyz, vec3(0.0), vec3(1.0)), vec3(Constants.InverseGamma)) + vec3(0.0039215688593685626983642578125 * ((float(floatBitsToUint(float(floatBitsToUint(float(floatBitsToUint(float(floatBitsToUint((gl_FragCoord.x * gl_FragCoord.x) + gl_FragCoord.y) * 776531419u)) * 961748927u)) * 217645199u)) & 65535u) * 1.525902189314365386962890625e-05) - 0.5)), vec3(0.0), vec3(1.0)), 1.0);
+}
+

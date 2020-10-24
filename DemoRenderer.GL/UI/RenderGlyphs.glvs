@@ -1,0 +1,59 @@
+#version 450
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+struct GlyphInstance
+{
+    uint PackedMinimum;
+    uint PackedHorizontalAxis;
+    uint PackedScaleAndSourceId;
+    uint PackedColor;
+};
+
+struct GlyphSource
+{
+    vec2 Minimum;
+    uint PackedSpan;
+    float DistanceScale;
+};
+
+layout(binding = 0, std140) uniform type_VertexConstants
+{
+    vec2 PackedToScreenScale;
+    vec2 ScreenToNDCScale;
+    vec2 InverseAtlasResolution;
+} VertexConstants;
+
+layout(binding = 0, std430) readonly buffer type_StructuredBuffer_GlyphInstance
+{
+    GlyphInstance _m0[];
+} Instances;
+
+layout(binding = 1, std430) readonly buffer type_StructuredBuffer_GlyphSource
+{
+    GlyphSource _m0[];
+} Sources;
+
+layout(location = 0) out vec2 varying_TextureCoordinates;
+layout(location = 1) flat out float varying_DistanceScale;
+layout(location = 2) flat out vec4 varying_Color;
+
+void main()
+{
+    uint _60 = uint(int(uint(gl_VertexID) >> 2u));
+    vec2 _82 = vec2(float(Instances._m0[_60].PackedHorizontalAxis & 65535u) - 32767.0, float(Instances._m0[_60].PackedHorizontalAxis >> 16u) - 32767.0) * vec2(3.0518509447574615478515625e-05);
+    float _84 = float(Instances._m0[_60].PackedScaleAndSourceId & 65535u);
+    float _85 = _84 * 0.0002441443502902984619140625;
+    uint _86 = Instances._m0[_60].PackedScaleAndSourceId >> 16u;
+    vec2 _100 = vec2(float(Sources._m0[_86].PackedSpan & 65535u), float(Sources._m0[_86].PackedSpan >> 16u)) + vec2(4095.9375 / _84);
+    vec2 _106 = vec2(float(uint(gl_VertexID) & 1u), float((uint(gl_VertexID) >> 1u) & 1u));
+    vec2 _109 = ((_100 * _85) * _106) - vec2(0.5);
+    gl_Position = vec4(((((vec2(float(Instances._m0[_60].PackedMinimum & 65535u), float(Instances._m0[_60].PackedMinimum >> 16u)) * VertexConstants.PackedToScreenScale) + (_82 * _109.x)) + (vec2(-_82.y, _82.x) * _109.y)) * VertexConstants.ScreenToNDCScale) + vec2(-1.0, 1.0), 0.5, 1.0);
+    varying_TextureCoordinates = ((Sources._m0[_86].Minimum - vec2(2047.96875 / _84)) + (_100 * _106)) * VertexConstants.InverseAtlasResolution;
+    varying_DistanceScale = Sources._m0[_86].DistanceScale * _85;
+    varying_Color = vec4(float(Instances._m0[_60].PackedColor & 255u) * 0.0039215688593685626983642578125, float((Instances._m0[_60].PackedColor >> 8u) & 255u) * 0.0039215688593685626983642578125, float((Instances._m0[_60].PackedColor >> 16u) & 255u) * 0.0039215688593685626983642578125, float((Instances._m0[_60].PackedColor >> 24u) & 255u) * 0.0039215688593685626983642578125);
+}
+

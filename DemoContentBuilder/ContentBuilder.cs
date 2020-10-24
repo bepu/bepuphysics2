@@ -62,6 +62,9 @@ namespace DemoContentBuilder
                                 case ContentType.Image:
                                     newElement.Content = Texture2DBuilder.Build(stream);
                                     break;
+                                case ContentType.GLSL:
+                                    newElement.Content = GLSLBuilder.Build(stream);
+                                    break;
                                 default:
                                     throw new ArgumentException("Requested content type does not have a registered builder.");
                             }
@@ -86,7 +89,7 @@ namespace DemoContentBuilder
                 {
                     //Prune out all of the extra path bits and save it.
                     var relativePath = ProjectBuilder.GetRelativePathFromDirectory(pair.Key, workingPath);
-                    archive.Add(relativePath, pair.Value.Content);
+                    archive.Add(relativePath.Replace(Path.DirectorySeparatorChar, '\\'), pair.Value.Content);
                 }
 
 

@@ -1,0 +1,78 @@
+#version 450
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+struct LineInstance
+{
+    vec3 Start;
+    uint PackedBackgroundColor;
+    vec3 End;
+    uint PackedColor;
+};
+
+layout(binding = 0, std140) uniform type_VertexConstants
+{
+    mat4 ViewProjection;
+    vec2 NDCToScreenScale;
+    vec2 Padding0;
+    vec3 CameraForward;
+    float TanAnglePerPixel;
+    vec3 CameraRight;
+    float Padding1;
+    vec3 CameraPosition;
+} VertexConstants;
+
+layout(binding = 0, std430) readonly buffer type_StructuredBuffer_LineInstance
+{
+    LineInstance _m0[];
+} Instances;
+
+layout(location = 0) out vec3 varying_ToBoxOffset;
+layout(location = 1) flat out vec3 varying_LineStart;
+layout(location = 2) flat out vec3 varying_LineDirection;
+layout(location = 3) flat out float varying_LineLength;
+layout(location = 4) flat out uint varying_ScreenLineColor0;
+layout(location = 5) flat out uint varying_ScreenLineColor1;
+layout(location = 6) flat out float varying_InverseLineRadius;
+layout(location = 7) flat out float varying_TanAnglePerPixel;
+
+void main()
+{
+    uint _59 = uint(int(uint(gl_VertexID) >> 3u));
+    vec3 _66 = Instances._m0[_59].End - Instances._m0[_59].Start;
+    float _67 = length(_66);
+    vec3 _72 = mix(vec3(1.0, 0.0, 0.0), _66 / vec3(_67), bvec3(_67 > 1.0000000116860974230803549289703e-07));
+    vec3 _75 = Instances._m0[_59].Start - VertexConstants.CameraPosition;
+    float _92 = length(_75 + (_72 * clamp(-dot(_72, _75), 0.0, _67))) * VertexConstants.TanAnglePerPixel;
+    vec3 _96 = cross(VertexConstants.CameraForward, _72);
+    float _97 = length(_96);
+    vec3 _105;
+    float _106;
+    if (_97 < 1.0000000116860974230803549289703e-07)
+    {
+        vec3 _103 = cross(VertexConstants.CameraRight, _72);
+        _105 = _103;
+        _106 = length(_103);
+    }
+    else
+    {
+        _105 = _96;
+        _106 = _97;
+    }
+    vec3 _108 = _105 / vec3(_106);
+    vec3 _112 = _72 * _92;
+    vec3 _125 = (mix(Instances._m0[_59].Start - _112, Instances._m0[_59].End + _112, bvec3(float((uint(gl_VertexID) & 4u) >> 2u) > 0.0)) + ((_108 * _92) * ((float(uint(gl_VertexID) & 1u) * 2.0) - 1.0))) + ((cross(_72, _108) * _92) * ((float((uint(gl_VertexID) & 2u) >> 1u) * 2.0) - 1.0));
+    gl_Position = VertexConstants.ViewProjection * vec4(_125, 1.0);
+    varying_ToBoxOffset = _125 - VertexConstants.CameraPosition;
+    varying_LineStart = _75;
+    varying_LineDirection = _72;
+    varying_LineLength = _67;
+    varying_ScreenLineColor0 = Instances._m0[_59].PackedColor;
+    varying_ScreenLineColor1 = Instances._m0[_59].PackedBackgroundColor;
+    varying_InverseLineRadius = 1.0 / _92;
+    varying_TanAnglePerPixel = VertexConstants.TanAnglePerPixel;
+}
+

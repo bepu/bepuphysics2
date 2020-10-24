@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Condition="'$(Configuration)'=='Debug'" Command="dotnet run -p &quot;$(ProjectDir)../DemoContentBuilder&quot; -- &quot;$(ProjectDir)$(ProjectName).content&quot; -debug" />
+    <Exec Condition="'$(Configuration)'!='Debug'" Command="dotnet run -p &quot;$(ProjectDir)../DemoContentBuilder&quot; -- &quot;$(ProjectDir)$(ProjectName).content&quot;" />
+  </Target>
+  
+  <ItemGroup>
+    <PackageReference Include="OpenTK.NETCore" Version="1.1.2749.6433" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../BepuPhysics/BepuPhysics.csproj" />
+    <ProjectReference Include="../BepuUtilities/BepuUtilities.csproj" />
+    <ProjectReference Include="../DemoContentLoader/DemoContentLoader.csproj" />
+    <ProjectReference Include="../DemoUtilities/DemoUtilities.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../DemoRenderer/ParallelLooper.cs" Link="%(RecursiveDir)%(FileName)%(Extension)" />
+    <Compile Include="../DemoRenderer/Constraints/*.cs" Exclude="../DemoRenderer/Constraints/LineRenderer.cs" Link="Constraints/%(RecursiveDir)%(FileName)%(Extension)" />
+    <Compile Include="../DemoRenderer/ShapeDrawing/RayTracedInstances.cs" Link="ShapeDrawing/%(RecursiveDir)%(FileName)%(Extension)" />
+    <Compile Include="../DemoRenderer/UI/GlyphBatch.cs" Link="UI/%(RecursiveDir)%(FileName)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(ProjectName).contentarchive" />
+  </ItemGroup>
+</Project>

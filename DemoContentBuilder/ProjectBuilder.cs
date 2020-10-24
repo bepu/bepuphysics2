@@ -39,6 +39,7 @@ namespace DemoContentBuilder
                         line = line.Trim();
                         if (line.Length > 0)
                         {
+                            line = line.Replace('\\', Path.DirectorySeparatorChar);
                             var path = Path.Combine(workingPath, line);
                             if (File.Exists(path))
                             {
@@ -57,6 +58,10 @@ namespace DemoContentBuilder
                                         break;
                                     case ".png":
                                         contentToBuild.Add(new ContentBuildInput { Path = path, Type = ContentType.Image });
+                                        break;
+                                    case ".glvs":
+                                    case ".glfs":
+                                        contentToBuild.Add(new ContentBuildInput { Path = path, Type = ContentType.GLSL });
                                         break;
                                 }
                             }

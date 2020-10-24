@@ -23,7 +23,17 @@ namespace Demos
         {
             Window = window;
             Input = new Input(window, Pool);
-            Surface = new RenderSurface(window.Handle, window.Resolution, enableDeviceDebugLayer: false);
+            Surface = new RenderSurface(
+#if OPENGL
+                window.WindowInfo,
+#else
+                window.Handle,
+#endif
+                window.Resolution
+#if DEBUG
+                , enableDeviceDebugLayer: true
+#endif
+            );
             Renderer = new Renderer(Surface);
             Camera = new Camera(window.Resolution.X / (float)window.Resolution.Y, (float)Math.PI / 3, 0.01f, 100000);            
         }
