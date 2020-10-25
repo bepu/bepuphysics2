@@ -83,9 +83,9 @@ This list will probably change over time.
 
 You're not crazy- it doesn't exist! Instead, at the time of writing, there is friction, frequency, damping ratio, and maximum recovery velocity.
 
-Frequency and damping ratio can achieve some of the same effects as restitution. If your goal is just to make a thing bounce a little bit on heavy impact, it will work. If you want to make something that reliably behaves like a coefficient of restitution of 0.8, ... you're out of luck for now.
+Frequency and damping ratio can achieve some of the same effects as restitution with a bit of configuration. Check out the [BouncinessDemo](../Demos/Demos/BouncinessDemo.cs) for an example. 
 
-The reason for this is speculative contacts. v1 used them too, but v2 pushes their usage much further and uses them as the primary form of continuous collision detection. Most of the problems caused by speculative contacts (like ghost contacts) have been smoothed over, but the naive implementation of velocity-flip restitution simply doesn't work with speculative contacts.
+The reason for the lack of a traditional coefficient of restitution is speculative contacts. v1 used them too, but v2 pushes their usage much further and uses them as the primary form of continuous collision detection. Most of the problems caused by speculative contacts (like ghost contacts) have been smoothed over, but the naive implementation of velocity-flip restitution simply doesn't work with speculative contacts.
 
 I'd like to see if the frequency/damping ratio can suffice for most use cases. If this is a critical problem for what you are trying to do, let me know. I can't guarantee I'll fix it in the near term, but if it becomes a blocking problem for a large number of people (or myself) there's a better chance that I'll spend the time to add a workaround.
 
