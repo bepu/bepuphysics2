@@ -33,17 +33,19 @@ Visit the [forums](https://forum.bepuentertainment.com) for discussion and quest
 
 By user request, there's an [experimental discord server](https://discord.gg/ssa2XpY). I'll be focusing on the forum/github for long-form content, but if you like discord, now you can discord. 
 
-[Building](Documentation/Building.md)
-
 [Getting Started](Documentation/GettingStarted.md)
 
-[Upgrading from v1, concept mapping](Documentation/UpgradingFromV1.md)
+[Building](Documentation/Building.md)
 
 [Q&A](Documentation/QuestionsAndAnswers.md)
 
 [Stability Tips](Documentation/StabilityTips.md)
 
 [Performance Tips](Documentation/PerformanceTips.md)
+
+[Contributing](CONTRIBUTING.md)
+
+[Upgrading from v1, concept mapping](Documentation/UpgradingFromV1.md)
 
 [Packaging and Versioning](Documentation/PackagingAndVersioning.md)
 
