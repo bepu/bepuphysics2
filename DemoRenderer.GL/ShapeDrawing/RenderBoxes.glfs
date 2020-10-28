@@ -10,6 +10,8 @@ void main()
 {
     vec3 _71 = dFdx(varying_RayDirection);
     vec3 _72 = dFdy(varying_RayDirection);
+    // EDIT: Adjusts for OpenGL screenspace.
+    _72 = -_72;
     vec3 _74 = normalize(cross(_72, _71));
     float _87 = -varying_Orientation.w;
     float _91 = varying_Orientation.x + varying_Orientation.x;
