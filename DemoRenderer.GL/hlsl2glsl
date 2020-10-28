@@ -40,7 +40,12 @@ hlsl-to-glsl UI/RenderUILines
 
 sed -i '/gl_Position = .*;/a\
     // EDIT: Adjusts for OpenGL far clipping plane.\
-    gl_Position.z -= 1.0;' Background/RenderBackground.glvs || exit -1
+    gl_Position.z -= 1.0;' $SELF_PATH/Background/RenderBackground.glvs || exit -1
 sed -i '/gl_Position = .*;/a\
     // EDIT: Adjusts for OpenGL screenspace.\
-    gl_Position.y -= 2.0;' UI/RenderUILines.glvs || exit -1
+    gl_Position.y -= 2.0;' $SELF_PATH/UI/RenderUILines.glvs || exit -1
+for i in $SELF_PATH/ShapeDrawing/Render{Boxes,Meshes,Triangles}.glfs; do
+	sed -i '/vec3 _72 = dFdy(varying_RayDirection);/a\
+    // EDIT: Adjusts for OpenGL screenspace.\
+    _72 = -_72;' $i || exit -1
+done
