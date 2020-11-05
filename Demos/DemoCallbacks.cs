@@ -21,6 +21,13 @@ namespace Demos
 
         public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
 
+        public void Initialize(Simulation simulation)
+        {
+            //In this demo, we don't need to initialize anything.
+            //If you had a simulation with per body gravity stored in a CollidableProperty<T> or something similar, having the simulation provided in a callback can be helpful.
+        }
+
+
         public DemoPoseIntegratorCallbacks(Vector3 gravity, float linearDamping = .03f, float angularDamping = .03f) : this()
         {
             Gravity = gravity;

@@ -20,6 +20,11 @@ namespace Demos.Demos
         DemoPoseIntegratorCallbacks innerCallbacks;
         public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque;
 
+        public void Initialize(Simulation simulation)
+        {
+            innerCallbacks.Initialize(simulation);
+        }
+
         public GyroscopicIntegratorCallbacks(Vector3 gravity, float linearDamping, float angularDamping)
         {
             innerCallbacks = new DemoPoseIntegratorCallbacks(gravity, linearDamping, angularDamping);

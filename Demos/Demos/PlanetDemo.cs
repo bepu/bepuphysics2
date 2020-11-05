@@ -29,6 +29,10 @@ namespace Demos.Demos
 
             public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
 
+            public void Initialize(Simulation simulation)
+            {
+            }
+
             public void PrepareForIntegration(float dt)
             {
                 //No point in repeating this for every body; cache it.
