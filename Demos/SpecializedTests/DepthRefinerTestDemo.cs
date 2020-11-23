@@ -455,7 +455,7 @@
 //                renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.SearchTarget, new Vector3(1, 0, 0), default);
 //            else
 //            {
-//                ContactLines.BuildOrthnormalBasis(step.BestNormal, out var x, out var y);
+//                ContactLines.BuildOrthonormalBasis(step.BestNormal, out var x, out var y);
 
 //                renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.BestNormal, new Vector3(1, 0, 0), default);
 //                renderer.Lines.Allocate() = new LineInstance(basePosition + step.BestNormal * step.BestDepth, basePosition + x * 0.1f + step.BestNormal * step.BestDepth, new Vector3(1, 1, 0), default);

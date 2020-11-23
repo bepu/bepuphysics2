@@ -156,7 +156,7 @@ namespace Demos.Demos
         unsafe void DrawImpact(Renderer renderer, ref Vector3 hitLocation, ref Vector3 hitNormal)
         {
             //The normal itself will tend to be obscured by the shapes, so instead draw two lines representing the plane.
-            DemoRenderer.Constraints.ContactLines.BuildOrthnormalBasis(hitNormal, out var tangent1, out var tangent2);
+            DemoRenderer.Constraints.ContactLines.BuildOrthonormalBasis(hitNormal, out var tangent1, out var tangent2);
             renderer.Lines.Allocate() = new DemoRenderer.Constraints.LineInstance(hitLocation - tangent1, hitLocation + tangent1, new Vector3(0, 1, 0), new Vector3());
             renderer.Lines.Allocate() = new DemoRenderer.Constraints.LineInstance(hitLocation - tangent2, hitLocation + tangent2, new Vector3(0, 1, 0), new Vector3());
         }

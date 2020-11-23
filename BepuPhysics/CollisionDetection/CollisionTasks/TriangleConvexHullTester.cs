@@ -186,7 +186,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var hullFaceOrigin);
                 var previousVertex = hullFaceOrigin;
                 var candidateCount = 0;
-                Helpers.BuildOrthnormalBasis(slotFaceNormal, out var hullFaceX, out var hullFaceY);
+                Helpers.BuildOrthonormalBasis(slotFaceNormal, out var hullFaceX, out var hullFaceY);
                 Vector4 maximumVertexContainmentDots = Vector4.Zero;
                 for (int i = 0; i < faceVertexIndices.Length; ++i)
                 {

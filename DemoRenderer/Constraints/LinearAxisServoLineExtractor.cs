@@ -34,7 +34,7 @@ namespace DemoRenderer.Constraints
             var packedBasisColor = Helpers.PackColor(new Vector3(0.2f, 0.6f, 1f) * tint);
             var backgroundColor = new Vector3(0f, 0f, 1f) * tint;
             lines.AllocateUnsafely() = new LineInstance(poseA.Position, anchorA, packedColor, 0);
-            ContactLines.BuildOrthnormalBasis(localPlaneNormal, out var localTX, out var localTY);
+            ContactLines.BuildOrthonormalBasis(localPlaneNormal, out var localTX, out var localTY);
             Matrix3x3.Transform(localTX, orientationA, out var tX);
             Matrix3x3.Transform(localTY, orientationA, out var tY);
             lines.AllocateUnsafely() = new LineInstance(anchorA - tX, anchorA + tX, packedBasisColor, 0);

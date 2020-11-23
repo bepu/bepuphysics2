@@ -152,7 +152,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Add(lineStartToClosestPointOnLine, anchorA, out projection.OffsetA);
 
             //Note again that the basis is created in local space to avoid rapidly changing jacobians.
-            Helpers.BuildOrthnormalBasis(prestep.LocalDirection, out var localTangentX, out var localTangentY);
+            Helpers.BuildOrthonormalBasis(prestep.LocalDirection, out var localTangentX, out var localTangentY);
             Matrix3x3Wide.TransformWithoutOverlap(localTangentX, orientationMatrixA, out projection.LinearJacobian.X);
             Matrix3x3Wide.TransformWithoutOverlap(localTangentY, orientationMatrixA, out projection.LinearJacobian.Y);
             GetAngularJacobians(projection.LinearJacobian, projection.OffsetA, projection.OffsetB, out var angularJacobianA, out var angularJacobianB);

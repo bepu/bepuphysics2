@@ -77,7 +77,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Matrix3x3.Transform(slotFaceNormalAInA, slotBLocalOrientationA, out var slotFaceNormalA);
                 Vector3Wide.ReadSlot(ref localOffsetA, slotIndex, out var slotLocalOffsetA);
                 ConvexHullTestHelper.PickRepresentativeFace(ref bSlot, slotIndex, ref localNormal, closestOnB, slotOffsetIndices, ref boundingPlaneEpsilon, out var slotFaceNormalB, out var slotLocalNormal, out var bestFaceIndexB);
-                Helpers.BuildOrthnormalBasis(slotFaceNormalB, out var bFaceX, out var bFaceY);
+                Helpers.BuildOrthonormalBasis(slotFaceNormalB, out var bFaceX, out var bFaceY);
 
                 //Test each face edge plane against the capsule edge.
                 //Note that we do not use the faceNormal x edgeOffset edge plane, but rather edgeOffset x localNormal.

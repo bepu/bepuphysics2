@@ -285,7 +285,7 @@ namespace BepuPhysics.Collidables
                 }
                 return;
             }
-            Helpers.BuildOrthnormalBasis(faceNormal, out var basisX, out var basisY);
+            Helpers.BuildOrthonormalBasis(faceNormal, out var basisX, out var basisY);
             Vector2 centroid = default;
             for (int i = 0; i < faceVertexIndices.Count; ++i)
             {

@@ -18,7 +18,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void BuildOrthnormalBasis(in Vector3Wide normal, out Vector3Wide t1, out Vector3Wide t2)
+        public static void BuildOrthonormalBasis(in Vector3Wide normal, out Vector3Wide t1, out Vector3Wide t2)
         {
             //This could probably be improved.
             var sign = Vector.ConditionalSelect(Vector.LessThan(normal.Z, Vector<float>.Zero), -Vector<float>.One, Vector<float>.One);
@@ -47,7 +47,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void BuildOrthnormalBasis(in Vector3 normal, out Vector3 t1, out Vector3 t2)
+        public static void BuildOrthonormalBasis(in Vector3 normal, out Vector3 t1, out Vector3 t2)
         {
             var sign = normal.Z < 0 ? -1f : 1f;
 

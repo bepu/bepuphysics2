@@ -245,7 +245,7 @@ namespace Demos.Demos
                     Matrix3x3 basisPose;
                     //We want to visualize both friction and penetration impulses, so a cylinder is a good choice- radius and length.
                     //The length will be oriented along the contact normal, while the radius will expand along the tangent directions.
-                    BepuPhysics.Helpers.BuildOrthnormalBasis(contact.Normal, out basisPose.X, out basisPose.Z);
+                    BepuPhysics.Helpers.BuildOrthonormalBasis(contact.Normal, out basisPose.X, out basisPose.Z);
                     basisPose.Y = contact.Normal;
                     var baseLength = 0.2f;
                     var baseRadius = 0.1f;

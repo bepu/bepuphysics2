@@ -310,7 +310,7 @@ namespace BepuPhysics.Constraints.Contact
             projection.InertiaA = inertiaA;
             projection.PremultipliedFrictionCoefficient = prestep.MaterialProperties.FrictionCoefficient;
             projection.Normal = prestep.Normal;
-            Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref prestep.Contact0.OffsetA, ref projection.InertiaA, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.Contact0.OffsetA, prestep.Normal, prestep.Contact0.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
@@ -323,7 +323,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities wsvA, ref Contact1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFrictionOneBody.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref accumulatedImpulses.Tangent, ref wsvA);
             PenetrationLimitOneBody.WarmStart(projection.Penetration0, projection.InertiaA, projection.Normal, accumulatedImpulses.Penetration0, ref wsvA);
             TwistFrictionOneBody.WarmStart(ref projection.Normal, ref projection.InertiaA, ref accumulatedImpulses.Twist, ref wsvA);
@@ -332,7 +332,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities wsvA, ref Contact1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
                 (accumulatedImpulses.Penetration0);
             TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
@@ -486,7 +486,7 @@ namespace BepuPhysics.Constraints.Contact
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, out var offsetToManifoldCenterA);
             projection.PremultipliedFrictionCoefficient = (1f / 2f) * prestep.MaterialProperties.FrictionCoefficient;
             projection.Normal = prestep.Normal;
-            Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref projection.InertiaA, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.Contact0.OffsetA, prestep.Normal, prestep.Contact0.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
@@ -499,7 +499,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities wsvA, ref Contact2OneBodyProjection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFrictionOneBody.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref accumulatedImpulses.Tangent, ref wsvA);
             PenetrationLimitOneBody.WarmStart(projection.Penetration0, projection.InertiaA, projection.Normal, accumulatedImpulses.Penetration0, ref wsvA);
             PenetrationLimitOneBody.WarmStart(projection.Penetration1, projection.InertiaA, projection.Normal, accumulatedImpulses.Penetration1, ref wsvA);
@@ -509,7 +509,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities wsvA, ref Contact2OneBodyProjection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
                 (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
             TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
@@ -674,7 +674,7 @@ namespace BepuPhysics.Constraints.Contact
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, out var offsetToManifoldCenterA);
             projection.PremultipliedFrictionCoefficient = (1f / 3f) * prestep.MaterialProperties.FrictionCoefficient;
             projection.Normal = prestep.Normal;
-            Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref projection.InertiaA, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.Contact0.OffsetA, prestep.Normal, prestep.Contact0.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
@@ -689,7 +689,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities wsvA, ref Contact3OneBodyProjection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFrictionOneBody.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref accumulatedImpulses.Tangent, ref wsvA);
             PenetrationLimitOneBody.WarmStart(projection.Penetration0, projection.InertiaA, projection.Normal, accumulatedImpulses.Penetration0, ref wsvA);
             PenetrationLimitOneBody.WarmStart(projection.Penetration1, projection.InertiaA, projection.Normal, accumulatedImpulses.Penetration1, ref wsvA);
@@ -700,7 +700,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities wsvA, ref Contact3OneBodyProjection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
                 (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
             TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
@@ -876,7 +876,7 @@ namespace BepuPhysics.Constraints.Contact
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact3.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, prestep.Contact3.Depth, out var offsetToManifoldCenterA);
             projection.PremultipliedFrictionCoefficient = (1f / 4f) * prestep.MaterialProperties.FrictionCoefficient;
             projection.Normal = prestep.Normal;
-            Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref projection.InertiaA, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.Contact0.OffsetA, prestep.Normal, prestep.Contact0.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
@@ -893,7 +893,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities wsvA, ref Contact4OneBodyProjection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFrictionOneBody.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref accumulatedImpulses.Tangent, ref wsvA);
             PenetrationLimitOneBody.WarmStart(projection.Penetration0, projection.InertiaA, projection.Normal, accumulatedImpulses.Penetration0, ref wsvA);
             PenetrationLimitOneBody.WarmStart(projection.Penetration1, projection.InertiaA, projection.Normal, accumulatedImpulses.Penetration1, ref wsvA);
@@ -905,7 +905,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities wsvA, ref Contact4OneBodyProjection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
                 (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
             TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
@@ -1073,7 +1073,7 @@ namespace BepuPhysics.Constraints.Contact
             Vector3Wide.Subtract(prestep.Contact0.OffsetA, prestep.OffsetB, out var offsetToManifoldCenterB);
             projection.PremultipliedFrictionCoefficient = prestep.MaterialProperties.FrictionCoefficient;
             projection.Normal = prestep.Normal;
-            Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             TangentFriction.Prestep(ref x, ref z, ref prestep.Contact0.OffsetA, ref offsetToManifoldCenterB, ref projection.InertiaA, ref projection.InertiaB, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Vector3Wide contactOffsetB;
@@ -1088,7 +1088,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
             PenetrationLimit.WarmStart(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
             TwistFriction.WarmStart(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
@@ -1097,7 +1097,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
                 (accumulatedImpulses.Penetration0);
             TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -1265,7 +1265,7 @@ namespace BepuPhysics.Constraints.Contact
             Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
             projection.PremultipliedFrictionCoefficient = (1f / 2f) * prestep.MaterialProperties.FrictionCoefficient;
             projection.Normal = prestep.Normal;
-            Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             TangentFriction.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref offsetToManifoldCenterB, ref projection.InertiaA, ref projection.InertiaB, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Vector3Wide contactOffsetB;
@@ -1281,7 +1281,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
             PenetrationLimit.WarmStart(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
             PenetrationLimit.WarmStart(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
@@ -1291,7 +1291,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
                 (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
             TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -1470,7 +1470,7 @@ namespace BepuPhysics.Constraints.Contact
             Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
             projection.PremultipliedFrictionCoefficient = (1f / 3f) * prestep.MaterialProperties.FrictionCoefficient;
             projection.Normal = prestep.Normal;
-            Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             TangentFriction.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref offsetToManifoldCenterB, ref projection.InertiaA, ref projection.InertiaB, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Vector3Wide contactOffsetB;
@@ -1489,7 +1489,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
             PenetrationLimit.WarmStart(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
             PenetrationLimit.WarmStart(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
@@ -1500,7 +1500,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
                 (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
             TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -1690,7 +1690,7 @@ namespace BepuPhysics.Constraints.Contact
             Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
             projection.PremultipliedFrictionCoefficient = (1f / 4f) * prestep.MaterialProperties.FrictionCoefficient;
             projection.Normal = prestep.Normal;
-            Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             TangentFriction.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref offsetToManifoldCenterB, ref projection.InertiaA, ref projection.InertiaB, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Vector3Wide contactOffsetB;
@@ -1712,7 +1712,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
             PenetrationLimit.WarmStart(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
             PenetrationLimit.WarmStart(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
@@ -1724,7 +1724,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
                 (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
             TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
