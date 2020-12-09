@@ -3,7 +3,7 @@
 
 This is the repo for the bepuphysics v2 library, a complete rewrite of the C# 3d rigid body physics engine [BEPUphysics v1](https://github.com/bepu/bepuphysics1).
 
-The BepuPhysics and BepuUtilities libraries target .NET Standard 2.0 and should work on any supported platform. The demos are built on .NET Core 3.1 and require DX11.
+The BepuPhysics and BepuUtilities libraries target .NET Standard 2.0 and should work on any supported platform. The demos target .NET Core 5.0 and use DX11 by default. There is also an [OpenGL version of the demos](https://github.com/bepu/bepuphysics2/tree/master/Demos.GL) for other platforms that you can run from the command line in the repository root using `dotnet run --project Demos.GL/Demos.csproj -c ReleaseStrip`.
 
 The physics engine heavily uses System.Numerics.Vectors types, so to get good performance, you'll need a compiler which can consume those types (like RyuJIT).
 
@@ -27,11 +27,11 @@ To build the source, you'll need a recent version of Visual Studio with the .NET
 
 ## Links
 
-Report bugs [here on github](../../issues). 
+Report bugs [on the issues tab](../../issues). 
 
-Visit the [forums](https://forum.bepuentertainment.com) for discussion and questions.
+Use the [discussions tab](../../discussions) for... discussions. And questions.
 
-By user request, there's an [experimental discord server](https://discord.gg/ssa2XpY). I'll be focusing on the forum/github for long-form content, but if you like discord, now you can discord. 
+By user request, there's a [discord server](https://discord.gg/ssa2XpY). I'll be focusing on github for long-form content, but if you like discord, now you can discord. 
 
 [Getting Started](Documentation/GettingStarted.md)
 
