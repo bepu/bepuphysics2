@@ -12,9 +12,19 @@ namespace Demos
 {
     public struct DemoPoseIntegratorCallbacks : IPoseIntegratorCallbacks
     {
+        /// <summary>
+        /// Gravity to apply to dynamic bodies in the simulation.
+        /// </summary>
         public Vector3 Gravity;
+        /// <summary>
+        /// Fraction of dynamic body linear velocity to remove per unit of time. Values range from 0 to 1. 0 is fully undamped, while values very close to 1 will remove most velocity.
+        /// </summary>
         public float LinearDamping;
+        /// <summary>
+        /// Fraction of dynamic body angular velocity to remove per unit of time. Values range from 0 to 1. 0 is fully undamped, while values very close to 1 will remove most velocity.
+        /// </summary>
         public float AngularDamping;
+
         Vector3 gravityDt;
         float linearDampingDt;
         float angularDampingDt;
@@ -27,7 +37,12 @@ namespace Demos
             //If you had a simulation with per body gravity stored in a CollidableProperty<T> or something similar, having the simulation provided in a callback can be helpful.
         }
 
-
+        /// <summary>
+        /// Creates a new set of simple callbacks for the demos.
+        /// </summary>
+        /// <param name="gravity">Gravity to apply to dynamic bodies in the simulation.</param>
+        /// <param name="linearDamping">Fraction of dynamic body linear velocity to remove per unit of time. Values range from 0 to 1. 0 is fully undamped, while values very close to 1 will remove most velocity.</param>
+        /// <param name="angularDamping">Fraction of dynamic body angular velocity to remove per unit of time. Values range from 0 to 1. 0 is fully undamped, while values very close to 1 will remove most velocity.</param>
         public DemoPoseIntegratorCallbacks(Vector3 gravity, float linearDamping = .03f, float angularDamping = .03f) : this()
         {
             Gravity = gravity;
@@ -39,7 +54,7 @@ namespace Demos
         {
             //No reason to recalculate gravity * dt for every body; just cache it ahead of time.
             gravityDt = Gravity * dt;
-            //Since this doesn't use per-body damping, we can precalculate everything.
+            //Since these callbacks don't use per-body damping values, we can precalculate everything.
             linearDampingDt = MathF.Pow(MathHelper.Clamp(1 - LinearDamping, 0, 1), dt);
             angularDampingDt = MathF.Pow(MathHelper.Clamp(1 - AngularDamping, 0, 1), dt);
         }
