@@ -308,15 +308,22 @@ namespace BepuUtilities
         }
 
 
+        /// <summary>
+        /// Computes an approximation of arccos. Maximum error less than 6.8e-5.
+        /// </summary>
+        /// <param name="x">Input value to the arccos function.</param>
+        /// <param name="acos">Result of the arccos function.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApproximateAcos(in Vector<float> x, out Vector<float> acos)
+        public static void ApproximateAcos(Vector<float> x, out Vector<float> acos)
         {
-            //TODO: Could probably do better than this. Definitely don't need to use a square root.
-            //acos(x) ~= (pi / (2 * sqrt(2))) * sqrt(2 - 2 * x), for 0<=x<=1
-            //acos(x) ~= pi - (pi / (2 * sqrt(2))) * sqrt(2 + 2 * x), for -1<=x<=0
-            var two = new Vector<float>(2f);
-            acos = new Vector<float>(1.11072073454f) * Vector.SquareRoot(Vector.Max(Vector<float>.Zero, two - two * Vector.Abs(x)));
-            acos = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), new Vector<float>(Pi) - acos, acos);
+            //Adapted from Handbook of Mathematical Functions by Milton Abramowitz and Irene A. Stegun.
+            var negate = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), Vector<float>.One, Vector<float>.Zero);
+            x = Vector.Abs(x);
+            acos = new Vector<float>(-0.0187293f) * x + new Vector<float>(0.0742610f);
+            acos = (acos * x - new Vector<float>(0.2121144f)) * x + new Vector<float>(1.5707288f);
+            acos *= Vector.SquareRoot(Vector.Max(Vector<float>.Zero, Vector<float>.One - x));
+            acos -= new Vector<float>(2) * negate * acos;
+            acos = negate * new Vector<float>(3.14159265358979f) + acos;
         }
 
 
