@@ -196,6 +196,7 @@ namespace BepuPhysics
             batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
             ResizeHandleCapacity(initialCapacity);
             solveWorker = SolveWorker;
+            solveStepWorker = SolveStepWorker;
             incrementalContactUpdateWorker = IncrementalContactUpdateWorker;
         }
 
