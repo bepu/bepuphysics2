@@ -109,7 +109,6 @@ namespace BepuPhysics
                 var inverseDt = 1f / dt;
                 ref var activeSet = ref ActiveSet;
                 GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-                Buffer<FallbackTypeBatchResults> fallbackResults = default;
 
                 for (int i = 0; i < synchronizedBatchCount; ++i)
                 {
@@ -123,7 +122,7 @@ namespace BepuPhysics
                 if (fallbackExists)
                 {
                     ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
-                    FallbackBatch.AllocateResults(this, pool, ref batch, out fallbackResults);
+                    FallbackBatch.AllocateResults(this, pool, ref batch, out var fallbackResults);
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];

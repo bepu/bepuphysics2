@@ -275,5 +275,13 @@ namespace BepuPhysics.Constraints
             }
         }
 
+        public override void WarmStart2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            throw new NotImplementedException();
+        }
+        public override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
