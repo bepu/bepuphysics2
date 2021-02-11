@@ -285,5 +285,15 @@ namespace BepuPhysics.Constraints
                 function.Solve(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref projection, ref accumulatedImpulses);
             }
         }
+
+
+        public override void WarmStart2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            throw new NotImplementedException();
+        }
+        public override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
