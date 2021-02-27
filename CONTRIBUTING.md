@@ -13,4 +13,4 @@ The project is primarily driven and shaped by my own requirements and internal p
 1. There's a pretty good chance that something I'm doing internally could step on your toes.
 2. Some contributions might not fit with where I want to take the project, or they would introduce code that I don't want to maintain in the long term.
 
-To avoid nasty surprises that result in the rejection of a big PR, contact me early here on github, on in the [discussions](https://github.com/bepu/bepuphysics2/discussions), on [discord](https://discord.gg/ssa2XpY), or even [tweetertown](https://twitter.com/RossNordby).
+To avoid nasty surprises that result in the rejection of a big PR, contact me early here on github, in the [discussions](https://github.com/bepu/bepuphysics2/discussions), on [discord](https://discord.gg/ssa2XpY), or even [tweetertown](https://twitter.com/RossNordby).
