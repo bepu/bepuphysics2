@@ -168,6 +168,18 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// <para>Gets a CollidableReference for this body. CollidableReferences uniquely identify a collidable object in a simulation by including both the dynamic/kinematic/static state of the object and its handle.</para>
+        /// <para>Despite an unfortunate naming collision, CollidableReferences are distinct from a direct reference to a body's collidable data, which you can get from the Collidable property.</para>
+        /// </summary>
+        public CollidableReference CollidableReference
+        {
+            get
+            {
+                return new CollidableReference(Kinematic ? CollidableMobility.Kinematic : CollidableMobility.Dynamic, Handle);
+            }
+        }
+
+        /// <summary>
         /// Gets whether the body is kinematic, meaning its inverse inertia and mass are all zero.
         /// </summary>
         public bool Kinematic { get { return Bodies.IsKinematic(LocalInertia); } }

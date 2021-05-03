@@ -80,6 +80,19 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// <para>Gets a CollidableReference for this static. CollidableReferences uniquely identify a collidable object in a simulation by including both the dynamic/kinematic/static state of the object and its handle.</para>
+        /// <para>Despite an unfortunate naming collision, CollidableReferences are distinct from a direct reference to a static's collidable data, which you can get from the Collidable property.</para>
+        /// </summary>
+        public CollidableReference CollidableReference
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return new CollidableReference(Handle);
+            }
+        }
+
+        /// <summary>
         /// Gets a description of the static.
         /// </summary>
         /// <param name="description">Description of the static.</param>

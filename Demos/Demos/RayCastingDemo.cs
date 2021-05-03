@@ -81,7 +81,7 @@ namespace Demos
             {
                 points.AllocateUnsafely() = new Vector3(1 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 1 * (float)random.NextDouble());
             }
-            ConvexHullHelper.CreateShape(points, BufferPool, out _, out var hullShape);
+            var hullShape = new ConvexHull(points, BufferPool, out _);
             var sphereIndex = Simulation.Shapes.Add(sphere);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var boxIndex = Simulation.Shapes.Add(box);

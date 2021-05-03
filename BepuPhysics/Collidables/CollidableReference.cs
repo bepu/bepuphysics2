@@ -1,4 +1,5 @@
 ﻿using BepuUtilities.Collections;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -20,7 +21,7 @@ namespace BepuPhysics.Collidables
         Static = 2
     }
 
-    public struct CollidableReference
+    public struct CollidableReference : IEquatable<CollidableReference>
     {
         public uint Packed;
 
@@ -114,6 +115,16 @@ namespace BepuPhysics.Collidables
             var handle = (Mobility == CollidableMobility.Static) ? StaticHandle.Value : BodyHandle.Value;
             return $"{Mobility}[{handle}]";
         }
+
+        public bool Equals(CollidableReference other) => Packed == other.Packed;
+
+        public override bool Equals(object other) => other is CollidableReference otherReference && Equals(otherReference);
+
+        public static bool operator ==(CollidableReference x, CollidableReference y) => x.Packed == y.Packed;
+
+        public static bool operator !=(CollidableReference x, CollidableReference y) => x.Packed != y.Packed;
+
+        public override int GetHashCode() => (int)Packed;
     }
 
     public struct CollidableReferenceComparer : IEqualityComparerRef<CollidableReference>
