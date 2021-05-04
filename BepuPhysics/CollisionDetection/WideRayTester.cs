@@ -1,6 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.Trees;
 using BepuUtilities;
+using BepuUtilities.Memory;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -20,8 +21,12 @@ namespace BepuPhysics.CollisionDetection
         {
             RayWide rayWide;
             TShapeWide wide;
-            //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
-            (*&wide).Broadcast(shape);
+            if ((*&wide).InternalAllocationSize > 0)
+            {
+                var memory = stackalloc byte[wide.InternalAllocationSize];
+                wide.Initialize(new RawBuffer(memory, wide.InternalAllocationSize));
+            }
+            wide.Broadcast(shape);
             RigidPoses poses;
             Vector3Wide.Broadcast(pose.Position, out poses.Position);
             QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);
