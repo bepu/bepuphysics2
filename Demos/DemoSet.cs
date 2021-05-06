@@ -53,6 +53,7 @@ namespace Demos
             AddOption<RagdollDemo>();
             AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<ClothDemo>();
+            AddOption<CollisionQueryDemo>();
             AddOption<NewtDemo>();
             AddOption<PlanetDemo>();
             AddOption<CompoundTestDemo>();
