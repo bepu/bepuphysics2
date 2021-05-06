@@ -59,11 +59,12 @@ namespace Demos
             AddOption<BlockChainDemo>();
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();
-            AddOption<ContactEventsDemo>();
-            AddOption<SolverContactEnumerationDemo>();
-            AddOption<CustomVoxelCollidableDemo>();
             AddOption<RopeStabilityDemo>();
             AddOption<SubsteppingDemo>();
+            AddOption<ContactEventsDemo>();
+            AddOption<CollisionQueryDemo>();
+            AddOption<SolverContactEnumerationDemo>();
+            AddOption<CustomVoxelCollidableDemo>();
             AddOption<SponsorDemo>();
         }
 

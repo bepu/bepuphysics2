@@ -11,7 +11,7 @@ using BepuUtilities.Collections;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using DemoContentLoader;
 
-namespace Demos.Demos
+namespace Demos.SpecializedTests
 {
     public class TriangleTestDemo : Demo
     {
