@@ -33,7 +33,7 @@ namespace BepuPhysics.Constraints
     }
 
     /// <summary>
-    /// Shared implementation across all four body constraints.
+    /// Shared implementation across all three body constraints.
     /// </summary>
     public abstract class ThreeBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         : TypeProcessor<ThreeBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
