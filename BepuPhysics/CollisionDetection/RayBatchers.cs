@@ -121,7 +121,6 @@ namespace BepuPhysics.CollisionDetection
             {
                 public TRayHitHandler HitHandler;
                 public CollidableReference Reference;
-                public RaySource RaySource;
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public bool AllowTest(int childIndex)
@@ -144,7 +143,6 @@ namespace BepuPhysics.CollisionDetection
                 {
                     Simulation.GetPoseAndShape(reference, out var pose, out var shape);
                     HitHandler.Reference = reference;
-                    HitHandler.RaySource = rays;
                     Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, ref rays, ref HitHandler);
                 }
             }
@@ -155,6 +153,7 @@ namespace BepuPhysics.CollisionDetection
                 if (HitHandler.HitHandler.AllowTest(reference))
                 {
                     Simulation.GetPoseAndShape(reference, out var pose, out var shape);
+                    HitHandler.Reference = reference;
                     Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, *rayData, ref *maximumT, ref HitHandler);
                 }
             }

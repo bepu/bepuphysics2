@@ -23,9 +23,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="freetype6.dll">
+    <None Condition="'$(OS)' != 'Unix'" Update="freetype6.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <Target Condition="'$(OS)' == 'Unix'" Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="ln -sf /usr/lib/libfreetype.so.6 $(TargetDir)/freetype6.so" />
+  </Target>
 
 </Project>

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using OpenTK;
 using BepuUtilities;
 using OpenTK.Graphics;
+using OpenTK.Platform;
 using System.Threading;
 using Vector2 = System.Numerics.Vector2;
 
@@ -76,6 +77,7 @@ namespace DemoUtilities
         }
 
         public IntPtr Handle { get { return window.WindowInfo.Handle; } }
+        public IWindowInfo WindowInfo => window.WindowInfo;
 
         /// <summary>
         /// Gets whether the window is currently focused.

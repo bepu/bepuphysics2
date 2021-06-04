@@ -10,7 +10,7 @@ namespace DemoRenderer.Constraints
     public static class ContactLines
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void BuildOrthnormalBasis(in Vector3 normal, out Vector3 t1, out Vector3 t2)
+        public static void BuildOrthonormalBasis(in Vector3 normal, out Vector3 t1, out Vector3 t2)
         {
             //No frisvad or friends here- just want a simple and consistent basis with only one singularity.
             //Could be faster if needed.
@@ -32,7 +32,7 @@ namespace DemoRenderer.Constraints
             Vector3Wide.ReadFirst(normalWide, out var normal);
             var depth = depthWide[0];
             var contactPosition = offsetA + poseA.Position;
-            BuildOrthnormalBasis(normal, out var t1, out var t2);
+            BuildOrthonormalBasis(normal, out var t1, out var t2);
             var packedColor = Helpers.PackColor(tint * (depth >= 0 ? new Vector3(0,1,0) : new Vector3(0.15f, 0.25f, 0.15f)));
             t1 *= 0.5f;
             t2 *= 0.5f;

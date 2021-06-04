@@ -13,6 +13,7 @@ using DemoRenderer.Constraints;
 using static BepuPhysics.Collidables.ConvexHullHelper;
 using System.Diagnostics;
 using BepuUtilities;
+using BepuPhysics.Constraints.Contact;
 
 namespace Demos.SpecializedTests
 {
@@ -47,14 +48,34 @@ namespace Demos.SpecializedTests
 
             var pointsBuffer = points.Span.Slice(points.Count);
             CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
-            const int iterationCount = 100;
+
+            hullShape.RayTest(RigidPose.Identity, new Vector3(0, 1, 0), -Vector3.UnitY, out var t, out var normal);
+
+            const int rayIterationCount = 10000;
+            var rayPose = RigidPose.Identity;
+            var rayOrigin = new Vector3(0, 2, 0);
+            var rayDirection = new Vector3(0, -1, 0);
+
+            int hitCounter = 0;
             var start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < rayIterationCount; ++i)
+            {
+                if(hullShape.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
+                {
+                    ++hitCounter;
+                }
+            }
+            var end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Hit counter: {hitCounter}, computation time (us): {(end - start) * 1e6 / (rayIterationCount * Stopwatch.Frequency)}");
+
+            const int iterationCount = 100;
+            start = Stopwatch.GetTimestamp();
             for (int i = 0; i < iterationCount; ++i)
             {
                 CreateShape(pointsBuffer, BufferPool, out _, out var perfTestShape);
                 perfTestShape.Dispose(BufferPool);
             }
-            var end = Stopwatch.GetTimestamp();
+            end = Stopwatch.GetTimestamp();
             Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
 
             var hullShapeIndex = Simulation.Shapes.Add(hullShape);

@@ -10,6 +10,7 @@ namespace DemoContentLoader
         Font = 1,
         Mesh = 2,
         Image = 3,
+        GLSL = 4,
     }
     public interface IContent
     {
@@ -47,6 +48,8 @@ namespace DemoContentLoader
                     return MeshIO.Load(reader);
                 case ContentType.Image:
                     return Texture2DIO.Load(reader);
+                case ContentType.GLSL:
+                    return GLSLIO.Load(reader);
             }
             throw new ArgumentException($"Given content type {type} cannot be loaded; no loader is specified. Is the archive corrupted?");
         }
@@ -63,6 +66,9 @@ namespace DemoContentLoader
                     return;
                 case ContentType.Image:
                     Texture2DIO.Save((Texture2DContent)content, writer);
+                    return;
+                case ContentType.GLSL:
+                    GLSLIO.Save((GLSLContent)content, writer);
                     return;
             }
             throw new ArgumentException("Given content type cannot be saved; no archiver is specified.");

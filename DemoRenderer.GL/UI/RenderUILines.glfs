@@ -1,0 +1,16 @@
+#version 450
+
+layout(location = 0) flat in vec2 varying_Start;
+layout(location = 1) flat in vec2 varying_LineDirection;
+layout(location = 2) flat in float varying_LineLength;
+layout(location = 3) flat in float varying_Radius;
+layout(location = 4) flat in vec3 varying_Color;
+layout(location = 0) out vec4 out_var_SV_Target0;
+
+void main()
+{
+    vec2 _33 = gl_FragCoord.xy - varying_Start;
+    float _42 = clamp(0.5 - ((length(_33 - (varying_LineDirection * clamp(dot(_33, varying_LineDirection), 0.0, varying_LineLength))) - varying_Radius) * 0.707106769084930419921875), 0.0, 1.0);
+    out_var_SV_Target0 = vec4(varying_Color * _42, _42);
+}
+

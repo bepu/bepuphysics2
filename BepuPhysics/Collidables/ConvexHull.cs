@@ -213,11 +213,11 @@ namespace BepuPhysics.Collidables
             Helpers.FillVectorWithLaneIndices(out var indexOffsets);
             //The interval of intersection on the ray is the time after it enters all bounding planes, and before it exits any of them.
             //All face normals point outward.
-            var latestEntryNumeratorBundle = new Vector<float>(float.MaxValue);
-            var latestEntryDenominatorBundle = new Vector<float>(-1);
+            var latestEntryWide = new Vector<float>(-float.MaxValue);
+            var earliestExitWide = new Vector<float>(float.MaxValue);
             var latestEntryIndexBundle = new Vector<int>();
-            var earliestExitNumeratorBundle = new Vector<float>(float.MaxValue);
-            var earliestExitDenominatorBundle = new Vector<float>(1);
+            var epsilon = new Vector<float>(1e-14f);
+            var minValue = new Vector<float>(float.MinValue);
             for (int i = 0; i < BoundingPlanes.Length; ++i)
             {
                 ref var boundingPlane = ref BoundingPlanes[i];
@@ -227,45 +227,37 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Dot(localOriginBundle, boundingPlane.Normal, out var normalDotOrigin);
                 var numerator = boundingPlane.Offset - normalDotOrigin;
                 Vector3Wide.Dot(localDirectionBundle, boundingPlane.Normal, out var denominator);
-                //A bounding plane is being 'entered' if the ray direction opposes the face normal.
-                //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
-                //If the denominator is zero, just ignore the lane.
-                var useLatestEntryCandidate = Vector.BitwiseAnd(Vector.LessThan(denominator, Vector<float>.Zero), Vector.GreaterThan(numerator * latestEntryDenominatorBundle, latestEntryNumeratorBundle * denominator));
-                var useEarliestExitCandidate = Vector.BitwiseAnd(Vector.GreaterThan(denominator, Vector<float>.Zero), Vector.LessThan(numerator * earliestExitDenominatorBundle, earliestExitNumeratorBundle * denominator));
-                latestEntryNumeratorBundle = Vector.ConditionalSelect(useLatestEntryCandidate, numerator, latestEntryNumeratorBundle);
-                latestEntryDenominatorBundle = Vector.ConditionalSelect(useLatestEntryCandidate, denominator, latestEntryDenominatorBundle);
-                latestEntryIndexBundle = Vector.ConditionalSelect(useLatestEntryCandidate, candidateIndices, latestEntryIndexBundle);
-                earliestExitNumeratorBundle = Vector.ConditionalSelect(useEarliestExitCandidate, numerator, earliestExitNumeratorBundle);
-                earliestExitDenominatorBundle = Vector.ConditionalSelect(useEarliestExitCandidate, denominator, earliestExitDenominatorBundle);
+                //If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
+                //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
+                //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
+                denominator = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(denominator), epsilon), Vector.ConditionalSelect(Vector.LessThan(denominator, Vector<float>.Zero), -epsilon, epsilon), denominator);
+                var planeT = numerator / denominator;
+                var exitCandidate = Vector.GreaterThan(denominator, Vector<float>.Zero);
+                var laneExists = Vector.GreaterThan(boundingPlane.Offset, minValue);
+                earliestExitWide = Vector.ConditionalSelect(Vector.BitwiseAnd(laneExists, exitCandidate), Vector.Min(planeT, earliestExitWide), earliestExitWide);
+                var entryCandidate = Vector.BitwiseAnd(Vector.GreaterThan(planeT, latestEntryWide), Vector.AndNot(laneExists, exitCandidate));
+                latestEntryWide = Vector.ConditionalSelect(entryCandidate, planeT, latestEntryWide);
+                latestEntryIndexBundle = Vector.ConditionalSelect(entryCandidate, candidateIndices, latestEntryIndexBundle);
             }
-            var latestEntryNumerator = latestEntryNumeratorBundle[0];
-            var latestEntryDenominator = latestEntryDenominatorBundle[0];
-            var latestEntryIndex = latestEntryIndexBundle[0];
-            var earliestExitNumerator = earliestExitNumeratorBundle[0];
-            var earliestExitDenominator = earliestExitDenominatorBundle[0];
+            //It's safe to access slot 0. The bundle wouldn't exist if there wasn't at least one element in it.
+            var latestEntryT = latestEntryWide[0];
+            var earliestExitT = earliestExitWide[0];
+            int latestEntryIndex = latestEntryIndexBundle[0];
             for (int i = 1; i < Vector<float>.Count; ++i)
             {
-                var latestEntryNumeratorCandidate = latestEntryNumeratorBundle[i];
-                var latestEntryDenominatorCandidate = latestEntryDenominatorBundle[i];
-                var earliestExitNumeratorCandidate = earliestExitNumeratorBundle[i];
-                var earliestExitDenominatorCandidate = earliestExitDenominatorBundle[i];
-                if (latestEntryNumeratorCandidate * latestEntryDenominator > latestEntryNumerator * latestEntryDenominatorCandidate)
+                var entryCandidate = latestEntryWide[i];
+                var exitCandidate = earliestExitWide[i];
+                if (entryCandidate > latestEntryT)
                 {
-                    latestEntryNumerator = latestEntryNumeratorCandidate;
-                    latestEntryDenominator = latestEntryDenominatorCandidate;
+                    latestEntryT = entryCandidate;
                     latestEntryIndex = latestEntryIndexBundle[i];
                 }
-                if (earliestExitNumeratorCandidate * earliestExitDenominator < earliestExitNumerator * earliestExitDenominatorCandidate)
-                {
-                    earliestExitNumerator = earliestExitNumeratorCandidate;
-                    earliestExitDenominator = earliestExitDenominatorCandidate;
-                }
+                if (exitCandidate < earliestExitT)
+                    earliestExitT = exitCandidate;
             }
             //If the earliest exit is behind the origin, there is no hit.
             //If the earliest exit comes before the latest entry, there is no hit.
-            //Entry denominators negative, exit denominators positive. Requires comparison sign flip.
-            if (earliestExitNumerator < 0 ||
-                latestEntryNumerator * earliestExitDenominator < earliestExitNumerator * latestEntryDenominator)
+            if (earliestExitT < 0 || latestEntryT > earliestExitT)
             {
                 t = default;
                 normal = default;
@@ -273,15 +265,12 @@ namespace BepuPhysics.Collidables
             }
             else
             {
-                t = latestEntryNumerator / latestEntryDenominator;
-                if (t < 0)
-                    t = 0;
+                t = latestEntryT < 0 ? 0 : latestEntryT;
                 BundleIndexing.GetBundleIndices(latestEntryIndex, out var bundleIndex, out var innerIndex);
                 Vector3Wide.ReadSlot(ref BoundingPlanes[bundleIndex].Normal, innerIndex, out normal);
                 Matrix3x3.Transform(normal, orientation, out normal);
                 return true;
             }
-
         }
         public void Dispose(BufferPool bufferPool)
         {
@@ -414,7 +403,7 @@ namespace BepuPhysics.Collidables
             Hulls[index] = source;
         }
     }
-       
+
     public struct ConvexHullSupportFinder : ISupportFinder<ConvexHull, ConvexHullWide>
     {
         public bool HasMargin => false;

@@ -338,7 +338,6 @@ namespace BepuPhysics.CollisionDetection
             Solver = simulation.Solver;
             ConstraintRemover = simulation.constraintRemover;
             Callbacks = callbacks;
-            Callbacks.Initialize(simulation);
             CollisionTaskRegistry = collisionTaskRegistry;
             SweepTaskRegistry = sweepTaskRegistry;
             PairCache = new PairCache(simulation.BufferPool, initialSetCapacity, minimumMappingSize, minimumPendingSize, minimumPerTypeCapacity);

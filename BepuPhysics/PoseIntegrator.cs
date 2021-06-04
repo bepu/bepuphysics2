@@ -49,6 +49,12 @@ namespace BepuPhysics
         AngularIntegrationMode AngularIntegrationMode { get; }
 
         /// <summary>
+        /// Performs any required initialization logic after the Simulation instance has been constructed.
+        /// </summary>
+        /// <param name="simulation">Simulation that owns these callbacks.</param>
+        void Initialize(Simulation simulation);
+
+        /// <summary>
         /// Called prior to integrating the simulation's active bodies. When used with a substepping timestepper, this could be called multiple times per frame with different time step values.
         /// </summary>
         /// <param name="dt">Current time step duration.</param>
@@ -161,19 +167,19 @@ namespace BepuPhysics
         Shapes shapes;
         BroadPhase broadPhase;
 
-        TCallbacks callbacks;
+        public TCallbacks Callbacks;
 
         Action<int> integrateBodiesAndUpdateBoundingBoxesWorker;
         Action<int> predictBoundingBoxesWorker;
         Action<int> integrateVelocitiesBoundsAndInertiasWorker;
         Action<int> integrateVelocitiesWorker;
         Action<int> integratePosesWorker;
-        public PoseIntegrator(Bodies bodies, Shapes shapes, BroadPhase broadPhase, TCallbacks callback)
+        public PoseIntegrator(Bodies bodies, Shapes shapes, BroadPhase broadPhase, TCallbacks callbacks)
         {
             this.bodies = bodies;
             this.shapes = shapes;
             this.broadPhase = broadPhase;
-            this.callbacks = callback;
+            Callbacks = callbacks;
             integrateBodiesAndUpdateBoundingBoxesWorker = IntegrateBodiesAndUpdateBoundingBoxesWorker;
             predictBoundingBoxesWorker = PredictBoundingBoxesWorker;
             integrateVelocitiesBoundsAndInertiasWorker = IntegrateVelocitiesBoundsAndInertiasWorker;
@@ -208,7 +214,7 @@ namespace BepuPhysics
             pose.Orientation.ValidateOrientation();
             angularVelocity.Validate();
 
-            if (callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
+            if (Callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
             {
                 //Note that this effectively recomputes the previous frame's inertia. There may not have been a previous inertia stored in the inertias buffer.
                 //This just avoids the need for quite a bit of complexity around keeping the world inertias buffer updated with adds/removes/moves and other state changes that we can't easily track.
@@ -222,7 +228,7 @@ namespace BepuPhysics
             }
 
             //Note that this mode branch is optimized out for any callbacks that return a constant value.
-            if (callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
+            if (Callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
             {
                 //Integrating the gyroscopic force explicitly can result in some instability, so we'll use an approximate implicit approach.
                 //angularVelocity1 * inertia1 = angularVelocity0 * inertia1 + dt * ((angularVelocity1 * inertia1) x angularVelocity1)
@@ -270,7 +276,7 @@ namespace BepuPhysics
         void IntegrateAngularVelocity(in Quaternion previousOrientation, in RigidPose pose, in BodyInertia localInertia, in BodyInertia inertia, ref Vector3 angularVelocity, float dt)
         {
             //Note that this mode branch is optimized out for any callbacks that return a constant value.
-            if ((int)callbacks.AngularIntegrationMode >= (int)AngularIntegrationMode.ConserveMomentum)
+            if ((int)Callbacks.AngularIntegrationMode >= (int)AngularIntegrationMode.ConserveMomentum)
             {
                 if (!Bodies.HasLockedInertia(localInertia.InverseInertiaTensor))
                 {
@@ -285,7 +291,7 @@ namespace BepuPhysics
             //We didn't have a previous orientation available. Reconstruct it by integrating backwards.
             //(In single threaded terms, caching this information could be faster, but it adds a lot of complexity and could end up reducing performance on higher core counts.)
             //Note that this mode branch is optimized out for any callbacks that return a constant value.
-            if ((int)callbacks.AngularIntegrationMode >= (int)AngularIntegrationMode.ConserveMomentum)
+            if ((int)Callbacks.AngularIntegrationMode >= (int)AngularIntegrationMode.ConserveMomentum)
             {
                 if (!Bodies.HasLockedInertia(localInertia.InverseInertiaTensor))
                 {
@@ -330,7 +336,7 @@ namespace BepuPhysics
                 inertia.InverseMass = localInertia.InverseMass;
 
                 IntegrateAngularVelocity(previousOrientation, pose, localInertia, inertia, ref velocity.Angular, dt);
-                callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
+                Callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
 
                 //Bounding boxes are accumulated in a scalar fashion, but the actual bounding box calculations are deferred until a sufficient number of collidables are accumulated to make
                 //executing a bundle worthwhile. This does two things: 
@@ -371,7 +377,7 @@ namespace BepuPhysics
 
                 //Bounding box prediction does not need to update inertia tensors.                
                 var integratedVelocity = velocity;
-                callbacks.IntegrateVelocity(i, pose, Unsafe.Add(ref baseLocalInertia, i), workerIndex, ref integratedVelocity);
+                Callbacks.IntegrateVelocity(i, pose, Unsafe.Add(ref baseLocalInertia, i), workerIndex, ref integratedVelocity);
 
                 //Note that we do not include fancier angular integration for the bounding box prediction- it's not very important.
                 boundingBoxBatcher.Add(i, pose, integratedVelocity, Unsafe.Add(ref baseCollidable, i));
@@ -403,7 +409,7 @@ namespace BepuPhysics
                 inertia.InverseMass = localInertia.InverseMass;
 
                 IntegrateAngularVelocity(pose, localInertia, inertia, ref velocity.Angular, dt);
-                callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
+                Callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
 
                 boundingBoxBatcher.Add(i, pose, velocity, Unsafe.Add(ref baseCollidable, i));
             }
@@ -431,7 +437,7 @@ namespace BepuPhysics
                 inertia.InverseMass = localInertia.InverseMass;
 
                 IntegrateAngularVelocity(pose, localInertia, inertia, ref velocity.Angular, dt);
-                callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
+                Callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
             }
         }
 
@@ -552,7 +558,7 @@ namespace BepuPhysics
 
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
-            callbacks.PrepareForIntegration(dt);
+            Callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
             {
                 //While we do technically support multithreading here, scaling is going to be really, really bad if the simulation gets kicked out of L3 cache in between frames.
@@ -582,7 +588,7 @@ namespace BepuPhysics
             //No need to ensure inertias capacity here; world inertias are not computed during bounding box prediction.
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
-            callbacks.PrepareForIntegration(dt);
+            Callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
             {
                 PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
@@ -605,7 +611,7 @@ namespace BepuPhysics
 
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
-            callbacks.PrepareForIntegration(dt);
+            Callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
             {
                 PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
@@ -628,7 +634,7 @@ namespace BepuPhysics
 
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
-            callbacks.PrepareForIntegration(dt);
+            Callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
             {
                 PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
@@ -647,7 +653,7 @@ namespace BepuPhysics
             //This path is used with some other velocity/bounding box integration that handles world inertia calculation, so we don't need to worry about it.
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
-            callbacks.PrepareForIntegration(dt);
+            Callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
             {
                 PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);

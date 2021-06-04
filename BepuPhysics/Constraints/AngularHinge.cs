@@ -129,7 +129,7 @@ namespace BepuPhysics.Constraints
             bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
 
             //Note that we build the tangents in local space first to avoid inconsistencies.
-            Helpers.BuildOrthnormalBasis(prestep.LocalHingeAxisA, out var localAX, out var localAY);
+            Helpers.BuildOrthonormalBasis(prestep.LocalHingeAxisA, out var localAX, out var localAY);
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var orientationMatrixA);
             Matrix3x3Wide.TransformWithoutOverlap(prestep.LocalHingeAxisA, orientationMatrixA, out var hingeAxisA);
             Matrix2x3Wide jacobianA;

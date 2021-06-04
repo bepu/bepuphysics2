@@ -114,7 +114,8 @@ namespace BepuPhysics
             }
 
             var simulation = new Simulation(bufferPool, initialAllocationSizes.Value, solverIterationCount, solverFallbackBatchThreshold, timestepper);
-            simulation.PoseIntegrator = new PoseIntegrator<TPoseIntegratorCallbacks>(simulation.Bodies, simulation.Shapes, simulation.BroadPhase, poseIntegratorCallbacks);
+            var poseIntegrator = new PoseIntegrator<TPoseIntegratorCallbacks>(simulation.Bodies, simulation.Shapes, simulation.BroadPhase, poseIntegratorCallbacks);
+            simulation.PoseIntegrator = poseIntegrator;
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation,
                 DefaultTypes.CreateDefaultCollisionTaskRegistry(), DefaultTypes.CreateDefaultSweepTaskRegistry(),
                 narrowPhaseCallbacks, initialAllocationSizes.Value.Islands + 1);
@@ -124,6 +125,10 @@ namespace BepuPhysics
             simulation.Awakener.pairCache = narrowPhase.PairCache;
             simulation.Solver.pairCache = narrowPhase.PairCache;
             simulation.BroadPhaseOverlapFinder = new CollidableOverlapFinder<TNarrowPhaseCallbacks>(narrowPhase, simulation.BroadPhase);
+
+            //We defer initialization until after all the other simulation bits are constructed.
+            poseIntegrator.Callbacks.Initialize(simulation);
+            narrowPhase.Callbacks.Initialize(simulation);
 
             return simulation;
         }

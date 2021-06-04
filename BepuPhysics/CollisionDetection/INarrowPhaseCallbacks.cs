@@ -23,7 +23,6 @@ namespace BepuPhysics.CollisionDetection
         public SpringSettings SpringSettings;
     }
 
-    //TODO: We've made some modifications to the way callbacks are used. You should reconsider whether initialize and dispose still make any sense for this type.
     public unsafe interface INarrowPhaseCallbacks
     {
         /// <summary>

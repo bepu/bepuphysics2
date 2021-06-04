@@ -12,7 +12,9 @@ The libraries target .NET Standard 2.0. They currently do some [unusual/question
 
 ## Demos
 
-`Demos.sln` contains all the projects necessary to build and run the demos application. The demo renderer uses DX11, and the content pipeline's shader compiler requires the Windows SDK. The demos application targets .NET Core 2.1.
+`Demos.sln` contains all the projects necessary to build and run the demos application. The default demo renderer uses DX11, and the content pipeline's shader compiler requires the Windows SDK. The demos application targets .NET Core 5.0.
+
+There's also an [OpenGL version of the demos](https://github.com/bepu/bepuphysics2/tree/master/Demos.GL). You can run it from the command line in the repository root using `dotnet run --project Demos.GL/Demos.csproj -c ReleaseStrip`.
 
 ## Build Configurations
 

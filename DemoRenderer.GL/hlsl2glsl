@@ -1,0 +1,51 @@
+#!/bin/bash
+
+SELF_PATH=$(dirname $(realpath $0))
+
+SC_PATH=$SELF_PATH/ShaderConductor-linux-gcc8-x64-Release
+SCC=$SC_PATH/Bin/ShaderConductorCmd
+if [ ! -x $SCC ]; then
+	curl 'https://dev.azure.com/msft-ShaderConductor/d7d96e72-b7cf-4608-8783-5a1bac9c9eea/_apis/build/builds/229/artifacts?artifactName=ShaderConductor-linux-gcc8-x64-Release&api-version=6.0&%24format=zip' --output $SC_PATH.zip || exit -1
+	unzip $SC_PATH.zip -d $SELF_PATH || exit -1
+	ln -sf $SC_PATH/Lib/libdxcompiler.so $SC_PATH/Lib/libdxcompiler.so.3.7 || exit -1
+	chmod a+x $SCC || exit -1
+fi
+export LD_LIBRARY_PATH=$SC_PATH/Lib
+
+function hlsl-to-glsl {
+	WORK=`mktemp -d`
+	SOURCE=$SELF_PATH/../DemoRenderer
+	TARGET=`dirname $WORK/$1`
+	mkdir -p $TARGET || exit -1
+	cp -s $SOURCE/*.hlsl `dirname $SOURCE/$1`/*.hlsl $TARGET || exit -1
+	HLSL=$WORK/$1.hlsl
+	GLSL=$SELF_PATH/$1
+	$SCC -E VSMain -I $HLSL -O $GLSL.glvs -S vs -T glsl || exit -1
+	$SCC -E PSMain -I $HLSL -O $GLSL.glfs -S ps -T glsl || exit -1
+	rm -rf $WORK || exit -1
+}
+
+hlsl-to-glsl Background/RenderBackground
+hlsl-to-glsl Constraints/RenderLines
+hlsl-to-glsl PostProcessing/CompressToSwap
+hlsl-to-glsl ShapeDrawing/RenderBoxes
+hlsl-to-glsl ShapeDrawing/RenderCapsules
+hlsl-to-glsl ShapeDrawing/RenderCylinders
+hlsl-to-glsl ShapeDrawing/RenderMeshes
+hlsl-to-glsl ShapeDrawing/RenderSpheres
+hlsl-to-glsl ShapeDrawing/RenderTriangles
+hlsl-to-glsl UI/RenderGlyphs
+hlsl-to-glsl UI/RenderImages
+hlsl-to-glsl UI/RenderUILines
+
+sed -i '/gl_Position = .*;/a\
+    // EDIT: Adjusts for OpenGL far clipping plane.\
+    gl_Position.z -= 1.0;' $SELF_PATH/Background/RenderBackground.glvs || exit -1
+sed -i '/gl_Position = .*;/a\
+    // EDIT: Adjusts for OpenGL screenspace.\
+    gl_Position.y -= 2.0;' $SELF_PATH/UI/RenderUILines.glvs || exit -1
+for i in $SELF_PATH/ShapeDrawing/Render{Boxes,Meshes,Triangles}.glfs; do
+	sed -i '/vec3 _72 = dFdy(varying_RayDirection);/a\
+    // EDIT: Adjusts for OpenGL screenspace.\
+    _72 = -_72;' $i || exit -1
+done

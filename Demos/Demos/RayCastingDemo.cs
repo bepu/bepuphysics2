@@ -68,12 +68,25 @@ namespace Demos
             //Note that the timestepper also has callbacks that you can use for executing logic between processing stages, like BeforeCollisionDetection.
             Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
-            var box = new Box(0.5f, 1.5f, 1f);
-            var capsule = new Capsule(0, 0.5f);
+           
+
             var sphere = new Sphere(0.5f);
-            var boxIndex = Simulation.Shapes.Add(box);
-            var capsuleIndex = Simulation.Shapes.Add(capsule);
+            var capsule = new Capsule(0, 0.5f);
+            var box = new Box(0.5f, 1.5f, 1f);
+            var cylinder = new Cylinder(0.5f, 1);
+            const int pointCount = 16;
+            var points = new QuickList<Vector3>(pointCount, BufferPool);
+            var random = new Random(5);
+            for (int i = 0; i < pointCount; ++i)
+            {
+                points.AllocateUnsafely() = new Vector3(1 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 1 * (float)random.NextDouble());
+            }
+            var hullShape = new ConvexHull(points, BufferPool, out _);
             var sphereIndex = Simulation.Shapes.Add(sphere);
+            var capsuleIndex = Simulation.Shapes.Add(capsule);
+            var boxIndex = Simulation.Shapes.Add(box);
+            var cylinderIndex = Simulation.Shapes.Add(cylinder);
+            var hullIndex = Simulation.Shapes.Add(hullShape);
             const int width = 16;
             const int height = 16;
             const int length = 16;
@@ -82,7 +95,6 @@ namespace Demos
             float randomizationSubset = 0.9f;
             var randomizationSpan = (spacing - new Vector3(1)) * randomizationSubset;
             var randomizationBase = randomizationSpan * -0.5f;
-            var random = new Random(5);
             for (int i = 0; i < width; ++i)
             {
                 for (int j = 0; j < height; ++j)
@@ -98,21 +110,14 @@ namespace Demos
                         orientation.Z = -1 + 2 * (float)random.NextDouble();
                         orientation.W = 0.01f + (float)random.NextDouble();
                         QuaternionEx.Normalize(ref orientation);
-
-                        TypedIndex shapeIndex;
-                        switch ((i + j + k) % 3)
+                        var shapeIndex = ((i + j + k) % 5) switch
                         {
-                            case 0:
-                                shapeIndex = boxIndex;
-                                break;
-                            case 1:
-                                shapeIndex = capsuleIndex;
-                                break;
-                            default:
-                                shapeIndex = sphereIndex;
-                                break;
-                        }
-
+                            0 => boxIndex,
+                            1 => capsuleIndex,
+                            2 => sphereIndex,
+                            3 => cylinderIndex,
+                            _ => hullIndex,
+                        };
                         if ((i + j + k) % 2 == 1)
                         {
                             Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(location, orientation), new CollidableDescription(shapeIndex, 0.1f), new BodyActivityDescription(-0.1f)));

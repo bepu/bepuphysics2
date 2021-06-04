@@ -120,7 +120,7 @@ namespace BepuPhysics.Constraints
             Matrix3x3Wide.TransformWithoutOverlap(prestep.LocalHingeAxisA, orientationMatrixA, out var hingeAxisA);
             Matrix3x3Wide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationMatrixB, out projection.OffsetB);
             Matrix3x3Wide.TransformWithoutOverlap(prestep.LocalHingeAxisB, orientationMatrixB, out var hingeAxisB);
-            Helpers.BuildOrthnormalBasis(prestep.LocalHingeAxisA, out var localAX, out var localAY);
+            Helpers.BuildOrthonormalBasis(prestep.LocalHingeAxisA, out var localAX, out var localAY);
             Matrix3x3Wide.TransformWithoutOverlap(localAX, orientationMatrixA, out projection.HingeJacobian.X);
             Matrix3x3Wide.TransformWithoutOverlap(localAY, orientationMatrixA, out projection.HingeJacobian.Y);
 

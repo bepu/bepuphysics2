@@ -256,7 +256,7 @@ for (int i = 0; i < contactCount; ++i)
 <#}#>
             projection.PremultipliedFrictionCoefficient = <#if (contactCount > 1) {#>(1f / <#=contactCount#>f) * <#}#>prestep.MaterialProperties.FrictionCoefficient;
             projection.Normal = prestep.Normal;
-            Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
 <#var offsetName = contactCount == 1 ? "prestep.Contact0.OffsetA" : "offsetToManifoldCenterA";#>
             TangentFriction<#=suffix#>.Prestep(ref x, ref z, ref <#=offsetName#>, <#if (bodyCount == 2) {#>ref offsetToManifoldCenterB, <#}#>ref projection.InertiaA, <#if (bodyCount == 2) {#>ref projection.InertiaB, <#}#>out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
@@ -283,7 +283,7 @@ for (int i = 0; i < contactCount; ++i)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities wsvA, <#if(bodyCount == 2) {#>ref BodyVelocities wsvB, <#}#>ref Contact<#=contactCount#><#=suffix#>Projection projection, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFriction<#=suffix#>.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, <#if (bodyCount == 2) {#>ref projection.InertiaB, <#}#>ref accumulatedImpulses.Tangent, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
 <#for (int i = 0; i < contactCount; ++i) {#>
             PenetrationLimit<#=suffix#>.WarmStart(projection.Penetration<#=i#>, projection.InertiaA, <#if (bodyCount == 2) {#>projection.InertiaB, <#}#>projection.Normal, accumulatedImpulses.Penetration<#=i#>, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
@@ -294,7 +294,7 @@ for (int i = 0; i < contactCount; ++i)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities wsvA, <#if(bodyCount == 2) {#>ref BodyVelocities wsvB, <#}#>ref Contact<#=contactCount#><#=suffix#>Projection projection, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses)
         {
-            Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
+            Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
                 (<#for (int i = 0; i < contactCount; ++i) {#>accumulatedImpulses.Penetration<#=i#><#if(i < contactCount - 1){#> + <#}}#>);
             TangentFriction<#=suffix#>.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, <#if (bodyCount == 2) {#>ref projection.InertiaB, <#}#>ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);

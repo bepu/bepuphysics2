@@ -58,19 +58,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Further, note that for any query location, it is sufficient to only test one edge even if the point is outside two edge planes. If it's outside two edge planes,
             //that just means it's going to be on the shared vertex, so a clamped edge test captures the correct closest point.
             //So, at each edge, if the point is outside the plane, cache the edge. The last edge registering an outside result will be tested.
-            //(pa x ab) * (ab x ac) = (pa * ab) * (ab * ac) - (pa * ac) * (ab * ab)
-            //(ac x pa) * (ab x ac) = (ac * ab) * (pa * ac) - (ac * ac) * (pa * ab)
-            //(ab x ac) * (ab x ac) = (ab * ab) * (ac * ac) - (ab * ac) * (ab * ac) 
-            Vector3Wide.Dot(pa, ab, out var abpa);
-            Vector3Wide.Dot(ab, ac, out var abac);
-            Vector3Wide.Dot(ac, pa, out var acpa);
-            Vector3Wide.Dot(ac, ac, out var acac);
-            Vector3Wide.Dot(ab, ab, out var abab);
-            var edgePlaneTestAB = abpa * abac - acpa * abab;
-            var edgePlaneTestAC = abac * acpa - acac * abpa;
-            var triangleNormalLengthSquared = abab * acac - abac * abac;
-
+            Vector3Wide.CrossWithoutOverlap(pa, ab, out var paxab);
+            Vector3Wide.CrossWithoutOverlap(ac, pa, out var acxpa);
+            Vector3Wide.Dot(paxab, localTriangleNormal, out var edgePlaneTestAB);
+            Vector3Wide.Dot(acxpa, localTriangleNormal, out var edgePlaneTestAC);
+            Vector3Wide.Dot(localTriangleNormal, localTriangleNormal, out var triangleNormalLengthSquared);
             var edgePlaneTestBC = triangleNormalLengthSquared - edgePlaneTestAB - edgePlaneTestAC;
+
             var outsideAB = Vector.LessThan(edgePlaneTestAB, Vector<float>.Zero);
             var outsideAC = Vector.LessThan(edgePlaneTestAC, Vector<float>.Zero);
             var outsideBC = Vector.LessThan(edgePlaneTestBC, Vector<float>.Zero);
