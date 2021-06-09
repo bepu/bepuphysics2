@@ -35,7 +35,7 @@ steps:
 - task: NuGetCommand@2
   inputs:
     command: 'pack'
-    packagesToPack: '$(solution)'
+    packagesToPack: '**\BepuPhysics.csproj'
     versioningScheme: 'off'
 
 - task: NuGetCommand@2
