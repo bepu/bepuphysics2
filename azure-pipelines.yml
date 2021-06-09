@@ -37,13 +37,13 @@ steps:
     command: 'pack'
     packagesToPack: '**\BepuUtilities.csproj'
     configuration: 'ReleaseStrip'
-    versioningScheme: 'off'
+    versioningScheme: 'byBuildNumber'
 
 - task: NuGetCommand@2
   inputs:
     command: 'pack'
     packagesToPack: '**\BepuPhysics.csproj'
-    versioningScheme: 'off'
+    versioningScheme: 'byBuildNumber'
 
 - task: NuGetCommand@2
   inputs:
