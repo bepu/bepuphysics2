@@ -23,7 +23,7 @@ namespace Demos.Demos
     //It's worth noting a few things about this event handler approach:
     //1) It's a little nonidiomatic, since there are no actual C# 'events' being used. An interface is invoked instead. This preserves the generic manifold type.
     //You could shuffle things around a bit and invoke delegates for a more event-ish workflow, or even function pointers if you wanted to jump through some hoops.
-    //2) All event handlers (except OnPairEnded) execute from the multithreaded context of the simulation execution, so you have to be careful about what the event handlers do.
+    //2) All event handlers (except OnPairEnded) potentially execute from the multithreaded context of the simulation execution, so you have to be careful about what the event handlers do.
     //A "deferred" event model could be built on top of this.
     //3) Event handling isn't free; try to avoid attaching events to everything if you can avoid it, and try to make the event handlers as cheap as possible.
     //4) This provides no insight into the constraints associated with these contacts. For example, if you want to spawn particles in response to heavy collisions or play sounds
@@ -145,8 +145,6 @@ namespace Demos.Demos
         }
     }
 
-
-    public delegate void ContactAdded<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold, int contactIndex, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>;
     /// <summary>
     /// Watches a set of bodies and statics for contact changes and reports events.
     /// </summary>
