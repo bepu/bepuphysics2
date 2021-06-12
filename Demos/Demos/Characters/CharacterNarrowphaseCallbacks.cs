@@ -31,7 +31,7 @@ namespace Demos.Demos.Characters
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
+        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
             pairMaterial = new PairMaterialProperties { FrictionCoefficient = 1, MaximumRecoveryVelocity = 2, SpringSettings = new SpringSettings(30, 1) };
             Characters.TryReportContacts(pair, ref manifold, workerIndex, ref pairMaterial);

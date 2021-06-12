@@ -82,14 +82,14 @@ namespace Demos.Demos
             /// <param name="pairMaterial">Material properties of the manifold.</param>
             /// <returns>True if a constraint should be created for the manifold, false otherwise.</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
+            public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 //The IContactManifold parameter includes functions for accessing contact data regardless of what the underlying type of the manifold is.
                 //If you want to have direct access to the underlying type, you can use the manifold.Convex property and a cast like Unsafe.As<TManifold, ConvexContactManifold or NonconvexContactManifold>(ref manifold).
 
                 //The engine does not define any per-body material properties. Instead, all material lookup and blending operations are handled by the callbacks.
                 //For the purposes of this demo, we'll use the same settings for all pairs.
-                //(Note that there's no bounciness property! See here for more details: https://github.com/bepu/bepuphysics2/issues/3)
+                //(Note that there's no bounciness property! See here for more details: https://github.com/bepu/bepuphysics2/issues/3 and check out the BouncinessDemo for some options.)
                 pairMaterial.FrictionCoefficient = 1f;
                 pairMaterial.MaximumRecoveryVelocity = 2f;
                 pairMaterial.SpringSettings = new SpringSettings(30, 1);
