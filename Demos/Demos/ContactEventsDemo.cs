@@ -348,16 +348,6 @@ namespace Demos.Demos
             collision.WasTouching = isTouching;
         }
 
-        bool IsTouching<TManifold>(ref TManifold manifold) where TManifold : unmanaged, IContactManifold<TManifold>
-        {
-            for (int i = 0; i < manifold.Count; ++i)
-            {
-                if (manifold.GetDepth(ref manifold, i) >= 0)
-                    return true;
-            }
-            return false;
-        }
-
         void HandleManifoldForCollidable<TManifold>(int workerIndex, CollidableReference source, CollidableReference other, CollidablePair pair, ref TManifold manifold) where TManifold : unmanaged, IContactManifold<TManifold>
         {
             //The "source" refers to the object that an event handler was (potentially) attached to, so we look for listeners registered for it.
