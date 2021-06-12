@@ -41,7 +41,7 @@ namespace Demos.Demos.Cars
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
+        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
             pairMaterial.FrictionCoefficient = Properties[pair.A.BodyHandle].Friction;
             if (pair.B.Mobility != CollidableMobility.Static)

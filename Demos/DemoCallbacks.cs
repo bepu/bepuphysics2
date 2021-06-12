@@ -108,7 +108,7 @@ namespace Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
+        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
             pairMaterial.FrictionCoefficient = 1f;
             pairMaterial.MaximumRecoveryVelocity = 2f;
