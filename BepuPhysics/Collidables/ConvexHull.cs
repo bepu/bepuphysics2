@@ -311,8 +311,10 @@ namespace BepuPhysics.Collidables
                 Hulls[i] = shape;
         }
 
-        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
-        {
+        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max) {
+            maximumRadius = default;
+            min = default;
+            max = default;
             for (int i = 0; i < countInBundle; ++i)
             {
                 Vector3Wide.Broadcast(new Vector3(float.MaxValue), out var minWide);
@@ -355,8 +357,10 @@ namespace BepuPhysics.Collidables
             maximumAngularExpansion = maximumRadius;
         }
 
-        public void RayTest(ref RigidPoses poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
-        {
+        public void RayTest(ref RigidPoses poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal) {
+            intersected = default;
+            t = default;
+            normal = default;
             Debug.Assert(Hulls.Length > 0 && Hulls.Length <= Vector<float>.Count);
             for (int i = 0; i < Hulls.Length; ++i)
             {
@@ -380,7 +384,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EstimateEpsilonScale(in Vector<int> terminatedLanes, out Vector<float> epsilonScale)
         {
-            Vector3Wide bundle;
+            Vector3Wide bundle = default;
             for (int i = 0; i < Vector<float>.Count; ++i)
             {
                 if (terminatedLanes[i] < 0)
@@ -409,8 +413,8 @@ namespace BepuPhysics.Collidables
         public bool HasMargin => false;
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeLocalSupport(in ConvexHullWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
-        {
+        public void ComputeLocalSupport(in ConvexHullWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support) {
+            support = default;
             Helpers.FillVectorWithLaneIndices(out var indexOffsets);
             for (int slotIndex = 0; slotIndex < Vector<float>.Count; ++slotIndex)
             {

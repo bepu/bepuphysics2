@@ -144,8 +144,8 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
-        {
+        public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose) {
+            integratedPose = default;
             Integrate(pose.Position, velocity.Linear, dt, out integratedPose.Position);
             Integrate(pose.Orientation, velocity.Angular, dt, out integratedPose.Orientation);
         }

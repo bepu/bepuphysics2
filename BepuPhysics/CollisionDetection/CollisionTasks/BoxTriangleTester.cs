@@ -112,7 +112,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             in Vector<int> exists, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
         {
             Vector3Wide.Subtract(pointOnTriangle, triangleCenter, out var offset);
-            ManifoldCandidate candidate;
+            ManifoldCandidate candidate = default;
             Vector3Wide.Dot(offset, triangleTangentX, out candidate.X);
             Vector3Wide.Dot(offset, triangleTangentY, out candidate.Y);
             candidate.FeatureId = featureId;

@@ -450,7 +450,11 @@ namespace BepuUtilities.Memory
                 if (currentSize != targetSize || pools[powerIndex].GetStartPointerForSlot(slotIndex) != buffer.Memory)
                 {
                     TakeAtLeast(targetSize, out var newBuffer);
+#if NET45
+                    Unsafe.CopyBlock(newBuffer.Memory, buffer.Memory, (uint)copyCount);
+#else
                     Buffer.MemoryCopy(buffer.Memory, newBuffer.Memory, buffer.Length, copyCount);
+#endif
                     pools[powerIndex].Return(slotIndex);
                     buffer = newBuffer;
                 }

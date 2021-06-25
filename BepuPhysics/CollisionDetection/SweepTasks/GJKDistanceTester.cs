@@ -333,13 +333,14 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
 
         public void Test(in TShapeWideA a, in TShapeWideB b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
-            out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
-        {
+            out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal) {
+            closestA = default;
+            normal = default;
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var rA);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
             var supportFinderA = default(TSupportFinderA);
             var supportFinderB = default(TSupportFinderB);
-            Simplex simplex;
+            Simplex simplex = default;
             //TODO: It would be pretty easy to initialize to a triangle or tetrahedron. Might be worth it.
             SampleMinkowskiDifference(a, rA, ref supportFinderA, b, rB, ref supportFinderB, offsetB, offsetB, inactiveLanes, out simplex.AOnA, out simplex.A);
             simplex.Count = new Vector<int>(1);

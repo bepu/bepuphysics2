@@ -62,8 +62,8 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void FillVectorWithLaneIndices(out Vector<int> indices)
-        {
+        public static void FillVectorWithLaneIndices(out Vector<int> indices) {
+            indices = default;
             ref var start = ref Unsafe.As<Vector<int>, int>(ref indices);
             start = 0;
             for (int i = 1; i < Vector<int>.Count; ++i)

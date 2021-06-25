@@ -45,7 +45,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var outsideBC = Vector.LessThan(edgePlaneTestBC, Vector<float>.Zero);
 
             var outsideAnyEdge = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideAC, outsideBC));
-            Vector3Wide localClosestOnTriangle;
+            Vector3Wide localClosestOnTriangle = default;
             var negativeOne = new Vector<int>(-1);
             if (Vector.EqualsAny(outsideAnyEdge, negativeOne))
             {

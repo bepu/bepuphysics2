@@ -96,8 +96,8 @@ namespace BepuPhysics.Constraints
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref TwistLimitPrestepData prestep, out TwistLimitProjection projection)
-        {
+            ref TwistLimitPrestepData prestep, out TwistLimitProjection projection) {
+            projection = default;
             TwistServoFunctions.ComputeJacobian(bodies, bodyReferences, count, prestep.LocalBasisA, prestep.LocalBasisB,
                 out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
 

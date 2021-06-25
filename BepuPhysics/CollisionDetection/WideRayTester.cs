@@ -19,7 +19,7 @@ namespace BepuPhysics.CollisionDetection
             where TRaySource : IRaySource
             where TRayHitHandler : struct, IShapeRayHitHandler
         {
-            RayWide rayWide;
+            RayWide rayWide = default;
             TShapeWide wide;
             if ((*&wide).InternalAllocationSize > 0)
             {

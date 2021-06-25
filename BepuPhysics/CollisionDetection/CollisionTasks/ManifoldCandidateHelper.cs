@@ -89,8 +89,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             in Vector3Wide faceNormalA, in Vector3Wide normal, in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
             in Vector<float> epsilonScale, in Vector<float> minimumDepth, int pairCount,
             out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
-            out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
-        {
+            out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists) {
+            contact0 = default;
+            contact1 = default;
+            contact2 = default;
+            contact3 = default;
             //See if we can avoid visiting some of the higher indices.
             //Mask out any contacts generated on the pairs which don't actually exist. They can waste time and cause problems.
             Vector<int> maskedContactCount = rawContactCount;

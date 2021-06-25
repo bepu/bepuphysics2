@@ -47,10 +47,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //To find the contact manifold, we'll clip the capsule axis against the face as usual, but we're dealing with potentially
             //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
-            Vector3Wide faceNormalBundle;
+            Vector3Wide faceNormalBundle = default;
             var boundingPlaneEpsilon = 1e-3f * epsilonScale;
-            Vector<float> latestEntryNumeratorBundle, latestEntryDenominatorBundle;
-            Vector<float> earliestExitNumeratorBundle, earliestExitDenominatorBundle;
+            Vector<float> latestEntryNumeratorBundle = default, latestEntryDenominatorBundle = default;
+            Vector<float> earliestExitNumeratorBundle = default, earliestExitDenominatorBundle = default;
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
             {
                 if (inactiveLanes[slotIndex] < 0)

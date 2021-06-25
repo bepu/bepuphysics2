@@ -184,7 +184,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var capThreshold = new Vector<float>(0.70710678118f);
             var useCapA = Vector.GreaterThan(Vector.Abs(nDotAY), capThreshold);
             var useCapB = Vector.GreaterThan(Vector.Abs(localNormal.Y), capThreshold);
-            Vector3Wide contact0, contact1, contact2, contact3;
+            Vector3Wide contact0 = default, contact1 = default, contact2 = default, contact3 = default;
             manifold.Contact0Exists = default;
             manifold.Contact1Exists = default;
             manifold.Contact2Exists = default;

@@ -95,7 +95,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(contactNormal, t, out var unprojectedVertex);
             Vector3Wide.Add(unprojectedVertex, vertex, out unprojectedVertex);
 
-            ManifoldCandidate candidate;
+            ManifoldCandidate candidate = default;
             Vector3Wide.Subtract(unprojectedVertex, triangleCenterB, out var offsetOnB);
             Vector3Wide.Dot(offsetOnB, tangentBX, out candidate.X);
             Vector3Wide.Dot(offsetOnB, tangentBY, out candidate.Y);
@@ -148,7 +148,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(tangentBX, edgeDirectionB, out var edgeDirectionX);
             Vector3Wide.Dot(tangentBY, edgeDirectionB, out var edgeDirectionY);
 
-            ManifoldCandidate candidate;
+            ManifoldCandidate candidate = default;
             var six = new Vector<int>(6);
             //Entry
             var exists = Vector.BitwiseAnd(allowContacts, Vector.BitwiseAnd(
@@ -182,8 +182,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public unsafe void Test(
             ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
-            out Convex4ContactManifoldWide manifold)
-        {
+            out Convex4ContactManifoldWide manifold) {
+            manifold = default;
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var worldRA);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var worldRB);
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(worldRB, worldRA, out var rB);

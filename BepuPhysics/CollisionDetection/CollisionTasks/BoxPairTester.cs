@@ -113,7 +113,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(vertex, offset, out var vertexOnBFace);
 
             Vector3Wide.Subtract(vertexOnBFace, faceCenterB, out var vertexOffsetOnBFace);
-            ManifoldCandidate candidate;
+            ManifoldCandidate candidate = default;
             Vector3Wide.Dot(vertexOffsetOnBFace, faceTangentBX, out candidate.X);
             Vector3Wide.Dot(vertexOffsetOnBFace, faceTangentBY, out candidate.Y);
             candidate.FeatureId = featureId;
@@ -275,7 +275,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //We now have intervals for all four box B edges.
             var edgeFeatureIdOffset = new Vector<int>(64);
             var epsilon = epsilonScale * 1e-5f;
-            ManifoldCandidate min, max;
+            ManifoldCandidate min = default, max = default;
             //X0
             min.FeatureId = featureIdX0;
             min.X = minX0;
@@ -320,8 +320,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public unsafe void Test(
             ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
-            out Convex4ContactManifoldWide manifold)
-        {
+            out Convex4ContactManifoldWide manifold) {
+            manifold = default;
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var worldRA);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var worldRB);
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(worldRB, worldRA, out var rB);

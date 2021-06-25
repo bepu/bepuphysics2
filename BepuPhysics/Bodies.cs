@@ -545,8 +545,8 @@ namespace BepuPhysics
         /// <param name="inertiaB">Gathered inertia of body B.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherInertia(ref Vector<int> references, int count,
-            out BodyInertias inertiaA)
-        {
+            out BodyInertias inertiaA) {
+            inertiaA = default;
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references);
@@ -564,8 +564,9 @@ namespace BepuPhysics
         /// <param name="inertiaA">Gathered inertia of body A.</param>
         /// <param name="inertiaB">Gathered inertia of body B.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherInertia(ref TwoBodyReferences references, int count, out BodyInertias inertiaA, out BodyInertias inertiaB)
-        {
+        public void GatherInertia(ref TwoBodyReferences references, int count, out BodyInertias inertiaA, out BodyInertias inertiaB) {
+            inertiaA = default;
+            inertiaB = default;
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -586,8 +587,10 @@ namespace BepuPhysics
         /// <param name="inertiaB">Gathered inertia of body B.</param>
         /// <param name="inertiaC">Gathered inertia of body C.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherInertia(ref ThreeBodyReferences references, int count, out BodyInertias inertiaA, out BodyInertias inertiaB, out BodyInertias inertiaC)
-        {
+        public void GatherInertia(ref ThreeBodyReferences references, int count, out BodyInertias inertiaA, out BodyInertias inertiaB, out BodyInertias inertiaC) {
+            inertiaA = default;
+            inertiaB = default;
+            inertiaC = default;
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -611,8 +614,11 @@ namespace BepuPhysics
         /// <param name="inertiaC">Gathered inertia of body C.</param>
         /// <param name="inertiaD">Gathered inertia of body D.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherInertia(ref FourBodyReferences references, int count, out BodyInertias inertiaA, out BodyInertias inertiaB, out BodyInertias inertiaC, out BodyInertias inertiaD)
-        {
+        public void GatherInertia(ref FourBodyReferences references, int count, out BodyInertias inertiaA, out BodyInertias inertiaB, out BodyInertias inertiaC, out BodyInertias inertiaD) {
+            inertiaA = default;
+            inertiaB = default;
+            inertiaC = default;
+            inertiaD = default;
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -637,8 +643,9 @@ namespace BepuPhysics
         /// <param name="orientationB">Gathered orientation of body B.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherOrientation(ref TwoBodyReferences references, int count,
-            out QuaternionWide orientationA, out QuaternionWide orientationB)
-        {
+            out QuaternionWide orientationA, out QuaternionWide orientationB) {
+            orientationA = default;
+            orientationB = default;
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -663,8 +670,8 @@ namespace BepuPhysics
         /// <param name="orientation">Gathered orientation of bodies in the bundle.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherOrientation(ref Vector<int> references, int count,
-            out QuaternionWide orientation)
-        {
+            out QuaternionWide orientation) {
+            orientation = default;
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references);
@@ -698,6 +705,8 @@ namespace BepuPhysics
             ref var baseIndex = ref Unsafe.As<Vector<int>, int>(ref references);
 
             ref var poses = ref ActiveSet.Poses;
+            position = default;
+            orientation = default;
             for (int i = 0; i < count; ++i)
             {
                 ref var indexA = ref Unsafe.Add(ref baseIndex, i);
@@ -725,7 +734,9 @@ namespace BepuPhysics
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
 
-            Vector3Wide positionA, positionB;
+            Vector3Wide positionA = default, positionB = default;
+            orientationA = default;
+            orientationB = default;
             ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {
@@ -764,7 +775,7 @@ namespace BepuPhysics
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
 
-            Vector3Wide positionA, positionB;
+            Vector3Wide positionA = default, positionB = default;
             ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {
@@ -791,7 +802,7 @@ namespace BepuPhysics
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
             ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
 
-            Vector3Wide positionA, positionB, positionC;
+            Vector3Wide positionA = default, positionB = default, positionC = default;
             ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {
@@ -821,7 +832,7 @@ namespace BepuPhysics
             ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
             ref var baseIndexD = ref Unsafe.As<Vector<int>, int>(ref references.IndexD);
 
-            Vector3Wide positionA, positionB, positionC, positionD;
+            Vector3Wide positionA = default, positionB = default, positionC = default, positionD = default;
             ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {
@@ -856,8 +867,8 @@ namespace BepuPhysics
         /// <param name="count">Number of bodies in the bundle.</param>
         /// <param name="velocities">Gathered velocities.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref Vector<int> references, int count, out BodyVelocities velocities)
-        {
+        public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref Vector<int> references, int count, out BodyVelocities velocities) {
+            velocities = default;
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndex = ref Unsafe.As<Vector<int>, int>(ref references);
             for (int i = 0; i < count; ++i)
@@ -874,8 +885,9 @@ namespace BepuPhysics
         /// <param name="velocitiesA">Gathered velocities of A bodies.</param>
         /// <param name="velocitiesB">Gathered velocities of B bodies.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref TwoBodyReferences references, int count, out BodyVelocities velocitiesA, out BodyVelocities velocitiesB)
-        {
+        public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref TwoBodyReferences references, int count, out BodyVelocities velocitiesA, out BodyVelocities velocitiesB) {
+            velocitiesA = default;
+            velocitiesB = default;
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -897,8 +909,10 @@ namespace BepuPhysics
         /// <param name="velocitiesC">Gathered velocities of C bodies.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref ThreeBodyReferences references, int count,
-            out BodyVelocities velocitiesA, out BodyVelocities velocitiesB, out BodyVelocities velocitiesC)
-        {
+            out BodyVelocities velocitiesA, out BodyVelocities velocitiesB, out BodyVelocities velocitiesC) {
+            velocitiesA = default;
+            velocitiesB = default;
+            velocitiesC = default;
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -923,8 +937,11 @@ namespace BepuPhysics
         /// <param name="velocitiesD">Gathered velocities of D bodies.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref FourBodyReferences references, int count,
-            out BodyVelocities velocitiesA, out BodyVelocities velocitiesB, out BodyVelocities velocitiesC, out BodyVelocities velocitiesD)
-        {
+            out BodyVelocities velocitiesA, out BodyVelocities velocitiesB, out BodyVelocities velocitiesC, out BodyVelocities velocitiesD) {
+            velocitiesA = default;
+            velocitiesB = default;
+            velocitiesC = default;
+            velocitiesD = default;
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);

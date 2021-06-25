@@ -245,8 +245,13 @@ namespace BepuPhysics.CollisionDetection
             cachedShapeA = batch.Shapes.Allocate(shapeSizeA);
             cachedShapeB = batch.Shapes.Allocate(shapeSizeB);
             //TODO: Given the size of these copies, it's not clear that this copy implementation is ideal. Wouldn't worry too much about it.
+#if NET45
+            Unsafe.CopyBlockUnaligned(cachedShapeA, shapeA, (uint)shapeSizeA);
+            Unsafe.CopyBlockUnaligned(cachedShapeB, shapeB, (uint)shapeSizeB);
+#else
             Buffer.MemoryCopy(shapeA, cachedShapeA, shapeSizeA, shapeSizeA);
             Buffer.MemoryCopy(shapeB, cachedShapeB, shapeSizeB, shapeSizeB);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -261,7 +266,11 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(batch.Shapes.ByteCount == 0);
             }
             cachedShapeDataB = batch.Shapes.Allocate(shapeSizeB);
+#if NET45
+            Unsafe.CopyBlockUnaligned(cachedShapeDataB, shapeDataB, (uint)shapeDataB);
+#else
             Buffer.MemoryCopy(shapeDataB, cachedShapeDataB, shapeSizeB, shapeSizeB);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
