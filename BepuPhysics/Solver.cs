@@ -197,6 +197,7 @@ namespace BepuPhysics
             ResizeHandleCapacity(initialCapacity);
             solveWorker = SolveWorker;
             solveStepWorker = SolveStepWorker;
+            solveStep2Worker = SolveStep2Worker;
             incrementalContactUpdateWorker = IncrementalContactUpdateWorker;
         }
 
