@@ -1,5 +1,7 @@
 ﻿using BepuUtilities;
 using DemoContentLoader;
+using Demos.Demos;
+using Demos.SpecializedTests;
 using DemoUtilities;
 using OpenTK;
 
@@ -17,6 +19,7 @@ namespace Demos
             {
                 content = ContentArchive.Load(stream);
             }
+            HeadlessTest.Test<NewtDemo>(content, 2, 32, 512);
             var demo = new DemoHarness(loop, content);
             loop.Run(demo);
             loop.Dispose();
