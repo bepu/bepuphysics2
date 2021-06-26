@@ -179,6 +179,7 @@ namespace BepuPhysics
 
 
         Action<int> solveWorker;
+        Action<int> solve2Worker;
         Action<int> incrementalContactUpdateWorker;
         public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
             int initialCapacity,
@@ -196,6 +197,7 @@ namespace BepuPhysics
             batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
             ResizeHandleCapacity(initialCapacity);
             solveWorker = SolveWorker;
+            solve2Worker = Solve2Worker;
             solveStepWorker = SolveStepWorker;
             solveStep2Worker = SolveStep2Worker;
             incrementalContactUpdateWorker = IncrementalContactUpdateWorker;

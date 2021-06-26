@@ -297,6 +297,33 @@ namespace BepuPhysics.Constraints
             }
         }
 
+        public unsafe override void Prestep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
+            ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
+            ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
+            ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
+            ref var bodyVelocities = ref bodies.ActiveSet.Velocities;
+            var function = default(TConstraintFunctions);
+            for (int i = startBundle; i < exclusiveEndBundle; ++i)
+            {
+                ref var prestep = ref Unsafe.Add(ref prestepBase, i);
+                ref var projection = ref Unsafe.Add(ref projectionBase, i);
+                ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
+                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
+                var count = GetCountInBundle(ref typeBatch, i);
+                bodies.GatherInertia(ref references, count, out var inertiaA);
+                Bodies.GatherVelocities(ref bodyVelocities, ref references, count, out var wsvA);
+                function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertiaA, ref prestep, out projection);
+                function.WarmStart(ref wsvA, ref projection, ref accumulatedImpulses);
+                Bodies.ScatterVelocities(ref wsvA, ref bodyVelocities, ref references, count);
+            }
+        }
+        public override void JacobiPrestep2(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            throw new NotImplementedException();
+        }
+
     }
 
     public abstract class OneBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>

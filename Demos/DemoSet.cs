@@ -45,6 +45,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<NewtDemo>();
             AddOption<CarDemo>();
             AddOption<CharacterDemo>();
             AddOption<TankDemo>();
@@ -53,7 +54,6 @@ namespace Demos
             AddOption<RagdollDemo>();
             AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<ClothDemo>();
-            AddOption<NewtDemo>();
             AddOption<PlanetDemo>();
             AddOption<CompoundTestDemo>();
             AddOption<BlockChainDemo>();

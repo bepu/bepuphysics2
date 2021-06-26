@@ -283,5 +283,14 @@ namespace BepuPhysics.Constraints
         {
             throw new NotImplementedException();
         }
+
+        public override void Prestep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            throw new NotImplementedException();
+        }
+        public override void JacobiPrestep2(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
