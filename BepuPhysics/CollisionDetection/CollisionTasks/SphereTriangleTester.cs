@@ -29,6 +29,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, 
             out Convex1ContactManifoldWide manifold)
         {
+            Unsafe.SkipInit(out manifold);
             //Work in the local space of the triangle, since it's quicker to transform the sphere position than the vertices of the triangle.
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, rB, out var localOffsetB);
@@ -70,7 +71,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var outsideBC = Vector.LessThan(edgePlaneTestBC, Vector<float>.Zero);
 
             var outsideAnyEdge = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideAC, outsideBC));
-            Vector3Wide localClosestOnTriangle;
+            Unsafe.SkipInit(out Vector3Wide localClosestOnTriangle);
             var negativeOne = new Vector<int>(-1);
             if (Vector.EqualsAny(Vector.BitwiseAnd(collidingWithSolidSide, outsideAnyEdge), negativeOne))
             {

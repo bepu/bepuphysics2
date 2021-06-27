@@ -95,7 +95,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var contained = Vector.BitwiseAnd(allowContact, Vector.BitwiseAnd(
                 Vector.BitwiseAnd(Vector.GreaterThanOrEqual(edge0010Dot, edge0010PlaneMin), Vector.LessThanOrEqual(edge0010Dot, edge0010PlaneMax)),
                 Vector.BitwiseAnd(Vector.GreaterThanOrEqual(edge1011Dot, edge1011PlaneMin), Vector.LessThanOrEqual(edge1011Dot, edge1011PlaneMax))));
-            ManifoldCandidate candidate;
+            Unsafe.SkipInit(out ManifoldCandidate candidate);
             candidate.X = point.X;
             candidate.Y = point.Y;
             candidate.FeatureId = featureId;
@@ -108,6 +108,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex4ContactManifoldWide manifold)
         {
+            Unsafe.SkipInit(out manifold);
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var worldRA);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var worldRB);
             //Work in b's local space.

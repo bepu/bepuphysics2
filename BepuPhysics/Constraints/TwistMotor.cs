@@ -90,6 +90,7 @@ namespace BepuPhysics.Constraints
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB, 
             ref TwistMotorPrestepData prestep, out TwistMotorProjection projection)
         {
+            Unsafe.SkipInit(out projection);
             bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
             //We don't need any measurement basis in a velocity motor, so the prestep data needs only the axes.
             QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axisA);

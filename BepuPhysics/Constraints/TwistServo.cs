@@ -173,6 +173,7 @@ namespace BepuPhysics.Constraints
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref TwistServoPrestepData prestep,
             out TwistServoProjection projection)
         {
+            Unsafe.SkipInit(out projection);
             ComputeJacobian(bodies, bodyReferences, count, prestep.LocalBasisA, prestep.LocalBasisB,
                 out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
 

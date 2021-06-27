@@ -14,6 +14,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public unsafe void Test(ref TriangleWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
+            Unsafe.SkipInit(out manifold);
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var triangleOrientation);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var hullOrientation);
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(triangleOrientation, hullOrientation, out var hullLocalTriangleOrientation);

@@ -313,6 +313,9 @@ namespace BepuPhysics.Collidables
 
         public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
+            Unsafe.SkipInit(out maximumRadius);
+            Unsafe.SkipInit(out min);
+            Unsafe.SkipInit(out max);
             for (int i = 0; i < countInBundle; ++i)
             {
                 Vector3Wide.Broadcast(new Vector3(float.MaxValue), out var minWide);
@@ -357,6 +360,9 @@ namespace BepuPhysics.Collidables
 
         public void RayTest(ref RigidPoses poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
+            Unsafe.SkipInit(out intersected);
+            Unsafe.SkipInit(out t);
+            Unsafe.SkipInit(out normal);
             Debug.Assert(Hulls.Length > 0 && Hulls.Length <= Vector<float>.Count);
             for (int i = 0; i < Hulls.Length; ++i)
             {
@@ -380,7 +386,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EstimateEpsilonScale(in Vector<int> terminatedLanes, out Vector<float> epsilonScale)
         {
-            Vector3Wide bundle;
+            Unsafe.SkipInit(out Vector3Wide bundle);
             for (int i = 0; i < Vector<float>.Count; ++i)
             {
                 if (terminatedLanes[i] < 0)
@@ -411,6 +417,7 @@ namespace BepuPhysics.Collidables
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeLocalSupport(in ConvexHullWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
+            Unsafe.SkipInit(out support);
             Helpers.FillVectorWithLaneIndices(out var indexOffsets);
             for (int slotIndex = 0; slotIndex < Vector<float>.Count; ++slotIndex)
             {

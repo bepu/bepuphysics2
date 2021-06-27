@@ -403,6 +403,9 @@ namespace BepuPhysics
         internal void GatherDataForBounds(ref int start, int count, out RigidPoses poses, out Vector<int> shapeIndices, out Vector<float> maximumExpansion)
         {
             Debug.Assert(count <= Vector<float>.Count);
+            Unsafe.SkipInit(out poses);
+            Unsafe.SkipInit(out shapeIndices);
+            Unsafe.SkipInit(out maximumExpansion);
             ref var targetPositionBase = ref Unsafe.As<Vector<float>, float>(ref poses.Position.X);
             ref var targetOrientationBase = ref Unsafe.As<Vector<float>, float>(ref poses.Orientation.X);
             ref var targetShapeBase = ref Unsafe.As<Vector<int>, int>(ref shapeIndices);

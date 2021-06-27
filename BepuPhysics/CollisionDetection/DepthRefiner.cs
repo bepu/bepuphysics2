@@ -71,6 +71,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Create(in Vector3Wide normal, in Vector3Wide support, out Simplex simplex)
         {
+            Unsafe.SkipInit(out simplex);
             //While only one slot is actually full, GetNextNormal expects every slot to have some kind of data-
             //for those slots which are not yet filled, it should be duplicates of other data.
             //(The sub-triangle case is treated the same as the degenerate case.)
@@ -86,6 +87,7 @@ namespace BepuPhysics.CollisionDetection
             in Vector3Wide bestNormal, in Vector<float> bestDepth, in Vector<float> convergenceThreshold,
             out Vector3Wide nextNormal)
         {
+            Unsafe.SkipInit(out nextNormal);
             //In the penetrating case, the search target is the closest point to the origin on the so-far-best bounding plane.
             //In the separated case, it's just the origin itself.
             //Termination conditions are based on the distance to the search target. In the penetrating case, we try to approach zero distance.
@@ -427,6 +429,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Create(in Vector3Wide normal, in Vector3Wide support, in Vector3Wide supportOnA, out SimplexWithWitness simplex)
         {
+            Unsafe.SkipInit(out simplex);
             //While only one slot is actually full, GetNextNormal expects every slot to have some kind of data-
             //for those slots which are not yet filled, it should be duplicates of other data.
             //(The sub-triangle case is treated the same as the degenerate case.)
@@ -445,6 +448,7 @@ namespace BepuPhysics.CollisionDetection
             in Vector3Wide bestNormal, in Vector<float> bestDepth, in Vector<float> convergenceThreshold,
             out Vector3Wide nextNormal)
         {
+            Unsafe.SkipInit(out nextNormal);
             //In the penetrating case, the search target is the closest point to the origin on the so-far-best bounding plane.
             //In the separated case, it's just the origin itself.
             //Termination conditions are based on the distance to the search target. In the penetrating case, we try to approach zero distance.

@@ -358,10 +358,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Broadcast(velocityB.Angular, out var wideAngularVelocityB);
 
             //The initial samples are distributed evenly over [t0, t1].
-            Vector<float> samples;
-            Vector3Wide sampleOffsetB;
-            QuaternionWide sampleOrientationA;
-            QuaternionWide sampleOrientationB;
+            Unsafe.SkipInit(out Vector<float> samples);
+            Unsafe.SkipInit(out Vector3Wide sampleOffsetB);
+            Unsafe.SkipInit(out QuaternionWide sampleOrientationA);
+            Unsafe.SkipInit(out QuaternionWide sampleOrientationB);
             Vector3Wide normals;
             Vector3Wide closestA;
             Vector<float> distances;

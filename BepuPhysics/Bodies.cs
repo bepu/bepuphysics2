@@ -547,6 +547,7 @@ namespace BepuPhysics
         public void GatherInertia(ref Vector<int> references, int count,
             out BodyInertias inertiaA)
         {
+            Unsafe.SkipInit(out inertiaA);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references);
@@ -566,6 +567,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherInertia(ref TwoBodyReferences references, int count, out BodyInertias inertiaA, out BodyInertias inertiaB)
         {
+            Unsafe.SkipInit(out inertiaA);
+            Unsafe.SkipInit(out inertiaB);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -588,6 +591,9 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherInertia(ref ThreeBodyReferences references, int count, out BodyInertias inertiaA, out BodyInertias inertiaB, out BodyInertias inertiaC)
         {
+            Unsafe.SkipInit(out inertiaA);
+            Unsafe.SkipInit(out inertiaB);
+            Unsafe.SkipInit(out inertiaC);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -613,6 +619,10 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherInertia(ref FourBodyReferences references, int count, out BodyInertias inertiaA, out BodyInertias inertiaB, out BodyInertias inertiaC, out BodyInertias inertiaD)
         {
+            Unsafe.SkipInit(out inertiaA);
+            Unsafe.SkipInit(out inertiaB);
+            Unsafe.SkipInit(out inertiaC);
+            Unsafe.SkipInit(out inertiaD);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -639,6 +649,8 @@ namespace BepuPhysics
         public void GatherOrientation(ref TwoBodyReferences references, int count,
             out QuaternionWide orientationA, out QuaternionWide orientationB)
         {
+            Unsafe.SkipInit(out orientationA);
+            Unsafe.SkipInit(out orientationB);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -665,6 +677,7 @@ namespace BepuPhysics
         public void GatherOrientation(ref Vector<int> references, int count,
             out QuaternionWide orientation)
         {
+            Unsafe.SkipInit(out orientation);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references);
@@ -689,6 +702,8 @@ namespace BepuPhysics
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherPose(ref Vector<int> references, int count, out Vector3Wide position, out QuaternionWide orientation)
         {
+            Unsafe.SkipInit(out position);
+            Unsafe.SkipInit(out orientation);
             //TODO: This function and its users (which should be relatively few) is a problem for large world position precision.
             //It directly reports the position, thereby infecting vectorized logic with the high precision representation.
             //You might be able to redesign the users of this function to not need it, but that comes with its own difficulties
@@ -720,12 +735,15 @@ namespace BepuPhysics
         public void GatherPose(ref TwoBodyReferences references, int count,
             out Vector3Wide offsetB, out QuaternionWide orientationA, out QuaternionWide orientationB)
         {
+            Unsafe.SkipInit(out Vector3Wide positionA);
+            Unsafe.SkipInit(out Vector3Wide positionB);
+            Unsafe.SkipInit(out orientationA);
+            Unsafe.SkipInit(out orientationB);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
 
-            Vector3Wide positionA, positionB;
             ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {
@@ -759,12 +777,13 @@ namespace BepuPhysics
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherOffsets(ref TwoBodyReferences references, int count, out Vector3Wide ab)
         {
+            Unsafe.SkipInit(out Vector3Wide positionA);
+            Unsafe.SkipInit(out Vector3Wide positionB);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
 
-            Vector3Wide positionA, positionB;
             ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {
@@ -785,13 +804,15 @@ namespace BepuPhysics
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherOffsets(ref ThreeBodyReferences references, int count, out Vector3Wide ab, out Vector3Wide ac)
         {
+            Unsafe.SkipInit(out Vector3Wide positionA);
+            Unsafe.SkipInit(out Vector3Wide positionB);
+            Unsafe.SkipInit(out Vector3Wide positionC);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
             ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
 
-            Vector3Wide positionA, positionB, positionC;
             ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {
@@ -814,6 +835,10 @@ namespace BepuPhysics
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherOffsets(ref FourBodyReferences references, int count, out Vector3Wide ab, out Vector3Wide ac, out Vector3Wide ad)
         {
+            Unsafe.SkipInit(out Vector3Wide positionA);
+            Unsafe.SkipInit(out Vector3Wide positionB);
+            Unsafe.SkipInit(out Vector3Wide positionC);
+            Unsafe.SkipInit(out Vector3Wide positionD);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -821,7 +846,6 @@ namespace BepuPhysics
             ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
             ref var baseIndexD = ref Unsafe.As<Vector<int>, int>(ref references.IndexD);
 
-            Vector3Wide positionA, positionB, positionC, positionD;
             ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {
@@ -858,6 +882,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref Vector<int> references, int count, out BodyVelocities velocities)
         {
+            Unsafe.SkipInit(out velocities);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndex = ref Unsafe.As<Vector<int>, int>(ref references);
             for (int i = 0; i < count; ++i)
@@ -876,6 +901,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref TwoBodyReferences references, int count, out BodyVelocities velocitiesA, out BodyVelocities velocitiesB)
         {
+            Unsafe.SkipInit(out velocitiesA);
+            Unsafe.SkipInit(out velocitiesB);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -899,6 +926,9 @@ namespace BepuPhysics
         public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref ThreeBodyReferences references, int count,
             out BodyVelocities velocitiesA, out BodyVelocities velocitiesB, out BodyVelocities velocitiesC)
         {
+            Unsafe.SkipInit(out velocitiesA);
+            Unsafe.SkipInit(out velocitiesB);
+            Unsafe.SkipInit(out velocitiesC);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -925,6 +955,10 @@ namespace BepuPhysics
         public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref FourBodyReferences references, int count,
             out BodyVelocities velocitiesA, out BodyVelocities velocitiesB, out BodyVelocities velocitiesC, out BodyVelocities velocitiesD)
         {
+            Unsafe.SkipInit(out velocitiesA);
+            Unsafe.SkipInit(out velocitiesB);
+            Unsafe.SkipInit(out velocitiesC);
+            Unsafe.SkipInit(out velocitiesD);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);

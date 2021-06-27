@@ -82,6 +82,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public unsafe void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
+            Unsafe.SkipInit(out manifold);
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var cylinderOrientation);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var hullOrientation);
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(cylinderOrientation, hullOrientation, out var hullLocalCylinderOrientation);
@@ -122,8 +123,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, hullLocalCylinderOrientation, out var localNormalInA);
             var inverseNormalDotAY = Vector<float>.One / localNormalInA.Y;
             var useCap = Vector.GreaterThan(Vector.Abs(localNormalInA.Y), new Vector<float>(0.70710678118f));
-            Vector3Wide capNormal, capCenter;
-            Vector2Wide interior0, interior1, interior2, interior3;
+            Vector3Wide capNormal;
+            Unsafe.SkipInit(out Vector3Wide capCenter);
+            Unsafe.SkipInit(out Vector2Wide interior0);
+            Unsafe.SkipInit(out Vector2Wide interior1);
+            Unsafe.SkipInit(out Vector2Wide interior2);
+            Unsafe.SkipInit(out Vector2Wide interior3);
             if (Vector.LessThanAny(Vector.AndNot(useCap, inactiveLanes), Vector<int>.Zero))
             {
                 Vector3Wide.ConditionallyNegate(Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), hullLocalCylinderOrientation.Y, out capNormal);
@@ -135,7 +140,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 BoxCylinderTester.GenerateInteriorPoints(a, localNormalInA, cylinderLocalCylinderToClosestOnCylinder, out interior0, out interior1, out interior2, out interior3);
             }
 
-            Vector3Wide cylinderSideEdgeCenter;
+            Unsafe.SkipInit(out Vector3Wide cylinderSideEdgeCenter);
             if (Vector.EqualsAny(Vector.BitwiseOr(useCap, inactiveLanes), Vector<int>.Zero))
             {
                 //If the contact is on the cylinder's side, use the closestOnHull-derived position rather than resampling the support function with the local normal to avoid numerical noise.

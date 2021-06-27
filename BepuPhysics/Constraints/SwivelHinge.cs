@@ -117,7 +117,7 @@ namespace BepuPhysics.Constraints
             //The upper left 3x3 block is just the ball socket.
             Symmetric3x3Wide.SkewSandwichWithoutOverlap(projection.OffsetA, inertiaA.InverseInertiaTensor, out var ballSocketContributionAngularA);
             Symmetric3x3Wide.SkewSandwichWithoutOverlap(projection.OffsetB, inertiaB.InverseInertiaTensor, out var ballSocketContributionAngularB);
-            Symmetric4x4Wide inverseEffectiveMass;
+            Unsafe.SkipInit(out Symmetric4x4Wide inverseEffectiveMass);
             ref var upperLeft = ref Symmetric4x4Wide.GetUpperLeft3x3Block(ref inverseEffectiveMass);
             Symmetric3x3Wide.Add(ballSocketContributionAngularA, ballSocketContributionAngularB, out upperLeft);
             var linearContribution = projection.InertiaA.InverseMass + projection.InertiaB.InverseMass;

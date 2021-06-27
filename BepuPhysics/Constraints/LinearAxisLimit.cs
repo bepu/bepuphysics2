@@ -115,6 +115,7 @@ namespace BepuPhysics.Constraints
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
             ref LinearAxisLimitPrestepData prestep, out LinearAxisServoProjection projection)
         {
+            Unsafe.SkipInit(out projection);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             LimitJacobianModifier modifier;
             modifier.MinimumOffset = prestep.MinimumOffset;

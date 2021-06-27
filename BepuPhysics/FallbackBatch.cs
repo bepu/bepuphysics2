@@ -237,7 +237,7 @@ namespace BepuPhysics
         public void GetJacobiScaleForBodies(ref Vector<int> references, int count, out Vector<float> jacobiScale)
         {
             ref var start = ref Unsafe.As<Vector<int>, int>(ref references);
-            Vector<int> counts;
+            Unsafe.SkipInit(out Vector<int> counts);
             ref var countsStart = ref Unsafe.As<Vector<int>, int>(ref counts);
             for (int i = 0; i < count; ++i)
             {
@@ -253,7 +253,8 @@ namespace BepuPhysics
         {
             ref var startA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
             ref var startB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
-            Vector<int> countsA, countsB;
+            Unsafe.SkipInit(out Vector<int> countsA);
+            Unsafe.SkipInit(out Vector<int> countsB);
             ref var countsAStart = ref Unsafe.As<Vector<int>, int>(ref countsA);
             ref var countsBStart = ref Unsafe.As<Vector<int>, int>(ref countsB);
             for (int i = 0; i < count; ++i)
@@ -275,7 +276,9 @@ namespace BepuPhysics
             ref var startA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
             ref var startB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
             ref var startC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
-            Vector<int> countsA, countsB, countsC;
+            Unsafe.SkipInit(out Vector<int> countsA);
+            Unsafe.SkipInit(out Vector<int> countsB);
+            Unsafe.SkipInit(out Vector<int> countsC);
             ref var countsAStart = ref Unsafe.As<Vector<int>, int>(ref countsA);
             ref var countsBStart = ref Unsafe.As<Vector<int>, int>(ref countsB);
             ref var countsCStart = ref Unsafe.As<Vector<int>, int>(ref countsC);
@@ -302,7 +305,10 @@ namespace BepuPhysics
             ref var startB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
             ref var startC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
             ref var startD = ref Unsafe.As<Vector<int>, int>(ref references.IndexD);
-            Vector<int> countsA, countsB, countsC, countsD;
+            Unsafe.SkipInit(out Vector<int> countsA);
+            Unsafe.SkipInit(out Vector<int> countsB);
+            Unsafe.SkipInit(out Vector<int> countsC);
+            Unsafe.SkipInit(out Vector<int> countsD);
             ref var countsAStart = ref Unsafe.As<Vector<int>, int>(ref countsA);
             ref var countsBStart = ref Unsafe.As<Vector<int>, int>(ref countsB);
             ref var countsCStart = ref Unsafe.As<Vector<int>, int>(ref countsC);

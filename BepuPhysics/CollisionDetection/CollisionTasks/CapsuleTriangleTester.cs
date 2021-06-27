@@ -112,6 +112,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex2ContactManifoldWide manifold)
         {
+            Unsafe.SkipInit(out manifold);
             //Work in the triangle's local space to limit transformation requirements.
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, rB, out var localOffsetB);
@@ -194,7 +195,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 manifold.Contact1Exists = Vector<int>.Zero;
                 return;
             }
-            Vector3Wide b0, b1;
+            Unsafe.SkipInit(out Vector3Wide b0);
+            Unsafe.SkipInit(out Vector3Wide b1);
             Vector<int> contactCount;
             if (Vector.EqualsAny(useEdge, new Vector<int>(-1)))
             {
