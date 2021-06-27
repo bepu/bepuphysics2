@@ -95,13 +95,52 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool RayTestDualSided(in Vector3 a, in Vector3 b, in Vector3 c, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        {
+            var ab = b - a;
+            var ac = c - a;
+            normal = Vector3.Cross(ac, ab);
+            var dn = -Vector3.Dot(direction, normal);
+            if (dn <= 0)
+            {
+                normal *= -1;
+                dn *= -1;
+                ab *= -1;
+                ac *= -1;
+            }
+            var ao = origin - a;
+            t = Vector3.Dot(ao, normal);
+            if (t < 0)
+            {
+                //Impact occurred before the start of the ray.
+                return false;
+            }
+            var aoxd = Vector3.Cross(ao, direction);
+            var v = -Vector3.Dot(ac, aoxd);
+            if (v < 0 || v > dn)
+            {
+                //Invalid barycentric coordinate for b.
+                return false;
+            }
+            var w = Vector3.Dot(ab, aoxd);
+            if (w < 0 || v + w > dn)
+            {
+                //Invalid barycentric coordinate for b and/or c.
+                return false;
+            }
+            t /= dn;
+            normal /= (float)Math.Sqrt(Vector3.Dot(normal, normal));
+            return true;
+        }
+
         public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
             var offset = origin - pose.Position;
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             Matrix3x3.TransformTranspose(offset, orientation, out var localOffset);
             Matrix3x3.TransformTranspose(direction, orientation, out var localDirection);
-            if (RayTest(A, B, C, localOffset, localDirection, out t, out normal))
+            if (RayTestDualSided(A, B, C, localOffset, localDirection, out t, out normal))
             {
                 Matrix3x3.Transform(normal, orientation, out normal);
                 return true;
