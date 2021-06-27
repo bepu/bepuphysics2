@@ -9,6 +9,7 @@ using DemoContentLoader;
 using DemoUtilities;
 using DemoRenderer.UI;
 using OpenTK.Input;
+using System.Collections.Generic;
 
 namespace Demos.Demos.Characters
 {
@@ -18,8 +19,13 @@ namespace Demos.Demos.Characters
     public class CharacterDemo : Demo
     {
         CharacterControllers characters;
+        List<StaticHandle> staticPlatforms = new List<StaticHandle>();
+
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
+            var result = Triangle.RayTestDualSided(new Vector3(0f, 1f, 0f), new Vector3(1f, -1f, 0f), new Vector3(-1f, -1f, 0f),
+                Vector3.UnitZ * -1, Vector3.UnitZ, out float t, out Vector3 normal);
+
             camera.Position = new Vector3(20, 10, 20);
             camera.Yaw = MathF.PI;
             camera.Pitch = 0;
@@ -152,7 +158,7 @@ namespace Demos.Demos.Characters
             {
                 for (int j = 0; j < width; ++j)
                 {
-                    Simulation.Statics.Add(new StaticDescription(new Vector3(box.Width, 0, box.Length) * new Vector3(i, 0, j) + new Vector3(32f, 1, 0), boxCollidable));
+                    staticPlatforms.Add(Simulation.Statics.Add(new StaticDescription(new Vector3(box.Width, 0, box.Length) * new Vector3(i, 0, j) + new Vector3(32f, 1, 0), boxCollidable)));
                 }
 
             }
@@ -172,7 +178,7 @@ namespace Demos.Demos.Characters
             public MovingPlatform(CollidableDescription collidable, double timeOffset, float goalSatisfactionTime, Simulation simulation, Func<double, RigidPose> poseCreator)
             {
                 PoseCreator = poseCreator;
-                BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(poseCreator(timeOffset), collidable, new BodyActivityDescription(-1)));
+                BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(poseCreator(timeOffset), collidable, new BodyActivityDescription(0.1f)));
                 InverseGoalSatisfactionTime = 1f / goalSatisfactionTime;
                 TimeOffset = timeOffset;
             }
@@ -187,6 +193,9 @@ namespace Demos.Demos.Characters
                 QuaternionEx.GetRelativeRotationWithoutOverlap(pose.Orientation, targetPose.Orientation, out var rotation);
                 QuaternionEx.GetAxisAngleFromQuaternion(rotation, out var axis, out var angle);
                 velocity.Angular = axis * (angle * InverseGoalSatisfactionTime);
+
+                if (velocity.Linear.Length() > 1e-5f && !body.Awake)
+                    body.Awake = true;
             }
         }
         MovingPlatform[] movingPlatforms;
@@ -194,6 +203,7 @@ namespace Demos.Demos.Characters
         bool characterActive;
         CharacterInput character;
         double time;
+        double updateTime;
         void CreateCharacter(Vector3 position)
         {
             characterActive = true;
@@ -202,7 +212,20 @@ namespace Demos.Demos.Characters
 
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
+            if(input.WasPushed(Key.U))
+            {
+                foreach(var handle in staticPlatforms)
+                {
+                    var index = Simulation.Statics.HandleToIndex[handle.Value];
+                    ref var pose = ref Simulation.Statics.Poses[index];
+
+                    pose.Position += Vector3.UnitX;
+                }
+            }
+
+
             const float simulationDt = 1 / 60f;
+
             if (input.WasPushed(Key.C))
             {
                 if (characterActive)
@@ -221,7 +244,18 @@ namespace Demos.Demos.Characters
                 character.UpdateCharacterGoals(input, camera, simulationDt);
             }
             //Using a fixed time per update to match the demos simulation update rate.
-            time += 1 / 60f;
+            updateTime += 1 / 60f;
+
+            Simulation.Bodies.GetDescription(character.BodyHandle, out BodyDescription description);
+            Simulation.Shapes.RecursivelyRemoveAndDispose(description.Collidable.Shape, BufferPool);
+            var shapeIndex = Simulation.Shapes.Add(new Capsule(0.5f, MathF.Sin((float)updateTime) + 1f));
+            Simulation.Bodies.SetShape(character.BodyHandle, shapeIndex);
+
+            /*if(updateTime % 20 > 10)
+                time += 1 / 60f;*/
+
+            time += Math.Max(0, Math.Sin(updateTime) / 60f);
+
             for (int i = 0; i < movingPlatforms.Length; ++i)
             {
                 movingPlatforms[i].Update(Simulation, time);
