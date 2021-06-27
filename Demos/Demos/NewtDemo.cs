@@ -683,8 +683,10 @@ namespace Demos.Demos
                         LocalOrientation = Quaternion.Identity,
                         SpringSettings = weldSpringiness
                     });
-                //Simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
+                //simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
                 //    new CenterDistanceConstraint(offset.Length(), weldSpringiness));
+                //simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
+                //    new BallSocket { LocalOffsetA = offset * 0.5f, LocalOffsetB = offset * -0.5f, SpringSettings = weldSpringiness });
             }
             //for (int i = 0; i < tetrahedraVertexIndices.Length; ++i)
             //{
@@ -710,20 +712,21 @@ namespace Demos.Demos
             //The PositionFirstTimestepper is the simplest timestepping mode, but since it integrates velocity into position at the start of the frame, directly modified velocities outside of the timestep
             //will be integrated before collision detection or the solver has a chance to intervene. That's fine in this demo. Other built-in options include the PositionLastTimestepper and the SubsteppingTimestepper.
             //Note that the timestepper also has callbacks that you can use for executing logic between processing stages, like BeforeCollisionDetection.
-            //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(6));
-            //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper2(), solverIterationCount: 18);
-            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(6), solverIterationCount: 1);
+            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper(1));
+            //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(3));
+            //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper2(), solverIterationCount: 5);
+            //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper2(3), solverIterationCount: 1);
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
             float cellSize = 0.1f;
             DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool,
                 out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
-            var weldSpringiness = new SpringSettings(60f, 1f);
+            var weldSpringiness = new SpringSettings(120f, 1f);
             var volumeSpringiness = new SpringSettings(30f, 1);
             for (int i = 0; i < 40; ++i)
             {
                 //CreateDeformable(Simulation, new Vector3(i * 3, 5 + i * 1.5f, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
-                CreateDeformable(Simulation, new Vector3(i * 3, cellSize + i * 0f, 0), Quaternion.Identity, 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
+                CreateDeformable(Simulation, new Vector3(i * 3, cellSize * 2f + i * 0f, 0), Quaternion.Identity, 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
             }
 
             BufferPool.Return(ref vertices);

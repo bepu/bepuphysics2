@@ -81,9 +81,7 @@ namespace BepuPhysics
             Debug.Assert(activeSet.Batches.Count > 0, "Don't dispatch if there are no constraints.");
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
 
-            var solveStage = new SolveStepStageFunction();
-            solveStage.Dt = context.Dt;
-            solveStage.InverseDt = 1f / context.Dt;
+            var solveStage = new SolveStepStageFunction { Dt = context.Dt, InverseDt = 1f / context.Dt };
             for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
             {
                 var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
@@ -92,9 +90,7 @@ namespace BepuPhysics
             }
             if (fallbackExists)
             {
-                var solveFallbackStage = new FallbackSolveStepStageFunction();
-                solveFallbackStage.Dt = context.Dt;
-                solveFallbackStage.InverseDt = 1f / context.Dt;
+                var solveFallbackStage = new FallbackSolveStepStageFunction { Dt = context.Dt, InverseDt = 1f / context.Dt };
                 var fallbackScatterStage = new FallbackScatterStageFunction();
                 var batchOffset = FallbackBatchThreshold > 0 ? context.BatchBoundaries[FallbackBatchThreshold - 1] : 0;
                 ExecuteStage(ref solveFallbackStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[FallbackBatchThreshold],
