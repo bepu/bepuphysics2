@@ -384,7 +384,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
         /// <param name="inertia">Inertia of the closed mesh.</param>
-        public void ComputeClosedInertia(float mass, out BodyInertia inertia)
+        public readonly void ComputeClosedInertia(float mass, out BodyInertia inertia)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor);
