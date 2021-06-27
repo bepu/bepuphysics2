@@ -10,7 +10,7 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/bepu/bepuphysics2</RepositoryUrl>
     <PackageIcon>bepuphysicslogo256.png</PackageIcon>
-    <Configurations>Debug;Release;ReleaseStrip;ReleaseStripNoProfiling</Configurations>
+    <Configurations>Debug;Release;ReleaseNoProfiling</Configurations>
     <LangVersion>latest</LangVersion>
     <PackageTags>physics;3d;rigid body;real time;simulation</PackageTags>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -19,31 +19,22 @@
     <DelaySign>false</DelaySign>
     <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
-  
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Condition="'$(Configuration)'=='ReleaseStrip' Or '$(Configuration)'=='ReleaseStripNoProfiling'" Command="dotnet &quot;$(ProjectDir)..\Dependencies\ilopt\ilopt.dll&quot; &quot;$(TargetPath)&quot;" />
-  </Target>
-  
+    
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <Optimize>false</Optimize>
-    <DefineConstants>TRACE;DEBUG;CHECKMATH;PROFILE;NETSTANDARD2_0</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;CHECKMATH;PROFILE</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
     <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE;PROFILE;NETSTANDARD2_0</DefineConstants>
+    <DefineConstants>TRACE;RELEASE;PROFILE</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)'=='ReleaseStrip'">
+  <PropertyGroup Condition="'$(Configuration)'=='ReleaseNoProfiling'">
     <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE;PROFILE;NETSTANDARD2_0;RELEASESTRIP</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)'=='ReleaseStripNoProfiling'">
-    <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE;NETSTANDARD2_0;RELEASESTRIP</DefineConstants>
+    <DefineConstants>TRACE;RELEASE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

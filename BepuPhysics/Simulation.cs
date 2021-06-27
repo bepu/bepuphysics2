@@ -9,6 +9,10 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using BepuPhysics.Trees;
 
+#if !DEBUG
+[module: SkipLocalsInit]
+#endif
+
 namespace BepuPhysics
 {
     /// <summary>

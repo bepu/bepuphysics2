@@ -12,7 +12,7 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/bepu/bepuphysics2</RepositoryUrl>
     <PackageIcon>bepuphysicslogo256.png</PackageIcon>
-    <Configurations>Debug;Release;ReleaseStrip</Configurations>
+    <Configurations>Debug;Release</Configurations>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     
@@ -21,25 +21,16 @@
     <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Condition="'$(Configuration)'=='ReleaseStrip'" Command="dotnet &quot;$(ProjectDir)..\Dependencies\ilopt\ilopt.dll&quot; &quot;$(TargetPath)&quot;" />
-  </Target>
-
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <Optimize>false</Optimize>
-    <DefineConstants>TRACE;DEBUG;CHECKMATH;NETSTANDARD2_0</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;CHECKMATH</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE;NETSTANDARD2_0</DefineConstants>
+    <DefineConstants>TRACE;RELEASE</DefineConstants>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)'=='ReleaseStrip'">
-    <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE;NETSTANDARD2_0;RELEASESTRIP</DefineConstants>
   </PropertyGroup>
     
   <ItemGroup>
