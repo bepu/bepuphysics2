@@ -59,7 +59,7 @@ namespace BepuPhysics.Constraints
         {
         }
 
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -68,9 +68,9 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type TypeProcessorType => typeof(DistanceServoTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(DistanceServoTypeProcessor);
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(TargetDistance >= 0, "DistanceServo.TargetDistance must be nonnegative.");
             ConstraintChecker.AssertValid(ServoSettings, SpringSettings, nameof(DistanceServo));
@@ -83,7 +83,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out DistanceServo description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out DistanceServo description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<DistanceServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);

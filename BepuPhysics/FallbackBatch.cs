@@ -40,7 +40,7 @@ namespace BepuPhysics
         /// <summary>
         /// Gets the number of bodies in the fallback batch.
         /// </summary>
-        public int BodyCount { get { return bodyConstraintReferences.Count; } }
+        public readonly int BodyCount { get { return bodyConstraintReferences.Count; } }
 
         //Every body in the fallback batch must track what constraints are associated with it. These tables must be maintained as constraints are added and removed.
         //Note that this dictionary contains active set body *indices* while active, but body *handles* when associated with an inactive set.

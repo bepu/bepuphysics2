@@ -147,8 +147,8 @@ namespace BepuPhysics.Trees
 
         Buffer<int> fallbackStack;
 
-        public int RayCapacity { get { return rayCapacity; } }
-        public int RayCount { get { return batchRayCount; } }
+        public readonly int RayCapacity { get { return rayCapacity; } }
+        public readonly int RayCount { get { return batchRayCount; } }
 
         /// <summary>
         /// Constructs a ray batcher and initializes its backing resources.
@@ -474,25 +474,17 @@ namespace BepuPhysics.Trees
             }
             while (stackPointer > 0)
             {
-                --stackPointer;
-                ref var entry = ref stack[stackPointer];
-                ushort* rayStackStart;
                 //Move the ray stack pointer back to the start of the popped region. The test will read from the region and potentially push additional elements.
                 //The pushes are guaranteed to never go beyond the region that was popped- a node cannot be traversed by more rays than its parent.
                 //Further, the reads are guaranteed to complete before being overwritten. Each bundle is popped and processed before any dangerous pushes can occur.
-                switch (entry.RayStack)
+                --stackPointer;
+                ref var entry = ref stack[stackPointer];
+                var rayStackStart = entry.RayStack switch
                 {
-                    case 0:
-                        rayStackStart = rayIndicesA0.Memory + (stackPointerA0 -= entry.RayCount);
-                        break;
-                    case 1:
-                        rayStackStart = rayIndicesB.Memory + (stackPointerB -= entry.RayCount);
-                        break;
-                    default:
-                        rayStackStart = rayIndicesA1.Memory + (stackPointerA1 -= entry.RayCount);
-                        break;
-                }
-
+                    0 => rayIndicesA0.Memory + (stackPointerA0 -= entry.RayCount),
+                    1 => rayIndicesB.Memory + (stackPointerB -= entry.RayCount),
+                    _ => rayIndicesA1.Memory + (stackPointerA1 -= entry.RayCount),
+                };
                 if (entry.RayCount >= 3)
                 //if(true)
                 {

@@ -30,7 +30,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public MotorSettings Settings;
 
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -39,9 +39,9 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type TypeProcessorType => typeof(TwistMotorTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(TwistMotorTypeProcessor);
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             ConstraintChecker.AssertUnitLength(LocalAxisA, nameof(TwistMotor), nameof(LocalAxisA));
             ConstraintChecker.AssertUnitLength(LocalAxisB, nameof(TwistMotor), nameof(LocalAxisB));
@@ -54,7 +54,7 @@ namespace BepuPhysics.Constraints
             MotorSettingsWide.WriteFirst(Settings, ref target.Settings);
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistMotor description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistMotor description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<TwistMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);

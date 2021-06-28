@@ -132,7 +132,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AddBoxAVertices(in Vector3Wide faceCenterB, in Vector3Wide faceTangentBX, in Vector3Wide faceTangentBY, in Vector<float> halfSpanBX, in Vector<float> halfSpanBY,
+        private static void AddBoxAVertices(in Vector3Wide faceCenterB, in Vector3Wide faceTangentBX, in Vector3Wide faceTangentBY, in Vector<float> halfSpanBX, in Vector<float> halfSpanBY,
             in Vector3Wide faceNormalB, in Vector3Wide contactNormal,
             in Vector3Wide v00, in Vector3Wide v01, in Vector3Wide v10, in Vector3Wide v11,
             in Vector<int> f00, in Vector<int> f01, in Vector<int> f10, in Vector<int> f11,

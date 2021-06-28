@@ -36,7 +36,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public ServoSettings ServoSettings;
 
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -45,9 +45,9 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type TypeProcessorType => typeof(TwistServoTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(TwistServoTypeProcessor);
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             ConstraintChecker.AssertUnitLength(LocalBasisA, nameof(TwistServo), nameof(LocalBasisA));
             ConstraintChecker.AssertUnitLength(LocalBasisB, nameof(TwistServo), nameof(LocalBasisB));
@@ -61,7 +61,7 @@ namespace BepuPhysics.Constraints
             ServoSettingsWide.WriteFirst(ServoSettings, ref target.ServoSettings);
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistServo description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistServo description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<TwistServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);

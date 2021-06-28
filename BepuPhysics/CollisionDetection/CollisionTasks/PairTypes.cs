@@ -39,7 +39,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
-        public CollisionTaskPairType PairType => CollisionTaskPairType.StandardPair;
+        public readonly CollisionTaskPairType PairType => CollisionTaskPairType.StandardPair;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref PairContinuation GetContinuation(ref CollisionPair pair)
@@ -58,7 +58,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
-        public CollisionTaskPairType PairType => CollisionTaskPairType.FliplessPair;
+        public readonly CollisionTaskPairType PairType => CollisionTaskPairType.FliplessPair;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref PairContinuation GetContinuation(ref FliplessPair pair)
@@ -75,7 +75,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
-        public CollisionTaskPairType PairType => CollisionTaskPairType.SpherePair;
+        public readonly CollisionTaskPairType PairType => CollisionTaskPairType.SpherePair;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref PairContinuation GetContinuation(ref SpherePair pair)
@@ -97,7 +97,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
-        public CollisionTaskPairType PairType => CollisionTaskPairType.SphereIncludingPair;
+        public readonly CollisionTaskPairType PairType => CollisionTaskPairType.SphereIncludingPair;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref PairContinuation GetContinuation(ref SphereIncludingPair pair)
@@ -125,7 +125,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
-        public CollisionTaskPairType PairType => CollisionTaskPairType.BoundsTestedPair;
+        public readonly CollisionTaskPairType PairType => CollisionTaskPairType.BoundsTestedPair;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref PairContinuation GetContinuation(ref BoundsTestedPair pair)

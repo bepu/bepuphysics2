@@ -29,7 +29,7 @@ for (int i = 0; i < contactCount ; ++i)
             NonconvexConstraintHelpers.ApplyTwoBodyDescription<Contact<#= contactCount #>Nonconvex, Contact<#= contactCount #>NonconvexPrestepData>(ref this, ref batch, bundleIndex, innerIndex);
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact<#= contactCount #>Nonconvex description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact<#= contactCount #>Nonconvex description)
         {
             NonconvexConstraintHelpers.BuildTwoBodyDescription<Contact<#= contactCount #>Nonconvex, Contact<#= contactCount #>NonconvexPrestepData>(ref batch, bundleIndex, innerIndex, out description);
         }
@@ -55,15 +55,15 @@ for (int i = 0; i < contactCount ; ++i)
             return ref description.Contact0;
         }
 
-        public int ContactCount => <#= contactCount #>;
+        public readonly int ContactCount => <#= contactCount #>;
 
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact<#= contactCount #>NonconvexTypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact<#= contactCount #>NonconvexTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact<#= contactCount #>NonconvexTypeProcessor);
 
     }
 
@@ -96,8 +96,8 @@ for (int i = 0; i < contactCount; ++i)
             return ref Unsafe.Add(ref prestep.Contact0, index);
         }
         
-        public int ContactCount => <#= contactCount #>;
-        public int BodyCount => 2;
+        public readonly int ContactCount => <#= contactCount #>;
+        public readonly int BodyCount => 2;
     }
 
     public struct Contact<#= contactCount #>NonconvexAccumulatedImpulses : INonconvexContactAccumulatedImpulses<Contact<#= contactCount #>NonconvexAccumulatedImpulses>
@@ -107,7 +107,7 @@ for (int i = 0; i < contactCount ; ++i)
 {#>
         public NonconvexAccumulatedImpulses Contact<#=i#>;
 <#}#>
-        public int ContactCount => <#=contactCount#>;
+        public readonly int ContactCount => <#=contactCount#>;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref NonconvexAccumulatedImpulses GetImpulsesForContact(ref Contact<#= contactCount #>NonconvexAccumulatedImpulses impulses, int index)
@@ -137,7 +137,7 @@ for (int i = 0; i < contactCount ; ++i)
             return ref projection.Common;
         }
 
-        public int ContactCount => <#= contactCount #>;
+        public readonly int ContactCount => <#= contactCount #>;
     }
     
     /// <summary>
@@ -165,7 +165,7 @@ for (int i = 0; i < contactCount ; ++i)
             NonconvexConstraintHelpers.ApplyOneBodyDescription<Contact<#= contactCount #>NonconvexOneBody, Contact<#= contactCount #>NonconvexOneBodyPrestepData>(ref this, ref batch, bundleIndex, innerIndex);
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact<#= contactCount #>NonconvexOneBody description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact<#= contactCount #>NonconvexOneBody description)
         {
             NonconvexConstraintHelpers.BuildOneBodyDescription<Contact<#= contactCount #>NonconvexOneBody, Contact<#= contactCount #>NonconvexOneBodyPrestepData>(ref batch, bundleIndex, innerIndex, out description);
         }
@@ -190,15 +190,15 @@ for (int i = 0; i < contactCount ; ++i)
             return ref description.Contact0;
         }
 
-        public int ContactCount => <#= contactCount #>;
+        public readonly int ContactCount => <#= contactCount #>;
 
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact<#= contactCount #>NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact<#= contactCount #>NonconvexOneBodyTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact<#= contactCount #>NonconvexOneBodyTypeProcessor);
 
     }
 
@@ -224,8 +224,8 @@ for (int i = 0; i < contactCount ; ++i)
             return ref Unsafe.Add(ref prestep.Contact0, index);
         }
                 
-        public int ContactCount => <#= contactCount #>;
-        public int BodyCount => 1;
+        public readonly int ContactCount => <#= contactCount #>;
+        public readonly int BodyCount => 1;
     }
 
     public unsafe struct Contact<#= contactCount #>NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact<#= contactCount #>NonconvexOneBodyProjection>
@@ -249,7 +249,7 @@ for (int i = 0; i < contactCount ; ++i)
             return ref projection.Common;
         }
 
-        public int ContactCount => <#= contactCount #>;
+        public readonly int ContactCount => <#= contactCount #>;
     }
 
     /// <summary>

@@ -112,7 +112,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        bool PushBody<TTraversalPredicate>(int bodyIndex, ref IndexSet consideredBodies, ref QuickList<int> bodyIndices, ref QuickList<int> visitationStack,
+        static bool PushBody<TTraversalPredicate>(int bodyIndex, ref IndexSet consideredBodies, ref QuickList<int> bodyIndices, ref QuickList<int> visitationStack,
             BufferPool pool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
         {
             if (!consideredBodies.Contains(bodyIndex))

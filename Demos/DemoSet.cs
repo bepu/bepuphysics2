@@ -24,7 +24,7 @@ namespace Demos
             public Func<ContentArchive, Camera, RenderSurface, Demo> Builder;
         }
 
-        List<Option> options = new List<Option>();
+        List<Option> options = new();
         void AddOption<T>() where T : Demo, new()
         {
             options.Add(new Option

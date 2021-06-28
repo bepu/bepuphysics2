@@ -25,7 +25,7 @@ namespace Demos.Demos
     struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
     {
         //Type ids should be unique across all shape types in a simulation.
-        public int TypeId => 12;
+        public readonly int TypeId => 12;
 
         //Using an object space tree isn't necessarily ideal for a highly regular data like voxels.
         //We're using it here since it exists already and a voxel-specialized version doesn't.
@@ -46,7 +46,7 @@ namespace Demos.Demos
         /// </summary>
         public Vector3 VoxelSize;
 
-        public int ChildCount => VoxelIndices.Count;
+        public readonly int ChildCount => VoxelIndices.Count;
 
         public Voxels(QuickList<Vector3> voxelIndices, Vector3 voxelSize, BufferPool pool)
         {
@@ -69,7 +69,7 @@ namespace Demos.Demos
             pool.Return(ref bounds);
         }
 
-        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             //Shapes types are responsible for informing the shape system how to create a batch for them.
             //Convex shapes will return a ConvexShapeBatch<TShape>, compound shapes a CompoundShapeBatch<TShape>,
@@ -79,7 +79,7 @@ namespace Demos.Demos
             return new HomogeneousCompoundShapeBatch<Voxels, Box, BoxWide>(pool, initialCapacity);
         }
 
-        public void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var basis);
             min = new Vector3(float.MaxValue);
@@ -130,7 +130,7 @@ namespace Demos.Demos
         /// <param name="ray">Ray to test against the voxels.</param>
         /// <param name="maximumT">Maximum length of the ray in units of the ray direction length.</param>
         /// <param name="hitHandler">Callback to execute for every hit.</param>
-        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             HitLeafTester<TRayHitHandler> leafTester;
             leafTester.VoxelIndices = VoxelIndices;
@@ -155,7 +155,7 @@ namespace Demos.Demos
         /// <param name="pose">Pose of the voxels during the ray test.</param>
         /// <param name="rays">Set of rays to cast against the voxels.</param>
         /// <param name="hitHandler">Callbacks to execute.</param>
-        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             HitLeafTester<TRayHitHandler> leafTester;
             leafTester.VoxelIndices = VoxelIndices;
@@ -177,7 +177,7 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetLocalChild(int childIndex, out Box childShape)
+        public readonly void GetLocalChild(int childIndex, out Box childShape)
         {
             var halfSize = VoxelSize * 0.5f;
             childShape.HalfWidth = halfSize.X;
@@ -186,14 +186,14 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPosedLocalChild(int childIndex, out Box childShape, out RigidPose childPose)
+        public readonly void GetPosedLocalChild(int childIndex, out Box childShape, out RigidPose childPose)
         {
             GetLocalChild(childIndex, out childShape);
             childPose = new RigidPose((VoxelIndices[childIndex] + new Vector3(0.5f)) * VoxelSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetLocalChild(int childIndex, ref BoxWide shapeWide)
+        public readonly void GetLocalChild(int childIndex, ref BoxWide shapeWide)
         {
             //This function provides a reference to a lane in an AOSOA structure.
             //We are to fill in the first lane and ignore the others.
@@ -205,7 +205,7 @@ namespace Demos.Demos
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+        public readonly unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
              where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
              where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
         {
@@ -225,7 +225,7 @@ namespace Demos.Demos
             }
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps
+        public readonly unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             //Similar to the non-swept FindLocalOverlaps function above, this just adds the overlaps to the provided collection.
             //Some unfortunate loss of type information due to some language limitations around generic pointers- pretend the overlaps pointer has type TOverlaps*.

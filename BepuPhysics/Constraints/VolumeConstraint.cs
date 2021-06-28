@@ -38,7 +38,7 @@ namespace BepuPhysics.Constraints
             SpringSettings = springSettings;
         }
 
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -47,9 +47,9 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type TypeProcessorType => typeof(VolumeConstraintTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(VolumeConstraintTypeProcessor);
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             ConstraintChecker.AssertValid(SpringSettings, nameof(VolumeConstraint));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
@@ -58,7 +58,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out VolumeConstraint description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out VolumeConstraint description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<VolumeConstraintPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);

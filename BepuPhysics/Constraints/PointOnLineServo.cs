@@ -34,7 +34,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public SpringSettings SpringSettings;
 
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -43,9 +43,9 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type TypeProcessorType => typeof(PointOnLineServoTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(PointOnLineServoTypeProcessor);
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             ConstraintChecker.AssertUnitLength(LocalDirection, nameof(PointOnLineServo), nameof(LocalDirection));
             ConstraintChecker.AssertValid(ServoSettings, SpringSettings, nameof(PointOnLineServo));
@@ -58,7 +58,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out PointOnLineServo description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out PointOnLineServo description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<PointOnLineServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);

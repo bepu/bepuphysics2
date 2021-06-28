@@ -114,7 +114,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="mesh">Mesh to measure.</param>
         /// <returns>Number of bytes it would take to store the mesh.</returns>
-        public unsafe int GetSerializedByteCount()
+        public readonly unsafe int GetSerializedByteCount()
         {
             return 16 + Triangles.Length * sizeof(Triangle) + Tree.GetSerializedByteCount();
         }
@@ -124,7 +124,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="mesh">Mesh to write into the byte buffer.</param>
         /// <param name="data">Byte buffer to store the mesh in.</param>
-        public unsafe void Serialize(Span<byte> data)
+        public readonly unsafe void Serialize(Span<byte> data)
         {
             var requiredSizeInBytes = GetSerializedByteCount();
             if (data.Length < requiredSizeInBytes)
@@ -136,10 +136,10 @@ namespace BepuPhysics.Collidables
             Tree.Serialize(data.Slice(16 + triangleByteCount, data.Length - 16 - triangleByteCount));
         }
 
-        public int ChildCount => Triangles.Length;
+        public readonly int ChildCount => Triangles.Length;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetLocalChild(int triangleIndex, out Triangle target)
+        public readonly unsafe void GetLocalChild(int triangleIndex, out Triangle target)
         {
             ref var source = ref Triangles[triangleIndex];
             target.A = scale * source.A;
@@ -148,7 +148,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetPosedLocalChild(int triangleIndex, out Triangle target, out RigidPose childPose)
+        public readonly unsafe void GetPosedLocalChild(int triangleIndex, out Triangle target, out RigidPose childPose)
         {
             GetLocalChild(triangleIndex, out target);
             childPose = new RigidPose((target.A + target.B + target.C) * (1f / 3f));
@@ -158,7 +158,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetLocalChild(int triangleIndex, ref TriangleWide target)
+        public readonly unsafe void GetLocalChild(int triangleIndex, ref TriangleWide target)
         {
             //This inserts a triangle into the first slot of the given wide instance.
             ref var source = ref Triangles[triangleIndex];
@@ -167,7 +167,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.WriteFirst(source.C * scale, ref target.C);
         }
 
-        public void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var r);
             min = new Vector3(float.MaxValue);
@@ -192,7 +192,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new HomogeneousCompoundShapeBatch<Mesh, Triangle, TriangleWide>(pool, initialCapacity);
         }
@@ -227,7 +227,7 @@ namespace BepuPhysics.Collidables
         /// <param name="ray">Ray to test against the mesh.</param>
         /// <param name="maximumT">Maximum length of the ray in units of the ray direction length.</param>
         /// <param name="hitHandler">Callback to execute for every hit.</param>
-        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             HitLeafTester<TRayHitHandler> leafTester;
             leafTester.Triangles = Triangles.Memory;
@@ -251,7 +251,7 @@ namespace BepuPhysics.Collidables
         /// <param name="pose">Pose of the mesh during the ray test.</param>
         /// <param name="rays">Set of rays to cast against the mesh.</param>
         /// <param name="hitHandler">Callbacks to execute.</param>
-        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             HitLeafTester<TRayHitHandler> leafTester;
             leafTester.Triangles = Triangles.Memory;
@@ -273,7 +273,7 @@ namespace BepuPhysics.Collidables
             hitHandler = leafTester.HitHandler;
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+        public readonly unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
         {
@@ -294,7 +294,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+        public readonly unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             var scaledMin = min * inverseScale;
@@ -397,7 +397,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="volume">Volume of the closed mesh.</param>
         /// <param name="center">Center of mass of the closed mesh.</param>
-        public void ComputeClosedCenterOfMass(out float volume, out Vector3 center)
+        public readonly void ComputeClosedCenterOfMass(out float volume, out Vector3 center)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeClosedCenterOfMass(ref triangleSource, out volume, out center);
@@ -408,7 +408,7 @@ namespace BepuPhysics.Collidables
         /// Assumes the mesh is closed and should be treated as solid.
         /// </summary>
         /// <returns>Center of mass of the closed mesh.</returns>
-        public Vector3 ComputeClosedCenterOfMass()
+        public readonly Vector3 ComputeClosedCenterOfMass()
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeClosedCenterOfMass(ref triangleSource, out _, out var center);
@@ -439,7 +439,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
         /// <param name="inertia">Inertia of the open mesh.</param>
-        public void ComputeOpenInertia(float mass, out BodyInertia inertia)
+        public readonly void ComputeOpenInertia(float mass, out BodyInertia inertia)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeOpenInertia(ref triangleSource, mass, out var inertiaTensor);
@@ -452,7 +452,7 @@ namespace BepuPhysics.Collidables
         /// Assumes the mesh is open and should be treated as a triangle soup.
         /// </summary>
         /// <returns>Center of mass of the open mesh.</returns>
-        public Vector3 ComputeOpenCenterOfMass()
+        public readonly Vector3 ComputeOpenCenterOfMass()
         {
             var triangleSource = new MeshTriangleSource(this);
             return MeshInertiaHelper.ComputeOpenCenterOfMass(ref triangleSource);
@@ -473,7 +473,7 @@ namespace BepuPhysics.Collidables
         /// Type id of mesh shapes.
         /// </summary>
         public const int Id = 8;
-        public int TypeId => Id;
+        public readonly int TypeId => Id;
 
     }
 }

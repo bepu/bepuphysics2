@@ -39,7 +39,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        public readonly void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
         {
             maximumRadius = HalfLength + Radius;
             //The minimum radius is capsules.Radius, so the maximum offset is simply the half length.
@@ -47,7 +47,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             QuaternionEx.TransformUnitY(orientation, out var segmentOffset);
             max = Vector3.Abs(HalfLength * segmentOffset) + new Vector3(Radius);
@@ -55,7 +55,7 @@ namespace BepuPhysics.Collidables
         }
 
 
-        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
             //It's convenient to work in local space, so pull the ray into the capsule's local space.
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
@@ -154,7 +154,7 @@ namespace BepuPhysics.Collidables
 
         }
 
-        public void ComputeInertia(float mass, out BodyInertia inertia)
+        public readonly void ComputeInertia(float mass, out BodyInertia inertia)
         {
             inertia.InverseMass = 1f / mass;
             var r2 = Radius * Radius;
@@ -175,7 +175,7 @@ namespace BepuPhysics.Collidables
             inertia.InverseInertiaTensor.ZZ = inertia.InverseInertiaTensor.XX;
         }
 
-        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new ConvexShapeBatch<Capsule, CapsuleWide>(pool, initialCapacity);
         }
@@ -186,7 +186,7 @@ namespace BepuPhysics.Collidables
         /// Type id of capsule shapes.
         /// </summary>
         public const int Id = 1;
-        public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public readonly int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
     public struct CapsuleWide : IShapeWide<Capsule>

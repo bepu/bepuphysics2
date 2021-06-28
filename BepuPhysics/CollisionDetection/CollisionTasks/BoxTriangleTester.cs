@@ -253,7 +253,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AddBoxVertices(in Vector3Wide a, in Vector3Wide b, in Vector3Wide ab, in Vector3Wide bc, in Vector3Wide ca, in Vector3Wide triangleNormal, in Vector3Wide contactNormal,
+        private static void AddBoxVertices(in Vector3Wide a, in Vector3Wide b, in Vector3Wide ab, in Vector3Wide bc, in Vector3Wide ca, in Vector3Wide triangleNormal, in Vector3Wide contactNormal,
             in Vector3Wide v00, in Vector3Wide v01, in Vector3Wide v10, in Vector3Wide v11,
             in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY, in Vector<int> baseFeatureId, in Vector<int> featureIdX, in Vector<int> featureIdY,
             in Vector<int> allowContacts, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)

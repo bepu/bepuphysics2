@@ -155,7 +155,7 @@ namespace BepuUtilities.Memory
 
             }
 
-            public unsafe byte* GetStartPointerForSlot(int slot)
+            public unsafe readonly byte* GetStartPointerForSlot(int slot)
             {
                 var blockIndex = slot >> SuballocationsPerBlockShift;
                 var indexInBlock = slot & SuballocationsPerBlockMask;
@@ -224,7 +224,7 @@ namespace BepuUtilities.Memory
                     "The extent of the buffer should fit within the block.");
             }
 
-            public unsafe void Return(int slotIndex)
+            public readonly unsafe void Return(int slotIndex)
             {
 #if DEBUG 
                 Debug.Assert(outstandingIds.Remove(slotIndex),

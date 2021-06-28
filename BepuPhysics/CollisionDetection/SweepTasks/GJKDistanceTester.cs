@@ -20,7 +20,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         public float ContainmentEpsilon;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void SampleMinkowskiDifference(
+        static void SampleMinkowskiDifference(
             in TShapeWideA a, in Matrix3x3Wide rA, ref TSupportFinderA supportFinderA,
             in TShapeWideB b, in Matrix3x3Wide rB, ref TSupportFinderB supportFinderB, in Vector3Wide offsetB, in Vector3Wide direction,
             in Vector<int> terminatedLanes, out Vector3Wide supportA, out Vector3Wide support)
@@ -47,7 +47,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Append(ref Vector<int> mask, ref Simplex simplex, ref Vector3Wide vA, ref Vector3Wide v)
+        static void Append(ref Vector<int> mask, ref Simplex simplex, ref Vector3Wide vA, ref Vector3Wide v)
         {
             for (int i = 0; i < Vector<float>.Count; ++i)
             {
@@ -68,7 +68,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Select(ref Vector<int> mask,
+        static void Select(ref Vector<int> mask,
             ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId,
             in Vector<float> distanceSquaredCandidate, in Vector3Wide closestCandidate, in Vector3Wide closestACandidate, in Vector<int> featureIdCandidate)
         {
@@ -80,7 +80,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Edge(ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide aOnA, ref Vector3Wide bOnA, out Vector3Wide ab, out Vector<float> abab, out Vector<float> abA, in Vector<int> aFeatureId, in Vector<int> bFeatureId,
+        static void Edge(ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide aOnA, ref Vector3Wide bOnA, out Vector3Wide ab, out Vector<float> abab, out Vector<float> abA, in Vector<int> aFeatureId, in Vector<int> bFeatureId,
             ref Vector<int> mask, ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId)
         {
             Vector3Wide.Subtract(b, a, out ab);
@@ -107,7 +107,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void TryRemove(ref Simplex simplex, int index, in Vector<int> featureId, in Vector<int> activeMask)
+        private static void TryRemove(ref Simplex simplex, int index, in Vector<int> featureId, in Vector<int> activeMask)
         {
             var shouldRemove = Vector.BitwiseAnd(activeMask, Vector.Equals(Vector.BitwiseAnd(featureId, new Vector<int>(1 << index)), Vector<int>.Zero));
             var lastSlot = simplex.Count - Vector<int>.One;
@@ -141,7 +141,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Triangle(
+        static void Triangle(
             ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide c,
             ref Vector3Wide aOnA, ref Vector3Wide bOnA, ref Vector3Wide cOnA,
             ref Vector<float> abA, ref Vector<float> acA,
@@ -200,7 +200,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 distanceSquaredCandidate, closestCandidate, closestACandidate, featureIdCandidate);
         }
 
-        void FindClosestPoint(ref Vector<int> outerLoopTerminatedMask, ref Simplex simplex, out Vector<float> distanceSquared, out Vector3Wide closestA, out Vector3Wide closest)
+        static void FindClosestPoint(ref Vector<int> outerLoopTerminatedMask, ref Simplex simplex, out Vector<float> distanceSquared, out Vector3Wide closestA, out Vector3Wide closest)
         {
             //The outer loop mask considers 0 to be executing, -1 to be terminated.
             var activeMask = Vector.OnesComplement(outerLoopTerminatedMask);
@@ -218,7 +218,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //Note that simplex sizes are always at least 1.
             Vector3Wide.LengthSquared(simplex.A, out distanceSquared);
             //Contributing vertices are tracked using a bitfield. A:1, B:2, C:4, D:8.
-            Vector<int> featureId = new Vector<int>(1);
+            var featureId = new Vector<int>(1);
             //For simplicity, we'll compute the closestA at each point and cache it if it is optimal.
             closest = simplex.A;
             closestA = simplex.AOnA;
@@ -373,7 +373,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 containmentEpsilon = Vector.Max(containmentEpsilon, marginB);
             }
             var containmentEpsilonSquared = containmentEpsilon * containmentEpsilon;
-            Vector<float> distanceSquared = new Vector<float>(float.MaxValue);
+            var distanceSquared = new Vector<float>(float.MaxValue);
             while (true)
             {
                 ++iterationCount;

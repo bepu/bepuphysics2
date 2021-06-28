@@ -123,7 +123,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, hullLocalCylinderOrientation, out var localNormalInA);
             var inverseNormalDotAY = Vector<float>.One / localNormalInA.Y;
             var useCap = Vector.GreaterThan(Vector.Abs(localNormalInA.Y), new Vector<float>(0.70710678118f));
-            Vector3Wide capNormal;
             Unsafe.SkipInit(out Vector3Wide capCenter);
             Unsafe.SkipInit(out Vector2Wide interior0);
             Unsafe.SkipInit(out Vector2Wide interior1);
@@ -131,7 +130,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Unsafe.SkipInit(out Vector2Wide interior3);
             if (Vector.LessThanAny(Vector.AndNot(useCap, inactiveLanes), Vector<int>.Zero))
             {
-                Vector3Wide.ConditionallyNegate(Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), hullLocalCylinderOrientation.Y, out capNormal);
+                Vector3Wide.ConditionallyNegate(Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), hullLocalCylinderOrientation.Y, out Vector3Wide capNormal);
                 Vector3Wide.Scale(capNormal, a.HalfLength, out capCenter);
                 Vector3Wide.Add(capCenter, localOffsetA, out capCenter);
 

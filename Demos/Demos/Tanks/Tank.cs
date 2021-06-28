@@ -108,7 +108,7 @@ namespace Demos.Demos.Tanks
         /// <param name="simulation">Simulation containing the tank.</param>
         /// <param name="aimDirection">Direction to aim in.</param>
         /// <returns>Swivel and pitch angles to point in the given direction.</returns>
-        public (float targetSwivelAngle, float targetPitchAngle) ComputeTurretAngles(Simulation simulation, in Vector3 aimDirection)
+        public readonly (float targetSwivelAngle, float targetPitchAngle) ComputeTurretAngles(Simulation simulation, in Vector3 aimDirection)
         {
             //Decompose the aim direction into target angles for the turret and barrel servos.
             //First, we need to compute the frame of reference and transform the aim direction into the tank's local space.
@@ -148,7 +148,7 @@ namespace Demos.Demos.Tanks
         /// </summary>
         /// <param name="simulation">Simulation containing the tank.</param>
         /// <param name="barrelDirection">Direction in which the barrel points.</param>
-        public void ComputeBarrelDirection(Simulation simulation, out Vector3 barrelDirection)
+        public readonly void ComputeBarrelDirection(Simulation simulation, out Vector3 barrelDirection)
         {
             QuaternionEx.Transform(BarrelLocalDirection, simulation.Bodies.GetBodyReference(Barrel).Pose.Orientation, out barrelDirection);
         }
@@ -396,7 +396,7 @@ namespace Demos.Demos.Tanks
             return tank;
         }
 
-        void ClearBodyProperties(ref TankDemoBodyProperties properties)
+        static void ClearBodyProperties(ref TankDemoBodyProperties properties)
         {
             //After blowing up, all tank parts will collide with each other, and we should no longer flag the pieces as part of a living tank.
             properties.Filter = new SubgroupCollisionFilter(properties.Filter.GroupId);

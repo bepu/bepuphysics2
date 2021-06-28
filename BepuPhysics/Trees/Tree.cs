@@ -11,7 +11,7 @@ namespace BepuPhysics.Trees
         public Buffer<Node> Nodes;
         public Buffer<Metanode> Metanodes;
         int nodeCount;
-        public int NodeCount
+        public readonly int NodeCount
         {
             get
             {
@@ -21,7 +21,7 @@ namespace BepuPhysics.Trees
 
         public Buffer<Leaf> Leaves;
         int leafCount;
-        public int LeafCount
+        public readonly int LeafCount
         {
             get
             {
@@ -92,7 +92,7 @@ namespace BepuPhysics.Trees
         /// </summary>
         /// <param name="tree">Tree to measure.</param>
         /// <returns>Number of bytes required to store the tree.</returns>
-        public int GetSerializedByteCount()
+        public readonly int GetSerializedByteCount()
         {
             return 4 + sizeof(Leaf) * LeafCount + (sizeof(Node) + sizeof(Metanode)) * NodeCount;
         }
@@ -102,7 +102,7 @@ namespace BepuPhysics.Trees
         /// </summary>
         /// <param name="tree">Tree to write into the buffer.</param>
         /// <param name="bytes">Buffer to hold the tree's data.</param>
-        public void Serialize(Span<byte> bytes)
+        public readonly void Serialize(Span<byte> bytes)
         {
             var requiredSizeInBytes = GetSerializedByteCount();
             if (bytes.Length < requiredSizeInBytes)
