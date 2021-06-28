@@ -281,7 +281,7 @@ namespace BepuPhysics.CollisionDetection
         where TPrestepData : unmanaged, IConvexContactPrestep<TPrestepData>
         where TAccumulatedImpulses : unmanaged, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
     {
-        public unsafe override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
@@ -298,10 +298,9 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(typeof(TContactManifold) == typeof(NonconvexContactManifold));
                 ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
                 Debug.Assert(manifold.Count == 1, "Nonconvex manifolds should only result in convex constraints when the contact count is 1.");
-                TConstraintCache constraintCache;
-                TConstraintDescription description;
-                //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
-                CopyContactData(ref manifold, ref *&constraintCache, ref (*&description).GetFirstContact(ref description));
+                Unsafe.SkipInit(out TConstraintCache constraintCache);
+                Unsafe.SkipInit(out TConstraintDescription description);
+                CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
                 description.CopyManifoldWideProperties(ref manifold.Contact0.Normal, ref material);
                 UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
             }
@@ -341,7 +340,7 @@ namespace BepuPhysics.CollisionDetection
         where TPrestepData : unmanaged, ITwoBodyConvexContactPrestep<TPrestepData>
         where TAccumulatedImpulses : unmanaged, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
     {
-        public unsafe override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
@@ -358,10 +357,9 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(typeof(TContactManifold) == typeof(NonconvexContactManifold));
                 ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
                 Debug.Assert(manifold.Count == 1, "Nonconvex manifolds should only result in convex constraints when the contact count is 1.");
-                TConstraintCache constraintCache;
-                TConstraintDescription description;
-                //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
-                CopyContactData(ref manifold, ref *&constraintCache, ref (*&description).GetFirstContact(ref description));
+                Unsafe.SkipInit(out TConstraintCache constraintCache);
+                Unsafe.SkipInit(out TConstraintDescription description);
+                CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
                 description.CopyManifoldWideProperties(ref manifold.OffsetB, ref manifold.Contact0.Normal, ref material);
                 UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
             }
@@ -411,16 +409,15 @@ namespace BepuPhysics.CollisionDetection
         where TPrestepData : unmanaged, INonconvexContactPrestep<TPrestepData>
         where TAccumulatedImpulses : unmanaged, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
     {
-        public unsafe override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
             Debug.Assert(typeof(TCallBodyHandles) == typeof(int));
             ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
-            TConstraintCache constraintCache;
-            TConstraintDescription description;
-            //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
-            CopyContactData(ref manifold, ref *&constraintCache, ref (*&description).GetFirstContact(ref description));
+            Unsafe.SkipInit(out TConstraintCache constraintCache);
+            Unsafe.SkipInit(out TConstraintDescription description);
+            CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
             description.CopyManifoldWideProperties(ref material);
             UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
         }
@@ -459,16 +456,15 @@ namespace BepuPhysics.CollisionDetection
         where TPrestepData : unmanaged, ITwoBodyNonconvexContactPrestep<TPrestepData>
         where TAccumulatedImpulses : unmanaged, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
     {
-        public unsafe override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
             Debug.Assert(typeof(TCallBodyHandles) == typeof(TwoBodyHandles));
             ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
-            TConstraintCache constraintCache;
-            TConstraintDescription description;
-            //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
-            CopyContactData(ref manifold, ref *&constraintCache, ref (*&description).GetFirstContact(ref description));
+            Unsafe.SkipInit(out TConstraintCache constraintCache);
+            Unsafe.SkipInit(out TConstraintDescription description);
+            CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
             description.CopyManifoldWideProperties(ref manifold.OffsetB, ref material);
             UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
         }
