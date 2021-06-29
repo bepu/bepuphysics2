@@ -26,8 +26,8 @@ namespace BepuPhysics.Constraints
     /// <typeparam name="TProjection">Type of the projection to input.</typeparam>
     public interface IThreeBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
-        void Prestep(Bodies bodies, ref ThreeBodyReferences bodyReferences, int count, float dt, float inverseDt,
-            ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref BodyInertias inertiaC, ref TPrestepData prestepData, out TProjection projection);
+        void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertias inertiaC,
+            float dt, float inverseDt, ref TPrestepData prestepData, out TProjection projection);
         void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
         void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
     }
@@ -89,7 +89,7 @@ namespace BepuPhysics.Constraints
         {
             VerifySortRegion<ThreeBodySortKeyGenerator>(ref typeBatch, bundleStartIndex, constraintCount, ref sortedKeys, ref sortedSourceIndices);
         }
-               
+
         public unsafe override void Prestep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
@@ -102,8 +102,11 @@ namespace BepuPhysics.Constraints
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherInertia(ref references, count, out var inertiaA, out var inertiaB, out var inertiaC);
-                function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertiaA, ref inertiaB, ref inertiaC, ref prestep, out projection);
+                bodies.GatherState(ref references, count, 
+                    out var orientationA, out var wsvA, out var inertiaA, 
+                    out var ab, out var orientationB, out var wsvB, out var inertiaB, 
+                    out var ac, out var orientationC, out var wsvC, out var inertiaC);
+                function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, dt, inverseDt, ref prestep, out projection);
             }
         }
 
@@ -119,9 +122,12 @@ namespace BepuPhysics.Constraints
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
-                Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out var wsvA, out var wsvB, out var wsvC);
+                bodies.GatherState(ref bodyReferences, count,
+                    out var orientationA, out var wsvA, out var inertiaA,
+                    out var ab, out var orientationB, out var wsvB, out var inertiaB,
+                    out var ac, out var orientationC, out var wsvC, out var inertiaC);
                 function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
-                Bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref bodyVelocities, ref bodyReferences, count);
+                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref bodyReferences, count);
 
             }
         }
@@ -138,9 +144,12 @@ namespace BepuPhysics.Constraints
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
-                Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out var wsvA, out var wsvB, out var wsvC);
+                bodies.GatherState(ref bodyReferences, count,
+                    out var orientationA, out var wsvA, out var inertiaA,
+                    out var ab, out var orientationB, out var wsvB, out var inertiaB,
+                    out var ac, out var orientationC, out var wsvC, out var inertiaC);
                 function.Solve(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
-                Bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref bodyVelocities, ref bodyReferences, count);
+                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref bodyReferences, count);
             }
         }
 
@@ -156,7 +165,10 @@ namespace BepuPhysics.Constraints
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherInertia(ref references, count, out var inertiaA, out var inertiaB, out var inertiaC);
+                bodies.GatherState(ref references, count,
+                    out var orientationA, out var wsvA, out var inertiaA,
+                    out var ab, out var orientationB, out var wsvB, out var inertiaB,
+                    out var ac, out var orientationC, out var wsvC, out var inertiaC);
                 //Jacobi batches split affected bodies into multiple pieces to guarantee convergence.
                 jacobiBatch.GetJacobiScaleForBodies(ref references, count, out var jacobiScaleA, out var jacobiScaleB, out var jacobiScaleC);
                 Symmetric3x3Wide.Scale(inertiaA.InverseInertiaTensor, jacobiScaleA, out inertiaA.InverseInertiaTensor);
@@ -165,7 +177,7 @@ namespace BepuPhysics.Constraints
                 inertiaB.InverseMass *= jacobiScaleB;
                 Symmetric3x3Wide.Scale(inertiaC.InverseInertiaTensor, jacobiScaleC, out inertiaC.InverseInertiaTensor);
                 inertiaC.InverseMass *= jacobiScaleC;
-                function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertiaA, ref inertiaB, ref inertiaC, ref prestep, out projection);
+                function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, dt, inverseDt, ref prestep, out projection);
             }
         }
         public unsafe override void JacobiWarmStart(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
@@ -186,7 +198,10 @@ namespace BepuPhysics.Constraints
                 ref var wsvA = ref jacobiResultsBundlesA[i];
                 ref var wsvB = ref jacobiResultsBundlesB[i];
                 ref var wsvC = ref jacobiResultsBundlesC[i];
-                Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out wsvA, out wsvB, out wsvC);
+                bodies.GatherState(ref bodyReferences, count,
+                    out var orientationA, out wsvA, out var inertiaA,
+                    out var ab, out var orientationB, out wsvB, out var inertiaB,
+                    out var ac, out var orientationC, out wsvC, out var inertiaC);
                 function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
             }
         }
@@ -208,7 +223,10 @@ namespace BepuPhysics.Constraints
                 ref var wsvA = ref jacobiResultsBundlesA[i];
                 ref var wsvB = ref jacobiResultsBundlesB[i];
                 ref var wsvC = ref jacobiResultsBundlesC[i];
-                Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out wsvA, out wsvB, out wsvC);
+                bodies.GatherState(ref bodyReferences, count,
+                    out var orientationA, out wsvA, out var inertiaA,
+                    out var ab, out var orientationB, out wsvB, out var inertiaB,
+                    out var ac, out var orientationC, out wsvC, out var inertiaC);
                 function.Solve(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
             }
         }
@@ -220,7 +238,6 @@ namespace BepuPhysics.Constraints
             ref var bodyReferencesBase = ref Unsafe.AsRef<ThreeBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
             ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
-            ref var bodyVelocities = ref bodies.ActiveSet.Velocities;
             var function = default(TConstraintFunctions);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
@@ -229,12 +246,14 @@ namespace BepuPhysics.Constraints
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherInertia(ref references, count, out var inertiaA, out var inertiaB, out var inertiaC);
-                function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertiaA, ref inertiaB, ref inertiaC, ref prestep, out var projection);
-                Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out var wsvA, out var wsvB, out var wsvC);
+                bodies.GatherState(ref references, count,
+                    out var orientationA, out var wsvA, out var inertiaA,
+                    out var ab, out var orientationB, out var wsvB, out var inertiaB,
+                    out var ac, out var orientationC, out var wsvC, out var inertiaC);
+                function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, dt, inverseDt, ref prestep, out var projection);
                 function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
                 function.Solve(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
-                Bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref bodyVelocities, ref bodyReferences, count);
+                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref bodyReferences, count);
             }
         }
 
@@ -244,7 +263,6 @@ namespace BepuPhysics.Constraints
             ref var bodyReferencesBase = ref Unsafe.AsRef<ThreeBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
             ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
-            ref var bodyVelocities = ref bodies.ActiveSet.Velocities;
             var function = default(TConstraintFunctions);
             ref var jacobiResultsBundlesA = ref jacobiResults.GetVelocitiesForBody(0);
             ref var jacobiResultsBundlesB = ref jacobiResults.GetVelocitiesForBody(1);
@@ -256,7 +274,13 @@ namespace BepuPhysics.Constraints
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherInertia(ref references, count, out var inertiaA, out var inertiaB, out var inertiaC);
+                ref var wsvA = ref jacobiResultsBundlesA[i];
+                ref var wsvB = ref jacobiResultsBundlesB[i];
+                ref var wsvC = ref jacobiResultsBundlesC[i];
+                bodies.GatherState(ref references, count,
+                    out var orientationA, out wsvA, out var inertiaA,
+                    out var ab, out var orientationB, out wsvB, out var inertiaB,
+                    out var ac, out var orientationC, out wsvC, out var inertiaC);
                 //Jacobi batches split affected bodies into multiple pieces to guarantee convergence.
                 jacobiBatch.GetJacobiScaleForBodies(ref references, count, out var jacobiScaleA, out var jacobiScaleB, out var jacobiScaleC);
                 Symmetric3x3Wide.Scale(inertiaA.InverseInertiaTensor, jacobiScaleA, out inertiaA.InverseInertiaTensor);
@@ -265,11 +289,7 @@ namespace BepuPhysics.Constraints
                 inertiaB.InverseMass *= jacobiScaleB;
                 Symmetric3x3Wide.Scale(inertiaC.InverseInertiaTensor, jacobiScaleC, out inertiaC.InverseInertiaTensor);
                 inertiaC.InverseMass *= jacobiScaleC;
-                function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertiaA, ref inertiaB, ref inertiaC, ref prestep, out var projection);
-                ref var wsvA = ref jacobiResultsBundlesA[i];
-                ref var wsvB = ref jacobiResultsBundlesB[i];
-                ref var wsvC = ref jacobiResultsBundlesC[i];
-                Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out wsvA, out wsvB, out wsvC);
+                function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, dt, inverseDt, ref prestep, out var projection);
                 function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
                 function.Solve(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
             }
