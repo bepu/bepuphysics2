@@ -5,14 +5,25 @@ using BepuUtilities.Memory;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace BepuPhysics
 {
     /// <summary>
     /// Describes the pose and velocity of a body.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential, Size = 64)]
     public struct MotionState
     {
+        /// <summary>
+        /// Pose of the body.
+        /// </summary>
+        public RigidPose Pose;
+        /// <summary>
+        /// Linear and angular velocity of the body.
+        /// </summary>
+        public BodyVelocity Velocity;
+
         /// <summary>
         /// Gets a motion state with zero position, zero velocity, and identity orientation.
         /// </summary>
@@ -124,14 +135,6 @@ namespace BepuPhysics
             Velocity = velocity;
         }
 
-        /// <summary>
-        /// Pose of the body.
-        /// </summary>
-        public RigidPose Pose;
-        /// <summary>
-        /// Linear and angular velocity of the body.
-        /// </summary>
-        public BodyVelocity Velocity;
     }
 
     //TODO: It's a little odd that this exists alongside the BepuUtilities.RigidTransform. The original reasoning was that rigid poses may end up having a non-FP32 representation.
