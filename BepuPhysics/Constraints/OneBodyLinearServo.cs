@@ -103,19 +103,18 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertia, ref OneBodyLinearServoPrestepData prestep,
-            out OneBodyLinearServoProjection projection)
+        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA,
+            float dt, float inverseDt, ref OneBodyLinearServoPrestepData prestep, out OneBodyLinearServoProjection projection)
         {
             //TODO: Note that this grabs a world position. That poses a problem for different position representations.
-            bodies.GatherPose(ref bodyReferences, count, out var position, out var orientation);
-            projection.Inertia = inertia;
+            projection.Inertia = inertiaA;
 
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
 
-            ComputeTransforms(prestep.LocalOffset, orientation, effectiveMassCFMScale, inertia, out projection.Offset, out projection.EffectiveMass);
+            ComputeTransforms(prestep.LocalOffset, orientationA, effectiveMassCFMScale, inertiaA, out projection.Offset, out projection.EffectiveMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Vector3Wide.Add(projection.Offset, position, out var worldGrabPoint);
+            Vector3Wide.Add(projection.Offset, positionA, out var worldGrabPoint);
             Vector3Wide.Subtract(prestep.Target, worldGrabPoint, out var error);
             ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out projection.BiasVelocity, out projection.MaximumImpulse);
         }

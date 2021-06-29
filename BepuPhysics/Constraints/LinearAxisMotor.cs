@@ -82,12 +82,12 @@ namespace BepuPhysics.Constraints
     public struct LinearAxisMotorFunctions : IConstraintFunctions<LinearAxisMotorPrestepData, LinearAxisServoProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref LinearAxisMotorPrestepData prestep, out LinearAxisServoProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref LinearAxisMotorPrestepData prestep, out LinearAxisServoProjection projection)
         {
             MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
             var modifier = new LinearAxisServoFunctions.NoChangeModifier();
-            LinearAxisServoFunctions.ComputeTransforms(ref modifier, bodies, ref bodyReferences, count, prestep.LocalOffsetA, prestep.LocalOffsetB, prestep.LocalPlaneNormal, inertiaA, inertiaB, effectiveMassCFMScale,
+            LinearAxisServoFunctions.ComputeTransforms(ref modifier, prestep.LocalOffsetA, prestep.LocalOffsetB, prestep.LocalPlaneNormal, orientationA, inertiaA, ab, orientationB, inertiaB, effectiveMassCFMScale,
                 out _, out _, out _, out var effectiveMass,
                 out projection.LinearVelocityToImpulseA, out projection.AngularVelocityToImpulseA, out projection.AngularVelocityToImpulseB,
                 out projection.LinearImpulseToVelocityA, out projection.AngularImpulseToVelocityA, out projection.NegatedLinearImpulseToVelocityB, out projection.AngularImpulseToVelocityB);

@@ -238,8 +238,8 @@ for (int i = 0; i < contactCount; ++i)
     public struct Contact<#=contactCount#><#=suffix#>Functions : I<#=suffix#>ContactConstraintFunctions<Contact<#=contactCount#><#=suffix#>PrestepData, Contact<#=contactCount#><#=suffix#>Projection, Contact<#=contactCount#>AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref <#=bodyReferencesType#> bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertiaA, <#if(bodyCount == 2) {#>ref BodyInertias inertiaB,<#}#>ref Contact<#=contactCount#><#=suffix#>PrestepData prestep, out Contact<#=contactCount#><#=suffix#>Projection projection)
+        public void Prestep(
+            <#if(bodyCount == 1) {#>in Vector3Wide positionA,<#}#> in QuaternionWide orientationA, in BodyInertias inertiaA, <#if(bodyCount == 2) {#>in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, <#}#>float dt, float inverseDt, ref Contact<#=contactCount#><#=suffix#>PrestepData prestep, out Contact<#=contactCount#><#=suffix#>Projection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;

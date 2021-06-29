@@ -67,16 +67,15 @@ namespace BepuPhysics.Constraints
     public struct OneBodyLinearMotorFunctions : IOneBodyConstraintFunctions<OneBodyLinearMotorPrestepData, OneBodyLinearServoProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertia, ref OneBodyLinearMotorPrestepData prestep,
-            out OneBodyLinearServoProjection projection)
+        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA,
+            float dt, float inverseDt, ref OneBodyLinearMotorPrestepData prestep, out OneBodyLinearServoProjection projection)
         {
             //TODO: Note that this grabs a world position. That poses a problem for different position representations.
-            bodies.GatherPose(ref bodyReferences, count, out var position, out var orientation);
-            projection.Inertia = inertia;
+            projection.Inertia = inertiaA;
 
             MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
 
-            OneBodyLinearServoFunctions.ComputeTransforms(prestep.LocalOffset, orientation, effectiveMassCFMScale, inertia, out projection.Offset, out projection.EffectiveMass);
+            OneBodyLinearServoFunctions.ComputeTransforms(prestep.LocalOffset, orientationA, effectiveMassCFMScale, inertiaA, out projection.Offset, out projection.EffectiveMass);
             projection.BiasVelocity = prestep.TargetVelocity;
         }
 

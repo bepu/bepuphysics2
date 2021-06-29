@@ -81,13 +81,12 @@ namespace BepuPhysics.Constraints
     public struct AngularAxisGearMotorFunctions : IConstraintFunctions<AngularAxisGearMotorPrestepData, AngularAxisGearMotorProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref AngularAxisGearMotorPrestepData prestep, out AngularAxisGearMotorProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref AngularAxisGearMotorPrestepData prestep, out AngularAxisGearMotorProjection projection)
         {
             //Velocity level constraint that acts directly on the given axes. Jacobians just the axes, nothing complicated. 1DOF, so we do premultiplication.
             //This is mildly more complex than the AngularAxisMotor:
             //dot(wa, axis) - dot(wb, axis) * velocityScale = 0, so jacobianB is actually -axis * velocityScale, not just -axis.
-            bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axis);
             Vector3Wide.Scale(axis, prestep.VelocityScale, out var jA);
             Symmetric3x3Wide.TransformWithoutOverlap(jA, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);

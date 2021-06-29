@@ -90,12 +90,13 @@ namespace BepuPhysics.Constraints
     public struct VolumeConstraintFunctions : IFourBodyConstraintFunctions<VolumeConstraintPrestepData, VolumeConstraintProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref FourBodyReferences bodyReferences, int count, float dt, float inverseDt,
-            ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref BodyInertias inertiaC, ref BodyInertias inertiaD,
-            ref VolumeConstraintPrestepData prestep, out VolumeConstraintProjection projection)
+        public void Prestep(
+            in QuaternionWide orientationA, in BodyInertias inertiaA,
+            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertias inertiaC,
+            in Vector3Wide ad, in QuaternionWide orientationD, in BodyInertias inertiaD,
+            float dt, float inverseDt, ref VolumeConstraintPrestepData prestep, out VolumeConstraintProjection projection)
         {
-            bodies.GatherOffsets(ref bodyReferences, count, out var ab, out var ac, out var ad);
-
             //Volume of parallelepiped with vertices a, b, c, d is:
             //(ab x ac) * ad
             //A tetrahedron with the same edges will have one sixth of this volume. As a constant factor, it's not relevant. So the constraint is just:

@@ -116,9 +116,10 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeTransforms<TJacobianModifier>(ref TJacobianModifier jacobianModifier, Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
+        public static void ComputeTransforms<TJacobianModifier>(ref TJacobianModifier jacobianModifier, 
             in Vector3Wide localOffsetA, in Vector3Wide localOffsetB, in Vector3Wide localPlaneNormal,
-            in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector<float> effectiveMassCFMScale,
+            in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            in Vector<float> effectiveMassCFMScale,
             out Vector3Wide anchorA, out Vector3Wide anchorB, out Vector3Wide normal, out Vector<float> effectiveMass,
             out Vector3Wide linearVelocityToImpulseA, out Vector3Wide angularVelocityToImpulseA, out Vector3Wide angularVelocityToImpulseB,
             out Vector3Wide linearImpulseToVelocityA, out Vector3Wide angularImpulseToVelocityA, out Vector3Wide negatedLinearImpulseToVelocityB, out Vector3Wide angularImpulseToVelocityB)
@@ -132,7 +133,6 @@ namespace BepuPhysics.Constraints
             //dot(linearA + angularA x offsetA - linearB - angularB x offsetB), planeNormal) = 0
             //dot(linearA - linearB, planeNormal) + dot(angularA x offsetA, planeNormal) + dot(offsetB x angularB, planeNormal) = 0
             //dot(linearA - linearB, planeNormal) + dot(offsetA x planeNormal, angularA) + dot(planeNormal x offsetB, angularB) = 0
-            bodies.GatherPose(ref bodyReferences, count, out var ab, out var orientationA, out var orientationB);
             //We'll just use the offset from a to anchorB as the 'offsetA' above.
             //(Note that there's no mathy reason why TargetOffset exists over just the LocalOffsetA alone; it's a usability thing.)
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var orientationMatrixA);
@@ -161,12 +161,12 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref LinearAxisServoPrestepData prestep, out LinearAxisServoProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref LinearAxisServoPrestepData prestep, out LinearAxisServoProjection projection)
         {
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             var modifier = new NoChangeModifier();
-            ComputeTransforms(ref modifier, bodies, ref bodyReferences, count, prestep.LocalOffsetA, prestep.LocalOffsetB, prestep.LocalPlaneNormal, inertiaA, inertiaB, effectiveMassCFMScale,
+            ComputeTransforms(ref modifier, prestep.LocalOffsetA, prestep.LocalOffsetB, prestep.LocalPlaneNormal, orientationA, inertiaA, ab, orientationB, inertiaB, effectiveMassCFMScale,
                 out var anchorA, out var anchorB, out var normal, out var effectiveMass,
                 out projection.LinearVelocityToImpulseA, out projection.AngularVelocityToImpulseA, out projection.AngularVelocityToImpulseB,
                 out projection.LinearImpulseToVelocityA, out projection.AngularImpulseToVelocityA, out projection.NegatedLinearImpulseToVelocityB, out projection.AngularImpulseToVelocityB);

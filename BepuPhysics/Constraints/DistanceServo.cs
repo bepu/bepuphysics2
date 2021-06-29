@@ -120,14 +120,12 @@ namespace BepuPhysics.Constraints
 
     public struct DistanceServoFunctions : IConstraintFunctions<DistanceServoPrestepData, DistanceServoProjection, Vector<float>>
     {
-        public static void GetDistance(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, in Vector3Wide localOffsetA, in Vector3Wide localOffsetB,
+        public static void GetDistance(in QuaternionWide orientationA, in Vector3Wide ab, in QuaternionWide orientationB, in Vector3Wide localOffsetA, in Vector3Wide localOffsetB,
             out Vector3Wide anchorOffsetA, out Vector3Wide anchorOffsetB, out Vector3Wide anchorOffset, out Vector<float> distance)
         {
-            bodies.GatherPose(ref bodyReferences, count, out var offsetB, out var orientationA, out var orientationB);
-
             QuaternionWide.TransformWithoutOverlap(localOffsetA, orientationA, out anchorOffsetA);
             QuaternionWide.TransformWithoutOverlap(localOffsetB, orientationB, out anchorOffsetB);
-            Vector3Wide.Add(anchorOffsetB, offsetB, out var anchorB);
+            Vector3Wide.Add(anchorOffsetB, ab, out var anchorB);
             Vector3Wide.Subtract(anchorB, anchorOffsetA, out anchorOffset);
 
             Vector3Wide.Length(anchorOffset, out distance);
@@ -186,10 +184,10 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref DistanceServoPrestepData prestep, out DistanceServoProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref DistanceServoPrestepData prestep, out DistanceServoProjection projection)
         {
-            GetDistance(bodies, ref bodyReferences, count, prestep.LocalOffsetA, prestep.LocalOffsetB, out var anchorOffsetA, out var anchorOffsetB, out var anchorOffset, out var distance);
+            GetDistance(orientationA, ab, orientationB, prestep.LocalOffsetA, prestep.LocalOffsetB, out var anchorOffsetA, out var anchorOffsetB, out var anchorOffset, out var distance);
 
             Vector3Wide.Scale(anchorOffset, Vector<float>.One / distance, out var direction);
 

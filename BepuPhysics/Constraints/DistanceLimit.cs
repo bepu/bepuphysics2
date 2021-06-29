@@ -116,10 +116,10 @@ namespace BepuPhysics.Constraints
     public struct DistanceLimitFunctions : IConstraintFunctions<DistanceLimitPrestepData, DistanceLimitProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref DistanceLimitPrestepData prestep, out DistanceLimitProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref DistanceLimitPrestepData prestep, out DistanceLimitProjection projection)
         {
-            DistanceServoFunctions.GetDistance(bodies, ref bodyReferences, count, prestep.LocalOffsetA, prestep.LocalOffsetB,
+            DistanceServoFunctions.GetDistance(orientationA, ab, orientationB, prestep.LocalOffsetA, prestep.LocalOffsetB,
                 out var anchorOffsetA, out var anchorOffsetB, out var anchorOffset, out var distance);
             //If the current distance is closer to the minimum, calibrate for the minimum. Otherwise, calibrate for the maximum.
             var useMinimum = Vector.LessThan(Vector.Abs(distance - prestep.MinimumDistance), Vector.Abs(distance - prestep.MaximumDistance));

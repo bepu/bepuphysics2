@@ -303,8 +303,8 @@ namespace BepuPhysics.Constraints.Contact
     public struct Contact1OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertiaA, ref Contact1OneBodyPrestepData prestep, out Contact1OneBodyProjection projection)
+        public void Prestep(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA, float dt, float inverseDt, ref Contact1OneBodyPrestepData prestep, out Contact1OneBodyProjection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -478,8 +478,8 @@ namespace BepuPhysics.Constraints.Contact
     public struct Contact2OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertiaA, ref Contact2OneBodyPrestepData prestep, out Contact2OneBodyProjection projection)
+        public void Prestep(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA, float dt, float inverseDt, ref Contact2OneBodyPrestepData prestep, out Contact2OneBodyProjection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -666,8 +666,8 @@ namespace BepuPhysics.Constraints.Contact
     public struct Contact3OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertiaA, ref Contact3OneBodyPrestepData prestep, out Contact3OneBodyProjection projection)
+        public void Prestep(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA, float dt, float inverseDt, ref Contact3OneBodyPrestepData prestep, out Contact3OneBodyProjection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -868,8 +868,8 @@ namespace BepuPhysics.Constraints.Contact
     public struct Contact4OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact4OneBodyPrestepData, Contact4OneBodyProjection, Contact4AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertiaA, ref Contact4OneBodyPrestepData prestep, out Contact4OneBodyProjection projection)
+        public void Prestep(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA, float dt, float inverseDt, ref Contact4OneBodyPrestepData prestep, out Contact4OneBodyProjection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -1064,8 +1064,8 @@ namespace BepuPhysics.Constraints.Contact
     public struct Contact1Functions : IContactConstraintFunctions<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,ref Contact1PrestepData prestep, out Contact1Projection projection)
+        public void Prestep(
+             in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, ref Contact1PrestepData prestep, out Contact1Projection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -1255,8 +1255,8 @@ namespace BepuPhysics.Constraints.Contact
     public struct Contact2Functions : IContactConstraintFunctions<Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,ref Contact2PrestepData prestep, out Contact2Projection projection)
+        public void Prestep(
+             in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, ref Contact2PrestepData prestep, out Contact2Projection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -1460,8 +1460,8 @@ namespace BepuPhysics.Constraints.Contact
     public struct Contact3Functions : IContactConstraintFunctions<Contact3PrestepData, Contact3Projection, Contact3AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,ref Contact3PrestepData prestep, out Contact3Projection projection)
+        public void Prestep(
+             in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, ref Contact3PrestepData prestep, out Contact3Projection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -1680,8 +1680,8 @@ namespace BepuPhysics.Constraints.Contact
     public struct Contact4Functions : IContactConstraintFunctions<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,ref Contact4PrestepData prestep, out Contact4Projection projection)
+        public void Prestep(
+             in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, ref Contact4PrestepData prestep, out Contact4Projection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;

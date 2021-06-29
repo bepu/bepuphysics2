@@ -88,12 +88,12 @@ namespace BepuPhysics.Constraints
     public struct AreaConstraintFunctions : IThreeBodyConstraintFunctions<AreaConstraintPrestepData, AreaConstraintProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref ThreeBodyReferences bodyReferences, int count, float dt, float inverseDt,
-            ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref BodyInertias inertiaC,
-            ref AreaConstraintPrestepData prestep, out AreaConstraintProjection projection)
+        public void Prestep(
+            in QuaternionWide orientationA, in BodyInertias inertiaA, 
+            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, 
+            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertias inertiaC,
+            float dt, float inverseDt, ref AreaConstraintPrestepData prestep, out AreaConstraintProjection projection)
         {
-            bodies.GatherOffsets(ref bodyReferences, count, out var ab, out var ac);
-
             //Area of a triangle with vertices a, b, and c is:
             //||ab x ac|| * 0.5
             //So the constraint is:
@@ -162,7 +162,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Add(velocityB.Linear, velocityChangeB, out velocityB.Linear);
             Vector3Wide.Add(velocityC.Linear, velocityChangeC, out velocityC.Linear);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref AreaConstraintProjection projection, ref Vector<float> accumulatedImpulse)
         {

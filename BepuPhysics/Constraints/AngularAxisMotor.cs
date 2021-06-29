@@ -37,7 +37,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(AngularAxisMotorTypeProcessor);
-        
+
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             ConstraintChecker.AssertUnitLength(LocalAxisA, nameof(AngularAxisMotor), nameof(LocalAxisA));
@@ -80,11 +80,10 @@ namespace BepuPhysics.Constraints
     public struct AngularAxisMotorFunctions : IConstraintFunctions<AngularAxisMotorPrestepData, AngularAxisMotorProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref AngularAxisMotorPrestepData prestep, out AngularAxisMotorProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref AngularAxisMotorPrestepData prestep, out AngularAxisMotorProjection projection)
         {
             //Velocity level constraint that acts directly on the given axes. Jacobians just the axes, nothing complicated. 1DOF, so we do premultiplication.
-            bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axis);
             Symmetric3x3Wide.TransformWithoutOverlap(axis, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
             Vector3Wide.Dot(axis, projection.ImpulseToVelocityA, out var contributionA);
