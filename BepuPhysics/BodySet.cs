@@ -35,8 +35,7 @@ namespace BepuPhysics
         /// </summary>
         public Buffer<BodyHandle> IndexToHandle;
 
-        public Buffer<RigidPose> Poses;
-        public Buffer<BodyVelocity> Velocities;
+        public Buffer<MotionState> MotionStates;
         public Buffer<BodyInertia> LocalInertias;
 
         /// <summary>
@@ -89,8 +88,7 @@ namespace BepuPhysics
             {
                 movedBodyIndex = Count;
                 //Copy the memory state of the last element down.
-                Poses[bodyIndex] = Poses[movedBodyIndex];
-                Velocities[bodyIndex] = Velocities[movedBodyIndex];
+                MotionStates[bodyIndex] = MotionStates[movedBodyIndex];
                 LocalInertias[bodyIndex] = LocalInertias[movedBodyIndex];
                 Activity[bodyIndex] = Activity[movedBodyIndex];
                 Collidables[bodyIndex] = Collidables[movedBodyIndex];
@@ -113,10 +111,10 @@ namespace BepuPhysics
 
         internal void ApplyDescriptionByIndex(int index, in BodyDescription description)
         {
-            Debug.Assert(!MathChecker.IsInvalid(description.Pose.Position.LengthSquared()), $"Invalid body position: {description.Pose.Position}");
-            Debug.Assert(Math.Abs(1 - description.Pose.Orientation.LengthSquared()) < 1e-3f, $"Body orientation not unit length: {description.Pose.Orientation}");
-            Debug.Assert(!MathChecker.IsInvalid(description.Velocity.Linear.LengthSquared()), $"Invalid body linear velocity: {description.Velocity.Linear}");
-            Debug.Assert(!MathChecker.IsInvalid(description.Velocity.Angular.LengthSquared()), $"Invalid body angular velocity: {description.Velocity.Angular}");
+            Debug.Assert(!MathChecker.IsInvalid(description.MotionState.Pose.Position.LengthSquared()), $"Invalid body position: {description.MotionState.Pose.Position}");
+            Debug.Assert(Math.Abs(1 - description.MotionState.Pose.Orientation.LengthSquared()) < 1e-3f, $"Body orientation not unit length: {description.MotionState.Pose.Orientation}");
+            Debug.Assert(!MathChecker.IsInvalid(description.MotionState.Velocity.Linear.LengthSquared()), $"Invalid body linear velocity: {description.MotionState.Velocity.Linear}");
+            Debug.Assert(!MathChecker.IsInvalid(description.MotionState.Velocity.Angular.LengthSquared()), $"Invalid body angular velocity: {description.MotionState.Velocity.Angular}");
             Debug.Assert(!MathChecker.IsInvalid(
                 description.LocalInertia.InverseInertiaTensor.XX * description.LocalInertia.InverseInertiaTensor.XX +
                 description.LocalInertia.InverseInertiaTensor.YX * description.LocalInertia.InverseInertiaTensor.YX +
@@ -126,8 +124,7 @@ namespace BepuPhysics
                 description.LocalInertia.InverseInertiaTensor.ZZ * description.LocalInertia.InverseInertiaTensor.ZZ), $"Invalid body inverse inertia tensor: {description.LocalInertia.InverseInertiaTensor}");
             Debug.Assert(!MathChecker.IsInvalid(description.LocalInertia.InverseMass) && description.LocalInertia.InverseMass >= 0, $"Invalid body inverse mass: {description.LocalInertia.InverseMass}");
 
-            Poses[index] = description.Pose;
-            Velocities[index] = description.Velocity;
+            MotionStates[index] = description.MotionState;
             LocalInertias[index] = description.LocalInertia;
             ref var collidable = ref Collidables[index];
             collidable.Continuity = description.Collidable.Continuity;
@@ -144,8 +141,7 @@ namespace BepuPhysics
 
         public void GetDescription(int index, out BodyDescription description)
         {
-            description.Pose = Poses[index];
-            description.Velocity = Velocities[index];
+            description.MotionState = MotionStates[index];
             description.LocalInertia = LocalInertias[index];
             ref var collidable = ref Collidables[index];
             description.Collidable.Continuity = collidable.Continuity;
@@ -223,8 +219,7 @@ namespace BepuPhysics
             handleToIndex[IndexToHandle[slotB].Value].Index = slotA;
             Helpers.Swap(ref IndexToHandle[slotA], ref IndexToHandle[slotB]);
             Helpers.Swap(ref Collidables[slotA], ref Collidables[slotB]);
-            Helpers.Swap(ref Poses[slotA], ref Poses[slotB]);
-            Helpers.Swap(ref Velocities[slotA], ref Velocities[slotB]);
+            Helpers.Swap(ref MotionStates[slotA], ref MotionStates[slotB]);
             Helpers.Swap(ref LocalInertias[slotA], ref LocalInertias[slotB]);
             Helpers.Swap(ref Activity[slotA], ref Activity[slotB]);
             Helpers.Swap(ref Constraints[slotA], ref Constraints[slotB]);
@@ -236,9 +231,8 @@ namespace BepuPhysics
             //Note that we base the bundle capacities on post-resize capacity of the IndexToHandle array. This simplifies the conditions on allocation, but increases memory use.
             //You may want to change this in the future if memory use is concerning.
             targetBodyCapacity = BufferPool.GetCapacityForCount<int>(targetBodyCapacity);
-            Debug.Assert(Poses.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
-            pool.ResizeToAtLeast(ref Poses, targetBodyCapacity, Count);
-            pool.ResizeToAtLeast(ref Velocities, targetBodyCapacity, Count);
+            Debug.Assert(MotionStates.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
+            pool.ResizeToAtLeast(ref MotionStates, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref LocalInertias, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref IndexToHandle, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref Collidables, targetBodyCapacity, Count);
@@ -261,8 +255,7 @@ namespace BepuPhysics
         /// <param name="pool">Pool to return the set's top level buffers to.</param>
         public void DisposeBuffers(BufferPool pool)
         {
-            pool.Return(ref Poses);
-            pool.Return(ref Velocities);
+            pool.Return(ref MotionStates);
             pool.Return(ref LocalInertias);
             pool.Return(ref IndexToHandle);
             pool.Return(ref Collidables);

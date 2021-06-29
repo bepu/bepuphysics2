@@ -8,6 +8,78 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics
 {
+    /// <summary>
+    /// Describes the pose and velocity of a body.
+    /// </summary>
+    public struct MotionState
+    {
+        /// <summary>
+        /// Constructs a motion state for a body.
+        /// </summary>
+        /// <param name="pose">Pose of the body.</param>
+        /// <param name="velocity">Velocity of the body.</param>
+        public MotionState(in RigidPose pose, in BodyVelocity velocity)
+        {
+            Pose = pose;
+            Velocity = velocity;
+        }
+
+        /// <summary>
+        /// Constructs a motion state for a body with zero velocity.
+        /// </summary>
+        /// <param name="pose">Pose of the body.</param>
+        public MotionState(in RigidPose pose)
+        {
+            Pose = pose;
+            Velocity = default;
+        }
+
+        /// <summary>
+        /// Constructs a motion state for a body with zero velocity and identity orientation.
+        /// </summary>
+        /// <param name="position">Position of the body.</param>
+        public MotionState(in Vector3 position)
+        {
+            Pose.Position = position;
+            Pose.Orientation = Quaternion.Identity;
+            Velocity = default;
+        }
+
+        /// <summary>
+        /// Constructs a motion state for a body with zero angular velocity and identity orientation.
+        /// </summary>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="linearVelocity">Linear velocity of the body.</param>
+        public MotionState(in Vector3 position, in Vector3 linearVelocity)
+        {
+            Pose.Position = position;
+            Pose.Orientation = Quaternion.Identity;
+            Velocity.Linear = linearVelocity;
+            Velocity.Angular = default;
+        }
+
+        /// <summary>
+        /// Constructs a motion state for a body with identity orientation.
+        /// </summary>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="velocity">Velocity of the body.</param>
+        public MotionState(in Vector3 position, in BodyVelocity velocity)
+        {
+            Pose.Position = position;
+            Pose.Orientation = Quaternion.Identity;
+            Velocity = velocity;
+        }
+
+        /// <summary>
+        /// Pose of the body.
+        /// </summary>
+        public RigidPose Pose;
+        /// <summary>
+        /// Linear and angular velocity of the body.
+        /// </summary>
+        public BodyVelocity Velocity;
+    }
+
     //TODO: It's a little odd that this exists alongside the BepuUtilities.RigidTransform. The original reasoning was that rigid poses may end up having a non-FP32 representation.
     //We haven't taken advantage of that, so right now it's pretty much a pure duplicate.
     //When/if we take advantage of larger sizes, we'll have to closely analyze every use case of RigidPose to see if we need the higher precision or not.

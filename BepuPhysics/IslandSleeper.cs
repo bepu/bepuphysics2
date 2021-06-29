@@ -360,8 +360,7 @@ namespace BepuPhysics
                         //Keep this in mind when removing the object from the active set. We don't want to dispose the list since we're still using it.
                         targetSet.Constraints[targetIndex] = sourceSet.Constraints[sourceIndex];
                         targetSet.LocalInertias[targetIndex] = sourceSet.LocalInertias[sourceIndex];
-                        targetSet.Poses[targetIndex] = sourceSet.Poses[sourceIndex];
-                        targetSet.Velocities[targetIndex] = sourceSet.Velocities[sourceIndex];
+                        targetSet.MotionStates[targetIndex] = sourceSet.MotionStates[sourceIndex];
 
                         if (sourceCollidable.Shape.Exists)
                         {

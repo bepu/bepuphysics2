@@ -355,7 +355,7 @@ namespace BepuPhysics
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.WarmStart(ref typeBatch, ref solver.bodies.ActiveSet.Velocities, block.StartBundle, block.End);
+                typeProcessor.WarmStart(ref typeBatch, solver.bodies, block.StartBundle, block.End);
 
             }
         }
@@ -367,7 +367,7 @@ namespace BepuPhysics
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.SolveIteration(ref typeBatch, ref solver.bodies.ActiveSet.Velocities, block.StartBundle, block.End);
+                typeProcessor.SolveIteration(ref typeBatch, solver.bodies, block.StartBundle, block.End);
             }
         }
 
@@ -379,7 +379,7 @@ namespace BepuPhysics
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.JacobiWarmStart(ref typeBatch, ref solver.bodies.ActiveSet.Velocities, ref solver.context.FallbackResults[block.TypeBatchIndex], block.StartBundle, block.End);
+                typeProcessor.JacobiWarmStart(ref typeBatch, solver.bodies, ref solver.context.FallbackResults[block.TypeBatchIndex], block.StartBundle, block.End);
 
             }
         }
@@ -391,7 +391,7 @@ namespace BepuPhysics
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.JacobiSolveIteration(ref typeBatch, ref solver.bodies.ActiveSet.Velocities, ref solver.context.FallbackResults[block.TypeBatchIndex], block.StartBundle, block.End);
+                typeProcessor.JacobiSolveIteration(ref typeBatch, solver.bodies, ref solver.context.FallbackResults[block.TypeBatchIndex], block.StartBundle, block.End);
             }
         }
 
@@ -795,7 +795,7 @@ namespace BepuPhysics
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
+                        TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, bodies, 0, typeBatch.BundleCount);
                     }
                 }
                 Buffer<FallbackTypeBatchResults> fallbackResults = default;
@@ -806,7 +806,7 @@ namespace BepuPhysics
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].JacobiWarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
+                        TypeProcessors[typeBatch.TypeId].JacobiWarmStart(ref typeBatch, bodies, ref fallbackResults[j], 0, typeBatch.BundleCount);
                     }
                     activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
                 }
@@ -818,7 +818,7 @@ namespace BepuPhysics
                         for (int j = 0; j < batch.TypeBatches.Count; ++j)
                         {
                             ref var typeBatch = ref batch.TypeBatches[j];
-                            TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
+                            TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, bodies, 0, typeBatch.BundleCount);
                         }
                     }
                     if (fallbackExists)
@@ -827,7 +827,7 @@ namespace BepuPhysics
                         for (int j = 0; j < batch.TypeBatches.Count; ++j)
                         {
                             ref var typeBatch = ref batch.TypeBatches[j];
-                            TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
+                            TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, bodies, ref fallbackResults[j], 0, typeBatch.BundleCount);
                         }
                         activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
                     }

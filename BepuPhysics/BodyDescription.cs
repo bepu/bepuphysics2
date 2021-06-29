@@ -34,9 +34,8 @@ namespace BepuPhysics
 
     public struct BodyDescription
     {
-        public RigidPose Pose;
+        public MotionState MotionState;
         public BodyInertia LocalInertia;
-        public BodyVelocity Velocity;
         public CollidableDescription Collidable;
         public BodyActivityDescription Activity;
 
@@ -81,7 +80,7 @@ namespace BepuPhysics
         /// <returns>Constructed description for the body.</returns>
         public static BodyDescription CreateDynamic(in RigidPose pose, in BodyVelocity velocity, in BodyInertia inertia, in CollidableDescription collidable, in BodyActivityDescription activity)
         {
-            return new BodyDescription { Pose = pose, Velocity = velocity, LocalInertia = inertia, Activity = activity, Collidable = collidable };
+            return new BodyDescription { MotionState = new (pose, velocity), LocalInertia = inertia, Activity = activity, Collidable = collidable };
         }
 
         /// <summary>
@@ -94,7 +93,7 @@ namespace BepuPhysics
         /// <returns>Constructed description for the body.</returns>
         public static BodyDescription CreateDynamic(in RigidPose pose, in BodyInertia inertia, in CollidableDescription collidable, in BodyActivityDescription activity)
         {
-            return new BodyDescription { Pose = pose, LocalInertia = inertia, Activity = activity, Collidable = collidable };
+            return new BodyDescription { MotionState = new(pose), LocalInertia = inertia, Activity = activity, Collidable = collidable };
         }
 
         /// <summary>
@@ -108,7 +107,7 @@ namespace BepuPhysics
         /// <returns>Constructed description for the body.</returns>
         public static BodyDescription CreateDynamic(in Vector3 position, in BodyVelocity velocity, in BodyInertia inertia, in CollidableDescription collidable, in BodyActivityDescription activity)
         {
-            return new BodyDescription { Pose = new RigidPose(position), Velocity = velocity, LocalInertia = inertia, Activity = activity, Collidable = collidable };
+            return new BodyDescription { MotionState = new(position, velocity), LocalInertia = inertia, Activity = activity, Collidable = collidable };
         }
 
         /// <summary>
@@ -121,7 +120,7 @@ namespace BepuPhysics
         /// <returns>Constructed description for the body.</returns>
         public static BodyDescription CreateDynamic(in Vector3 position, in BodyInertia inertia, in CollidableDescription collidable, in BodyActivityDescription activity)
         {
-            return new BodyDescription { Pose = new RigidPose(position), LocalInertia = inertia, Activity = activity, Collidable = collidable };
+            return new BodyDescription { MotionState = new(position), LocalInertia = inertia, Activity = activity, Collidable = collidable };
         }
 
         /// <summary>
@@ -140,8 +139,7 @@ namespace BepuPhysics
         {
             var description = new BodyDescription
             {
-                Pose = pose,
-                Velocity = velocity,
+                MotionState = new(pose, velocity),
                 Activity = GetDefaultActivity(shape),
                 Collidable = new CollidableDescription(shapes.Add(shape), GetDefaultSpeculativeMargin(shape))
             };
@@ -208,7 +206,7 @@ namespace BepuPhysics
         /// <returns>Constructed description for the body.</returns>
         public static BodyDescription CreateKinematic(in RigidPose pose, in BodyVelocity velocity, in CollidableDescription collidable, in BodyActivityDescription activity)
         {
-            return new BodyDescription { Pose = pose, Velocity = velocity, Activity = activity, Collidable = collidable };
+            return new BodyDescription { MotionState = new(pose, velocity), Activity = activity, Collidable = collidable };
         }
 
         /// <summary>
@@ -220,7 +218,7 @@ namespace BepuPhysics
         /// <returns>Constructed description for the body.</returns>
         public static BodyDescription CreateKinematic(in RigidPose pose, in CollidableDescription collidable, in BodyActivityDescription activity)
         {
-            return new BodyDescription { Pose = pose, Activity = activity, Collidable = collidable };
+            return new BodyDescription { MotionState = new(pose), Activity = activity, Collidable = collidable };
         }
 
         /// <summary>
@@ -233,7 +231,7 @@ namespace BepuPhysics
         /// <returns>Constructed description for the body.</returns>
         public static BodyDescription CreateKinematic(in Vector3 position, in BodyVelocity velocity, in CollidableDescription collidable, in BodyActivityDescription activity)
         {
-            return new BodyDescription { Pose = new RigidPose(position), Velocity = velocity, Activity = activity, Collidable = collidable };
+            return new BodyDescription { MotionState = new(position, velocity), Activity = activity, Collidable = collidable };
         }
 
         /// <summary>
@@ -245,7 +243,7 @@ namespace BepuPhysics
         /// <returns>Constructed description for the body.</returns>
         public static BodyDescription CreateKinematic(in Vector3 position, in CollidableDescription collidable, in BodyActivityDescription activity)
         {
-            return new BodyDescription { Pose = new RigidPose(position), Activity = activity, Collidable = collidable };
+            return new BodyDescription { MotionState = new(position), Activity = activity, Collidable = collidable };
         }
 
         /// <summary>
@@ -263,8 +261,7 @@ namespace BepuPhysics
         {
             var description = new BodyDescription
             {
-                Pose = pose,
-                Velocity = velocity,
+                MotionState = new(pose, velocity),
                 Activity = GetDefaultActivity(shape),
                 Collidable = new CollidableDescription(shapes.Add(shape), GetDefaultSpeculativeMargin(shape))
             };
