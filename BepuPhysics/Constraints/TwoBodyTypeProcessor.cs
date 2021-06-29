@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics.X86;
 
 namespace BepuPhysics.Constraints
 {
@@ -175,7 +176,7 @@ namespace BepuPhysics.Constraints
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
                 bodies.GatherState(ref bodyReferences, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
-                function.Solve(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses); 
+                function.Solve(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
                 bodies.ScatterVelocities(ref wsvA, ref wsvB, ref bodyReferences, count);
             }
         }
@@ -281,7 +282,7 @@ namespace BepuPhysics.Constraints
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
-                var count = GetCountInBundle(ref typeBatch, i); 
+                var count = GetCountInBundle(ref typeBatch, i);
                 ref var wsvA = ref jacobiResultsBundlesA[i];
                 ref var wsvB = ref jacobiResultsBundlesB[i];
                 bodies.GatherState(ref references, count, out var orientationA, out wsvA, out var inertiaA, out var ab, out var orientationB, out wsvB, out var inertiaB);
@@ -297,42 +298,90 @@ namespace BepuPhysics.Constraints
             }
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static unsafe void Prefetch(void* address)
+        {
+            if (Sse.IsSupported)
+            {
+                Sse.Prefetch0(address);
+            }
+            //TODO: ARM?
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static unsafe void PrefetchBundle(MotionState* baseAddress, ref TwoBodyReferences references, int countInBundle)
+        {
+            for (int i = 0; i < countInBundle; ++i)
+            {
+                Prefetch(baseAddress + references.IndexA[i]);
+                Prefetch(baseAddress + references.IndexB[i]);
+            }
+        }
+
+        const int prefetchDistance = 8;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe static void EarlyPrefetch(ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, int startBundleIndex, int exclusiveEndBundleIndex)
+        {
+            exclusiveEndBundleIndex = Math.Min(exclusiveEndBundleIndex, startBundleIndex + prefetchDistance);
+            var lastBundleIndex = exclusiveEndBundleIndex - 1;
+            for (int i = startBundleIndex; i < lastBundleIndex; ++i)
+            {
+                PrefetchBundle(states.Memory, ref references[i], Vector<float>.Count);
+            }
+            var countInBundle = GetCountInBundle(ref typeBatch, lastBundleIndex);
+            PrefetchBundle(states.Memory, ref references[lastBundleIndex], countInBundle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe static void Prefetch(ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, int bundleIndex, int exclusiveEndBundleIndex)
+        {
+            var targetIndex = bundleIndex + prefetchDistance;
+            if (targetIndex < exclusiveEndBundleIndex)
+            {
+                PrefetchBundle(states.Memory, ref references[targetIndex], GetCountInBundle(ref typeBatch, targetIndex));
+            }
+        }
+
         public unsafe override void WarmStart2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
-            ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
-            ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
-            ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
+            var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
+            var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
+            ref var motionStates = ref bodies.ActiveSet.MotionStates;
+            EarlyPrefetch(ref typeBatch, ref bodyReferencesBundles, ref motionStates, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
-                ref var prestep = ref Unsafe.Add(ref prestepBase, i);
-                ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
-                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
+                ref var prestep = ref prestepBundles[i];
+                ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
+                ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
+                Prefetch(ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out var projection);
                 function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref bodyReferences, count);
+                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref references, count);
             }
         }
         public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
-            ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
-            ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
-            ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
+            var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
+            var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
+            ref var motionStates = ref bodies.ActiveSet.MotionStates;
+            EarlyPrefetch(ref typeBatch, ref bodyReferencesBundles, ref motionStates, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
-                ref var prestep = ref Unsafe.Add(ref prestepBase, i);
-                ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
-                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
+                ref var prestep = ref prestepBundles[i];
+                ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
+                ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
+                Prefetch(ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out var projection);
                 function.Solve(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref bodyReferences, count);
+                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref references, count);
             }
         }
 
