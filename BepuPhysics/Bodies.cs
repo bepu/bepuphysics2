@@ -652,7 +652,7 @@ namespace BepuPhysics
         public void GatherState(ref ThreeBodyReferences references, int count,
             out QuaternionWide orientationA, out BodyVelocities velocityA, out BodyInertias inertiaA,
             out Vector3Wide ab,
-            out QuaternionWide orientationB, out BodyVelocities velocityB, out BodyInertias inertiaB
+            out QuaternionWide orientationB, out BodyVelocities velocityB, out BodyInertias inertiaB,
             out Vector3Wide ac,
             out QuaternionWide orientationC, out BodyVelocities velocityC, out BodyInertias inertiaC)
         {

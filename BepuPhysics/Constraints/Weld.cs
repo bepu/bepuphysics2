@@ -88,10 +88,9 @@ namespace BepuPhysics.Constraints
     public struct WeldFunctions : IConstraintFunctions<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
             ref WeldPrestepData prestep, out WeldProjection projection)
         {
-            bodies.GatherPose(ref bodyReferences, count, out var localPositionB, out var orientationA, out var orientationB);
             projection.InertiaA = inertiaA;
             projection.InertiaB = inertiaB;
 
@@ -128,7 +127,7 @@ namespace BepuPhysics.Constraints
 
             //Compute the current constraint error for all 6 degrees of freedom.
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Vector3Wide.Subtract(localPositionB, projection.Offset, out var positionError);
+            Vector3Wide.Subtract(ab, projection.Offset, out var positionError);
             QuaternionWide.ConcatenateWithoutOverlap(prestep.LocalOrientation, orientationA, out var targetOrientationB);
             QuaternionWide.Conjugate(targetOrientationB, out var inverseTarget);
             QuaternionWide.ConcatenateWithoutOverlap(inverseTarget, orientationB, out var rotationError);
