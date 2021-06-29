@@ -23,18 +23,19 @@ namespace BepuUtilities.Memory
             public Block(int blockSize)
             {
                 //While the runtime does have some alignment guarantees, we hedge against the possibility that the runtime could change (or another runtime is in use),
-                //or that the runtime isn't aligning to a size sufficiently large for wide SIMD types. I suspect that the combination of the jit's tendency to use unaligned 
-                //instructions regardless and modern processors' performance on unaligned instructions will make this basically irrelevant, but it costs roughly nothing.
+                //or that the runtime isn't aligning to a size sufficiently large for wide SIMD types, or some type expects cache line size alignment.
+                //I suspect that the combination of the jit's tendency to use unaligned instructions regardless and modern processors' performance on unaligned instructions
+                //will make this *almost* irrelevant, but it costs roughly nothing.
                 //Suballocations from the block will always occur on pow2 boundaries, so the only way for a suballocation to violate this alignment is if an individual 
                 //suballocation is smaller than the alignment- in which case it doesn't require the alignment to be that wide. Also, since the alignment and 
                 //suballocations are both pow2 sized, they won't drift out of sync.
-                int alignment = Vector<float>.Count * sizeof(float);
-                Array = new byte[blockSize + alignment];
+                const int cacheLineSize = 64; //Making an assumption here! But it's a reasonably good one.
+                Array = new byte[blockSize + cacheLineSize];
                 Handle = GCHandle.Alloc(Array, GCHandleType.Pinned);
                 Pointer = (byte*)Handle.AddrOfPinnedObject();
-                var mask = alignment - 1;
+                var mask = cacheLineSize - 1;
                 var offset = (uint)Pointer & mask;
-                Pointer += alignment - offset;
+                Pointer += cacheLineSize - offset;
             }
 
 
