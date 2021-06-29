@@ -10,9 +10,64 @@ using System.Runtime.InteropServices;
 namespace BepuPhysics
 {
     /// <summary>
+    /// Stores the inertia of a body in half precision.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Size = 8, Pack = 1)]
+    public struct PackedInertia
+    {
+        //TODO: Temporarily ignoring off-diagonal inertia for testing. 
+        public Half InverseMass;
+        public Half InverseInertiaXX;
+        //public Half InverseInertiaYX;
+        public Half InverseInertiaYY;
+        //public Half InverseInertiaZX;
+        //public Half InverseInertiaZY;
+        public Half InverseInertiaZZ;
+
+        public PackedInertia(in BodyInertia inertia)
+        {
+            InverseMass = (Half)inertia.InverseMass;
+            InverseInertiaXX = (Half)inertia.InverseInertiaTensor.XX;
+            //InverseInertiaYX = (Half)inertia.InverseInertiaTensor.YX;
+            InverseInertiaYY = (Half)inertia.InverseInertiaTensor.YY;
+            //InverseInertiaZX = (Half)inertia.InverseInertiaTensor.ZX;
+            //InverseInertiaZY = (Half)inertia.InverseInertiaTensor.ZY;
+            InverseInertiaZZ = (Half)inertia.InverseInertiaTensor.ZZ;
+        }
+
+        public readonly void Unpack(out BodyInertia inertia)
+        {
+            //TODO: not necessary in complete implementation
+            inertia = default;
+            inertia.InverseMass = (float)InverseMass;
+            inertia.InverseInertiaTensor.XX = (float)InverseInertiaXX;
+            //inertia.InverseInertiaTensor.YX = (float)InverseInertiaYX;
+            inertia.InverseInertiaTensor.YY = (float)InverseInertiaYY;
+            //inertia.InverseInertiaTensor.ZX = (float)InverseInertiaZX;
+            //inertia.InverseInertiaTensor.ZY = (float)InverseInertiaZY;
+            inertia.InverseInertiaTensor.ZZ = (float)InverseInertiaZZ;
+        }
+        public readonly BodyInertia Unpack()
+        {
+            BodyInertia inertia;
+            //TODO: not necessary in complete implementation
+            inertia = default;
+            inertia.InverseMass = (float)InverseMass;
+            inertia.InverseInertiaTensor.XX = (float)InverseInertiaXX;
+            //inertia.InverseInertiaTensor.YX = (float)InverseInertiaYX;
+            inertia.InverseInertiaTensor.YY = (float)InverseInertiaYY;
+            //inertia.InverseInertiaTensor.ZX = (float)InverseInertiaZX;
+            //inertia.InverseInertiaTensor.ZY = (float)InverseInertiaZY;
+            inertia.InverseInertiaTensor.ZZ = (float)InverseInertiaZZ;
+            return inertia;
+        }
+
+    }
+
+    /// <summary>
     /// Describes the pose and velocity of a body.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, Size = 64)]
+    [StructLayout(LayoutKind.Sequential, Size = 64, Pack = 1)]
     public struct MotionState
     {
         /// <summary>
@@ -25,116 +80,9 @@ namespace BepuPhysics
         public BodyVelocity Velocity;
 
         /// <summary>
-        /// Gets a motion state with zero position, zero velocity, and identity orientation.
+        /// Packed inertia of the body.
         /// </summary>
-        public static MotionState Identity
-        {
-            get
-            {
-                MotionState m;
-                m.Velocity = default;
-                m.Pose.Position = default;
-                m.Pose.Orientation = Quaternion.Identity;
-                return m;
-            }
-        }
-
-        /// <summary>
-        /// Constructs a motion state for a body.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        public MotionState(in Vector3 position, in Quaternion orientation, in BodyVelocity velocity)
-        {
-            Pose.Position = position;
-            Pose.Orientation = orientation;
-            Velocity = velocity;
-        }
-
-        /// <summary>
-        /// Constructs a motion state for a body with zero velocity.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        public MotionState(in Vector3 position, in Quaternion orientation)
-        {
-            Pose.Position = position;
-            Pose.Orientation = orientation;
-            Velocity = default;
-        }
-
-        /// <summary>
-        /// Constructs a motion state for a body with zero angular velocity.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="linearVelocity">Linear velocity of the body.</param>
-        public MotionState(in Vector3 position, in Quaternion orientation, in Vector3 linearVelocity)
-        {
-            Pose.Position = position;
-            Pose.Orientation = orientation;
-            Velocity.Linear = linearVelocity;
-            Velocity.Angular = default;
-        }
-
-        /// <summary>
-        /// Constructs a motion state for a body.
-        /// </summary>
-        /// <param name="pose">Pose of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        public MotionState(in RigidPose pose, in BodyVelocity velocity)
-        {
-            Pose = pose;
-            Velocity = velocity;
-        }
-
-        /// <summary>
-        /// Constructs a motion state for a body with zero velocity.
-        /// </summary>
-        /// <param name="pose">Pose of the body.</param>
-        public MotionState(in RigidPose pose)
-        {
-            Pose = pose;
-            Velocity = default;
-        }
-
-        /// <summary>
-        /// Constructs a motion state for a body with zero velocity and identity orientation.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        public MotionState(in Vector3 position)
-        {
-            Pose.Position = position;
-            Pose.Orientation = Quaternion.Identity;
-            Velocity = default;
-        }
-
-        /// <summary>
-        /// Constructs a motion state for a body with zero angular velocity and identity orientation.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="linearVelocity">Linear velocity of the body.</param>
-        public MotionState(in Vector3 position, in Vector3 linearVelocity)
-        {
-            Pose.Position = position;
-            Pose.Orientation = Quaternion.Identity;
-            Velocity.Linear = linearVelocity;
-            Velocity.Angular = default;
-        }
-
-        /// <summary>
-        /// Constructs a motion state for a body with identity orientation.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        public MotionState(in Vector3 position, in BodyVelocity velocity)
-        {
-            Pose.Position = position;
-            Pose.Orientation = Quaternion.Identity;
-            Velocity = velocity;
-        }
-
+        public PackedInertia PackedInertia;
     }
 
     //TODO: It's a little odd that this exists alongside the BepuUtilities.RigidTransform. The original reasoning was that rigid poses may end up having a non-FP32 representation.
@@ -143,6 +91,7 @@ namespace BepuPhysics
     /// <summary>
     /// Represents a rigid transformation.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential, Size = 28, Pack = 1)]
     public struct RigidPose
     {
         public Vector3 Position;
@@ -218,6 +167,7 @@ namespace BepuPhysics
         }
     }
 
+    [StructLayout(LayoutKind.Sequential, Size = 24, Pack = 1)]
     public struct BodyVelocity
     {
         public Vector3 Linear;
