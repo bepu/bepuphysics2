@@ -220,16 +220,12 @@ namespace Demos.SpecializedTests
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        var location = new Vector3(5, 3,5) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 2.5f, -30 - length * 1.5f);
+                        var location = new Vector3(5, 3, 5) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 2.5f, -30 - length * 1.5f);
                         var bodyDescription = new BodyDescription
                         {
                             Activity = new BodyActivityDescription(-0.01f),
-                            Pose = new RigidPose
-                            {
-                                Orientation = Quaternion.Identity,// Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathF.PI * 0.79813f),
-                                Position = location
-                            },
-                            Collidable = new CollidableDescription
+                            Pose = new(location),
+                            Collidable =
                             {
                                 Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
                                 SpeculativeMargin = 0.1f

@@ -57,11 +57,7 @@ namespace Demos.SpecializedTests
             {
                 Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = -0.01f },
                 LocalInertia = boxLocalInertia,
-                Pose = new RigidPose
-                {
-                    Orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), 0),
-                    Position = new Vector3(1, -0.5f, 0)
-                },
+                Pose = new(new(1, -0.5f, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), 0)),
                 Collidable = new CollidableDescription { SpeculativeMargin = 50.1f, Shape = Simulation.Shapes.Add(boxShape) }
             };
             Simulation.Bodies.Add(boxDescription);

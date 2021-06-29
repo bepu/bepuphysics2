@@ -14,6 +14,60 @@ namespace BepuPhysics
     public struct MotionState
     {
         /// <summary>
+        /// Gets a motion state with zero position, zero velocity, and identity orientation.
+        /// </summary>
+        public static MotionState Identity
+        {
+            get
+            {
+                MotionState m;
+                m.Velocity = default;
+                m.Pose.Position = default;
+                m.Pose.Orientation = Quaternion.Identity;
+                return m;
+            }
+        }
+
+        /// <summary>
+        /// Constructs a motion state for a body.
+        /// </summary>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="orientation">Orientation of the body.</param>
+        /// <param name="velocity">Velocity of the body.</param>
+        public MotionState(in Vector3 position, in Quaternion orientation, in BodyVelocity velocity)
+        {
+            Pose.Position = position;
+            Pose.Orientation = orientation;
+            Velocity = velocity;
+        }
+
+        /// <summary>
+        /// Constructs a motion state for a body with zero velocity.
+        /// </summary>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="orientation">Orientation of the body.</param>
+        public MotionState(in Vector3 position, in Quaternion orientation)
+        {
+            Pose.Position = position;
+            Pose.Orientation = orientation;
+            Velocity = default;
+        }
+
+        /// <summary>
+        /// Constructs a motion state for a body with zero angular velocity.
+        /// </summary>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="orientation">Orientation of the body.</param>
+        /// <param name="linearVelocity">Linear velocity of the body.</param>
+        public MotionState(in Vector3 position, in Quaternion orientation, in Vector3 linearVelocity)
+        {
+            Pose.Position = position;
+            Pose.Orientation = orientation;
+            Velocity.Linear = linearVelocity;
+            Velocity.Angular = default;
+        }
+
+        /// <summary>
         /// Constructs a motion state for a body.
         /// </summary>
         /// <param name="pose">Pose of the body.</param>

@@ -87,9 +87,10 @@ namespace Demos.Demos
                     else
                         direction = new Vector3(0, 1, 0);
 
-                    coinDescription.Pose.Position = origin + direction * 10 * (float)random.NextDouble();
-                    coinDescription.Pose.Orientation = QuaternionEx.Normalize(new Quaternion(0.01f + (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()));
-                    coinDescription.Velocity.Linear = direction * (5 + 30 * (float)random.NextDouble());
+                    coinDescription.Pose = new(
+                        origin + direction * 10 * (float)random.NextDouble(),
+                        QuaternionEx.Normalize(new Quaternion(0.01f + (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble())));
+                    coinDescription.Velocity = new(direction * (5 + 30 * (float)random.NextDouble()));
                     Simulation.Bodies.Add(coinDescription);
                 }
             }

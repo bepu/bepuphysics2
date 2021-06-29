@@ -43,11 +43,7 @@ namespace Demos.SpecializedTests
                         var bodyDescription = new BodyDescription
                         {
                             Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.01f },
-                            Pose = new RigidPose
-                            {
-                                Orientation = Quaternion.Identity,
-                                Position = location
-                            },
+                            Pose = new(location),
                             Collidable = new CollidableDescription
                             {
                                 Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
