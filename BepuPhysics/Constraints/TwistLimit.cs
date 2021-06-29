@@ -95,11 +95,11 @@ namespace BepuPhysics.Constraints
     public struct TwistLimitFunctions : IConstraintFunctions<TwistLimitPrestepData, TwistLimitProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref TwistLimitPrestepData prestep, out TwistLimitProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref TwistLimitPrestepData prestep, out TwistLimitProjection projection)
         {
             Unsafe.SkipInit(out projection);
-            TwistServoFunctions.ComputeJacobian(bodies, bodyReferences, count, prestep.LocalBasisA, prestep.LocalBasisB,
+            TwistServoFunctions.ComputeJacobian(orientationA, orientationB, prestep.LocalBasisA, prestep.LocalBasisB,
                 out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
 
             TwistServoFunctions.ComputeCurrentAngle(basisBX, basisBZ, basisA, out var angle);

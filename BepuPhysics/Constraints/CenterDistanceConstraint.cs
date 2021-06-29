@@ -79,11 +79,9 @@ namespace BepuPhysics.Constraints
     public struct CenterDistanceConstraintFunctions : IConstraintFunctions<CenterDistancePrestepData, CenterDistanceProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref CenterDistancePrestepData prestep, out CenterDistanceProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref CenterDistancePrestepData prestep, out CenterDistanceProjection projection)
         {
-            bodies.GatherOffsets(ref bodyReferences, count, out var ab);
-
             Vector3Wide.Length(ab, out var distance);
             Vector3Wide.Scale(ab, Vector<float>.One / distance, out projection.JacobianA);
 

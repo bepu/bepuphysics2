@@ -217,8 +217,8 @@ namespace BepuPhysics.Constraints.Contact
         where TAccumulatedImpulses : struct
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertia, ref TPrestep prestep, out TProjection projection)
+        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertia,
+            float dt, float inverseDt, ref TPrestep prestep, out TProjection projection)
         {
             //TODO: This is another area where it's highly doubtful that the compiler will ever figure out that this initialization is unnecessary.
             //While we could jump through some nasty contortions now to resolve this, we'll instead opt for a little inefficient simplicity while waiting for generic pointer support
@@ -302,8 +302,8 @@ namespace BepuPhysics.Constraints.Contact
         where TAccumulatedImpulses : struct
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
-            float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref TPrestep prestep, out TProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref TPrestep prestep, out TProjection projection)
         {
             //TODO: This is another area where it's highly doubtful that the compiler will ever figure out that this initialization is unnecessary.
             //While we could jump through some nasty contortions now to resolve this, we'll instead opt for a little inefficient simplicity while waiting for generic pointer support

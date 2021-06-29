@@ -88,7 +88,7 @@ namespace BepuPhysics.Constraints
     public struct WeldFunctions : IConstraintFunctions<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
             ref WeldPrestepData prestep, out WeldProjection projection)
         {
             projection.InertiaA = inertiaA;

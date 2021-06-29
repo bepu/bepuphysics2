@@ -103,8 +103,8 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref PointOnLineServoPrestepData prestep, out PointOnLineServoProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref PointOnLineServoPrestepData prestep, out PointOnLineServoProjection projection)
         {
             //This constrains a point on B to a line attached to A. It works on two degrees of freedom at the same time; those are the tangent axes to the line direction.
             //The error is measured as closest offset from the line. In other words:
@@ -138,7 +138,6 @@ namespace BepuPhysics.Constraints
             //Instead, we'll go with #2.
             //#3 would be the fastest on a single core by virtue of requiring significantly less ALU work, but it requires more memory bandwidth.
 
-            bodies.GatherPose(ref bodyReferences, count, out var ab, out var orientationA, out var orientationB);
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var orientationMatrixA);
             Matrix3x3Wide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationMatrixA, out var anchorA);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out projection.OffsetB);
@@ -178,7 +177,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, 
+        public static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
             in Matrix2x3Wide linearJacobian, in Matrix2x3Wide angularJacobianA, in Matrix2x3Wide angularJacobianB, in BodyInertias inertiaA, in BodyInertias inertiaB, ref Vector2Wide csi)
         {
             Matrix2x3Wide.Transform(csi, linearJacobian, out var linearImpulseA);

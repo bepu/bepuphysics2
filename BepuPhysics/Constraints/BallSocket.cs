@@ -78,10 +78,9 @@ namespace BepuPhysics.Constraints
     public struct BallSocketFunctions : IConstraintFunctions<BallSocketPrestepData, BallSocketProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref BallSocketPrestepData prestep, out BallSocketProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref BallSocketPrestepData prestep, out BallSocketProjection projection)
         {
-            bodies.GatherPose(ref bodyReferences, count, out var offsetB, out var orientationA, out var orientationB);
             projection.InertiaA = inertiaA;
             projection.InertiaB = inertiaB;
 
@@ -89,10 +88,10 @@ namespace BepuPhysics.Constraints
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out projection.OffsetA);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out projection.OffsetB);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            BallSocketShared.ComputeEffectiveMass(ref inertiaA, ref inertiaB, ref projection.OffsetA, ref projection.OffsetB, ref effectiveMassCFMScale, out projection.EffectiveMass);
+            BallSocketShared.ComputeEffectiveMass(inertiaA, inertiaB, ref projection.OffsetA, ref projection.OffsetB, ref effectiveMassCFMScale, out projection.EffectiveMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Vector3Wide.Add(offsetB, projection.OffsetB, out var anchorB);
+            Vector3Wide.Add(ab, projection.OffsetB, out var anchorB);
             Vector3Wide.Subtract(anchorB, projection.OffsetA, out var error);
             Vector3Wide.Scale(error, positionErrorToVelocity, out projection.BiasVelocity);
         }

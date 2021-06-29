@@ -95,10 +95,9 @@ namespace BepuPhysics.Constraints
     public struct SwivelHingeFunctions : IConstraintFunctions<SwivelHingePrestepData, SwivelHingeProjection, Vector4Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref SwivelHingePrestepData prestep, out SwivelHingeProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref SwivelHingePrestepData prestep, out SwivelHingeProjection projection)
         {
-            bodies.GatherPose(ref bodyReferences, count, out var ab, out var orientationA, out var orientationB);
             projection.InertiaA = inertiaA;
             projection.InertiaB = inertiaB;
 

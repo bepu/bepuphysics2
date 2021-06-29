@@ -83,18 +83,17 @@ namespace BepuPhysics.Constraints
     public struct BallSocketMotorFunctions : IConstraintFunctions<BallSocketMotorPrestepData, BallSocketMotorProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref BallSocketMotorPrestepData prestep, out BallSocketMotorProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref BallSocketMotorPrestepData prestep, out BallSocketMotorProjection projection)
         {
-            bodies.GatherPose(ref bodyReferences, count, out var offsetFromACenterToBCenter, out var orientationA, out var orientationB);
             projection.InertiaA = inertiaA;
             projection.InertiaB = inertiaB;
 
             //The offset for A just goes directly to B's anchor.
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out projection.OffsetB);
-            Vector3Wide.Add(offsetFromACenterToBCenter, projection.OffsetB, out projection.OffsetA);
+            Vector3Wide.Add(ab, projection.OffsetB, out projection.OffsetA);
             MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
-            BallSocketShared.ComputeEffectiveMass(ref inertiaA, ref inertiaB, ref projection.OffsetA, ref projection.OffsetB, ref effectiveMassCFMScale, out projection.EffectiveMass);
+            BallSocketShared.ComputeEffectiveMass(inertiaA, inertiaB, ref projection.OffsetA, ref projection.OffsetB, ref effectiveMassCFMScale, out projection.EffectiveMass);
 
             QuaternionWide.Transform(prestep.TargetVelocityLocalA, orientationA, out projection.BiasVelocity);
             Vector3Wide.Negate(projection.BiasVelocity, out projection.BiasVelocity);

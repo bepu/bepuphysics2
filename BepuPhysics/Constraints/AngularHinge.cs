@@ -123,11 +123,9 @@ namespace BepuPhysics.Constraints
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref AngularHingePrestepData prestep, out AngularHingeProjection projection)
+        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            float dt, float inverseDt, ref AngularHingePrestepData prestep, out AngularHingeProjection projection)
         {
-            bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
-
             //Note that we build the tangents in local space first to avoid inconsistencies.
             Helpers.BuildOrthonormalBasis(prestep.LocalHingeAxisA, out var localAX, out var localAY);
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var orientationMatrixA);

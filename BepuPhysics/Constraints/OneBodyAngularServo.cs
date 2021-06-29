@@ -77,10 +77,9 @@ namespace BepuPhysics.Constraints
     public struct OneBodyAngularServoFunctions : IOneBodyConstraintFunctions<OneBodyAngularServoPrestepData, OneBodyAngularServoProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA,
-            ref OneBodyAngularServoPrestepData prestep, out OneBodyAngularServoProjection projection)
+        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA,
+            float dt, float inverseDt, ref OneBodyAngularServoPrestepData prestep, out OneBodyAngularServoProjection projection)
         {
-            bodies.GatherOrientation(ref bodyReferences, count, out var orientationA);
             projection.ImpulseToVelocity = inertiaA.InverseInertiaTensor;
 
             //Jacobians are just the identity matrix.
