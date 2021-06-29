@@ -143,7 +143,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe override void WarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle)
+        public unsafe override void WarmStart(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -162,7 +162,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe override void SolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle)
+        public unsafe override void SolveIteration(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -202,7 +202,7 @@ namespace BepuPhysics.Constraints
                 function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertiaA, ref inertiaB, ref prestep, out projection);
             }
         }
-        public unsafe override void JacobiWarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
+        public unsafe override void JacobiWarmStart(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -222,7 +222,7 @@ namespace BepuPhysics.Constraints
                 function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
             }
         }
-        public unsafe override void JacobiSolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
+        public unsafe override void JacobiSolveIteration(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -273,7 +273,7 @@ namespace BepuPhysics.Constraints
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
             ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
-            ref var bodyVelocities = ref bodies.ActiveSet.Velocities;
+            ref var motionStates = ref bodies.ActiveSet.MotionStates;
             var function = default(TConstraintFunctions);
             ref var jacobiResultsBundlesA = ref jacobiResults.GetVelocitiesForBody(0);
             ref var jacobiResultsBundlesB = ref jacobiResults.GetVelocitiesForBody(1);
@@ -294,7 +294,7 @@ namespace BepuPhysics.Constraints
                 function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertiaA, ref inertiaB, ref prestep, out var projection);
                 ref var wsvA = ref jacobiResultsBundlesA[i];
                 ref var wsvB = ref jacobiResultsBundlesB[i];
-                Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out wsvA, out wsvB);
+                Bodies.GatherVelocities(ref motionStates, ref bodyReferences, count, out wsvA, out wsvB);
                 function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
                 function.Solve(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
             }
@@ -305,7 +305,7 @@ namespace BepuPhysics.Constraints
             ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
-            ref var bodyVelocities = ref bodies.ActiveSet.Velocities;
+            ref var states = ref bodies.ActiveSet.MotionStates;
             var function = default(TConstraintFunctions);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
@@ -315,10 +315,10 @@ namespace BepuPhysics.Constraints
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
                 bodies.GatherInertia(ref references, count, out var inertiaA, out var inertiaB);
-                Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out var wsvA, out var wsvB);
+                Bodies.GatherVelocities(ref states, ref bodyReferences, count, out var wsvA, out var wsvB);
                 function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertiaA, ref inertiaB, ref prestep, out var projection);
                 function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                Bodies.ScatterVelocities(ref wsvA, ref wsvB, ref bodyVelocities, ref bodyReferences, count);
+                Bodies.ScatterVelocities(ref wsvA, ref wsvB, ref states, ref bodyReferences, count);
             }
         }
         public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)

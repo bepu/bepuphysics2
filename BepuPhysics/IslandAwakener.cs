@@ -274,7 +274,7 @@ namespace BepuPhysics
                         sourceSet.Collidables.CopyTo(job.SourceStart, targetSet.Collidables, job.TargetStart, job.Count);
                         sourceSet.Constraints.CopyTo(job.SourceStart, targetSet.Constraints, job.TargetStart, job.Count);
                         //The world inertias must be updated as well. They are stored outside the sets.
-                        //Note that we use a manual loop copy for the local inertias and poses since we're accessing them during the world inertia calculation anyway.
+                        //Note that we use a manual loop copy for the local inertias and motion state since we're accessing them during the world inertia calculation anyway.
                         //This can worsen the copy codegen a little, but it means we only have to scan the memory once.
                         //(Realistically, either option is fast- these regions won't tend to fill L1.) 
                         for (int i = 0; i < job.Count; ++i)
@@ -284,14 +284,13 @@ namespace BepuPhysics
                             ref var targetWorldInertia = ref bodies.Inertias[targetIndex];
                             ref var sourceLocalInertia = ref sourceSet.LocalInertias[sourceIndex];
                             ref var targetLocalInertia = ref targetSet.LocalInertias[targetIndex];
-                            ref var sourcePose = ref sourceSet.Poses[sourceIndex];
-                            ref var targetPose = ref targetSet.Poses[targetIndex];
-                            targetPose = sourcePose;
+                            ref var sourceState = ref sourceSet.MotionStates[sourceIndex];
+                            ref var targetState = ref targetSet.MotionStates[targetIndex];
+                            targetState = sourceState;
                             targetLocalInertia = sourceLocalInertia;
-                            PoseIntegration.RotateInverseInertia(sourceLocalInertia.InverseInertiaTensor, sourcePose.Orientation, out targetWorldInertia.InverseInertiaTensor);
+                            PoseIntegration.RotateInverseInertia(sourceLocalInertia.InverseInertiaTensor, sourceState.Pose.Orientation, out targetWorldInertia.InverseInertiaTensor);
                             targetWorldInertia.InverseMass = sourceLocalInertia.InverseMass;
                         }
-                        sourceSet.Velocities.CopyTo(job.SourceStart, targetSet.Velocities, job.TargetStart, job.Count);
                         sourceSet.Activity.CopyTo(job.SourceStart, targetSet.Activity, job.TargetStart, job.Count);
                         if (resetActivityStates)
                         {

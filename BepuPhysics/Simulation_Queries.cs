@@ -128,7 +128,7 @@ namespace BepuPhysics
             {
                 ref var location = ref Bodies.HandleToLocation[reference.BodyHandle.Value];
                 ref var set = ref Bodies.Sets[location.SetIndex];
-                pose = set.Poses.Memory + location.Index;
+                pose = &(set.MotionStates.Memory + location.Index)->Pose;
                 shape = set.Collidables[location.Index].Shape;
             }
         }

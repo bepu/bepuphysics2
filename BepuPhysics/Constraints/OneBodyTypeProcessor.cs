@@ -101,12 +101,12 @@ namespace BepuPhysics.Constraints
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherInertia(ref references, count, out var inertiaA);
-                function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertiaA, ref prestep, out projection);
+                bodies.GatherState(ref references, count, out var position, out var orientation, out _, out var inertia);
+                function.Prestep(position, orientation, ref references, count, dt, inverseDt, ref inertia, ref prestep, out projection);
             }
         }
 
-        public unsafe override void WarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle)
+        public unsafe override void WarmStart(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -118,13 +118,13 @@ namespace BepuPhysics.Constraints
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
-                Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out var wsvA);
+                bodies.GatherState(ref bodyReferences, count, out _, out _, out var wsvA, out _);
                 function.WarmStart(ref wsvA, ref projection, ref accumulatedImpulses);
-                Bodies.ScatterVelocities(ref wsvA, ref bodyVelocities, ref bodyReferences, count);
+                bodies.ScatterVelocities(ref wsvA, ref bodyReferences, count);
             }
         }
 
-        public unsafe override void SolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle)
+        public unsafe override void SolveIteration(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -136,9 +136,9 @@ namespace BepuPhysics.Constraints
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
-                Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out var wsvA);
+                bodies.GatherState(ref bodyReferences, count, out _, out _, out var wsvA, out _);
                 function.Solve(ref wsvA, ref projection, ref accumulatedImpulses);
-                Bodies.ScatterVelocities(ref wsvA, ref bodyVelocities, ref bodyReferences, count);
+                bodies.ScatterVelocities(ref wsvA, ref bodyReferences, count);
             }
         }
 
@@ -162,7 +162,7 @@ namespace BepuPhysics.Constraints
                 function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertia, ref prestep, out projection);
             }
         }
-        public unsafe override void JacobiWarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
+        public unsafe override void JacobiWarmStart(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -180,7 +180,7 @@ namespace BepuPhysics.Constraints
                 function.WarmStart(ref wsvA, ref projection, ref accumulatedImpulses);
             }
         }
-        public unsafe override void JacobiSolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
+        public unsafe override void JacobiSolveIteration(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);

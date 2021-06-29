@@ -416,10 +416,12 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(bodyLocationA.SetIndex == 0 || bodyLocationB.SetIndex == 0, "One of the two bodies must be active. Otherwise, something is busted!");
                 ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
                 ref var setB = ref Bodies.Sets[bodyLocationB.SetIndex];
+                ref var stateA = ref setA.MotionStates[bodyLocationA.Index];
+                ref var stateB = ref setB.MotionStates[bodyLocationB.Index];
                 AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
                     ref setA.Collidables[bodyLocationA.Index], ref setB.Collidables[bodyLocationB.Index],
-                    ref setA.Poses[bodyLocationA.Index], ref setB.Poses[bodyLocationB.Index],
-                    ref setA.Velocities[bodyLocationA.Index], ref setB.Velocities[bodyLocationB.Index]);
+                    ref stateA.Pose, ref stateB.Pose,
+                    ref stateA.Velocity, ref stateB.Velocity);
             }
             else
             {
@@ -434,10 +436,11 @@ namespace BepuPhysics.CollisionDetection
                 //TODO: Ideally, the compiler would see this and optimize away the relevant math in AddBatchEntries. That's a longshot, though. May want to abuse some generics to force it.
                 var zeroVelocity = default(BodyVelocity);
                 ref var bodySet = ref Bodies.ActiveSet;
+                ref var bodyState = ref bodySet.MotionStates[bodyLocation.Index];
                 AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
                     ref bodySet.Collidables[bodyLocation.Index], ref Statics.Collidables[staticIndex],
-                    ref bodySet.Poses[bodyLocation.Index], ref Statics.Poses[staticIndex],
-                    ref bodySet.Velocities[bodyLocation.Index], ref zeroVelocity);
+                    ref bodyState.Pose, ref Statics.Poses[staticIndex],
+                    ref bodyState.Velocity, ref zeroVelocity);
             }
 
         }

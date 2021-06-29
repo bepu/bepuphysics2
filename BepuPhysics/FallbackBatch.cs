@@ -443,7 +443,7 @@ namespace BepuPhysics
                 var inverseCount = 1f / constraintReferences.Count;
                 bodyVelocity.Linear *= inverseCount;
                 bodyVelocity.Angular *= inverseCount;
-                bodies.ActiveSet.Velocities[bodyIndex] = bodyVelocity;
+                bodies.ActiveSet.MotionStates[bodyIndex].Velocity = bodyVelocity;
             }
         }
 
