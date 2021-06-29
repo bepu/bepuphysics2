@@ -31,7 +31,7 @@ namespace DemoTests
             const int bodyCount = 2048;
             for (int i = 0; i < bodyCount; ++i)
             {
-                var bodyDescription = new BodyDescription { LocalInertia = new BodyInertia { InverseMass = 1 }, Pose = new RigidPose { Orientation = Quaternion.Identity } };
+                var bodyDescription = new BodyDescription { LocalInertia = new BodyInertia { InverseMass = 1 }, Pose = RigidPose.Identity };
                 simulation.Bodies.Add(bodyDescription);
             }
 

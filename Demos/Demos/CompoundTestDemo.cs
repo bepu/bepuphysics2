@@ -96,7 +96,7 @@ namespace Demos.Demos
                             SpeculativeMargin = 0.1f,
                         },
                         LocalInertia = tableInertia,
-                        Pose = new RigidPose { Orientation = Quaternion.Identity }
+                        Pose = RigidPose.Identity
                     };
 
                     //Stack some tables.

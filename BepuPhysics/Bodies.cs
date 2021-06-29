@@ -175,7 +175,7 @@ namespace BepuPhysics
                 //Out of room; need to resize.
                 ResizeHandles(HandleToLocation.Length << 1);
             }
-            Debug.Assert(Math.Abs(description.MotionState.Pose.Orientation.Length() - 1) < 1e-6f, "Orientation should be initialized to a unit length quaternion.");
+            Debug.Assert(Math.Abs(description.Pose.Orientation.Length() - 1) < 1e-6f, "Orientation should be initialized to a unit length quaternion.");
 
             //All new bodies are active for simplicity. Someday, it may be worth offering an optimized path for inactives, but it adds complexity.
             //(Directly adding inactive bodies can be helpful in some networked open world scenarios.)
@@ -185,7 +185,7 @@ namespace BepuPhysics
 
             if (description.Collidable.Shape.Exists)
             {
-                AddCollidableToBroadPhase(handle, description.MotionState.Pose, description.LocalInertia, ref ActiveSet.Collidables[index]);
+                AddCollidableToBroadPhase(handle, description.Pose, description.LocalInertia, ref ActiveSet.Collidables[index]);
             }
             return handle;
         }

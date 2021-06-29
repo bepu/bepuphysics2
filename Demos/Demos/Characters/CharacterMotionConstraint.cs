@@ -166,7 +166,8 @@ namespace Demos.Demos.Characters
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref StaticCharacterMotionPrestep prestepData, out StaticCharacterMotionProjection projection)
+        public void Prestep(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA, float dt, float inverseDt, ref StaticCharacterMotionPrestep prestepData, out StaticCharacterMotionProjection projection)
         {
             //The motion constraint is split into two parts: the horizontal constraint, and the vertical constraint.
             //The horizontal constraint acts almost exactly like the TangentFriction, but we'll duplicate some of the logic to keep this implementation self-contained.
@@ -473,7 +474,8 @@ namespace Demos.Demos.Characters
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref DynamicCharacterMotionPrestep prestepData, out DynamicCharacterMotionProjection projection)
+        public void Prestep(
+             in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, ref DynamicCharacterMotionPrestep prestepData, out DynamicCharacterMotionProjection projection)
         {
             //The motion constraint is split into two parts: the horizontal constraint, and the vertical constraint.
             //The horizontal constraint acts almost exactly like the TangentFriction, but we'll duplicate some of the logic to keep this implementation self-contained.

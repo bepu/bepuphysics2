@@ -14,7 +14,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact1OneBodyPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
         }
     }
@@ -25,7 +25,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact2OneBodyPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
         }
@@ -37,7 +37,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact3OneBodyPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact2.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
@@ -50,7 +50,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact4OneBodyPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact2.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
@@ -64,7 +64,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact1PrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
         }
     }
@@ -75,7 +75,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact2PrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
         }
@@ -87,7 +87,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact3PrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact2.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
@@ -100,7 +100,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact4PrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact2.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
@@ -114,7 +114,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact2NonconvexOneBodyPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.Offset, ref prestepBundle.Contact1.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
         }
@@ -126,7 +126,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact3NonconvexOneBodyPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.Offset, ref prestepBundle.Contact1.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact2.Offset, ref prestepBundle.Contact2.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
@@ -139,7 +139,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact4NonconvexOneBodyPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.Offset, ref prestepBundle.Contact1.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact2.Offset, ref prestepBundle.Contact2.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
@@ -153,7 +153,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact2NonconvexPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.Offset, ref prestepBundle.Contact1.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
         }
@@ -165,7 +165,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact3NonconvexPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.Offset, ref prestepBundle.Contact1.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact2.Offset, ref prestepBundle.Contact2.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
@@ -178,7 +178,7 @@ namespace BepuPhysics.Constraints.Contact
         public unsafe void ExtractLines(ref Contact4NonconvexPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact1.Offset, ref prestepBundle.Contact1.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
             ContactLines.Add(poseA, ref prestepBundle.Contact2.Offset, ref prestepBundle.Contact2.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);

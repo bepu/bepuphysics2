@@ -266,7 +266,7 @@ namespace DemoRenderer.ShapeDrawing
                 color *= sleepTint;
             }
 
-            AddShape(shapes, set.Collidables[indexInSet].Shape, ref set.Poses[indexInSet], color);
+            AddShape(shapes, set.Collidables[indexInSet].Shape, ref set.MotionStates[indexInSet].Pose, color);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

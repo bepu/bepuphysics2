@@ -111,10 +111,10 @@ namespace BepuPhysics
 
         internal void ApplyDescriptionByIndex(int index, in BodyDescription description)
         {
-            Debug.Assert(!MathChecker.IsInvalid(description.MotionState.Pose.Position.LengthSquared()), $"Invalid body position: {description.MotionState.Pose.Position}");
-            Debug.Assert(Math.Abs(1 - description.MotionState.Pose.Orientation.LengthSquared()) < 1e-3f, $"Body orientation not unit length: {description.MotionState.Pose.Orientation}");
-            Debug.Assert(!MathChecker.IsInvalid(description.MotionState.Velocity.Linear.LengthSquared()), $"Invalid body linear velocity: {description.MotionState.Velocity.Linear}");
-            Debug.Assert(!MathChecker.IsInvalid(description.MotionState.Velocity.Angular.LengthSquared()), $"Invalid body angular velocity: {description.MotionState.Velocity.Angular}");
+            Debug.Assert(!MathChecker.IsInvalid(description.Pose.Position.LengthSquared()), $"Invalid body position: {description.Pose.Position}");
+            Debug.Assert(Math.Abs(1 - description.Pose.Orientation.LengthSquared()) < 1e-3f, $"Body orientation not unit length: {description.Pose.Orientation}");
+            Debug.Assert(!MathChecker.IsInvalid(description.Velocity.Linear.LengthSquared()), $"Invalid body linear velocity: {description.Velocity.Linear}");
+            Debug.Assert(!MathChecker.IsInvalid(description.Velocity.Angular.LengthSquared()), $"Invalid body angular velocity: {description.Velocity.Angular}");
             Debug.Assert(!MathChecker.IsInvalid(
                 description.LocalInertia.InverseInertiaTensor.XX * description.LocalInertia.InverseInertiaTensor.XX +
                 description.LocalInertia.InverseInertiaTensor.YX * description.LocalInertia.InverseInertiaTensor.YX +
@@ -124,7 +124,9 @@ namespace BepuPhysics
                 description.LocalInertia.InverseInertiaTensor.ZZ * description.LocalInertia.InverseInertiaTensor.ZZ), $"Invalid body inverse inertia tensor: {description.LocalInertia.InverseInertiaTensor}");
             Debug.Assert(!MathChecker.IsInvalid(description.LocalInertia.InverseMass) && description.LocalInertia.InverseMass >= 0, $"Invalid body inverse mass: {description.LocalInertia.InverseMass}");
 
-            MotionStates[index] = description.MotionState;
+            ref var state = ref MotionStates[index];
+            state.Pose = description.Pose;
+            state.Velocity = description.Velocity;
             LocalInertias[index] = description.LocalInertia;
             ref var collidable = ref Collidables[index];
             collidable.Continuity = description.Collidable.Continuity;
@@ -141,7 +143,9 @@ namespace BepuPhysics
 
         public void GetDescription(int index, out BodyDescription description)
         {
-            description.MotionState = MotionStates[index];
+            ref var state = ref MotionStates[index];
+            description.Pose = state.Pose;
+            description.Velocity = state.Velocity;
             description.LocalInertia = LocalInertias[index];
             ref var collidable = ref Collidables[index];
             description.Collidable.Continuity = collidable.Continuity;

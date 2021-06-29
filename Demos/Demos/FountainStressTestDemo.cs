@@ -260,7 +260,7 @@ namespace Demos.Demos
                     16 + 16 * (float)Math.Cos(4 * (angle + t * 0.5)),
                     radius * (float)Math.Sin(positionAngle));
 
-                var correction = targetLocation - set.Poses[bodyLocation.Index].Position;
+                var correction = targetLocation - set.MotionStates[bodyLocation.Index].Pose.Position;
                 var distance = correction.Length();
                 if (distance > 1e-4)
                 {
@@ -274,13 +274,13 @@ namespace Demos.Demos
                         correction *= maxDisplacement / distance;
                     }
                     Debug.Assert(bodyLocation.SetIndex == 0);
-                    Simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear = correction * inverseDt;
+                    Simulation.Bodies.ActiveSet.MotionStates[bodyLocation.Index].Velocity.Linear = correction * inverseDt;
                 }
                 else
                 {
                     if (bodyLocation.SetIndex == 0)
                     {
-                        Simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear = new Vector3();
+                        Simulation.Bodies.ActiveSet.MotionStates[bodyLocation.Index].Velocity.Linear = new Vector3();
                     }
                 }
             }

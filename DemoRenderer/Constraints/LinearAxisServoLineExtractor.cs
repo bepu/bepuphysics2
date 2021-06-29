@@ -14,8 +14,8 @@ namespace DemoRenderer.Constraints
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
-            var poseB = bodies.Sets[setIndex].Poses[bodyIndices[1]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
+            ref var poseB = ref bodies.Sets[setIndex].MotionStates[bodyIndices[1]].Pose;
             Vector3Wide.ReadFirst(prestepBundle.LocalOffsetA, out var localOffsetA);
             Vector3Wide.ReadFirst(prestepBundle.LocalOffsetB, out var localOffsetB);
             Vector3Wide.ReadFirst(prestepBundle.LocalPlaneNormal, out var localPlaneNormal);

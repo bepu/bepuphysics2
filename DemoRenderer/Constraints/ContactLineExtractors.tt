@@ -31,7 +31,7 @@ for (int convexity = 0; convexity <= 1; ++convexity)
         public unsafe void ExtractLines(ref Contact<#=contactCount#><#=convexitySuffix#><#=bodySuffix#>PrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
-            var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
+            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
 <#for (int i = 0; i < contactCount; ++i) { if(convex) {#>
             ContactLines.Add(poseA, ref prestepBundle.Contact<#=i#>.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact<#=i#>.Depth, tint, ref lines);
 <#} else {#>
