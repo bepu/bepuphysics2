@@ -548,6 +548,33 @@ namespace BepuPhysics
             Vector3Wide.WriteFirst(state.Velocity.Linear, ref GetOffsetInstance(ref velocity.Linear, bodyIndexInBundle));
             Vector3Wide.WriteFirst(state.Velocity.Angular, ref GetOffsetInstance(ref velocity.Angular, bodyIndexInBundle));
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void WriteGatherState(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<MotionState> states,
+            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocities velocity, ref BodyInertias inertia)
+        {
+            ref var state = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)];
+            Vector3Wide.WriteFirst(state.Pose.Position, ref GetOffsetInstance(ref position, bodyIndexInBundle));
+            QuaternionWide.WriteFirst(state.Pose.Orientation, ref GetOffsetInstance(ref orientation, bodyIndexInBundle));
+            Vector3Wide.WriteFirst(state.Velocity.Linear, ref GetOffsetInstance(ref velocity.Linear, bodyIndexInBundle));
+            Vector3Wide.WriteFirst(state.Velocity.Angular, ref GetOffsetInstance(ref velocity.Angular, bodyIndexInBundle));
+
+            //ref var targetSlot = ref GetOffsetInstance(ref inertia, bodyIndexInBundle);
+            //GetFirst(ref targetSlot.InverseInertiaTensor.XX) = (float)state.PackedLocalInertia.InverseNormalizedInertiaXX * state.PackedLocalInertia.InverseMass;
+            //GetFirst(ref targetSlot.InverseInertiaTensor.YX) = 0;
+            //GetFirst(ref targetSlot.InverseInertiaTensor.YY) = (float)state.PackedLocalInertia.InverseNormalizedInertiaYY * state.PackedLocalInertia.InverseMass;
+            //GetFirst(ref targetSlot.InverseInertiaTensor.ZX) = 0;
+            //GetFirst(ref targetSlot.InverseInertiaTensor.ZY) = 0;
+            //GetFirst(ref targetSlot.InverseInertiaTensor.ZZ) = (float)state.PackedLocalInertia.InverseNormalizedInertiaZZ * state.PackedLocalInertia.InverseMass;
+            //GetFirst(ref targetSlot.InverseMass) = state.PackedLocalInertia.InverseMass;
+            ref var targetSlot = ref GetOffsetInstance(ref inertia, bodyIndexInBundle);
+            GetFirst(ref targetSlot.InverseInertiaTensor.XX) = state.PackedLocalInertia.InverseMass;
+            GetFirst(ref targetSlot.InverseInertiaTensor.YX) = 0;
+            GetFirst(ref targetSlot.InverseInertiaTensor.YY) = state.PackedLocalInertia.InverseMass;
+            GetFirst(ref targetSlot.InverseInertiaTensor.ZX) = 0;
+            GetFirst(ref targetSlot.InverseInertiaTensor.ZY) = 0;
+            GetFirst(ref targetSlot.InverseInertiaTensor.ZZ) = state.PackedLocalInertia.InverseMass;
+            GetFirst(ref targetSlot.InverseMass) = state.PackedLocalInertia.InverseMass;
+        }
 
         /// <summary>
         /// Gathers motion state information for a body bundle into an AOSOA bundle.
@@ -616,10 +643,12 @@ namespace BepuPhysics
             ref var states = ref ActiveSet.MotionStates;
             for (int i = 0; i < count; ++i)
             {
-                WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
-                WriteGatherInertia(ref baseIndexA, i, ref Inertias, ref inertiaA);
-                WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
-                WriteGatherInertia(ref baseIndexB, i, ref Inertias, ref inertiaB);
+                //WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
+                //WriteGatherInertia(ref baseIndexA, i, ref Inertias, ref inertiaA);
+                //WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
+                //WriteGatherInertia(ref baseIndexB, i, ref Inertias, ref inertiaB);
+                WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA, ref inertiaA);
+                WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB, ref inertiaB);
             }
             //TODO: In future versions, we will likely store the body position in different forms to allow for extremely large worlds.
             //That will be an opt-in feature. The default implementation will use the FP32 representation, but the user could choose to swap it out for a fp64 or fixed64 representation.

@@ -12,53 +12,44 @@ namespace BepuPhysics
     /// <summary>
     /// Stores the inertia of a body in half precision.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, Size = 8, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential, Size = 10, Pack = 1)]
     public struct PackedInertia
     {
         //TODO: Temporarily ignoring off-diagonal inertia for testing. 
-        public Half InverseMass;
-        public Half InverseInertiaXX;
-        //public Half InverseInertiaYX;
-        public Half InverseInertiaYY;
-        //public Half InverseInertiaZX;
-        //public Half InverseInertiaZY;
-        public Half InverseInertiaZZ;
+        public float InverseMass;
+        public Half InverseNormalizedInertiaXX;
+        //public Half InverseNormalizedInertiaYX;
+        public Half InverseNormalizedInertiaYY;
+        //public Half InverseNormalizedInertiaZX;
+        //public Half InverseNormalizedInertiaZY;
+        public Half InverseNormalizedInertiaZZ;
 
         public PackedInertia(in BodyInertia inertia)
         {
-            InverseMass = (Half)inertia.InverseMass;
-            InverseInertiaXX = (Half)inertia.InverseInertiaTensor.XX;
-            //InverseInertiaYX = (Half)inertia.InverseInertiaTensor.YX;
-            InverseInertiaYY = (Half)inertia.InverseInertiaTensor.YY;
-            //InverseInertiaZX = (Half)inertia.InverseInertiaTensor.ZX;
-            //InverseInertiaZY = (Half)inertia.InverseInertiaTensor.ZY;
-            InverseInertiaZZ = (Half)inertia.InverseInertiaTensor.ZZ;
+            InverseMass = inertia.InverseMass;
+            InverseNormalizedInertiaXX = (Half)(inertia.InverseInertiaTensor.XX / InverseMass);
+            //InverseNormalizedInertiaYX = (Half)(inertia.InverseInertiaTensor.YX/ InverseMass);
+            InverseNormalizedInertiaYY = (Half)(inertia.InverseInertiaTensor.YY / InverseMass);
+            //InverseNormalizedInertiaZX = (Half)(inertia.InverseInertiaTensor.ZX/ InverseMass);
+            //InverseNormalizedInertiaZY = (Half)(inertia.InverseInertiaTensor.ZY/ InverseMass);
+            InverseNormalizedInertiaZZ = (Half)(inertia.InverseInertiaTensor.ZZ / InverseMass);
         }
 
         public readonly void Unpack(out BodyInertia inertia)
         {
             //TODO: not necessary in complete implementation
             inertia = default;
-            inertia.InverseMass = (float)InverseMass;
-            inertia.InverseInertiaTensor.XX = (float)InverseInertiaXX;
-            //inertia.InverseInertiaTensor.YX = (float)InverseInertiaYX;
-            inertia.InverseInertiaTensor.YY = (float)InverseInertiaYY;
-            //inertia.InverseInertiaTensor.ZX = (float)InverseInertiaZX;
-            //inertia.InverseInertiaTensor.ZY = (float)InverseInertiaZY;
-            inertia.InverseInertiaTensor.ZZ = (float)InverseInertiaZZ;
+            inertia.InverseMass = InverseMass;
+            inertia.InverseInertiaTensor.XX = (float)InverseNormalizedInertiaXX * InverseMass;
+            //inertia.InverseInertiaTensor.YX = (float)InverseNormalizedInertiaYX * InverseMass;
+            inertia.InverseInertiaTensor.YY = (float)InverseNormalizedInertiaYY * InverseMass;
+            //inertia.InverseInertiaTensor.ZX = (float)InverseNormalizedInertiaZX * InverseMass;
+            //inertia.InverseInertiaTensor.ZY = (float)InverseNormalizedInertiaZY * InverseMass;
+            inertia.InverseInertiaTensor.ZZ = (float)InverseNormalizedInertiaZZ * InverseMass;
         }
         public readonly BodyInertia Unpack()
         {
-            BodyInertia inertia;
-            //TODO: not necessary in complete implementation
-            inertia = default;
-            inertia.InverseMass = (float)InverseMass;
-            inertia.InverseInertiaTensor.XX = (float)InverseInertiaXX;
-            //inertia.InverseInertiaTensor.YX = (float)InverseInertiaYX;
-            inertia.InverseInertiaTensor.YY = (float)InverseInertiaYY;
-            //inertia.InverseInertiaTensor.ZX = (float)InverseInertiaZX;
-            //inertia.InverseInertiaTensor.ZY = (float)InverseInertiaZY;
-            inertia.InverseInertiaTensor.ZZ = (float)InverseInertiaZZ;
+            Unpack(out var inertia);
             return inertia;
         }
 
@@ -82,7 +73,7 @@ namespace BepuPhysics
         /// <summary>
         /// Packed inertia of the body.
         /// </summary>
-        public PackedInertia PackedInertia;
+        public PackedInertia PackedLocalInertia;
     }
 
     //TODO: It's a little odd that this exists alongside the BepuUtilities.RigidTransform. The original reasoning was that rigid poses may end up having a non-FP32 representation.
