@@ -40,7 +40,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public Buffer<Vector3Wide> Points;
         /// <summary>
-        /// Bundled bounding planes of the convex hull. 
+        /// Bundled bounding planes associated with the convex hull's faces.
         /// </summary>
         public Buffer<HullBoundingPlanes> BoundingPlanes;
         /// <summary>

@@ -849,5 +849,89 @@ namespace BepuPhysics.Collidables
             if (hullData.OriginalVertexMapping.Allocated)
                 hullData.Dispose(pool);
         }
+
+
+        /// <summary>
+        /// Creates a transformed copy of a convex hull.
+        /// </summary>
+        /// <param name="source">Source convex hull to copy.</param>
+        /// <param name="transform">Transform to apply to the hull points.</param>
+        /// <param name="targetPoints">Transformed points in the copy target hull.</param>
+        /// <param name="targetBoundingPlanes">Transformed bounding planes in the copy target hull.</param>
+        public static void CreateTransformedCopy(in ConvexHull source, in Matrix3x3 transform, Buffer<Vector3Wide> targetPoints, Buffer<HullBoundingPlanes> targetBoundingPlanes)
+        {
+            if (targetPoints.Length < source.Points.Length)
+                throw new ArgumentException("Target points buffer cannot hold the copy.", nameof(targetPoints));
+            if (targetBoundingPlanes.Length < source.BoundingPlanes.Length)
+                throw new ArgumentException("Target bounding planes buffer cannot hold the copy.", nameof(targetBoundingPlanes));
+            Matrix3x3Wide.Broadcast(transform, out var transformWide);
+            for (int i = 0; i < source.Points.Length; ++i)
+            {
+                Matrix3x3Wide.TransformWithoutOverlap(source.Points[i], transformWide, out targetPoints[i]);
+            }
+            Matrix3x3.Invert(transform, out var inverse);
+            Matrix3x3Wide.Broadcast(inverse, out var inverseWide);
+            for (int i = 0; i < source.BoundingPlanes.Length; ++i)
+            {
+                Matrix3x3Wide.TransformByTransposedWithoutOverlap(source.BoundingPlanes[i].Normal, inverseWide, out var normal);
+                Vector3Wide.Normalize(normal, out targetBoundingPlanes[i].Normal);
+            }
+
+            for (int faceIndex = 0; faceIndex < source.FaceToVertexIndicesStart.Length; ++faceIndex)
+            {
+                //This isn't exactly an optimal implementation- it uses a pretty inefficient gather, but any optimization can wait for it being a problem.
+                var vertexIndex = source.FaceVertexIndices[source.FaceToVertexIndicesStart[faceIndex]];
+                BundleIndexing.GetBundleIndices(faceIndex, out var bundleIndex, out var indexInBundle);
+                Vector3Wide.ReadSlot(ref targetPoints[vertexIndex.BundleIndex], vertexIndex.InnerIndex, out var point);
+                Vector3Wide.ReadSlot(ref targetBoundingPlanes[bundleIndex].Normal, indexInBundle, out var normal);
+                GatherScatter.Get(ref targetBoundingPlanes[bundleIndex].Offset, indexInBundle) = Vector3.Dot(point, normal);
+            }
+
+            //Clear any trailing bounding plane data to keep it from contributing.
+            var boundingPlaneCapacity = targetBoundingPlanes.Length * Vector<float>.Count;
+            for (int i = source.FaceToVertexIndicesStart.Length; i < boundingPlaneCapacity; ++i)
+            {
+                BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
+                ref var offsetInstance = ref GatherScatter.GetOffsetInstance(ref targetBoundingPlanes[bundleIndex], innerIndex);
+                Vector3Wide.WriteFirst(default, ref offsetInstance.Normal);
+                GatherScatter.GetFirst(ref offsetInstance.Offset) = float.MinValue;
+            }
+        }
+
+        /// <summary>
+        /// Creates a transformed copy of a convex hull. FaceVertexIndices and FaceToVertexIndicesStart buffers from the source are reused in the copy target.
+        /// Note that disposing two convex hulls with the same buffers will cause errors; disposal must be handled carefully to avoid double freeing the shared buffers.
+        /// </summary>
+        /// <param name="source">Source convex hull to copy.</param>
+        /// <param name="transform">Transform to apply to the hull points.</param>
+        /// <param name="pool">Pool from which to allocate the new hull's points and bounding planes buffers.</param>
+        /// <param name="target">Target convex hull to copy into. FaceVertexIndices and FaceToVertexIndicesStart buffers are reused from the source.</param>
+        public static void CreateTransformedShallowCopy(in ConvexHull source, in Matrix3x3 transform, BufferPool pool, out ConvexHull target)
+        {
+            pool.Take(source.Points.Length, out target.Points);
+            pool.Take(source.BoundingPlanes.Length, out target.BoundingPlanes);
+            CreateTransformedCopy(source, transform, target.Points, target.BoundingPlanes);
+            target.FaceVertexIndices = source.FaceVertexIndices;
+            target.FaceToVertexIndicesStart = source.FaceToVertexIndicesStart;
+        }
+
+        /// <summary>
+        /// Creates a transformed copy of a convex hull. Unique FaceVertexIndices and FaceToVertexIndicesStart buffers are allocated for the copy target.
+        /// </summary>
+        /// <param name="source">Source convex hull to copy.</param>
+        /// <param name="transform">Transform to apply to the hull points.</param>
+        /// <param name="pool">Pool from which to allocate the new hull's buffers.</param>
+        /// <param name="target">Target convex hull to copy into.</param>
+        public static void CreateTransformedCopy(in ConvexHull source, in Matrix3x3 transform, BufferPool pool, out ConvexHull target)
+        {
+            pool.Take(source.Points.Length, out target.Points);
+            pool.Take(source.BoundingPlanes.Length, out target.BoundingPlanes);
+            pool.Take(source.FaceVertexIndices.Length, out target.FaceVertexIndices);
+            pool.Take(source.FaceToVertexIndicesStart.Length, out target.FaceToVertexIndicesStart);
+            CreateTransformedCopy(source, transform, target.Points, target.BoundingPlanes);
+            source.FaceVertexIndices.CopyTo(0, target.FaceVertexIndices, 0, target.FaceVertexIndices.Length);
+            source.FaceToVertexIndicesStart.CopyTo(0, target.FaceToVertexIndicesStart, 0, target.FaceToVertexIndicesStart.Length);
+        }
+
     }
 }
