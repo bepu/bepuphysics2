@@ -127,6 +127,8 @@ namespace BepuPhysics
             ref var state = ref MotionStates[index];
             state.Pose = description.Pose;
             state.Velocity = description.Velocity;
+            //TODO: We're just trying this right now; note redundancy that we need to deal with.
+            state.PackedLocalInertia = new PackedInertia(description.LocalInertia);
             LocalInertias[index] = description.LocalInertia;
             ref var collidable = ref Collidables[index];
             collidable.Continuity = description.Collidable.Continuity;
