@@ -62,22 +62,41 @@ namespace BepuPhysics
     public struct MotionState
     {
         internal const int OffsetToPositionX = 0;
-        internal const int OffsetToPositionY = 4;
-        internal const int OffsetToPositionZ = 8;
-        internal const int OffsetToOrientationX = 12;
-        internal const int OffsetToOrientationY = 16;
-        internal const int OffsetToOrientationZ = 20;
-        internal const int OffsetToOrientationW = 24;
-        internal const int OffsetToLinearX = 28;
-        internal const int OffsetToLinearY = 32;
-        internal const int OffsetToLinearZ = 36;
-        internal const int OffsetToAngularX = 40;
-        internal const int OffsetToAngularY = 44;
-        internal const int OffsetToAngularZ = 48;
-        internal const int OffsetToInverseMass = 52;
+        internal const int OffsetToPositionY = 1;
+        internal const int OffsetToPositionZ = 2;
+        internal const int OffsetToOrientationX = 3;
+        internal const int OffsetToOrientationY = 4;
+        internal const int OffsetToOrientationZ = 5;
+        internal const int OffsetToOrientationW = 6;
+        internal const int OffsetToLinearX = 7;
+        internal const int OffsetToLinearY = 8;
+        internal const int OffsetToLinearZ = 9;
+        internal const int OffsetToAngularX = 10;
+        internal const int OffsetToAngularY = 11;
+        internal const int OffsetToAngularZ = 12;
+        internal const int OffsetToInverseMass = 13;
         internal const int OffsetToInverseInertiaXX = OffsetToInverseMass;
         internal const int OffsetToInverseInertiaYY = OffsetToInverseMass;
         internal const int OffsetToInverseInertiaZZ = OffsetToInverseMass;
+
+        internal const int ByteOffsetToPositionX = OffsetToPositionX * 4;
+        internal const int ByteOffsetToPositionY = OffsetToPositionY * 4;
+        internal const int ByteOffsetToPositionZ = OffsetToPositionZ * 4;
+        internal const int ByteOffsetToOrientationX = OffsetToOrientationX * 4;
+        internal const int ByteOffsetToOrientationY = OffsetToOrientationY * 4;
+        internal const int ByteOffsetToOrientationZ = OffsetToOrientationZ * 4;
+        internal const int ByteOffsetToOrientationW = OffsetToOrientationW * 4;
+        internal const int ByteOffsetToLinearX = OffsetToLinearX * 4;
+        internal const int ByteOffsetToLinearY = OffsetToLinearY * 4;
+        internal const int ByteOffsetToLinearZ = OffsetToLinearZ * 4;
+        internal const int ByteOffsetToAngularX = OffsetToAngularX * 4;
+        internal const int ByteOffsetToAngularY = OffsetToAngularY * 4;
+        internal const int ByteOffsetToAngularZ = OffsetToAngularZ * 4;
+        internal const int ByteOffsetToInverseMass = OffsetToInverseMass * 4;
+        internal const int ByteOffsetToInverseInertiaXX = ByteOffsetToInverseMass;
+        internal const int ByteOffsetToInverseInertiaYY = ByteOffsetToInverseMass;
+        internal const int ByteOffsetToInverseInertiaZZ = ByteOffsetToInverseMass;
+
 
         /// <summary>
         /// Pose of the body.
