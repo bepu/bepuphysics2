@@ -61,6 +61,24 @@ namespace BepuPhysics
     [StructLayout(LayoutKind.Sequential, Size = 64, Pack = 1)]
     public struct MotionState
     {
+        internal const int OffsetToPositionX = 0;
+        internal const int OffsetToPositionY = 4;
+        internal const int OffsetToPositionZ = 8;
+        internal const int OffsetToOrientationX = 12;
+        internal const int OffsetToOrientationY = 16;
+        internal const int OffsetToOrientationZ = 20;
+        internal const int OffsetToOrientationW = 24;
+        internal const int OffsetToLinearX = 28;
+        internal const int OffsetToLinearY = 32;
+        internal const int OffsetToLinearZ = 36;
+        internal const int OffsetToAngularX = 40;
+        internal const int OffsetToAngularY = 44;
+        internal const int OffsetToAngularZ = 48;
+        internal const int OffsetToInverseMass = 52;
+        internal const int OffsetToInverseInertiaXX = OffsetToInverseMass;
+        internal const int OffsetToInverseInertiaYY = OffsetToInverseMass;
+        internal const int OffsetToInverseInertiaZZ = OffsetToInverseMass;
+
         /// <summary>
         /// Pose of the body.
         /// </summary>

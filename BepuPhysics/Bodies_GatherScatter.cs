@@ -8,11 +8,13 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using static BepuUtilities.GatherScatter;
+using System.Runtime.Intrinsics.X86;
+using System.Runtime.Intrinsics;
 
 namespace BepuPhysics
-{    
+{
     public partial class Bodies
-    {       
+    {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void WriteGatherInertia(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<BodyInertia> states, ref BodyInertias gatheredInertias)
@@ -112,7 +114,7 @@ namespace BepuPhysics
         /// <param name="inertiaA">Gathered inertia of body A.</param>
         /// <param name="inertiaB">Gathered inertia of body B.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherState(ref TwoBodyReferences references, int count,
+        public unsafe void GatherState(ref TwoBodyReferences references, int count,
             out QuaternionWide orientationA, out BodyVelocities velocityA, out BodyInertias inertiaA,
             out Vector3Wide ab,
             out QuaternionWide orientationB, out BodyVelocities velocityB, out BodyInertias inertiaB)
@@ -131,15 +133,97 @@ namespace BepuPhysics
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
 
             ref var states = ref ActiveSet.MotionStates;
-            
-            for (int i = 0; i < count; ++i)
+
+
+            if (Avx2.IsSupported)
             {
-                //WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
-                //WriteGatherInertia(ref baseIndexA, i, ref Inertias, ref inertiaA);
-                //WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
-                //WriteGatherInertia(ref baseIndexB, i, ref Inertias, ref inertiaB);
-                WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA, ref inertiaA);
-                WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB, ref inertiaB);
+                var maskMemory = stackalloc int[8];
+                for (int i = 0; i < count; ++i)
+                {
+                    maskMemory[i] = -1;
+                }
+                for (int i = count; i < 8; ++i)
+                {
+                    maskMemory[i] = 0;
+                }
+                var mask = Avx.LoadVector256(maskMemory);
+                var statesMemory = (float*)states.Memory;
+                var indexA = Avx2.ShiftLeftLogical(references.IndexA.AsVector256(), 6);
+                var indexB = Avx2.ShiftLeftLogical(references.IndexB.AsVector256(), 6);
+                var zero = Vector256<float>.Zero;
+                var offsetX = Vector256.Create(MotionState.OffsetToPositionX);
+                positionA.X = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetX), mask.AsSingle(), 1).AsVector();
+                positionB.X = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetX), mask.AsSingle(), 1).AsVector();
+                var offsetY = Vector256.Create(MotionState.OffsetToPositionY);
+                positionA.Y = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetY), mask.AsSingle(), 1).AsVector();
+                positionB.Y = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetY), mask.AsSingle(), 1).AsVector();
+                var offsetZ = Vector256.Create(MotionState.OffsetToPositionZ);
+                positionA.Z = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetZ), mask.AsSingle(), 1).AsVector();
+                positionB.Z = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetZ), mask.AsSingle(), 1).AsVector();
+
+                var offsetOrientationX = Vector256.Create(MotionState.OffsetToOrientationX);
+                orientationA.X = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetOrientationX), mask.AsSingle(), 1).AsVector();
+                orientationB.X = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetOrientationX), mask.AsSingle(), 1).AsVector();
+                var offsetOrientationY = Vector256.Create(MotionState.OffsetToOrientationY);
+                orientationA.Y = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetOrientationY), mask.AsSingle(), 1).AsVector();
+                orientationB.Y = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetOrientationY), mask.AsSingle(), 1).AsVector();
+                var offsetOrientationZ = Vector256.Create(MotionState.OffsetToOrientationZ);
+                orientationA.Z = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetOrientationZ), mask.AsSingle(), 1).AsVector();
+                orientationB.Z = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetOrientationZ), mask.AsSingle(), 1).AsVector();
+                var offsetOrientationW = Vector256.Create(MotionState.OffsetToOrientationW);
+                orientationA.W = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetOrientationW), mask.AsSingle(), 1).AsVector();
+                orientationB.W = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetOrientationW), mask.AsSingle(), 1).AsVector();
+
+                var offsetLinearX = Vector256.Create(MotionState.OffsetToLinearX);
+                velocityA.Linear.X = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetLinearX), mask.AsSingle(), 1).AsVector();
+                velocityB.Linear.X = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetLinearX), mask.AsSingle(), 1).AsVector();
+                var offsetLinearY = Vector256.Create(MotionState.OffsetToLinearY);
+                velocityA.Linear.Y = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetLinearY), mask.AsSingle(), 1).AsVector();
+                velocityB.Linear.Y = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetLinearY), mask.AsSingle(), 1).AsVector();
+                var offsetLinearZ = Vector256.Create(MotionState.OffsetToLinearZ);
+                velocityA.Linear.Z = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetLinearZ), mask.AsSingle(), 1).AsVector();
+                velocityB.Linear.Z = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetLinearZ), mask.AsSingle(), 1).AsVector();
+
+                var offsetAngularX = Vector256.Create(MotionState.OffsetToAngularX);
+                velocityA.Angular.X = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetAngularX), mask.AsSingle(), 1).AsVector();
+                velocityB.Angular.X = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetAngularX), mask.AsSingle(), 1).AsVector();
+                var offsetAngularY = Vector256.Create(MotionState.OffsetToAngularY);
+                velocityA.Angular.Y = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetAngularY), mask.AsSingle(), 1).AsVector();
+                velocityB.Angular.Y = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetAngularY), mask.AsSingle(), 1).AsVector();
+                var offsetAngularZ = Vector256.Create(MotionState.OffsetToAngularZ);
+                velocityA.Angular.Z = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetAngularZ), mask.AsSingle(), 1).AsVector();
+                velocityB.Angular.Z = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetAngularZ), mask.AsSingle(), 1).AsVector();
+
+                var offsetInverseMass = Vector256.Create(MotionState.OffsetToInverseMass);
+                inertiaA.InverseMass = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetInverseMass), mask.AsSingle(), 1).AsVector();
+                inertiaB.InverseMass = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetInverseMass), mask.AsSingle(), 1).AsVector();
+                var offsetInverseInertiaXX = Vector256.Create(MotionState.OffsetToInverseInertiaXX);
+                inertiaA.InverseInertiaTensor.XX = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetInverseInertiaXX), mask.AsSingle(), 1).AsVector();
+                inertiaB.InverseInertiaTensor.XX = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetInverseInertiaXX), mask.AsSingle(), 1).AsVector();
+                var offsetInverseInertiaYY = Vector256.Create(MotionState.OffsetToInverseInertiaYY);
+                inertiaA.InverseInertiaTensor.YY = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetInverseInertiaYY), mask.AsSingle(), 1).AsVector();
+                inertiaB.InverseInertiaTensor.YY = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetInverseInertiaYY), mask.AsSingle(), 1).AsVector();
+                var offsetInverseInertiaZZ = Vector256.Create(MotionState.OffsetToInverseInertiaZZ);
+                inertiaA.InverseInertiaTensor.ZZ = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexA, offsetInverseInertiaZZ), mask.AsSingle(), 1).AsVector();
+                inertiaB.InverseInertiaTensor.ZZ = Avx2.GatherMaskVector256(zero, statesMemory, Avx2.Add(indexB, offsetInverseInertiaZZ), mask.AsSingle(), 1).AsVector();
+                inertiaA.InverseInertiaTensor.YX = default;
+                inertiaB.InverseInertiaTensor.YX = default;
+                inertiaB.InverseInertiaTensor.ZX = default;
+                inertiaA.InverseInertiaTensor.ZX = default;
+                inertiaA.InverseInertiaTensor.ZY = default;
+                inertiaB.InverseInertiaTensor.ZY = default;
+            }
+            else
+            {
+                for (int i = 0; i < count; ++i)
+                {
+                    //WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
+                    //WriteGatherInertia(ref baseIndexA, i, ref Inertias, ref inertiaA);
+                    //WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
+                    //WriteGatherInertia(ref baseIndexB, i, ref Inertias, ref inertiaB);
+                    WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA, ref inertiaA);
+                    WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB, ref inertiaB);
+                }
             }
             //TODO: In future versions, we will likely store the body position in different forms to allow for extremely large worlds.
             //That will be an opt-in feature. The default implementation will use the FP32 representation, but the user could choose to swap it out for a fp64 or fixed64 representation.
