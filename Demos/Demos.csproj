@@ -5,7 +5,7 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <Configurations>Debug;Release</Configurations>
     <LangVersion>latest</LangVersion>
-    <!--<TieredCompilation>false</TieredCompilation>-->
+    <TieredCompilation>false</TieredCompilation>
   </PropertyGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">

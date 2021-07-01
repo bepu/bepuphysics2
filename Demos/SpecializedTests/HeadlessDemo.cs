@@ -29,7 +29,7 @@ namespace Demos.SpecializedTests
                 Console.Write("Completed frames: ");
                 for (int i = 0; i < frameCount; ++i)
                 {
-                    CacheBlaster.Blast();
+                    //CacheBlaster.Blast();
                     var start = Stopwatch.GetTimestamp();
                     demo.Update(null, null, null, 1 / 60f);
                     var end = Stopwatch.GetTimestamp();

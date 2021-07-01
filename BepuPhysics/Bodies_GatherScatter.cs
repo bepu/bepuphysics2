@@ -152,6 +152,72 @@ namespace BepuPhysics
                 pInertiaZZ[i] = stateValues[MotionState.OffsetToInverseInertiaZZ];
             }
         }
+        unsafe static void TransposingGather(int count, MotionState* motionStates, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocities velocity, ref BodyInertias inertia)
+        {
+            var indices = (int*)Unsafe.AsPointer(ref baseIndex);
+
+            var firstIndex = indices[0];
+            var s0 = (float*)(motionStates + indices[0]);
+            var s1 = (float*)(motionStates + indices[1]);
+            var s2 = (float*)(motionStates + indices[2]);
+            var s3 = (float*)(motionStates + indices[3]);
+            var s4 = (float*)(motionStates + indices[4]);
+            var s5 = (float*)(motionStates + indices[5]);
+            var s6 = (float*)(motionStates + indices[6]);
+            var s7 = (float*)(motionStates + indices[7]);
+
+            //for (int i = 0; i < 8; ++i)
+            //{
+            //    s0[i] = i;
+            //    s1[i] = i + 100;
+            //    s2[i] = i + 200;
+            //    s3[i] = i + 300;
+            //    s4[i] = i + 400;
+            //    s5[i] = i + 500;
+            //    s6[i] = i + 600;
+            //    s7[i] = i + 700;
+            //}
+
+            //Load every body for the first half of the motion state.
+            //Note that buffers are allocated on cache line boundaries, so we can use aligned loads for all that matters.
+            var m0 = Avx2.LoadVector256(s0);
+            var m1 = count > 1 ? Avx2.LoadAlignedVector256(s1) : Vector256<float>.Zero;
+            var m2 = count > 2 ? Avx2.LoadAlignedVector256(s2) : Vector256<float>.Zero;
+            var m3 = count > 3 ? Avx2.LoadAlignedVector256(s3) : Vector256<float>.Zero;
+            var m4 = count > 4 ? Avx2.LoadAlignedVector256(s4) : Vector256<float>.Zero;
+            var m5 = count > 5 ? Avx2.LoadAlignedVector256(s5) : Vector256<float>.Zero;
+            var m6 = count > 6 ? Avx2.LoadAlignedVector256(s6) : Vector256<float>.Zero;
+            var m7 = count > 7 ? Avx2.LoadAlignedVector256(s7) : Vector256<float>.Zero;
+
+            var n0 = Avx2.UnpackLow(m0, m1);
+            var n1 = Avx2.UnpackLow(m2, m3);
+
+            var o0 = Avx2.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+            var o4 = Avx2.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+
+            var n2 = Avx2.UnpackLow(m4, m5);
+            var n3 = Avx2.UnpackLow(m6, m7);
+            var o1 = Avx2.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+            position.X = Avx2.Permute2x128(o0, o1, 0 | (2 << 4)).AsVector();
+            orientation.Y = Avx2.Permute2x128(o0, o1, 1 | (3 << 4)).AsVector();
+            var o5 = Avx2.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+            position.Y = Avx2.Permute2x128(o4, o5, 0 | (2 << 4)).AsVector();
+            orientation.Z = Avx2.Permute2x128(o4, o5, 1 | (3 << 4)).AsVector();
+
+            var n4 = Avx2.UnpackHigh(m0, m1);
+            var n5 = Avx2.UnpackHigh(m2, m3);
+            var n6 = Avx2.UnpackHigh(m4, m5);
+            var n7 = Avx2.UnpackHigh(m6, m7);
+            var o2 = Avx2.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+            var o3 = Avx2.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+            position.Z = Avx2.Permute2x128(o2, o3, 0 | (2 << 4)).AsVector();
+            orientation.W = Avx2.Permute2x128(o2, o3, 1 | (3 << 4)).AsVector();
+            var o6 = Avx2.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+            var o7 = Avx2.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+            orientation.X = Avx2.Permute2x128(o6, o7, 0 | (2 << 4)).AsVector();
+            velocity.Linear.X = Avx2.Permute2x128(o6, o7, 1 | (3 << 4)).AsVector();
+
+        }
 
         /// <summary>
         /// Gathers orientations and relative positions for a two body bundle into an AOSOA bundle.
@@ -187,7 +253,7 @@ namespace BepuPhysics
             ref var states = ref ActiveSet.MotionStates;
 
 
-            if (Avx2.IsSupported)
+            if (false)//Avx2.IsSupported)
             {
                 var maskMemory = stackalloc int[8];
                 for (int i = 0; i < count; ++i)
@@ -264,6 +330,10 @@ namespace BepuPhysics
                 inertiaA.InverseInertiaTensor.ZX = default;
                 inertiaA.InverseInertiaTensor.ZY = default;
                 inertiaB.InverseInertiaTensor.ZY = default;
+            }
+            else if (Avx2.IsSupported)
+            {
+                TransposingGather(count, states.Memory, ref references.IndexA, ref positionA, ref orientationA, ref velocityA, ref inertiaA);
             }
             else
             {
