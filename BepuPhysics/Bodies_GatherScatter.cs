@@ -601,7 +601,7 @@ namespace BepuPhysics
             target.Angular = new Vector3(sourceSlot.Angular.X[0], sourceSlot.Angular.Y[0], sourceSlot.Angular.Z[0]);
         }
 
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void TransposeScatterVelocities(ref BodyVelocities sourceVelocities, MotionState* motionStates, ref Vector<int> references, int count)
         {
             if (Avx.IsSupported)
@@ -611,20 +611,19 @@ namespace BepuPhysics
                 var m0 = sourceVelocities.Linear.X.AsVector256();
                 var m1 = sourceVelocities.Linear.Y.AsVector256();
                 var m2 = sourceVelocities.Linear.Z.AsVector256();
-                var m3 = Vector256<float>.Zero;
                 var m4 = sourceVelocities.Angular.X.AsVector256();
                 var m5 = sourceVelocities.Angular.Y.AsVector256();
                 var m6 = sourceVelocities.Angular.Z.AsVector256();
-                var m7 = Vector256<float>.Zero;
 
+                //We're being a bit lazy here- you could reduce the instructions a bit more given the two empty source lanes.
                 var n0 = Avx.UnpackLow(m0, m1);
-                var n1 = Avx.UnpackLow(m2, m3);
+                var n1 = Avx.UnpackLow(m2, m2);
                 var n2 = Avx.UnpackLow(m4, m5);
-                var n3 = Avx.UnpackLow(m6, m7);
+                var n3 = Avx.UnpackLow(m6, m6);
                 var n4 = Avx.UnpackHigh(m0, m1);
-                var n5 = Avx.UnpackHigh(m2, m3);
+                var n5 = Avx.UnpackHigh(m2, m2);
                 var n6 = Avx.UnpackHigh(m4, m5);
-                var n7 = Avx.UnpackHigh(m6, m7);
+                var n7 = Avx.UnpackHigh(m6, m6);
 
                 var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
                 var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));

@@ -87,7 +87,7 @@ namespace BepuPhysics.Constraints
 
     public struct WeldFunctions : IConstraintFunctions<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>
     {
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
             ref WeldPrestepData prestep, out WeldProjection projection)
         {
@@ -167,13 +167,13 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Subtract(velocityB.Angular, negatedAngularChangeB, out velocityB.Angular); //note subtraction; the jacobian is -I        
         }
 
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref WeldProjection projection, ref WeldAccumulatedImpulses accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse.Orientation, ref accumulatedImpulse.Offset);
         }
 
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref WeldProjection projection, ref WeldAccumulatedImpulses accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
@@ -198,6 +198,99 @@ namespace BepuPhysics.Constraints
 
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref orientationCSI, ref offsetCSI);
         }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ApplyImpulse(in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide offset, in Vector3Wide orientationCSI, in Vector3Wide offsetCSI, ref BodyVelocities velocityA, ref BodyVelocities velocityB)
+        {
+            //Recall the jacobians:
+            //J = [ 0, I,                                          0, -I ]
+            //    [ I, skewSymmetric(localOffset * orientationA), -I,  0 ]
+            //The velocity changes are: 
+            // csi * J * I^-1
+            //linearImpulseA = offsetCSI
+            //angularImpulseA = orientationCSI + worldOffset x offsetCSI
+            //linearImpulseB = -offsetCSI
+            //angularImpulseB = -orientationCSI
+            Vector3Wide.Scale(offsetCSI, inertiaA.InverseMass, out var linearChangeA);
+            Vector3Wide.Add(velocityA.Linear, linearChangeA, out velocityA.Linear);
+
+            //Note order of cross relative to the SolveIteration. 
+            //SolveIteration transforms velocity into constraint space velocity using JT, while this converts constraint space to world space using J.
+            //The elements are transposed, and transposed skew symmetric matrices are negated. Flipping the cross product is equivalent to a negation.
+            Vector3Wide.CrossWithoutOverlap(offset, offsetCSI, out var offsetWorldImpulse);
+            Vector3Wide.Add(offsetWorldImpulse, orientationCSI, out var angularImpulseA);
+            Symmetric3x3Wide.TransformWithoutOverlap(angularImpulseA, inertiaA.InverseInertiaTensor, out var angularChangeA);
+            Vector3Wide.Add(velocityA.Angular, angularChangeA, out velocityA.Angular);
+
+            Vector3Wide.Scale(offsetCSI, inertiaB.InverseMass, out var negatedLinearChangeB);
+            Vector3Wide.Subtract(velocityB.Linear, negatedLinearChangeB, out velocityB.Linear); //note subtraction; the jacobian is -I
+
+            Symmetric3x3Wide.TransformWithoutOverlap(orientationCSI, inertiaB.InverseInertiaTensor, out var negatedAngularChangeB);
+            Vector3Wide.Subtract(velocityB.Angular, negatedAngularChangeB, out velocityB.Angular); //note subtraction; the jacobian is -I        
+        }
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WarmStart2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
+            in WeldPrestepData prestep, in WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        {
+            //The weld constraint handles 6 degrees of freedom simultaneously. The constraints are:
+            //localOrientation * orientationA = orientationB
+            //positionA + localOffset * orientationA = positionB
+            //The velocity derivatives:
+            //angularVelocityA = angularVelocityB
+            //linearVelocityA + angularVelocityA x (localOffset * orientationA) = linearVelocityB
+            //Note that the position constraint is similar a ball socket joint, except the anchor point is on top of the center of mass of object B.
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
+            ApplyImpulse(inertiaA, inertiaB, offset, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
+        }
+        public void Solve2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
+            in WeldPrestepData prestep, in WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        {
+            //The weld constraint handles 6 degrees of freedom simultaneously. The constraints are:
+            //localOrientation * orientationA = orientationB
+            //positionA + localOffset * orientationA = positionB
+            //The velocity derivatives:
+            //angularVelocityA = angularVelocityB
+            //linearVelocityA + angularVelocityA x (localOffset * orientationA) = linearVelocityB
+            //Note that the position constraint is similar a ball socket joint, except the anchor point is on top of the center of mass of object B.
+
+            //From the above, the jacobians ordered as [linearA, angularA, linearB, angularB] are:
+            //J = [ 0, I,                                          0, -I ]
+            //    [ I, skewSymmetric(localOffset * orientationA), -I,  0 ]
+            //where I is the 3x3 identity matrix.
+            //Effective mass = (J * M^-1 * JT)^-1, which is going to be a little tricky because J * M^-1 * JT is a 6x6 matrix:
+            //J * M^-1 * JT = [ Ia^-1 + Ib^-1,                                     Ia^-1 * transpose(skewSymmetric(localOffset * orientationA))                                                             ]
+            //                [ skewSymmetric(localOffset * orientationA) * Ia^-1, Ma^-1 + Mb^-1 + skewSymmetric(localOffset * orientationA) * Ia^-1 * transpose(skewSymmetric(localOffset * orientationA)) ]
+            //where Ia^-1 and Ib^-1 are the inverse inertia tensors for a and b and Ma^-1 and Mb^-1 are the inverse masses of A and B expanded to 3x3 diagonal matrices.
+            Symmetric3x3Wide.Add(inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, out var jmjtA);
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
+            Matrix3x3Wide.CreateCrossProduct(offset, out var xAB);
+            Symmetric3x3Wide.Multiply(inertiaA.InverseInertiaTensor, xAB, out var jmjtB);
+            Symmetric3x3Wide.CompleteMatrixSandwichTranspose(xAB, jmjtB, out var jmjtD);
+            var diagonalAdd = inertiaA.InverseMass + inertiaB.InverseMass;
+            jmjtD.XX += diagonalAdd;
+            jmjtD.YY += diagonalAdd;
+            jmjtD.ZZ += diagonalAdd;
+            //Note that there is no need to invert that 6x6 chonk. We want to convert a constraint space velocity into a constraint space impulse, csi = csv * effectiveMass.
+            //This is equivalent to solving csi * effectiveMass^-1 = csv for csi, and since effectiveMass^-1 is symmetric positive semidefinite, we can use an LDLT decomposition to quickly solve it.
+
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+
+            //Compute the current constraint error for all 6 degrees of freedom.
+            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
+            Vector3Wide.Subtract(ab, offset, out var positionError);
+            QuaternionWide.ConcatenateWithoutOverlap(prestep.LocalOrientation, orientationA, out var targetOrientationB);
+            QuaternionWide.Conjugate(targetOrientationB, out var inverseTarget);
+            QuaternionWide.ConcatenateWithoutOverlap(inverseTarget, orientationB, out var rotationError);
+            QuaternionWide.GetApproximateAxisAngleFromQuaternion(rotationError, out var rotationErrorAxis, out var rotationErrorLength);
+
+            Vector3Wide.Scale(positionError, positionErrorToVelocity, out var offsetBiasVelocity);
+            Vector3Wide.Scale(rotationErrorAxis, rotationErrorLength * positionErrorToVelocity, out var orientationBiasVelocity);
+
+            ApplyImpulse(inertiaA, inertiaB, ab, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
+        }
+
 
     }
 

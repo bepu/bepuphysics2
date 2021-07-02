@@ -46,7 +46,7 @@ namespace BepuUtilities
             Symmetric3x3Wide.Add(result.D, invD, out result.D);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Invert(in Symmetric6x6Wide m, out Symmetric6x6Wide result)
         {
             Invert(m.A, m.B, m.D, out result);
