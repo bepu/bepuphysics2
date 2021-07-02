@@ -110,15 +110,17 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetLengthSquared(in QuaternionWide q, out Vector<float> lengthSquared)
+        public Vector<float> LengthSquared()
         {
-            lengthSquared = q.X * q.X + q.Y * q.Y + q.Z * q.Z + q.W * q.W;
+            return X * X + Y * Y + Z * Z + W * W;
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetLength(in QuaternionWide q, out Vector<float> length)
+        public Vector<float> Length()
         {
-            length = Vector.SquareRoot(q.X * q.X + q.Y * q.Y + q.Z * q.Z + q.W * q.W);
+            return Vector.SquareRoot(X * X + Y * Y + Z * Z + W * W);
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static QuaternionWide Normalize(QuaternionWide q)
         {
@@ -142,7 +144,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static QuaternionWide operator-(QuaternionWide q)
+        public static QuaternionWide operator -(QuaternionWide q)
         {
             QuaternionWide negated;
             negated.X = -q.X;
@@ -350,6 +352,12 @@ namespace BepuUtilities
             return result;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector3Wide operator *(Vector3Wide v, QuaternionWide rotation)
+        {
+            return Transform(v, rotation);
+        }
+
         /// <summary>
         /// Transforms the unit X direction using a quaternion.
         /// </summary>
@@ -520,7 +528,7 @@ namespace BepuUtilities
         /// <param name="b">Second quaternion to concatenate.</param>
         /// <returns>Product of the concatenation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static QuaternionWide operator*(QuaternionWide a, QuaternionWide b)
+        public static QuaternionWide operator *(QuaternionWide a, QuaternionWide b)
         {
             QuaternionWide result;
             result.X = a.W * b.X + a.X * b.W + a.Z * b.Y - a.Y * b.Z;
