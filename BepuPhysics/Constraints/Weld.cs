@@ -5,7 +5,13 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using static BepuUtilities.QuaternionWide;
+using static BepuUtilities.Vector3Wide;
+using static BepuUtilities.Symmetric3x3Wide;
+using static BepuUtilities.Matrix3x3Wide;
 using static BepuUtilities.GatherScatter;
+
+
 namespace BepuPhysics.Constraints
 {
     /// <summary>
@@ -234,17 +240,10 @@ namespace BepuPhysics.Constraints
         public void WarmStart2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
             in WeldPrestepData prestep, in WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
-            //The weld constraint handles 6 degrees of freedom simultaneously. The constraints are:
-            //localOrientation * orientationA = orientationB
-            //positionA + localOffset * orientationA = positionB
-            //The velocity derivatives:
-            //angularVelocityA = angularVelocityB
-            //linearVelocityA + angularVelocityA x (localOffset * orientationA) = linearVelocityB
-            //Note that the position constraint is similar a ball socket joint, except the anchor point is on top of the center of mass of object B.
             ApplyImpulse(inertiaA, inertiaB, prestep.LocalOffset * orientationA, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
         }
         public void Solve2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
-            in WeldPrestepData prestep, in WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+            in WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
             //The weld constraint handles 6 degrees of freedom simultaneously. The constraints are:
             //localOrientation * orientationA = orientationB
@@ -258,36 +257,46 @@ namespace BepuPhysics.Constraints
             //J = [ 0, I,                                          0, -I ]
             //    [ I, skewSymmetric(localOffset * orientationA), -I,  0 ]
             //where I is the 3x3 identity matrix.
+
+            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
+            var offset = prestep.LocalOffset * orientationA;
+            var positionError = ab - offset;
+            var targetOrientationB = prestep.LocalOrientation * orientationA;        
+            var rotationError = Conjugate(targetOrientationB) * orientationB;
+            GetApproximateAxisAngleFromQuaternion(rotationError, out var rotationErrorAxis, out var rotationErrorLength);
+
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+            var offsetBiasVelocity = positionError * positionErrorToVelocity;
+            var orientationBiasVelocity = rotationErrorAxis * (rotationErrorLength * positionErrorToVelocity);
+
+            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
+            //csi = -accumulatedImpulse * projection.SoftnessImpulseScale - (-biasVelocity + csvaLinear + csvaAngular + csvbLinear + csvbAngular) * effectiveMass;
+            //csi = (biasVelocity - csvaLinear - csvaAngular - csvbLinear - csvbAngular) * effectiveMass - accumulatedImpulse * projection.SoftnessImpulseScale;
+            //csv = V * JT 
+            var orientationCSV = orientationBiasVelocity - (wsvA.Angular - wsvB.Angular);
+            var offsetCSV = offsetBiasVelocity - (wsvA.Linear - wsvB.Linear + Cross(wsvA.Angular, offset));
+
             //Effective mass = (J * M^-1 * JT)^-1, which is going to be a little tricky because J * M^-1 * JT is a 6x6 matrix:
             //J * M^-1 * JT = [ Ia^-1 + Ib^-1,                                     Ia^-1 * transpose(skewSymmetric(localOffset * orientationA))                                                             ]
             //                [ skewSymmetric(localOffset * orientationA) * Ia^-1, Ma^-1 + Mb^-1 + skewSymmetric(localOffset * orientationA) * Ia^-1 * transpose(skewSymmetric(localOffset * orientationA)) ]
             //where Ia^-1 and Ib^-1 are the inverse inertia tensors for a and b and Ma^-1 and Mb^-1 are the inverse masses of A and B expanded to 3x3 diagonal matrices.
             var jmjtA = inertiaA.InverseInertiaTensor + inertiaB.InverseInertiaTensor;
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
-            Matrix3x3Wide.CreateCrossProduct(offset, out var xAB);
-            Symmetric3x3Wide.Multiply(inertiaA.InverseInertiaTensor, xAB, out var jmjtB);
-            Symmetric3x3Wide.CompleteMatrixSandwichTranspose(xAB, jmjtB, out var jmjtD);
+            var xAB = CreateCrossProduct(offset);
+            var jmjtB = inertiaA.InverseInertiaTensor * xAB;
+            CompleteMatrixSandwichTranspose(xAB, jmjtB, out var jmjtD);
             var diagonalAdd = inertiaA.InverseMass + inertiaB.InverseMass;
             jmjtD.XX += diagonalAdd;
             jmjtD.YY += diagonalAdd;
             jmjtD.ZZ += diagonalAdd;
-            //Note that there is no need to invert that 6x6 chonk. We want to convert a constraint space velocity into a constraint space impulse, csi = csv * effectiveMass.
+            //Note that there is no need to invert the 6x6 inverse effective mass matrix chonk. We want to convert a constraint space velocity into a constraint space impulse, csi = csv * effectiveMass.
             //This is equivalent to solving csi * effectiveMass^-1 = csv for csi, and since effectiveMass^-1 is symmetric positive semidefinite, we can use an LDLT decomposition to quickly solve it.
+            Symmetric6x6Wide.LDLTSolve(orientationCSV, offsetCSV, jmjtA, jmjtB, jmjtD, out var orientationCSI, out var offsetCSI);
+            orientationCSI = orientationCSI * effectiveMassCFMScale - accumulatedImpulses.Orientation * softnessImpulseScale;
+            offsetCSI = offsetCSI * effectiveMassCFMScale - accumulatedImpulses.Offset * effectiveMassCFMScale;
+            accumulatedImpulses.Orientation += orientationCSI;
+            accumulatedImpulses.Offset += offsetCSI;
 
-            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
-
-            //Compute the current constraint error for all 6 degrees of freedom.
-            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Vector3Wide.Subtract(ab, offset, out var positionError);
-            QuaternionWide.ConcatenateWithoutOverlap(prestep.LocalOrientation, orientationA, out var targetOrientationB);
-            QuaternionWide.Conjugate(targetOrientationB, out var inverseTarget);
-            QuaternionWide.ConcatenateWithoutOverlap(inverseTarget, orientationB, out var rotationError);
-            QuaternionWide.GetApproximateAxisAngleFromQuaternion(rotationError, out var rotationErrorAxis, out var rotationErrorLength);
-
-            Vector3Wide.Scale(positionError, positionErrorToVelocity, out var offsetBiasVelocity);
-            Vector3Wide.Scale(rotationErrorAxis, rotationErrorLength * positionErrorToVelocity, out var orientationBiasVelocity);
-
-            ApplyImpulse(inertiaA, inertiaB, ab, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
+            ApplyImpulse(inertiaA, inertiaB, ab, orientationCSI, offsetCSI, ref wsvA, ref wsvB);
         }
 
 

@@ -180,6 +180,22 @@ namespace BepuUtilities
             skew.Z.Z = Vector<float>.Zero;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Matrix3x3Wide CreateCrossProduct(in Vector3Wide v)
+        {
+            Matrix3x3Wide skew;
+            skew.X.X = Vector<float>.Zero;
+            skew.X.Y = -v.Z;
+            skew.X.Z = v.Y;
+            skew.Y.X = v.Z;
+            skew.Y.Y = Vector<float>.Zero;
+            skew.Y.Z = -v.X;
+            skew.Z.X = -v.Y;
+            skew.Z.Y = v.X;
+            skew.Z.Z = Vector<float>.Zero;
+            return skew;
+        }
+
         /// <summary>
         /// Negates the components of a matrix.
         /// </summary>
