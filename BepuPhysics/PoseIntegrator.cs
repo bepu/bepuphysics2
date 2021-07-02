@@ -135,7 +135,7 @@ namespace BepuPhysics
             q.Z = angularVelocity.Z * scale;
             MathHelper.Cos(halfAngle, out q.W);
             QuaternionWide.ConcatenateWithoutOverlap(start, q, out var concatenated);
-            QuaternionWide.Normalize(concatenated, out integrated);
+            integrated = QuaternionWide.Normalize(concatenated);
             var speedValid = Vector.GreaterThan(speed, new Vector<float>(1e-15f));
             integrated.X = Vector.ConditionalSelect(speedValid, integrated.X, start.X);
             integrated.Y = Vector.ConditionalSelect(speedValid, integrated.Y, start.Y);

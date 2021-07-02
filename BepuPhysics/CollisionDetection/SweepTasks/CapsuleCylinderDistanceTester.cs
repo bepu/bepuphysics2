@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         {
             QuaternionWide.Conjugate(orientationB, out var inverseOrientationB);
             QuaternionWide.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
-            QuaternionWide.TransformUnitY(localOrientationA, out var capsuleAxis);
+            var capsuleAxis = QuaternionWide.TransformUnitY(localOrientationA);
             QuaternionWide.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
 

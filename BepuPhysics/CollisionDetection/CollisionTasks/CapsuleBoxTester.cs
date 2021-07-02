@@ -19,7 +19,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             QuaternionWide.TransformWithoutOverlap(offsetB, toLocalB, out localOffsetA);
             Vector3Wide.Negate(ref localOffsetA);
             QuaternionWide.ConcatenateWithoutOverlap(orientationA, toLocalB, out var boxLocalOrientationA);
-            QuaternionWide.TransformUnitY(boxLocalOrientationA, out capsuleAxis);
+            capsuleAxis = QuaternionWide.TransformUnitY(boxLocalOrientationA);
 
             //Get the closest point on the capsule segment to the box center to choose which edge to use.
             //(Pointless to test the other 9; they're guaranteed to be further away.)
