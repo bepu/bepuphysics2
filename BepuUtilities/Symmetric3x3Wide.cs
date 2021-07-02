@@ -78,6 +78,25 @@ namespace BepuUtilities
             result.ZY = a.ZY + b.ZY;
             result.ZZ = a.ZZ + b.ZZ;
         }
+        /// <summary>
+        /// Adds the components of two symmetric matrices together.
+        /// </summary>
+        /// <param name="a">First matrix to add.</param>
+        /// <param name="b">Second matrix to add.</param>
+        /// <returns>Sum of the two input matrices.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Symmetric3x3Wide operator +(in Symmetric3x3Wide a, in Symmetric3x3Wide b)  //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
+        {
+            Symmetric3x3Wide result;
+            result.XX = a.XX + b.XX;
+            result.YX = a.YX + b.YX;
+            result.YY = a.YY + b.YY;
+            result.ZX = a.ZX + b.ZX;
+            result.ZY = a.ZY + b.ZY;
+            result.ZZ = a.ZZ + b.ZZ;
+            return result;
+        }
+
 
         /// <summary>
         /// Subtracts one symmetric matrix's components from another.
@@ -96,6 +115,24 @@ namespace BepuUtilities
             result.ZZ = a.ZZ - b.ZZ;
         }
 
+        /// <summary>
+        /// Subtracts one symmetric matrix's components from another.
+        /// </summary>
+        /// <param name="a">Matrix to be subtracted from.</param>
+        /// <param name="b">Matrix to subtract from the first matrix.</param>
+        /// <returns>Result of a - b.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Symmetric3x3Wide operator -(in Symmetric3x3Wide a, in Symmetric3x3Wide b) //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
+        {
+            Symmetric3x3Wide result;
+            result.XX = a.XX - b.XX;
+            result.YX = a.YX - b.YX;
+            result.YY = a.YY - b.YY;
+            result.ZX = a.ZX - b.ZX;
+            result.ZY = a.ZY - b.ZY;
+            result.ZZ = a.ZZ - b.ZZ;
+            return result;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Scale(in Symmetric3x3Wide m, in Vector<float> scale, out Symmetric3x3Wide result)
@@ -107,7 +144,20 @@ namespace BepuUtilities
             result.ZY = m.ZY * scale;
             result.ZZ = m.ZZ * scale;
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Symmetric3x3Wide operator *(in Symmetric3x3Wide m, in Vector<float> scale) //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
+        {
+            Symmetric3x3Wide result;
+            result.XX = m.XX * scale;
+            result.YX = m.YX * scale;
+            result.YY = m.YY * scale;
+            result.ZX = m.ZX * scale;
+            result.ZY = m.ZY * scale;
+            result.ZZ = m.ZZ * scale;
+            return result;
+        }
+
         //If you ever need a triangular invert, a couple of options:
         //For matrices of the form:
         //[ 1  0  0 ]
@@ -225,6 +275,25 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="a">First matrix of the pair to multiply.</param>
         /// <param name="b">Matrix to be reinterpreted as symmetric for the multiply.</param>
+        /// <returns>Result of multiplying a * b.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Matrix2x3Wide operator *(in Matrix2x3Wide a, in Symmetric3x3Wide b) //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
+        {
+            Matrix2x3Wide result;
+            result.X.X = a.X.X * b.XX + a.X.Y * b.YX + a.X.Z * b.ZX;
+            result.X.Y = a.X.X * b.YX + a.X.Y * b.YY + a.X.Z * b.ZY;
+            result.X.Z = a.X.X * b.ZX + a.X.Y * b.ZY + a.X.Z * b.ZZ;
+            result.Y.X = a.Y.X * b.XX + a.Y.Y * b.YX + a.Y.Z * b.ZX;
+            result.Y.Y = a.Y.X * b.YX + a.Y.Y * b.YY + a.Y.Z * b.ZY;
+            result.Y.Z = a.Y.X * b.ZX + a.Y.Y * b.ZY + a.Y.Z * b.ZZ;
+            return result;
+        }
+
+        /// <summary>
+        /// Computes result = a * b, assuming that b represents a symmetric 3x3 matrix. Assumes that input parameters and output result do not overlap.
+        /// </summary>
+        /// <param name="a">First matrix of the pair to multiply.</param>
+        /// <param name="b">Matrix to be reinterpreted as symmetric for the multiply.</param>
         /// <param name="result">Result of multiplying a * b.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void MultiplyWithoutOverlap(in Matrix3x3Wide a, in Symmetric3x3Wide b, out Matrix3x3Wide result)
@@ -240,6 +309,31 @@ namespace BepuUtilities
             result.Z.X = a.Z.X * b.XX + a.Z.Y * b.YX + a.Z.Z * b.ZX;
             result.Z.Y = a.Z.X * b.YX + a.Z.Y * b.YY + a.Z.Z * b.ZY;
             result.Z.Z = a.Z.X * b.ZX + a.Z.Y * b.ZY + a.Z.Z * b.ZZ;
+        }
+
+
+        /// <summary>
+        /// Computes result = a * b, assuming that b represents a symmetric 3x3 matrix. Assumes that input parameters and output result do not overlap.
+        /// </summary>
+        /// <param name="a">First matrix of the pair to multiply.</param>
+        /// <param name="b">Matrix to be reinterpreted as symmetric for the multiply.</param>
+        /// <returns>Result of multiplying a * b.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Matrix3x3Wide operator *(in Matrix3x3Wide a, in Symmetric3x3Wide b) //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
+        {
+            Matrix3x3Wide result;
+            result.X.X = a.X.X * b.XX + a.X.Y * b.YX + a.X.Z * b.ZX;
+            result.X.Y = a.X.X * b.YX + a.X.Y * b.YY + a.X.Z * b.ZY;
+            result.X.Z = a.X.X * b.ZX + a.X.Y * b.ZY + a.X.Z * b.ZZ;
+
+            result.Y.X = a.Y.X * b.XX + a.Y.Y * b.YX + a.Y.Z * b.ZX;
+            result.Y.Y = a.Y.X * b.YX + a.Y.Y * b.YY + a.Y.Z * b.ZY;
+            result.Y.Z = a.Y.X * b.ZX + a.Y.Y * b.ZY + a.Y.Z * b.ZZ;
+
+            result.Z.X = a.Z.X * b.XX + a.Z.Y * b.YX + a.Z.Z * b.ZX;
+            result.Z.Y = a.Z.X * b.YX + a.Z.Y * b.YY + a.Z.Z * b.ZY;
+            result.Z.Z = a.Z.X * b.ZX + a.Z.Y * b.ZY + a.Z.Z * b.ZZ;
+            return result;
         }
 
         /// <summary>
@@ -262,6 +356,30 @@ namespace BepuUtilities
             result.Z.X = a.ZX * b.X.X + a.ZY * b.Y.X + a.ZZ * b.Z.X;
             result.Z.Y = a.ZX * b.X.Y + a.ZY * b.Y.Y + a.ZZ * b.Z.Y;
             result.Z.Z = a.ZX * b.X.Z + a.ZY * b.Y.Z + a.ZZ * b.Z.Z;
+        }
+
+        /// <summary>
+        /// Computes result = a * b, assuming that a represents a symmetric 3x3 matrix. Assumes that input parameters and output result do not overlap.
+        /// </summary>
+        /// <param name="a">Matrix to be reinterpreted as symmetric for the multiply.</param>
+        /// <param name="b">Second matrix of the pair to multiply.</param>
+        /// <param name="result">Result of multiplying a * b.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Matrix3x3Wide operator *(in Symmetric3x3Wide a, in Matrix3x3Wide b) //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
+        {
+            Matrix3x3Wide result;
+            result.X.X = a.XX * b.X.X + a.YX * b.Y.X + a.ZX * b.Z.X;
+            result.X.Y = a.XX * b.X.Y + a.YX * b.Y.Y + a.ZX * b.Z.Y;
+            result.X.Z = a.XX * b.X.Z + a.YX * b.Y.Z + a.ZX * b.Z.Z;
+
+            result.Y.X = a.YX * b.X.X + a.YY * b.Y.X + a.ZY * b.Z.X;
+            result.Y.Y = a.YX * b.X.Y + a.YY * b.Y.Y + a.ZY * b.Z.Y;
+            result.Y.Z = a.YX * b.X.Z + a.YY * b.Y.Z + a.ZY * b.Z.Z;
+
+            result.Z.X = a.ZX * b.X.X + a.ZY * b.Y.X + a.ZZ * b.Z.X;
+            result.Z.Y = a.ZX * b.X.Y + a.ZY * b.Y.Y + a.ZZ * b.Z.Y;
+            result.Z.Z = a.ZX * b.X.Z + a.ZY * b.Y.Z + a.ZZ * b.Z.Z;
+            return result;
         }
 
         /// <summary>
@@ -401,7 +519,7 @@ namespace BepuUtilities
             result.ZX = a.X.Z * b.X.X + a.Y.Z * b.Y.X + a.Z.Z * b.Z.X;
             result.ZY = a.X.Z * b.X.Y + a.Y.Z * b.Y.Y + a.Z.Z * b.Z.Y;
             result.ZZ = a.X.Z * b.X.Z + a.Y.Z * b.Y.Z + a.Z.Z * b.Z.Z;
-        }        
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void TransformWithoutOverlap(in Vector3Wide v, in Symmetric3x3Wide m, out Vector3Wide result)
@@ -409,6 +527,16 @@ namespace BepuUtilities
             result.X = v.X * m.XX + v.Y * m.YX + v.Z * m.ZX;
             result.Y = v.X * m.YX + v.Y * m.YY + v.Z * m.ZY;
             result.Z = v.X * m.ZX + v.Y * m.ZY + v.Z * m.ZZ;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector3Wide operator *(in Vector3Wide v, in Symmetric3x3Wide m) //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
+        {
+            Vector3Wide result;
+            result.X = v.X * m.XX + v.Y * m.YX + v.Z * m.ZX;
+            result.Y = v.X * m.YX + v.Y * m.YY + v.Z * m.ZY;
+            result.Z = v.X * m.ZX + v.Y * m.ZY + v.Z * m.ZZ;
+            return result;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

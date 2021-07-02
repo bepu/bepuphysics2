@@ -113,6 +113,17 @@ namespace BepuUtilities
             result.Y = v.X * m.X.Y + v.Y * m.Y.Y + v.Z * m.Z.Y;
             result.Z = v.X * m.X.Z + v.Y * m.Y.Z + v.Z * m.Z.Z;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector3Wide operator *(Vector3Wide v, Matrix3x3Wide m)
+        {
+            Vector3Wide result;
+            result.X = v.X * m.X.X + v.Y * m.Y.X + v.Z * m.Z.X;
+            result.Y = v.X * m.X.Y + v.Y * m.Y.Y + v.Z * m.Z.Y;
+            result.Z = v.X * m.X.Z + v.Y * m.Y.Z + v.Z * m.Z.Z;
+            return result;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void TransformByTransposedWithoutOverlap(in Vector3Wide v, in Matrix3x3Wide m, out Vector3Wide result)
         {

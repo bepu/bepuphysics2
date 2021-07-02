@@ -241,8 +241,7 @@ namespace BepuPhysics.Constraints
             //angularVelocityA = angularVelocityB
             //linearVelocityA + angularVelocityA x (localOffset * orientationA) = linearVelocityB
             //Note that the position constraint is similar a ball socket joint, except the anchor point is on top of the center of mass of object B.
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
-            ApplyImpulse(inertiaA, inertiaB, offset, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
+            ApplyImpulse(inertiaA, inertiaB, prestep.LocalOffset * orientationA, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
         }
         public void Solve2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
             in WeldPrestepData prestep, in WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
@@ -263,7 +262,7 @@ namespace BepuPhysics.Constraints
             //J * M^-1 * JT = [ Ia^-1 + Ib^-1,                                     Ia^-1 * transpose(skewSymmetric(localOffset * orientationA))                                                             ]
             //                [ skewSymmetric(localOffset * orientationA) * Ia^-1, Ma^-1 + Mb^-1 + skewSymmetric(localOffset * orientationA) * Ia^-1 * transpose(skewSymmetric(localOffset * orientationA)) ]
             //where Ia^-1 and Ib^-1 are the inverse inertia tensors for a and b and Ma^-1 and Mb^-1 are the inverse masses of A and B expanded to 3x3 diagonal matrices.
-            Symmetric3x3Wide.Add(inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, out var jmjtA);
+            var jmjtA = inertiaA.InverseInertiaTensor + inertiaB.InverseInertiaTensor;
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
             Matrix3x3Wide.CreateCrossProduct(offset, out var xAB);
             Symmetric3x3Wide.Multiply(inertiaA.InverseInertiaTensor, xAB, out var jmjtB);

@@ -707,6 +707,11 @@ namespace Demos.Demos
             Unsafe.SkipInit(out Vector3Wide c);
             Unsafe.SkipInit(out Vector<float> d);
             Unsafe.SkipInit(out Vector<int> e);
+            Unsafe.SkipInit(out Symmetric3x3Wide s1);
+            Unsafe.SkipInit(out Matrix3x3Wide s2);
+            Unsafe.SkipInit(out QuaternionWide q1);
+            Unsafe.SkipInit(out QuaternionWide q2);
+
 
             var r = Vector3Wide.Min(Vector3Wide.Max(Vector3Wide.Dot(a - b, b - c), a), b);
             var p = Vector3Wide.Cross((d * r) * d, -Vector3Wide.Abs(a));
@@ -715,12 +720,16 @@ namespace Demos.Demos
             var uh = n1 + n2;
             uh += Vector3Wide.Dot(a * b, Vector3Wide.Broadcast(Vector3.Zero));
 
-            Unsafe.SkipInit(out QuaternionWide q1);
-            Unsafe.SkipInit(out QuaternionWide q2);
-
             var ehe = Vector3Wide.Normalize(a * q1 * q2);
             uh += ehe.LengthSquared() * q1.LengthSquared();
 
+            var m0 = s1 * s2;
+            uh += Vector3Wide.Dot(a * m0, a);
+
+            uh += Vector3Wide.Dot(a * s1, a);
+            var uh2 = a * s1;
+
+            Console.WriteLine("$uah" + uh2);
             Console.WriteLine($"ree: {uh}");
         }
 
