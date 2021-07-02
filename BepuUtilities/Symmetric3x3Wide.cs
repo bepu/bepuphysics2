@@ -41,7 +41,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="m">Symmetric matrix to invert.</param>
         /// <param name="inverse">Inverse of the symmetric matrix.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Invert(in Symmetric3x3Wide m, out Symmetric3x3Wide inverse)
         {
             var xx = m.YY * m.ZZ - m.ZY * m.ZY;

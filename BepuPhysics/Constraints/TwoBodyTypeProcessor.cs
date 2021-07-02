@@ -358,8 +358,16 @@ namespace BepuPhysics.Constraints
                 var count = GetCountInBundle(ref typeBatch, i);
                 Prefetch(ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
-                function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out var projection);
-                function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
+                if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
+                {
+                    default(WeldFunctions).PrestepWarmstart(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, 
+                        Unsafe.As<TPrestepData, WeldPrestepData>(ref prestep), Unsafe.As<TAccumulatedImpulse, WeldAccumulatedImpulses>(ref accumulatedImpulses), ref wsvA, ref wsvB);
+                }
+                else
+                {
+                    function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out var projection);
+                    function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
+                }
                 bodies.ScatterVelocities(ref wsvA, ref wsvB, ref references, count);
             }
         }
