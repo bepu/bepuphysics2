@@ -715,6 +715,12 @@ namespace Demos.Demos
             var uh = n1 + n2;
             uh += Vector3Wide.Dot(a * b, Vector3Wide.Broadcast(Vector3.Zero));
 
+            Unsafe.SkipInit(out QuaternionWide q1);
+            Unsafe.SkipInit(out QuaternionWide q2);
+
+            var ehe = Vector3Wide.Normalize(a * q1 * q2);
+            uh += ehe.LengthSquared() * q1.LengthSquared();
+
             Console.WriteLine($"ree: {uh}");
         }
 
