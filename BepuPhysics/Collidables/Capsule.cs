@@ -221,7 +221,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
-            QuaternionWide.TransformUnitY(orientations, out var segmentOffset);
+            var segmentOffset = QuaternionWide.TransformUnitY(orientations);
             Vector3Wide.Scale(segmentOffset, HalfLength, out segmentOffset);
             Vector3Wide.Abs(segmentOffset, out segmentOffset);
 

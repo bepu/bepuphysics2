@@ -221,7 +221,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
-            QuaternionWide.TransformUnitY(orientations, out var y);
+            var y = QuaternionWide.TransformUnitY(orientations);
             Vector3Wide.Multiply(y, y, out var yy);
             Vector3Wide.Subtract(Vector<float>.One, yy, out var squared);
             max.X = Vector.Abs(HalfLength * y.X) + Vector.SquareRoot(Vector.Max(Vector<float>.Zero, squared.X)) * Radius;

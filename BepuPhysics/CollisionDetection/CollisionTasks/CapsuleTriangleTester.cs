@@ -121,7 +121,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(b.C, localTriangleCenter, out localTriangleCenter);
             Vector3Wide.Scale(localTriangleCenter, new Vector<float>(1f / 3f), out localTriangleCenter);
 
-            QuaternionWide.TransformUnitY(orientationA, out var worldCapsuleAxis);
+            var worldCapsuleAxis = QuaternionWide.TransformUnitY(orientationA);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(worldCapsuleAxis, rB, out var localCapsuleAxis);
 
             //There are four sources of separating axis for deep contact, where the capsule axis intersects the triangle:

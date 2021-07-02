@@ -187,7 +187,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         {
             //Bring the capsule into the box's local space.
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
-            QuaternionWide.TransformUnitY(orientationA, out var capsuleAxis);
+            var capsuleAxis = QuaternionWide.TransformUnitY(orientationA);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(capsuleAxis, rB, out var localCapsuleAxis);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, rB, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
