@@ -26,7 +26,7 @@ namespace BepuUtilities
             Symmetric3x3Wide.Scale(m.D, scale, out result.D);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Invert(in Symmetric3x3Wide a, in Matrix3x3Wide b, in Symmetric3x3Wide d, out Symmetric6x6Wide result)
         {
             // [ A  B ]^-1 = [ (A - B * D^-1 * BT)^-1, -(A - B * D^-1 * BT)^-1 * B * D^-1                   ]
