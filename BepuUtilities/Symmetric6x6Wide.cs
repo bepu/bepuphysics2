@@ -71,5 +71,51 @@ namespace BepuUtilities
             result1.Y = v0.X * m.B.X.Y + v0.Y * m.B.Y.Y + v0.Z * m.B.Z.Y + v1.X * m.D.YX + v1.Y * m.D.YY + v1.Z * m.D.ZY;
             result1.Z = v0.X * m.B.X.Z + v0.Y * m.B.Y.Z + v0.Z * m.B.Z.Z + v1.X * m.D.ZX + v1.Y * m.D.ZY + v1.Z * m.D.ZZ;
         }
+
+        /// <summary>
+        /// Solves [vLower, vUpper] = [resultLower, resultUpper] * [[a, b], [bT, d]] for [resultLower, resultUpper] using LDLT decomposition.
+        /// [[a, b], [bT, d]] should be positive semidefinite.
+        /// </summary>
+        /// <param name="v0">First 3 values of the 6 component input vector.</param>
+        /// <param name="v1">Second 3 values of the 6 component input vector.</param>
+        /// <param name="a">Upper left 3x3 region of the matrix.</param>
+        /// <param name="b">Upper right 3x3 region of the matrix. Also the lower left 3x3 region of the matrix, transposed.</param>
+        /// <param name="d">Lower right 3x3 region of the matrix.</param>
+        /// <param name="result0">First 3 values of the result vector.</param>
+        /// <param name="result1">Second 3 values of the result vector.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void LDLTSolve(
+            in Vector3Wide v0, in Vector3Wide v1, in Symmetric3x3Wide a, in Matrix3x3Wide b, in Symmetric3x3Wide d, out Vector3Wide result0, out Vector3Wide result1)
+        {
+            var d1 = a.XX;
+            var inverseD1 = Vector<float>.One / d1;
+            var l21 = inverseD1 * a.YX;
+            var l31 = inverseD1 * a.ZX;
+            var l41 = inverseD1 * b.X.X;
+            var l51 = inverseD1 * b.X.Y;
+            var l61 = inverseD1 * b.X.Z;
+            var d2 = a.YY - l21 * l21;
+            var inverseD2 = Vector<float>.One / d2;
+            var l32 = inverseD2 * (a.ZY - l31 * l21 * d1);
+            var l42 = inverseD2 * (b.Y.X - l41 * l21 * d1);
+            var l52 = inverseD2 * (b.Y.Y - l51 * l21 * d1);
+            var l62 = inverseD2 * (b.Y.Z - l61 * l21 * d1);
+            var d3 = a.ZZ - l31 * l31 * d1 - l32 * l32 * d2;
+            var inverseD3 = Vector<float>.One / d3;
+            var l43 = inverseD3 * (b.Z.X - l41 * l31 * d1 - l42 * l32 * d2);
+            var l53 = inverseD3 * (b.Z.Y - l51 * l31 * d1 - l52 * l32 * d2);
+            var l63 = inverseD3 * (b.Z.Y - l61 * l31 * d1 - l62 * l32 * d2);
+            var d4 = d.XX - l41 * l41 * d1 - l42 * l42 * d2 - l43 * l43 * d3;
+            var inverseD4 = Vector<float>.One / d4;
+            var l54 = inverseD4 * (d.YX - l51 * l41 * d1 - l52 * l42 * d2 - l53 * l43 * d3);
+            var l64 = inverseD4 * (d.ZX - l61 * l41 * d1 - l62 * l42 * d2 - l63 * l43 * d3);
+            var d5 = d.YY - l51 * l51 * d1 - l52 * l52 * d2 - l53 * l53 * d3 - l54 * l54 * d4;
+            var inverseD5 = Vector<float>.One / d5;
+            var l65 = inverseD5 * (d.ZY - l61 * l51 * d1 - l62 * l52 * d2 - l63 * l53 * d3 - l64 * l54 * d4);
+            var d6 = d.ZZ - l61 * l61 * d1 - l62 * l62 * d2 - l63 * l63 * d3 - l64 * l64 * d4 - l65 * l65 * d5;
+            var inverseD6 = Vector<float>.One / d6;
+
+            //We now have the components of L and D, so substitute.
+        }
     }
 }
