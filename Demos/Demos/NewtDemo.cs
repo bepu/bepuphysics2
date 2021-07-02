@@ -699,11 +699,28 @@ namespace Demos.Demos
             edges.Dispose(pool);
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        void Test()
+        {
+            Unsafe.SkipInit(out Vector3Wide a);
+            Unsafe.SkipInit(out Vector3Wide b);
+            Unsafe.SkipInit(out Vector3Wide c);
+            Unsafe.SkipInit(out Vector<float> d);
+            Unsafe.SkipInit(out Vector<int> e);
 
+            var r = Vector3Wide.Min(Vector3Wide.Max(Vector3Wide.Dot(a - b, b - c), a), b);
+            var p = Vector3Wide.Cross((d * r) * d, -Vector3Wide.Abs(a));
+            var n1 = Vector3Wide.Length(Vector3Wide.ConditionallyNegate(e, p));
+            var n2 = (Vector3Wide.ConditionallyNegate(e, b)).Length();
+            var uh = n1 + n2;
+            uh += Vector3Wide.Dot(a * b, Vector3Wide.Broadcast(Vector3.Zero));
 
+            Console.WriteLine($"ree: {uh}");
+        }
 
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
+            Test();
             Console.WriteLine($"aasgh: {Unsafe.SizeOf<MotionState>()}");
             var stateTest = new MotionState();
             Console.WriteLine($"offset: {(byte*)&stateTest.Velocity - (byte*)&stateTest.Pose}");

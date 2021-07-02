@@ -360,7 +360,7 @@ namespace BepuPhysics.Constraints
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
                 {
-                    default(WeldFunctions).PrestepWarmstart(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, 
+                    default(WeldFunctions).WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, 
                         Unsafe.As<TPrestepData, WeldPrestepData>(ref prestep), Unsafe.As<TAccumulatedImpulse, WeldAccumulatedImpulses>(ref accumulatedImpulses), ref wsvA, ref wsvB);
                 }
                 else
