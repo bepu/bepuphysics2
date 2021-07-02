@@ -87,7 +87,7 @@ namespace BepuPhysics.Constraints
 
     public struct WeldFunctions : IConstraintFunctions<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
             ref WeldPrestepData prestep, out WeldProjection projection)
         {
@@ -167,13 +167,13 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Subtract(velocityB.Angular, negatedAngularChangeB, out velocityB.Angular); //note subtraction; the jacobian is -I        
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref WeldProjection projection, ref WeldAccumulatedImpulses accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse.Orientation, ref accumulatedImpulse.Offset);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref WeldProjection projection, ref WeldAccumulatedImpulses accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);

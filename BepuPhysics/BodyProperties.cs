@@ -12,27 +12,27 @@ namespace BepuPhysics
     /// <summary>
     /// Stores the inertia of a body in half precision.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, Size = 10, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential, Size = 4, Pack = 1)]
     public struct PackedInertia
     {
         //TODO: Temporarily ignoring off-diagonal inertia for testing. 
         public float InverseMass;
-        public Half InverseNormalizedInertiaXX;
-        //public Half InverseNormalizedInertiaYX;
-        public Half InverseNormalizedInertiaYY;
-        //public Half InverseNormalizedInertiaZX;
-        //public Half InverseNormalizedInertiaZY;
-        public Half InverseNormalizedInertiaZZ;
+        //public Half InverseNormalizedInertiaXX;
+        ////public Half InverseNormalizedInertiaYX;
+        //public Half InverseNormalizedInertiaYY;
+        ////public Half InverseNormalizedInertiaZX;
+        ////public Half InverseNormalizedInertiaZY;
+        //public Half InverseNormalizedInertiaZZ;
 
         public PackedInertia(in BodyInertia inertia)
         {
             InverseMass = inertia.InverseMass;
-            InverseNormalizedInertiaXX = (Half)(inertia.InverseInertiaTensor.XX / InverseMass);
-            //InverseNormalizedInertiaYX = (Half)(inertia.InverseInertiaTensor.YX/ InverseMass);
-            InverseNormalizedInertiaYY = (Half)(inertia.InverseInertiaTensor.YY / InverseMass);
-            //InverseNormalizedInertiaZX = (Half)(inertia.InverseInertiaTensor.ZX/ InverseMass);
-            //InverseNormalizedInertiaZY = (Half)(inertia.InverseInertiaTensor.ZY/ InverseMass);
-            InverseNormalizedInertiaZZ = (Half)(inertia.InverseInertiaTensor.ZZ / InverseMass);
+            //InverseNormalizedInertiaXX = (Half)(inertia.InverseInertiaTensor.XX / InverseMass);
+            ////InverseNormalizedInertiaYX = (Half)(inertia.InverseInertiaTensor.YX/ InverseMass);
+            //InverseNormalizedInertiaYY = (Half)(inertia.InverseInertiaTensor.YY / InverseMass);
+            ////InverseNormalizedInertiaZX = (Half)(inertia.InverseInertiaTensor.ZX/ InverseMass);
+            ////InverseNormalizedInertiaZY = (Half)(inertia.InverseInertiaTensor.ZY/ InverseMass);
+            //InverseNormalizedInertiaZZ = (Half)(inertia.InverseInertiaTensor.ZZ / InverseMass);
         }
 
         public readonly void Unpack(out BodyInertia inertia)
@@ -40,12 +40,12 @@ namespace BepuPhysics
             //TODO: not necessary in complete implementation
             inertia = default;
             inertia.InverseMass = InverseMass;
-            inertia.InverseInertiaTensor.XX = (float)InverseNormalizedInertiaXX * InverseMass;
-            //inertia.InverseInertiaTensor.YX = (float)InverseNormalizedInertiaYX * InverseMass;
-            inertia.InverseInertiaTensor.YY = (float)InverseNormalizedInertiaYY * InverseMass;
-            //inertia.InverseInertiaTensor.ZX = (float)InverseNormalizedInertiaZX * InverseMass;
-            //inertia.InverseInertiaTensor.ZY = (float)InverseNormalizedInertiaZY * InverseMass;
-            inertia.InverseInertiaTensor.ZZ = (float)InverseNormalizedInertiaZZ * InverseMass;
+            //inertia.InverseInertiaTensor.XX = (float)InverseNormalizedInertiaXX * InverseMass;
+            ////inertia.InverseInertiaTensor.YX = (float)InverseNormalizedInertiaYX * InverseMass;
+            //inertia.InverseInertiaTensor.YY = (float)InverseNormalizedInertiaYY * InverseMass;
+            ////inertia.InverseInertiaTensor.ZX = (float)InverseNormalizedInertiaZX * InverseMass;
+            ////inertia.InverseInertiaTensor.ZY = (float)InverseNormalizedInertiaZY * InverseMass;
+            //inertia.InverseInertiaTensor.ZZ = (float)InverseNormalizedInertiaZZ * InverseMass;
         }
         public readonly BodyInertia Unpack()
         {
@@ -61,20 +61,20 @@ namespace BepuPhysics
     [StructLayout(LayoutKind.Sequential, Size = 64, Pack = 1)]
     public struct MotionState
     {
-        internal const int OffsetToPositionX = 0;
-        internal const int OffsetToPositionY = 1;
-        internal const int OffsetToPositionZ = 2;
-        internal const int OffsetToOrientationX = 3;
-        internal const int OffsetToOrientationY = 4;
-        internal const int OffsetToOrientationZ = 5;
-        internal const int OffsetToOrientationW = 6;
-        internal const int OffsetToLinearX = 7;
-        internal const int OffsetToLinearY = 8;
-        internal const int OffsetToLinearZ = 9;
-        internal const int OffsetToAngularX = 10;
-        internal const int OffsetToAngularY = 11;
-        internal const int OffsetToAngularZ = 12;
-        internal const int OffsetToInverseMass = 13;
+        internal const int OffsetToOrientationX = 0;
+        internal const int OffsetToOrientationY = 1;
+        internal const int OffsetToOrientationZ = 2;
+        internal const int OffsetToOrientationW = 3;
+        internal const int OffsetToPositionX = 4;
+        internal const int OffsetToPositionY = 5;
+        internal const int OffsetToPositionZ = 6;
+        internal const int OffsetToInverseMass = 7;
+        internal const int OffsetToLinearX = 8;
+        internal const int OffsetToLinearY = 9;
+        internal const int OffsetToLinearZ = 10;
+        internal const int OffsetToAngularX = 12;
+        internal const int OffsetToAngularY = 13;
+        internal const int OffsetToAngularZ = 14;
         internal const int OffsetToInverseInertiaXX = OffsetToInverseMass;
         internal const int OffsetToInverseInertiaYY = OffsetToInverseMass;
         internal const int OffsetToInverseInertiaZZ = OffsetToInverseMass;
@@ -103,14 +103,13 @@ namespace BepuPhysics
         /// </summary>
         public RigidPose Pose;
         /// <summary>
-        /// Linear and angular velocity of the body.
-        /// </summary>
-        public BodyVelocity Velocity;
-
-        /// <summary>
         /// Packed inertia of the body.
         /// </summary>
         public PackedInertia PackedLocalInertia;
+        /// <summary>
+        /// Linear and angular velocity of the body.
+        /// </summary>
+        public BodyVelocity Velocity;
     }
 
     //TODO: It's a little odd that this exists alongside the BepuUtilities.RigidTransform. The original reasoning was that rigid poses may end up having a non-FP32 representation.
@@ -122,12 +121,12 @@ namespace BepuPhysics
     [StructLayout(LayoutKind.Sequential, Size = 28, Pack = 1)]
     public struct RigidPose
     {
-        public Vector3 Position;
         //Note that we store a quaternion rather than a matrix3x3. While this often requires some overhead when performing vector transforms or extracting basis vectors, 
         //systems needing to interact directly with this representation are often terrifically memory bound. Spending the extra ALU time to convert to a basis can actually be faster
         //than loading the extra 5 elements needed to express the full 3x3 rotation matrix. Also, it's marginally easier to keep the rotation normalized over time.
         //There may be an argument for the matrix variant to ALSO be stored for some bandwidth-unconstrained stages, but don't worry about that until there's a reason to worry about it.
         public Quaternion Orientation;
+        public Vector3 Position;
 
         public static RigidPose Identity { get; } = new RigidPose(new Vector3());
 
@@ -195,7 +194,7 @@ namespace BepuPhysics
         }
     }
 
-    [StructLayout(LayoutKind.Sequential, Size = 24, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential, Size = 32, Pack = 16)]
     public struct BodyVelocity
     {
         public Vector3 Linear;
