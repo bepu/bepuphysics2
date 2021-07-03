@@ -291,6 +291,8 @@ namespace BepuPhysics.Constraints
             //Note that there is no need to invert the 6x6 inverse effective mass matrix chonk. We want to convert a constraint space velocity into a constraint space impulse, csi = csv * effectiveMass.
             //This is equivalent to solving csi * effectiveMass^-1 = csv for csi, and since effectiveMass^-1 is symmetric positive semidefinite, we can use an LDLT decomposition to quickly solve it.
             Symmetric6x6Wide.LDLTSolve(orientationCSV, offsetCSV, jmjtA, jmjtB, jmjtD, out var orientationCSI, out var offsetCSI);
+            //Symmetric6x6Wide.Invert(jmjtA, jmjtB, jmjtD, out var testEffectiveMass);
+            //Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, testEffectiveMass, out var testOrientationCSI, out var testOffsetCSI);
             orientationCSI = orientationCSI * effectiveMassCFMScale - accumulatedImpulses.Orientation * softnessImpulseScale;
             offsetCSI = offsetCSI * effectiveMassCFMScale - accumulatedImpulses.Offset * effectiveMassCFMScale;
             accumulatedImpulses.Orientation += orientationCSI;
