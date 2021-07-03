@@ -814,13 +814,6 @@ namespace Demos.Demos
 
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            Test();
-            Test2();
-            Test2();
-            Console.WriteLine($"aasgh: {Unsafe.SizeOf<MotionState>()}");
-            var stateTest = new MotionState();
-            Console.WriteLine($"offset: {(byte*)&stateTest.Velocity - (byte*)&stateTest.Pose}");
-
             camera.Position = new Vector3(-5f, 5.5f, 5f);
             camera.Yaw = MathHelper.Pi / 4;
             camera.Pitch = MathHelper.Pi * 0.15f;
