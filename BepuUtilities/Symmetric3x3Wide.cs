@@ -85,7 +85,7 @@ namespace BepuUtilities
         /// <param name="b">Second matrix to add.</param>
         /// <returns>Sum of the two input matrices.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Symmetric3x3Wide operator +(in Symmetric3x3Wide a, in Symmetric3x3Wide b)  //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
+        public static Symmetric3x3Wide operator +(in Symmetric3x3Wide a, in Symmetric3x3Wide b)
         {
             Symmetric3x3Wide result;
             result.XX = a.XX + b.XX;
