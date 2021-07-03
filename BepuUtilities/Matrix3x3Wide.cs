@@ -181,7 +181,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Matrix3x3Wide CreateCrossProduct(in Vector3Wide v)
+        public static Matrix3x3Wide CreateCrossProduct(in Vector3Wide v) //TODO: this has some weird codegen on .NET 6 preview 5.
         {
             Matrix3x3Wide skew;
             skew.X.X = Vector<float>.Zero;

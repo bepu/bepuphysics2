@@ -187,7 +187,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Subtract(velocityA.Angular, velocityB.Angular, out var orientationCSV);
             Vector3Wide.Subtract(velocityA.Linear, velocityB.Linear, out var offsetCSV);
 
-            Vector3Wide.CrossWithoutOverlap(velocityA.Angular, projection.Offset,  out var offsetAngularCSV);
+            Vector3Wide.CrossWithoutOverlap(velocityA.Angular, projection.Offset, out var offsetAngularCSV);
             Vector3Wide.Add(offsetCSV, offsetAngularCSV, out offsetCSV);
 
             //Note subtraction: this is computing biasVelocity - csv, and later we'll compute (biasVelocity-csv) - softness.
@@ -206,7 +206,7 @@ namespace BepuPhysics.Constraints
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ApplyImpulse(in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide offset, in Vector3Wide orientationCSI, in Vector3Wide offsetCSI, ref BodyVelocities velocityA, ref BodyVelocities velocityB)
         {
             //Recall the jacobians:
@@ -218,22 +218,15 @@ namespace BepuPhysics.Constraints
             //angularImpulseA = orientationCSI + worldOffset x offsetCSI
             //linearImpulseB = -offsetCSI
             //angularImpulseB = -orientationCSI
-            Vector3Wide.Scale(offsetCSI, inertiaA.InverseMass, out var linearChangeA);
-            Vector3Wide.Add(velocityA.Linear, linearChangeA, out velocityA.Linear);
+            velocityA.Linear += offsetCSI * inertiaA.InverseMass;
 
             //Note order of cross relative to the SolveIteration. 
             //SolveIteration transforms velocity into constraint space velocity using JT, while this converts constraint space to world space using J.
             //The elements are transposed, and transposed skew symmetric matrices are negated. Flipping the cross product is equivalent to a negation.
-            Vector3Wide.CrossWithoutOverlap(offset, offsetCSI, out var offsetWorldImpulse);
-            Vector3Wide.Add(offsetWorldImpulse, orientationCSI, out var angularImpulseA);
-            Symmetric3x3Wide.TransformWithoutOverlap(angularImpulseA, inertiaA.InverseInertiaTensor, out var angularChangeA);
-            Vector3Wide.Add(velocityA.Angular, angularChangeA, out velocityA.Angular);
+            velocityA.Angular += (Cross(offset, offsetCSI) + orientationCSI) * inertiaA.InverseInertiaTensor;
 
-            Vector3Wide.Scale(offsetCSI, inertiaB.InverseMass, out var negatedLinearChangeB);
-            Vector3Wide.Subtract(velocityB.Linear, negatedLinearChangeB, out velocityB.Linear); //note subtraction; the jacobian is -I
-
-            Symmetric3x3Wide.TransformWithoutOverlap(orientationCSI, inertiaB.InverseInertiaTensor, out var negatedAngularChangeB);
-            Vector3Wide.Subtract(velocityB.Angular, negatedAngularChangeB, out velocityB.Angular); //note subtraction; the jacobian is -I        
+            velocityB.Linear -= offsetCSI * inertiaB.InverseMass;//note subtraction; the jacobian is -I
+            velocityB.Angular -= orientationCSI * inertiaB.InverseInertiaTensor;//note subtraction; the jacobian is -I     
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -242,6 +235,7 @@ namespace BepuPhysics.Constraints
         {
             ApplyImpulse(inertiaA, inertiaB, prestep.LocalOffset * orientationA, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
         }
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
             in WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
@@ -261,7 +255,7 @@ namespace BepuPhysics.Constraints
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             var offset = prestep.LocalOffset * orientationA;
             var positionError = ab - offset;
-            var targetOrientationB = prestep.LocalOrientation * orientationA;        
+            var targetOrientationB = prestep.LocalOrientation * orientationA;
             var rotationError = Conjugate(targetOrientationB) * orientationB;
             GetApproximateAxisAngleFromQuaternion(rotationError, out var rotationErrorAxis, out var rotationErrorLength);
 
@@ -281,7 +275,7 @@ namespace BepuPhysics.Constraints
             //                [ skewSymmetric(localOffset * orientationA) * Ia^-1, Ma^-1 + Mb^-1 + skewSymmetric(localOffset * orientationA) * Ia^-1 * transpose(skewSymmetric(localOffset * orientationA)) ]
             //where Ia^-1 and Ib^-1 are the inverse inertia tensors for a and b and Ma^-1 and Mb^-1 are the inverse masses of A and B expanded to 3x3 diagonal matrices.
             var jmjtA = inertiaA.InverseInertiaTensor + inertiaB.InverseInertiaTensor;
-            var xAB = CreateCrossProduct(offset);
+            CreateCrossProduct(offset, out var xAB);
             var jmjtB = inertiaA.InverseInertiaTensor * xAB;
             CompleteMatrixSandwichTranspose(xAB, jmjtB, out var jmjtD);
             var diagonalAdd = inertiaA.InverseMass + inertiaB.InverseMass;
@@ -292,7 +286,7 @@ namespace BepuPhysics.Constraints
             //This is equivalent to solving csi * effectiveMass^-1 = csv for csi, and since effectiveMass^-1 is symmetric positive semidefinite, we can use an LDLT decomposition to quickly solve it.
             Symmetric6x6Wide.LDLTSolve(orientationCSV, offsetCSV, jmjtA, jmjtB, jmjtD, out var orientationCSI, out var offsetCSI);
             //Symmetric6x6Wide.Invert(jmjtA, jmjtB, jmjtD, out var testEffectiveMass);
-            //Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, testEffectiveMass, out var testOrientationCSI, out var testOffsetCSI);
+            //Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, testEffectiveMass, out var orientationCSI, out var offsetCSI);
             orientationCSI = orientationCSI * effectiveMassCFMScale - accumulatedImpulses.Orientation * softnessImpulseScale;
             offsetCSI = offsetCSI * effectiveMassCFMScale - accumulatedImpulses.Offset * effectiveMassCFMScale;
             accumulatedImpulses.Orientation += orientationCSI;
