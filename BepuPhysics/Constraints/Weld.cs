@@ -272,8 +272,21 @@ namespace BepuPhysics.Constraints
             //csi = -accumulatedImpulse * projection.SoftnessImpulseScale - (-biasVelocity + csvaLinear + csvaAngular + csvbLinear + csvbAngular) * effectiveMass;
             //csi = (biasVelocity - csvaLinear - csvaAngular - csvbLinear - csvbAngular) * effectiveMass - accumulatedImpulse * projection.SoftnessImpulseScale;
             //csv = V * JT 
-            var orientationCSV = orientationBiasVelocity - (wsvA.Angular - wsvB.Angular);
-            var offsetCSV = offsetBiasVelocity - (wsvA.Linear - wsvB.Linear + Cross(wsvA.Angular, offset));
+            //var orientationCSV = orientationBiasVelocity - (wsvA.Angular - wsvB.Angular);
+            //var offsetCSV = offsetBiasVelocity - (wsvA.Linear - wsvB.Linear + Cross(wsvA.Angular, offset));
+
+            Vector3Wide orientationCSV, offsetCSV;
+            orientationCSV.X = orientationBiasVelocity.X - wsvA.Angular.X + wsvB.Angular.X;
+            orientationCSV.Y = orientationBiasVelocity.Y - wsvA.Angular.Y + wsvB.Angular.Y;
+            orientationCSV.Z = orientationBiasVelocity.Z - wsvA.Angular.Z + wsvB.Angular.Z;
+
+            offsetCSV.X = offsetBiasVelocity.X - wsvA.Linear.X + wsvB.Linear.X - (wsvA.Angular.Y * offset.Z - wsvA.Angular.Z * offset.Y);
+            offsetCSV.Y = offsetBiasVelocity.Y - wsvA.Linear.Y + wsvB.Linear.Y - (wsvA.Angular.Z * offset.X - wsvA.Angular.X * offset.Z);
+            offsetCSV.Z = offsetBiasVelocity.Z - wsvA.Linear.Z + wsvB.Linear.Z - (wsvA.Angular.X * offset.Y - wsvA.Angular.Y * offset.X);
+
+            //result.X = a.Y * b.Z - a.Z * b.Y;
+            //result.Y = a.Z * b.X - a.X * b.Z;
+            //result.Z = a.X * b.Y - a.Y * b.X;
 
             //Effective mass = (J * M^-1 * JT)^-1, which is going to be a little tricky because J * M^-1 * JT is a 6x6 matrix:
             //J * M^-1 * JT = [ Ia^-1 + Ib^-1,                                     Ia^-1 * transpose(skewSymmetric(localOffset * orientationA))                                                             ]
@@ -294,6 +307,7 @@ namespace BepuPhysics.Constraints
             Symmetric6x6Wide.LDLTSolve(orientationCSV, offsetCSV, jmjtA, jmjtB, jmjtD, out var orientationCSI, out var offsetCSI);
             //Symmetric6x6Wide.Invert(jmjtA, jmjtB, jmjtD, out var testEffectiveMass);
             //Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, testEffectiveMass, out var orientationCSI2, out var offsetCSI2);
+
             //Scale(orientationCSI, effectiveMassCFMScale, out orientationCSI);
             //Scale(accumulatedImpulses.Orientation, softnessImpulseScale, out var orientationSoftness);
             //Subtract(orientationCSI, orientationSoftness, out orientationCSI);
@@ -302,10 +316,25 @@ namespace BepuPhysics.Constraints
             //Scale(accumulatedImpulses.Offset, softnessImpulseScale, out var offsetSoftness);
             //Subtract(offsetCSI, offsetSoftness, out offsetCSI);
             //Add(accumulatedImpulses.Offset, offsetCSI, out accumulatedImpulses.Offset);
-            orientationCSI = orientationCSI * effectiveMassCFMScale - accumulatedImpulses.Orientation * softnessImpulseScale;
-            offsetCSI = offsetCSI * effectiveMassCFMScale - accumulatedImpulses.Offset * softnessImpulseScale;
-            accumulatedImpulses.Orientation += orientationCSI;
-            accumulatedImpulses.Offset += offsetCSI;
+
+            //orientationCSI = orientationCSI * effectiveMassCFMScale - accumulatedImpulses.Orientation * softnessImpulseScale;
+            //offsetCSI = offsetCSI * effectiveMassCFMScale - accumulatedImpulses.Offset * softnessImpulseScale;
+            //accumulatedImpulses.Orientation += orientationCSI;
+            //accumulatedImpulses.Offset += offsetCSI;
+
+            orientationCSI.X = orientationCSI.X * effectiveMassCFMScale - accumulatedImpulses.Orientation.X * softnessImpulseScale;
+            orientationCSI.Y = orientationCSI.Y * effectiveMassCFMScale - accumulatedImpulses.Orientation.Y * softnessImpulseScale;
+            orientationCSI.Z = orientationCSI.Z * effectiveMassCFMScale - accumulatedImpulses.Orientation.Z * softnessImpulseScale;
+            accumulatedImpulses.Orientation.X += orientationCSI.X;
+            accumulatedImpulses.Orientation.Y += orientationCSI.Y;
+            accumulatedImpulses.Orientation.Z += orientationCSI.Z;
+
+            offsetCSI.X = offsetCSI.X * effectiveMassCFMScale - accumulatedImpulses.Offset.X * softnessImpulseScale;
+            offsetCSI.Y = offsetCSI.Y * effectiveMassCFMScale - accumulatedImpulses.Offset.Y * softnessImpulseScale;
+            offsetCSI.Z = offsetCSI.Z * effectiveMassCFMScale - accumulatedImpulses.Offset.Z * softnessImpulseScale;
+            accumulatedImpulses.Offset.X += offsetCSI.X;
+            accumulatedImpulses.Offset.Y += offsetCSI.Y;
+            accumulatedImpulses.Offset.Z += offsetCSI.Z;
 
             ApplyImpulse(inertiaA, inertiaB, ab, orientationCSI, offsetCSI, ref wsvA, ref wsvB);
         }
