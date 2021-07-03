@@ -240,7 +240,7 @@ namespace BepuUtilities
             axis.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, axis.Y);
             axis.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, axis.Z);
             MathHelper.ApproximateAcos(qw, out var halfAngle);
-            angle = 2 * halfAngle;
+            angle = new Vector<float>(2) * halfAngle;
         }
 
         /// <summary>
