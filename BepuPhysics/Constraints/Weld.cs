@@ -286,7 +286,7 @@ namespace BepuPhysics.Constraints
             //This is equivalent to solving csi * effectiveMass^-1 = csv for csi, and since effectiveMass^-1 is symmetric positive semidefinite, we can use an LDLT decomposition to quickly solve it.
             Symmetric6x6Wide.LDLTSolve(orientationCSV, offsetCSV, jmjtA, jmjtB, jmjtD, out var orientationCSI, out var offsetCSI);
             //Symmetric6x6Wide.Invert(jmjtA, jmjtB, jmjtD, out var testEffectiveMass);
-            //Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, testEffectiveMass, out var orientationCSI, out var offsetCSI);
+            //Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, testEffectiveMass, out var orientationCSI2, out var offsetCSI2);
             orientationCSI = orientationCSI * effectiveMassCFMScale - accumulatedImpulses.Orientation * softnessImpulseScale;
             offsetCSI = offsetCSI * effectiveMassCFMScale - accumulatedImpulses.Offset * effectiveMassCFMScale;
             accumulatedImpulses.Orientation += orientationCSI;

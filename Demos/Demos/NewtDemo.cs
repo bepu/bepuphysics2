@@ -733,9 +733,72 @@ namespace Demos.Demos
             Console.WriteLine($"ree: {uh}");
         }
 
+        void Test2()
+        {
+            const int pointCount = 16;
+            var points = new QuickList<Vector3>(pointCount * 2, BufferPool);
+            var random = new Random(5);
+            for (int i = 0; i < pointCount; ++i)
+            {
+                points.AllocateUnsafely() = new Vector3(3 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 3 * (float)random.NextDouble());
+            }
+            var convexHull1 = new ConvexHull(points, BufferPool, out _);
+            points.Count = 0;
+            for (int i = 0; i < pointCount; ++i)
+            {
+                points.AllocateUnsafely() = new Vector3(3 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 3 * (float)random.NextDouble());
+            }
+            var convexHull2 = new ConvexHull(points, BufferPool, out _);
+            convexHull1.ComputeInertia(1, out var scalarInertiaA);
+            convexHull2.ComputeInertia(1, out var scalarInertiaB);
+
+            BodyInertias inertiaA;
+            inertiaA.InverseMass = new Vector<float>(1);
+            inertiaA.InverseInertiaTensor.XX = new Vector<float>(scalarInertiaA.InverseInertiaTensor.XX);
+            inertiaA.InverseInertiaTensor.YX = new Vector<float>(scalarInertiaA.InverseInertiaTensor.YX);
+            inertiaA.InverseInertiaTensor.YY = new Vector<float>(scalarInertiaA.InverseInertiaTensor.YY);
+            inertiaA.InverseInertiaTensor.ZX = new Vector<float>(scalarInertiaA.InverseInertiaTensor.ZX);
+            inertiaA.InverseInertiaTensor.ZY = new Vector<float>(scalarInertiaA.InverseInertiaTensor.ZY);
+            inertiaA.InverseInertiaTensor.ZZ = new Vector<float>(scalarInertiaA.InverseInertiaTensor.ZZ);
+            Vector3Wide.Broadcast(new Vector3(1, 3, 4), out var offset);
+            BodyInertias inertiaB;
+            inertiaB.InverseMass = new Vector<float>(1);
+            inertiaB.InverseInertiaTensor.XX = new Vector<float>(scalarInertiaB.InverseInertiaTensor.XX);
+            inertiaB.InverseInertiaTensor.YX = new Vector<float>(scalarInertiaB.InverseInertiaTensor.YX);
+            inertiaB.InverseInertiaTensor.YY = new Vector<float>(scalarInertiaB.InverseInertiaTensor.YY);
+            inertiaB.InverseInertiaTensor.ZX = new Vector<float>(scalarInertiaB.InverseInertiaTensor.ZX);
+            inertiaB.InverseInertiaTensor.ZY = new Vector<float>(scalarInertiaB.InverseInertiaTensor.ZY);
+            inertiaB.InverseInertiaTensor.ZZ = new Vector<float>(scalarInertiaB.InverseInertiaTensor.ZZ);
+            Vector3Wide.Broadcast(new Vector3(5, 4, 3), out var orientationCSV);
+            Vector3Wide.Broadcast(new Vector3(-5, -4, -3), out var offsetCSV);
+
+            convexHull1.Dispose(BufferPool);
+            convexHull2.Dispose(BufferPool);
+            points.Dispose(BufferPool);
+
+            var jmjtA = inertiaA.InverseInertiaTensor + inertiaB.InverseInertiaTensor;
+            Matrix3x3Wide.CreateCrossProduct(offset, out var xAB);
+            var jmjtB = inertiaA.InverseInertiaTensor * xAB;
+            Symmetric3x3Wide.CompleteMatrixSandwichTranspose(xAB, jmjtB, out var jmjtD);
+            var diagonalAdd = inertiaA.InverseMass + inertiaB.InverseMass;
+            jmjtD.XX += diagonalAdd;
+            jmjtD.YY += diagonalAdd;
+            jmjtD.ZZ += diagonalAdd;
+
+            var inverseEffectiveMass = new Symmetric6x6Wide { A = jmjtA, B = jmjtB, D = jmjtD };
+
+            Symmetric6x6Wide.LDLTSolve(orientationCSV, offsetCSV, jmjtA, jmjtB, jmjtD, out var orientationCSI, out var offsetCSI);
+            Symmetric6x6Wide.TransformWithoutOverlap(orientationCSI, offsetCSI, inverseEffectiveMass, out var roundtripOrientationCSV, out var roundtripOffsetCSV);
+
+            Symmetric6x6Wide.Invert(jmjtA, jmjtB, jmjtD, out var testEffectiveMass);
+            Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, testEffectiveMass, out var orientationCSI2, out var offsetCSI2);
+            Symmetric6x6Wide.TransformWithoutOverlap(orientationCSI2, offsetCSI2, inverseEffectiveMass, out var roundtripOrientationCSV2, out var roundtripOffsetCSV2);
+        }
+
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             Test();
+            Test2();
             Console.WriteLine($"aasgh: {Unsafe.SizeOf<MotionState>()}");
             var stateTest = new MotionState();
             Console.WriteLine($"offset: {(byte*)&stateTest.Velocity - (byte*)&stateTest.Pose}");
