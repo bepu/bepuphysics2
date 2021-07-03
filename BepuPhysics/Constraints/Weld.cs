@@ -229,11 +229,14 @@ namespace BepuPhysics.Constraints
             velocityB.Angular -= orientationCSI * inertiaB.InverseInertiaTensor;//note subtraction; the jacobian is -I     
         }
 
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.NoInlining)]
         public void WarmStart2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
             in WeldPrestepData prestep, in WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
-            ApplyImpulse(inertiaA, inertiaB, prestep.LocalOffset * orientationA, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
+            Transform(prestep.LocalOffset, orientationA, out var offset);
+            ApplyImpulse(inertiaA, inertiaB, offset, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
+            //var offset = prestep.LocalOffset * orientationA;
+            //ApplyImpulse(inertiaA, inertiaB, prestep.LocalOffset * orientationA, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
@@ -253,10 +256,12 @@ namespace BepuPhysics.Constraints
             //where I is the 3x3 identity matrix.
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            var offset = prestep.LocalOffset * orientationA;
+            //var offset = prestep.LocalOffset * orientationA;
+            QuaternionWide.Transform(prestep.LocalOffset, orientationA, out var offset);
             var positionError = ab - offset;
             var targetOrientationB = prestep.LocalOrientation * orientationA;
-            var rotationError = Conjugate(targetOrientationB) * orientationB;
+            //ConcatenateWithoutOverlap(prestep.LocalOrientation, orientationA, out var targetOrientationB);
+            ConcatenateWithoutOverlap(Conjugate(targetOrientationB), orientationB, out var rotationError);
             GetApproximateAxisAngleFromQuaternion(rotationError, out var rotationErrorAxis, out var rotationErrorLength);
 
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
@@ -274,9 +279,11 @@ namespace BepuPhysics.Constraints
             //J * M^-1 * JT = [ Ia^-1 + Ib^-1,                                     Ia^-1 * transpose(skewSymmetric(localOffset * orientationA))                                                             ]
             //                [ skewSymmetric(localOffset * orientationA) * Ia^-1, Ma^-1 + Mb^-1 + skewSymmetric(localOffset * orientationA) * Ia^-1 * transpose(skewSymmetric(localOffset * orientationA)) ]
             //where Ia^-1 and Ib^-1 are the inverse inertia tensors for a and b and Ma^-1 and Mb^-1 are the inverse masses of A and B expanded to 3x3 diagonal matrices.
-            var jmjtA = inertiaA.InverseInertiaTensor + inertiaB.InverseInertiaTensor;
+            //var jmjtA = inertiaA.InverseInertiaTensor + inertiaB.InverseInertiaTensor;
+            Symmetric3x3Wide.Add(inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, out var jmjtA);
             CreateCrossProduct(offset, out var xAB);
-            var jmjtB = inertiaA.InverseInertiaTensor * xAB;
+            Multiply(inertiaA.InverseInertiaTensor, xAB, out var jmjtB);
+            //var jmjtB = inertiaA.InverseInertiaTensor * xAB;
             CompleteMatrixSandwichTranspose(xAB, jmjtB, out var jmjtD);
             var diagonalAdd = inertiaA.InverseMass + inertiaB.InverseMass;
             jmjtD.XX += diagonalAdd;
@@ -287,8 +294,16 @@ namespace BepuPhysics.Constraints
             Symmetric6x6Wide.LDLTSolve(orientationCSV, offsetCSV, jmjtA, jmjtB, jmjtD, out var orientationCSI, out var offsetCSI);
             //Symmetric6x6Wide.Invert(jmjtA, jmjtB, jmjtD, out var testEffectiveMass);
             //Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, testEffectiveMass, out var orientationCSI2, out var offsetCSI2);
+            //Scale(orientationCSI, effectiveMassCFMScale, out orientationCSI);
+            //Scale(accumulatedImpulses.Orientation, softnessImpulseScale, out var orientationSoftness);
+            //Subtract(orientationCSI, orientationSoftness, out orientationCSI);
+            //Add(accumulatedImpulses.Orientation, orientationCSI, out accumulatedImpulses.Orientation);
+            //Scale(offsetCSI, effectiveMassCFMScale, out offsetCSI);
+            //Scale(accumulatedImpulses.Offset, softnessImpulseScale, out var offsetSoftness);
+            //Subtract(offsetCSI, offsetSoftness, out offsetCSI);
+            //Add(accumulatedImpulses.Offset, offsetCSI, out accumulatedImpulses.Offset);
             orientationCSI = orientationCSI * effectiveMassCFMScale - accumulatedImpulses.Orientation * softnessImpulseScale;
-            offsetCSI = offsetCSI * effectiveMassCFMScale - accumulatedImpulses.Offset * effectiveMassCFMScale;
+            offsetCSI = offsetCSI * effectiveMassCFMScale - accumulatedImpulses.Offset * softnessImpulseScale;
             accumulatedImpulses.Orientation += orientationCSI;
             accumulatedImpulses.Offset += offsetCSI;
 

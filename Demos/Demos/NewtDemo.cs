@@ -787,17 +787,35 @@ namespace Demos.Demos
 
             var inverseEffectiveMass = new Symmetric6x6Wide { A = jmjtA, B = jmjtB, D = jmjtD };
 
-            Symmetric6x6Wide.LDLTSolve(orientationCSV, offsetCSV, jmjtA, jmjtB, jmjtD, out var orientationCSI, out var offsetCSI);
-            Symmetric6x6Wide.TransformWithoutOverlap(orientationCSI, offsetCSI, inverseEffectiveMass, out var roundtripOrientationCSV, out var roundtripOffsetCSV);
+            const int iterationCount = 1000000;
+            var startLDLT = Stopwatch.GetTimestamp();
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                Symmetric6x6Wide.LDLTSolve(orientationCSV, offsetCSV, jmjtA, jmjtB, jmjtD, out var orientationCSI, out var offsetCSI);
+                //Symmetric6x6Wide.TransformWithoutOverlap(orientationCSI, offsetCSI, inverseEffectiveMass, out var roundtripOrientationCSV, out var roundtripOffsetCSV);
+            }
+            var endLDLT = Stopwatch.GetTimestamp();
+            var startInverse = Stopwatch.GetTimestamp();
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                Symmetric6x6Wide.Invert(jmjtA, jmjtB, jmjtD, out var testEffectiveMass);
+                Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, testEffectiveMass, out var orientationCSI2, out var offsetCSI2);
+                //Symmetric6x6Wide.TransformWithoutOverlap(orientationCSI2, offsetCSI2, inverseEffectiveMass, out var roundtripOrientationCSV2, out var roundtripOffsetCSV2);
+            }
+            var endInverse = Stopwatch.GetTimestamp();
+            double ldltTime = (endLDLT - startLDLT) / (iterationCount * (double)Stopwatch.Frequency);
+            double inverseTime = (endInverse - startInverse) / (iterationCount * (double)Stopwatch.Frequency);
 
-            Symmetric6x6Wide.Invert(jmjtA, jmjtB, jmjtD, out var testEffectiveMass);
-            Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, testEffectiveMass, out var orientationCSI2, out var offsetCSI2);
-            Symmetric6x6Wide.TransformWithoutOverlap(orientationCSI2, offsetCSI2, inverseEffectiveMass, out var roundtripOrientationCSV2, out var roundtripOffsetCSV2);
+            Console.WriteLine($"LDLT time (ns): {ldltTime * 1e9}");
+            Console.WriteLine($"Inverse time (ns): {inverseTime * 1e9}");
+            Console.WriteLine($"inverse / ldlt: {inverseTime / ldltTime}");
+
         }
 
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             Test();
+            Test2();
             Test2();
             Console.WriteLine($"aasgh: {Unsafe.SizeOf<MotionState>()}");
             var stateTest = new MotionState();
