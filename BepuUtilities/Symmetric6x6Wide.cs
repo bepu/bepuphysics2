@@ -116,6 +116,20 @@ namespace BepuUtilities
             var inverseD6 = Vector<float>.One / d6;
 
             //We now have the components of L and D, so substitute.
+            result0.X = v0.X;
+            result0.Y = v0.Y - l21 * result0.X;
+            result0.Z = v0.Z - l31 * result0.X - l32 * result0.Y;
+            result1.X = v1.X - l41 * result0.X - l42 * result0.Y - l43 * result0.Z;
+            result1.Y = v1.Y - l51 * result0.X - l52 * result0.Y - l53 * result0.Z - l54 * result1.X;
+            result1.Z = v1.Z - l61 * result0.X - l62 * result0.Y - l63 * result0.Z - l64 * result1.X - l65 * result1.Y;
+
+            result1.Z = result1.Z * inverseD6;
+            result1.Y = result1.Y * inverseD5 - l65 * result1.Z;
+            result1.X = result1.X * inverseD4 - l64 * result1.Z - l54 * result1.Y;
+            result0.Z = result0.Z * inverseD3 - l63 * result1.Z - l53 * result1.Y - l43 * result1.X;
+            result0.Y = result0.Y * inverseD2 - l62 * result1.Z - l52 * result1.Y - l42 * result1.X - l32 * result0.Z;
+            result0.X = result0.X * inverseD1 - l61 * result1.Z - l51 * result1.Y - l41 * result1.X - l31 * result0.Z - l21 * result0.Y;
+
         }
     }
 }
