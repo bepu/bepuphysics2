@@ -360,8 +360,13 @@ namespace BepuPhysics.Constraints
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
                 {
-                    default(WeldFunctions).WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt,
+                    default(WeldFunctions).WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB,
                         Unsafe.As<TPrestepData, WeldPrestepData>(ref prestep), Unsafe.As<TAccumulatedImpulse, WeldAccumulatedImpulses>(ref accumulatedImpulses), ref wsvA, ref wsvB);
+                }
+                else if(typeof(TConstraintFunctions) == typeof(BallSocketFunctions))
+                {
+                    default(BallSocketFunctions).WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB,
+                        Unsafe.As<TPrestepData, BallSocketPrestepData>(ref prestep), Unsafe.As<TAccumulatedImpulse, Vector3Wide>(ref accumulatedImpulses), ref wsvA, ref wsvB);
                 }
                 else
                 {
@@ -391,6 +396,11 @@ namespace BepuPhysics.Constraints
                 {
                     default(WeldFunctions).Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt,
                         Unsafe.As<TPrestepData, WeldPrestepData>(ref prestep), ref Unsafe.As<TAccumulatedImpulse, WeldAccumulatedImpulses>(ref accumulatedImpulses), ref wsvA, ref wsvB);
+                }
+                else if (typeof(TConstraintFunctions) == typeof(BallSocketFunctions))
+                {
+                    default(BallSocketFunctions).Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt,
+                        Unsafe.As<TPrestepData, BallSocketPrestepData>(ref prestep), ref Unsafe.As<TAccumulatedImpulse, Vector3Wide>(ref accumulatedImpulses), ref wsvA, ref wsvB);
                 }
                 else
                 {

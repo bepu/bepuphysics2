@@ -75,7 +75,7 @@ namespace BepuPhysics.Constraints
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
-            ref Vector3Wide offsetA, ref Vector3Wide offsetB, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide constraintSpaceImpulse)
+            in Vector3Wide offsetA, in Vector3Wide offsetB, in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide constraintSpaceImpulse)
         {
             Vector3Wide.CrossWithoutOverlap(offsetA, constraintSpaceImpulse, out var wsi);
             Symmetric3x3Wide.TransformWithoutOverlap(wsi, inertiaA.InverseInertiaTensor, out var change);
@@ -93,8 +93,8 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref Vector3Wide offsetA, ref Vector3Wide offsetB,
-            ref Vector3Wide biasVelocity, ref Symmetric3x3Wide effectiveMass, ref Vector<float> softnessImpulseScale, ref Vector3Wide accumulatedImpulse, out Vector3Wide correctiveImpulse)
+        public static void ComputeCorrectiveImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, in Vector3Wide offsetA, in Vector3Wide offsetB,
+            in Vector3Wide biasVelocity, in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, in Vector3Wide accumulatedImpulse, out Vector3Wide correctiveImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             //Note subtraction; jLinearB = -I.
@@ -112,25 +112,25 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref Vector3Wide offsetA, ref Vector3Wide offsetB,
-            ref Vector3Wide biasVelocity, ref Symmetric3x3Wide effectiveMass, ref Vector<float> softnessImpulseScale, ref Vector3Wide accumulatedImpulse, ref BodyInertias inertiaA, ref BodyInertias inertiaB)
+        public static void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, in Vector3Wide offsetA, in Vector3Wide offsetB,
+            in Vector3Wide biasVelocity, in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, ref Vector3Wide accumulatedImpulse, in BodyInertias inertiaA, in BodyInertias inertiaB)
         {
-            ComputeCorrectiveImpulse(ref velocityA, ref velocityB, ref offsetA, ref offsetB, ref biasVelocity, ref effectiveMass, ref softnessImpulseScale, ref accumulatedImpulse, out var correctiveImpulse);
+            ComputeCorrectiveImpulse(ref velocityA, ref velocityB, offsetA, offsetB, biasVelocity, effectiveMass, softnessImpulseScale, accumulatedImpulse, out var correctiveImpulse);
             //This function does not have a maximum impulse limit, so no clamping is required.
             Vector3Wide.Add(accumulatedImpulse, correctiveImpulse, out accumulatedImpulse);
 
-            ApplyImpulse(ref velocityA, ref velocityB, ref offsetA, ref offsetB, ref inertiaA, ref inertiaB, ref correctiveImpulse);
+            ApplyImpulse(ref velocityA, ref velocityB, offsetA, offsetB, inertiaA, inertiaB, correctiveImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref Vector3Wide offsetA, ref Vector3Wide offsetB,
             ref Vector3Wide biasVelocity, ref Symmetric3x3Wide effectiveMass, ref Vector<float> softnessImpulseScale, ref Vector<float> maximumImpulse, ref Vector3Wide accumulatedImpulse, ref BodyInertias inertiaA, ref BodyInertias inertiaB)
         {
-            ComputeCorrectiveImpulse(ref velocityA, ref velocityB, ref offsetA, ref offsetB, ref biasVelocity, ref effectiveMass, ref softnessImpulseScale, ref accumulatedImpulse, out var correctiveImpulse);
+            ComputeCorrectiveImpulse(ref velocityA, ref velocityB, offsetA, offsetB, biasVelocity, effectiveMass, softnessImpulseScale, accumulatedImpulse, out var correctiveImpulse);
             //This function DOES have a maximum impulse limit.
             ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulse, ref correctiveImpulse);
 
-            ApplyImpulse(ref velocityA, ref velocityB, ref offsetA, ref offsetB, ref inertiaA, ref inertiaB, ref correctiveImpulse);
+            ApplyImpulse(ref velocityA, ref velocityB, offsetA, offsetB, inertiaA, inertiaB, correctiveImpulse);
         }
 
     }
