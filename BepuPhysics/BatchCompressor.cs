@@ -97,7 +97,7 @@ namespace BepuPhysics
 
 
         Action<int> analysisWorkerDelegate;
-        public BatchCompressor(Solver solver, Bodies bodies, float targetCandidateFraction = 0.01f, float maximumCompressionFraction = 0.0005f)
+        public BatchCompressor(Solver solver, Bodies bodies, float targetCandidateFraction = 0.005f, float maximumCompressionFraction = 0.0005f)
         {
             this.Solver = solver;
             this.Bodies = bodies;

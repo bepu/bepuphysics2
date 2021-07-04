@@ -324,9 +324,10 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        const int prefetchDistance = 8;
+        const int warmStartPrefetchDistance = 8;
+        const int solvePrefetchDistance = 4;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void EarlyPrefetch(ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, ref Buffer<BodyInertia> inertias, int startBundleIndex, int exclusiveEndBundleIndex)
+        unsafe static void EarlyPrefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, ref Buffer<BodyInertia> inertias, int startBundleIndex, int exclusiveEndBundleIndex)
         {
             exclusiveEndBundleIndex = Math.Min(exclusiveEndBundleIndex, startBundleIndex + prefetchDistance);
             var lastBundleIndex = exclusiveEndBundleIndex - 1;
@@ -339,7 +340,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void Prefetch(ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, ref Buffer<BodyInertia> inertias, int bundleIndex, int exclusiveEndBundleIndex)
+        unsafe static void Prefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, ref Buffer<BodyInertia> inertias, int bundleIndex, int exclusiveEndBundleIndex)
         {
             var targetIndex = bundleIndex + prefetchDistance;
             if (targetIndex < exclusiveEndBundleIndex)
@@ -356,14 +357,14 @@ namespace BepuPhysics.Constraints
             var function = default(TConstraintFunctions);
             ref var motionStates = ref bodies.ActiveSet.MotionStates;
             ref var inertias = ref bodies.Inertias;
-            EarlyPrefetch(ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, startBundle, exclusiveEndBundle);
+            EarlyPrefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
-                Prefetch(ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, i, exclusiveEndBundle);
+                Prefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, i, exclusiveEndBundle);
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
                 {
@@ -391,14 +392,14 @@ namespace BepuPhysics.Constraints
             var function = default(TConstraintFunctions);
             ref var motionStates = ref bodies.ActiveSet.MotionStates;
             ref var inertias = ref bodies.Inertias;
-            EarlyPrefetch(ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, startBundle, exclusiveEndBundle);
+            EarlyPrefetch(solvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
-                Prefetch(ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, i, exclusiveEndBundle);
+                Prefetch(solvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, i, exclusiveEndBundle);
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
                 {
