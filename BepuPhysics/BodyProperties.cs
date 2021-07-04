@@ -194,10 +194,13 @@ namespace BepuPhysics
         }
     }
 
-    [StructLayout(LayoutKind.Sequential, Size = 32, Pack = 16)]
+    [StructLayout(LayoutKind.Explicit, Size = 32)]
     public struct BodyVelocity
     {
+        [FieldOffset(0)]
         public Vector3 Linear;
+
+        [FieldOffset(16)]
         public Vector3 Angular;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
