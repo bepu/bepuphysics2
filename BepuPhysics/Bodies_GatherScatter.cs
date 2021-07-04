@@ -258,9 +258,9 @@ namespace BepuPhysics
                     velocity.Linear.X = Avx.Permute2x128(o0, o1, 0 | (2 << 4)).AsVector();
                     velocity.Linear.Y = Avx.Permute2x128(o4, o5, 0 | (2 << 4)).AsVector();
                     velocity.Linear.Z = Avx.Permute2x128(o2, o3, 0 | (2 << 4)).AsVector();
-                    velocity.Angular.X = Avx.Permute2x128(o6, o7, 0 | (2 << 4)).AsVector();
-                    velocity.Angular.Y = Avx.Permute2x128(o0, o1, 1 | (3 << 4)).AsVector();
-                    velocity.Angular.Z = Avx.Permute2x128(o4, o5, 1 | (3 << 4)).AsVector();
+                    velocity.Angular.X = Avx.Permute2x128(o0, o1, 1 | (3 << 4)).AsVector();
+                    velocity.Angular.Y = Avx.Permute2x128(o4, o5, 1 | (3 << 4)).AsVector();
+                    velocity.Angular.Z = Avx.Permute2x128(o2, o3, 1 | (3 << 4)).AsVector();
                 }
             }
             else
