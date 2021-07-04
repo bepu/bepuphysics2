@@ -38,11 +38,11 @@ namespace BepuUtilities
         public float ZZ;
 
         /// <summary>
-        /// Computes rT * m * r for a symmetric matrix m and a rotation matrix R.
+        /// Computes rT * m * r for a symmetric matrix m and a rotation matrix r.
         /// </summary>
         /// <param name="r">Rotation matrix to use as the sandwich bread.</param>
         /// <param name="m">Succulent interior symmetric matrix.</param>
-        /// <param name="sandwich">Result of v * m * transpose(v) for a symmetric matrix m.</param>
+        /// <param name="sandwich">Result of transpose(r) * m * r.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void RotationSandwich(in Matrix3x3 r, in Symmetric3x3 m, out Symmetric3x3 sandwich)
         {
