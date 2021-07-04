@@ -722,8 +722,8 @@ namespace BepuPhysics
             //These values are found by empirical tuning. The optimal values may vary by architecture.
             //The goal here is to have just enough blocks that, in the event that we end up some underpowered threads (due to competition or hyperthreading), 
             //there are enough blocks that workstealing will still generally allow the extra threads to be useful.
-            const int targetBlocksPerBatchPerWorker = 16;
-            const int minimumBlockSizeInBundles = 3;
+            const int targetBlocksPerBatchPerWorker = 1;
+            const int minimumBlockSizeInBundles = 1;
 
             var targetBlocksPerBatch = workerCount * targetBlocksPerBatchPerWorker;
             BuildWorkBlocks(pool, minimumBlockSizeInBundles, targetBlocksPerBatch, ref filter);

@@ -68,16 +68,11 @@ namespace BepuPhysics
 
         void SolveStep2Worker(int workerIndex)
         {
-            int prestepStart = GetUniformlyDistributedStart(workerIndex, context.ConstraintBlocks.Blocks.Count, context.WorkerCount, 0);
             int fallbackStart = GetUniformlyDistributedStart(workerIndex, context.FallbackBlocks.Blocks.Count, context.WorkerCount, 0);
             Buffer<int> batchStarts;
             ref var activeSet = ref ActiveSet;
             unsafe
             {
-                //stackalloc is actually a little bit slow since the localsinit behavior forces a zeroing.
-                //Fortunately, this executes once per thread per frame. With 32 batches, it would add... a few nanoseconds per frame. We can accept that overhead.
-                //This is preferred over preallocating on the heap- we might write to these values and we don't want to risk false sharing for no reason. 
-                //A single instance of false sharing would cost far more than the overhead of zeroing out the array.
                 var batchStartsData = stackalloc int[activeSet.Batches.Count];
                 batchStarts = new Buffer<int>(batchStartsData, activeSet.Batches.Count);
             }

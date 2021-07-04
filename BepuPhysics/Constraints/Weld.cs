@@ -257,7 +257,7 @@ namespace BepuPhysics.Constraints
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             //var offset = prestep.LocalOffset * orientationA;
-            QuaternionWide.Transform(prestep.LocalOffset, orientationA, out var offset);
+            Transform(prestep.LocalOffset, orientationA, out var offset);
             var positionError = ab - offset;
             var targetOrientationB = prestep.LocalOrientation * orientationA;
             //ConcatenateWithoutOverlap(prestep.LocalOrientation, orientationA, out var targetOrientationB);
@@ -274,18 +274,18 @@ namespace BepuPhysics.Constraints
             //csi = -accumulatedImpulse * projection.SoftnessImpulseScale - (-biasVelocity + csvaLinear + csvaAngular + csvbLinear + csvbAngular) * effectiveMass;
             //csi = (biasVelocity - csvaLinear - csvaAngular - csvbLinear - csvbAngular) * effectiveMass - accumulatedImpulse * projection.SoftnessImpulseScale;
             //csv = V * JT 
-            var orientationCSV = orientationBiasVelocity - (wsvA.Angular - wsvB.Angular);
-            var offsetCSV = offsetBiasVelocity - (wsvA.Linear - wsvB.Linear + Cross(wsvA.Angular, offset));
+            //var orientationCSV = orientationBiasVelocity - (wsvA.Angular - wsvB.Angular);
+            //var offsetCSV = offsetBiasVelocity - (wsvA.Linear - wsvB.Linear + Cross(wsvA.Angular, offset));
 
-            ////Unfortunately, manually inlining does actually improve the codegen meaningfully as of this writing.
-            //Vector3Wide orientationCSV, offsetCSV;
-            //orientationCSV.X = orientationBiasVelocity.X - wsvA.Angular.X + wsvB.Angular.X;
-            //orientationCSV.Y = orientationBiasVelocity.Y - wsvA.Angular.Y + wsvB.Angular.Y;
-            //orientationCSV.Z = orientationBiasVelocity.Z - wsvA.Angular.Z + wsvB.Angular.Z;
+            //Unfortunately, manually inlining does actually improve the codegen meaningfully as of this writing.
+            Vector3Wide orientationCSV, offsetCSV;
+            orientationCSV.X = orientationBiasVelocity.X - wsvA.Angular.X + wsvB.Angular.X;
+            orientationCSV.Y = orientationBiasVelocity.Y - wsvA.Angular.Y + wsvB.Angular.Y;
+            orientationCSV.Z = orientationBiasVelocity.Z - wsvA.Angular.Z + wsvB.Angular.Z;
 
-            //offsetCSV.X = offsetBiasVelocity.X - wsvA.Linear.X + wsvB.Linear.X - (wsvA.Angular.Y * offset.Z - wsvA.Angular.Z * offset.Y);
-            //offsetCSV.Y = offsetBiasVelocity.Y - wsvA.Linear.Y + wsvB.Linear.Y - (wsvA.Angular.Z * offset.X - wsvA.Angular.X * offset.Z);
-            //offsetCSV.Z = offsetBiasVelocity.Z - wsvA.Linear.Z + wsvB.Linear.Z - (wsvA.Angular.X * offset.Y - wsvA.Angular.Y * offset.X);
+            offsetCSV.X = offsetBiasVelocity.X - wsvA.Linear.X + wsvB.Linear.X - (wsvA.Angular.Y * offset.Z - wsvA.Angular.Z * offset.Y);
+            offsetCSV.Y = offsetBiasVelocity.Y - wsvA.Linear.Y + wsvB.Linear.Y - (wsvA.Angular.Z * offset.X - wsvA.Angular.X * offset.Z);
+            offsetCSV.Z = offsetBiasVelocity.Z - wsvA.Linear.Z + wsvB.Linear.Z - (wsvA.Angular.X * offset.Y - wsvA.Angular.Y * offset.X);
 
             //Effective mass = (J * M^-1 * JT)^-1, which is going to be a little tricky because J * M^-1 * JT is a 6x6 matrix:
             //J * M^-1 * JT = [ Ia^-1 + Ib^-1,                                     Ia^-1 * transpose(skewSymmetric(localOffset * orientationA))                                                             ]

@@ -324,11 +324,11 @@ namespace BepuPhysics
             //TODO: The order of these optimizer stages is performance relevant, even though they don't have any effect on correctness.
             //You may want to try them in different locations to see how they impact cache residency.
             profiler.Start(BodyLayoutOptimizer);
-            BodyLayoutOptimizer.IncrementalOptimize();
+            //BodyLayoutOptimizer.IncrementalOptimize();
             profiler.End(BodyLayoutOptimizer);
 
             profiler.Start(ConstraintLayoutOptimizer);
-            ConstraintLayoutOptimizer.Update(BufferPool, threadDispatcher);
+            //ConstraintLayoutOptimizer.Update(BufferPool, threadDispatcher);
             profiler.End(ConstraintLayoutOptimizer);
 
             profiler.Start(SolverBatchCompressor);
