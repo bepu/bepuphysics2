@@ -230,7 +230,7 @@ namespace BepuPhysics.Constraints
         }
 
         //[MethodImpl(MethodImplOptions.NoInlining)]
-        public void WarmStart2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
+        public void WarmStart2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
             in WeldPrestepData prestep, in WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
             Transform(prestep.LocalOffset, orientationA, out var offset);
