@@ -118,11 +118,13 @@ namespace BepuPhysics
             }
         }
 
-        private unsafe void BuildWorkBlocks<TTypeBatchFilter>(BufferPool pool, int minimumBlockSizeInBundles, int targetBlocksPerBatch, ref TTypeBatchFilter typeBatchFilter) where TTypeBatchFilter : ITypeBatchSolveFilter
+        private unsafe void BuildWorkBlocks<TTypeBatchFilter>(BufferPool pool, int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlocksPerBatch, ref TTypeBatchFilter typeBatchFilter) where TTypeBatchFilter : ITypeBatchSolveFilter
         {
             ref var activeSet = ref ActiveSet;
             context.ConstraintBlocks.Blocks = new QuickList<WorkBlock>(targetBlocksPerBatch * activeSet.Batches.Count, pool);
             pool.Take(activeSet.Batches.Count, out context.BatchBoundaries);
+            var inverseMinimumBlockSizeInBundles = 1f / minimumBlockSizeInBundles;
+            var inverseMaximumBlockSizeInBundles = 1f / maximumBlockSizeInBundles;
             for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
                 ref var typeBatches = ref activeSet.Batches[batchIndex].TypeBatches;
@@ -134,7 +136,6 @@ namespace BepuPhysics
                         bundleCount += typeBatches[typeBatchIndex].BundleCount;
                     }
                 }
-
                 for (int typeBatchIndex = 0; typeBatchIndex < typeBatches.Count; ++typeBatchIndex)
                 {
                     ref var typeBatch = ref typeBatches[typeBatchIndex];
@@ -142,9 +143,10 @@ namespace BepuPhysics
                     {
                         continue;
                     }
-                    var typeBatchSizeFraction = typeBatch.BundleCount / (float)bundleCount;
-                    var typeBatchMaximumBlockCount = typeBatch.BundleCount / (float)minimumBlockSizeInBundles;
-                    var typeBatchBlockCount = Math.Max(1, (int)Math.Min(typeBatchMaximumBlockCount, targetBlocksPerBatch * typeBatchSizeFraction));
+                    var typeBatchSizeFraction = typeBatch.BundleCount / (float)bundleCount; //note: pre-inverting this doesn't necessarily work well due to numerical issues.
+                    var typeBatchMaximumBlockCount = typeBatch.BundleCount * inverseMinimumBlockSizeInBundles;
+                    var typeBatchMinimumBlockCount = typeBatch.BundleCount * inverseMaximumBlockSizeInBundles;
+                    var typeBatchBlockCount = Math.Max(1, (int)Math.Min(typeBatchMaximumBlockCount, Math.Max(typeBatchMinimumBlockCount, targetBlocksPerBatch * typeBatchSizeFraction)));
                     int previousEnd = 0;
                     var baseBlockSizeInBundles = typeBatch.BundleCount / typeBatchBlockCount;
                     var remainder = typeBatch.BundleCount - baseBlockSizeInBundles * typeBatchBlockCount;
@@ -724,9 +726,10 @@ namespace BepuPhysics
             //there are enough blocks that workstealing will still generally allow the extra threads to be useful.
             const int targetBlocksPerBatchPerWorker = 1;
             const int minimumBlockSizeInBundles = 1;
+            const int maximumBlockSizeInBundles = 1024;
 
             var targetBlocksPerBatch = workerCount * targetBlocksPerBatchPerWorker;
-            BuildWorkBlocks(pool, minimumBlockSizeInBundles, targetBlocksPerBatch, ref filter);
+            BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref filter);
             ValidateWorkBlocks(ref filter);
 
             //Note the clear; the block claims must be initialized to 0 so that the first worker stage knows that the data is available to claim.
