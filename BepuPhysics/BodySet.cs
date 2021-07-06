@@ -52,6 +52,13 @@ namespace BepuPhysics
         /// </summary>
         public Buffer<QuickList<BodyConstraintReference>> Constraints;
 
+        /// <summary>
+        /// Range of constraint batches, or the unconstrained integration index, associated with each body.
+        /// </summary>
+        /// <remarks>This is used to determine which system is responsible for integrating a body's velocities and pose. 
+        /// If a body has constraints, the constraint solve will handle it. If it's unconstrained, a separate dedicated phase will.</remarks>
+        public Buffer<BodyConstraintBatchRange> ConstraintBatchRanges;
+
         public int Count;
         /// <summary>
         /// Gets whether this instance is backed by allocated memory.
@@ -97,6 +104,7 @@ namespace BepuPhysics
                 //During true removal, the caller is responsible for removing all constraints and disposing the list.
                 //In sleeping, the reference to the list is simply copied into the sleeping set.
                 Constraints[bodyIndex] = Constraints[movedBodyIndex];
+                ConstraintBatchRanges[bodyIndex] = ConstraintBatchRanges[movedBodyIndex];
                 //Point the body handles at the new location.
                 movedBodyHandle = IndexToHandle[movedBodyIndex];
                 IndexToHandle[bodyIndex] = movedBodyHandle;
@@ -229,6 +237,7 @@ namespace BepuPhysics
             Helpers.Swap(ref LocalInertias[slotA], ref LocalInertias[slotB]);
             Helpers.Swap(ref Activity[slotA], ref Activity[slotB]);
             Helpers.Swap(ref Constraints[slotA], ref Constraints[slotB]);
+            Helpers.Swap(ref ConstraintBatchRanges[slotA], ref ConstraintBatchRanges[slotB]);
         }
 
         internal unsafe void InternalResize(int targetBodyCapacity, BufferPool pool)
@@ -244,6 +253,7 @@ namespace BepuPhysics
             pool.ResizeToAtLeast(ref Collidables, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref Activity, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref Constraints, targetBodyCapacity, Count);
+            pool.ResizeToAtLeast(ref ConstraintBatchRanges, targetBodyCapacity, Count);
         }
 
         public unsafe void Clear(BufferPool pool)
@@ -267,6 +277,7 @@ namespace BepuPhysics
             pool.Return(ref Collidables);
             pool.Return(ref Activity);
             pool.Return(ref Constraints);
+            pool.Return(ref ConstraintBatchRanges);
         }
 
         /// <summary>
