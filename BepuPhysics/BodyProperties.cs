@@ -1,6 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
@@ -301,57 +302,38 @@ namespace BepuPhysics
     }
 
     /// <summary>
-    /// Stores indices for choosing what system is responsible for integrating a body's velocities and pose.
+    /// Stores references to constraints connected to a body and additional data for choosing what system is responsible for integrating a body's velocities and pose.
     /// </summary>
-    public struct BodyConstraintBatchRange
+    public struct BodyConstraints
     {
-        /// <summary>
-        /// Most significant bit encodes whether the body has any constraints. Set if it does, unset if it doesn't. 
-        /// Least significant bits [0, 15) store the minimum batch index if the most significant bit is set.
-        /// Bits [16, 31) store the maximum batch index if the most significant bit is set.
-        /// Bits [0, 31) store the index into the active unconstrained integration set if the body is awake and the most significant bit is not set.
-        /// If the most significant bit is not set and the body is asleep, bits [0, 31) are undefined.
-        /// </summary>
-        public uint Packed;
+        public QuickList<BodyConstraintReference> References;
 
         /// <summary>
-        /// Gets whether the body has any constraints in the solver.
-        /// Constrained bodies will have their velocities and poses integrated as a part of the constraint solve, unconstrained bodies will be independently integrated.
+        /// Index of the body in the unconstrained integration set if it has no constraints. If the body has constraints, this value is undefined.
         /// </summary>
-        public bool Constrained => (Packed & (1u << 31)) != 0;
-        /// <summary>
-        /// Gets the minimum constraint batch index that this body is associated with if the body has constraints. If it has no constraints, this property is undefined.
-        /// </summary>
-        public int MinimumBatch => (int)(Packed & 0x7FFF);
-        /// <summary>
-        /// Gets the maximum constraint batch index that this body is associated with if the body has constraints. If it has no constraints, this property is undefined.
-        /// </summary>
-        public int MaximumBatch => (int)((Packed >> 16) & 0x7FFF);
-        /// <summary>
-        /// Gets the index of the body in the unconstrained integration set if it has no constraints. If the body has constraints, this property is undefined.
-        /// </summary>
-        public int UnconstrainedIndex => (int)(Packed & 0x7FFF_FFFF);
+        public int UnconstrainedIndex;
 
         /// <summary>
-        /// Constructs an unconstrained body range.
+        /// Inclusive minimum constraint batch index that this body is associated with if the body has constraints. If it has no constraints, this value is undefined.
         /// </summary>
-        /// <param name="unconstrainedIndex">Index of the body in the unconstrained set.</param>
-        public BodyConstraintBatchRange(int unconstrainedIndex)
-        {
-            Debug.Assert(unconstrainedIndex >= 0, "Unconstrained index must be positive. Did some data get corrupted?");
-            Packed = (uint)unconstrainedIndex;
-        }
+        public int MinimumBatch;
+        /// <summary>
+        /// Inclusive maximum constraint batch index that this body is associated with if the body has constraints. If it has no constraints, this value is undefined.
+        /// </summary>
+        public int MaximumBatch;
 
         /// <summary>
-        /// Constructs a constrained body range.
+        /// Constraint connected to the body associated with the lowest batch index. If the body has no constraints, this value is undefined.
         /// </summary>
-        /// <param name="minimumBatch">Minimum constraint batch index the body is involved in.</param>
-        /// <param name="maximumBatch">Maximum constraint batch index the body is involved in.</param>
-        public BodyConstraintBatchRange(int minimumBatch, int maximumBatch)
-        {
-            Debug.Assert(minimumBatch >= 0 && minimumBatch < (1 << 15) && maximumBatch >= 0 && maximumBatch < (1 << 15),
-                "Batch indices must fit within the packed ranges. Did some data get corrupted, or is the maximum batch count just way too high?");
-            Packed = (1u << 31) | ((uint)maximumBatch << 16) | (uint)minimumBatch;
-        }
+        public ConstraintHandle MinimumConstraint;
+        /// <summary>
+        /// Constraint connected to the body associated with the highest batch index. If the body has no constraints, this value is undefined.
+        /// </summary>
+        public ConstraintHandle MaximumConstraint;
+
+        /// <summary>
+        /// Gets whether this body has any constraints based on the value in the UnconstrainedIndex field.
+        /// </summary>
+        public bool Constrained => References.Count > 0;
     }
 }

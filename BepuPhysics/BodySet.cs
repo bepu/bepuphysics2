@@ -48,16 +48,9 @@ namespace BepuPhysics
         /// </summary>
         public Buffer<BodyActivity> Activity;
         /// <summary>
-        /// List of constraints associated with each body in the set.
+        /// List of constraints and constraint related data associated with each body in the set.
         /// </summary>
-        public Buffer<QuickList<BodyConstraintReference>> Constraints;
-
-        /// <summary>
-        /// Range of constraint batches, or the unconstrained integration index, associated with each body.
-        /// </summary>
-        /// <remarks>This is used to determine which system is responsible for integrating a body's velocities and pose. 
-        /// If a body has constraints, the constraint solve will handle it. If it's unconstrained, a separate dedicated phase will.</remarks>
-        public Buffer<BodyConstraintBatchRange> ConstraintBatchRanges;
+        public Buffer<BodyConstraints> Constraints;
 
         public int Count;
         /// <summary>
@@ -80,7 +73,8 @@ namespace BepuPhysics
             ++Count;
             IndexToHandle[index] = handle;
             //Collidable's broad phase index is left unset. The Bodies collection is responsible for attaching that data.
-            Constraints[index] = new QuickList<BodyConstraintReference>(minimumConstraintCapacity, pool);
+            Constraints[index].References = new QuickList<BodyConstraintReference>(minimumConstraintCapacity, pool);
+
             ApplyDescriptionByIndex(index, bodyDescription);
             return index;
         }
@@ -104,7 +98,6 @@ namespace BepuPhysics
                 //During true removal, the caller is responsible for removing all constraints and disposing the list.
                 //In sleeping, the reference to the list is simply copied into the sleeping set.
                 Constraints[bodyIndex] = Constraints[movedBodyIndex];
-                ConstraintBatchRanges[bodyIndex] = ConstraintBatchRanges[movedBodyIndex];
                 //Point the body handles at the new location.
                 movedBodyHandle = IndexToHandle[movedBodyIndex];
                 IndexToHandle[bodyIndex] = movedBodyHandle;
@@ -167,16 +160,48 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void AddConstraint(int bodyIndex, ConstraintHandle constraintHandle, int bodyIndexInConstraint, BufferPool pool)
+        internal void AddConstraint(Solver solver, int bodyIndex, ConstraintHandle constraintHandle, int bodyIndexInConstraint, BufferPool pool)
         {
             BodyConstraintReference constraint;
             constraint.ConnectingConstraintHandle = constraintHandle;
             constraint.BodyIndexInConstraint = bodyIndexInConstraint;
             ref var constraints = ref Constraints[bodyIndex];
-            Debug.Assert(constraints.Span.Allocated, "Any time a body is created, a list should be built to support it.");
-            if (constraints.Span.Length == constraints.Count)
-                constraints.Resize(constraints.Span.Length * 2, pool);
-            constraints.AllocateUnsafely() = constraint;
+            Debug.Assert(constraints.References.Span.Allocated, "Any time a body is created, a list should be built to support it.");
+            if (constraints.References.Span.Length == constraints.References.Count)
+                constraints.References.Resize(constraints.References.Span.Length * 2, pool);
+            constraints.References.AllocateUnsafely() = constraint;
+
+            var batchIndex = solver.HandleToConstraint[constraintHandle.Value].BatchIndex;
+            if (constraints.References.Count == 1)
+            {
+                //The body is transitioning from unconstrained to constrained. The constraint will now be responsible for its integration.
+                //UnconstrainedBodies.Remove(bodyIndex);
+                constraints.MinimumBatch = batchIndex;
+                constraints.MaximumBatch = batchIndex;
+                constraints.MinimumConstraint = constraintHandle;
+                constraints.MaximumConstraint = constraintHandle;
+                //solver.AddIntegrationResponsibilityToConstraint(constraintHandle, bodyIndex, bodyIndexInConstraint);
+            }
+            else
+            {
+                var minimum = constraints.MinimumBatch;
+                var maximum = constraints.MaximumBatch;
+                if (batchIndex < minimum)
+                {
+                    //solver.RemoveIntegrationResponsibilityFromConstraint(constraints.MinimumConstraint, bodyIndex);
+                    constraints.MinimumBatch = batchIndex;
+                    constraints.MinimumConstraint = constraintHandle;
+                    //solver.AddIntegrationResponsibilityToConstraint(constraintHandle, bodyIndex, bodyIndexInConstraint);
+
+                }
+                else if (batchIndex > maximum)
+                {
+                    //solver.RemoveIntegrationResponsibilityFromConstraint(constraints.MinimumConstraint, bodyIndex);
+                    constraints.MaximumBatch = batchIndex;
+                    constraints.MinimumConstraint = constraintHandle;
+                    //solver.AddIntegrationResponsibilityToConstraint(constraintHandle, bodyIndex, bodyIndexInConstraint);
+                }
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -184,7 +209,7 @@ namespace BepuPhysics
         {
             //This uses a linear search. That's fine; bodies will rarely have more than a handful of constraints associated with them.
             //Attempting to use something like a hash set for fast removes would just introduce more constant overhead and slow it down on average.
-            ref var list = ref Constraints[bodyIndex];
+            ref var list = ref Constraints[bodyIndex].References;
             for (int i = 0; i < list.Count; ++i)
             {
                 ref var element = ref list[i];
@@ -209,7 +234,7 @@ namespace BepuPhysics
 
         public bool BodyIsConstrainedBy(int bodyIndex, ConstraintHandle constraintHandle)
         {
-            ref var list = ref Constraints[bodyIndex];
+            ref var list = ref Constraints[bodyIndex].References;
             for (int i = 0; i < list.Count; ++i)
             {
                 if (list[i].ConnectingConstraintHandle.Value == constraintHandle.Value)
@@ -237,7 +262,6 @@ namespace BepuPhysics
             Helpers.Swap(ref LocalInertias[slotA], ref LocalInertias[slotB]);
             Helpers.Swap(ref Activity[slotA], ref Activity[slotB]);
             Helpers.Swap(ref Constraints[slotA], ref Constraints[slotB]);
-            Helpers.Swap(ref ConstraintBatchRanges[slotA], ref ConstraintBatchRanges[slotB]);
         }
 
         internal unsafe void InternalResize(int targetBodyCapacity, BufferPool pool)
@@ -253,14 +277,13 @@ namespace BepuPhysics
             pool.ResizeToAtLeast(ref Collidables, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref Activity, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref Constraints, targetBodyCapacity, Count);
-            pool.ResizeToAtLeast(ref ConstraintBatchRanges, targetBodyCapacity, Count);
         }
 
         public unsafe void Clear(BufferPool pool)
         {
             for (int i = 0; i < Count; ++i)
             {
-                Constraints[i].Dispose(pool);
+                Constraints[i].References.Dispose(pool);
             }
             Count = 0;
         }
@@ -277,7 +300,6 @@ namespace BepuPhysics
             pool.Return(ref Collidables);
             pool.Return(ref Activity);
             pool.Return(ref Constraints);
-            pool.Return(ref ConstraintBatchRanges);
         }
 
         /// <summary>
@@ -288,7 +310,7 @@ namespace BepuPhysics
         {
             for (int i = 0; i < Count; ++i)
             {
-                Constraints[i].Dispose(pool);
+                Constraints[i].References.Dispose(pool);
             }
             DisposeBuffers(pool);
             this = new BodySet();

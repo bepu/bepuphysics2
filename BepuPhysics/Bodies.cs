@@ -223,7 +223,7 @@ namespace BepuPhysics
         public void RemoveAt(int activeBodyIndex)
         {
             //Constraints must be removed; we cannot leave 'orphans' in the solver because they will access invalid data.
-            ref var constraints = ref ActiveSet.Constraints[activeBodyIndex];
+            ref var constraints = ref ActiveSet.Constraints[activeBodyIndex].References;
             for (int i = constraints.Count - 1; i >= 0; --i)
             {
                 solver.Remove(constraints[i].ConnectingConstraintHandle);
@@ -253,12 +253,13 @@ namespace BepuPhysics
         /// <summary>
         /// Adds a constraint to an active body's constraint list.
         /// </summary>
+        /// <param name="solver">Solver owning the constraint.</param>
         /// <param name="bodyIndex">Index of the body to add the constraint to.</param>
         /// <param name="constraintHandle">Handle of the constraint to add.</param>
         /// <param name="indexInConstraint">Index of the body in the constraint.</param>
-        internal void AddConstraint(int bodyIndex, ConstraintHandle constraintHandle, int indexInConstraint)
+        internal void AddConstraint(Solver solver, int bodyIndex, ConstraintHandle constraintHandle, int indexInConstraint)
         {
-            ActiveSet.AddConstraint(bodyIndex, constraintHandle, indexInConstraint, Pool);
+            ActiveSet.AddConstraint(solver, bodyIndex, constraintHandle, indexInConstraint, Pool);
         }
 
         /// <summary>
@@ -331,7 +332,7 @@ namespace BepuPhysics
             }
             if (newlyKinematic)
             {
-                ref var constraints = ref set.Constraints[location.Index];
+                ref var constraints = ref set.Constraints[location.Index].References;
                 ConnectedDynamicCounter enumerator;
                 enumerator.Bodies = this;
                 for (int i = 0; i < constraints.Count; ++i)
@@ -602,7 +603,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void EnumerateConnectedBodyIndices<TEnumerator>(int activeBodyIndex, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
-            ref var list = ref ActiveSet.Constraints[activeBodyIndex];
+            ref var list = ref ActiveSet.Constraints[activeBodyIndex].References;
             ActiveConstraintBodyIndicesEnumerator<TEnumerator> constraintBodiesEnumerator;
             constraintBodiesEnumerator.InnerEnumerator = enumerator;
             constraintBodiesEnumerator.SourceBodyIndex = activeBodyIndex;
@@ -631,7 +632,7 @@ namespace BepuPhysics
         {
             ref var bodyLocation = ref HandleToLocation[bodyHandle.Value];
             ref var set = ref Sets[bodyLocation.SetIndex];
-            ref var list = ref set.Constraints[bodyLocation.Index];
+            ref var list = ref set.Constraints[bodyLocation.Index].References;
             //In the loops below, we still make use of the reversed iteration. Removing from within the context of an enumerator is a dangerous move, but it is permitted if the user 
             //is careful. By maintaining the same convention across all of these enumerations, it makes it a little easier to do reliably.
             if (bodyLocation.SetIndex == 0)
@@ -751,7 +752,7 @@ namespace BepuPhysics
         {
             for (int i = 0; i < ActiveSet.Count; ++i)
             {
-                ref var list = ref ActiveSet.Constraints[i];
+                ref var list = ref ActiveSet.Constraints[i].References;
                 var targetCapacity = BufferPool.GetCapacityForCount<BodyConstraintReference>(list.Count > MinimumConstraintCapacityPerBody ? list.Count : MinimumConstraintCapacityPerBody);
                 if (list.Span.Length != targetCapacity)
                     list.Resize(targetCapacity, Pool);
@@ -782,7 +783,7 @@ namespace BepuPhysics
         {
             for (int i = 0; i < ActiveSet.Count; ++i)
             {
-                ref var list = ref ActiveSet.Constraints[i];
+                ref var list = ref ActiveSet.Constraints[i].References;
                 if (list.Span.Length < MinimumConstraintCapacityPerBody)
                     list.Resize(MinimumConstraintCapacityPerBody, Pool);
             }
