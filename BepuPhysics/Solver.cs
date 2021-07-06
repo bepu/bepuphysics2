@@ -370,7 +370,7 @@ namespace BepuPhysics
                     //Now for the body->constraint direction.
                     for (int bodyIndex = 0; bodyIndex < bodySet.Count; ++bodyIndex)
                     {
-                        ref var constraintList = ref bodySet.Constraints[bodyIndex];
+                        ref var constraintList = ref bodySet.Constraints[bodyIndex].References;
                         for (int constraintIndex = 0; constraintIndex < constraintList.Count; ++constraintIndex)
                         {
                             ref var constraintLocation = ref HandleToConstraint[constraintList[constraintIndex].ConnectingConstraintHandle.Value];
@@ -644,7 +644,7 @@ namespace BepuPhysics
             {
                 var bodyHandle = bodyHandles[i];
                 bodies.ValidateExistingHandle(bodyHandle);
-                bodies.AddConstraint(bodies.HandleToLocation[bodyHandle.Value].Index, constraintHandle, i);
+                bodies.AddConstraint(this, bodies.HandleToLocation[bodyHandle.Value].Index, constraintHandle, i);
             }
             return constraintHandle;
         }
@@ -909,7 +909,7 @@ namespace BepuPhysics
             //That's not impossible by any means, but consider that this function will tend to be called in a deferred way- we have control over how many cache optimizations
             //we perform. We do not, however, have any control over how many adds must be performed. Those must be performed immediately for correctness.
             //In other words, doing a little more work here can reduce the overall work required, in addition to simplifying the storage requirements.
-            ref var list = ref bodies.ActiveSet.Constraints[originalIndex];
+            ref var list = ref bodies.ActiveSet.Constraints[originalIndex].References;
             bool bodyShouldBePresentInFallback = false;
             for (int i = 0; i < list.Count; ++i)
             {

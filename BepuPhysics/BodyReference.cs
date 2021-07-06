@@ -163,7 +163,7 @@ namespace BepuPhysics
             get
             {
                 ref var location = ref MemoryLocation;
-                return ref Bodies.Sets[location.SetIndex].Constraints[location.Index];
+                return ref Bodies.Sets[location.SetIndex].Constraints[location.Index].References;
             }
         }
 

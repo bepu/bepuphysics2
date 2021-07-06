@@ -51,7 +51,7 @@ namespace Demos.SpecializedTests
             //Note that we cannot change the order of bodies within constraints! That would change behavior.
             for (int bodyIndex = 0; bodyIndex < simulation.Bodies.ActiveSet.Count; ++bodyIndex)
             {
-                ref var list = ref simulation.Bodies.ActiveSet.Constraints[bodyIndex];
+                ref var list = ref simulation.Bodies.ActiveSet.Constraints[bodyIndex].References;
                 for (int i = 0; i < list.Count - 1; ++i)
                 {
                     ref var currentSlot = ref list[i];
@@ -207,7 +207,7 @@ namespace Demos.SpecializedTests
             //Remove a body.
             var removedBodyIndex = random.Next(simulation.Bodies.ActiveSet.Count);
             //All constraints associated with the body have to be removed first.
-            ref var constraintList = ref simulation.Bodies.ActiveSet.Constraints[removedBodyIndex];
+            ref var constraintList = ref simulation.Bodies.ActiveSet.Constraints[removedBodyIndex].References;
             for (int i = constraintList.Count - 1; i >= 0; --i)
             {
                 WriteLine($"Removing constraint (handle: {constraintList[i].ConnectingConstraintHandle}) for a body removal.");
