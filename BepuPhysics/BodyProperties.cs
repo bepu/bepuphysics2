@@ -332,6 +332,15 @@ namespace BepuPhysics
         public ConstraintHandle MaximumConstraint;
 
         /// <summary>
+        /// Index of the body within the minimum batch index constraint. If the body has no constraints, this value is undefined.
+        /// </summary>
+        public int MinimumIndexInConstraint;
+        /// <summary>
+        /// Index of the body within the maximum batch index constraint. If the body has no constraints, this value is undefined.
+        /// </summary>
+        public int MaximumIndexInConstraint;
+
+        /// <summary>
         /// Gets whether this body has any constraints based on the value in the UnconstrainedIndex field.
         /// </summary>
         public bool Constrained => References.Count > 0;

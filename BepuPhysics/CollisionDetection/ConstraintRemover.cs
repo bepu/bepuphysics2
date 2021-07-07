@@ -341,7 +341,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int j = 0; j < removals.Count; ++j)
                 {
                     ref var target = ref removals[j];
-                    bodies.RemoveConstraintReference(target.BodyIndex, target.ConstraintHandle);
+                    bodies.RemoveConstraintReference(solver, target.BodyIndex, target.ConstraintHandle);
                 }
             }
         }
