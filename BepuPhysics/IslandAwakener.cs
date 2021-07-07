@@ -178,6 +178,7 @@ namespace BepuPhysics
         {
             BroadPhase,
             CopyConstraintRegion,
+            UpdateUnconstrainedBodies,
         }
         struct PhaseTwoJob
         {
@@ -375,6 +376,22 @@ namespace BepuPhysics
                             job.SourceStart, job.TargetStart, job.Count, bodies, solver);
                     }
                     break;
+                case PhaseTwoJobType.UpdateUnconstrainedBodies:
+                    {
+                        //Unconstrained bodies are tracked so that they can be integrated without any of the constraints handling it for them.
+                        //It requires modifying a shared list, so we couldn't do it as a part of the phase 1 copy job. Instead, it's deferred to a locally sequential job here.
+                        //Note that the unconstrained body set's memory capacity was ensured on the main thread prior to the dispatch.
+                        for (int i = 0; i < job.Count; ++i)
+                        {
+                            var bodyIndex = i + job.TargetStart;
+                            ref var constraints = ref bodies.ActiveSet.Constraints[bodyIndex];
+                            if (constraints.References.Count == 0)
+                            {
+                                constraints.UnconstrainedIndex = bodies.UnconstrainedBodies.AddUnsafely(bodyIndex);
+                            }
+                        }
+                    }
+                    break;
             }
 
         }
@@ -555,6 +572,7 @@ namespace BepuPhysics
             //We now know how many new bodies, constraint batch entries, and pair cache entries are going to be added.
             //Ensure capacities on all systems:
             //bodies,
+            var preAwakeningBodyCount = bodies.ActiveSet.Count;
             bodies.EnsureCapacity(bodies.ActiveSet.Count + newBodyCount);
             //broad phase, (technically overestimating, not every body has a collidable, but vast majority do and shrug)
             broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount + newBodyCount, broadPhase.StaticTree.LeafCount);
@@ -632,6 +650,7 @@ namespace BepuPhysics
             {
                 phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.UpdateBatchReferencedHandles, BatchIndex = batchIndex };
             }
+            phaseTwoJobs.AllocateUnsafely() = new PhaseTwoJob { Type = PhaseTwoJobType.UpdateUnconstrainedBodies, TargetStart = preAwakeningBodyCount, Count = newBodyCount };
             phaseTwoJobs.AllocateUnsafely() = new PhaseTwoJob { Type = PhaseTwoJobType.BroadPhase };
 
             ref var activeBodySet = ref bodies.ActiveSet;

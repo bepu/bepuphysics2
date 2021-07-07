@@ -189,6 +189,8 @@ namespace BepuPhysics
             if (constraints.References.Count == 1)
             {
                 //The body is transitioning from unconstrained to constrained. The constraint will now be responsible for its integration.
+                Debug.Assert(constraints.UnconstrainedIndex >= 0 && constraints.UnconstrainedIndex < unconstrainedBodies.Count);
+                Debug.Assert(unconstrainedBodies.BodyIndices[constraints.UnconstrainedIndex] == bodyIndex);
                 if (unconstrainedBodies.RemoveAt(constraints.UnconstrainedIndex, out var movedUnconstrainedBodyIndex))
                 {
                     Constraints[movedUnconstrainedBodyIndex].UnconstrainedIndex = constraints.UnconstrainedIndex;

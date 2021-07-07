@@ -578,7 +578,7 @@ namespace BepuPhysics
 
         [Conditional("DEBUG")]
 
-        internal void ValidateIntegrationResponsibilities()
+        public void ValidateIntegrationResponsibilities()
         {
             Debug.Assert(UnconstrainedBodies.Count <= UnconstrainedBodies.BodyIndices.Length, "Unconstrained bodies count/length corrupted. Bad asynchronous access?");
             for (int bodyIndex = 0; bodyIndex < ActiveSet.Count; ++bodyIndex)

@@ -15,6 +15,13 @@ namespace BepuPhysics
         {
             pool.TakeAtLeast(initialCapacity, out BodyIndices);
         }
+        internal int AddUnsafely(int bodyIndex)
+        {
+            Debug.Assert(Count < BodyIndices.Length);
+            var index = Count++;
+            BodyIndices[index] = bodyIndex;
+            return index;
+        }
 
         internal int Add(int bodyIndex, BufferPool pool)
         {
@@ -22,11 +29,8 @@ namespace BepuPhysics
             {
                 pool.ResizeToAtLeast(ref BodyIndices, Count * 2, BodyIndices.Length);
             }
-            var index = Count++;
-            BodyIndices[index] = bodyIndex;
-            return index;
+            return AddUnsafely(bodyIndex);
         }
-
         internal bool RemoveAt(int unconstrainedIndex, out int movedBodyIndex)
         {
             Debug.Assert(unconstrainedIndex >= 0 && unconstrainedIndex < Count, "Unconstrained index should fall within the unconstrained set.");

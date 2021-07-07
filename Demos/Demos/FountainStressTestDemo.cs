@@ -247,6 +247,7 @@ namespace Demos.Demos
             var anglePerKinematic = MathHelper.TwoPi / kinematicHandles.Length;
             var maxDisplacement = 50 * timestepDuration;
             var inverseDt = 1f / timestepDuration;
+            Simulation.Bodies.ValidateIntegrationResponsibilities();
             for (int i = 0; i < kinematicHandles.Length; ++i)
             {
                 ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[kinematicHandles[i].Value];
@@ -284,6 +285,7 @@ namespace Demos.Demos
                     }
                 }
             }
+            Simulation.Bodies.ValidateIntegrationResponsibilities();
 
             //Remove some statics from the simulation.
             var missingStaticsAsymptote = 512;
@@ -295,6 +297,7 @@ namespace Demos.Demos
                 Simulation.Statics.RemoveAt(indexToRemove);
                 removedStatics.Enqueue(staticDescription, BufferPool);
             }
+            Simulation.Bodies.ValidateIntegrationResponsibilities();
 
             var staticApplyDescriptionsPerFrame = 8;
             for (int i = 0; i < staticApplyDescriptionsPerFrame; ++i)
@@ -310,6 +313,7 @@ namespace Demos.Demos
                 Simulation.Statics.ApplyDescription(handleToReapply, staticDescription);
             }
 
+            Simulation.Bodies.ValidateIntegrationResponsibilities();
 
             //Add some of the missing static bodies back into the simulation.
             var staticAddCount = removedStatics.Count * (staticRemovalsPerFrame / (float)missingStaticsAsymptote);
@@ -319,6 +323,7 @@ namespace Demos.Demos
                 var staticDescription = removedStatics.Dequeue();
                 Simulation.Statics.Add(staticDescription);
             }
+            Simulation.Bodies.ValidateIntegrationResponsibilities();
 
 
             //Spray some shapes!
@@ -347,6 +352,7 @@ namespace Demos.Demos
                 }
             }
 
+            Simulation.Bodies.ValidateIntegrationResponsibilities();
             //Change some dynamic objects without adding/removing them to make sure all the state transition stuff works reasonably well.
             var dynamicApplyDescriptionsPerFrame = 8;
             for (int i = 0; i < dynamicApplyDescriptionsPerFrame; ++i)
@@ -362,6 +368,7 @@ namespace Demos.Demos
                 }
                 Simulation.Bodies.ApplyDescription(handle, newDescription);
             }
+            Simulation.Bodies.ValidateIntegrationResponsibilities();
 
             base.Update(window, camera, input, dt);
 
