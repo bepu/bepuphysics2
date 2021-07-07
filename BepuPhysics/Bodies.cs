@@ -60,6 +60,7 @@ namespace BepuPhysics
         internal Shapes shapes;
         internal BroadPhase broadPhase;
         internal Solver solver;
+        public UnconstrainedBodies UnconstrainedBodies { get; private set; }
 
         /// <summary>
         /// Gets or sets the minimum constraint capacity for each body. Future resizes or allocations will obey this minimum, but changing this does not immediately resize existing lists.
@@ -90,6 +91,7 @@ namespace BepuPhysics
             this.shapes = shapes;
             this.broadPhase = broadPhase;
             MinimumConstraintCapacityPerBody = initialConstraintCapacityPerBody;
+            UnconstrainedBodies = new UnconstrainedBodies(initialBodyCapacity, pool);
         }
 
         /// <summary>
@@ -180,7 +182,7 @@ namespace BepuPhysics
             //All new bodies are active for simplicity. Someday, it may be worth offering an optimized path for inactives, but it adds complexity.
             //(Directly adding inactive bodies can be helpful in some networked open world scenarios.)
             var handle = new BodyHandle(handleIndex);
-            var index = ActiveSet.Add(description, handle, MinimumConstraintCapacityPerBody, Pool);
+            var index = ActiveSet.Add(description, handle, UnconstrainedBodies, MinimumConstraintCapacityPerBody, Pool);
             HandleToLocation[handleIndex] = new BodyMemoryLocation { SetIndex = 0, Index = index };
 
             if (description.Collidable.Shape.Exists)
@@ -205,7 +207,7 @@ namespace BepuPhysics
                 RemoveCollidableFromBroadPhase(ref collidable);
             }
 
-            var bodyMoved = set.RemoveAt(activeBodyIndex, out var handle, out var movedBodyIndex, out var movedBodyHandle);
+            var bodyMoved = set.RemoveAt(activeBodyIndex, UnconstrainedBodies, out var handle, out var movedBodyIndex, out var movedBodyHandle);
             if (bodyMoved)
             {
                 //While the removed body doesn't have any constraints associated with it, the body that gets moved to fill its slot might!
@@ -259,17 +261,18 @@ namespace BepuPhysics
         /// <param name="indexInConstraint">Index of the body in the constraint.</param>
         internal void AddConstraint(Solver solver, int bodyIndex, ConstraintHandle constraintHandle, int indexInConstraint)
         {
-            ActiveSet.AddConstraint(solver, bodyIndex, constraintHandle, indexInConstraint, Pool);
+            ActiveSet.AddConstraint(solver, UnconstrainedBodies, bodyIndex, constraintHandle, indexInConstraint, Pool);
         }
 
         /// <summary>
         /// Removes a constraint from an active body's constraint list.
         /// </summary>
+        /// <param name="solver">Solver to which the constraint belongs.</param>
         /// <param name="bodyIndex">Index of the active body.</param>
         /// <param name="constraintHandle">Handle of the constraint to remove.</param>
-        internal void RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle)
+        internal void RemoveConstraintReference(Solver solver, int bodyIndex, ConstraintHandle constraintHandle)
         {
-            ActiveSet.RemoveConstraintReference(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, Pool);
+            ActiveSet.RemoveConstraintReference(solver, UnconstrainedBodies, bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, Pool);
         }
 
         /// <summary>
@@ -678,6 +681,7 @@ namespace BepuPhysics
                 if (set.Allocated)
                     set.Dispose(Pool);
             }
+            UnconstrainedBodies.Clear();
             Unsafe.InitBlockUnaligned(HandleToLocation.Memory, 0xFF, (uint)(sizeof(BodyMemoryLocation) * HandleToLocation.Length));
             HandlePool.Clear();
         }
@@ -737,6 +741,7 @@ namespace BepuPhysics
                 ActiveSet.InternalResize(targetBodyCapacity, Pool);
             }
             ResizeInertias(capacity);
+            UnconstrainedBodies.Resize(capacity, Pool);
             var targetHandleCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(capacity, HandlePool.HighestPossiblyClaimedId + 1));
             if (HandleToLocation.Length != targetHandleCapacity)
             {
@@ -762,13 +767,14 @@ namespace BepuPhysics
         /// <summary>
         /// Increases the size of active body buffers if needed to hold the target capacity.
         /// </summary>
-        /// <param name="capacity">Target data capacity.</param>
+        /// <param name="capacity">Target body capacity.</param>
         public void EnsureCapacity(int capacity)
         {
             if (ActiveSet.IndexToHandle.Length < capacity)
             {
                 ActiveSet.InternalResize(capacity, Pool);
             }
+            UnconstrainedBodies.EnsureCapacity(capacity, Pool);
             EnsureInertiasCapacity(capacity);
             if (HandleToLocation.Length < capacity)
             {
@@ -808,6 +814,7 @@ namespace BepuPhysics
                 Pool.Return(ref Inertias);
             Pool.Return(ref HandleToLocation);
             HandlePool.Dispose(Pool);
+            UnconstrainedBodies.Dispose(Pool);
         }
 
     }
