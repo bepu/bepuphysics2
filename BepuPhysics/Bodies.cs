@@ -546,6 +546,17 @@ namespace BepuPhysics
         }
         private void ValidateBodyConstraintIntegrationBounds(int bodyReference, in BodyConstraints constraints, int batchCount)
         {
+            int expectedMinimum = int.MaxValue;
+            int expectedMaximum = -1;
+            for (int i = 0; i < constraints.References.Count; ++i)
+            {
+                var batchIndex = solver.HandleToConstraint[constraints.References[i].ConnectingConstraintHandle.Value].BatchIndex;
+                if (batchIndex < expectedMinimum)
+                    expectedMinimum = batchIndex;
+                if (batchIndex > expectedMaximum)
+                    expectedMaximum = batchIndex;
+            }
+            Debug.Assert(constraints.MinimumBatch == expectedMinimum && constraints.MaximumBatch == expectedMaximum, "Minimum and maximum batch index bounds should match the brute force determined results.");
             Debug.Assert(constraints.MinimumBatch >= 0 && constraints.MinimumBatch < batchCount && constraints.MinimumBatch <= constraints.MaximumBatch,
                 "Constrained bodies must have a minimum batch index that points back to a valid existing constraint batch.");
             Debug.Assert(constraints.MaximumBatch >= 0 && constraints.MaximumBatch < batchCount,
