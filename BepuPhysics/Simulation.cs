@@ -353,6 +353,7 @@ namespace BepuPhysics
             profiler.Start(this);
 
             Timestepper.Timestep(this, dt, threadDispatcher);
+            Bodies.ValidateIntegrationResponsibilities();
 
             profiler.End(this);
         }

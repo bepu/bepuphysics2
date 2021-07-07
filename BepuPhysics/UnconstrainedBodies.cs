@@ -35,6 +35,7 @@ namespace BepuPhysics
             {
                 //The removal target is not the last element, so we'll move the current last element to the removal index.
                 movedBodyIndex = BodyIndices[Count];
+                BodyIndices[unconstrainedIndex] = movedBodyIndex;
                 return true;
             }
             else

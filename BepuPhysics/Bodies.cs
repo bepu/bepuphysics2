@@ -216,8 +216,8 @@ namespace BepuPhysics
                 HandleToLocation[movedBodyHandle.Value].Index = activeBodyIndex;
             }
             return handle;
-
         }
+
         /// <summary>
         /// Removes an active body by its index. Any constraints connected to this body will be removed. Assumes that the input location is valid.
         /// </summary>
@@ -527,6 +527,79 @@ namespace BepuPhysics
                 }
             }
         }
+
+        struct IntegrationValidationEnumerator : IForEach<int>
+        {
+            public int BodyReference;
+            public int ExpectedIndexInConstraint;
+            public int EnumeratedCount;
+            public int FoundIndex;
+
+            public void LoopBody(int i)
+            {
+                if (BodyReference == i)
+                {
+                    FoundIndex = EnumeratedCount;
+                }
+                ++EnumeratedCount;
+            }
+        }
+        private void ValidateBodyConstraintIntegrationBounds(int bodyReference, in BodyConstraints constraints, int batchCount)
+        {
+            Debug.Assert(constraints.MinimumBatch >= 0 && constraints.MinimumBatch < batchCount && constraints.MinimumBatch <= constraints.MaximumBatch,
+                "Constrained bodies must have a minimum batch index that points back to a valid existing constraint batch.");
+            Debug.Assert(constraints.MaximumBatch >= 0 && constraints.MaximumBatch < batchCount,
+                "Constrained bodies must have a maximum batch index that points back to a valid existing constraint batch.");
+            IntegrationValidationEnumerator enumerator;
+            enumerator.EnumeratedCount = 0;
+            enumerator.ExpectedIndexInConstraint = constraints.MinimumIndexInConstraint;
+            enumerator.BodyReference = bodyReference;
+            enumerator.FoundIndex = -1;
+            solver.EnumerateConnectedBodies(constraints.MinimumConstraint, ref enumerator);
+            Debug.Assert(enumerator.FoundIndex == constraints.MinimumIndexInConstraint, "Body should be in the constraint that it listed as a integration-responsible bound.");
+
+            enumerator.EnumeratedCount = 0;
+            enumerator.ExpectedIndexInConstraint = constraints.MaximumIndexInConstraint;
+            enumerator.FoundIndex = -1;
+            solver.EnumerateConnectedBodies(constraints.MaximumConstraint, ref enumerator);
+            Debug.Assert(enumerator.FoundIndex == constraints.MaximumIndexInConstraint, "Body should be in the constraint that it listed as a integration-responsible bound.");
+        }
+
+        [Conditional("DEBUG")]
+
+        internal void ValidateIntegrationResponsibilities()
+        {
+            Debug.Assert(UnconstrainedBodies.Count <= UnconstrainedBodies.BodyIndices.Length, "Unconstrained bodies count/length corrupted. Bad asynchronous access?");
+            for (int bodyIndex = 0; bodyIndex < ActiveSet.Count; ++bodyIndex)
+            {
+                ref var constraints = ref ActiveSet.Constraints[bodyIndex];
+                if (constraints.References.Count == 0)
+                {
+                    Debug.Assert(constraints.UnconstrainedIndex >= 0 && constraints.UnconstrainedIndex < UnconstrainedBodies.Count, "Unconstrained bodies must point to a valid position in the unconstrained set.");
+                    Debug.Assert(UnconstrainedBodies.BodyIndices[constraints.UnconstrainedIndex] == bodyIndex, "Bidirectional mapping between bodies and unconstrained set entries must match.");
+                }
+                else
+                {
+                    ValidateBodyConstraintIntegrationBounds(bodyIndex, constraints, solver.ActiveSet.Batches.Count);
+                }
+            }
+            for (int setIndex = 1; setIndex < Sets.Length; ++setIndex)
+            {
+                ref var set = ref Sets[setIndex];
+                if (set.Allocated)
+                {
+                    for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
+                    {
+                        ref var constraints = ref set.Constraints[bodyIndex];
+                        if (constraints.References.Count > 0)
+                        {
+                            ValidateBodyConstraintIntegrationBounds(set.IndexToHandle[bodyIndex].Value, constraints, solver.Sets[setIndex].Batches.Count);
+                        }
+                    }
+                }
+            }
+        }
+
 
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
         {

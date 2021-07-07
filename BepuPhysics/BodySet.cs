@@ -219,7 +219,7 @@ namespace BepuPhysics
                 {
                     solver.RemoveLateIntegrationResponsibilityFromConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint, bodyIndex);
                     constraints.MaximumBatch = batchIndex;
-                    constraints.MinimumConstraint = constraintHandle;
+                    constraints.MaximumConstraint = constraintHandle;
                     constraints.MaximumIndexInConstraint = bodyIndexInConstraint;
                     solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, bodyIndexInConstraint, bodyIndex);
                 }
@@ -257,11 +257,11 @@ namespace BepuPhysics
                 {
                     //We need to know which constraint is now responsible for the body.
 
-                    int newBatchIndex = int.MaxValue;
-                    int newIndexInConstraint = -1;
-                    ConstraintHandle newConstraintHandle = default;
                     if (isMinimum)
                     {
+                        int newBatchIndex = int.MaxValue;
+                        int newIndexInConstraint = -1;
+                        ConstraintHandle newConstraintHandle = default;
                         //Find the new minimum batch index, and remove the target constraint.
                         for (int i = list.Count - 1; i >= 0; --i)
                         {
@@ -281,10 +281,17 @@ namespace BepuPhysics
                                 }
                             }
                         }
+                        constraints.MinimumBatch = newBatchIndex;
+                        constraints.MinimumConstraint = newConstraintHandle;
+                        constraints.MinimumIndexInConstraint = newIndexInConstraint;
+                        Debug.Assert(solver.HandleToConstraint[newConstraintHandle.Value].SetIndex >= 0);
                         solver.AddEarlyIntegrationResponsibilityToConstraint(newConstraintHandle, newIndexInConstraint, bodyIndex);
                     }
                     else
                     {
+                        int newBatchIndex = -1;
+                        int newIndexInConstraint = -1;
+                        ConstraintHandle newConstraintHandle = default;
                         //Find the new maximum batch index, and remove the target constraint.
                         for (int i = list.Count - 1; i >= 0; --i)
                         {
@@ -304,6 +311,10 @@ namespace BepuPhysics
                                 }
                             }
                         }
+                        constraints.MaximumBatch = newBatchIndex;
+                        constraints.MaximumConstraint = newConstraintHandle;
+                        constraints.MaximumIndexInConstraint = newIndexInConstraint;
+                        Debug.Assert(solver.HandleToConstraint[newConstraintHandle.Value].SetIndex >= 0);
                         solver.AddLateIntegrationResponsibilityToConstraint(newConstraintHandle, newIndexInConstraint, bodyIndex);
                     }
                 }
