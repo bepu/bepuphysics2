@@ -232,11 +232,10 @@ namespace BepuPhysics
             //This uses a linear search. That's fine; bodies will rarely have more than a handful of constraints associated with them.
             //Attempting to use something like a hash set for fast removes would just introduce more constant overhead and slow it down on average.
             ref var constraints = ref Constraints[bodyIndex];
-            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle.Value];
-            Debug.Assert(constraintLocation.SetIndex == 0, "Removals must only occur on the active set.");
+            Debug.Assert(solver.HandleToConstraint[constraintHandle.Value].SetIndex == 0, "Removals must only occur on the active set.");
             ref var list = ref constraints.References;
-            var isMinimum = constraintLocation.BatchIndex == constraints.MinimumBatch;
-            if (isMinimum || constraintLocation.BatchIndex == constraints.MaximumBatch)
+            var isMinimum = constraintHandle == constraints.MinimumConstraint;
+            if (isMinimum || constraintHandle == constraints.MaximumConstraint)
             {
                 //This constraint used to have integration responsibility for this body.
                 if (isMinimum)
@@ -256,7 +255,6 @@ namespace BepuPhysics
                 else
                 {
                     //We need to know which constraint is now responsible for the body.
-
                     if (isMinimum)
                     {
                         int newBatchIndex = int.MaxValue;
