@@ -182,8 +182,10 @@ namespace BepuPhysics
             //All new bodies are active for simplicity. Someday, it may be worth offering an optimized path for inactives, but it adds complexity.
             //(Directly adding inactive bodies can be helpful in some networked open world scenarios.)
             var handle = new BodyHandle(handleIndex);
-            var index = ActiveSet.Add(description, handle, UnconstrainedBodies, MinimumConstraintCapacityPerBody, Pool);
+            var index = ActiveSet.Add(description, handle, MinimumConstraintCapacityPerBody, Pool);
+            ActiveSet.Constraints[index].UnconstrainedIndex = UnconstrainedBodies.Add(index, Pool);
             HandleToLocation[handleIndex] = new BodyMemoryLocation { SetIndex = 0, Index = index };
+
 
             if (description.Collidable.Shape.Exists)
             {
@@ -207,11 +209,20 @@ namespace BepuPhysics
                 RemoveCollidableFromBroadPhase(ref collidable);
             }
 
-            var bodyMoved = set.RemoveAt(activeBodyIndex, UnconstrainedBodies, out var handle, out var movedBodyIndex, out var movedBodyHandle);
+            ref var constraintsForRemovedSlot = ref set.Constraints[activeBodyIndex];
+            if (constraintsForRemovedSlot.References.Count == 0 && UnconstrainedBodies.RemoveAt(constraintsForRemovedSlot.UnconstrainedIndex, out var bodyMovedInUnconstrainedSet))
+            {
+                set.Constraints[bodyMovedInUnconstrainedSet].UnconstrainedIndex = constraintsForRemovedSlot.UnconstrainedIndex;
+            }
+            var bodyMoved = set.RemoveAt(activeBodyIndex, out var handle, out var movedBodyIndex, out var movedBodyHandle);
             if (bodyMoved)
             {
                 //While the removed body doesn't have any constraints associated with it, the body that gets moved to fill its slot might!
                 solver.UpdateForBodyMemoryMove(movedBodyIndex, activeBodyIndex);
+                if (constraintsForRemovedSlot.References.Count == 0)
+                {
+                    UnconstrainedBodies.UpdateForBodyMemoryMove(constraintsForRemovedSlot.UnconstrainedIndex, activeBodyIndex);
+                }
                 Debug.Assert(HandleToLocation[movedBodyHandle.Value].SetIndex == 0 && HandleToLocation[movedBodyHandle.Value].Index == movedBodyIndex);
                 HandleToLocation[movedBodyHandle.Value].Index = activeBodyIndex;
             }
