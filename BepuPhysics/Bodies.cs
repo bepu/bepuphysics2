@@ -594,21 +594,6 @@ namespace BepuPhysics
                     ValidateBodyConstraintIntegrationBounds(bodyIndex, constraints, solver.ActiveSet.Batches.Count);
                 }
             }
-            for (int setIndex = 1; setIndex < Sets.Length; ++setIndex)
-            {
-                ref var set = ref Sets[setIndex];
-                if (set.Allocated)
-                {
-                    for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
-                    {
-                        ref var constraints = ref set.Constraints[bodyIndex];
-                        if (constraints.References.Count > 0)
-                        {
-                            ValidateBodyConstraintIntegrationBounds(set.IndexToHandle[bodyIndex].Value, constraints, solver.Sets[setIndex].Batches.Count);
-                        }
-                    }
-                }
-            }
         }
 
 

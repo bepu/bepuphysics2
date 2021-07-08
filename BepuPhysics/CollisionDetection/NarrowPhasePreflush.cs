@@ -402,7 +402,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int i = 0; i < awakenerPhaseOneJobCount; ++i)
                     Simulation.Awakener.ExecutePhaseOneJob(i);
                 //Note that phase one of awakener must occur before the constraint flush. Phase one registers the newly awakened constraints in constraint batches.
-                //This this was not done, pending adds might end up in the same batches as newly awake constraints that share bodies.
+                //If this was not done, pending adds might end up in the same batches as newly awake constraints that share bodies.
                 for (int i = 0; i < awakenerPhaseTwoJobCount; ++i)
                     Simulation.Awakener.ExecutePhaseTwoJob(i);
                 overlapWorkers[0].PendingConstraints.FlushSequentially(Simulation, PairCache);
