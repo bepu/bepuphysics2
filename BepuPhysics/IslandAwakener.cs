@@ -298,18 +298,8 @@ namespace BepuPhysics
                                 //It's necessary since sleeping potentially changes constraint batch indices.
                                 //Note that the handle to constraint mapping is updated in the second phase as a part of the "CopyConstraintRegion" job, 
                                 //so the mapping currently points to the sleeping set as desired.
-                                int minimumBatchIndex = int.MaxValue;
-                                int maximumBatchIndex = -1;
-                                for (int j = 0; j < sourceConstraints.References.Count; ++j)
-                                {
-                                    var batchIndex = solver.HandleToConstraint[sourceConstraints.References[j].ConnectingConstraintHandle.Value].BatchIndex;
-                                    if (batchIndex < minimumBatchIndex)
-                                        minimumBatchIndex = batchIndex;
-                                    if (batchIndex > maximumBatchIndex)
-                                        maximumBatchIndex = batchIndex;
-                                }
-                                targetConstraints.MinimumBatch = minimumBatchIndex;
-                                targetConstraints.MaximumBatch = maximumBatchIndex;
+                                //The constraint copy is also responsible for initializing solver integration responsibility flags appropriately.
+                                bodies.UpdateIntegrationResponsibilitiesForBodyWithoutSolverModifications(solver, targetIndex);
                             }
                             else
                             {

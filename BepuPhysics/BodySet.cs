@@ -161,7 +161,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void AddConstraint(Solver solver, UnconstrainedBodies unconstrainedBodies, int bodyIndex, ConstraintHandle constraintHandle, int bodyIndexInConstraint, BufferPool pool)
+        internal ref BodyConstraints AddConstraint(int bodyIndex, ConstraintHandle constraintHandle, int bodyIndexInConstraint, BufferPool pool)
         {
             BodyConstraintReference constraint;
             constraint.ConnectingConstraintHandle = constraintHandle;
@@ -171,155 +171,24 @@ namespace BepuPhysics
             if (constraints.References.Span.Length == constraints.References.Count)
                 constraints.References.Resize(constraints.References.Span.Length * 2, pool);
             constraints.References.AllocateUnsafely() = constraint;
-
-            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle.Value];
-            Debug.Assert(constraintLocation.SetIndex == 0, "Constraints should only be added to active bodies.");
-            var batchIndex = constraintLocation.BatchIndex;
-            if (constraints.References.Count == 1)
-            {
-                //The body is transitioning from unconstrained to constrained. The constraint will now be responsible for its integration.
-                Debug.Assert(constraints.UnconstrainedIndex >= 0 && constraints.UnconstrainedIndex < unconstrainedBodies.Count);
-                Debug.Assert(unconstrainedBodies.BodyIndices[constraints.UnconstrainedIndex] == bodyIndex);
-                if (unconstrainedBodies.RemoveAt(constraints.UnconstrainedIndex, out var movedUnconstrainedBodyIndex))
-                {
-                    Constraints[movedUnconstrainedBodyIndex].UnconstrainedIndex = constraints.UnconstrainedIndex;
-                }
-                constraints.MinimumBatch = batchIndex;
-                constraints.MaximumBatch = batchIndex;
-                constraints.MinimumConstraint = constraintHandle;
-                constraints.MaximumConstraint = constraintHandle;
-                constraints.MinimumIndexInConstraint = bodyIndexInConstraint;
-                constraints.MaximumIndexInConstraint = bodyIndexInConstraint;
-                solver.AddEarlyIntegrationResponsibilityToConstraint(constraintHandle, bodyIndexInConstraint, bodyIndex);
-                solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, bodyIndexInConstraint, bodyIndex);
-            }
-            else
-            {
-                var minimum = constraints.MinimumBatch;
-                var maximum = constraints.MaximumBatch;
-                if (batchIndex < minimum)
-                {
-                    solver.RemoveEarlyIntegrationResponsibilityFromConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint, bodyIndex);
-                    constraints.MinimumBatch = batchIndex;
-                    constraints.MinimumConstraint = constraintHandle;
-                    constraints.MinimumIndexInConstraint = bodyIndexInConstraint;
-                    solver.AddEarlyIntegrationResponsibilityToConstraint(constraintHandle, bodyIndexInConstraint, bodyIndex);
-
-                }
-                else if (batchIndex > maximum)
-                {
-                    solver.RemoveLateIntegrationResponsibilityFromConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint, bodyIndex);
-                    constraints.MaximumBatch = batchIndex;
-                    constraints.MaximumConstraint = constraintHandle;
-                    constraints.MaximumIndexInConstraint = bodyIndexInConstraint;
-                    solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, bodyIndexInConstraint, bodyIndex);
-                }
-            }
+            return ref constraints;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void RemoveConstraintReference(Solver solver, UnconstrainedBodies unconstrainedBodies, int bodyIndex, ConstraintHandle constraintHandle, int minimumConstraintCapacityPerBody, BufferPool pool)
+        internal ref BodyConstraints RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle, int minimumConstraintCapacityPerBody, BufferPool pool)
         {
             //This uses a linear search. That's fine; bodies will rarely have more than a handful of constraints associated with them.
             //Attempting to use something like a hash set for fast removes would just introduce more constant overhead and slow it down on average.
             ref var constraints = ref Constraints[bodyIndex];
-            Debug.Assert(solver.HandleToConstraint[constraintHandle.Value].SetIndex == 0, "Removals must only occur on the active set.");
             ref var list = ref constraints.References;
-            var isMinimum = constraintHandle == constraints.MinimumConstraint;
-            if (isMinimum || constraintHandle == constraints.MaximumConstraint)
+            //This constraint did not have any integration responsibilities; we can remove it with no fanfare.
+            for (int i = 0; i < list.Count; ++i)
             {
-                //This constraint used to have integration responsibility for this body.
-                if (isMinimum)
+                ref var element = ref list[i];
+                if (element.ConnectingConstraintHandle.Value == constraintHandle.Value)
                 {
-                    solver.RemoveEarlyIntegrationResponsibilityFromConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint, bodyIndex);
-                }
-                else
-                {
-                    solver.RemoveLateIntegrationResponsibilityFromConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint, bodyIndex);
-                }
-                if (list.Count == 1)
-                {
-                    //Removing this constraint from the list will leave the body unconstrained, and it should enter the unconstrained integration set.
-                    constraints.UnconstrainedIndex = unconstrainedBodies.Add(bodyIndex, pool);
-                    list.Count = 0;
-                }
-                else
-                {
-                    //We need to know which constraint is now responsible for the body.
-                    if (isMinimum)
-                    {
-                        int newBatchIndex = int.MaxValue;
-                        int newIndexInConstraint = -1;
-                        ConstraintHandle newConstraintHandle = default;
-                        //Find the new minimum batch index, and remove the target constraint.
-                        for (int i = list.Count - 1; i >= 0; --i)
-                        {
-                            ref var reference = ref list[i];
-                            if (reference.ConnectingConstraintHandle.Value == constraintHandle.Value)
-                            {
-                                list.FastRemoveAt(i);
-                            }
-                            else
-                            {
-                                var batchIndex = solver.HandleToConstraint[reference.ConnectingConstraintHandle.Value].BatchIndex;
-                                if (batchIndex < newBatchIndex)
-                                {
-                                    newBatchIndex = batchIndex;
-                                    newConstraintHandle = reference.ConnectingConstraintHandle;
-                                    newIndexInConstraint = reference.BodyIndexInConstraint;
-                                }
-                            }
-                        }
-                        constraints.MinimumBatch = newBatchIndex;
-                        constraints.MinimumConstraint = newConstraintHandle;
-                        constraints.MinimumIndexInConstraint = newIndexInConstraint;
-                        Debug.Assert(solver.HandleToConstraint[newConstraintHandle.Value].SetIndex >= 0);
-                        solver.AddEarlyIntegrationResponsibilityToConstraint(newConstraintHandle, newIndexInConstraint, bodyIndex);
-                    }
-                    else
-                    {
-                        int newBatchIndex = -1;
-                        int newIndexInConstraint = -1;
-                        ConstraintHandle newConstraintHandle = default;
-                        //Find the new maximum batch index, and remove the target constraint.
-                        for (int i = list.Count - 1; i >= 0; --i)
-                        {
-                            ref var reference = ref list[i];
-                            if (reference.ConnectingConstraintHandle.Value == constraintHandle.Value)
-                            {
-                                list.FastRemoveAt(i);
-                            }
-                            else
-                            {
-                                var batchIndex = solver.HandleToConstraint[reference.ConnectingConstraintHandle.Value].BatchIndex;
-                                if (batchIndex > newBatchIndex)
-                                {
-                                    newBatchIndex = batchIndex;
-                                    newConstraintHandle = reference.ConnectingConstraintHandle;
-                                    newIndexInConstraint = reference.BodyIndexInConstraint;
-                                }
-                            }
-                        }
-                        constraints.MaximumBatch = newBatchIndex;
-                        constraints.MaximumConstraint = newConstraintHandle;
-                        constraints.MaximumIndexInConstraint = newIndexInConstraint;
-                        Debug.Assert(solver.HandleToConstraint[newConstraintHandle.Value].SetIndex >= 0);
-                        solver.AddLateIntegrationResponsibilityToConstraint(newConstraintHandle, newIndexInConstraint, bodyIndex);
-                    }
-                }
-
-            }
-            else
-            {
-                //This constraint did not have any integration responsibilities; we can remove it with no fanfare.
-                for (int i = 0; i < list.Count; ++i)
-                {
-                    ref var element = ref list[i];
-                    if (element.ConnectingConstraintHandle.Value == constraintHandle.Value)
-                    {
-                        list.FastRemoveAt(i);
-                        break;
-                    }
+                    list.FastRemoveAt(i);
+                    break;
                 }
             }
             //Note the conservative resizing threshold. If the current capacity is 8, the minimum capacity is 4, and the current count is 4, it COULD resize,
@@ -333,6 +202,7 @@ namespace BepuPhysics
                 //The list can be trimmed down a bit while still holding all existing constraints and obeying the minimum capacity.
                 list.Resize(targetCapacity, pool);
             }
+            return ref constraints;
         }
 
         public bool BodyIsConstrainedBy(int bodyIndex, ConstraintHandle constraintHandle)

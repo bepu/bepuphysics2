@@ -191,6 +191,10 @@ namespace BepuPhysics
             {
                 AddCollidableToBroadPhase(handle, description.Pose, description.LocalInertia, ref ActiveSet.Collidables[index]);
             }
+            lock (debugBodiesAdded)
+            {
+                debugBodiesAdded.Add(index);
+            }
             return handle;
         }
 
@@ -260,6 +264,10 @@ namespace BepuPhysics
         {
             ValidateExistingHandle(handle);
             awakener.AwakenBody(handle);
+            lock (debugBodiesRemoved)
+            {
+                debugBodiesRemoved.Add(HandleToLocation[handle.Value].Index);
+            }
             RemoveAt(HandleToLocation[handle.Value].Index);
         }
 
@@ -269,21 +277,160 @@ namespace BepuPhysics
         /// <param name="solver">Solver owning the constraint.</param>
         /// <param name="bodyIndex">Index of the body to add the constraint to.</param>
         /// <param name="constraintHandle">Handle of the constraint to add.</param>
+        /// <param name="constraintLocation">Location of the constraint in memory.</param>
         /// <param name="indexInConstraint">Index of the body in the constraint.</param>
-        internal void AddConstraint(Solver solver, int bodyIndex, ConstraintHandle constraintHandle, int indexInConstraint)
+        /// <remarks>We pass the reference to the constraint location explicitly to try to make abundantly clear that it is *used*, and this function should only be called
+        /// from contexts where that information is available. We don't currently use bodies.AddConstraint from any context where that's a risk, but this is the kind of thing
+        /// that I forget about a year later when trying to modify the bookkeeping somehow.</remarks>
+        internal void AddConstraint(Solver solver, int bodyIndex, ConstraintHandle constraintHandle, ref ConstraintLocation constraintLocation, int indexInConstraint)
         {
-            ActiveSet.AddConstraint(solver, UnconstrainedBodies, bodyIndex, constraintHandle, indexInConstraint, Pool);
+            ref var constraints = ref ActiveSet.AddConstraint(bodyIndex, constraintHandle, indexInConstraint, Pool);
+
+            //We handle integration responsibility stuff out here since it's only relevant for active constraints.
+            //It's okay to do this stuff immediately, because this function is only ever called from contexts that have a valid constraint location, which isn't the case for remove.
+            Debug.Assert(constraintLocation.SetIndex == 0, "Constraints should only be added to active bodies.");
+            var batchIndex = constraintLocation.BatchIndex;
+            if (constraints.References.Count == 1)
+            {
+                //The body is transitioning from unconstrained to constrained. The constraint will now be responsible for its integration.
+                Debug.Assert(constraints.UnconstrainedIndex >= 0 && constraints.UnconstrainedIndex < UnconstrainedBodies.Count);
+                Debug.Assert(UnconstrainedBodies.BodyIndices[constraints.UnconstrainedIndex] == bodyIndex);
+                if (UnconstrainedBodies.RemoveAt(constraints.UnconstrainedIndex, out var movedUnconstrainedBodyIndex))
+                {
+                    ActiveSet.Constraints[movedUnconstrainedBodyIndex].UnconstrainedIndex = constraints.UnconstrainedIndex;
+                }
+                constraints.MinimumBatch = batchIndex;
+                constraints.MaximumBatch = batchIndex;
+                constraints.MinimumConstraint = constraintHandle;
+                constraints.MaximumConstraint = constraintHandle;
+                constraints.MinimumIndexInConstraint = indexInConstraint;
+                constraints.MaximumIndexInConstraint = indexInConstraint;
+                solver.AddEarlyIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint, bodyIndex);
+                solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint, bodyIndex);
+            }
+            else
+            {
+                var minimum = constraints.MinimumBatch;
+                var maximum = constraints.MaximumBatch;
+                if (batchIndex < minimum)
+                {
+                    solver.RemoveEarlyIntegrationResponsibilityFromConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint, bodyIndex);
+                    constraints.MinimumBatch = batchIndex;
+                    constraints.MinimumConstraint = constraintHandle;
+                    constraints.MinimumIndexInConstraint = indexInConstraint;
+                    solver.AddEarlyIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint, bodyIndex);
+
+                }
+                else if (batchIndex > maximum)
+                {
+                    solver.RemoveLateIntegrationResponsibilityFromConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint, bodyIndex);
+                    constraints.MaximumBatch = batchIndex;
+                    constraints.MaximumConstraint = constraintHandle;
+                    constraints.MaximumIndexInConstraint = indexInConstraint;
+                    solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint, bodyIndex);
+                }
+            }
+            lock (debugBodiesConstraintAdded)
+            {
+                debugBodiesConstraintAdded.Add(bodyIndex);
+            }
         }
 
         /// <summary>
         /// Removes a constraint from an active body's constraint list.
         /// </summary>
-        /// <param name="solver">Solver to which the constraint belongs.</param>
+        /// <param name="bodyIndex">Index of the active body.</param>
+        /// <param name="constraintHandle">Handle of the constraint to remove.</param>
+        /// <returns>True if the constraint had integration responsibilities for the body, false otherwise.</returns>
+        internal bool RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle)
+        {
+            ref var constraints = ref ActiveSet.RemoveConstraintReference(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, Pool);
+
+            //If this constraint is being removed, we have to get rid of references to it in the integration responsibilities.
+            //This function assumes a multithreaded context that means we can't directly handle everything here, so we return a bool indicating whether this body requires integration responsibility analysis.
+            bool requiresUpdateIfConstraintsRemain = constraintHandle == constraints.MinimumConstraint || constraintHandle == constraints.MaximumConstraint;
+            if (requiresUpdateIfConstraintsRemain)
+            {
+                //If either constraint is a bound, we just clear both bounds.
+                //Updating both bounds costs the same amount as updating one, and by clearing out both bounds, we stop later removals from possibly triggering another update for the second bound.
+                constraints.MinimumConstraint.Value = -1;
+                constraints.MaximumConstraint.Value = -1;
+            }
+            if (constraints.References.Count == 0)
+            {
+                //If there are no constraints left associated with the body, we can immediately add the body to the unconstrained set.
+                //This is only called from a locally sequential context, so it's safe to do inline, unlike the integration bounds update which needs to look at solver constraint locations.
+                constraints.UnconstrainedIndex = UnconstrainedBodies.Add(bodyIndex, Pool);
+                return false;
+            }
+            return requiresUpdateIfConstraintsRemain;
+        }
+
+
+        internal ref BodyConstraints UpdateIntegrationResponsibilitiesForBodyWithoutSolverModifications(Solver solver, int bodyIndex)
+        {
+            ref var constraints = ref ActiveSet.Constraints[bodyIndex];
+            ref var list = ref constraints.References;
+            if (list.Count > 0) //It's possible that an update request came before the body had all its constraints removed, meaning there is no more need for an update.
+            {
+                //Note that there's no need to remove the integration responsibility of a constraint that's being removed.
+                constraints.MinimumBatch = int.MaxValue;
+                constraints.MaximumBatch = -1;
+                //Find the new minimum batch index.
+                for (int i = 0; i < list.Count; ++i)
+                {
+                    ref var reference = ref list[i];
+                    var batchIndex = solver.HandleToConstraint[reference.ConnectingConstraintHandle.Value].BatchIndex;
+                    if (batchIndex < constraints.MinimumBatch)
+                    {
+                        constraints.MinimumBatch = batchIndex;
+                        constraints.MinimumConstraint = reference.ConnectingConstraintHandle;
+                        constraints.MinimumIndexInConstraint = reference.BodyIndexInConstraint;
+                    }
+                    if (batchIndex > constraints.MaximumBatch)
+                    {
+                        constraints.MaximumBatch = batchIndex;
+                        constraints.MaximumConstraint = reference.ConnectingConstraintHandle;
+                        constraints.MaximumIndexInConstraint = reference.BodyIndexInConstraint;
+                    }
+                }
+            }
+            lock (debugConstraintRemovedDirectlyOrIndirectly)
+            {
+                debugConstraintRemovedDirectlyOrIndirectly.Add(bodyIndex);
+            }
+            return ref constraints;
+        }
+
+        internal void UpdateIntegrationResponsibilitiesForBodyWithSolverModifications(Solver solver, int bodyIndex)
+        {
+            ref var constraints = ref UpdateIntegrationResponsibilitiesForBodyWithoutSolverModifications(solver, bodyIndex);
+            if (constraints.References.Count > 0) //It's possible that an update request came before the body had all its constraints removed, meaning there is no more need for an update.
+            {
+                solver.AddEarlyIntegrationResponsibilityToConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint, bodyIndex);
+                solver.AddLateIntegrationResponsibilityToConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint, bodyIndex);
+            }
+            lock (debugConstraintRemovedDirectlyOrIndirectly)
+            {
+                debugConstraintRemovedDirectlyOrIndirectly.Add(bodyIndex);
+            }
+        }
+
+        /// <summary>
+        /// Removes a constraint from an active body's constraint list. Immdiately modifies constraint integration responsibilities.
+        /// </summary>
         /// <param name="bodyIndex">Index of the active body.</param>
         /// <param name="constraintHandle">Handle of the constraint to remove.</param>
         internal void RemoveConstraintReference(Solver solver, int bodyIndex, ConstraintHandle constraintHandle)
         {
-            ActiveSet.RemoveConstraintReference(solver, UnconstrainedBodies, bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, Pool);
+            if (RemoveConstraintReference(bodyIndex, constraintHandle))
+            {
+                UpdateIntegrationResponsibilitiesForBodyWithSolverModifications(solver, bodyIndex);
+            }
+            lock (debugBodiesConstraintRemovedDirectly)
+            {
+                debugBodiesConstraintRemovedDirectly.Add(bodyIndex);
+            }
         }
 
         /// <summary>
@@ -555,8 +702,15 @@ namespace BepuPhysics
                 ++EnumeratedCount;
             }
         }
+        public System.Collections.Generic.HashSet<int> debugConstraintRemovedDirectlyOrIndirectly = new();
+        public System.Collections.Generic.HashSet<int> debugBodiesConstraintAdded = new();
+        public System.Collections.Generic.HashSet<int> debugBodiesConstraintRemovedDirectly = new();
+        public System.Collections.Generic.HashSet<int> debugBodiesAdded = new();
+        public System.Collections.Generic.HashSet<int> debugBodiesRemoved = new();
         private void ValidateBodyConstraintIntegrationBounds(int bodyReference, in BodyConstraints constraints, int batchCount)
         {
+            Debug.Assert(solver.HandleToConstraint[constraints.MinimumConstraint.Value].BatchIndex == constraints.MinimumBatch);
+            Debug.Assert(solver.HandleToConstraint[constraints.MaximumConstraint.Value].BatchIndex == constraints.MaximumBatch);
             int expectedMinimum = int.MaxValue;
             int expectedMaximum = -1;
             for (int i = 0; i < constraints.References.Count; ++i)
@@ -567,6 +721,11 @@ namespace BepuPhysics
                 if (batchIndex > expectedMaximum)
                     expectedMaximum = batchIndex;
             }
+            var constraintHadBoundsUpdatedForRemovalDeferredOrImmediate = debugConstraintRemovedDirectlyOrIndirectly.Contains(bodyReference);
+            var bodyHadConstraintAdded = debugBodiesConstraintAdded.Contains(bodyReference);
+            var bodyHadConstraintRemoved = debugBodiesConstraintRemovedDirectly.Contains(bodyReference);
+            var bodyWasAdded = debugBodiesAdded.Contains(bodyReference);
+            var bodyWasRemoved = debugBodiesRemoved.Contains(bodyReference);
             Debug.Assert(constraints.MinimumBatch == expectedMinimum && constraints.MaximumBatch == expectedMaximum, "Minimum and maximum batch index bounds should match the brute force determined results.");
             Debug.Assert(constraints.MinimumBatch >= 0 && constraints.MinimumBatch < batchCount && constraints.MinimumBatch <= constraints.MaximumBatch,
                 "Constrained bodies must have a minimum batch index that points back to a valid existing constraint batch.");
@@ -605,6 +764,11 @@ namespace BepuPhysics
                     ValidateBodyConstraintIntegrationBounds(bodyIndex, constraints, solver.ActiveSet.Batches.Count);
                 }
             }
+            debugConstraintRemovedDirectlyOrIndirectly.Clear();
+            debugBodiesConstraintAdded.Clear();
+            debugBodiesConstraintRemovedDirectly.Clear();
+            debugBodiesAdded.Clear();
+            debugBodiesRemoved.Clear();
         }
 
 
