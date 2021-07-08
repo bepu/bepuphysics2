@@ -63,7 +63,7 @@ namespace BepuPhysics
             InternalResize(initialCapacity, pool);
         }
 
-        internal int Add(in BodyDescription bodyDescription, BodyHandle handle, UnconstrainedBodies unconstrainedBodies, int minimumConstraintCapacity, BufferPool pool)
+        internal int Add(in BodyDescription bodyDescription, BodyHandle handle, int minimumConstraintCapacity, BufferPool pool)
         {
             var index = Count;
             if (index == IndexToHandle.Length)
@@ -73,26 +73,19 @@ namespace BepuPhysics
             ++Count;
             IndexToHandle[index] = handle;
             //Collidable's broad phase index is left unset. The Bodies collection is responsible for attaching that data.
-            ref var constraints = ref Constraints[index];
-            constraints.References = new QuickList<BodyConstraintReference>(minimumConstraintCapacity, pool);
-            constraints.UnconstrainedIndex = unconstrainedBodies.Add(index, pool);
-
+            Constraints[index].References = new QuickList<BodyConstraintReference>(minimumConstraintCapacity, pool);
 
             ApplyDescriptionByIndex(index, bodyDescription);
             return index;
         }
 
-        internal bool RemoveAt(int bodyIndex, UnconstrainedBodies unconstrainedBodies, out BodyHandle handle, out int movedBodyIndex, out BodyHandle movedBodyHandle)
+        internal bool RemoveAt(int bodyIndex, out BodyHandle handle, out int movedBodyIndex, out BodyHandle movedBodyHandle)
         {
             handle = IndexToHandle[bodyIndex];
             //Move the last body into the removed slot.
             --Count;
             bool bodyMoved = bodyIndex < Count;
             ref var constraintsForRemovedSlot = ref Constraints[bodyIndex];
-            if (constraintsForRemovedSlot.References.Count == 0 && unconstrainedBodies.RemoveAt(constraintsForRemovedSlot.UnconstrainedIndex, out var bodyMovedInUnconstrainedSet))
-            {
-                Constraints[bodyMovedInUnconstrainedSet].UnconstrainedIndex = constraintsForRemovedSlot.UnconstrainedIndex;
-            }
             if (bodyMoved)
             {
                 movedBodyIndex = Count;
@@ -105,11 +98,7 @@ namespace BepuPhysics
                 //The two callers for this function are 'true' removal, and sleeping. 
                 //During true removal, the caller is responsible for removing all constraints and disposing the list.
                 //In sleeping, the reference to the list is simply copied into the sleeping set.
-                constraintsForRemovedSlot = Constraints[movedBodyIndex];
-                if (constraintsForRemovedSlot.References.Count == 0)
-                {
-                    unconstrainedBodies.UpdateForBodyMemoryMove(constraintsForRemovedSlot.UnconstrainedIndex, bodyIndex);
-                }
+                Constraints[bodyIndex] = Constraints[movedBodyIndex];
                 //Point the body handles at the new location.
                 movedBodyHandle = IndexToHandle[movedBodyIndex];
                 IndexToHandle[bodyIndex] = movedBodyHandle;
