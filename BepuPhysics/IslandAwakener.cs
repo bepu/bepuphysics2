@@ -178,7 +178,6 @@ namespace BepuPhysics
         {
             BroadPhase,
             CopyConstraintRegion,
-            UpdateUnconstrainedBodies,
         }
         struct PhaseTwoJob
         {
@@ -273,7 +272,6 @@ namespace BepuPhysics
                         ref var sourceSet = ref bodies.Sets[job.SourceSet];
                         ref var targetSet = ref bodies.ActiveSet;
                         sourceSet.Collidables.CopyTo(job.SourceStart, targetSet.Collidables, job.TargetStart, job.Count);
-                        sourceSet.Constraints.CopyTo(job.SourceStart, targetSet.Constraints, job.TargetStart, job.Count);
                         //The world inertias must be updated as well. They are stored outside the sets.
                         //Note that we use a manual loop copy for the local inertias and motion state since we're accessing them during the world inertia calculation anyway.
                         //This can worsen the copy codegen a little, but it means we only have to scan the memory once.
@@ -287,10 +285,44 @@ namespace BepuPhysics
                             ref var targetLocalInertia = ref targetSet.LocalInertias[targetIndex];
                             ref var sourceState = ref sourceSet.MotionStates[sourceIndex];
                             ref var targetState = ref targetSet.MotionStates[targetIndex];
+                            ref var sourceConstraints = ref sourceSet.Constraints[sourceIndex];
+                            ref var targetConstraints = ref targetSet.Constraints[targetIndex];
                             targetState = sourceState;
                             targetLocalInertia = sourceLocalInertia;
+                            targetConstraints = sourceConstraints;
                             PoseIntegration.RotateInverseInertia(sourceLocalInertia.InverseInertiaTensor, sourceState.Pose.Orientation, out targetWorldInertia.InverseInertiaTensor);
                             targetWorldInertia.InverseMass = sourceLocalInertia.InverseMass;
+                            if (sourceConstraints.References.Count > 0)
+                            {
+                                //Minimum/maximum batch indices and constraints were not updated when bodies went into sleep, so we update them as they wake up.
+                                //It's necessary since sleeping potentially changes constraint batch indices.
+                                //Note that the handle to constraint mapping is updated in the second phase as a part of the "CopyConstraintRegion" job, 
+                                //so the mapping currently points to the sleeping set as desired.
+                                int minimumBatchIndex = int.MaxValue;
+                                int maximumBatchIndex = -1;
+                                for (int j = 0; j < sourceConstraints.References.Count; ++j)
+                                {
+                                    var batchIndex = solver.HandleToConstraint[sourceConstraints.References[j].ConnectingConstraintHandle.Value].BatchIndex;
+                                    if (batchIndex < minimumBatchIndex)
+                                        minimumBatchIndex = batchIndex;
+                                    if (batchIndex > maximumBatchIndex)
+                                        maximumBatchIndex = batchIndex;
+                                }
+                                targetConstraints.MinimumBatch = minimumBatchIndex;
+                                targetConstraints.MaximumBatch = maximumBatchIndex;
+                            }
+                            else
+                            {
+                                //We can't add an unconstrained body to the unconstrained bodies set from a multithreaded context without further work.
+                                //The good news is that sleeping unconstrained bodies are actually pretty rare in practice- they'd have to be stationary and floating, which isn't a terribly common
+                                //thing in most simulations thanks to gravity and momentum.
+
+                                //While we could defer this into the second phase, it would typically waste a lot of time enumerating over bodies that have constraints.
+                                //We could write out a list of bodies which have constraints, but doing that is about as expensive as adding the body to the unconstrained set directly.
+                                //So, we just have a special multithreading-safe add that internally performs an interlocked add.
+                                //Note that the buffer capacity was ensured during the job creation phase.
+                                targetConstraints.UnconstrainedIndex = bodies.UnconstrainedBodies.AddMultithreaded(targetIndex);
+                            }
                         }
                         sourceSet.Activity.CopyTo(job.SourceStart, targetSet.Activity, job.TargetStart, job.Count);
                         if (resetActivityStates)
@@ -374,22 +406,6 @@ namespace BepuPhysics
                         solver.TypeProcessors[job.TypeId].CopySleepingToActive(
                             job.SourceSet, job.Batch, job.SourceTypeBatch, job.Batch, job.TargetTypeBatch,
                             job.SourceStart, job.TargetStart, job.Count, bodies, solver);
-                    }
-                    break;
-                case PhaseTwoJobType.UpdateUnconstrainedBodies:
-                    {
-                        //Unconstrained bodies are tracked so that they can be integrated without any of the constraints handling it for them.
-                        //It requires modifying a shared list, so we couldn't do it as a part of the phase 1 copy job. Instead, it's deferred to a locally sequential job here.
-                        //Note that the unconstrained body set's memory capacity was ensured on the main thread prior to the dispatch.
-                        for (int i = 0; i < job.Count; ++i)
-                        {
-                            var bodyIndex = i + job.TargetStart;
-                            ref var constraints = ref bodies.ActiveSet.Constraints[bodyIndex];
-                            if (constraints.References.Count == 0)
-                            {
-                                constraints.UnconstrainedIndex = bodies.UnconstrainedBodies.AddUnsafely(bodyIndex);
-                            }
-                        }
                     }
                     break;
             }
@@ -650,7 +666,6 @@ namespace BepuPhysics
             {
                 phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.UpdateBatchReferencedHandles, BatchIndex = batchIndex };
             }
-            phaseTwoJobs.AllocateUnsafely() = new PhaseTwoJob { Type = PhaseTwoJobType.UpdateUnconstrainedBodies, TargetStart = preAwakeningBodyCount, Count = newBodyCount };
             phaseTwoJobs.AllocateUnsafely() = new PhaseTwoJob { Type = PhaseTwoJobType.BroadPhase };
 
             ref var activeBodySet = ref bodies.ActiveSet;

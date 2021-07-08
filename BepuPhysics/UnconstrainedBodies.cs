@@ -1,6 +1,7 @@
 ﻿using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
+using System.Threading;
 
 namespace BepuPhysics
 {
@@ -15,12 +16,13 @@ namespace BepuPhysics
         {
             pool.TakeAtLeast(initialCapacity, out BodyIndices);
         }
-        internal int AddUnsafely(int bodyIndex)
+
+        internal int AddMultithreaded(int bodyIndex)
         {
-            Debug.Assert(Count < BodyIndices.Length);
-            var index = Count++;
-            BodyIndices[index] = bodyIndex;
-            return index;
+            var unconstrainedIndex = Interlocked.Increment(ref Count) - 1;
+            Debug.Assert(unconstrainedIndex < BodyIndices.Length, "The multithreaded variant assumes that the body indices buffer has been resized to the maximum required size prior to execution.");
+            BodyIndices[unconstrainedIndex] = bodyIndex;
+            return unconstrainedIndex;
         }
 
         internal int Add(int bodyIndex, BufferPool pool)
@@ -29,7 +31,9 @@ namespace BepuPhysics
             {
                 pool.ResizeToAtLeast(ref BodyIndices, Count * 2, BodyIndices.Length);
             }
-            return AddUnsafely(bodyIndex);
+            var index = Count++;
+            BodyIndices[index] = bodyIndex;
+            return index;
         }
         internal bool RemoveAt(int unconstrainedIndex, out int movedBodyIndex)
         {

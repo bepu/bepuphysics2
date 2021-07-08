@@ -309,16 +309,16 @@ namespace BepuPhysics
         public QuickList<BodyConstraintReference> References;
 
         /// <summary>
-        /// Index of the body in the unconstrained integration set if it has no constraints. If the body has constraints, this value is undefined.
+        /// Index of the body in the unconstrained integration set if it has no constraints. If the body has constraints or is asleep, this value is undefined.
         /// </summary>
         public int UnconstrainedIndex;
 
         /// <summary>
-        /// Inclusive minimum constraint batch index that this body is associated with if the body has constraints. If it has no constraints, this value is undefined.
+        /// Inclusive minimum constraint batch index that this body is associated with if the body has constraints. If it has no constraints or is asleep, this value is undefined.
         /// </summary>
         public int MinimumBatch;
         /// <summary>
-        /// Inclusive maximum constraint batch index that this body is associated with if the body has constraints. If it has no constraints, this value is undefined.
+        /// Inclusive maximum constraint batch index that this body is associated with if the body has constraints. If it has no constraints or is asleep, this value is undefined.
         /// </summary>
         public int MaximumBatch;
 
