@@ -341,8 +341,9 @@ namespace BepuPhysics.Constraints
             //It's not exactly trivial to keep everything straight, especially over time- it becomes a maintenance nightmare.
             //So instead, given that compressions should generally be extremely rare (relatively speaking) and highly deferrable, we'll accept some minor overhead.
             int bodiesPerConstraint = InternalBodiesPerConstraint;
+            var bodyIndices = stackalloc int[bodiesPerConstraint];
             var bodyHandles = stackalloc int[bodiesPerConstraint];
-            var bodyHandleCollector = new ActiveConstraintBodyHandleCollector(bodies, bodyHandles);
+            var bodyHandleCollector = new ActiveConstraintBodyHandleAndIndexCollector(bodies, bodyHandles, bodyIndices);
             EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref bodyHandleCollector);
             Debug.Assert(targetBatchIndex <= solver.FallbackBatchThreshold,
                 "Constraint transfers should never target the fallback batch. It doesn't have any body handles so attempting to allocate in the same way wouldn't turn out well.");
@@ -378,6 +379,17 @@ namespace BepuPhysics.Constraints
             constraintLocation.BatchIndex = targetBatchIndex;
             constraintLocation.IndexInTypeBatch = targetReference.IndexInTypeBatch;
             constraintLocation.TypeId = typeId;
+
+            //Now that the constraint's been moved, update the integration responsibilities for any involved constraints.
+            for (int i = 0; i < bodiesPerConstraint; ++i)
+            {
+                var bodyIndex = bodyIndices[i];
+                ref var constraints = ref bodies.ActiveSet.Constraints[bodyIndex];
+                if (constraints.MinimumBatch > targetBatchIndex || constraints.MaximumConstraint == constraintHandle)
+                {
+                    bodies.UpdateIntegrationResponsibilitiesForBodyWithSolverModifications(solver, bodyIndex);
+                }
+            }
 
         }
 
