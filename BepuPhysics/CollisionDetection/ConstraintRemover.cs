@@ -247,7 +247,7 @@ namespace BepuPhysics.CollisionDetection
         //in sequence at that point- sequential removes would cost around 5us in that case, so any kind of multithreaded overhead can overwhelm the work being done.
         //Doubling the cost of the best case, resulting in handfuls of wasted microseconds, isn't concerning (and we could special case it if we really wanted to).
         //Cutting the cost of the worst case when thousands of constraints get removed by a factor of ~ThreadCount is worth this complexity. Frame spikes are evil!
-        
+
         RemovalCache batches;
         /// <summary>
         /// Processes enqueued constraint removals and prepares removal jobs.
@@ -330,21 +330,34 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        public void RemoveConstraintsFromBodyLists()
+        public void RemoveConstraintsFromBodyLists(BufferPool threadPool)
         {
             //While body list removal could technically be internally multithreaded, it would be pretty complex- you would have to do one dispatch per solver.Batches batch
             //to guarantee that no two threads hit the same body constraint list at the same time. 
             //That is more complicated and would almost certainly be slower than this locally sequential version.
+            //Further, introducing the integration responsibility tracking here makes sequential processing ~required.
+            int updateCapacity = 0;
+            for (int i = 0; i < batches.BatchCount; ++i)
+            {
+                ref var removals = ref batches.RemovalsForTypeBatches[i].PerBodyRemovalTargets;
+                updateCapacity += removals.Count;
+            }
+            bodiesNeedingIntegrationResponsibilityUpdate.threadPool = threadPool;
+            bodiesNeedingIntegrationResponsibilityUpdate.bodies = new QuickList<int>(updateCapacity, threadPool);
             for (int i = 0; i < batches.BatchCount; ++i)
             {
                 ref var removals = ref batches.RemovalsForTypeBatches[i].PerBodyRemovalTargets;
                 for (int j = 0; j < removals.Count; ++j)
                 {
                     ref var target = ref removals[j];
-                    bodies.RemoveConstraintReference(solver, target.BodyIndex, target.ConstraintHandle);
+                    if (bodies.RemoveConstraintReference(target.BodyIndex, target.ConstraintHandle))
+                    {
+                        bodiesNeedingIntegrationResponsibilityUpdate.bodies.AllocateUnsafely() = target.BodyIndex;
+                    }
                 }
             }
         }
+        (QuickList<int> bodies, BufferPool threadPool) bodiesNeedingIntegrationResponsibilityUpdate;
 
         public void RemoveConstraintsFromBatchReferencedHandles()
         {
@@ -440,6 +453,14 @@ namespace BepuPhysics.CollisionDetection
                     solver.HandleToConstraint[batchHandles[j].Value].SetIndex = -1;
                 }
             }
+            Debug.Assert(bodiesNeedingIntegrationResponsibilityUpdate.threadPool != null, "This should only be called from usages of the constraint remover that removed constraints from body lists.");
+            for (int i = 0; i < bodiesNeedingIntegrationResponsibilityUpdate.bodies.Count; ++i)
+            {
+                bodies.UpdateIntegrationResponsibilitiesForBodyWithoutSolverModifications(solver, bodiesNeedingIntegrationResponsibilityUpdate.bodies[i]);
+            }
+            //Console.WriteLine($"Number of updates: {bodiesNeedingIntegrationResponsibilityUpdate.bodies.Count}");
+            bodiesNeedingIntegrationResponsibilityUpdate.bodies.Dispose(bodiesNeedingIntegrationResponsibilityUpdate.threadPool);
+            bodiesNeedingIntegrationResponsibilityUpdate = default;
         }
 
         public void Postflush()

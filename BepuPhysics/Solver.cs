@@ -640,11 +640,12 @@ namespace BepuPhysics
                 awakener.AwakenBody(bodyHandles[i]);
             }
             Add(bodyHandles, ref description, out var constraintHandle);
+            ref var location = ref HandleToConstraint[constraintHandle.Value];
             for (int i = 0; i < bodyHandles.Length; ++i)
             {
                 var bodyHandle = bodyHandles[i];
                 bodies.ValidateExistingHandle(bodyHandle);
-                bodies.AddConstraint(this, bodies.HandleToLocation[bodyHandle.Value].Index, constraintHandle, i);
+                bodies.AddConstraint(this, bodies.HandleToLocation[bodyHandle.Value].Index, constraintHandle, ref location, i);
             }
             return constraintHandle;
         }

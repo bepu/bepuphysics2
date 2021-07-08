@@ -213,7 +213,7 @@ namespace BepuPhysics.CollisionDetection
             switch (job.Type)
             {
                 case NarrowPhaseFlushJobType.RemoveConstraintsFromBodyLists:
-                    ConstraintRemover.RemoveConstraintsFromBodyLists();
+                    ConstraintRemover.RemoveConstraintsFromBodyLists(threadPool);
                     break;
                 case NarrowPhaseFlushJobType.ReturnConstraintHandles:
                     ConstraintRemover.ReturnConstraintHandles();
@@ -237,9 +237,7 @@ namespace BepuPhysics.CollisionDetection
         public void Flush(IThreadDispatcher threadDispatcher = null)
         {
             var deterministic = threadDispatcher != null && Simulation.Deterministic;
-            Simulation.Bodies.ValidateIntegrationResponsibilities();
             OnPreflush(threadDispatcher, deterministic);
-            Simulation.Bodies.ValidateIntegrationResponsibilities();
             //var start = Stopwatch.GetTimestamp();
             flushJobs = new QuickList<NarrowPhaseFlushJob>(128, Pool);
             PairCache.PrepareFlushJobs(ref flushJobs);
@@ -260,7 +258,6 @@ namespace BepuPhysics.CollisionDetection
             {
                 flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch, Index = i });
             }
-            Simulation.Bodies.ValidateIntegrationResponsibilities();
 
             if (threadDispatcher == null)
             {
@@ -276,7 +273,6 @@ namespace BepuPhysics.CollisionDetection
                 threadDispatcher.DispatchWorkers(flushWorkerLoop);
                 this.threadDispatcher = null;
             }
-            Simulation.Bodies.ValidateIntegrationResponsibilities();
             //var end = Stopwatch.GetTimestamp();
             //Console.WriteLine($"Flush stage 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
             flushJobs.Dispose(Pool);
@@ -286,7 +282,6 @@ namespace BepuPhysics.CollisionDetection
             ConstraintRemover.Postflush();
 
             OnPostflush(threadDispatcher);
-            Simulation.Bodies.ValidateIntegrationResponsibilities();
         }
 
         public void Clear()

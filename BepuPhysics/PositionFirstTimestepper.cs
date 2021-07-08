@@ -36,10 +36,8 @@ namespace BepuPhysics
             //So, velocity integration (and deactivation candidacy management) could come before sleep.
 
             //Sleep at the start, on the other hand, stops some forms of unintuitive behavior when using direct awakenings. Just a matter of preference.
-            simulation.Bodies.ValidateIntegrationResponsibilities();
             simulation.Sleep(threadDispatcher);
             Slept?.Invoke(dt, threadDispatcher);
-            simulation.Bodies.ValidateIntegrationResponsibilities();
 
             //Note that pose integrator comes before collision detection and solving. This is a shift from v1, where collision detection went first.
             //This is a tradeoff:
@@ -60,18 +58,14 @@ namespace BepuPhysics
             //2) local->world inertia calculation before the solver.
             simulation.IntegrateBodiesAndUpdateBoundingBoxes(dt, threadDispatcher);
             BeforeCollisionDetection?.Invoke(dt, threadDispatcher);
-            simulation.Bodies.ValidateIntegrationResponsibilities();
 
             simulation.CollisionDetection(dt, threadDispatcher);
             CollisionsDetected?.Invoke(dt, threadDispatcher);
-            simulation.Bodies.ValidateIntegrationResponsibilities();
 
             simulation.Solve(dt, threadDispatcher);
             ConstraintsSolved?.Invoke(dt, threadDispatcher);
-            simulation.Bodies.ValidateIntegrationResponsibilities();
 
             simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
-            simulation.Bodies.ValidateIntegrationResponsibilities();
         }
     }
 }
