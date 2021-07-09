@@ -102,9 +102,9 @@ namespace BepuPhysics.Constraints
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState(ref references, count, 
-                    out var orientationA, out var wsvA, out var inertiaA, 
-                    out var ab, out var orientationB, out var wsvB, out var inertiaB, 
+                bodies.GatherState(ref references, count,
+                    out var orientationA, out var wsvA, out var inertiaA,
+                    out var ab, out var orientationB, out var wsvB, out var inertiaB,
                     out var ac, out var orientationC, out var wsvC, out var inertiaC);
                 function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, dt, inverseDt, ref prestep, out projection);
             }
@@ -295,11 +295,11 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public override void WarmStart2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public override void WarmStart2(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             throw new NotImplementedException();
         }
-        public override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public override void SolveStep2(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             throw new NotImplementedException();
         }

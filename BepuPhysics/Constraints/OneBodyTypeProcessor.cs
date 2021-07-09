@@ -250,7 +250,7 @@ namespace BepuPhysics.Constraints
 
 
 
-        public unsafe override void WarmStart2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void WarmStart2(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
             ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
@@ -269,7 +269,7 @@ namespace BepuPhysics.Constraints
                 bodies.ScatterVelocities(ref wsvA, ref bodyReferences, count);
             }
         }
-        public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void SolveStep2(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
             ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
