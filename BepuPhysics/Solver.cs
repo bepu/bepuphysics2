@@ -1078,21 +1078,37 @@ namespace BepuPhysics
                 "There cannot be more than FallbackBatchThreshold + 1 constraint batches because that +1 is the fallback batch which contains all remaining constraints.");
         }
 
-        internal void RemoveLateIntegrationResponsibilityFromConstraint(ConstraintHandle constraint, int bodyIndexInConstraint, int bodyIndex)
+        internal void RemoveEarlyIntegrationResponsibilityFromConstraint(ConstraintHandle constraint, int bodyIndexInConstraint)
         {
+            ref var location = ref HandleToConstraint[constraint.Value];
+            Debug.Assert(location.SetIndex == 0);
+            ref var typeBatch = ref ActiveSet.Batches[location.BatchIndex].GetTypeBatch(location.TypeId);
+            typeBatch.IntegrationFlags[bodyIndexInConstraint].Early.Remove(location.IndexInTypeBatch);
+        }
+        internal void RemoveLateIntegrationResponsibilityFromConstraint(ConstraintHandle constraint, int bodyIndexInConstraint)
+        {
+            ref var location = ref HandleToConstraint[constraint.Value];
+            Debug.Assert(location.SetIndex == 0);
+            ref var typeBatch = ref ActiveSet.Batches[location.BatchIndex].GetTypeBatch(location.TypeId);
+            typeBatch.IntegrationFlags[bodyIndexInConstraint].Late.Remove(location.IndexInTypeBatch);
         }
 
-        internal void AddLateIntegrationResponsibilityToConstraint(ConstraintHandle constraint, int bodyIndexInConstraint, int bodyIndex)
+        internal void AddEarlyIntegrationResponsibilityToConstraint(ConstraintHandle constraint, int bodyIndexInConstraint)
         {
+            ref var location = ref HandleToConstraint[constraint.Value];
+            Debug.Assert(location.SetIndex == 0);
+            ref var typeBatch = ref ActiveSet.Batches[location.BatchIndex].GetTypeBatch(location.TypeId);
+            typeBatch.IntegrationFlags[bodyIndexInConstraint].Early.AddUnsafely(location.IndexInTypeBatch);
         }
 
-        internal void AddEarlyIntegrationResponsibilityToConstraint(ConstraintHandle constraint, int bodyIndexInConstraint, int bodyIndex)
+        internal void AddLateIntegrationResponsibilityToConstraint(ConstraintHandle constraint, int bodyIndexInConstraint)
         {
+            ref var location = ref HandleToConstraint[constraint.Value];
+            Debug.Assert(location.SetIndex == 0);
+            ref var typeBatch = ref ActiveSet.Batches[location.BatchIndex].GetTypeBatch(location.TypeId);
+            typeBatch.IntegrationFlags[bodyIndexInConstraint].Late.AddUnsafely(location.IndexInTypeBatch);
         }
 
-        internal void RemoveEarlyIntegrationResponsibilityFromConstraint(ConstraintHandle constraint, int bodyIndexInConstraint, int bodyIndex)
-        {
-        }
 
         //Note that none of these affect the constraint batch estimates or type batch estimates. The assumption is that those are too small to bother with.
         //In the worst case you might see a couple of kilobytes. The reason why these functions exist is to deal with the potential many *megabytes* worth of constraint and body buffers.

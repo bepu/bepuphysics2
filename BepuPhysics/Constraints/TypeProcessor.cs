@@ -387,7 +387,21 @@ namespace BepuPhysics.Constraints
                 ref var constraints = ref bodies.ActiveSet.Constraints[bodyIndex];
                 if (constraints.MinimumBatch > targetBatchIndex || constraints.MaximumConstraint == constraintHandle)
                 {
-                    bodies.UpdateIntegrationResponsibilitiesForBodyWithSolverModifications(solver, bodyIndex);
+                    var previousMin = constraints.MinimumConstraint;
+                    var previousMinIndexInConstraint = constraints.MinimumIndexInConstraint;
+                    var previousMax = constraints.MaximumConstraint;
+                    var previousMaxIndexInConstraint = constraints.MaximumIndexInConstraint;
+                    bodies.UpdateIntegrationResponsibilitiesForBodyWithoutSolverModifications(solver, bodyIndex);
+                    solver.AddEarlyIntegrationResponsibilityToConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint);
+                    solver.AddLateIntegrationResponsibilityToConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint);
+                    if (constraints.MinimumConstraint != previousMin)
+                    {
+                        solver.RemoveEarlyIntegrationResponsibilityFromConstraint(previousMin, previousMinIndexInConstraint);
+                    }
+                    if (constraints.MaximumConstraint != previousMax)
+                    {
+                        solver.RemoveLateIntegrationResponsibilityFromConstraint(previousMax, previousMaxIndexInConstraint);
+                    }
                 }
             }
 
@@ -406,6 +420,13 @@ namespace BepuPhysics.Constraints
             pool.ResizeToAtLeast(ref typeBatch.BodyReferences, bundleCapacity * Unsafe.SizeOf<TBodyReferences>(), bundleCount * Unsafe.SizeOf<TBodyReferences>());
             pool.ResizeToAtLeast(ref typeBatch.PrestepData, bundleCapacity * Unsafe.SizeOf<TPrestepData>(), bundleCount * Unsafe.SizeOf<TPrestepData>());
             pool.ResizeToAtLeast(ref typeBatch.AccumulatedImpulses, bundleCapacity * Unsafe.SizeOf<TAccumulatedImpulse>(), bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
+            pool.ResizeToAtLeast(ref typeBatch.AccumulatedImpulses, bundleCapacity * Unsafe.SizeOf<TAccumulatedImpulse>(), bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
+            for (int i = 0; i < typeBatch.IntegrationFlags.Length; ++i)
+            {
+                ref var flags = ref typeBatch.IntegrationFlags[i];
+                flags.Early.Resize(constraintCapacity, pool);
+                flags.Late.Resize(constraintCapacity, pool);
+            }
         }
 
         public override void Initialize(ref TypeBatch typeBatch, int initialCapacity, BufferPool pool)
@@ -414,6 +435,8 @@ namespace BepuPhysics.Constraints
             //Technically we could use an initialization-specific version, but it doesn't matter.
             typeBatch = new TypeBatch();
             typeBatch.TypeId = TypeId;
+            pool.Take(bodiesPerConstraint, out typeBatch.IntegrationFlags);
+            typeBatch.IntegrationFlags.Clear(0, typeBatch.IntegrationFlags.Length);
             InternalResize(ref typeBatch, pool, initialCapacity);
         }
 
@@ -633,12 +656,6 @@ namespace BepuPhysics.Constraints
 
                 ref var sourceReferencesLaneStart = ref Unsafe.Add(ref Unsafe.As<TBodyReferences, int>(ref Buffer<TBodyReferences>.Get(ref sourceTypeBatch.BodyReferences, sourceBundle)), sourceInner);
                 ref var targetReferencesLaneStart = ref Unsafe.Add(ref Unsafe.As<TBodyReferences, int>(ref Buffer<TBodyReferences>.Get(ref targetTypeBatch.BodyReferences, targetBundle)), targetInner);
-                var offset = 0;
-                for (int j = 0; j < bodiesPerConstraint; ++j)
-                {
-                    Unsafe.Add(ref targetReferencesLaneStart, offset) = bodies.HandleToLocation[Unsafe.Add(ref sourceReferencesLaneStart, offset)].Index;
-                    offset += Vector<int>.Count;
-                }
                 var constraintHandle = sourceTypeBatch.IndexToHandle[sourceIndex];
                 ref var location = ref solver.HandleToConstraint[constraintHandle.Value];
                 Debug.Assert(location.SetIndex == sourceSet);
@@ -648,6 +665,21 @@ namespace BepuPhysics.Constraints
                 location.IndexInTypeBatch = targetIndex;
                 //This could be done with a bulk copy, but eh! We already touched the memory.
                 targetTypeBatch.IndexToHandle[targetIndex] = constraintHandle;
+
+                //While we update body references, also update constraint integration responsibilities.
+                var offset = 0;
+                for (int j = 0; j < bodiesPerConstraint; ++j)
+                {
+                    var bodyIndex = bodies.HandleToLocation[Unsafe.Add(ref sourceReferencesLaneStart, offset)].Index;
+                    //Note that the awakener called UpdateIntegrationResponsibilitiesForBodyWithoutSolverModifications already in phase 1.
+                    //This constraint copy need only examine the results of that.
+                    ref var bodyConstraints = ref bodies.ActiveSet.Constraints[bodyIndex];
+                    ref var flags = ref targetTypeBatch.IntegrationFlags[j];
+                    flags.Early.SetUnsafely(targetIndex, bodyConstraints.MinimumConstraint == constraintHandle);
+                    flags.Late.SetUnsafely(targetIndex, bodyConstraints.MaximumConstraint == constraintHandle);
+                    Unsafe.Add(ref targetReferencesLaneStart, offset) = bodyIndex;
+                    offset += Vector<int>.Count;
+                }
             }
         }
 
