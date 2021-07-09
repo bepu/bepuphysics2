@@ -213,7 +213,7 @@ namespace BepuPhysics.CollisionDetection
             switch (job.Type)
             {
                 case NarrowPhaseFlushJobType.RemoveConstraintsFromBodyLists:
-                    ConstraintRemover.RemoveConstraintsFromBodyLists(threadPool);
+                    ConstraintRemover.RemoveConstraintsFromBodyLists();
                     break;
                 case NarrowPhaseFlushJobType.ReturnConstraintHandles:
                     ConstraintRemover.ReturnConstraintHandles();

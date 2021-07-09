@@ -60,7 +60,6 @@ namespace BepuPhysics
         internal Shapes shapes;
         internal BroadPhase broadPhase;
         internal Solver solver;
-        public UnconstrainedBodies UnconstrainedBodies { get; private set; }
 
         /// <summary>
         /// Gets or sets the minimum constraint capacity for each body. Future resizes or allocations will obey this minimum, but changing this does not immediately resize existing lists.
@@ -91,7 +90,6 @@ namespace BepuPhysics
             this.shapes = shapes;
             this.broadPhase = broadPhase;
             MinimumConstraintCapacityPerBody = initialConstraintCapacityPerBody;
-            UnconstrainedBodies = new UnconstrainedBodies(initialBodyCapacity, pool);
         }
 
         /// <summary>
@@ -183,17 +181,11 @@ namespace BepuPhysics
             //(Directly adding inactive bodies can be helpful in some networked open world scenarios.)
             var handle = new BodyHandle(handleIndex);
             var index = ActiveSet.Add(description, handle, MinimumConstraintCapacityPerBody, Pool);
-            ActiveSet.Constraints[index].UnconstrainedIndex = UnconstrainedBodies.Add(index, Pool);
             HandleToLocation[handleIndex] = new BodyMemoryLocation { SetIndex = 0, Index = index };
-
 
             if (description.Collidable.Shape.Exists)
             {
                 AddCollidableToBroadPhase(handle, description.Pose, description.LocalInertia, ref ActiveSet.Collidables[index]);
-            }
-            lock (debugBodiesAdded)
-            {
-                debugBodiesAdded.Add(index);
             }
             return handle;
         }
@@ -213,26 +205,17 @@ namespace BepuPhysics
                 RemoveCollidableFromBroadPhase(ref collidable);
             }
 
-            ref var constraintsForRemovedSlot = ref set.Constraints[activeBodyIndex];
-            if (constraintsForRemovedSlot.References.Count == 0 && UnconstrainedBodies.RemoveAt(constraintsForRemovedSlot.UnconstrainedIndex, out var bodyMovedInUnconstrainedSet))
-            {
-                set.Constraints[bodyMovedInUnconstrainedSet].UnconstrainedIndex = constraintsForRemovedSlot.UnconstrainedIndex;
-            }
             var bodyMoved = set.RemoveAt(activeBodyIndex, out var handle, out var movedBodyIndex, out var movedBodyHandle);
             if (bodyMoved)
             {
                 //While the removed body doesn't have any constraints associated with it, the body that gets moved to fill its slot might!
                 solver.UpdateForBodyMemoryMove(movedBodyIndex, activeBodyIndex);
-                if (constraintsForRemovedSlot.References.Count == 0)
-                {
-                    UnconstrainedBodies.UpdateForBodyMemoryMove(constraintsForRemovedSlot.UnconstrainedIndex, activeBodyIndex);
-                }
                 Debug.Assert(HandleToLocation[movedBodyHandle.Value].SetIndex == 0 && HandleToLocation[movedBodyHandle.Value].Index == movedBodyIndex);
                 HandleToLocation[movedBodyHandle.Value].Index = activeBodyIndex;
             }
             return handle;
-        }
 
+        }
         /// <summary>
         /// Removes an active body by its index. Any constraints connected to this body will be removed. Assumes that the input location is valid.
         /// </summary>
@@ -240,7 +223,7 @@ namespace BepuPhysics
         public void RemoveAt(int activeBodyIndex)
         {
             //Constraints must be removed; we cannot leave 'orphans' in the solver because they will access invalid data.
-            ref var constraints = ref ActiveSet.Constraints[activeBodyIndex].References;
+            ref var constraints = ref ActiveSet.Constraints[activeBodyIndex];
             for (int i = constraints.Count - 1; i >= 0; --i)
             {
                 solver.Remove(constraints[i].ConnectingConstraintHandle);
@@ -264,76 +247,18 @@ namespace BepuPhysics
         {
             ValidateExistingHandle(handle);
             awakener.AwakenBody(handle);
-            lock (debugBodiesRemoved)
-            {
-                debugBodiesRemoved.Add(HandleToLocation[handle.Value].Index);
-            }
             RemoveAt(HandleToLocation[handle.Value].Index);
         }
 
         /// <summary>
         /// Adds a constraint to an active body's constraint list.
         /// </summary>
-        /// <param name="solver">Solver owning the constraint.</param>
         /// <param name="bodyIndex">Index of the body to add the constraint to.</param>
         /// <param name="constraintHandle">Handle of the constraint to add.</param>
-        /// <param name="constraintLocation">Location of the constraint in memory.</param>
         /// <param name="indexInConstraint">Index of the body in the constraint.</param>
-        /// <remarks>We pass the reference to the constraint location explicitly to try to make abundantly clear that it is *used*, and this function should only be called
-        /// from contexts where that information is available. We don't currently use bodies.AddConstraint from any context where that's a risk, but this is the kind of thing
-        /// that I forget about a year later when trying to modify the bookkeeping somehow.</remarks>
-        internal void AddConstraint(Solver solver, int bodyIndex, ConstraintHandle constraintHandle, ref ConstraintLocation constraintLocation, int indexInConstraint)
+        internal void AddConstraint(int bodyIndex, ConstraintHandle constraintHandle, int indexInConstraint)
         {
-            ref var constraints = ref ActiveSet.AddConstraint(bodyIndex, constraintHandle, indexInConstraint, Pool);
-
-            //We handle integration responsibility stuff out here since it's only relevant for active constraints.
-            //It's okay to do this stuff immediately, because this function is only ever called from contexts that have a valid constraint location, which isn't the case for remove.
-            Debug.Assert(constraintLocation.SetIndex == 0, "Constraints should only be added to active bodies.");
-            var batchIndex = constraintLocation.BatchIndex;
-            if (constraints.References.Count == 1)
-            {
-                //The body is transitioning from unconstrained to constrained. The constraint will now be responsible for its integration.
-                Debug.Assert(constraints.UnconstrainedIndex >= 0 && constraints.UnconstrainedIndex < UnconstrainedBodies.Count);
-                Debug.Assert(UnconstrainedBodies.BodyIndices[constraints.UnconstrainedIndex] == bodyIndex);
-                if (UnconstrainedBodies.RemoveAt(constraints.UnconstrainedIndex, out var movedUnconstrainedBodyIndex))
-                {
-                    ActiveSet.Constraints[movedUnconstrainedBodyIndex].UnconstrainedIndex = constraints.UnconstrainedIndex;
-                }
-                constraints.MinimumBatch = batchIndex;
-                constraints.MaximumBatch = batchIndex;
-                constraints.MinimumConstraint = constraintHandle;
-                constraints.MaximumConstraint = constraintHandle;
-                constraints.MinimumIndexInConstraint = indexInConstraint;
-                constraints.MaximumIndexInConstraint = indexInConstraint;
-                solver.AddEarlyIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint);
-                solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint);
-            }
-            else
-            {
-                var minimum = constraints.MinimumBatch;
-                var maximum = constraints.MaximumBatch;
-                if (batchIndex < minimum)
-                {
-                    solver.RemoveEarlyIntegrationResponsibilityFromConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint);
-                    constraints.MinimumBatch = batchIndex;
-                    constraints.MinimumConstraint = constraintHandle;
-                    constraints.MinimumIndexInConstraint = indexInConstraint;
-                    solver.AddEarlyIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint);
-
-                }
-                else if (batchIndex > maximum)
-                {
-                    solver.RemoveLateIntegrationResponsibilityFromConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint);
-                    constraints.MaximumBatch = batchIndex;
-                    constraints.MaximumConstraint = constraintHandle;
-                    constraints.MaximumIndexInConstraint = indexInConstraint;
-                    solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint);
-                }
-            }
-            lock (debugBodiesConstraintAdded)
-            {
-                debugBodiesConstraintAdded.Add(bodyIndex);
-            }
+            ActiveSet.AddConstraint(bodyIndex, constraintHandle, indexInConstraint, Pool);
         }
 
         /// <summary>
@@ -341,96 +266,9 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bodyIndex">Index of the active body.</param>
         /// <param name="constraintHandle">Handle of the constraint to remove.</param>
-        /// <returns>True if the constraint had integration responsibilities for the body, false otherwise.</returns>
-        internal bool RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle)
+        internal void RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle)
         {
-            ref var constraints = ref ActiveSet.RemoveConstraintReference(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, Pool);
-
-            //If this constraint is being removed, we have to get rid of references to it in the integration responsibilities.
-            //This function assumes a multithreaded context that means we can't directly handle everything here, so we return a bool indicating whether this body requires integration responsibility analysis.
-            bool requiresUpdateIfConstraintsRemain = constraintHandle == constraints.MinimumConstraint || constraintHandle == constraints.MaximumConstraint;
-            if (requiresUpdateIfConstraintsRemain)
-            {
-                //If either constraint is a bound, we just clear both bounds.
-                //Updating both bounds costs the same amount as updating one, and by clearing out both bounds, we stop later removals from possibly triggering another update for the second bound.
-                constraints.MinimumConstraint.Value = -1;
-                constraints.MaximumConstraint.Value = -1;
-            }
-            if (constraints.References.Count == 0)
-            {
-                //If there are no constraints left associated with the body, we can immediately add the body to the unconstrained set.
-                //This is only called from a locally sequential context, so it's safe to do inline, unlike the integration bounds update which needs to look at solver constraint locations.
-                constraints.UnconstrainedIndex = UnconstrainedBodies.Add(bodyIndex, Pool);
-                return false;
-            }
-            return requiresUpdateIfConstraintsRemain;
-        }
-
-
-        internal ref BodyConstraints UpdateIntegrationResponsibilitiesForBodyWithoutSolverModifications(Solver solver, int bodyIndex)
-        {
-            ref var constraints = ref ActiveSet.Constraints[bodyIndex];
-            ref var list = ref constraints.References;
-            if (list.Count > 0) //It's possible that an update request came before the body had all its constraints removed, meaning there is no more need for an update.
-            {
-                //Note that there's no need to remove the integration responsibility of a constraint that's being removed.
-                constraints.MinimumBatch = int.MaxValue;
-                constraints.MaximumBatch = -1;
-                //Find the new minimum batch index.
-                for (int i = 0; i < list.Count; ++i)
-                {
-                    ref var reference = ref list[i];
-                    var batchIndex = solver.HandleToConstraint[reference.ConnectingConstraintHandle.Value].BatchIndex;
-                    if (batchIndex < constraints.MinimumBatch)
-                    {
-                        constraints.MinimumBatch = batchIndex;
-                        constraints.MinimumConstraint = reference.ConnectingConstraintHandle;
-                        constraints.MinimumIndexInConstraint = reference.BodyIndexInConstraint;
-                    }
-                    if (batchIndex > constraints.MaximumBatch)
-                    {
-                        constraints.MaximumBatch = batchIndex;
-                        constraints.MaximumConstraint = reference.ConnectingConstraintHandle;
-                        constraints.MaximumIndexInConstraint = reference.BodyIndexInConstraint;
-                    }
-                }
-            }
-            lock (debugConstraintRemovedDirectlyOrIndirectly)
-            {
-                debugConstraintRemovedDirectlyOrIndirectly.Add(bodyIndex);
-            }
-            return ref constraints;
-        }
-
-        internal void UpdateIntegrationResponsibilitiesForBodyWithSolverModifications(Solver solver, int bodyIndex)
-        {
-            ref var constraints = ref UpdateIntegrationResponsibilitiesForBodyWithoutSolverModifications(solver, bodyIndex);
-            if (constraints.References.Count > 0) //It's possible that an update request came before the body had all its constraints removed, meaning there is no more need for an update.
-            {
-                solver.AddEarlyIntegrationResponsibilityToConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint);
-                solver.AddLateIntegrationResponsibilityToConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint);
-            }
-            lock (debugConstraintRemovedDirectlyOrIndirectly)
-            {
-                debugConstraintRemovedDirectlyOrIndirectly.Add(bodyIndex);
-            }
-        }
-
-        /// <summary>
-        /// Removes a constraint from an active body's constraint list. Immdiately modifies constraint integration responsibilities.
-        /// </summary>
-        /// <param name="bodyIndex">Index of the active body.</param>
-        /// <param name="constraintHandle">Handle of the constraint to remove.</param>
-        internal void RemoveConstraintReference(Solver solver, int bodyIndex, ConstraintHandle constraintHandle)
-        {
-            if (RemoveConstraintReference(bodyIndex, constraintHandle))
-            {
-                UpdateIntegrationResponsibilitiesForBodyWithSolverModifications(solver, bodyIndex);
-            }
-            lock (debugBodiesConstraintRemovedDirectly)
-            {
-                debugBodiesConstraintRemovedDirectly.Add(bodyIndex);
-            }
+            ActiveSet.RemoveConstraintReference(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, Pool);
         }
 
         /// <summary>
@@ -493,7 +331,7 @@ namespace BepuPhysics
             }
             if (newlyKinematic)
             {
-                ref var constraints = ref set.Constraints[location.Index].References;
+                ref var constraints = ref set.Constraints[location.Index];
                 ConnectedDynamicCounter enumerator;
                 enumerator.Bodies = this;
                 for (int i = 0; i < constraints.Count; ++i)
@@ -686,92 +524,6 @@ namespace BepuPhysics
             }
         }
 
-        struct IntegrationValidationEnumerator : IForEach<int>
-        {
-            public int BodyReference;
-            public int ExpectedIndexInConstraint;
-            public int EnumeratedCount;
-            public int FoundIndex;
-
-            public void LoopBody(int i)
-            {
-                if (BodyReference == i)
-                {
-                    FoundIndex = EnumeratedCount;
-                }
-                ++EnumeratedCount;
-            }
-        }
-        public System.Collections.Generic.HashSet<int> debugConstraintRemovedDirectlyOrIndirectly = new();
-        public System.Collections.Generic.HashSet<int> debugBodiesConstraintAdded = new();
-        public System.Collections.Generic.HashSet<int> debugBodiesConstraintRemovedDirectly = new();
-        public System.Collections.Generic.HashSet<int> debugBodiesAdded = new();
-        public System.Collections.Generic.HashSet<int> debugBodiesRemoved = new();
-        private void ValidateBodyConstraintIntegrationBounds(int bodyReference, in BodyConstraints constraints, int batchCount)
-        {
-            Debug.Assert(solver.HandleToConstraint[constraints.MinimumConstraint.Value].BatchIndex == constraints.MinimumBatch);
-            Debug.Assert(solver.HandleToConstraint[constraints.MaximumConstraint.Value].BatchIndex == constraints.MaximumBatch);
-            int expectedMinimum = int.MaxValue;
-            int expectedMaximum = -1;
-            for (int i = 0; i < constraints.References.Count; ++i)
-            {
-                var batchIndex = solver.HandleToConstraint[constraints.References[i].ConnectingConstraintHandle.Value].BatchIndex;
-                if (batchIndex < expectedMinimum)
-                    expectedMinimum = batchIndex;
-                if (batchIndex > expectedMaximum)
-                    expectedMaximum = batchIndex;
-            }
-            var constraintHadBoundsUpdatedForRemovalDeferredOrImmediate = debugConstraintRemovedDirectlyOrIndirectly.Contains(bodyReference);
-            var bodyHadConstraintAdded = debugBodiesConstraintAdded.Contains(bodyReference);
-            var bodyHadConstraintRemoved = debugBodiesConstraintRemovedDirectly.Contains(bodyReference);
-            var bodyWasAdded = debugBodiesAdded.Contains(bodyReference);
-            var bodyWasRemoved = debugBodiesRemoved.Contains(bodyReference);
-            Debug.Assert(constraints.MinimumBatch == expectedMinimum && constraints.MaximumBatch == expectedMaximum, "Minimum and maximum batch index bounds should match the brute force determined results.");
-            Debug.Assert(constraints.MinimumBatch >= 0 && constraints.MinimumBatch < batchCount && constraints.MinimumBatch <= constraints.MaximumBatch,
-                "Constrained bodies must have a minimum batch index that points back to a valid existing constraint batch.");
-            Debug.Assert(constraints.MaximumBatch >= 0 && constraints.MaximumBatch < batchCount,
-                "Constrained bodies must have a maximum batch index that points back to a valid existing constraint batch.");
-            IntegrationValidationEnumerator enumerator;
-            enumerator.EnumeratedCount = 0;
-            enumerator.ExpectedIndexInConstraint = constraints.MinimumIndexInConstraint;
-            enumerator.BodyReference = bodyReference;
-            enumerator.FoundIndex = -1;
-            solver.EnumerateConnectedBodies(constraints.MinimumConstraint, ref enumerator);
-            Debug.Assert(enumerator.FoundIndex == constraints.MinimumIndexInConstraint, "Body should be in the constraint that it listed as a integration-responsible bound.");
-
-            enumerator.EnumeratedCount = 0;
-            enumerator.ExpectedIndexInConstraint = constraints.MaximumIndexInConstraint;
-            enumerator.FoundIndex = -1;
-            solver.EnumerateConnectedBodies(constraints.MaximumConstraint, ref enumerator);
-            Debug.Assert(enumerator.FoundIndex == constraints.MaximumIndexInConstraint, "Body should be in the constraint that it listed as a integration-responsible bound.");
-        }
-
-        [Conditional("DEBUG")]
-
-        public void ValidateIntegrationResponsibilities()
-        {
-            Debug.Assert(UnconstrainedBodies.Count <= UnconstrainedBodies.BodyIndices.Length, "Unconstrained bodies count/length corrupted. Bad asynchronous access?");
-            for (int bodyIndex = 0; bodyIndex < ActiveSet.Count; ++bodyIndex)
-            {
-                ref var constraints = ref ActiveSet.Constraints[bodyIndex];
-                if (constraints.References.Count == 0)
-                {
-                    Debug.Assert(constraints.UnconstrainedIndex >= 0 && constraints.UnconstrainedIndex < UnconstrainedBodies.Count, "Unconstrained bodies must point to a valid position in the unconstrained set.");
-                    Debug.Assert(UnconstrainedBodies.BodyIndices[constraints.UnconstrainedIndex] == bodyIndex, "Bidirectional mapping between bodies and unconstrained set entries must match.");
-                }
-                else
-                {
-                    ValidateBodyConstraintIntegrationBounds(bodyIndex, constraints, solver.ActiveSet.Batches.Count);
-                }
-            }
-            debugConstraintRemovedDirectlyOrIndirectly.Clear();
-            debugBodiesConstraintAdded.Clear();
-            debugBodiesConstraintRemovedDirectly.Clear();
-            debugBodiesAdded.Clear();
-            debugBodiesRemoved.Clear();
-        }
-
-
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
         {
             Debug.Assert(setsCapacity >= potentiallyAllocatedCount && potentiallyAllocatedCount <= Sets.Length);
@@ -850,7 +602,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void EnumerateConnectedBodyIndices<TEnumerator>(int activeBodyIndex, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
-            ref var list = ref ActiveSet.Constraints[activeBodyIndex].References;
+            ref var list = ref ActiveSet.Constraints[activeBodyIndex];
             ActiveConstraintBodyIndicesEnumerator<TEnumerator> constraintBodiesEnumerator;
             constraintBodiesEnumerator.InnerEnumerator = enumerator;
             constraintBodiesEnumerator.SourceBodyIndex = activeBodyIndex;
@@ -879,7 +631,7 @@ namespace BepuPhysics
         {
             ref var bodyLocation = ref HandleToLocation[bodyHandle.Value];
             ref var set = ref Sets[bodyLocation.SetIndex];
-            ref var list = ref set.Constraints[bodyLocation.Index].References;
+            ref var list = ref set.Constraints[bodyLocation.Index];
             //In the loops below, we still make use of the reversed iteration. Removing from within the context of an enumerator is a dangerous move, but it is permitted if the user 
             //is careful. By maintaining the same convention across all of these enumerations, it makes it a little easier to do reliably.
             if (bodyLocation.SetIndex == 0)
@@ -925,7 +677,6 @@ namespace BepuPhysics
                 if (set.Allocated)
                     set.Dispose(Pool);
             }
-            UnconstrainedBodies.Clear();
             Unsafe.InitBlockUnaligned(HandleToLocation.Memory, 0xFF, (uint)(sizeof(BodyMemoryLocation) * HandleToLocation.Length));
             HandlePool.Clear();
         }
@@ -985,7 +736,6 @@ namespace BepuPhysics
                 ActiveSet.InternalResize(targetBodyCapacity, Pool);
             }
             ResizeInertias(capacity);
-            UnconstrainedBodies.Resize(capacity, Pool);
             var targetHandleCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(capacity, HandlePool.HighestPossiblyClaimedId + 1));
             if (HandleToLocation.Length != targetHandleCapacity)
             {
@@ -1001,7 +751,7 @@ namespace BepuPhysics
         {
             for (int i = 0; i < ActiveSet.Count; ++i)
             {
-                ref var list = ref ActiveSet.Constraints[i].References;
+                ref var list = ref ActiveSet.Constraints[i];
                 var targetCapacity = BufferPool.GetCapacityForCount<BodyConstraintReference>(list.Count > MinimumConstraintCapacityPerBody ? list.Count : MinimumConstraintCapacityPerBody);
                 if (list.Span.Length != targetCapacity)
                     list.Resize(targetCapacity, Pool);
@@ -1011,14 +761,13 @@ namespace BepuPhysics
         /// <summary>
         /// Increases the size of active body buffers if needed to hold the target capacity.
         /// </summary>
-        /// <param name="capacity">Target body capacity.</param>
+        /// <param name="capacity">Target data capacity.</param>
         public void EnsureCapacity(int capacity)
         {
             if (ActiveSet.IndexToHandle.Length < capacity)
             {
                 ActiveSet.InternalResize(capacity, Pool);
             }
-            UnconstrainedBodies.EnsureCapacity(capacity, Pool);
             EnsureInertiasCapacity(capacity);
             if (HandleToLocation.Length < capacity)
             {
@@ -1033,7 +782,7 @@ namespace BepuPhysics
         {
             for (int i = 0; i < ActiveSet.Count; ++i)
             {
-                ref var list = ref ActiveSet.Constraints[i].References;
+                ref var list = ref ActiveSet.Constraints[i];
                 if (list.Span.Length < MinimumConstraintCapacityPerBody)
                     list.Resize(MinimumConstraintCapacityPerBody, Pool);
             }
@@ -1058,7 +807,6 @@ namespace BepuPhysics
                 Pool.Return(ref Inertias);
             Pool.Return(ref HandleToLocation);
             HandlePool.Dispose(Pool);
-            UnconstrainedBodies.Dispose(Pool);
         }
 
     }

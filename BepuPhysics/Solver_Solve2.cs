@@ -190,5 +190,6 @@ namespace BepuPhysics
                 ExecuteMultithreaded<MainSolveFilter>(dt, threadDispatcher, solve2Worker);
             }
         }
+
     }
 }

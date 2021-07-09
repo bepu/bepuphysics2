@@ -17,7 +17,7 @@ namespace BepuPhysics
         public void LoopBody(int bodyIndex)
         {
             //Note that this only looks in the active set. Directly removing inactive objects is unsupported- removals and adds activate all involved islands.
-            bodies.RemoveConstraintReference(bodies.solver, bodyIndex, constraintHandle);
+            bodies.RemoveConstraintReference(bodyIndex, constraintHandle);
         }
     }
 

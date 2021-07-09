@@ -140,7 +140,7 @@ namespace BepuPhysics
             BufferPool pool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
         {
             bodyEnumerator.SourceIndex = bodyIndex;
-            ref var list = ref bodies.ActiveSet.Constraints[bodyIndex].References;
+            ref var list = ref bodies.ActiveSet.Constraints[bodyIndex];
             for (int i = 0; i < list.Count; ++i)
             {
                 ref var entry = ref list[i];
