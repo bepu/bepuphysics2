@@ -305,8 +305,8 @@ namespace BepuPhysics
                 constraints.MaximumConstraint = constraintHandle;
                 constraints.MinimumIndexInConstraint = indexInConstraint;
                 constraints.MaximumIndexInConstraint = indexInConstraint;
-                solver.AddEarlyIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint, bodyIndex);
-                solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint, bodyIndex);
+                solver.AddEarlyIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint);
+                solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint);
             }
             else
             {
@@ -314,20 +314,20 @@ namespace BepuPhysics
                 var maximum = constraints.MaximumBatch;
                 if (batchIndex < minimum)
                 {
-                    solver.RemoveEarlyIntegrationResponsibilityFromConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint, bodyIndex);
+                    solver.RemoveEarlyIntegrationResponsibilityFromConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint);
                     constraints.MinimumBatch = batchIndex;
                     constraints.MinimumConstraint = constraintHandle;
                     constraints.MinimumIndexInConstraint = indexInConstraint;
-                    solver.AddEarlyIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint, bodyIndex);
+                    solver.AddEarlyIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint);
 
                 }
                 else if (batchIndex > maximum)
                 {
-                    solver.RemoveLateIntegrationResponsibilityFromConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint, bodyIndex);
+                    solver.RemoveLateIntegrationResponsibilityFromConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint);
                     constraints.MaximumBatch = batchIndex;
                     constraints.MaximumConstraint = constraintHandle;
                     constraints.MaximumIndexInConstraint = indexInConstraint;
-                    solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint, bodyIndex);
+                    solver.AddLateIntegrationResponsibilityToConstraint(constraintHandle, indexInConstraint);
                 }
             }
             lock (debugBodiesConstraintAdded)
@@ -407,8 +407,8 @@ namespace BepuPhysics
             ref var constraints = ref UpdateIntegrationResponsibilitiesForBodyWithoutSolverModifications(solver, bodyIndex);
             if (constraints.References.Count > 0) //It's possible that an update request came before the body had all its constraints removed, meaning there is no more need for an update.
             {
-                solver.AddEarlyIntegrationResponsibilityToConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint, bodyIndex);
-                solver.AddLateIntegrationResponsibilityToConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint, bodyIndex);
+                solver.AddEarlyIntegrationResponsibilityToConstraint(constraints.MinimumConstraint, constraints.MinimumIndexInConstraint);
+                solver.AddLateIntegrationResponsibilityToConstraint(constraints.MaximumConstraint, constraints.MaximumIndexInConstraint);
             }
             lock (debugConstraintRemovedDirectlyOrIndirectly)
             {
