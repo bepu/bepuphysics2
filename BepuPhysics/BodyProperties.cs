@@ -252,13 +252,13 @@ namespace BepuPhysics
         }
     }
 
-    public struct BodyVelocities
+    public struct BodyVelocityWide
     {
         public Vector3Wide Linear;
         public Vector3Wide Angular;
     }
 
-    public struct BodyInertias
+    public struct BodyInertiaWide
     {
         public Symmetric3x3Wide InverseInertiaTensor;
         //Note that the inverse mass is included in the BodyInertias bundle. InverseMass is rotationally invariant, so it doesn't need to be updated...

@@ -88,8 +88,8 @@ namespace BepuPhysics.Constraints
         public Symmetric2x2Wide EffectiveMass;
         public Vector<float> SoftnessImpulseScale;
         public Vector<float> MaximumImpulse;
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
     }
 
     public struct PointOnLineServoFunctions : IConstraintFunctions<PointOnLineServoPrestepData, PointOnLineServoProjection, Vector2Wide>
@@ -103,7 +103,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref PointOnLineServoPrestepData prestep, out PointOnLineServoProjection projection)
         {
             //This constrains a point on B to a line attached to A. It works on two degrees of freedom at the same time; those are the tangent axes to the line direction.
@@ -177,8 +177,8 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
-            in Matrix2x3Wide linearJacobian, in Matrix2x3Wide angularJacobianA, in Matrix2x3Wide angularJacobianB, in BodyInertias inertiaA, in BodyInertias inertiaB, ref Vector2Wide csi)
+        public static void ApplyImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB,
+            in Matrix2x3Wide linearJacobian, in Matrix2x3Wide angularJacobianA, in Matrix2x3Wide angularJacobianB, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB, ref Vector2Wide csi)
         {
             Matrix2x3Wide.Transform(csi, linearJacobian, out var linearImpulseA);
             Matrix2x3Wide.Transform(csi, angularJacobianA, out var angularImpulseA);
@@ -195,14 +195,14 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref PointOnLineServoProjection projection, ref Vector2Wide accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref PointOnLineServoProjection projection, ref Vector2Wide accumulatedImpulse)
         {
             GetAngularJacobians(projection.LinearJacobian, projection.OffsetA, projection.OffsetB, out var angularA, out var angularB);
             ApplyImpulse(ref velocityA, ref velocityB, projection.LinearJacobian, angularA, angularB, projection.InertiaA, projection.InertiaB, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref PointOnLineServoProjection projection, ref Vector2Wide accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref PointOnLineServoProjection projection, ref Vector2Wide accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             GetAngularJacobians(projection.LinearJacobian, projection.OffsetA, projection.OffsetB, out var angularA, out var angularB);

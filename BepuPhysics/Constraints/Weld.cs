@@ -81,8 +81,8 @@ namespace BepuPhysics.Constraints
         public Vector3Wide OrientationBiasVelocity;
         public Symmetric6x6Wide EffectiveMass;
         public Vector<float> SoftnessImpulseScale;
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
     }
 
     public struct WeldAccumulatedImpulses
@@ -94,7 +94,7 @@ namespace BepuPhysics.Constraints
     public struct WeldFunctions : IConstraintFunctions<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
             ref WeldPrestepData prestep, out WeldProjection projection)
         {
             projection.InertiaA = inertiaA;
@@ -144,7 +144,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref WeldProjection projection, ref Vector3Wide orientationCSI, ref Vector3Wide offsetCSI)
+        private static void ApplyImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref WeldProjection projection, ref Vector3Wide orientationCSI, ref Vector3Wide offsetCSI)
         {
             //Recall the jacobians:
             //J = [ 0, I,                                          0, -I ]
@@ -174,13 +174,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref WeldProjection projection, ref WeldAccumulatedImpulses accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref WeldProjection projection, ref WeldAccumulatedImpulses accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse.Orientation, ref accumulatedImpulse.Offset);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref WeldProjection projection, ref WeldAccumulatedImpulses accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref WeldProjection projection, ref WeldAccumulatedImpulses accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             //csv = V * JT 
@@ -207,7 +207,7 @@ namespace BepuPhysics.Constraints
 
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ApplyImpulse(in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide offset, in Vector3Wide orientationCSI, in Vector3Wide offsetCSI, ref BodyVelocities velocityA, ref BodyVelocities velocityB)
+        private static void ApplyImpulse(in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB, in Vector3Wide offset, in Vector3Wide orientationCSI, in Vector3Wide offsetCSI, ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
         {
             //Recall the jacobians:
             //J = [ 0, I,                                          0, -I ]
@@ -230,8 +230,8 @@ namespace BepuPhysics.Constraints
         }
 
         //[MethodImpl(MethodImplOptions.NoInlining)]
-        public void WarmStart2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
-            in WeldPrestepData prestep, in WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public void WarmStart2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in WeldPrestepData prestep, in WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Transform(prestep.LocalOffset, orientationA, out var offset);
             ApplyImpulse(inertiaA, inertiaB, offset, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
@@ -239,8 +239,8 @@ namespace BepuPhysics.Constraints
             //ApplyImpulse(inertiaA, inertiaB, prestep.LocalOffset * orientationA, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt,
-            in WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public void Solve2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
+            in WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //The weld constraint handles 6 degrees of freedom simultaneously. The constraints are:
             //localOrientation * orientationA = orientationB

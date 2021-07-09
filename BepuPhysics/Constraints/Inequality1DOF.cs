@@ -47,7 +47,7 @@ namespace BepuPhysics.Constraints
     {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref TwoBody1DOFJacobians jacobians, ref SpringSettingsWide springSettings, ref Vector<float> maximumRecoveryVelocity,
+        public static void Prestep(ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB, ref TwoBody1DOFJacobians jacobians, ref SpringSettingsWide springSettings, ref Vector<float> maximumRecoveryVelocity,
             ref Vector<float> positionError, float dt, float inverseDt, out Projection2Body1DOF projection)
         {
             //unsoftened effective mass = (J * M^-1 * JT)^-1
@@ -310,14 +310,14 @@ namespace BepuPhysics.Constraints
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(ref Projection2Body1DOF data, ref Vector<float> correctiveImpulse,
-            ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+            ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Applying the impulse requires transforming the constraint space impulse into a world space velocity change.
             //The first step is to transform into a world space impulse, which requires transforming by the transposed jacobian
             //(transpose(jacobian) goes from world to constraint space, jacobian goes from constraint to world space).
             //That world space impulse is then converted to a corrective velocity change by scaling the impulse by the inverse mass/inertia.
             //As an optimization for constraints with smaller jacobians, the jacobian * (inertia or mass) transform is precomputed.
-            BodyVelocities correctiveVelocityA, correctiveVelocityB;
+            BodyVelocityWide correctiveVelocityA, correctiveVelocityB;
             Vector3Wide.Scale(data.CSIToWSVLinearA, correctiveImpulse, out correctiveVelocityA.Linear);
             Vector3Wide.Scale(data.CSIToWSVAngularA, correctiveImpulse, out correctiveVelocityA.Angular);
             Vector3Wide.Scale(data.CSIToWSVLinearB, correctiveImpulse, out correctiveVelocityB.Linear);
@@ -329,7 +329,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarmStart(ref Projection2Body1DOF data, ref Vector<float> accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public static void WarmStart(ref Projection2Body1DOF data, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //TODO: If the previous frame and current frame are associated with different time steps, the previous frame's solution won't be a good solution anymore.
             //To compensate for this, the accumulated impulse should be scaled if dt changes.
@@ -337,7 +337,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Projection2Body1DOF projection, ref Vector<float> accumulatedImpulse,
+        public static void ComputeCorrectiveImpulse(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Projection2Body1DOF projection, ref Vector<float> accumulatedImpulse,
             out Vector<float> correctiveCSI)
         {
             //Take the world space velocity of each body into constraint space by transforming by the transpose(jacobian).
@@ -363,7 +363,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref Projection2Body1DOF projection, ref Vector<float> accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public static void Solve(ref Projection2Body1DOF projection, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeCorrectiveImpulse(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulse, out var correctiveCSI);
             ApplyImpulse(ref projection, ref correctiveCSI, ref wsvA, ref wsvB);

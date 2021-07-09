@@ -79,7 +79,7 @@ namespace BepuPhysics.Constraints
     public struct CenterDistanceConstraintFunctions : IConstraintFunctions<CenterDistancePrestepData, CenterDistanceProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref CenterDistancePrestepData prestep, out CenterDistanceProjection projection)
         {
             Vector3Wide.Length(ab, out var distance);
@@ -102,7 +102,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ApplyImpulse(ref BodyVelocities a, ref BodyVelocities b, ref CenterDistanceProjection projection, ref Vector<float> impulse)
+        static void ApplyImpulse(ref BodyVelocityWide a, ref BodyVelocityWide b, ref CenterDistanceProjection projection, ref Vector<float> impulse)
         {
             Vector3Wide.Scale(projection.JacobianA, impulse * projection.InverseMassA, out var changeA);
             Vector3Wide.Scale(projection.JacobianA, impulse * projection.InverseMassB, out var negatedChangeB);
@@ -111,13 +111,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref CenterDistanceProjection projection, ref Vector<float> accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref CenterDistanceProjection projection, ref Vector<float> accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref CenterDistanceProjection projection, ref Vector<float> accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref CenterDistanceProjection projection, ref Vector<float> accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             Vector3Wide.Dot(velocityA.Linear, projection.JacobianA, out var linearCSVA);

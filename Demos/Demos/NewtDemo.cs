@@ -752,7 +752,7 @@ namespace Demos.Demos
             convexHull1.ComputeInertia(1, out var scalarInertiaA);
             convexHull2.ComputeInertia(1, out var scalarInertiaB);
 
-            BodyInertias inertiaA;
+            BodyInertiaWide inertiaA;
             inertiaA.InverseMass = new Vector<float>(1);
             inertiaA.InverseInertiaTensor.XX = new Vector<float>(scalarInertiaA.InverseInertiaTensor.XX);
             inertiaA.InverseInertiaTensor.YX = new Vector<float>(scalarInertiaA.InverseInertiaTensor.YX);
@@ -761,7 +761,7 @@ namespace Demos.Demos
             inertiaA.InverseInertiaTensor.ZY = new Vector<float>(scalarInertiaA.InverseInertiaTensor.ZY);
             inertiaA.InverseInertiaTensor.ZZ = new Vector<float>(scalarInertiaA.InverseInertiaTensor.ZZ);
             Vector3Wide.Broadcast(new Vector3(1, 3, 4), out var offset);
-            BodyInertias inertiaB;
+            BodyInertiaWide inertiaB;
             inertiaB.InverseMass = new Vector<float>(1);
             inertiaB.InverseInertiaTensor.XX = new Vector<float>(scalarInertiaB.InverseInertiaTensor.XX);
             inertiaB.InverseInertiaTensor.YX = new Vector<float>(scalarInertiaB.InverseInertiaTensor.YX);

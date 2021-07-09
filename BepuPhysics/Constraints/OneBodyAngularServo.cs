@@ -77,7 +77,7 @@ namespace BepuPhysics.Constraints
     public struct OneBodyAngularServoFunctions : IOneBodyConstraintFunctions<OneBodyAngularServoPrestepData, OneBodyAngularServoProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA,
+        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             float dt, float inverseDt, ref OneBodyAngularServoPrestepData prestep, out OneBodyAngularServoProjection projection)
         {
             projection.ImpulseToVelocity = inertiaA.InverseInertiaTensor;
@@ -105,13 +105,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref OneBodyAngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref OneBodyAngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA.Angular, projection.ImpulseToVelocity, accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref BodyVelocities velocityA,
+        public static void Solve(ref BodyVelocityWide velocityA,
             in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, in Vector3Wide biasImpulse, in Vector<float> maximumImpulse,
             in Symmetric3x3Wide impulseToVelocityA, ref Vector3Wide accumulatedImpulse)
         {
@@ -128,7 +128,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref OneBodyAngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref OneBodyAngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             Solve(ref velocityA, projection.VelocityToImpulse, projection.SoftnessImpulseScale, projection.BiasImpulse,
                 projection.MaximumImpulse, projection.ImpulseToVelocity, ref accumulatedImpulse);

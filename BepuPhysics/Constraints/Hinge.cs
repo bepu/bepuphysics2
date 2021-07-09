@@ -89,8 +89,8 @@ namespace BepuPhysics.Constraints
         public Vector2Wide HingeBiasVelocity;
         public Symmetric5x5Wide EffectiveMass;
         public Vector<float> SoftnessImpulseScale;
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
     }
 
     public struct HingeAccumulatedImpulses
@@ -102,7 +102,7 @@ namespace BepuPhysics.Constraints
     public struct HingeFunctions : IConstraintFunctions<HingePrestepData, HingeProjection, HingeAccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref HingePrestepData prestep, out HingeProjection projection)
         {
             projection.InertiaA = inertiaA;
@@ -166,7 +166,7 @@ namespace BepuPhysics.Constraints
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref HingeProjection projection, ref HingeAccumulatedImpulses csi)
+        private static void ApplyImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref HingeProjection projection, ref HingeAccumulatedImpulses csi)
         {
             //[ csi ] * [ I, skew(offsetA),   -I, -skew(offsetB)    ]
             //          [ 0, constraintAxisAX, 0, -constraintAxisAX ]
@@ -190,13 +190,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref HingeProjection projection, ref HingeAccumulatedImpulses accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref HingeProjection projection, ref HingeAccumulatedImpulses accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref HingeProjection projection, ref HingeAccumulatedImpulses accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref HingeProjection projection, ref HingeAccumulatedImpulses accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             //    [ I, skew(offsetA),   -I, -skew(offsetB)    ]

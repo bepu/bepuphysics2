@@ -13,10 +13,10 @@ namespace BepuPhysics
 {
     public struct FallbackTypeBatchResults
     {
-        public Buffer<Buffer<BodyVelocities>> BodyVelocities;
+        public Buffer<Buffer<BodyVelocityWide>> BodyVelocities;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Buffer<BodyVelocities> GetVelocitiesForBody(int slotIndex)
+        public ref Buffer<BodyVelocityWide> GetVelocitiesForBody(int slotIndex)
         {
             return ref BodyVelocities[slotIndex];
         }

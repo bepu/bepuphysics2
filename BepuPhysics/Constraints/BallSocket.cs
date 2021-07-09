@@ -71,14 +71,14 @@ namespace BepuPhysics.Constraints
         public Vector3Wide BiasVelocity;
         public Symmetric3x3Wide EffectiveMass;
         public Vector<float> SoftnessImpulseScale;
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
     }
 
     public struct BallSocketFunctions : IConstraintFunctions<BallSocketPrestepData, BallSocketProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref BallSocketPrestepData prestep, out BallSocketProjection projection)
         {
             projection.InertiaA = inertiaA;
@@ -98,19 +98,19 @@ namespace BepuPhysics.Constraints
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BallSocketProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BallSocketProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             BallSocketShared.ApplyImpulse(ref velocityA, ref velocityB, projection.OffsetA, projection.OffsetB, projection.InertiaA, projection.InertiaB, accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BallSocketProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BallSocketProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             BallSocketShared.Solve(ref velocityA, ref velocityB, projection.OffsetA, projection.OffsetB, projection.BiasVelocity, projection.EffectiveMass, projection.SoftnessImpulseScale, ref accumulatedImpulse, projection.InertiaA, projection.InertiaB);
         }
 
-        public void WarmStart2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
-            in BallSocketPrestepData prestep, in Vector3Wide accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public void WarmStart2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in BallSocketPrestepData prestep, in Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var offsetA);
@@ -118,8 +118,8 @@ namespace BepuPhysics.Constraints
             BallSocketShared.ApplyImpulse(ref wsvA, ref wsvB, offsetA, offsetB, inertiaA, inertiaB, accumulatedImpulses);
         }
 
-        public void Solve2(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, 
-            in BallSocketPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public void Solve2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, 
+            in BallSocketPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {    
             //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var offsetA);

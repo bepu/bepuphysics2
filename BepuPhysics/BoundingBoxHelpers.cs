@@ -106,7 +106,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ExpandBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max, ref BodyVelocities velocities, float dt,
+        public static void ExpandBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max, ref BodyVelocityWide velocities, float dt,
             ref Vector<float> maximumRadius, ref Vector<float> maximumAngularExpansion, ref Vector<float> maximumExpansion)
         {
             GetBoundsExpansion(velocities.Linear, velocities.Angular, dt, maximumRadius, maximumAngularExpansion, out var minDisplacement, out var maxDisplacement);

@@ -18,7 +18,7 @@ namespace BepuPhysics.Constraints.Contact
     public static class PenetrationLimit
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(in BodyInertias inertiaA, in BodyInertias inertiaB,
+        public static void Prestep(in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
             in Vector3Wide contactOffsetA, in Vector3Wide contactOffsetB, in Vector3Wide normal, in Vector<float> depth,
             in Vector<float> positionErrorToVelocity, in Vector<float> effectiveMassCFMScale, in Vector<float> maximumRecoveryVelocity,
             float inverseDt, out PenetrationLimitProjection projection)
@@ -77,9 +77,9 @@ namespace BepuPhysics.Constraints.Contact
         /// Transforms an impulse from constraint space to world space, uses it to modify the cached world space velocities of the bodies.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(in PenetrationLimitProjection projection, in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide normal,
+        public static void ApplyImpulse(in PenetrationLimitProjection projection, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB, in Vector3Wide normal,
             in Vector<float> correctiveImpulse,
-            ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+            ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             var linearVelocityChangeA = correctiveImpulse * inertiaA.InverseMass;
             Vector3Wide.Scale(normal, linearVelocityChangeA, out var correctiveVelocityALinearVelocity);
@@ -99,14 +99,14 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WarmStart(
-            in PenetrationLimitProjection projection, in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide normal,
-            in Vector<float> accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+            in PenetrationLimitProjection projection, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB, in Vector3Wide normal,
+            in Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ApplyImpulse(projection, inertiaA, inertiaB, normal, accumulatedImpulse, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(in BodyVelocities wsvA, in BodyVelocities wsvB,
+        public static void ComputeCorrectiveImpulse(in BodyVelocityWide wsvA, in BodyVelocityWide wsvB,
             in PenetrationLimitProjection projection,
             in Vector3Wide normal, in Vector<float> softnessImpulseScale,
             ref Vector<float> accumulatedImpulse, out Vector<float> correctiveCSI)
@@ -127,15 +127,15 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(in PenetrationLimitProjection projection, in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide normal,
-            in Vector<float> softnessImpulseScale, ref Vector<float> accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public static void Solve(in PenetrationLimitProjection projection, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB, in Vector3Wide normal,
+            in Vector<float> softnessImpulseScale, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeCorrectiveImpulse(wsvA, wsvB, projection, normal, softnessImpulseScale, ref accumulatedImpulse, out var correctiveCSI);
             ApplyImpulse(projection, inertiaA, inertiaB, normal, correctiveCSI, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void UpdatePenetrationDepth(in Vector<float> dt, in Vector3Wide contactOffsetA, in Vector3Wide offsetB, in Vector3Wide normal, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Vector<float> penetrationDepth)
+        public static void UpdatePenetrationDepth(in Vector<float> dt, in Vector3Wide contactOffsetA, in Vector3Wide offsetB, in Vector3Wide normal, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Vector<float> penetrationDepth)
         {
             //The normal is calibrated to point from B to A. Any movement of A along N results in a decrease in depth. Any movement of B along N results in an increase in depth. 
             //estimatedPenetrationDepthChange = dot(normal, velocityDtA.Linear + velocityDtA.Angular x contactOffsetA) - dot(normal, velocityDtB.Linear + velocityDtB.Angular x contactOffsetB)

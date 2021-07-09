@@ -17,7 +17,7 @@ namespace BepuPhysics
     {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteGatherInertia(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<BodyInertia> states, ref BodyInertias gatheredInertias)
+        private static void WriteGatherInertia(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<BodyInertia> states, ref BodyInertiaWide gatheredInertias)
         {
             ref var source = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)];
             ref var targetSlot = ref GetOffsetInstance(ref gatheredInertias, bodyIndexInBundle);
@@ -32,7 +32,7 @@ namespace BepuPhysics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void WriteGatherState(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<MotionState> states,
-            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocities velocity)
+            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
         {
             ref var state = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)];
             Vector3Wide.WriteFirst(state.Pose.Position, ref GetOffsetInstance(ref position, bodyIndexInBundle));
@@ -42,7 +42,7 @@ namespace BepuPhysics
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void WriteGatherState(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<MotionState> states,
-            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocities velocity, ref BodyInertias inertia)
+            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity, ref BodyInertiaWide inertia)
         {
             ref var state = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)];
             Vector3Wide.WriteFirst(state.Pose.Position, ref GetOffsetInstance(ref position, bodyIndexInBundle));
@@ -79,7 +79,7 @@ namespace BepuPhysics
         /// <param name="inertia">Gathered inertia of the body.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherState(ref Vector<int> references, int count,
-            out Vector3Wide position, out QuaternionWide orientation, out BodyVelocities velocity, out BodyInertias inertia)
+            out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
         {
             Unsafe.SkipInit(out position);
             Unsafe.SkipInit(out orientation);
@@ -102,7 +102,7 @@ namespace BepuPhysics
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void ScalarGather(int count, MotionState* motionStates, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocities velocity, ref BodyInertias inertia)
+        unsafe static void ScalarGather(int count, MotionState* motionStates, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity, ref BodyInertiaWide inertia)
         {
             var indices = (int*)Unsafe.AsPointer(ref baseIndex);
             var pPositionX = (float*)Unsafe.AsPointer(ref position.X);
@@ -153,7 +153,7 @@ namespace BepuPhysics
             }
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void TransposingGather(int count, MotionState* motionStates, BodyInertia* inertias, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocities velocity, ref BodyInertias inertia)
+        unsafe static void TransposingGather(int count, MotionState* motionStates, BodyInertia* inertias, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity, ref BodyInertiaWide inertia)
         {
             if (Avx.IsSupported)
             {
@@ -331,9 +331,9 @@ namespace BepuPhysics
         /// <param name="inertiaB">Gathered inertia of body B.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherState(ref TwoBodyReferences references, int count,
-        out QuaternionWide orientationA, out BodyVelocities velocityA, out BodyInertias inertiaA,
+        out QuaternionWide orientationA, out BodyVelocityWide velocityA, out BodyInertiaWide inertiaA,
         out Vector3Wide ab,
-        out QuaternionWide orientationB, out BodyVelocities velocityB, out BodyInertias inertiaB)
+        out QuaternionWide orientationB, out BodyVelocityWide velocityB, out BodyInertiaWide inertiaB)
         {
             Unsafe.SkipInit(out Vector3Wide positionA);
             Unsafe.SkipInit(out Vector3Wide positionB);
@@ -393,11 +393,11 @@ namespace BepuPhysics
         /// <param name="inertiaC">Gathered inertia of body C.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherState(ref ThreeBodyReferences references, int count,
-            out QuaternionWide orientationA, out BodyVelocities velocityA, out BodyInertias inertiaA,
+            out QuaternionWide orientationA, out BodyVelocityWide velocityA, out BodyInertiaWide inertiaA,
             out Vector3Wide ab,
-            out QuaternionWide orientationB, out BodyVelocities velocityB, out BodyInertias inertiaB,
+            out QuaternionWide orientationB, out BodyVelocityWide velocityB, out BodyInertiaWide inertiaB,
             out Vector3Wide ac,
-            out QuaternionWide orientationC, out BodyVelocities velocityC, out BodyInertias inertiaC)
+            out QuaternionWide orientationC, out BodyVelocityWide velocityC, out BodyInertiaWide inertiaC)
         {
             Unsafe.SkipInit(out Vector3Wide positionA);
             Unsafe.SkipInit(out Vector3Wide positionB);
@@ -461,13 +461,13 @@ namespace BepuPhysics
         /// <param name="inertiaD">Gathered inertia of body C.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherState(ref FourBodyReferences references, int count,
-            out QuaternionWide orientationA, out BodyVelocities velocityA, out BodyInertias inertiaA,
+            out QuaternionWide orientationA, out BodyVelocityWide velocityA, out BodyInertiaWide inertiaA,
             out Vector3Wide ab,
-            out QuaternionWide orientationB, out BodyVelocities velocityB, out BodyInertias inertiaB,
+            out QuaternionWide orientationB, out BodyVelocityWide velocityB, out BodyInertiaWide inertiaB,
             out Vector3Wide ac,
-            out QuaternionWide orientationC, out BodyVelocities velocityC, out BodyInertias inertiaC,
+            out QuaternionWide orientationC, out BodyVelocityWide velocityC, out BodyInertiaWide inertiaC,
             out Vector3Wide ad,
-            out QuaternionWide orientationD, out BodyVelocities velocityD, out BodyInertias inertiaD)
+            out QuaternionWide orientationD, out BodyVelocityWide velocityD, out BodyInertiaWide inertiaD)
         {
             Unsafe.SkipInit(out Vector3Wide positionA);
             Unsafe.SkipInit(out Vector3Wide positionB);
@@ -518,7 +518,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void ScatterVelocities(ref BodyVelocities sourceVelocities, ref int baseIndex, int innerIndex)
+        private unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocities, ref int baseIndex, int innerIndex)
         {
             //TODO: How much value would there be in branching on kinematic state and avoiding a write? Depends a lot on the number of kinematics.
             ref var sourceSlot = ref GetOffsetInstance(ref sourceVelocities, innerIndex);
@@ -528,7 +528,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void TransposeScatterVelocities(ref BodyVelocities sourceVelocities, MotionState* motionStates, ref Vector<int> references, int count)
+        private unsafe void TransposeScatterVelocities(ref BodyVelocityWide sourceVelocities, MotionState* motionStates, ref Vector<int> references, int count)
         {
             if (Avx.IsSupported)
             {
@@ -593,7 +593,7 @@ namespace BepuPhysics
         /// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
         /// <param name="count">Number of body pairs in the bundle.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ScatterVelocities(ref BodyVelocities sourceVelocities, ref Vector<int> references, int count)
+        public unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocities, ref Vector<int> references, int count)
         {
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
@@ -613,7 +613,7 @@ namespace BepuPhysics
         /// <param name="count">Number of body pairs in the bundle.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public unsafe void ScatterVelocities(ref BodyVelocities sourceVelocitiesA, ref BodyVelocities sourceVelocitiesB,
+        public unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB,
             ref TwoBodyReferences references, int count)
         {
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
@@ -640,7 +640,7 @@ namespace BepuPhysics
         /// <param name="count">Number of body pairs in the bundle.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ScatterVelocities(
-            ref BodyVelocities sourceVelocitiesA, ref BodyVelocities sourceVelocitiesB, ref BodyVelocities sourceVelocitiesC,
+            ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB, ref BodyVelocityWide sourceVelocitiesC,
             ref ThreeBodyReferences references, int count)
         {
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
@@ -667,7 +667,7 @@ namespace BepuPhysics
         /// <param name="count">Number of body pairs in the bundle.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ScatterVelocities(
-            ref BodyVelocities sourceVelocitiesA, ref BodyVelocities sourceVelocitiesB, ref BodyVelocities sourceVelocitiesC, ref BodyVelocities sourceVelocitiesD,
+            ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB, ref BodyVelocityWide sourceVelocitiesC, ref BodyVelocityWide sourceVelocitiesD,
             ref FourBodyReferences references, int count)
         {
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);

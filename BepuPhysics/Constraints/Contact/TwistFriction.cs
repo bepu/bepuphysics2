@@ -20,7 +20,7 @@ namespace BepuPhysics.Constraints.Contact
     public static class TwistFriction
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide angularJacobianA,
+        public static void Prestep(ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB, ref Vector3Wide angularJacobianA,
             out TwistFrictionProjection projection)
         {
             //Compute effective mass matrix contributions. No linear contributions for the twist constraint.
@@ -44,8 +44,8 @@ namespace BepuPhysics.Constraints.Contact
         /// Transforms an impulse from constraint space to world space, uses it to modify the cached world space velocities of the bodies.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref Vector3Wide angularJacobianA, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref Vector<float> correctiveImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public static void ApplyImpulse(ref Vector3Wide angularJacobianA, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB,
+            ref Vector<float> correctiveImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Vector3Wide.Scale(angularJacobianA, correctiveImpulse, out var worldCorrectiveImpulseA);
             Symmetric3x3Wide.TransformWithoutOverlap(worldCorrectiveImpulseA, inertiaA.InverseInertiaTensor, out var worldCorrectiveVelocityA);
@@ -55,15 +55,15 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarmStart(ref Vector3Wide angularJacobianA, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref Vector<float> accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public static void WarmStart(ref Vector3Wide angularJacobianA, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB,
+            ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ApplyImpulse(ref angularJacobianA, ref inertiaA, ref inertiaB, ref accumulatedImpulse, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeCorrectiveImpulse(ref Vector3Wide angularJacobianA, ref TwistFrictionProjection projection,
-            ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Vector<float> maximumImpulse,
+            ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Vector<float> maximumImpulse,
             ref Vector<float> accumulatedImpulse, out Vector<float> correctiveCSI)
         {
             Vector3Wide.Dot(wsvA.Angular, angularJacobianA, out var csvA);
@@ -78,8 +78,8 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref Vector3Wide angularJacobianA, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref TwistFrictionProjection projection,
-            ref Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public static void Solve(ref Vector3Wide angularJacobianA, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB, ref TwistFrictionProjection projection,
+            ref Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeCorrectiveImpulse(ref angularJacobianA, ref projection, ref wsvA, ref wsvB, ref maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
             ApplyImpulse(ref angularJacobianA, ref inertiaA, ref inertiaB, ref correctiveCSI, ref wsvA, ref wsvB);

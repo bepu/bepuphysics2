@@ -171,14 +171,14 @@ namespace BepuPhysics.Constraints.Contact
 
     public struct NonconvexOneBodyProjectionCommon
     {
-        public BodyInertias InertiaA;
+        public BodyInertiaWide InertiaA;
         public Vector<float> FrictionCoefficient;
         public Vector<float> SoftnessImpulseScale;
     }
     public struct NonconvexTwoBodyProjectionCommon
     {
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
         public Vector<float> FrictionCoefficient;
         public Vector<float> SoftnessImpulseScale;
     }
@@ -217,7 +217,7 @@ namespace BepuPhysics.Constraints.Contact
         where TAccumulatedImpulses : struct
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertia,
+        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertia,
             float dt, float inverseDt, ref TPrestep prestep, out TProjection projection)
         {
             //TODO: This is another area where it's highly doubtful that the compiler will ever figure out that this initialization is unnecessary.
@@ -246,7 +246,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WarmStart(ref BodyVelocities wsvA, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
+        public unsafe void WarmStart(ref BodyVelocityWide wsvA, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
         {
             //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
             //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
@@ -264,7 +264,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocityWide wsvA, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
         {
             //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
             //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
@@ -284,7 +284,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocity, ref TPrestep prestep)
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocity, ref TPrestep prestep)
         {
             ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
             for (int i = 0; i < prestep.ContactCount; ++i)
@@ -302,7 +302,7 @@ namespace BepuPhysics.Constraints.Contact
         where TAccumulatedImpulses : struct
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref TPrestep prestep, out TProjection projection)
         {
             //TODO: This is another area where it's highly doubtful that the compiler will ever figure out that this initialization is unnecessary.
@@ -334,7 +334,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
+        public unsafe void WarmStart(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
         {
             //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
             //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
@@ -352,7 +352,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
         {
             //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
             //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
@@ -371,7 +371,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref TPrestep prestep)
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref TPrestep prestep)
         {
             ref var prestepOffsetB = ref prestep.GetOffsetB(ref prestep);
             ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
