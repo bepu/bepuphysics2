@@ -289,7 +289,7 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact1OneBodyProjection
     {
-        public BodyInertias InertiaA;
+        public BodyInertiaWide InertiaA;
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFrictionOneBody.Projection Tangent;
@@ -304,7 +304,7 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA, float dt, float inverseDt, ref Contact1OneBodyPrestepData prestep, out Contact1OneBodyProjection projection)
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref Contact1OneBodyPrestepData prestep, out Contact1OneBodyProjection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -321,7 +321,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref Contact1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocityWide wsvA, ref Contact1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFrictionOneBody.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref accumulatedImpulses.Tangent, ref wsvA);
@@ -330,7 +330,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref Contact1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocityWide wsvA, ref Contact1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -346,7 +346,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact1OneBodyPrestepData prestep)
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact1OneBodyPrestepData prestep)
         {
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, velocityA, ref prestep.Contact0.Depth);
         }
@@ -462,7 +462,7 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact2OneBodyProjection
     {
-        public BodyInertias InertiaA;
+        public BodyInertiaWide InertiaA;
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFrictionOneBody.Projection Tangent;
@@ -479,7 +479,7 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA, float dt, float inverseDt, ref Contact2OneBodyPrestepData prestep, out Contact2OneBodyProjection projection)
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref Contact2OneBodyPrestepData prestep, out Contact2OneBodyProjection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -497,7 +497,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref Contact2OneBodyProjection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocityWide wsvA, ref Contact2OneBodyProjection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFrictionOneBody.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref accumulatedImpulses.Tangent, ref wsvA);
@@ -507,7 +507,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref Contact2OneBodyProjection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocityWide wsvA, ref Contact2OneBodyProjection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -525,7 +525,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact2OneBodyPrestepData prestep)
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact2OneBodyPrestepData prestep)
         {
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, velocityA, ref prestep.Contact0.Depth);
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, velocityA, ref prestep.Contact1.Depth);
@@ -648,7 +648,7 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact3OneBodyProjection
     {
-        public BodyInertias InertiaA;
+        public BodyInertiaWide InertiaA;
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFrictionOneBody.Projection Tangent;
@@ -667,7 +667,7 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA, float dt, float inverseDt, ref Contact3OneBodyPrestepData prestep, out Contact3OneBodyProjection projection)
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref Contact3OneBodyPrestepData prestep, out Contact3OneBodyProjection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -687,7 +687,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref Contact3OneBodyProjection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocityWide wsvA, ref Contact3OneBodyProjection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFrictionOneBody.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref accumulatedImpulses.Tangent, ref wsvA);
@@ -698,7 +698,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref Contact3OneBodyProjection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocityWide wsvA, ref Contact3OneBodyProjection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -718,7 +718,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact3OneBodyPrestepData prestep)
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact3OneBodyPrestepData prestep)
         {
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, velocityA, ref prestep.Contact0.Depth);
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, velocityA, ref prestep.Contact1.Depth);
@@ -848,7 +848,7 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact4OneBodyProjection
     {
-        public BodyInertias InertiaA;
+        public BodyInertiaWide InertiaA;
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFrictionOneBody.Projection Tangent;
@@ -869,7 +869,7 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA, float dt, float inverseDt, ref Contact4OneBodyPrestepData prestep, out Contact4OneBodyProjection projection)
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref Contact4OneBodyPrestepData prestep, out Contact4OneBodyProjection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -891,7 +891,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref Contact4OneBodyProjection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocityWide wsvA, ref Contact4OneBodyProjection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFrictionOneBody.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref accumulatedImpulses.Tangent, ref wsvA);
@@ -903,7 +903,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref Contact4OneBodyProjection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocityWide wsvA, ref Contact4OneBodyProjection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -925,7 +925,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact4OneBodyPrestepData prestep)
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact4OneBodyPrestepData prestep)
         {
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, velocityA, ref prestep.Contact0.Depth);
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, velocityA, ref prestep.Contact1.Depth);
@@ -1049,8 +1049,8 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact1Projection
     {
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFriction.Projection Tangent;
@@ -1065,7 +1065,7 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-             in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, ref Contact1PrestepData prestep, out Contact1Projection projection)
+             in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref Contact1PrestepData prestep, out Contact1Projection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -1086,7 +1086,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -1095,7 +1095,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -1111,7 +1111,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact1PrestepData prestep)
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact1PrestepData prestep)
         {
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact0.Depth);
         }
@@ -1238,8 +1238,8 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact2Projection
     {
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFriction.Projection Tangent;
@@ -1256,7 +1256,7 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-             in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, ref Contact2PrestepData prestep, out Contact2Projection projection)
+             in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref Contact2PrestepData prestep, out Contact2Projection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -1279,7 +1279,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -1289,7 +1289,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -1307,7 +1307,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact2PrestepData prestep)
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact2PrestepData prestep)
         {
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact0.Depth);
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact1.Depth);
@@ -1441,8 +1441,8 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact3Projection
     {
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFriction.Projection Tangent;
@@ -1461,7 +1461,7 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-             in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, ref Contact3PrestepData prestep, out Contact3Projection projection)
+             in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref Contact3PrestepData prestep, out Contact3Projection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -1487,7 +1487,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -1498,7 +1498,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -1518,7 +1518,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact3PrestepData prestep)
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact3PrestepData prestep)
         {
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact0.Depth);
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact1.Depth);
@@ -1659,8 +1659,8 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact4Projection
     {
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFriction.Projection Tangent;
@@ -1681,7 +1681,7 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-             in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, ref Contact4PrestepData prestep, out Contact4Projection projection)
+             in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref Contact4PrestepData prestep, out Contact4Projection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
             projection.InertiaA = inertiaA;
@@ -1710,7 +1710,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -1722,7 +1722,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthonormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -1744,7 +1744,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact4PrestepData prestep)
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact4PrestepData prestep)
         {
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact0.Depth);
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact1.Depth);

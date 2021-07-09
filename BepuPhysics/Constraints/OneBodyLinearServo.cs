@@ -81,14 +81,14 @@ namespace BepuPhysics.Constraints
         public Symmetric3x3Wide EffectiveMass;
         public Vector<float> SoftnessImpulseScale;
         public Vector<float> MaximumImpulse;
-        public BodyInertias Inertia;
+        public BodyInertiaWide Inertia;
     }
 
     public struct OneBodyLinearServoFunctions : IOneBodyConstraintFunctions<OneBodyLinearServoPrestepData, OneBodyLinearServoProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeTransforms(in Vector3Wide localOffset, in QuaternionWide orientation, in Vector<float> effectiveMassCFMScale,
-            in BodyInertias inertia, out Vector3Wide offset, out Symmetric3x3Wide effectiveMass)
+            in BodyInertiaWide inertia, out Vector3Wide offset, out Symmetric3x3Wide effectiveMass)
         {
             //The grabber is roughly equivalent to a ball socket joint with a nonzero goal (and only one body).
             QuaternionWide.TransformWithoutOverlap(localOffset, orientation, out offset);
@@ -103,7 +103,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA,
+        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             float dt, float inverseDt, ref OneBodyLinearServoPrestepData prestep, out OneBodyLinearServoProjection projection)
         {
             //TODO: Note that this grabs a world position. That poses a problem for different position representations.
@@ -120,7 +120,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref BodyVelocities velocityA, in OneBodyLinearServoProjection projection, ref Vector3Wide csi)
+        public static void ApplyImpulse(ref BodyVelocityWide velocityA, in OneBodyLinearServoProjection projection, ref Vector3Wide csi)
         {
             Vector3Wide.CrossWithoutOverlap(projection.Offset, csi, out var wsi);
             Symmetric3x3Wide.TransformWithoutOverlap(wsi, projection.Inertia.InverseInertiaTensor, out var change);
@@ -131,13 +131,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA, projection, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SharedSolve(ref BodyVelocities velocities, in OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        public static void SharedSolve(ref BodyVelocityWide velocities, in OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular);
             Vector3Wide.CrossWithoutOverlap(velocities.Angular, projection.Offset, out var angularCSV);
@@ -163,7 +163,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             SharedSolve(ref velocityA, projection, ref accumulatedImpulse);
         }

@@ -91,10 +91,10 @@ namespace BepuPhysics.Constraints
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-            in QuaternionWide orientationA, in BodyInertias inertiaA,
-            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
-            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertias inertiaC,
-            in Vector3Wide ad, in QuaternionWide orientationD, in BodyInertias inertiaD,
+            in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
+            in Vector3Wide ad, in QuaternionWide orientationD, in BodyInertiaWide inertiaD,
             float dt, float inverseDt, ref VolumeConstraintPrestepData prestep, out VolumeConstraintProjection projection)
         {
             //Volume of parallelepiped with vertices a, b, c, d is:
@@ -155,7 +155,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref BodyVelocities velocityD,
+        private static void ApplyImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD,
             ref VolumeConstraintProjection projection, ref Vector3Wide negatedJacobianA, ref Vector<float> impulse)
         {
             Vector3Wide.Scale(negatedJacobianA, projection.InverseMassA * impulse, out var negativeVelocityChangeA);
@@ -176,7 +176,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref BodyVelocities velocityD, ref VolumeConstraintProjection projection, ref Vector<float> accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD, ref VolumeConstraintProjection projection, ref Vector<float> accumulatedImpulse)
         {
             //Unlike most constraints, the jacobians in a volume constraint can change magnitude and direction wildly in some cases.
             //Reusing the previous frame's accumulated impulse can result in catastrophically wrong guesses which require many iterations to correct.
@@ -191,7 +191,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref BodyVelocities velocityD, ref VolumeConstraintProjection projection, ref Vector<float> accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD, ref VolumeConstraintProjection projection, ref Vector<float> accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             GetNegatedJacobianA(projection, out var negatedJacobianA);

@@ -79,7 +79,7 @@ namespace BepuPhysics.Constraints
     public struct AngularServoFunctions : IConstraintFunctions<AngularServoPrestepData, AngularServoProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref AngularServoPrestepData prestep, out AngularServoProjection projection)
         {
             projection.ImpulseToVelocityA = inertiaA.InverseInertiaTensor;
@@ -112,13 +112,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref AngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref AngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
+        public static void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB,
             in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, in Vector3Wide biasImpulse, in Vector<float> maximumImpulse,
             in Symmetric3x3Wide impulseToVelocityA, in Symmetric3x3Wide negatedImpulseToVelocityB, ref Vector3Wide accumulatedImpulse)
         {
@@ -136,7 +136,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref AngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref AngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             Solve(ref velocityA, ref velocityB, projection.EffectiveMass, projection.SoftnessImpulseScale, projection.BiasImpulse,
                 projection.MaximumImpulse, projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, ref accumulatedImpulse);

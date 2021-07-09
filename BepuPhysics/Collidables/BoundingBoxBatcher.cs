@@ -80,7 +80,7 @@ namespace BepuPhysics
         public TShapeWide Shape;
         public Vector<float> MaximumExpansion;
         public RigidPoses Pose;
-        public BodyVelocities Velocities;
+        public BodyVelocityWide Velocities;
     }
 
     public struct BoundingBoxBatcher

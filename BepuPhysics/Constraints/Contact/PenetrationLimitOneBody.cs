@@ -17,7 +17,7 @@ namespace BepuPhysics.Constraints.Contact
     public static class PenetrationLimitOneBody
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(in BodyInertias inertiaA,
+        public static void Prestep(in BodyInertiaWide inertiaA,
             in Vector3Wide contactOffsetA, in Vector3Wide normal, in Vector<float> depth,
             in Vector<float> positionErrorToVelocity, in Vector<float> effectiveMassCFMScale, in Vector<float> maximumRecoveryVelocity,
             float inverseDt, out PenetrationLimitOneBodyProjection projection)
@@ -42,8 +42,8 @@ namespace BepuPhysics.Constraints.Contact
         /// Transforms an impulse from constraint space to world space, uses it to modify the cached world space velocities of the bodies.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(in PenetrationLimitOneBodyProjection projection, in BodyInertias inertiaA, in Vector3Wide normal,
-            in Vector<float> correctiveImpulse, ref BodyVelocities wsvA)
+        public static void ApplyImpulse(in PenetrationLimitOneBodyProjection projection, in BodyInertiaWide inertiaA, in Vector3Wide normal,
+            in Vector<float> correctiveImpulse, ref BodyVelocityWide wsvA)
         {
             var linearVelocityChangeA = correctiveImpulse * inertiaA.InverseMass;
             Vector3Wide.Scale(normal, linearVelocityChangeA, out var correctiveVelocityALinearVelocity);
@@ -56,14 +56,14 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WarmStart(
-            in PenetrationLimitOneBodyProjection projection, in BodyInertias inertiaA, in Vector3Wide normal,
-            in Vector<float> accumulatedImpulse, ref BodyVelocities wsvA)
+            in PenetrationLimitOneBodyProjection projection, in BodyInertiaWide inertiaA, in Vector3Wide normal,
+            in Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
             ApplyImpulse(projection, inertiaA, normal, accumulatedImpulse, ref wsvA);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(in BodyVelocities wsvA,
+        public static void ComputeCorrectiveImpulse(in BodyVelocityWide wsvA,
             in PenetrationLimitOneBodyProjection projection,
             in Vector3Wide normal, in Vector<float> softnessImpulseScale,
             ref Vector<float> accumulatedImpulse, out Vector<float> correctiveCSI)
@@ -82,15 +82,15 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(in PenetrationLimitOneBodyProjection projection, in BodyInertias inertiaA, in Vector3Wide normal,
-            in Vector<float> softnessImpulseScale, ref Vector<float> accumulatedImpulse, ref BodyVelocities wsvA)
+        public static void Solve(in PenetrationLimitOneBodyProjection projection, in BodyInertiaWide inertiaA, in Vector3Wide normal,
+            in Vector<float> softnessImpulseScale, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
             ComputeCorrectiveImpulse(wsvA, projection, normal, softnessImpulseScale, ref accumulatedImpulse, out var correctiveCSI);
             ApplyImpulse(projection, inertiaA, normal, correctiveCSI, ref wsvA);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void UpdatePenetrationDepth(in Vector<float> dt, in Vector3Wide contactOffset, in Vector3Wide normal, in BodyVelocities velocity, ref Vector<float> penetrationDepth)
+        public static void UpdatePenetrationDepth(in Vector<float> dt, in Vector3Wide contactOffset, in Vector3Wide normal, in BodyVelocityWide velocity, ref Vector<float> penetrationDepth)
         {
             //The normal is calibrated to point from B to A. Any movement of A along N results in a decrease in depth. Any movement of B along N results in an increase in depth. 
             //But one body constraints have no B.

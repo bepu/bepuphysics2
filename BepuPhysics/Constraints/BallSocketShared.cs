@@ -16,7 +16,7 @@ namespace BepuPhysics.Constraints
         //There are very few cases where a combo constraint will have less than 3DOFs...)
         //The only reason not to do that is codegen concerns. But we may want to stop holding back just because of some hopefully-not-permanent quirks in the JIT.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeEffectiveMass(in BodyInertias inertiaA, in BodyInertias inertiaB,
+        public static void ComputeEffectiveMass(in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
             ref Vector3Wide offsetA, ref Vector3Wide offsetB, ref Vector<float> effectiveMassCFMScale, out Symmetric3x3Wide effectiveMass)
         {
             //Anchor points attached to each body are constrained to stay in the same position, yielding a position constraint of:
@@ -74,8 +74,8 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
-            in Vector3Wide offsetA, in Vector3Wide offsetB, in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide constraintSpaceImpulse)
+        public static void ApplyImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB,
+            in Vector3Wide offsetA, in Vector3Wide offsetB, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB, in Vector3Wide constraintSpaceImpulse)
         {
             Vector3Wide.CrossWithoutOverlap(offsetA, constraintSpaceImpulse, out var wsi);
             Symmetric3x3Wide.TransformWithoutOverlap(wsi, inertiaA.InverseInertiaTensor, out var change);
@@ -93,7 +93,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, in Vector3Wide offsetA, in Vector3Wide offsetB,
+        public static void ComputeCorrectiveImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, in Vector3Wide offsetA, in Vector3Wide offsetB,
             in Vector3Wide biasVelocity, in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, in Vector3Wide accumulatedImpulse, out Vector3Wide correctiveImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
@@ -112,8 +112,8 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, in Vector3Wide offsetA, in Vector3Wide offsetB,
-            in Vector3Wide biasVelocity, in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, ref Vector3Wide accumulatedImpulse, in BodyInertias inertiaA, in BodyInertias inertiaB)
+        public static void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, in Vector3Wide offsetA, in Vector3Wide offsetB,
+            in Vector3Wide biasVelocity, in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, ref Vector3Wide accumulatedImpulse, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB)
         {
             ComputeCorrectiveImpulse(ref velocityA, ref velocityB, offsetA, offsetB, biasVelocity, effectiveMass, softnessImpulseScale, accumulatedImpulse, out var correctiveImpulse);
             //This function does not have a maximum impulse limit, so no clamping is required.
@@ -123,8 +123,8 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref Vector3Wide offsetA, ref Vector3Wide offsetB,
-            ref Vector3Wide biasVelocity, ref Symmetric3x3Wide effectiveMass, ref Vector<float> softnessImpulseScale, ref Vector<float> maximumImpulse, ref Vector3Wide accumulatedImpulse, ref BodyInertias inertiaA, ref BodyInertias inertiaB)
+        public static void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref Vector3Wide offsetA, ref Vector3Wide offsetB,
+            ref Vector3Wide biasVelocity, ref Symmetric3x3Wide effectiveMass, ref Vector<float> softnessImpulseScale, ref Vector<float> maximumImpulse, ref Vector3Wide accumulatedImpulse, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB)
         {
             ComputeCorrectiveImpulse(ref velocityA, ref velocityB, offsetA, offsetB, biasVelocity, effectiveMass, softnessImpulseScale, accumulatedImpulse, out var correctiveImpulse);
             //This function DOES have a maximum impulse limit.

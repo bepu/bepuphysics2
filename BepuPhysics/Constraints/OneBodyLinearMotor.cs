@@ -67,7 +67,7 @@ namespace BepuPhysics.Constraints
     public struct OneBodyLinearMotorFunctions : IOneBodyConstraintFunctions<OneBodyLinearMotorPrestepData, OneBodyLinearServoProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA,
+        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             float dt, float inverseDt, ref OneBodyLinearMotorPrestepData prestep, out OneBodyLinearServoProjection projection)
         {
             //TODO: Note that this grabs a world position. That poses a problem for different position representations.
@@ -81,13 +81,13 @@ namespace BepuPhysics.Constraints
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             OneBodyLinearServoFunctions.ApplyImpulse(ref velocityA, projection, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             OneBodyLinearServoFunctions.SharedSolve(ref velocityA, projection, ref accumulatedImpulse);
         }

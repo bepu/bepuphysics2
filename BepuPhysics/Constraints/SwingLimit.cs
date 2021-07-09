@@ -102,7 +102,7 @@ namespace BepuPhysics.Constraints
     public struct SwingLimitFunctions : IConstraintFunctions<SwingLimitPrestepData, SwingLimitProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref SwingLimitPrestepData prestep, out SwingLimitProjection projection)
         {
             //The swing limit attempts to keep an axis on body A within from an axis on body B. In other words, this is the same as a hinge joint, but with one fewer DOF.
@@ -159,13 +159,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref SwingLimitProjection projection, ref Vector<float> accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref SwingLimitProjection projection, ref Vector<float> accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, ref projection, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref SwingLimitProjection projection, ref Vector<float> accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref SwingLimitProjection projection, ref Vector<float> accumulatedImpulse)
         {
             //JB = -JA. This is (angularVelocityA * JA + angularVelocityB * JB) * effectiveMass => (angularVelocityA - angularVelocityB) * (JA * effectiveMass)
             Vector3Wide.Subtract(velocityA.Angular, velocityB.Angular, out var difference);

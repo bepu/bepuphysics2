@@ -127,7 +127,7 @@ namespace Demos.Demos.Characters
         public Vector2Wide TargetVelocity;
         public Symmetric2x2Wide HorizontalEffectiveMass;
         public Vector<float> MaximumHorizontalImpulse;
-        public BodyInertias InertiaA;
+        public BodyInertiaWide InertiaA;
         public Vector<float> VerticalBiasVelocity;
         public Vector<float> VerticalEffectiveMass;
         public Vector<float> MaximumVerticalForce;
@@ -167,7 +167,7 @@ namespace Demos.Demos.Characters
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertias inertiaA, float dt, float inverseDt, ref StaticCharacterMotionPrestep prestepData, out StaticCharacterMotionProjection projection)
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref StaticCharacterMotionPrestep prestepData, out StaticCharacterMotionProjection projection)
         {
             //The motion constraint is split into two parts: the horizontal constraint, and the vertical constraint.
             //The horizontal constraint acts almost exactly like the TangentFriction, but we'll duplicate some of the logic to keep this implementation self-contained.
@@ -226,8 +226,8 @@ namespace Demos.Demos.Characters
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ApplyHorizontalImpulse(in Matrix3x3Wide basis,
             in Matrix2x3Wide angularJacobianA, in Vector2Wide constraintSpaceImpulse,
-            in BodyInertias inertiaA, 
-            ref BodyVelocities velocityA)
+            in BodyInertiaWide inertiaA, 
+            ref BodyVelocityWide velocityA)
         {
             //Transform the constraint space impulse into world space by using the jacobian and then apply each body's inverse inertia to get the velocity change.
             Vector3Wide.Scale(basis.X, constraintSpaceImpulse.X, out var linearImpulseAX);
@@ -244,8 +244,8 @@ namespace Demos.Demos.Characters
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ApplyVerticalImpulse(in Matrix3x3Wide basis,
             in Vector3Wide angularJacobianA, in Vector<float> constraintSpaceImpulse,
-            in BodyInertias inertiaA, 
-            ref BodyVelocities velocityA)
+            in BodyInertiaWide inertiaA, 
+            ref BodyVelocityWide velocityA)
         {
             Vector3Wide.Scale(basis.Y, constraintSpaceImpulse, out var linearImpulseA);
             Vector3Wide.Scale(linearImpulseA, inertiaA.InverseMass, out var linearChangeA);
@@ -257,7 +257,7 @@ namespace Demos.Demos.Characters
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref StaticCharacterMotionProjection projection, ref CharacterMotionAccumulatedImpulse accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref StaticCharacterMotionProjection projection, ref CharacterMotionAccumulatedImpulse accumulatedImpulse)
         {
             ComputeJacobians(projection.OffsetFromCharacter, projection.SurfaceBasis,
                 out var basis, out var horizontalAngularJacobianA, out var verticalAngularJacobianA);
@@ -266,7 +266,7 @@ namespace Demos.Demos.Characters
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref StaticCharacterMotionProjection projection, ref CharacterMotionAccumulatedImpulse accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref StaticCharacterMotionProjection projection, ref CharacterMotionAccumulatedImpulse accumulatedImpulse)
         {
             ComputeJacobians(projection.OffsetFromCharacter, projection.SurfaceBasis,
                 out var basis, out var horizontalAngularJacobianA, out var verticalAngularJacobianA);
@@ -431,8 +431,8 @@ namespace Demos.Demos.Characters
         public Vector2Wide TargetVelocity;
         public Symmetric2x2Wide HorizontalEffectiveMass;
         public Vector<float> MaximumHorizontalImpulse;
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
         public Vector<float> VerticalBiasVelocity;
         public Vector<float> VerticalEffectiveMass;
         public Vector<float> MaximumVerticalForce;
@@ -475,7 +475,7 @@ namespace Demos.Demos.Characters
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-             in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, float dt, float inverseDt, ref DynamicCharacterMotionPrestep prestepData, out DynamicCharacterMotionProjection projection)
+             in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref DynamicCharacterMotionPrestep prestepData, out DynamicCharacterMotionProjection projection)
         {
             //The motion constraint is split into two parts: the horizontal constraint, and the vertical constraint.
             //The horizontal constraint acts almost exactly like the TangentFriction, but we'll duplicate some of the logic to keep this implementation self-contained.
@@ -540,8 +540,8 @@ namespace Demos.Demos.Characters
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ApplyHorizontalImpulse(in Matrix3x3Wide basis,
             in Matrix2x3Wide angularJacobianA, in Matrix2x3Wide angularJacobianB, in Vector2Wide constraintSpaceImpulse,
-            in BodyInertias inertiaA, in BodyInertias inertiaB,
-            ref BodyVelocities velocityA, ref BodyVelocities velocityB)
+            in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
+            ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
         {
             //Transform the constraint space impulse into world space by using the jacobian and then apply each body's inverse inertia to get the velocity change.
             Vector3Wide.Scale(basis.X, constraintSpaceImpulse.X, out var linearImpulseAX);
@@ -563,8 +563,8 @@ namespace Demos.Demos.Characters
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ApplyVerticalImpulse(in Matrix3x3Wide basis,
             in Vector3Wide angularJacobianA, in Vector3Wide angularJacobianB, in Vector<float> constraintSpaceImpulse,
-            in BodyInertias inertiaA, in BodyInertias inertiaB,
-            ref BodyVelocities velocityA, ref BodyVelocities velocityB)
+            in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
+            ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
         {
             Vector3Wide.Scale(basis.Y, constraintSpaceImpulse, out var linearImpulseA);
             Vector3Wide.Scale(linearImpulseA, inertiaA.InverseMass, out var linearChangeA);
@@ -581,7 +581,7 @@ namespace Demos.Demos.Characters
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref DynamicCharacterMotionProjection projection, ref CharacterMotionAccumulatedImpulse accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref DynamicCharacterMotionProjection projection, ref CharacterMotionAccumulatedImpulse accumulatedImpulse)
         {
             ComputeJacobians(projection.OffsetFromCharacter, projection.OffsetFromSupport, projection.SurfaceBasis,
                 out var basis, out var horizontalAngularJacobianA, out var horizontalAngularJacobianB, out var verticalAngularJacobianA, out var verticalAngularJacobianB);
@@ -590,7 +590,7 @@ namespace Demos.Demos.Characters
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref DynamicCharacterMotionProjection projection, ref CharacterMotionAccumulatedImpulse accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref DynamicCharacterMotionProjection projection, ref CharacterMotionAccumulatedImpulse accumulatedImpulse)
         {
             ComputeJacobians(projection.OffsetFromCharacter, projection.OffsetFromSupport, projection.SurfaceBasis,
                 out var basis, out var horizontalAngularJacobianA, out var horizontalAngularJacobianB, out var verticalAngularJacobianA, out var verticalAngularJacobianB);

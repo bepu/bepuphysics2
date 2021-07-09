@@ -118,7 +118,7 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeTransforms<TJacobianModifier>(ref TJacobianModifier jacobianModifier, 
             in Vector3Wide localOffsetA, in Vector3Wide localOffsetB, in Vector3Wide localPlaneNormal,
-            in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+            in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             in Vector<float> effectiveMassCFMScale,
             out Vector3Wide anchorA, out Vector3Wide anchorB, out Vector3Wide normal, out Vector<float> effectiveMass,
             out Vector3Wide linearVelocityToImpulseA, out Vector3Wide angularVelocityToImpulseA, out Vector3Wide angularVelocityToImpulseB,
@@ -161,7 +161,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref LinearAxisServoPrestepData prestep, out LinearAxisServoProjection projection)
         {
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
@@ -181,7 +181,7 @@ namespace BepuPhysics.Constraints
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
+        public static void ApplyImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB,
             in Vector3Wide linearImpulseToVelocityA, in Vector3Wide angularImpulseToVelocityA, in Vector3Wide negatedLinearImpulseToVelocityB, in Vector3Wide angularImpulseToVelocityB, ref Vector<float> csi)
         {
             Vector3Wide.Scale(linearImpulseToVelocityA, csi, out var linearChangeA);
@@ -196,14 +196,14 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA, ref velocityB,
                 projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.NegatedLinearImpulseToVelocityB, projection.AngularImpulseToVelocityB,
                 ref accumulatedImpulse);
         }
 
-        public static void ComputeCorrectiveImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
+        public static void ComputeCorrectiveImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB,
             in Vector3Wide linearVelocityToImpulseA, in Vector3Wide angularVelocityToImpulseA, in Vector3Wide angularVelocityToImpulseB,
             in Vector<float> biasImpulse, in Vector<float> softnessImpulseScale, in Vector<float> accumulatedImpulse, out Vector<float> csi)
         {
@@ -217,7 +217,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
         {
             ComputeCorrectiveImpulse(ref velocityA, ref velocityB, projection.LinearVelocityToImpulseA, projection.AngularVelocityToImpulseA, projection.AngularVelocityToImpulseB,
                 projection.BiasImpulse, projection.SoftnessImpulseScale, accumulatedImpulse, out var csi);

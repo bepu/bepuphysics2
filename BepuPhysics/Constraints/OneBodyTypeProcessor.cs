@@ -16,9 +16,9 @@ namespace BepuPhysics.Constraints
     /// <typeparam name="TProjection">Type of the projection to input.</typeparam>
     public interface IOneBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
-        void Prestep(in Vector3Wide position, in QuaternionWide orientation, in BodyInertias inertia, float dt, float inverseDt, ref TPrestepData prestepData, out TProjection projection);
-        void WarmStart(ref BodyVelocities velocity, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
-        void Solve(ref BodyVelocities velocity, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
+        void Prestep(in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide inertia, float dt, float inverseDt, ref TPrestepData prestepData, out TProjection projection);
+        void WarmStart(ref BodyVelocityWide velocity, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
+        void Solve(ref BodyVelocityWide velocity, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
     }
 
     /// <summary>
@@ -29,7 +29,7 @@ namespace BepuPhysics.Constraints
     /// <typeparam name="TProjection">Type of the projection to input.</typeparam>
     public interface IOneBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse> : IOneBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
-        void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocity, ref TPrestepData prestepData);
+        void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocity, ref TPrestepData prestepData);
     }
 
     //Not a big fan of complex generic-filled inheritance hierarchies, but this is the shortest evolutionary step to removing duplicates.

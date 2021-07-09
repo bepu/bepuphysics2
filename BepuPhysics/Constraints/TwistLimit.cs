@@ -95,7 +95,7 @@ namespace BepuPhysics.Constraints
     public struct TwistLimitFunctions : IConstraintFunctions<TwistLimitPrestepData, TwistLimitProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref TwistLimitPrestepData prestep, out TwistLimitProjection projection)
         {
             Unsafe.SkipInit(out projection);
@@ -126,13 +126,13 @@ namespace BepuPhysics.Constraints
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref TwistLimitProjection projection, ref Vector<float> accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref TwistLimitProjection projection, ref Vector<float> accumulatedImpulse)
         {
             TwistServoFunctions.ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref TwistLimitProjection projection, ref Vector<float> accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref TwistLimitProjection projection, ref Vector<float> accumulatedImpulse)
         {
             Vector3Wide.Subtract(velocityA.Angular, velocityB.Angular, out var netVelocity);
             Vector3Wide.Dot(netVelocity, projection.VelocityToImpulseA, out var csiVelocityComponent);

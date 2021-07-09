@@ -89,9 +89,9 @@ namespace BepuPhysics.Constraints
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
-            in QuaternionWide orientationA, in BodyInertias inertiaA, 
-            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB, 
-            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertias inertiaC,
+            in QuaternionWide orientationA, in BodyInertiaWide inertiaA, 
+            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, 
+            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
             float dt, float inverseDt, ref AreaConstraintPrestepData prestep, out AreaConstraintProjection projection)
         {
             //Area of a triangle with vertices a, b, and c is:
@@ -152,7 +152,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC,
+        private static void ApplyImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC,
             ref AreaConstraintProjection projection, ref Vector3Wide negatedJacobianA, ref Vector<float> impulse)
         {
             Vector3Wide.Scale(negatedJacobianA, projection.InverseMassA * impulse, out var negativeVelocityChangeA);
@@ -164,14 +164,14 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref AreaConstraintProjection projection, ref Vector<float> accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref AreaConstraintProjection projection, ref Vector<float> accumulatedImpulse)
         {
             Vector3Wide.Add(projection.JacobianB, projection.JacobianC, out var negatedJacobianA);
             ApplyImpulse(ref velocityA, ref velocityB, ref velocityC, ref projection, ref negatedJacobianA, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref AreaConstraintProjection projection, ref Vector<float> accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref AreaConstraintProjection projection, ref Vector<float> accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             Vector3Wide.Add(projection.JacobianB, projection.JacobianC, out var negatedJacobianA);

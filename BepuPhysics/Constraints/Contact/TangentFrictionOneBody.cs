@@ -35,7 +35,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Vector3Wide offsetA, ref BodyInertias inertiaA,
+        public static void Prestep(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Vector3Wide offsetA, ref BodyInertiaWide inertiaA,
             out Projection projection)
         {
             ComputeJacobians(ref tangentX, ref tangentY, ref offsetA, out var jacobians);
@@ -55,12 +55,12 @@ namespace BepuPhysics.Constraints.Contact
         /// Transforms an impulse from constraint space to world space, uses it to modify the cached world space velocities of the bodies.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref Jacobians jacobians, ref BodyInertias inertiaA,
-            ref Vector2Wide correctiveImpulse, ref BodyVelocities wsvA)
+        public static void ApplyImpulse(ref Jacobians jacobians, ref BodyInertiaWide inertiaA,
+            ref Vector2Wide correctiveImpulse, ref BodyVelocityWide wsvA)
         {
             Matrix2x3Wide.Transform(correctiveImpulse, jacobians.LinearA, out var linearImpulseA);
             Matrix2x3Wide.Transform(correctiveImpulse, jacobians.AngularA, out var angularImpulseA);
-            BodyVelocities correctiveVelocityA;
+            BodyVelocityWide correctiveVelocityA;
             Vector3Wide.Scale(linearImpulseA, inertiaA.InverseMass, out correctiveVelocityA.Linear);
             Symmetric3x3Wide.TransformWithoutOverlap(angularImpulseA, inertiaA.InverseInertiaTensor, out correctiveVelocityA.Angular);
             Vector3Wide.Add(wsvA.Linear, correctiveVelocityA.Linear, out wsvA.Linear);
@@ -68,8 +68,8 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarmStart(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Projection projection, ref BodyInertias inertiaA,
-            ref Vector2Wide accumulatedImpulse, ref BodyVelocities wsvA)
+        public static void WarmStart(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Projection projection, ref BodyInertiaWide inertiaA,
+            ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
             ComputeJacobians(ref tangentX, ref tangentY, ref projection.OffsetA, out var jacobians);
             //TODO: If the previous frame and current frame are associated with different time steps, the previous frame's solution won't be a good solution anymore.
@@ -78,7 +78,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(ref BodyVelocities wsvA, ref Projection data, ref Jacobians jacobians,
+        public static void ComputeCorrectiveImpulse(ref BodyVelocityWide wsvA, ref Projection data, ref Jacobians jacobians,
             ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, out Vector2Wide correctiveCSI)
         {
             Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvA.Linear, jacobians.LinearA, out var csvaLinear);
@@ -101,7 +101,7 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Solve(ref Vector3Wide tangentX, ref Vector3Wide tangentY,
-            ref Projection projection, ref BodyInertias inertiaA, ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocities wsvA)
+            ref Projection projection, ref BodyInertiaWide inertiaA, ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
             ComputeJacobians(ref tangentX, ref tangentY, ref projection.OffsetA, out var jacobians);
             ComputeCorrectiveImpulse(ref wsvA, ref projection, ref jacobians, ref maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);

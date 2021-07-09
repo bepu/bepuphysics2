@@ -133,7 +133,7 @@ namespace BepuPhysics.Constraints
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeTransforms(
-            in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide anchorOffsetA, in Vector3Wide anchorOffsetB, in Vector<float> distance, ref Vector3Wide direction,
+            in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB, in Vector3Wide anchorOffsetA, in Vector3Wide anchorOffsetB, in Vector<float> distance, ref Vector3Wide direction,
             float dt, in SpringSettingsWide springSettings,
             out Vector<float> positionErrorToVelocity, out Vector<float> softnessImpulseScale, out Vector<float> effectiveMass,
             out Vector3Wide linearVelocityToImpulseA, out Vector3Wide angularVelocityToImpulseA, out Vector3Wide angularVelocityToImpulseB,
@@ -184,7 +184,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref DistanceServoPrestepData prestep, out DistanceServoProjection projection)
         {
             GetDistance(orientationA, ab, orientationB, prestep.LocalOffsetA, prestep.LocalOffsetB, out var anchorOffsetA, out var anchorOffsetB, out var anchorOffset, out var distance);
@@ -205,7 +205,7 @@ namespace BepuPhysics.Constraints
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
+        public static void ApplyImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB,
             in Vector3Wide linearImpulseToVelocityA, in Vector3Wide angularImpulseToVelocityA, in Vector3Wide linearImpulseToVelocityB, in Vector3Wide angularImpulseToVelocityB,
             ref Vector<float> csi)
         {
@@ -220,14 +220,14 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref DistanceServoProjection projection, ref Vector<float> accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref DistanceServoProjection projection, ref Vector<float> accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA, ref velocityB,
                 projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.LinearImpulseToVelocityB, projection.AngularImpulseToVelocityB, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref DistanceServoProjection projection, ref Vector<float> accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref DistanceServoProjection projection, ref Vector<float> accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             Vector3Wide.Dot(velocityA.Linear, projection.LinearVelocityToImpulseA, out var linearCSIA);

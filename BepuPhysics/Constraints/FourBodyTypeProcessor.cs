@@ -28,13 +28,13 @@ namespace BepuPhysics.Constraints
     public interface IFourBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         void Prestep(
-            in QuaternionWide orientationA, in BodyInertias inertiaA, 
-            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
-            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertias inertiaC,
-            in Vector3Wide ad, in QuaternionWide orientationD, in BodyInertias inertiaD,
+            in QuaternionWide orientationA, in BodyInertiaWide inertiaA, 
+            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
+            in Vector3Wide ad, in QuaternionWide orientationD, in BodyInertiaWide inertiaD,
             float dt, float inverseDt, ref TPrestepData prestepData, out TProjection projection);
-        void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref BodyVelocities velocityD, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
-        void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref BodyVelocities velocityD, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
+        void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
+        void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
     }
 
     /// <summary>

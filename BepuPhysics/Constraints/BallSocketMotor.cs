@@ -76,14 +76,14 @@ namespace BepuPhysics.Constraints
         public Symmetric3x3Wide EffectiveMass;
         public Vector<float> SoftnessImpulseScale;
         public Vector<float> MaximumImpulse;
-        public BodyInertias InertiaA;
-        public BodyInertias InertiaB;
+        public BodyInertiaWide InertiaA;
+        public BodyInertiaWide InertiaB;
     }
 
     public struct BallSocketMotorFunctions : IConstraintFunctions<BallSocketMotorPrestepData, BallSocketMotorProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertias inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertias inertiaB,
+        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             float dt, float inverseDt, ref BallSocketMotorPrestepData prestep, out BallSocketMotorProjection projection)
         {
             projection.InertiaA = inertiaA;
@@ -100,13 +100,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BallSocketMotorProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BallSocketMotorProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             BallSocketShared.ApplyImpulse(ref velocityA, ref velocityB, projection.OffsetA, projection.OffsetB, projection.InertiaA, projection.InertiaB, accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BallSocketMotorProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BallSocketMotorProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             BallSocketShared.Solve(ref velocityA, ref velocityB, ref projection.OffsetA, ref projection.OffsetB, ref projection.BiasVelocity, ref projection.EffectiveMass, ref projection.SoftnessImpulseScale, ref projection.MaximumImpulse, ref accumulatedImpulse, ref projection.InertiaA, ref projection.InertiaB);
         }
