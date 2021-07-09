@@ -370,7 +370,7 @@ namespace BepuPhysics
                     //Now for the body->constraint direction.
                     for (int bodyIndex = 0; bodyIndex < bodySet.Count; ++bodyIndex)
                     {
-                        ref var constraintList = ref bodySet.Constraints[bodyIndex].References;
+                        ref var constraintList = ref bodySet.Constraints[bodyIndex];
                         for (int constraintIndex = 0; constraintIndex < constraintList.Count; ++constraintIndex)
                         {
                             ref var constraintLocation = ref HandleToConstraint[constraintList[constraintIndex].ConnectingConstraintHandle.Value];
@@ -640,12 +640,11 @@ namespace BepuPhysics
                 awakener.AwakenBody(bodyHandles[i]);
             }
             Add(bodyHandles, ref description, out var constraintHandle);
-            ref var location = ref HandleToConstraint[constraintHandle.Value];
             for (int i = 0; i < bodyHandles.Length; ++i)
             {
                 var bodyHandle = bodyHandles[i];
                 bodies.ValidateExistingHandle(bodyHandle);
-                bodies.AddConstraint(this, bodies.HandleToLocation[bodyHandle.Value].Index, constraintHandle, ref location, i);
+                bodies.AddConstraint(bodies.HandleToLocation[bodyHandle.Value].Index, constraintHandle, i);
             }
             return constraintHandle;
         }
@@ -910,7 +909,7 @@ namespace BepuPhysics
             //That's not impossible by any means, but consider that this function will tend to be called in a deferred way- we have control over how many cache optimizations
             //we perform. We do not, however, have any control over how many adds must be performed. Those must be performed immediately for correctness.
             //In other words, doing a little more work here can reduce the overall work required, in addition to simplifying the storage requirements.
-            ref var list = ref bodies.ActiveSet.Constraints[originalIndex].References;
+            ref var list = ref bodies.ActiveSet.Constraints[originalIndex];
             bool bodyShouldBePresentInFallback = false;
             for (int i = 0; i < list.Count; ++i)
             {
@@ -1077,38 +1076,6 @@ namespace BepuPhysics
             Debug.Assert(ActiveSet.Batches.Count <= FallbackBatchThreshold + 1,
                 "There cannot be more than FallbackBatchThreshold + 1 constraint batches because that +1 is the fallback batch which contains all remaining constraints.");
         }
-
-        internal void RemoveEarlyIntegrationResponsibilityFromConstraint(ConstraintHandle constraint, int bodyIndexInConstraint)
-        {
-            ref var location = ref HandleToConstraint[constraint.Value];
-            Debug.Assert(location.SetIndex == 0);
-            ref var typeBatch = ref ActiveSet.Batches[location.BatchIndex].GetTypeBatch(location.TypeId);
-            typeBatch.IntegrationFlags[bodyIndexInConstraint].Early.Remove(location.IndexInTypeBatch);
-        }
-        internal void RemoveLateIntegrationResponsibilityFromConstraint(ConstraintHandle constraint, int bodyIndexInConstraint)
-        {
-            ref var location = ref HandleToConstraint[constraint.Value];
-            Debug.Assert(location.SetIndex == 0);
-            ref var typeBatch = ref ActiveSet.Batches[location.BatchIndex].GetTypeBatch(location.TypeId);
-            typeBatch.IntegrationFlags[bodyIndexInConstraint].Late.Remove(location.IndexInTypeBatch);
-        }
-
-        internal void AddEarlyIntegrationResponsibilityToConstraint(ConstraintHandle constraint, int bodyIndexInConstraint)
-        {
-            ref var location = ref HandleToConstraint[constraint.Value];
-            Debug.Assert(location.SetIndex == 0);
-            ref var typeBatch = ref ActiveSet.Batches[location.BatchIndex].GetTypeBatch(location.TypeId);
-            typeBatch.IntegrationFlags[bodyIndexInConstraint].Early.AddUnsafely(location.IndexInTypeBatch);
-        }
-
-        internal void AddLateIntegrationResponsibilityToConstraint(ConstraintHandle constraint, int bodyIndexInConstraint)
-        {
-            ref var location = ref HandleToConstraint[constraint.Value];
-            Debug.Assert(location.SetIndex == 0);
-            ref var typeBatch = ref ActiveSet.Batches[location.BatchIndex].GetTypeBatch(location.TypeId);
-            typeBatch.IntegrationFlags[bodyIndexInConstraint].Late.AddUnsafely(location.IndexInTypeBatch);
-        }
-
 
         //Note that none of these affect the constraint batch estimates or type batch estimates. The assumption is that those are too small to bother with.
         //In the worst case you might see a couple of kilobytes. The reason why these functions exist is to deal with the potential many *megabytes* worth of constraint and body buffers.

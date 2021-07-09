@@ -149,7 +149,7 @@ namespace BepuPhysics.CollisionDetection
             for (int i = 0; i < typeProcessor.BodiesPerConstraint; ++i)
             {
                 var bodyHandle = constraintRemover.bodies.ActiveSet.IndexToHandle[references[i]];
-                Console.Write($"{bodyHandle} ({constraintRemover.bodies.ActiveSet.Constraints[references[i]].References.Count}), ");
+                Console.Write($"{bodyHandle} ({constraintRemover.bodies.ActiveSet.Constraints[references[i]].Count}), ");
 
             }
             Console.WriteLine();

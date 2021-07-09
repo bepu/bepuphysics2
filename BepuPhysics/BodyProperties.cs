@@ -1,10 +1,8 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -299,50 +297,5 @@ namespace BepuPhysics
         /// True if this body is a candidate for being slept. If all the bodies that it is connected to by constraints are also candidates, this body may go to sleep.
         /// </summary>
         public bool SleepCandidate;
-    }
-
-    /// <summary>
-    /// Stores references to constraints connected to a body and additional data for choosing what system is responsible for integrating a body's velocities and pose.
-    /// </summary>
-    public struct BodyConstraints
-    {
-        public QuickList<BodyConstraintReference> References;
-
-        /// <summary>
-        /// Index of the body in the unconstrained integration set if it has no constraints. If the body has constraints or is asleep, this value is undefined.
-        /// </summary>
-        public int UnconstrainedIndex;
-
-        /// <summary>
-        /// Inclusive minimum constraint batch index that this body is associated with if the body has constraints. If it has no constraints or is asleep, this value is undefined.
-        /// </summary>
-        public int MinimumBatch;
-        /// <summary>
-        /// Inclusive maximum constraint batch index that this body is associated with if the body has constraints. If it has no constraints or is asleep, this value is undefined.
-        /// </summary>
-        public int MaximumBatch;
-
-        /// <summary>
-        /// Constraint connected to the body associated with the lowest batch index. If the body has no constraints, this value is undefined.
-        /// </summary>
-        public ConstraintHandle MinimumConstraint;
-        /// <summary>
-        /// Constraint connected to the body associated with the highest batch index. If the body has no constraints, this value is undefined.
-        /// </summary>
-        public ConstraintHandle MaximumConstraint;
-
-        /// <summary>
-        /// Index of the body within the minimum batch index constraint. If the body has no constraints, this value is undefined.
-        /// </summary>
-        public int MinimumIndexInConstraint;
-        /// <summary>
-        /// Index of the body within the maximum batch index constraint. If the body has no constraints, this value is undefined.
-        /// </summary>
-        public int MaximumIndexInConstraint;
-
-        /// <summary>
-        /// Gets whether this body has any constraints based on the value in the UnconstrainedIndex field.
-        /// </summary>
-        public bool Constrained => References.Count > 0;
     }
 }

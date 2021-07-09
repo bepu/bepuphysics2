@@ -130,15 +130,12 @@ namespace BepuPhysics.CollisionDetection
                 simulation.Solver.ApplyDescriptionWithoutWaking(ref reference, ref constraint.ConstraintDescription);
                 ref var aLocation = ref simulation.Bodies.HandleToLocation[handles[0].Value];
                 Debug.Assert(aLocation.SetIndex == 0, "By the time we flush new constraints into the solver, all associated islands should be awake.");
-                //We pass the reference to the constraint location explicitly to try to make abundantly clear that it is *used*, and this function should only be called
-                //from contexts where that information is available. We don't currently use bodies.AddConstraint from any context where that's a risk, but this is the kind of thing
-                //that I forget about a year later when trying to modify the bookkeeping somehow.
-                simulation.Bodies.AddConstraint(simulation.Solver, aLocation.Index, constraintHandle, ref simulation.Solver.HandleToConstraint[constraintHandle.Value], 0);
+                simulation.Bodies.AddConstraint(aLocation.Index, constraintHandle, 0);
                 if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
                 {
                     ref var bLocation = ref simulation.Bodies.HandleToLocation[handles[1].Value];
                     Debug.Assert(bLocation.SetIndex == 0, "By the time we flush new constraints into the solver, all associated islands should have be awake.");
-                    simulation.Bodies.AddConstraint(simulation.Solver, bLocation.Index, constraintHandle, ref simulation.Solver.HandleToConstraint[constraintHandle.Value], 1);
+                    simulation.Bodies.AddConstraint(bLocation.Index, constraintHandle, 1);
                 }
                 pairCache.CompleteConstraintAdd(simulation.NarrowPhase, simulation.Solver, ref constraint.Impulses, constraint.ConstraintCacheIndex, constraintHandle, ref constraint.Pair);
             }

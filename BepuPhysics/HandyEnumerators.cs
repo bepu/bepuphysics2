@@ -29,30 +29,6 @@ namespace BepuPhysics
             Handles[Index++] = Bodies.ActiveSet.IndexToHandle[bodyIndex].Value;
         }
     }
-    /// <summary>
-    /// Collects body indices and body handles associated with an active constraint as integers.
-    /// </summary>
-    public unsafe struct ActiveConstraintBodyHandleAndIndexCollector : IForEach<int>
-    {
-        public Bodies Bodies;
-        public int* Indices;
-        public int* Handles;
-        public int Index;
-
-        public ActiveConstraintBodyHandleAndIndexCollector(Bodies bodies, int* handles, int* indices)
-        {
-            Bodies = bodies;
-            Indices = indices;
-            Handles = handles;
-            Index = 0;
-        }
-
-        public void LoopBody(int bodyIndex)
-        {
-            Indices[Index] = bodyIndex;
-            Handles[Index++] = Bodies.ActiveSet.IndexToHandle[bodyIndex].Value;
-        }
-    }
 
     public unsafe struct ReferenceCollector : IForEach<int>
     {

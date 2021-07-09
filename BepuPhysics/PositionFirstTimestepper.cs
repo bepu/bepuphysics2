@@ -47,7 +47,7 @@ namespace BepuPhysics
             //2) By bundling bounding box calculation with pose integration, you avoid redundant pose and velocity memory accesses.
             //3) Generated contact positions are in sync with the integrated poses. 
             //That's often helpful for gameplay purposes- you don't have to reinterpret contact data when creating graphical effects or positioning sound sources.
-
+            
             //#1 is a difficult problem, though. There is no fully 'correct' place to change velocities. We might just have to bite the bullet and create a
             //inertia tensor/bounding box update separate from pose integration. If the cache gets evicted in between (virtually guaranteed unless no stages run),
             //this basically means an extra 100-200 microseconds per frame on a processor with ~20GBps bandwidth simulating 32768 bodies.

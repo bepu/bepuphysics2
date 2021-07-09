@@ -48,9 +48,9 @@ namespace BepuPhysics
         /// </summary>
         public Buffer<BodyActivity> Activity;
         /// <summary>
-        /// List of constraints and constraint related data associated with each body in the set.
+        /// List of constraints associated with each body in the set.
         /// </summary>
-        public Buffer<BodyConstraints> Constraints;
+        public Buffer<QuickList<BodyConstraintReference>> Constraints;
 
         public int Count;
         /// <summary>
@@ -73,8 +73,7 @@ namespace BepuPhysics
             ++Count;
             IndexToHandle[index] = handle;
             //Collidable's broad phase index is left unset. The Bodies collection is responsible for attaching that data.
-            Constraints[index].References = new QuickList<BodyConstraintReference>(minimumConstraintCapacity, pool);
-
+            Constraints[index] = new QuickList<BodyConstraintReference>(minimumConstraintCapacity, pool);
             ApplyDescriptionByIndex(index, bodyDescription);
             return index;
         }
@@ -85,7 +84,6 @@ namespace BepuPhysics
             //Move the last body into the removed slot.
             --Count;
             bool bodyMoved = bodyIndex < Count;
-            ref var constraintsForRemovedSlot = ref Constraints[bodyIndex];
             if (bodyMoved)
             {
                 movedBodyIndex = Count;
@@ -161,27 +159,24 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ref BodyConstraints AddConstraint(int bodyIndex, ConstraintHandle constraintHandle, int bodyIndexInConstraint, BufferPool pool)
+        internal void AddConstraint(int bodyIndex, ConstraintHandle constraintHandle, int bodyIndexInConstraint, BufferPool pool)
         {
             BodyConstraintReference constraint;
             constraint.ConnectingConstraintHandle = constraintHandle;
             constraint.BodyIndexInConstraint = bodyIndexInConstraint;
             ref var constraints = ref Constraints[bodyIndex];
-            Debug.Assert(constraints.References.Span.Allocated, "Any time a body is created, a list should be built to support it.");
-            if (constraints.References.Span.Length == constraints.References.Count)
-                constraints.References.Resize(constraints.References.Span.Length * 2, pool);
-            constraints.References.AllocateUnsafely() = constraint;
-            return ref constraints;
+            Debug.Assert(constraints.Span.Allocated, "Any time a body is created, a list should be built to support it.");
+            if (constraints.Span.Length == constraints.Count)
+                constraints.Resize(constraints.Span.Length * 2, pool);
+            constraints.AllocateUnsafely() = constraint;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ref BodyConstraints RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle, int minimumConstraintCapacityPerBody, BufferPool pool)
+        internal void RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle, int minimumConstraintCapacityPerBody, BufferPool pool)
         {
             //This uses a linear search. That's fine; bodies will rarely have more than a handful of constraints associated with them.
             //Attempting to use something like a hash set for fast removes would just introduce more constant overhead and slow it down on average.
-            ref var constraints = ref Constraints[bodyIndex];
-            ref var list = ref constraints.References;
-            //This constraint did not have any integration responsibilities; we can remove it with no fanfare.
+            ref var list = ref Constraints[bodyIndex];
             for (int i = 0; i < list.Count; ++i)
             {
                 ref var element = ref list[i];
@@ -202,12 +197,11 @@ namespace BepuPhysics
                 //The list can be trimmed down a bit while still holding all existing constraints and obeying the minimum capacity.
                 list.Resize(targetCapacity, pool);
             }
-            return ref constraints;
         }
 
         public bool BodyIsConstrainedBy(int bodyIndex, ConstraintHandle constraintHandle)
         {
-            ref var list = ref Constraints[bodyIndex].References;
+            ref var list = ref Constraints[bodyIndex];
             for (int i = 0; i < list.Count; ++i)
             {
                 if (list[i].ConnectingConstraintHandle.Value == constraintHandle.Value)
@@ -256,7 +250,7 @@ namespace BepuPhysics
         {
             for (int i = 0; i < Count; ++i)
             {
-                Constraints[i].References.Dispose(pool);
+                Constraints[i].Dispose(pool);
             }
             Count = 0;
         }
@@ -283,7 +277,7 @@ namespace BepuPhysics
         {
             for (int i = 0; i < Count; ++i)
             {
-                Constraints[i].References.Dispose(pool);
+                Constraints[i].Dispose(pool);
             }
             DisposeBuffers(pool);
             this = new BodySet();

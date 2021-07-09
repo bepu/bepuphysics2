@@ -362,7 +362,6 @@ namespace Demos.Demos
                 }
                 Simulation.Bodies.ApplyDescription(handle, newDescription);
             }
-            Simulation.Bodies.ValidateIntegrationResponsibilities();
 
             base.Update(window, camera, input, dt);
 
