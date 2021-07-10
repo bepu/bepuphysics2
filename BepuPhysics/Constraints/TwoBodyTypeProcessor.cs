@@ -309,7 +309,7 @@ namespace BepuPhysics.Constraints
             //TODO: ARM?
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static unsafe void PrefetchBundle(MotionState* motionBase, BodyInertia* inertiaBase, ref TwoBodyReferences references, int countInBundle)
+        static unsafe void PrefetchBundle(MotionState* motionBase, BodyInertias* inertiaBase, ref TwoBodyReferences references, int countInBundle)
         {
             var indicesA = (int*)Unsafe.AsPointer(ref references.IndexA);
             var indicesB = (int*)Unsafe.AsPointer(ref references.IndexB);
@@ -327,7 +327,7 @@ namespace BepuPhysics.Constraints
         const int warmStartPrefetchDistance = 8;
         const int solvePrefetchDistance = 4;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void EarlyPrefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, ref Buffer<BodyInertia> inertias, int startBundleIndex, int exclusiveEndBundleIndex)
+        unsafe static void EarlyPrefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, ref Buffer<BodyInertias> inertias, int startBundleIndex, int exclusiveEndBundleIndex)
         {
             exclusiveEndBundleIndex = Math.Min(exclusiveEndBundleIndex, startBundleIndex + prefetchDistance);
             var lastBundleIndex = exclusiveEndBundleIndex - 1;
@@ -340,7 +340,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void Prefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, ref Buffer<BodyInertia> inertias, int bundleIndex, int exclusiveEndBundleIndex)
+        unsafe static void Prefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, ref Buffer<BodyInertias> inertias, int bundleIndex, int exclusiveEndBundleIndex)
         {
             var targetIndex = bundleIndex + prefetchDistance;
             if (targetIndex < exclusiveEndBundleIndex)
@@ -356,7 +356,7 @@ namespace BepuPhysics.Constraints
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
             ref var motionStates = ref bodies.ActiveSet.MotionStates;
-            ref var inertias = ref bodies.Inertias;
+            ref var inertias = ref bodies.ActiveSet.Inertias;
             EarlyPrefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
@@ -391,7 +391,7 @@ namespace BepuPhysics.Constraints
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
             ref var motionStates = ref bodies.ActiveSet.MotionStates;
-            ref var inertias = ref bodies.Inertias;
+            ref var inertias = ref bodies.ActiveSet.Inertias;
             EarlyPrefetch(solvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {

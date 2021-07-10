@@ -831,7 +831,7 @@ namespace Demos.Demos.Characters
                         activeSet.MotionStates[jump.CharacterBodyIndex].Velocity.Linear += jump.CharacterVelocityChange;
                         if (jump.SupportBodyIndex >= 0)
                         {
-                            BodyReference.ApplyImpulse(Simulation.Bodies.ActiveSet, jump.SupportBodyIndex, jump.CharacterVelocityChange / -activeSet.LocalInertias[jump.CharacterBodyIndex].InverseMass, jump.SupportImpulseOffset);
+                            BodyReference.ApplyImpulse(Simulation.Bodies.ActiveSet, jump.SupportBodyIndex, jump.CharacterVelocityChange / -activeSet.Inertias[jump.CharacterBodyIndex].Local.InverseMass, jump.SupportImpulseOffset);
                         }
                     }
                     workerCache.Dispose(pool);

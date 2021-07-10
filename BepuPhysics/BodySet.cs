@@ -36,7 +36,7 @@ namespace BepuPhysics
         public Buffer<BodyHandle> IndexToHandle;
 
         public Buffer<MotionState> MotionStates;
-        public Buffer<BodyInertia> LocalInertias;
+        public Buffer<BodyInertias> Inertias;
 
         /// <summary>
         /// The collidables owned by each body in the set. Speculative margins, continuity settings, and shape indices can be changed directly.
@@ -89,7 +89,7 @@ namespace BepuPhysics
                 movedBodyIndex = Count;
                 //Copy the memory state of the last element down.
                 MotionStates[bodyIndex] = MotionStates[movedBodyIndex];
-                LocalInertias[bodyIndex] = LocalInertias[movedBodyIndex];
+                Inertias[bodyIndex] = Inertias[movedBodyIndex];
                 Activity[bodyIndex] = Activity[movedBodyIndex];
                 Collidables[bodyIndex] = Collidables[movedBodyIndex];
                 //Note that the constraint list is NOT disposed before being overwritten.
@@ -127,9 +127,8 @@ namespace BepuPhysics
             ref var state = ref MotionStates[index];
             state.Pose = description.Pose;
             state.Velocity = description.Velocity;
-            //TODO: We're just trying this right now; note redundancy that we need to deal with.
-            state.PackedLocalInertia = new PackedInertia(description.LocalInertia);
-            LocalInertias[index] = description.LocalInertia;
+            //Note that the world inertia is only valid in the velocity integration->pose integration interval, so we don't need to initialize it here.
+            Inertias[index].Local = description.LocalInertia;
             ref var collidable = ref Collidables[index];
             collidable.Continuity = description.Collidable.Continuity;
             collidable.SpeculativeMargin = description.Collidable.SpeculativeMargin;
@@ -148,7 +147,7 @@ namespace BepuPhysics
             ref var state = ref MotionStates[index];
             description.Pose = state.Pose;
             description.Velocity = state.Velocity;
-            description.LocalInertia = LocalInertias[index];
+            description.LocalInertia = Inertias[index].Local;
             ref var collidable = ref Collidables[index];
             description.Collidable.Continuity = collidable.Continuity;
             description.Collidable.Shape = collidable.Shape;
@@ -226,7 +225,7 @@ namespace BepuPhysics
             Helpers.Swap(ref IndexToHandle[slotA], ref IndexToHandle[slotB]);
             Helpers.Swap(ref Collidables[slotA], ref Collidables[slotB]);
             Helpers.Swap(ref MotionStates[slotA], ref MotionStates[slotB]);
-            Helpers.Swap(ref LocalInertias[slotA], ref LocalInertias[slotB]);
+            Helpers.Swap(ref Inertias[slotA], ref Inertias[slotB]);
             Helpers.Swap(ref Activity[slotA], ref Activity[slotB]);
             Helpers.Swap(ref Constraints[slotA], ref Constraints[slotB]);
         }
@@ -239,7 +238,7 @@ namespace BepuPhysics
             targetBodyCapacity = BufferPool.GetCapacityForCount<int>(targetBodyCapacity);
             Debug.Assert(MotionStates.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
             pool.ResizeToAtLeast(ref MotionStates, targetBodyCapacity, Count);
-            pool.ResizeToAtLeast(ref LocalInertias, targetBodyCapacity, Count);
+            pool.ResizeToAtLeast(ref Inertias, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref IndexToHandle, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref Collidables, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref Activity, targetBodyCapacity, Count);
@@ -262,7 +261,7 @@ namespace BepuPhysics
         public void DisposeBuffers(BufferPool pool)
         {
             pool.Return(ref MotionStates);
-            pool.Return(ref LocalInertias);
+            pool.Return(ref Inertias);
             pool.Return(ref IndexToHandle);
             pool.Return(ref Collidables);
             pool.Return(ref Activity);

@@ -256,7 +256,7 @@ namespace BepuPhysics
                 //Using localAngularVelocity0 as the first guess for localAngularVelocity1.
                 Matrix3x3.TransformTranspose(angularVelocity, orientationMatrix, out var localAngularVelocity);
                 Symmetric3x3.Invert(localInertia.InverseInertiaTensor, out var localInertiaTensor);
-                
+
                 Symmetric3x3.TransformWithoutOverlap(localAngularVelocity, localInertiaTensor, out var localAngularMomentum);
                 var residual = dt * Vector3.Cross(localAngularMomentum, localAngularVelocity);
 
@@ -307,8 +307,7 @@ namespace BepuPhysics
         unsafe void IntegrateBodiesAndUpdateBoundingBoxes(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
             ref var baseStates = ref bodies.ActiveSet.MotionStates[0];
-            ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
-            ref var baseInertias = ref bodies.Inertias[0];
+            ref var baseInertias = ref bodies.ActiveSet.Inertias[0];
             ref var baseActivity = ref bodies.ActiveSet.Activity[0];
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
@@ -329,15 +328,15 @@ namespace BepuPhysics
                 //has to get is inertia tensors calculated elsewhere. Either they would need to be computed on addition or something- which is a bit gross, but doable-
                 //or we would need to move this calculation to the beginning of the frame to guarantee that all inertias are up to date. 
                 //This would require a scan through all pose memory to support, but if you do it at the same time as AABB update, that's fine- that stage uses the pose too.
-                ref var localInertia = ref Unsafe.Add(ref baseLocalInertia, i);
                 ref var inertia = ref Unsafe.Add(ref baseInertias, i);
-                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, state.Pose.Orientation, out inertia.InverseInertiaTensor);
+                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, state.Pose.Orientation, out inertia.World.InverseInertiaTensor);
                 //While it's a bit goofy just to copy over the inverse mass every frame even if it doesn't change,
-                //it's virtually always gathered together with the inertia tensor and it really isn't worth a whole extra external system to copy inverse masses only on demand.
-                inertia.InverseMass = localInertia.InverseMass;
+                //it's virtually always gathered together with the inertia tensor and having a duplicate means we can sometimes avoid loading a lane
+                //(i.e. loading only the last 32 bytes of the cache line into a Vector256).
+                inertia.World.InverseMass = inertia.Local.InverseMass;
 
-                IntegrateAngularVelocity(previousOrientation, state.Pose, localInertia, inertia, ref state.Velocity.Angular, dt);
-                Callbacks.IntegrateVelocity(i, state.Pose, localInertia, workerIndex, ref state.Velocity);
+                IntegrateAngularVelocity(previousOrientation, state.Pose, inertia.Local, inertia.World, ref state.Velocity.Angular, dt);
+                Callbacks.IntegrateVelocity(i, state.Pose, inertia.Local, workerIndex, ref state.Velocity);
 
                 //Bounding boxes are accumulated in a scalar fashion, but the actual bounding box calculations are deferred until a sufficient number of collidables are accumulated to make
                 //executing a bundle worthwhile. This does two things: 
@@ -361,7 +360,7 @@ namespace BepuPhysics
         unsafe void PredictBoundingBoxes(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
             ref var baseStates = ref bodies.ActiveSet.MotionStates[0];
-            ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
+            ref var baseInertia = ref bodies.ActiveSet.Inertias[0];
             ref var baseActivity = ref bodies.ActiveSet.Activity[0];
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
@@ -376,7 +375,7 @@ namespace BepuPhysics
 
                 //Bounding box prediction does not need to update inertia tensors.                
                 var integratedVelocity = state.Velocity;
-                Callbacks.IntegrateVelocity(i, state.Pose, Unsafe.Add(ref baseLocalInertia, i), workerIndex, ref integratedVelocity);
+                Callbacks.IntegrateVelocity(i, state.Pose, Unsafe.Add(ref baseInertia, i).Local, workerIndex, ref integratedVelocity);
 
                 //Note that we do not include fancier angular integration for the bounding box prediction- it's not very important.
                 boundingBoxBatcher.Add(i, state.Pose, integratedVelocity, Unsafe.Add(ref baseCollidable, i));
@@ -386,8 +385,7 @@ namespace BepuPhysics
         unsafe void IntegrateVelocitiesBoundsAndInertias(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
             ref var baseStates = ref bodies.ActiveSet.MotionStates[0];
-            ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
-            ref var baseInertias = ref bodies.Inertias[0];
+            ref var baseInertia = ref bodies.ActiveSet.Inertias[0];
             ref var baseActivity = ref bodies.ActiveSet.Activity[0];
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
@@ -400,13 +398,12 @@ namespace BepuPhysics
 
                 UpdateSleepCandidacy(ref state.Velocity, ref Unsafe.Add(ref baseActivity, i));
 
-                ref var localInertia = ref Unsafe.Add(ref baseLocalInertia, i);
-                ref var inertia = ref Unsafe.Add(ref baseInertias, i);
-                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, state.Pose.Orientation, out inertia.InverseInertiaTensor);
-                inertia.InverseMass = localInertia.InverseMass;
+                ref var inertia = ref Unsafe.Add(ref baseInertia, i);
+                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, state.Pose.Orientation, out inertia.World.InverseInertiaTensor);
+                inertia.World.InverseMass = inertia.Local.InverseMass;
 
-                IntegrateAngularVelocity(state.Pose, localInertia, inertia, ref state.Velocity.Angular, dt);
-                Callbacks.IntegrateVelocity(i, state.Pose, localInertia, workerIndex, ref state.Velocity);
+                IntegrateAngularVelocity(state.Pose, inertia.Local, inertia.World, ref state.Velocity.Angular, dt);
+                Callbacks.IntegrateVelocity(i, state.Pose, inertia.Local, workerIndex, ref state.Velocity);
 
                 boundingBoxBatcher.Add(i, state.Pose, state.Velocity, Unsafe.Add(ref baseCollidable, i));
             }
@@ -416,8 +413,7 @@ namespace BepuPhysics
         unsafe void IntegrateVelocities(int startIndex, int endIndex, float dt, int workerIndex)
         {
             ref var baseStates = ref bodies.ActiveSet.MotionStates[0];
-            ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
-            ref var baseInertias = ref bodies.Inertias[0];
+            ref var baseInertia = ref bodies.ActiveSet.Inertias[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
                 ref var state = ref Unsafe.Add(ref baseStates, i);
@@ -426,13 +422,12 @@ namespace BepuPhysics
                 state.Velocity.Linear.Validate();
                 state.Velocity.Angular.Validate();
 
-                ref var localInertia = ref Unsafe.Add(ref baseLocalInertia, i);
-                ref var inertia = ref Unsafe.Add(ref baseInertias, i);
-                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, state.Pose.Orientation, out inertia.InverseInertiaTensor);
-                inertia.InverseMass = localInertia.InverseMass;
+                ref var inertia = ref Unsafe.Add(ref baseInertia, i);
+                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, state.Pose.Orientation, out inertia.World.InverseInertiaTensor);
+                inertia.World.InverseMass = inertia.Local.InverseMass;
 
-                IntegrateAngularVelocity(state.Pose, localInertia, inertia, ref state.Velocity.Angular, dt);
-                Callbacks.IntegrateVelocity(i, state.Pose, localInertia, workerIndex, ref state.Velocity);
+                IntegrateAngularVelocity(state.Pose, inertia.Local, inertia.World, ref state.Velocity.Angular, dt);
+                Callbacks.IntegrateVelocity(i, state.Pose, inertia.Local, workerIndex, ref state.Velocity);
             }
         }
 
@@ -546,9 +541,6 @@ namespace BepuPhysics
 
         public void IntegrateBodiesAndUpdateBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
-            //Users of this codepath are expecting all integration related work to be done at once, so we need to update inertias.
-            bodies.EnsureInertiasCapacity(Math.Max(1, bodies.ActiveSet.Count));
-
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
             Callbacks.PrepareForIntegration(dt);
@@ -600,8 +592,6 @@ namespace BepuPhysics
 
         public void IntegrateVelocitiesBoundsAndInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
-            bodies.EnsureInertiasCapacity(Math.Max(1, bodies.ActiveSet.Count));
-
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
             Callbacks.PrepareForIntegration(dt);
@@ -622,9 +612,6 @@ namespace BepuPhysics
 
         public void IntegrateVelocitiesAndUpdateInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
-            //Isolated velocity integration is used by substeppers that also expect an inertia update.
-            bodies.EnsureInertiasCapacity(Math.Max(1, bodies.ActiveSet.Count));
-
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
             Callbacks.PrepareForIntegration(dt);

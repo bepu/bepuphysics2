@@ -137,7 +137,7 @@ namespace BepuPhysics
             get
             {
                 ref var location = ref MemoryLocation;
-                return ref Bodies.Sets[location.SetIndex].LocalInertias[location.Index];
+                return ref Bodies.Sets[location.SetIndex].Inertias[location.Index].Local;
             }
         }
 
@@ -219,9 +219,11 @@ namespace BepuPhysics
         {
             ref var location = ref MemoryLocation;
             ref var set = ref Bodies.Sets[MemoryLocation.SetIndex];
-            ref var localInertia = ref set.LocalInertias[location.Index];
+            //Note that inertia.World is ephemeral data packed into the same cache line for the benefit of the solver.
+            //It should not be assumed to contain up to date information outside of the velocity integration to pose integration interval, so this computes world inertia from scratch.
+            ref var inertia = ref set.Inertias[location.Index];
             ref var pose = ref set.MotionStates[location.Index].Pose;
-            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out inverseInertia);
+            PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, pose.Orientation, out inverseInertia);
         }
 
         /// <summary>
@@ -341,7 +343,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(in BodySet set, int index, in Vector3 impulse, in Vector3 impulseOffset)
         {
-            ref var localInertia = ref set.LocalInertias[index];
+            ref var localInertia = ref set.Inertias[index].Local;
             ref var state = ref set.MotionStates[index];
             ApplyImpulse(impulse, impulseOffset, ref localInertia, ref state.Pose, ref state.Velocity);
         }
@@ -393,7 +395,7 @@ namespace BepuPhysics
         {
             ref var location = ref MemoryLocation;
             ref var set = ref Bodies.Sets[location.SetIndex];
-            ApplyLinearImpulse(impulse, set.LocalInertias[location.Index].InverseMass, ref set.MotionStates[location.Index].Velocity.Linear);
+            ApplyLinearImpulse(impulse, set.Inertias[location.Index].Local.InverseMass, ref set.MotionStates[location.Index].Velocity.Linear);
         }
 
         /// <summary>
@@ -416,9 +418,11 @@ namespace BepuPhysics
         {
             ref var location = ref MemoryLocation;
             ref var set = ref Bodies.Sets[location.SetIndex];
-            ref var localInertia = ref set.LocalInertias[location.Index];
+            ref var inertia = ref set.Inertias[location.Index];
             ref var state = ref set.MotionStates[location.Index];
-            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, state.Pose.Orientation, out var inverseInertia);
+            //Note that inertia.World is ephemeral data packed into the same cache line for the benefit of the solver.
+            //It should not be assumed to contain up to date information outside of the velocity integration to pose integration interval, so this computes world inertia from scratch.
+            PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, state.Pose.Orientation, out var inverseInertia);
             ApplyAngularImpulse(angularImpulse, inverseInertia, ref state.Velocity.Angular);
         }
     }
