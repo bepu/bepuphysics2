@@ -17,9 +17,9 @@ namespace BepuPhysics
     {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteGatherInertia(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<BodyInertia> states, ref BodyInertiaWide gatheredInertias)
+        private static void WriteGatherInertia(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<BodyInertias> inertias, ref BodyInertiaWide gatheredInertias)
         {
-            ref var source = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)];
+            ref var source = ref inertias[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)].World;
             ref var targetSlot = ref GetOffsetInstance(ref gatheredInertias, bodyIndexInBundle);
             GetFirst(ref targetSlot.InverseInertiaTensor.XX) = source.InverseInertiaTensor.XX;
             GetFirst(ref targetSlot.InverseInertiaTensor.YX) = source.InverseInertiaTensor.YX;
@@ -39,33 +39,6 @@ namespace BepuPhysics
             QuaternionWide.WriteFirst(state.Pose.Orientation, ref GetOffsetInstance(ref orientation, bodyIndexInBundle));
             Vector3Wide.WriteFirst(state.Velocity.Linear, ref GetOffsetInstance(ref velocity.Linear, bodyIndexInBundle));
             Vector3Wide.WriteFirst(state.Velocity.Angular, ref GetOffsetInstance(ref velocity.Angular, bodyIndexInBundle));
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteGatherState(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<MotionState> states,
-            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity, ref BodyInertiaWide inertia)
-        {
-            ref var state = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)];
-            Vector3Wide.WriteFirst(state.Pose.Position, ref GetOffsetInstance(ref position, bodyIndexInBundle));
-            QuaternionWide.WriteFirst(state.Pose.Orientation, ref GetOffsetInstance(ref orientation, bodyIndexInBundle));
-            Vector3Wide.WriteFirst(state.Velocity.Linear, ref GetOffsetInstance(ref velocity.Linear, bodyIndexInBundle));
-            Vector3Wide.WriteFirst(state.Velocity.Angular, ref GetOffsetInstance(ref velocity.Angular, bodyIndexInBundle));
-
-            //ref var targetSlot = ref GetOffsetInstance(ref inertia, bodyIndexInBundle);
-            //GetFirst(ref targetSlot.InverseInertiaTensor.XX) = (float)state.PackedLocalInertia.InverseNormalizedInertiaXX * state.PackedLocalInertia.InverseMass;
-            //GetFirst(ref targetSlot.InverseInertiaTensor.YX) = 0;
-            //GetFirst(ref targetSlot.InverseInertiaTensor.YY) = (float)state.PackedLocalInertia.InverseNormalizedInertiaYY * state.PackedLocalInertia.InverseMass;
-            //GetFirst(ref targetSlot.InverseInertiaTensor.ZX) = 0;
-            //GetFirst(ref targetSlot.InverseInertiaTensor.ZY) = 0;
-            //GetFirst(ref targetSlot.InverseInertiaTensor.ZZ) = (float)state.PackedLocalInertia.InverseNormalizedInertiaZZ * state.PackedLocalInertia.InverseMass;
-            //GetFirst(ref targetSlot.InverseMass) = state.PackedLocalInertia.InverseMass;
-            ref var targetSlot = ref GetOffsetInstance(ref inertia, bodyIndexInBundle);
-            GetFirst(ref targetSlot.InverseInertiaTensor.XX) = state.PackedLocalInertia.InverseMass;
-            GetFirst(ref targetSlot.InverseInertiaTensor.YX) = 0;
-            GetFirst(ref targetSlot.InverseInertiaTensor.YY) = state.PackedLocalInertia.InverseMass;
-            GetFirst(ref targetSlot.InverseInertiaTensor.ZX) = 0;
-            GetFirst(ref targetSlot.InverseInertiaTensor.ZY) = 0;
-            GetFirst(ref targetSlot.InverseInertiaTensor.ZZ) = state.PackedLocalInertia.InverseMass;
-            GetFirst(ref targetSlot.InverseMass) = state.PackedLocalInertia.InverseMass;
         }
 
         /// <summary>
@@ -93,11 +66,10 @@ namespace BepuPhysics
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndex = ref Unsafe.As<Vector<int>, int>(ref references);
 
-            ref var states = ref ActiveSet.MotionStates;
             for (int i = 0; i < count; ++i)
             {
-                WriteGatherState(ref baseIndex, i, ref states, ref position, ref orientation, ref velocity);
-                WriteGatherInertia(ref baseIndex, i, ref Inertias, ref inertia);
+                WriteGatherState(ref baseIndex, i, ref ActiveSet.MotionStates, ref position, ref orientation, ref velocity);
+                WriteGatherInertia(ref baseIndex, i, ref ActiveSet.Inertias, ref inertia);
             }
         }
 
@@ -153,7 +125,7 @@ namespace BepuPhysics
             }
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void TransposingGather(int count, MotionState* motionStates, BodyInertia* inertias, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity, ref BodyInertiaWide inertia)
+        unsafe static void TransposingGather(int count, MotionState* motionStates, BodyInertias* inertias, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity, ref BodyInertiaWide inertia)
         {
             if (Avx.IsSupported)
             {
@@ -265,14 +237,14 @@ namespace BepuPhysics
                     }
                 }
                 {
-                    var s0 = (float*)(inertias + indices[0]);
-                    var s1 = (float*)(inertias + indices[1]);
-                    var s2 = (float*)(inertias + indices[2]);
-                    var s3 = (float*)(inertias + indices[3]);
-                    var s4 = (float*)(inertias + indices[4]);
-                    var s5 = (float*)(inertias + indices[5]);
-                    var s6 = (float*)(inertias + indices[6]);
-                    var s7 = (float*)(inertias + indices[7]);
+                    var s0 = (float*)(inertias + indices[0]) + 8;
+                    var s1 = (float*)(inertias + indices[1]) + 8;
+                    var s2 = (float*)(inertias + indices[2]) + 8;
+                    var s3 = (float*)(inertias + indices[3]) + 8;
+                    var s4 = (float*)(inertias + indices[4]) + 8;
+                    var s5 = (float*)(inertias + indices[5]) + 8;
+                    var s6 = (float*)(inertias + indices[6]) + 8;
+                    var s7 = (float*)(inertias + indices[7]) + 8;
 
                     //Load every inertia vector.
                     var m0 = Avx.LoadVector256(s0);
@@ -350,8 +322,8 @@ namespace BepuPhysics
 
             ref var states = ref ActiveSet.MotionStates;
 
-            TransposingGather(count, states.Memory, Inertias.Memory, ref references.IndexA, ref positionA, ref orientationA, ref velocityA, ref inertiaA);
-            TransposingGather(count, states.Memory, Inertias.Memory, ref references.IndexB, ref positionB, ref orientationB, ref velocityB, ref inertiaB);
+            TransposingGather(count, states.Memory, ActiveSet.Inertias.Memory, ref references.IndexA, ref positionA, ref orientationA, ref velocityA, ref inertiaA);
+            TransposingGather(count, states.Memory, ActiveSet.Inertias.Memory, ref references.IndexB, ref positionB, ref orientationB, ref velocityB, ref inertiaB);
 
             //for (int i = 0; i < count; ++i)
             //{
@@ -418,14 +390,15 @@ namespace BepuPhysics
             ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
 
             ref var states = ref ActiveSet.MotionStates;
+            ref var inertias = ref ActiveSet.Inertias;
             for (int i = 0; i < count; ++i)
             {
                 WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
-                WriteGatherInertia(ref baseIndexA, i, ref Inertias, ref inertiaA);
+                WriteGatherInertia(ref baseIndexA, i, ref inertias, ref inertiaA);
                 WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
-                WriteGatherInertia(ref baseIndexB, i, ref Inertias, ref inertiaB);
+                WriteGatherInertia(ref baseIndexB, i, ref inertias, ref inertiaB);
                 WriteGatherState(ref baseIndexC, i, ref states, ref positionC, ref orientationC, ref velocityC);
-                WriteGatherInertia(ref baseIndexC, i, ref Inertias, ref inertiaC);
+                WriteGatherInertia(ref baseIndexC, i, ref inertias, ref inertiaC);
             }
             //TODO: In future versions, we will likely store the body position in different forms to allow for extremely large worlds.
             //That will be an opt-in feature. The default implementation will use the FP32 representation, but the user could choose to swap it out for a fp64 or fixed64 representation.
@@ -493,16 +466,17 @@ namespace BepuPhysics
             ref var baseIndexD = ref Unsafe.As<Vector<int>, int>(ref references.IndexD);
 
             ref var states = ref ActiveSet.MotionStates;
+            ref var inertias = ref ActiveSet.Inertias;
             for (int i = 0; i < count; ++i)
             {
                 WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
-                WriteGatherInertia(ref baseIndexA, i, ref Inertias, ref inertiaA);
+                WriteGatherInertia(ref baseIndexA, i, ref inertias, ref inertiaA);
                 WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
-                WriteGatherInertia(ref baseIndexB, i, ref Inertias, ref inertiaB);
+                WriteGatherInertia(ref baseIndexB, i, ref inertias, ref inertiaB);
                 WriteGatherState(ref baseIndexC, i, ref states, ref positionC, ref orientationC, ref velocityC);
-                WriteGatherInertia(ref baseIndexC, i, ref Inertias, ref inertiaC);
+                WriteGatherInertia(ref baseIndexC, i, ref inertias, ref inertiaC);
                 WriteGatherState(ref baseIndexD, i, ref states, ref positionD, ref orientationD, ref velocityD);
-                WriteGatherInertia(ref baseIndexD, i, ref Inertias, ref inertiaD);
+                WriteGatherInertia(ref baseIndexD, i, ref inertias, ref inertiaD);
             }
             //TODO: In future versions, we will likely store the body position in different forms to allow for extremely large worlds.
             //That will be an opt-in feature. The default implementation will use the FP32 representation, but the user could choose to swap it out for a fp64 or fixed64 representation.

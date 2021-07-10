@@ -236,7 +236,7 @@ namespace DemoRenderer.ShapeDrawing
             //3) Activity state
             //The handle is hashed to get variation.
             ref var activity = ref set.Activity[indexInSet];
-            ref var inertia = ref set.LocalInertias[indexInSet];
+            ref var inertia = ref set.Inertias[indexInSet].Local;
             Vector3 color;
             Helpers.UnpackColor((uint)HashHelper.Rehash(handle.Value), out Vector3 colorVariation);
             if (Bodies.IsKinematic(inertia))

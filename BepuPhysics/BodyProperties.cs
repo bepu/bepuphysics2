@@ -10,52 +10,6 @@ using System.Runtime.InteropServices;
 namespace BepuPhysics
 {
     /// <summary>
-    /// Stores the inertia of a body in half precision.
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential, Size = 4, Pack = 1)]
-    public struct PackedInertia
-    {
-        //TODO: Temporarily ignoring off-diagonal inertia for testing. 
-        public float InverseMass;
-        //public Half InverseNormalizedInertiaXX;
-        ////public Half InverseNormalizedInertiaYX;
-        //public Half InverseNormalizedInertiaYY;
-        ////public Half InverseNormalizedInertiaZX;
-        ////public Half InverseNormalizedInertiaZY;
-        //public Half InverseNormalizedInertiaZZ;
-
-        public PackedInertia(in BodyInertia inertia)
-        {
-            InverseMass = inertia.InverseMass;
-            //InverseNormalizedInertiaXX = (Half)(inertia.InverseInertiaTensor.XX / InverseMass);
-            ////InverseNormalizedInertiaYX = (Half)(inertia.InverseInertiaTensor.YX/ InverseMass);
-            //InverseNormalizedInertiaYY = (Half)(inertia.InverseInertiaTensor.YY / InverseMass);
-            ////InverseNormalizedInertiaZX = (Half)(inertia.InverseInertiaTensor.ZX/ InverseMass);
-            ////InverseNormalizedInertiaZY = (Half)(inertia.InverseInertiaTensor.ZY/ InverseMass);
-            //InverseNormalizedInertiaZZ = (Half)(inertia.InverseInertiaTensor.ZZ / InverseMass);
-        }
-
-        public readonly void Unpack(out BodyInertia inertia)
-        {
-            //TODO: not necessary in complete implementation
-            inertia = default;
-            inertia.InverseMass = InverseMass;
-            //inertia.InverseInertiaTensor.XX = (float)InverseNormalizedInertiaXX * InverseMass;
-            ////inertia.InverseInertiaTensor.YX = (float)InverseNormalizedInertiaYX * InverseMass;
-            //inertia.InverseInertiaTensor.YY = (float)InverseNormalizedInertiaYY * InverseMass;
-            ////inertia.InverseInertiaTensor.ZX = (float)InverseNormalizedInertiaZX * InverseMass;
-            ////inertia.InverseInertiaTensor.ZY = (float)InverseNormalizedInertiaZY * InverseMass;
-            //inertia.InverseInertiaTensor.ZZ = (float)InverseNormalizedInertiaZZ * InverseMass;
-        }
-        public readonly BodyInertia Unpack()
-        {
-            Unpack(out var inertia);
-            return inertia;
-        }
-
-    }
-
-    /// <summary>
     /// Describes the pose and velocity of a body.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Size = 64, Pack = 1)]
@@ -103,10 +57,6 @@ namespace BepuPhysics
         /// </summary>
         public RigidPose Pose;
         /// <summary>
-        /// Packed inertia of the body.
-        /// </summary>
-        public PackedInertia PackedLocalInertia;
-        /// <summary>
         /// Linear and angular velocity of the body.
         /// </summary>
         public BodyVelocity Velocity;
@@ -118,7 +68,7 @@ namespace BepuPhysics
     /// <summary>
     /// Represents a rigid transformation.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, Size = 28, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential, Size = 32, Pack = 1)]
     public struct RigidPose
     {
         //Note that we store a quaternion rather than a matrix3x3. While this often requires some overhead when performing vector transforms or extracting basis vectors, 
@@ -225,6 +175,23 @@ namespace BepuPhysics
         public float InverseMass;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct BodyInertias
+    {
+        /// <summary>
+        /// Local inertia of the body.
+        /// </summary>
+        public BodyInertia Local;
+        /// <summary>
+        /// Transformed world inertia of the body. Note that this is only valid between the velocity integration that updates it and the pose integration that follows.
+        /// Outside of that execution window, this should be considered undefined.
+        /// </summary>
+        /// <remarks>
+        /// We cache this here because velocity integration wants both the local and world inertias, and any integration happening within the solver will do so without the benefit of sequential loads.
+        /// In that context, being able to load a single cache line to grab both local and world inertia helps quite a lot.</remarks>
+        public BodyInertia World;
+    }
+
     public struct RigidPoses
     {
         public Vector3Wide Position;
@@ -261,7 +228,7 @@ namespace BepuPhysics
     public struct BodyInertiaWide
     {
         public Symmetric3x3Wide InverseInertiaTensor;
-        //Note that the inverse mass is included in the BodyInertias bundle. InverseMass is rotationally invariant, so it doesn't need to be updated...
+        //Note that the inverse mass is included in the bundle. InverseMass is rotationally invariant, so it doesn't need to be updated...
         //But it's included alongside the rotated inertia tensor because to split it out would require that constraint presteps suffer another cache miss when they
         //gather the inverse mass in isolation. (From the solver's perspective, inertia/mass gathering is incoherent.)
         public Vector<float> InverseMass;

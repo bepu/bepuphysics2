@@ -46,13 +46,6 @@ namespace BepuPhysics
         /// <returns>Reference to the active body set.</returns>
         public unsafe ref BodySet ActiveSet { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return ref *Sets.Memory; } }
 
-        //TODO: Having Inertias publicly exposed seems like a recipe for confusion, given its ephemeral nature. We may want to explicitly delete it after frame execution and
-        //never expose it. If the user really wants an up to date world space inertia, it's pretty easy for them to build it from the local inertia and orientation anyway.
-        /// <summary>
-        /// The world transformed inertias of active bodies as of the last update. Note that this is not automatically updated for direct orientation changes or for body memory moves.
-        /// It is only updated once during the frame. It should be treated as ephemeral information.
-        /// </summary>
-        public Buffer<BodyInertia> Inertias;
         public BufferPool Pool { get; private set; }
 
         internal IslandAwakener awakener;
@@ -307,7 +300,7 @@ namespace BepuPhysics
             {
                 //The solver's connected bodies enumeration directly provides the constraint-stored reference, which is an index in the active set for active constraints and a handle for inactive constraints.
                 //We forced the dynamic active at the beginning of BecomeKinematic, so we don't have to worry about the inactive side of things.
-                if (!IsKinematic(Bodies.ActiveSet.LocalInertias[bodyIndex]))
+                if (!IsKinematic(Bodies.ActiveSet.Inertias[bodyIndex].Local))
                     ++DynamicCount;
             }
         }
@@ -319,7 +312,7 @@ namespace BepuPhysics
             ref var collidable = ref set.Collidables[location.Index];
             if (collidable.Shape.Exists)
             {
-                var mobility = IsKinematic(set.LocalInertias[location.Index]) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
+                var mobility = IsKinematic(set.Inertias[location.Index].Local) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
                 if (location.SetIndex == 0)
                 {
                     broadPhase.activeLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
@@ -369,8 +362,8 @@ namespace BepuPhysics
             }
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
-            var newlyKinematic = IsKinematic(localInertia) && !IsKinematic(set.LocalInertias[location.Index]);
-            set.LocalInertias[location.Index] = localInertia;
+            var newlyKinematic = IsKinematic(localInertia) && !IsKinematic(set.Inertias[location.Index].Local);
+            set.Inertias[location.Index].Local = localInertia;
             UpdateForKinematicStateChange(handle, ref location, ref set, newlyKinematic);
         }
 
@@ -383,7 +376,7 @@ namespace BepuPhysics
                 if (newShape.Exists)
                 {
                     //Add a collidable to the simulation for the new shape.
-                    AddCollidableToBroadPhase(handle, set.MotionStates[activeBodyIndex].Pose, set.LocalInertias[activeBodyIndex], ref set.Collidables[activeBodyIndex]);
+                    AddCollidableToBroadPhase(handle, set.MotionStates[activeBodyIndex].Pose, set.Inertias[activeBodyIndex].Local, ref set.Collidables[activeBodyIndex]);
                 }
                 else
                 {
@@ -436,7 +429,7 @@ namespace BepuPhysics
             ref var set = ref Sets[location.SetIndex];
             ref var collidable = ref set.Collidables[location.Index];
             var oldShape = collidable.Shape;
-            var newlyKinematic = IsKinematic(description.LocalInertia) && !IsKinematic(set.LocalInertias[location.Index]);
+            var newlyKinematic = IsKinematic(description.LocalInertia) && !IsKinematic(set.Inertias[location.Index].Local);
             set.ApplyDescriptionByIndex(location.Index, description);
             UpdateForShapeChange(handle, location.Index, oldShape, description.Collidable.Shape);
             UpdateForKinematicStateChange(handle, ref location, ref set, newlyKinematic);
@@ -698,31 +691,6 @@ namespace BepuPhysics
                 }
             }
         }
-        //Note that these resize and ensure capacity functions affect only the active set.
-        //Inactive islands are created with minimal allocations. Since you cannot add to or remove from inactive islands, it is pointless to try to modify their allocation sizes.
-        /// <summary>
-        /// Reallocates the inertias buffer for the target capacity. Will not shrink below the size of the current active set.
-        /// </summary>
-        internal void ResizeInertias(int capacity)
-        {
-            var targetCapacity = BufferPool.GetCapacityForCount<BodyInertia>(Math.Max(capacity, ActiveSet.Count));
-            if (Inertias.Length != targetCapacity)
-            {
-                Pool.ResizeToAtLeast(ref Inertias, targetCapacity, Math.Min(Inertias.Length, ActiveSet.Count));
-            }
-        }
-        /// <summary>
-        /// Guarantees that the inertias capacity is sufficient for the given capacity.
-        /// </summary>
-        internal void EnsureInertiasCapacity(int capacity)
-        {
-            if (capacity < ActiveSet.Count)
-                capacity = ActiveSet.Count;
-            if (Inertias.Length < capacity)
-            {
-                Pool.ResizeToAtLeast(ref Inertias, capacity, Math.Min(Inertias.Length, ActiveSet.Count));
-            }
-        }
 
         /// <summary>
         /// Resizes the allocated spans for active body data. Note that this is conservative; it will never orphan existing objects.
@@ -735,7 +703,6 @@ namespace BepuPhysics
             {
                 ActiveSet.InternalResize(targetBodyCapacity, Pool);
             }
-            ResizeInertias(capacity);
             var targetHandleCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(capacity, HandlePool.HighestPossiblyClaimedId + 1));
             if (HandleToLocation.Length != targetHandleCapacity)
             {
@@ -768,7 +735,6 @@ namespace BepuPhysics
             {
                 ActiveSet.InternalResize(capacity, Pool);
             }
-            EnsureInertiasCapacity(capacity);
             if (HandleToLocation.Length < capacity)
             {
                 ResizeHandles(capacity);
@@ -803,8 +769,6 @@ namespace BepuPhysics
                 }
             }
             Pool.Return(ref Sets);
-            if (Inertias.Allocated)
-                Pool.Return(ref Inertias);
             Pool.Return(ref HandleToLocation);
             HandlePool.Dispose(Pool);
         }
