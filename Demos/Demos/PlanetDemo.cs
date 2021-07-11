@@ -49,7 +49,12 @@ namespace Demos.Demos
                     velocity.Linear -= gravityDt * offset / MathF.Max(1f, distance * distance * distance);
                 }
             }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void IntegrateVelocity(ReadOnlySpan<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
+            {
+            }
         }
+
 
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
@@ -84,6 +89,7 @@ namespace Demos.Demos
             }
 
         }
+
 
     }
 }

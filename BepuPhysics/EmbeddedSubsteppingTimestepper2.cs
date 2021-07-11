@@ -90,16 +90,16 @@ namespace BepuPhysics
                     simulation.IncrementallyUpdateContactConstraints(substepDt, threadDispatcher);
                     ContactConstraintsUpdatedForSubstep?.Invoke(substepIndex, substepDt, threadDispatcher);
                 }
-                simulation.IntegrateVelocitiesAndUpdateInertias(substepDt, threadDispatcher);
-                VelocitiesIntegrated?.Invoke(substepIndex, substepDt, threadDispatcher);
+                //simulation.IntegrateVelocitiesAndUpdateInertias(substepDt, threadDispatcher);
+                //VelocitiesIntegrated?.Invoke(substepIndex, substepDt, threadDispatcher);
 
                 simulation.Profiler.Start(simulation.Solver);
                 simulation.Solver.SolveStep2(substepDt, threadDispatcher);
                 simulation.Profiler.End(simulation.Solver);
                 ConstraintsSolved?.Invoke(substepIndex, substepDt, threadDispatcher);
 
-                simulation.IntegratePoses(substepDt, threadDispatcher);
-                PosesIntegrated?.Invoke(substepIndex, substepDt, threadDispatcher);
+                //simulation.IntegratePoses(substepDt, threadDispatcher);
+                //PosesIntegrated?.Invoke(substepIndex, substepDt, threadDispatcher);
                 SubstepEnded?.Invoke(substepIndex, substepDt, threadDispatcher);
             }
             SubstepsComplete?.Invoke(dt, threadDispatcher);
