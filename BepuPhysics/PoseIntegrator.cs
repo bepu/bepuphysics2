@@ -80,14 +80,11 @@ namespace BepuPhysics
         /// <param name="localInertia">Body's current local inertia.</param>
         /// <param name="integrationMask">Mask indicating which lanes are active in the bundle. Active lanes will contain 0xFFFFFFFF, inactive lanes will contain 0.</param>
         /// <param name="workerIndex">Index of the worker thread processing this bundle.</param>
-        /// <param name="velocity">Current velocity of bodies in the bundle.</param>
         /// <param name="dt">Durations to integrate the velocity over. Can vary over lanes.</param>
-        /// <param name="linearChange">Change to apply to the linear velocity of bodies in the bundle. Any changes in inactive lanes will be ignored.</param>
-        /// <param name="angularChange">Change to apply to the angular velocity of bodies in the bundle. Any changes in inactive lanes will be ignored.</param>
+        /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
         void IntegrateVelocity(
             ReadOnlySpan<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, 
-            in Vector<int> integrationMask, int workerIndex, in BodyVelocityWide velocity, in Vector<float> dt,
-            out Vector3Wide linearChange, out Vector3Wide angularChange);
+            in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity);
     }
 
     /// <summary>
