@@ -74,7 +74,7 @@ namespace BepuPhysics
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void ScalarGather(int count, MotionState* motionStates, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity, ref BodyInertiaWide inertia)
+        unsafe static void FallbackGatherMotionState(int count, MotionState* motionStates, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
         {
             var indices = (int*)Unsafe.AsPointer(ref baseIndex);
             var pPositionX = (float*)Unsafe.AsPointer(ref position.X);
@@ -90,13 +90,6 @@ namespace BepuPhysics
             var pAngularX = (float*)Unsafe.AsPointer(ref velocity.Angular.X);
             var pAngularY = (float*)Unsafe.AsPointer(ref velocity.Angular.Y);
             var pAngularZ = (float*)Unsafe.AsPointer(ref velocity.Angular.Z);
-            var pMass = (float*)Unsafe.AsPointer(ref inertia.InverseMass);
-            var pInertiaXX = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.XX);
-            var pInertiaYX = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.YX);
-            var pInertiaYY = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.YY);
-            var pInertiaZX = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.ZX);
-            var pInertiaZY = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.ZY);
-            var pInertiaZZ = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.ZZ);
 
             for (int i = 0; i < count; ++i)
             {
@@ -115,136 +108,171 @@ namespace BepuPhysics
                 pAngularX[i] = stateValues[MotionState.OffsetToAngularX];
                 pAngularY[i] = stateValues[MotionState.OffsetToAngularY];
                 pAngularZ[i] = stateValues[MotionState.OffsetToAngularZ];
-                pMass[i] = stateValues[MotionState.OffsetToInverseMass];
-                pInertiaXX[i] = stateValues[MotionState.OffsetToInverseInertiaXX];
-                pInertiaYX[i] = 0;
-                pInertiaYY[i] = stateValues[MotionState.OffsetToInverseInertiaYY];
-                pInertiaZX[i] = 0;
-                pInertiaZY[i] = 0;
-                pInertiaZZ[i] = stateValues[MotionState.OffsetToInverseInertiaZZ];
+            }
+        }
+        unsafe static void FallbackGatherInertia(int count, BodyInertias* inertias, ref Vector<int> baseIndex, ref BodyInertiaWide inertia, int offsetInFloats)
+        {
+            var indices = (int*)Unsafe.AsPointer(ref baseIndex);
+            var pMass = (float*)Unsafe.AsPointer(ref inertia.InverseMass);
+            var pInertiaXX = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.XX);
+            var pInertiaYX = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.YX);
+            var pInertiaYY = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.YY);
+            var pInertiaZX = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.ZX);
+            var pInertiaZY = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.ZY);
+            var pInertiaZZ = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.ZZ);
+
+            for (int i = 0; i < count; ++i)
+            {
+                var index = indices[i];
+                var inertiaValues = (float*)(inertias + index) + offsetInFloats;
+                pInertiaXX[i] = inertiaValues[0];
+                pInertiaYX[i] = inertiaValues[1];
+                pInertiaYY[i] = inertiaValues[2];
+                pInertiaZX[i] = inertiaValues[3];
+                pInertiaZY[i] = inertiaValues[4];
+                pInertiaZZ[i] = inertiaValues[5];
+                pMass[i] = inertiaValues[6];
             }
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void TransposingGather(int count, MotionState* motionStates, BodyInertias* inertias, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity, ref BodyInertiaWide inertia)
+        public unsafe void GatherMotionState(ref Vector<int> bodyIndices, int count, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity)
         {
+            var motionStates = ActiveSet.MotionStates.Memory;
             if (Avx.IsSupported)
             {
-                var indices = (int*)Unsafe.AsPointer(ref baseIndex);
+                var indices = (int*)Unsafe.AsPointer(ref bodyIndices);
+
+                var s0 = (float*)(motionStates + indices[0]);
+                var s1 = (float*)(motionStates + indices[1]);
+                var s2 = (float*)(motionStates + indices[2]);
+                var s3 = (float*)(motionStates + indices[3]);
+                var s4 = (float*)(motionStates + indices[4]);
+                var s5 = (float*)(motionStates + indices[5]);
+                var s6 = (float*)(motionStates + indices[6]);
+                var s7 = (float*)(motionStates + indices[7]);
+
+                //for (int i = 0; i < 8; ++i)
+                //{
+                //    s0[i] = i;
+                //    s1[i] = i + 100;
+                //    s2[i] = i + 200;
+                //    s3[i] = i + 300;
+                //    s4[i] = i + 400;
+                //    s5[i] = i + 500;
+                //    s6[i] = i + 600;
+                //    s7[i] = i + 700;
+                //}
 
                 {
-                    var s0 = (float*)(motionStates + indices[0]);
-                    var s1 = (float*)(motionStates + indices[1]);
-                    var s2 = (float*)(motionStates + indices[2]);
-                    var s3 = (float*)(motionStates + indices[3]);
-                    var s4 = (float*)(motionStates + indices[4]);
-                    var s5 = (float*)(motionStates + indices[5]);
-                    var s6 = (float*)(motionStates + indices[6]);
-                    var s7 = (float*)(motionStates + indices[7]);
+                    //Load every body for the first half of the motion state.
+                    //Note that buffers are allocated on cache line boundaries, so we can use aligned loads for all that matters.
+                    var m0 = Avx.LoadVector256(s0);
+                    var m1 = count > 1 ? Avx.LoadAlignedVector256(s1) : Vector256<float>.Zero;
+                    var m2 = count > 2 ? Avx.LoadAlignedVector256(s2) : Vector256<float>.Zero;
+                    var m3 = count > 3 ? Avx.LoadAlignedVector256(s3) : Vector256<float>.Zero;
+                    var m4 = count > 4 ? Avx.LoadAlignedVector256(s4) : Vector256<float>.Zero;
+                    var m5 = count > 5 ? Avx.LoadAlignedVector256(s5) : Vector256<float>.Zero;
+                    var m6 = count > 6 ? Avx.LoadAlignedVector256(s6) : Vector256<float>.Zero;
+                    var m7 = count > 7 ? Avx.LoadAlignedVector256(s7) : Vector256<float>.Zero;
 
-                    //for (int i = 0; i < 8; ++i)
-                    //{
-                    //    s0[i] = i;
-                    //    s1[i] = i + 100;
-                    //    s2[i] = i + 200;
-                    //    s3[i] = i + 300;
-                    //    s4[i] = i + 400;
-                    //    s5[i] = i + 500;
-                    //    s6[i] = i + 600;
-                    //    s7[i] = i + 700;
-                    //}
+                    var n0 = Avx.UnpackLow(m0, m1);
+                    var n1 = Avx.UnpackLow(m2, m3);
+                    var n2 = Avx.UnpackLow(m4, m5);
+                    var n3 = Avx.UnpackLow(m6, m7);
+                    var n4 = Avx.UnpackHigh(m0, m1);
+                    var n5 = Avx.UnpackHigh(m2, m3);
+                    var n6 = Avx.UnpackHigh(m4, m5);
+                    var n7 = Avx.UnpackHigh(m6, m7);
 
-                    {
-                        //Load every body for the first half of the motion state.
-                        //Note that buffers are allocated on cache line boundaries, so we can use aligned loads for all that matters.
-                        var m0 = Avx.LoadVector256(s0);
-                        var m1 = count > 1 ? Avx.LoadAlignedVector256(s1) : Vector256<float>.Zero;
-                        var m2 = count > 2 ? Avx.LoadAlignedVector256(s2) : Vector256<float>.Zero;
-                        var m3 = count > 3 ? Avx.LoadAlignedVector256(s3) : Vector256<float>.Zero;
-                        var m4 = count > 4 ? Avx.LoadAlignedVector256(s4) : Vector256<float>.Zero;
-                        var m5 = count > 5 ? Avx.LoadAlignedVector256(s5) : Vector256<float>.Zero;
-                        var m6 = count > 6 ? Avx.LoadAlignedVector256(s6) : Vector256<float>.Zero;
-                        var m7 = count > 7 ? Avx.LoadAlignedVector256(s7) : Vector256<float>.Zero;
+                    var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o3 = Avx.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o5 = Avx.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
 
-                        var n0 = Avx.UnpackLow(m0, m1);
-                        var n1 = Avx.UnpackLow(m2, m3);
-                        var n2 = Avx.UnpackLow(m4, m5);
-                        var n3 = Avx.UnpackLow(m6, m7);
-                        var n4 = Avx.UnpackHigh(m0, m1);
-                        var n5 = Avx.UnpackHigh(m2, m3);
-                        var n6 = Avx.UnpackHigh(m4, m5);
-                        var n7 = Avx.UnpackHigh(m6, m7);
-
-                        var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                        var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                        var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                        var o3 = Avx.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                        var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-                        var o5 = Avx.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-                        var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-                        var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-
-                        orientation.X = Avx.Permute2x128(o0, o1, 0 | (2 << 4)).AsVector();
-                        orientation.Y = Avx.Permute2x128(o4, o5, 0 | (2 << 4)).AsVector();
-                        orientation.Z = Avx.Permute2x128(o2, o3, 0 | (2 << 4)).AsVector();
-                        orientation.W = Avx.Permute2x128(o6, o7, 0 | (2 << 4)).AsVector();
-                        position.X = Avx.Permute2x128(o0, o1, 1 | (3 << 4)).AsVector();
-                        position.Y = Avx.Permute2x128(o4, o5, 1 | (3 << 4)).AsVector();
-                        position.Z = Avx.Permute2x128(o2, o3, 1 | (3 << 4)).AsVector();
-                        //inertia.InverseMass = Avx.Permute2x128(o6, o7, 1 | (3 << 4)).AsVector();
-                        //inertia.InverseInertiaTensor.XX = inertia.InverseMass;
-                        //inertia.InverseInertiaTensor.YY = inertia.InverseMass;
-                        //inertia.InverseInertiaTensor.ZZ = inertia.InverseMass;
-                        //inertia.InverseInertiaTensor.YX = default;
-                        //inertia.InverseInertiaTensor.ZX = default;
-                        //inertia.InverseInertiaTensor.ZY = default;
-                    }
-
-                    {
-                        //Second half.
-                        var m0 = Avx.LoadVector256(s0 + 8);
-                        var m1 = count > 1 ? Avx.LoadAlignedVector256(s1 + 8) : Vector256<float>.Zero;
-                        var m2 = count > 2 ? Avx.LoadAlignedVector256(s2 + 8) : Vector256<float>.Zero;
-                        var m3 = count > 3 ? Avx.LoadAlignedVector256(s3 + 8) : Vector256<float>.Zero;
-                        var m4 = count > 4 ? Avx.LoadAlignedVector256(s4 + 8) : Vector256<float>.Zero;
-                        var m5 = count > 5 ? Avx.LoadAlignedVector256(s5 + 8) : Vector256<float>.Zero;
-                        var m6 = count > 6 ? Avx.LoadAlignedVector256(s6 + 8) : Vector256<float>.Zero;
-                        var m7 = count > 7 ? Avx.LoadAlignedVector256(s7 + 8) : Vector256<float>.Zero;
-
-                        var n0 = Avx.UnpackLow(m0, m1);
-                        var n1 = Avx.UnpackLow(m2, m3);
-                        var n2 = Avx.UnpackLow(m4, m5);
-                        var n3 = Avx.UnpackLow(m6, m7);
-                        var n4 = Avx.UnpackHigh(m0, m1);
-                        var n5 = Avx.UnpackHigh(m2, m3);
-                        var n6 = Avx.UnpackHigh(m4, m5);
-                        var n7 = Avx.UnpackHigh(m6, m7);
-
-                        var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                        var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                        var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                        var o3 = Avx.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                        var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-                        var o5 = Avx.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-                        var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-                        var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-
-                        velocity.Linear.X = Avx.Permute2x128(o0, o1, 0 | (2 << 4)).AsVector();
-                        velocity.Linear.Y = Avx.Permute2x128(o4, o5, 0 | (2 << 4)).AsVector();
-                        velocity.Linear.Z = Avx.Permute2x128(o2, o3, 0 | (2 << 4)).AsVector();
-                        velocity.Angular.X = Avx.Permute2x128(o0, o1, 1 | (3 << 4)).AsVector();
-                        velocity.Angular.Y = Avx.Permute2x128(o4, o5, 1 | (3 << 4)).AsVector();
-                        velocity.Angular.Z = Avx.Permute2x128(o2, o3, 1 | (3 << 4)).AsVector();
-                    }
+                    orientation.X = Avx.Permute2x128(o0, o1, 0 | (2 << 4)).AsVector();
+                    orientation.Y = Avx.Permute2x128(o4, o5, 0 | (2 << 4)).AsVector();
+                    orientation.Z = Avx.Permute2x128(o2, o3, 0 | (2 << 4)).AsVector();
+                    orientation.W = Avx.Permute2x128(o6, o7, 0 | (2 << 4)).AsVector();
+                    position.X = Avx.Permute2x128(o0, o1, 1 | (3 << 4)).AsVector();
+                    position.Y = Avx.Permute2x128(o4, o5, 1 | (3 << 4)).AsVector();
+                    position.Z = Avx.Permute2x128(o2, o3, 1 | (3 << 4)).AsVector();
+                    //inertia.InverseMass = Avx.Permute2x128(o6, o7, 1 | (3 << 4)).AsVector();
+                    //inertia.InverseInertiaTensor.XX = inertia.InverseMass;
+                    //inertia.InverseInertiaTensor.YY = inertia.InverseMass;
+                    //inertia.InverseInertiaTensor.ZZ = inertia.InverseMass;
+                    //inertia.InverseInertiaTensor.YX = default;
+                    //inertia.InverseInertiaTensor.ZX = default;
+                    //inertia.InverseInertiaTensor.ZY = default;
                 }
+
                 {
-                    var s0 = (float*)(inertias + indices[0]) + 8;
-                    var s1 = (float*)(inertias + indices[1]) + 8;
-                    var s2 = (float*)(inertias + indices[2]) + 8;
-                    var s3 = (float*)(inertias + indices[3]) + 8;
-                    var s4 = (float*)(inertias + indices[4]) + 8;
-                    var s5 = (float*)(inertias + indices[5]) + 8;
-                    var s6 = (float*)(inertias + indices[6]) + 8;
-                    var s7 = (float*)(inertias + indices[7]) + 8;
+                    //Second half.
+                    var m0 = Avx.LoadVector256(s0 + 8);
+                    var m1 = count > 1 ? Avx.LoadAlignedVector256(s1 + 8) : Vector256<float>.Zero;
+                    var m2 = count > 2 ? Avx.LoadAlignedVector256(s2 + 8) : Vector256<float>.Zero;
+                    var m3 = count > 3 ? Avx.LoadAlignedVector256(s3 + 8) : Vector256<float>.Zero;
+                    var m4 = count > 4 ? Avx.LoadAlignedVector256(s4 + 8) : Vector256<float>.Zero;
+                    var m5 = count > 5 ? Avx.LoadAlignedVector256(s5 + 8) : Vector256<float>.Zero;
+                    var m6 = count > 6 ? Avx.LoadAlignedVector256(s6 + 8) : Vector256<float>.Zero;
+                    var m7 = count > 7 ? Avx.LoadAlignedVector256(s7 + 8) : Vector256<float>.Zero;
+
+                    var n0 = Avx.UnpackLow(m0, m1);
+                    var n1 = Avx.UnpackLow(m2, m3);
+                    var n2 = Avx.UnpackLow(m4, m5);
+                    var n3 = Avx.UnpackLow(m6, m7);
+                    var n4 = Avx.UnpackHigh(m0, m1);
+                    var n5 = Avx.UnpackHigh(m2, m3);
+                    var n6 = Avx.UnpackHigh(m4, m5);
+                    var n7 = Avx.UnpackHigh(m6, m7);
+
+                    var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o3 = Avx.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o5 = Avx.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+
+                    velocity.Linear.X = Avx.Permute2x128(o0, o1, 0 | (2 << 4)).AsVector();
+                    velocity.Linear.Y = Avx.Permute2x128(o4, o5, 0 | (2 << 4)).AsVector();
+                    velocity.Linear.Z = Avx.Permute2x128(o2, o3, 0 | (2 << 4)).AsVector();
+                    velocity.Angular.X = Avx.Permute2x128(o0, o1, 1 | (3 << 4)).AsVector();
+                    velocity.Angular.Y = Avx.Permute2x128(o4, o5, 1 | (3 << 4)).AsVector();
+                    velocity.Angular.Z = Avx.Permute2x128(o2, o3, 1 | (3 << 4)).AsVector();
+                }
+
+            }
+            else
+            {
+                Unsafe.SkipInit(out position);
+                Unsafe.SkipInit(out orientation);
+                Unsafe.SkipInit(out velocity);
+                FallbackGatherMotionState(count, motionStates, ref bodyIndices, ref position, ref orientation, ref velocity);
+            }
+        }
+
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void GatherInertia(ref Vector<int> bodyIndices, int count, int offsetInFloats, out BodyInertiaWide inertia)
+        {
+            var inertias = ActiveSet.Inertias.Memory;
+            if (Avx.IsSupported)
+            {
+                var indices = (int*)Unsafe.AsPointer(ref bodyIndices);
+                {
+                    var s0 = (float*)(inertias + indices[0]) + offsetInFloats;
+                    var s1 = (float*)(inertias + indices[1]) + offsetInFloats;
+                    var s2 = (float*)(inertias + indices[2]) + offsetInFloats;
+                    var s3 = (float*)(inertias + indices[3]) + offsetInFloats;
+                    var s4 = (float*)(inertias + indices[4]) + offsetInFloats;
+                    var s5 = (float*)(inertias + indices[5]) + offsetInFloats;
+                    var s6 = (float*)(inertias + indices[6]) + offsetInFloats;
+                    var s7 = (float*)(inertias + indices[7]) + offsetInFloats;
 
                     //Load every inertia vector.
                     var m0 = Avx.LoadVector256(s0);
@@ -285,8 +313,20 @@ namespace BepuPhysics
             }
             else
             {
-                ScalarGather(count, motionStates, ref baseIndex, ref position, ref orientation, ref velocity, ref inertia);
+                Unsafe.SkipInit(out inertia);
+                FallbackGatherInertia(count, ActiveSet.Inertias.Memory, ref bodyIndices, ref inertia, offsetInFloats);
             }
+        }
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void GatherWorldInertia(ref Vector<int> bodyIndices, int count, out BodyInertiaWide inertia)
+        {
+            GatherInertia(ref bodyIndices, count, 8, out inertia);
+        }
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void GatherLocalInertia(ref Vector<int> bodyIndices, int count, out BodyInertiaWide inertia)
+        {
+            GatherInertia(ref bodyIndices, count, 0, out inertia);
         }
 
         /// <summary>
@@ -322,8 +362,10 @@ namespace BepuPhysics
 
             ref var states = ref ActiveSet.MotionStates;
 
-            TransposingGather(count, states.Memory, ActiveSet.Inertias.Memory, ref references.IndexA, ref positionA, ref orientationA, ref velocityA, ref inertiaA);
-            TransposingGather(count, states.Memory, ActiveSet.Inertias.Memory, ref references.IndexB, ref positionB, ref orientationB, ref velocityB, ref inertiaB);
+            GatherMotionState(ref references.IndexA, count, out positionA, out orientationA, out velocityA);
+            GatherWorldInertia(ref references.IndexA, count, out inertiaA);
+            GatherMotionState(ref references.IndexB, count, out positionB, out orientationB, out velocityB);
+            GatherWorldInertia(ref references.IndexA, count, out inertiaB);
 
             //for (int i = 0; i < count; ++i)
             //{

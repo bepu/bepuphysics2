@@ -22,16 +22,12 @@ namespace BepuPhysics
         internal const int OffsetToPositionX = 4;
         internal const int OffsetToPositionY = 5;
         internal const int OffsetToPositionZ = 6;
-        internal const int OffsetToInverseMass = 7;
         internal const int OffsetToLinearX = 8;
         internal const int OffsetToLinearY = 9;
         internal const int OffsetToLinearZ = 10;
         internal const int OffsetToAngularX = 12;
         internal const int OffsetToAngularY = 13;
         internal const int OffsetToAngularZ = 14;
-        internal const int OffsetToInverseInertiaXX = OffsetToInverseMass;
-        internal const int OffsetToInverseInertiaYY = OffsetToInverseMass;
-        internal const int OffsetToInverseInertiaZZ = OffsetToInverseMass;
 
         internal const int ByteOffsetToPositionX = OffsetToPositionX * 4;
         internal const int ByteOffsetToPositionY = OffsetToPositionY * 4;
@@ -46,10 +42,6 @@ namespace BepuPhysics
         internal const int ByteOffsetToAngularX = OffsetToAngularX * 4;
         internal const int ByteOffsetToAngularY = OffsetToAngularY * 4;
         internal const int ByteOffsetToAngularZ = OffsetToAngularZ * 4;
-        internal const int ByteOffsetToInverseMass = OffsetToInverseMass * 4;
-        internal const int ByteOffsetToInverseInertiaXX = ByteOffsetToInverseMass;
-        internal const int ByteOffsetToInverseInertiaYY = ByteOffsetToInverseMass;
-        internal const int ByteOffsetToInverseInertiaZZ = ByteOffsetToInverseMass;
 
 
         /// <summary>

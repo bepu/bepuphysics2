@@ -568,6 +568,26 @@ namespace BepuUtilities
             return result;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ConditionalSelect(in Vector<int> condition, in QuaternionWide left, in QuaternionWide right, out QuaternionWide result)
+        {
+            result.X = Vector.ConditionalSelect(condition, left.X, right.X);
+            result.Y = Vector.ConditionalSelect(condition, left.Y, right.Y);
+            result.Z = Vector.ConditionalSelect(condition, left.Z, right.Z);
+            result.W = Vector.ConditionalSelect(condition, left.W, right.W);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static QuaternionWide ConditionalSelect(Vector<int> condition, QuaternionWide left, QuaternionWide right)
+        {
+            QuaternionWide result;
+            result.X = Vector.ConditionalSelect(condition, left.X, right.X);
+            result.Y = Vector.ConditionalSelect(condition, left.Y, right.Y);
+            result.Z = Vector.ConditionalSelect(condition, left.Z, right.Z);
+            result.W = Vector.ConditionalSelect(condition, left.W, right.W);
+            return result;
+        }
+
         /// <summary>
         /// Gathers values from the first slot of a wide quaternion and puts them into a narrow representation.
         /// </summary>
