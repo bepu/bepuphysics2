@@ -144,6 +144,77 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void RotateInverseInertia(in Symmetric3x3Wide localInverseInertiaTensor, in QuaternionWide orientation, out Symmetric3x3Wide rotatedInverseInertiaTensor)
+        {
+            Matrix3x3Wide.CreateFromQuaternion(orientation, out var orientationMatrix);
+            //I^-1 = RT * Ilocal^-1 * R 
+            //NOTE: If you were willing to confuse users a little bit, the local inertia could be required to be diagonal.
+            //This would be totally fine for all the primitive types which happen to have diagonal inertias, but for more complex shapes (convex hulls, meshes), 
+            //there would need to be a reorientation step. That could be confusing, and it's probably not worth it.
+            Symmetric3x3Wide.RotationSandwich(orientationMatrix, localInverseInertiaTensor, out rotatedInverseInertiaTensor);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void IntegrateAngularVelocityConserveMomentum(in QuaternionWide previousOrientation, in BodyInertiaWide localInertia, in BodyInertiaWide inertia, ref Vector3Wide angularVelocity)
+        {
+            //Note that this effectively recomputes the previous frame's inertia. There may not have been a previous inertia stored in the inertias buffer.
+            //This just avoids the need for quite a bit of complexity around keeping the world inertias buffer updated with adds/removes/moves and other state changes that we can't easily track.
+            //Also, even if it were cached, the memory bandwidth requirements of loading another inertia tensor would hurt multithreaded scaling enough to eliminate any performance advantage.
+            Matrix3x3Wide.CreateFromQuaternion(previousOrientation, out var previousOrientationMatrix);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(angularVelocity, previousOrientationMatrix, out var localPreviousAngularVelocity);
+            Symmetric3x3Wide.Invert(localInertia.InverseInertiaTensor, out var localInertiaTensor);
+            Symmetric3x3Wide.TransformWithoutOverlap(localPreviousAngularVelocity, localInertiaTensor, out var localAngularMomentum);
+            Matrix3x3Wide.Transform(localAngularMomentum, previousOrientationMatrix, out var angularMomentum);
+            Symmetric3x3Wide.TransformWithoutOverlap(angularMomentum, inertia.InverseInertiaTensor, out angularVelocity);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(
+            in QuaternionWide orientation, in BodyInertiaWide localInertia, in BodyInertiaWide inertia, ref Vector3Wide angularVelocity, float dt)
+        {
+            //Integrating the gyroscopic force explicitly can result in some instability, so we'll use an approximate implicit approach.
+            //angularVelocity1 * inertia1 = angularVelocity0 * inertia1 + dt * ((angularVelocity1 * inertia1) x angularVelocity1)
+            //Note that this includes a reference to inertia1 which doesn't exist yet. We do, however, have the local inertia, so we'll 
+            //transform all velocities into local space using the current orientation for the calculation.
+            //So:
+            //localAngularVelocity1 * localInertia = localAngularVelocity0 * localInertia - dt * (localAngularVelocity1 x (localAngularVelocity1 * localInertia))
+            //localAngularVelocity1 * localInertia - localAngularVelocity0 * localInertia + dt * (localAngularVelocity1 x (localAngularVelocity1 * localInertia)) = 0 
+            //f(localAngularVelocity1) = (localAngularVelocity1 - localAngularVelocity0) * localInertia + dt * (localAngularVelocity1 x (localAngularVelocity1 * localInertia))
+            //Not trivial to solve for localAngularVelocity1 so we'll do so numerically with a newton iteration.
+            //(For readers familiar with Bullet's BT_ENABLE_GYROSCOPIC_FORCE_IMPLICIT_BODY, this is basically identical.)
+
+            //We'll start with an initial guess of localAngularVelocity1 = localAngularVelocity0, and update with a newton step of f(localAngularVelocity1) * invert(df/dw1(localAngularVelocity1))
+            //df/dw1x(localAngularVelocity1) * localInertia + dt * (df/dw1x(localAngularVelocity1) x (localAngularVelocity1 * localInertia) + localAngularVelocity1 x df/dw1x(localAngularVelocity1 * localInertia))
+            //df/dw1x(localAngularVelocity1) = (1,0,0)
+            //df/dw1x(f(localAngularVelocity1)) = (1, 0, 0) * localInertia + dt * ((1, 0, 0) x (localAngularVelocity1 * localInertia) + localAngularVelocity1 x ((1, 0, 0) * localInertia))
+            //df/dw1x(f(localAngularVelocity1)) = (0, 1, 0) * localInertia + dt * ((0, 1, 0) x (localAngularVelocity1 * localInertia) + localAngularVelocity1 x ((0, 1, 0) * localInertia))
+            //df/dw1x(f(localAngularVelocity1)) = (0, 0, 1) * localInertia + dt * ((0, 0, 1) x (localAngularVelocity1 * localInertia) + localAngularVelocity1 x ((0, 0, 1) * localInertia))
+            //This can be expressed a bit more concisely, given a x b = skew(a) * b, where skew(a) is a skew symmetric matrix representing a cross product: 
+            //df/dw1(f(localAngularVelocity1)) = localInertia + dt * (skew(localAngularVelocity1) * localInertia - skew(localAngularVelocity1 * localInertia))
+            Matrix3x3Wide.CreateFromQuaternion(orientation, out var orientationMatrix);
+            //Using localAngularVelocity0 as the first guess for localAngularVelocity1.
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(angularVelocity, orientationMatrix, out var localAngularVelocity);
+            Symmetric3x3Wide.Invert(localInertia.InverseInertiaTensor, out var localInertiaTensor);
+
+            Symmetric3x3Wide.TransformWithoutOverlap(localAngularVelocity, localInertiaTensor, out var localAngularMomentum);
+            var dtWide = new Vector<float>(dt);
+            var residual = dtWide * Vector3Wide.Cross(localAngularMomentum, localAngularVelocity);
+
+            Matrix3x3Wide.CreateCrossProduct(localAngularMomentum, out var skewMomentum);
+            Matrix3x3Wide.CreateCrossProduct(localAngularVelocity, out var skewVelocity);
+            var transformedSkewVelocity = skewVelocity * localInertiaTensor;
+            Matrix3x3Wide.Subtract(transformedSkewVelocity, skewMomentum, out var changeOverDt);
+            Matrix3x3Wide.Scale(changeOverDt, dtWide, out var change);
+            var jacobian = localInertiaTensor + change;
+
+            Matrix3x3Wide.Invert(jacobian, out var inverseJacobian);
+            Matrix3x3Wide.Transform(residual, inverseJacobian, out var newtonStep);
+            localAngularVelocity -= newtonStep;
+
+            Matrix3x3Wide.Transform(localAngularVelocity, orientationMatrix, out angularVelocity);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
         {
             Integrate(pose.Position, velocity.Linear, dt, out integratedPose.Position);

@@ -540,6 +540,39 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Matrix3x3Wide operator +(in Symmetric3x3Wide a, in Matrix3x3Wide b)
+        {
+            Matrix3x3Wide result;
+            result.X.X = a.XX + b.X.X;
+            result.X.Y = a.YX + b.X.Y;
+            result.X.Z = a.ZX + b.X.Z;
+            result.Y.X = a.YX + b.Y.X;
+            result.Y.Y = a.YY + b.Y.Y;
+            result.Y.Z = a.ZY + b.Y.Z;
+            result.Z.X = a.ZX + b.Z.X;
+            result.Z.Y = a.ZY + b.Z.Y;
+            result.Z.Z = a.ZZ + b.Z.Z;
+            return result;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Matrix3x3Wide operator +(in Matrix3x3Wide a, in Symmetric3x3Wide b)
+        {
+            Matrix3x3Wide result;
+            result.X.X = a.X.X + b.XX;
+            result.X.Y = a.X.Y + b.YX;
+            result.X.Z = a.X.Z + b.ZX;
+            result.Y.X = a.Y.X + b.YX;
+            result.Y.Y = a.Y.Y + b.YY;
+            result.Y.Z = a.Y.Z + b.ZY;
+            result.Z.X = a.Z.X + b.ZX;
+            result.Z.Y = a.Z.Y + b.ZY;
+            result.Z.Z = a.Z.Z + b.ZZ;
+            return result;
+        }
+
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteFirst(in Symmetric3x3 scalar, ref Symmetric3x3Wide wide)
         {
             GatherScatter.GetFirst(ref wide.XX) = scalar.XX;

@@ -12,8 +12,20 @@ using System.Threading;
 
 namespace BepuPhysics
 {
-    public partial class Solver
+    public class Solver<TIntegrationCallbacks> : Solver where TIntegrationCallbacks : struct, IPoseIntegratorCallbacks
     {
+        public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
+            int initialCapacity,
+            int initialIslandCapacity,
+            int minimumCapacityPerTypeBatch, PoseIntegrator<TIntegrationCallbacks> poseIntegrator)
+            : base(bodies, pool, iterationCount, fallbackBatchThreshold, initialCapacity, initialIslandCapacity, minimumCapacityPerTypeBatch)
+        {
+            PoseIntegrator = poseIntegrator;
+            solveStep2Worker = SolveStep2Worker;
+        }
+
+        public PoseIntegrator<TIntegrationCallbacks> PoseIntegrator { get; private set; }
+
         //Split the solve process into a warmstart and solve, where warmstart doesn't try to store out anything. It just computes jacobians and modifies velocities according to the accumulated impulse.
         //The solve step then *recomputes* jacobians from prestep data and pose information.
         //Why? Memory bandwidth. Redoing the calculation is cheaper than storing it out.
@@ -21,14 +33,15 @@ namespace BepuPhysics
         {
             public float Dt;
             public float InverseDt;
+            Solver<TIntegrationCallbacks> solver;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex)
+            public void Execute(Solver solver, int blockIndex, int workerIndex )
             {
-                ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
+                ref var block = ref this.solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.WarmStart2(ref typeBatch, ref solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
+                typeProcessor.WarmStart2(ref typeBatch, ref this.solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], this.solver.bodies, ref this.solver.PoseIntegrator.Callbacks, Dt, InverseDt, block.StartBundle, block.End, workerIndex);
             }
         }
         //no fallback warmstart; the last constraint batch is always handled by the solve instead, and if the fallback batch exists, it's guaranteed to be the last batch.
@@ -37,14 +50,15 @@ namespace BepuPhysics
         {
             public float Dt;
             public float InverseDt;
+            Solver<TIntegrationCallbacks> solver;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex)
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
-                ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
+                ref var block = ref this.solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.SolveStep2(ref typeBatch, ref solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
+                typeProcessor.SolveStep2(ref typeBatch, ref this.solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
             }
         }
 
@@ -64,8 +78,6 @@ namespace BepuPhysics
         //}
 
         Action<int> solveStep2Worker;
-
-
         void SolveStep2Worker(int workerIndex)
         {
             int fallbackStart = GetUniformlyDistributedStart(workerIndex, context.FallbackBlocks.Blocks.Count, context.WorkerCount, 0);
@@ -216,7 +228,7 @@ namespace BepuPhysics
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].WarmStart2(ref typeBatch, ref integrationFlagsForBatch[j], bodies, dt, inverseDt, 0, typeBatch.BundleCount);
+                        TypeProcessors[typeBatch.TypeId].WarmStart2(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks, dt, inverseDt, 0, typeBatch.BundleCount, 0);
                     }
                 }
 
@@ -236,6 +248,11 @@ namespace BepuPhysics
                 ExecuteMultithreaded<MainSolveFilter>(dt, threadDispatcher, solveStep2Worker);
             }
         }
+    }
+
+    public partial class Solver
+    {
+        
 
     }
 }
