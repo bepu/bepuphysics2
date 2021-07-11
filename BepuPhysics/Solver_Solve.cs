@@ -74,7 +74,7 @@ namespace BepuPhysics
         //Without sticky scheduling, memory bandwidth use could skyrocket during iterations as the L3 gets missed over and over.
 
 
-        struct WorkBlock
+        protected struct WorkBlock
         {
             public int BatchIndex;
             public int TypeBatchIndex;
@@ -88,19 +88,19 @@ namespace BepuPhysics
             public int End;
         }
 
-        struct FallbackScatterWorkBlock
+        protected struct FallbackScatterWorkBlock
         {
             public int Start;
             public int End;
         }
 
-        interface ITypeBatchSolveFilter
+        protected interface ITypeBatchSolveFilter
         {
             bool AllowFallback { get; }
             bool AllowType(int typeId);
         }
 
-        struct MainSolveFilter : ITypeBatchSolveFilter
+        protected struct MainSolveFilter : ITypeBatchSolveFilter
         {
             public bool AllowFallback
             {
@@ -118,7 +118,7 @@ namespace BepuPhysics
             }
         }
 
-        private unsafe void BuildWorkBlocks<TTypeBatchFilter>(BufferPool pool, int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlocksPerBatch, ref TTypeBatchFilter typeBatchFilter) where TTypeBatchFilter : ITypeBatchSolveFilter
+        protected unsafe void BuildWorkBlocks<TTypeBatchFilter>(BufferPool pool, int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlocksPerBatch, ref TTypeBatchFilter typeBatchFilter) where TTypeBatchFilter : ITypeBatchSolveFilter
         {
             ref var activeSet = ref ActiveSet;
             context.ConstraintBlocks.Blocks = new QuickList<WorkBlock>(targetBlocksPerBatch * activeSet.Batches.Count, pool);
@@ -182,7 +182,7 @@ namespace BepuPhysics
         }
 
 
-        struct WorkerBounds
+        protected struct WorkerBounds
         {
             /// <summary>
             /// Inclusive start of blocks known to be claimed by any worker.
@@ -216,7 +216,7 @@ namespace BepuPhysics
 
             }
         }
-        struct WorkBlocks<T> where T : unmanaged
+        protected struct WorkBlocks<T> where T : unmanaged
         {
             public QuickList<T> Blocks;
             public Buffer<int> Claims;
@@ -234,7 +234,7 @@ namespace BepuPhysics
         }
 
         //Just bundling these up to avoid polluting the this. intellisense.
-        struct MultithreadingParameters
+        protected struct MultithreadingParameters
         {
             public float Dt;
             public WorkBlocks<WorkBlock> ConstraintBlocks;
@@ -248,7 +248,7 @@ namespace BepuPhysics
             public Buffer<WorkerBounds> WorkerBoundsB;
 
         }
-        MultithreadingParameters context;
+        protected MultithreadingParameters context;
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -278,7 +278,7 @@ namespace BepuPhysics
                     highestLocallyClaimedIndex = blockIndex;
                     bounds.Max = blockIndex + 1; //Exclusive bound.
                     Debug.Assert(blockIndex < batchEnd);
-                    stageFunction.Execute(this, blockIndex);
+                    stageFunction.Execute(this, blockIndex, workerIndex);
                     //Increment or exit.
                     if (++blockIndex == batchEnd)
                         break;
@@ -310,7 +310,7 @@ namespace BepuPhysics
                     lowestLocallyClaimedIndex = blockIndex;
                     bounds.Min = blockIndex;
                     Debug.Assert(blockIndex >= batchStart);
-                    stageFunction.Execute(this, blockIndex);
+                    stageFunction.Execute(this, blockIndex, workerIndex);
                     //Decrement or exit.
                     if (blockIndex == batchStart)
                         break;
@@ -326,9 +326,9 @@ namespace BepuPhysics
             MergeWorkerBounds(ref bounds, ref allWorkerBounds, workerIndex);
             return lowestLocallyClaimedIndex;
         }
-        interface IStageFunction
+        protected interface IStageFunction
         {
-            void Execute(Solver solver, int blockIndex);
+            void Execute(Solver solver, int blockIndex, int workerIndex);
         }
         struct PrestepStageFunction : IStageFunction
         {
@@ -336,7 +336,7 @@ namespace BepuPhysics
             public float InverseDt;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex)
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
@@ -352,7 +352,7 @@ namespace BepuPhysics
         struct WarmStartStageFunction : IStageFunction
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex)
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
@@ -364,7 +364,7 @@ namespace BepuPhysics
         struct SolveStageFunction : IStageFunction
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex)
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
@@ -376,7 +376,7 @@ namespace BepuPhysics
         struct WarmStartFallbackStageFunction : IStageFunction
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex)
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
@@ -388,7 +388,7 @@ namespace BepuPhysics
         struct SolveFallbackStageFunction : IStageFunction
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex)
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
@@ -400,7 +400,7 @@ namespace BepuPhysics
         struct FallbackScatterStageFunction : IStageFunction
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex)
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
                 ref var block = ref solver.context.FallbackBlocks.Blocks[blockIndex];
                 solver.ActiveSet.Fallback.ScatterVelocities(solver.bodies, solver, ref solver.context.FallbackResults, block.Start, block.End);
@@ -455,7 +455,7 @@ namespace BepuPhysics
         }
 
 
-        void InterstageSync(ref int syncStageIndex)
+        protected void InterstageSync(ref int syncStageIndex)
         {
             //No more work is available to claim, but not every thread is necessarily done with the work they claimed. So we need a dedicated sync- upon completing its local work,
             //a worker increments the 'workerCompleted' counter, and the spins on that counter reaching workerCount * stageIndex.
@@ -471,7 +471,7 @@ namespace BepuPhysics
             }
         }
 
-        private void ExecuteStage<TStageFunction, TBlock>(ref TStageFunction stageFunction, ref WorkBlocks<TBlock> blocks,
+        protected void ExecuteStage<TStageFunction, TBlock>(ref TStageFunction stageFunction, ref WorkBlocks<TBlock> blocks,
             ref Buffer<WorkerBounds> allWorkerBounds, ref Buffer<WorkerBounds> previousWorkerBounds, int workerIndex,
             int batchStart, int batchEnd, ref int workerStart, ref int syncStage,
             int claimedState, int unclaimedState)
@@ -572,7 +572,7 @@ namespace BepuPhysics
 
         }
 
-        static int GetUniformlyDistributedStart(int workerIndex, int blockCount, int workerCount, int offset)
+        protected static int GetUniformlyDistributedStart(int workerIndex, int blockCount, int workerCount, int offset)
         {
             if (blockCount <= workerCount)
             {
@@ -713,7 +713,7 @@ namespace BepuPhysics
 
         }
 
-        void ExecuteMultithreaded<TTypeBatchSolveFilter>(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate) where TTypeBatchSolveFilter : struct, ITypeBatchSolveFilter
+        protected void ExecuteMultithreaded<TTypeBatchSolveFilter>(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate) where TTypeBatchSolveFilter : struct, ITypeBatchSolveFilter
         {
             var filter = default(TTypeBatchSolveFilter);
             var workerCount = context.WorkerCount = threadDispatcher.ThreadCount;

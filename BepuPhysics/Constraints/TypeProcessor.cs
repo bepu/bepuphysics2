@@ -136,7 +136,8 @@ namespace BepuPhysics.Constraints
         public abstract void JacobiSolveStep(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
 
-        public abstract void WarmStart2(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
+        public abstract void WarmStart2<TCallbacks>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TCallbacks poseIntegratorCallbacks, 
+            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex) where TCallbacks : struct, IPoseIntegratorCallbacks;
         public abstract void SolveStep2(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
 

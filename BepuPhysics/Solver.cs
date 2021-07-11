@@ -199,7 +199,6 @@ namespace BepuPhysics
             solveWorker = SolveWorker;
             solve2Worker = Solve2Worker;
             solveStepWorker = SolveStepWorker;
-            solveStep2Worker = SolveStep2Worker;
             incrementalContactUpdateWorker = IncrementalContactUpdateWorker;
         }
 

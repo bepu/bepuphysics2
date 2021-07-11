@@ -264,6 +264,35 @@ namespace BepuUtilities
             result.Z.Z = Vector<float>.One - XX - YY;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Subtract(in Matrix3x3Wide a, in Matrix3x3Wide b, out Matrix3x3Wide result)
+        {
+            result.X.X = a.X.X - b.X.X;
+            result.X.Y = a.X.Y - b.X.Y;
+            result.X.Z = a.X.Z - b.X.Z;
+            result.Y.X = a.Y.X - b.Y.X;
+            result.Y.Y = a.Y.Y - b.Y.Y;
+            result.Y.Z = a.Y.Z - b.Y.Z;
+            result.Z.X = a.Z.X - b.Z.X;
+            result.Z.Y = a.Z.Y - b.Z.Y;
+            result.Z.Z = a.Z.Z - b.Z.Z;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Matrix3x3Wide operator -(in Matrix3x3Wide a, in Matrix3x3Wide b)
+        {
+            Matrix3x3Wide result;
+            result.X.X = a.X.X - b.X.X;
+            result.X.Y = a.X.Y - b.X.Y;
+            result.X.Z = a.X.Z - b.X.Z;
+            result.Y.X = a.Y.X - b.Y.X;
+            result.Y.Y = a.Y.Y - b.Y.Y;
+            result.Y.Z = a.Y.Z - b.Y.Z;
+            result.Z.X = a.Z.X - b.Z.X;
+            result.Z.Y = a.Z.Y - b.Z.Y;
+            result.Z.Z = a.Z.Z - b.Z.Z;
+            return result;
+        }
+
         /// <summary>
         /// Pulls one lane out of the wide representation.
         /// </summary>
