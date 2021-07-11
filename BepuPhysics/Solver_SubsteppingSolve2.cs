@@ -12,6 +12,20 @@ using System.Threading;
 
 namespace BepuPhysics
 {
+    public partial class Solver
+    {
+        public virtual void PrepareConstraintIntegrationResponsibilities()
+        {
+        }
+        public virtual void DisposeConstraintIntegrationResponsibilities()
+        {
+        }
+
+        public virtual void SolveStep2(float dt, IThreadDispatcher threadDispatcher = null)
+        {
+
+        }
+    }
     public class Solver<TIntegrationCallbacks> : Solver where TIntegrationCallbacks : struct, IPoseIntegratorCallbacks
     {
         public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
@@ -33,7 +47,7 @@ namespace BepuPhysics
         {
             public float Dt;
             public float InverseDt;
-            Solver<TIntegrationCallbacks> solver;
+            public Solver<TIntegrationCallbacks> solver;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Execute(Solver solver, int blockIndex, int workerIndex )
@@ -50,7 +64,7 @@ namespace BepuPhysics
         {
             public float Dt;
             public float InverseDt;
-            Solver<TIntegrationCallbacks> solver;
+            public Solver<TIntegrationCallbacks> solver;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Execute(Solver solver, int blockIndex, int workerIndex)
@@ -58,7 +72,7 @@ namespace BepuPhysics
                 ref var block = ref this.solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.SolveStep2(ref typeBatch, ref this.solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
+                typeProcessor.SolveStep2(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
             }
         }
 
@@ -106,9 +120,12 @@ namespace BepuPhysics
             Debug.Assert(activeSet.Batches.Count > 0, "Don't dispatch if there are no constraints.");
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
 
-            var warmstartStage = new WarmStartStep2StageFunction();
-            warmstartStage.Dt = context.Dt;
-            warmstartStage.InverseDt = 1f / context.Dt;
+            var warmstartStage = new WarmStartStep2StageFunction
+            {
+                Dt = context.Dt,
+                InverseDt = 1f / context.Dt,
+                solver = this
+            };
             for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
             {
                 var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
@@ -117,9 +134,12 @@ namespace BepuPhysics
             }
             claimedState ^= 1;
             unclaimedState ^= 1;
-            var solveStage = new SolveStep2StageFunction();
-            solveStage.Dt = context.Dt;
-            solveStage.InverseDt = 1f / context.Dt;
+            var solveStage = new SolveStep2StageFunction
+            {
+                Dt = context.Dt,
+                InverseDt = 1f / context.Dt,
+                solver = this
+            };
             for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
             {
                 var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
@@ -142,7 +162,7 @@ namespace BepuPhysics
 
         Buffer<Buffer<Buffer<IndexSet>>> integrationFlags;
 
-        public void PrepareConstraintIntegrationResponsibilities()
+        public override void PrepareConstraintIntegrationResponsibilities()
         {
             //var start = Stopwatch.GetTimestamp();
             pool.Take(ActiveSet.Batches.Count, out integrationFlags);
@@ -193,7 +213,7 @@ namespace BepuPhysics
             //var end = Stopwatch.GetTimestamp();
             //Console.WriteLine($"Brute force time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
         }
-        public void DisposeConstraintIntegrationResponsibilities()
+        public override void DisposeConstraintIntegrationResponsibilities()
         {
             for (int i = 0; i < integrationFlags.Length; ++i)
             {
@@ -212,7 +232,7 @@ namespace BepuPhysics
             pool.Return(ref integrationFlags);
         }
 
-        public void SolveStep2(float dt, IThreadDispatcher threadDispatcher = null)
+        public override void SolveStep2(float dt, IThreadDispatcher threadDispatcher = null)
         {
             if (threadDispatcher == null)
             {
@@ -239,7 +259,7 @@ namespace BepuPhysics
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, ref integrationFlagsForBatch[j], bodies, dt, inverseDt, 0, typeBatch.BundleCount);
+                        TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, dt, inverseDt, 0, typeBatch.BundleCount);
                     }
                 }
             }

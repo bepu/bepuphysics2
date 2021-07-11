@@ -349,14 +349,33 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        bool BundleShouldIntegrate(int bundleIndex, in IndexSet integrationFlags, out int integrationMask)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        bool BundleShouldIntegrate(int bundleIndex, in IndexSet integrationFlags, out Vector<int> integrationMask)
         {
             Debug.Assert(Vector<float>.Count <= 32, "Wait, what? The integration mask isn't big enough to handle a vector this big.");
             var constraintStartIndex = bundleIndex * Vector<float>.Count;
             var flagBundleIndex = constraintStartIndex >> 6;
             var flagInnerIndex = constraintStartIndex - flagBundleIndex;
-            integrationMask = ((int)(integrationFlags.Flags[flagBundleIndex] >> flagInnerIndex)) & BundleIndexing.VectorMask;
-            return integrationMask > 0;
+            var scalarIntegrationMask = ((int)(integrationFlags.Flags[flagBundleIndex] >> flagInnerIndex)) & BundleIndexing.VectorMask;
+            if (scalarIntegrationMask == BundleIndexing.VectorMask)
+            {
+                //No need to carefully expand a bitstring into a vector mask if we know that a single broadcast will suffice.
+                integrationMask = new Vector<int>(-1);
+                return true;
+            }
+            else if (scalarIntegrationMask > 0)
+            {
+                //TODO: This is bad prototype code.
+                Span<int> mask = stackalloc int[Vector<int>.Count];
+                for (int i = 0; i < mask.Length; ++i)
+                {
+                    mask[i] = (scalarIntegrationMask & (1 << i)) > 0 ? -1 : 0;
+                }
+                integrationMask = new Vector<int>(scalarIntegrationMask);
+                return true;
+            }
+            integrationMask = default;
+            return false;
         }
 
         unsafe void IntegratePoseAndVelocity<TIntegratorCallbacks>(
@@ -372,7 +391,6 @@ namespace BepuPhysics.Constraints
             //So, the solver runs velocity integration alone on the first substep. All later substeps then run pose + velocity, and then after the last substep, a final pose integration.
             //This is equivalent in ordering to running each substep as velocity, warmstart, solve, pose integration, but just shifting the execution context.
             position += velocity.Linear * new Vector<float>(dt);
-
             if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
             {
                 var oldOrientation = orientation;
@@ -394,7 +412,7 @@ namespace BepuPhysics.Constraints
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
                 inertia.InverseMass = localInertia.InverseMass;
             }
-            integratorCallbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), Vector<int>.Count), position, orientation, localInertia, integrationMask, workerIndex, velocity, 
+            integratorCallbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), Vector<int>.Count), position, orientation, localInertia, integrationMask, workerIndex, velocity, new Vector<float>(dt),
                 out Vector3Wide linearChange, out Vector3Wide angularChange);
             //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
             velocity.Linear.X = Vector.ConditionalSelect(integrationMask, velocity.Linear.X + linearChange.X, velocity.Linear.X);
@@ -426,9 +444,9 @@ namespace BepuPhysics.Constraints
                 Prefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, i, exclusiveEndBundle);
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 if (BundleShouldIntegrate(i, integrationFlags[0], out var integrationMaskA))
-                    IntegratePoseAndVelocity(ref integratorCallbacks, localInertiaA, dt, integrationMaskA, ref positionA, ref orientationA, ref wsvA, workerIndex, out inertiaA);
+                    IntegratePoseAndVelocity(ref integratorCallbacks, ref references.IndexA, localInertiaA, dt, integrationMaskA, ref positionA, ref orientationA, ref wsvA, workerIndex, out inertiaA);
                 if (BundleShouldIntegrate(i, integrationFlags[1], out var integrationMaskB))
-                    IntegratePoseAndVelocity(ref integratorCallbacks, localInertiaB, dt, integrationMaskB, ref positionB, ref orientationB, ref wsvB, workerIndex, out inertiaB);
+                    IntegratePoseAndVelocity(ref integratorCallbacks, ref references.IndexB, localInertiaB, dt, integrationMaskB, ref positionB, ref orientationB, ref wsvB, workerIndex, out inertiaB);
                 if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
                 {
                     default(WeldFunctions).WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB,
@@ -447,7 +465,7 @@ namespace BepuPhysics.Constraints
                 bodies.ScatterVelocities(ref wsvA, ref wsvB, ref references, count);
             }
         }
-        public unsafe override void SolveStep2(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();

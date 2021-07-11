@@ -319,11 +319,12 @@ namespace BepuPhysics.Constraints
         }
 
 
-        public override void WarmStart2(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public override void WarmStart2<TIntegratorCallbacks>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks, 
+            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             throw new NotImplementedException();
         }
-        public override void SolveStep2(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             throw new NotImplementedException();
         }

@@ -28,7 +28,7 @@ namespace BepuPhysics
             public float InverseDt;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex)
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
