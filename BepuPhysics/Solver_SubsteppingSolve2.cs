@@ -269,10 +269,4 @@ namespace BepuPhysics
             }
         }
     }
-
-    public partial class Solver
-    {
-        
-
-    }
 }

@@ -439,7 +439,7 @@ namespace BepuPhysics.Constraints
                 bodies.GatherLocalInertia(ref bodyIndices, count, out var localInertia);
                 IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, localInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
                 //The scatter will be able to ignore any lanes which have a zeroed integration mask.
-                bodies.ScatterMotionStateAndInertia(position, orientation, inertia, integrationMask, ref bodyIndices, count);
+                bodies.ScatterPoseAndInertia(ref position, ref orientation, ref inertia, ref bodyIndices, ref integrationMask);
             }
             else
             {

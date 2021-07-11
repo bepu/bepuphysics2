@@ -59,35 +59,7 @@ namespace BepuPhysics
         /// </summary>
         public bool Deterministic { get; set; }
 
-        protected Simulation(BufferPool bufferPool, SimulationAllocationSizes initialAllocationSizes, int solverIterationCount, int solverFallbackBatchThreshold, ITimestepper timestepper)
-        {
-            BufferPool = bufferPool;
-            Shapes = new Shapes(bufferPool, initialAllocationSizes.ShapesPerType);
-            BroadPhase = new BroadPhase(bufferPool, initialAllocationSizes.Bodies, initialAllocationSizes.Bodies + initialAllocationSizes.Statics);
-            Bodies = new Bodies(bufferPool, Shapes, BroadPhase,
-                initialAllocationSizes.Bodies,
-                initialAllocationSizes.Islands,
-                initialAllocationSizes.ConstraintCountPerBodyEstimate);
-            Statics = new Statics(bufferPool, Shapes, Bodies, BroadPhase, initialAllocationSizes.Statics);
-
-            Solver = new Solver(Bodies, BufferPool, solverIterationCount, solverFallbackBatchThreshold,
-                initialCapacity: initialAllocationSizes.Constraints,
-                initialIslandCapacity: initialAllocationSizes.Islands,
-                minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
-            constraintRemover = new ConstraintRemover(BufferPool, Bodies, Solver);
-            Sleeper = new IslandSleeper(Bodies, Solver, BroadPhase, constraintRemover, BufferPool);
-            Awakener = new IslandAwakener(Bodies, Statics, Solver, BroadPhase, Sleeper, bufferPool);
-            Statics.awakener = Awakener;
-            Solver.awakener = Awakener;
-            Bodies.Initialize(Solver, Awakener, Sleeper);
-            SolverBatchCompressor = new BatchCompressor(Solver, Bodies);
-            BodyLayoutOptimizer = new BodyLayoutOptimizer(Bodies, BroadPhase, Solver, bufferPool);
-            ConstraintLayoutOptimizer = new ConstraintLayoutOptimizer(Bodies, Solver);
-            Timestepper = timestepper;
-
-        }
-
-        /// <summary>
+         /// <summary>
         /// Constructs a simulation supporting dynamic movement and constraints with the specified narrow phase callbacks.
         /// </summary>
         /// <param name="bufferPool">Buffer pool used to fill persistent structures and main thread ephemeral resources across the engine.</param>
@@ -117,9 +89,35 @@ namespace BepuPhysics
                 };
             }
 
-            var simulation = new Simulation(bufferPool, initialAllocationSizes.Value, solverIterationCount, solverFallbackBatchThreshold, timestepper);
+            //var simulation = new Simulation(bufferPool, initialAllocationSizes.Value, solverIterationCount, solverFallbackBatchThreshold, timestepper);
+            var simulation = new Simulation();
+            simulation.BufferPool = bufferPool;
+            simulation.Shapes = new Shapes(bufferPool, initialAllocationSizes.Value.ShapesPerType);
+            simulation.BroadPhase = new BroadPhase(bufferPool, initialAllocationSizes.Value.Bodies, initialAllocationSizes.Value.Bodies + initialAllocationSizes.Value.Statics);
+            simulation.Bodies = new Bodies(bufferPool, simulation.Shapes, simulation.BroadPhase,
+                initialAllocationSizes.Value.Bodies,
+                initialAllocationSizes.Value.Islands,
+                initialAllocationSizes.Value.ConstraintCountPerBodyEstimate);
+            simulation.Statics = new Statics(bufferPool, simulation.Shapes, simulation.Bodies, simulation.BroadPhase, initialAllocationSizes.Value.Statics);
+
             var poseIntegrator = new PoseIntegrator<TPoseIntegratorCallbacks>(simulation.Bodies, simulation.Shapes, simulation.BroadPhase, poseIntegratorCallbacks);
             simulation.PoseIntegrator = poseIntegrator;
+
+            simulation.Solver = new Solver<TPoseIntegratorCallbacks>(simulation.Bodies, simulation.BufferPool, solverIterationCount, solverFallbackBatchThreshold,
+                initialCapacity: initialAllocationSizes.Value.Constraints,
+                initialIslandCapacity: initialAllocationSizes.Value.Islands,
+                minimumCapacityPerTypeBatch: initialAllocationSizes.Value.ConstraintsPerTypeBatch, poseIntegrator);
+            simulation.constraintRemover = new ConstraintRemover(simulation.BufferPool, simulation.Bodies, simulation.Solver);
+            simulation.Sleeper = new IslandSleeper(simulation.Bodies, simulation.Solver, simulation.BroadPhase, simulation.constraintRemover, simulation.BufferPool);
+            simulation.Awakener = new IslandAwakener(simulation.Bodies, simulation.Statics, simulation.Solver, simulation.BroadPhase, simulation.Sleeper, bufferPool);
+            simulation.Statics.awakener = simulation.Awakener;
+            simulation.Solver.awakener = simulation.Awakener;
+            simulation.Bodies.Initialize(simulation.Solver, simulation.Awakener, simulation.Sleeper);
+            simulation.SolverBatchCompressor = new BatchCompressor(simulation.Solver, simulation.Bodies);
+            simulation.BodyLayoutOptimizer = new BodyLayoutOptimizer(simulation.Bodies, simulation.BroadPhase, simulation.Solver, bufferPool);
+            simulation.ConstraintLayoutOptimizer = new ConstraintLayoutOptimizer(simulation.Bodies, simulation.Solver);
+            simulation.Timestepper = timestepper;
+
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation,
                 DefaultTypes.CreateDefaultCollisionTaskRegistry(), DefaultTypes.CreateDefaultSweepTaskRegistry(),
                 narrowPhaseCallbacks, initialAllocationSizes.Value.Islands + 1);

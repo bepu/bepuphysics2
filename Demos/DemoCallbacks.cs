@@ -80,6 +80,10 @@ namespace Demos
             //This is also a handy spot to implement things like position dependent gravity or per-body damping.
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IntegrateVelocity(ReadOnlySpan<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
+        {
+        }
     }
     public unsafe struct DemoNarrowPhaseCallbacks : INarrowPhaseCallbacks
     {

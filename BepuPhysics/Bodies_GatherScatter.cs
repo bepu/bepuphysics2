@@ -200,13 +200,6 @@ namespace BepuPhysics
                     position.X = Avx.Permute2x128(o0, o1, 1 | (3 << 4)).AsVector();
                     position.Y = Avx.Permute2x128(o4, o5, 1 | (3 << 4)).AsVector();
                     position.Z = Avx.Permute2x128(o2, o3, 1 | (3 << 4)).AsVector();
-                    //inertia.InverseMass = Avx.Permute2x128(o6, o7, 1 | (3 << 4)).AsVector();
-                    //inertia.InverseInertiaTensor.XX = inertia.InverseMass;
-                    //inertia.InverseInertiaTensor.YY = inertia.InverseMass;
-                    //inertia.InverseInertiaTensor.ZZ = inertia.InverseMass;
-                    //inertia.InverseInertiaTensor.YX = default;
-                    //inertia.InverseInertiaTensor.ZX = default;
-                    //inertia.InverseInertiaTensor.ZY = default;
                 }
 
                 {
@@ -257,7 +250,7 @@ namespace BepuPhysics
         }
 
 
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void GatherInertia(ref Vector<int> bodyIndices, int count, int offsetInFloats, out BodyInertiaWide inertia)
         {
             var inertias = ActiveSet.Inertias.Memory;
@@ -347,14 +340,6 @@ namespace BepuPhysics
         out Vector3Wide ab,
         out QuaternionWide orientationB, out BodyVelocityWide velocityB, out BodyInertiaWide inertiaB)
         {
-            Unsafe.SkipInit(out Vector3Wide positionA);
-            Unsafe.SkipInit(out Vector3Wide positionB);
-            Unsafe.SkipInit(out orientationA);
-            Unsafe.SkipInit(out orientationB);
-            Unsafe.SkipInit(out velocityA);
-            Unsafe.SkipInit(out velocityB);
-            Unsafe.SkipInit(out inertiaA);
-            Unsafe.SkipInit(out inertiaB);
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -362,9 +347,9 @@ namespace BepuPhysics
 
             ref var states = ref ActiveSet.MotionStates;
 
-            GatherMotionState(ref references.IndexA, count, out positionA, out orientationA, out velocityA);
+            GatherMotionState(ref references.IndexA, count, out var positionA, out orientationA, out velocityA);
             GatherWorldInertia(ref references.IndexA, count, out inertiaA);
-            GatherMotionState(ref references.IndexB, count, out positionB, out orientationB, out velocityB);
+            GatherMotionState(ref references.IndexB, count, out var positionB, out orientationB, out velocityB);
             GatherWorldInertia(ref references.IndexA, count, out inertiaB);
 
             //for (int i = 0; i < count; ++i)
@@ -533,6 +518,100 @@ namespace BepuPhysics
             Vector3Wide.Subtract(positionC, positionA, out ad);
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void ScatterPoseAndInertia(
+            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyInertiaWide inertia, ref Vector<int> references, ref Vector<int> mask)
+        {
+            if (Avx.IsSupported)
+            {
+                {
+                    var m0 = orientation.X.AsVector256();
+                    var m1 = orientation.Y.AsVector256();
+                    var m2 = orientation.Z.AsVector256();
+                    var m3 = orientation.W.AsVector256();
+                    var m4 = position.Y.AsVector256();
+                    var m5 = position.Y.AsVector256();
+                    var m6 = position.Z.AsVector256();
+
+                    var n0 = Avx.UnpackLow(m0, m1);
+                    var n1 = Avx.UnpackLow(m2, m3);
+                    var n2 = Avx.UnpackLow(m4, m5);
+                    var n3 = Avx.UnpackLow(m6, m6);
+                    var n4 = Avx.UnpackHigh(m0, m1);
+                    var n5 = Avx.UnpackHigh(m2, m3);
+                    var n6 = Avx.UnpackHigh(m4, m5);
+                    var n7 = Avx.UnpackHigh(m6, m6); //Laze alert.
+
+                    var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o3 = Avx.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o5 = Avx.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+
+                    var maskPointer = (int*)Unsafe.AsPointer(ref mask);
+                    var indices = (int*)Unsafe.AsPointer(ref references);
+                    var motionStates = ActiveSet.MotionStates.Memory;
+                    if (maskPointer[0] != 0) Avx.StoreAligned((float*)(motionStates + indices[0]), Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                    if (maskPointer[1] != 0) Avx.StoreAligned((float*)(motionStates + indices[1]), Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                    if (maskPointer[2] != 0) Avx.StoreAligned((float*)(motionStates + indices[2]), Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                    if (maskPointer[3] != 0) Avx.StoreAligned((float*)(motionStates + indices[3]), Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                    if (maskPointer[4] != 0) Avx.StoreAligned((float*)(motionStates + indices[4]), Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                    if (maskPointer[5] != 0) Avx.StoreAligned((float*)(motionStates + indices[5]), Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                    if (maskPointer[6] != 0) Avx.StoreAligned((float*)(motionStates + indices[6]), Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                    if (maskPointer[7] != 0) Avx.StoreAligned((float*)(motionStates + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                }
+                {
+                    var m0 = inertia.InverseInertiaTensor.XX.AsVector256();
+                    var m1 = inertia.InverseInertiaTensor.YX.AsVector256();
+                    var m2 = inertia.InverseInertiaTensor.YY.AsVector256();
+                    var m3 = inertia.InverseInertiaTensor.ZX.AsVector256();
+                    var m4 = inertia.InverseInertiaTensor.ZY.AsVector256();
+                    var m5 = inertia.InverseInertiaTensor.ZZ.AsVector256();
+                    var m6 = inertia.InverseMass.AsVector256();
+
+                    var n0 = Avx.UnpackLow(m0, m1);
+                    var n1 = Avx.UnpackLow(m2, m3);
+                    var n2 = Avx.UnpackLow(m4, m5);
+                    var n3 = Avx.UnpackLow(m6, m6);
+                    var n4 = Avx.UnpackHigh(m0, m1);
+                    var n5 = Avx.UnpackHigh(m2, m3);
+                    var n6 = Avx.UnpackHigh(m4, m5);
+                    var n7 = Avx.UnpackHigh(m6, m6); //Laze alert.
+
+                    var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o3 = Avx.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o5 = Avx.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+
+                    var maskPointer = (int*)Unsafe.AsPointer(ref mask);
+                    var indices = (int*)Unsafe.AsPointer(ref references);
+                    //Note the offset; we're scattering into the world inertias.
+                    var inertias = ActiveSet.Inertias.Memory;
+                    if (maskPointer[0] != 0) Avx.StoreAligned((float*)(inertias + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                    if (maskPointer[1] != 0) Avx.StoreAligned((float*)(inertias + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                    if (maskPointer[2] != 0) Avx.StoreAligned((float*)(inertias + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                    if (maskPointer[3] != 0) Avx.StoreAligned((float*)(inertias + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                    if (maskPointer[4] != 0) Avx.StoreAligned((float*)(inertias + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                    if (maskPointer[5] != 0) Avx.StoreAligned((float*)(inertias + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                    if (maskPointer[6] != 0) Avx.StoreAligned((float*)(inertias + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                    if (maskPointer[7] != 0) Avx.StoreAligned((float*)(inertias + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                }
+            }
+            else
+            {
+            }
+        }
+
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocities, ref int baseIndex, int innerIndex)
         {
@@ -600,7 +679,6 @@ namespace BepuPhysics
             {
             }
         }
-
 
         /// <summary>
         /// Scatters velocities for one body bundle into the active body set.
