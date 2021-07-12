@@ -138,7 +138,7 @@ namespace BepuPhysics
         public unsafe void GatherMotionState(ref Vector<int> bodyIndices, int count, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity)
         {
             var motionStates = ActiveSet.MotionStates.Memory;
-            if (Avx.IsSupported)
+            if (Avx.IsSupported && Vector<float>.Count == 8)
             {
                 var indices = (int*)Unsafe.AsPointer(ref bodyIndices);
 
@@ -254,7 +254,7 @@ namespace BepuPhysics
         unsafe void GatherInertia(ref Vector<int> bodyIndices, int count, int offsetInFloats, out BodyInertiaWide inertia)
         {
             var inertias = ActiveSet.Inertias.Memory;
-            if (Avx.IsSupported)
+            if (Avx.IsSupported && Vector<float>.Count == 8)
             {
                 var indices = (int*)Unsafe.AsPointer(ref bodyIndices);
                 {
@@ -524,7 +524,7 @@ namespace BepuPhysics
             ref Vector3Wide position, ref QuaternionWide orientation, ref BodyInertiaWide inertia, ref Vector<int> references, int count, ref Vector<int> mask)
             where TBatchIntegrationMode : struct, IBatchIntegrationMode
         {
-            if (Avx.IsSupported)
+            if (Avx.IsSupported && Vector<float>.Count == 8)
             {
                 {
                     var m0 = orientation.X.AsVector256();
@@ -656,7 +656,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void TransposeScatterVelocities(ref BodyVelocityWide sourceVelocities, MotionState* motionStates, ref Vector<int> references, int count)
         {
-            if (Avx.IsSupported)
+            if (Avx.IsSupported && Vector<float>.Count == 8)
             {
                 //for (int i = 0; i < 8; ++i)
                 //{
