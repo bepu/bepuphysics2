@@ -50,12 +50,23 @@ namespace BepuPhysics
             public Solver<TIntegrationCallbacks> solver;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex, int workerIndex )
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
                 ref var block = ref this.solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.WarmStart2(ref typeBatch, ref this.solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], this.solver.bodies, ref this.solver.PoseIntegrator.Callbacks, Dt, InverseDt, block.StartBundle, block.End, workerIndex);
+                if (block.BatchIndex == 0)
+                {
+                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate>(
+                        ref typeBatch, ref this.solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], this.solver.bodies, ref this.solver.PoseIntegrator.Callbacks,
+                        Dt, InverseDt, block.StartBundle, block.End, workerIndex);
+                }
+                else
+                {
+                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate>(
+                        ref typeBatch, ref this.solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], this.solver.bodies, ref this.solver.PoseIntegrator.Callbacks,
+                        Dt, InverseDt, block.StartBundle, block.End, workerIndex);
+                }
             }
         }
         //no fallback warmstart; the last constraint batch is always handled by the solve instead, and if the fallback batch exists, it's guaranteed to be the last batch.
@@ -248,7 +259,16 @@ namespace BepuPhysics
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].WarmStart2(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks, dt, inverseDt, 0, typeBatch.BundleCount, 0);
+                        if (i == 0)
+                        {
+                            TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate>(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks,
+                                dt, inverseDt, 0, typeBatch.BundleCount, 0);
+                        }
+                        else
+                        {
+                            TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate>(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks,
+                                dt, inverseDt, 0, typeBatch.BundleCount, 0);
+                        }
                     }
                 }
 

@@ -78,7 +78,7 @@ namespace BepuPhysics
         /// <param name="position">Current body positions.</param>
         /// <param name="orientation">Current body orientations.</param>
         /// <param name="localInertia">Body's current local inertia.</param>
-        /// <param name="integrationMask">Mask indicating which lanes are active in the bundle. Active lanes will contain 0xFFFFFFFF, inactive lanes will contain 0.</param>
+        /// <param name="integrationMask">Mask indicating which lanes are active in the bundle. Active lanes will contain 0xFFFFFFFF, inactive lanes will contain 0. Lanes beyond bodyIndices.Length are undefined.</param>
         /// <param name="workerIndex">Index of the worker thread processing this bundle.</param>
         /// <param name="dt">Durations to integrate the velocity over. Can vary over lanes.</param>
         /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
@@ -139,8 +139,6 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Integrate(in QuaternionWide start, in Vector3Wide angularVelocity, in Vector<float> halfDt, out QuaternionWide integrated)
         {
-            start.Validate();
-            angularVelocity.Validate();
             Vector3Wide.Length(angularVelocity, out var speed);
             var halfAngle = speed * halfDt;
             QuaternionWide q;
@@ -150,13 +148,13 @@ namespace BepuPhysics
             q.Y = angularVelocity.Y * scale;
             q.Z = angularVelocity.Z * scale;
             MathHelper.Cos(halfAngle, out q.W);
-            QuaternionWide.ConcatenateWithoutOverlap(start, q, out var concatenated);
-            integrated = QuaternionWide.Normalize(concatenated);
+            QuaternionWide.ConcatenateWithoutOverlap(start, q, out var end);
+            end = QuaternionWide.Normalize(end);
             var speedValid = Vector.GreaterThan(speed, new Vector<float>(1e-15f));
-            integrated.X = Vector.ConditionalSelect(speedValid, integrated.X, start.X);
-            integrated.Y = Vector.ConditionalSelect(speedValid, integrated.Y, start.Y);
-            integrated.Z = Vector.ConditionalSelect(speedValid, integrated.Z, start.Z);
-            integrated.W = Vector.ConditionalSelect(speedValid, integrated.W, start.W);
+            integrated.X = Vector.ConditionalSelect(speedValid, end.X, start.X);
+            integrated.Y = Vector.ConditionalSelect(speedValid, end.Y, start.Y);
+            integrated.Z = Vector.ConditionalSelect(speedValid, end.Z, start.Z);
+            integrated.W = Vector.ConditionalSelect(speedValid, end.W, start.W);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

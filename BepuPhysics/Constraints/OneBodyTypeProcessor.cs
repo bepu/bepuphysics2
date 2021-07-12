@@ -250,7 +250,7 @@ namespace BepuPhysics.Constraints
 
 
 
-        public unsafe override void WarmStart2<TIntegratorCallbacks>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks,
+        public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);

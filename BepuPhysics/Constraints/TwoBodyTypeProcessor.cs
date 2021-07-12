@@ -380,7 +380,7 @@ namespace BepuPhysics.Constraints
         }
 
         public static unsafe void IntegratePoseAndVelocity<TIntegratorCallbacks>(
-            ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, in BodyInertiaWide localInertia, float dt, Vector<int> integrationMask,
+            ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, int count, in BodyInertiaWide localInertia, float dt, Vector<int> integrationMask,
             ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity,
             int workerIndex,
             out BodyInertiaWide inertia)
@@ -418,36 +418,84 @@ namespace BepuPhysics.Constraints
                 QuaternionWide.ConditionalSelect(integrationMask, newOrientation, orientation, out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
             }
-            integratorCallbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), Vector<int>.Count), position, orientation, localInertia, integrationMask, workerIndex, new Vector<float>(dt), ref velocity);
+            integratorCallbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), count), position, orientation, localInertia, integrationMask, workerIndex, new Vector<float>(dt), ref velocity);
             //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
             Vector3Wide.ConditionalSelect(integrationMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
             Vector3Wide.ConditionalSelect(integrationMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);
-
-
         }
-        public static unsafe void GatherAndIntegrate<TIntegratorCallbacks>(
-            Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref IndexSet integrationFlags, float dt, int workerIndex, int bundleIndex,
-            ref Vector<int> bodyIndices, int count, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
+
+        public static unsafe void IntegratePoseAndVelocity<TIntegratorCallbacks>(
+            ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, int count, in BodyInertiaWide localInertia, float dt,
+            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity,
+            int workerIndex,
+            out BodyInertiaWide inertia)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
         {
-            bodies.GatherMotionState(ref bodyIndices, count, out position, out orientation, out velocity);
-            if (BundleShouldIntegrate(bundleIndex, integrationFlags, out var integrationMask))
+            //This is identical to the other IntegratePoseAndVelocity, but it avoids any masking because we know ahead of time that the entire bundle is integrating.
+            position += velocity.Linear * new Vector<float>(dt);
+            inertia.InverseMass = localInertia.InverseMass;
+            if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
             {
-                //Note that if we take this codepath, the integration routine will reconstruct the world inertias from local inertia given the current pose.
-                //The changes to pose and velocity for integration inactive lanes will be masked out, so it'll just be identical to the world inertia if we had gathered it.
-                //Given that we're running the instructions in a bundle to build it, there's no reason to go out of our way to gather the world inertia.
-                bodies.GatherLocalInertia(ref bodyIndices, count, out var localInertia);
-                IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, localInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-                //The scatter will be able to ignore any lanes which have a zeroed integration mask.
-                bodies.ScatterPoseAndInertia(ref position, ref orientation, ref inertia, ref bodyIndices, ref integrationMask);
+                var previousOrientation = orientation;
+                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out orientation);
+                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
+                PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia, inertia, ref velocity.Angular);
+            }
+            else if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
+            {
+                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out orientation);
+                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
+                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia, inertia, ref velocity.Angular, dt);
             }
             else
             {
+                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out orientation);
+                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
+            }
+            integratorCallbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), count), position, orientation, localInertia, new Vector<int>(-1), workerIndex, new Vector<float>(dt), ref velocity);
+        }
+
+        public static unsafe void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(
+            Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref IndexSet integrationFlags, float dt, int workerIndex, int bundleIndex,
+            ref Vector<int> bodyIndices, int count, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
+            where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
+            where TBatchIntegrationMode : struct, IBatchIntegrationMode
+        {
+            bodies.GatherMotionState(ref bodyIndices, count, out position, out orientation, out velocity);
+            if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
+            {
+                bodies.GatherLocalInertia(ref bodyIndices, count, out var localInertia);
+                var integrationMask = new Vector<int>(-1);
+                //IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
+                IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
+                //The scatter will be able to ignore any lanes which have a zeroed integration mask.
+                bodies.ScatterPoseAndInertia<BatchShouldAlwaysIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
+            }
+            else if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
+            {
                 bodies.GatherWorldInertia(ref bodyIndices, count, out inertia);
+            }
+            else
+            {
+                Debug.Assert(typeof(TBatchIntegrationMode) == typeof(BatchShouldConditionallyIntegrate));
+                if (BundleShouldIntegrate(bundleIndex, integrationFlags, out var integrationMask))
+                {
+                    //Note that if we take this codepath, the integration routine will reconstruct the world inertias from local inertia given the current pose.
+                    //The changes to pose and velocity for integration inactive lanes will be masked out, so it'll just be identical to the world inertia if we had gathered it.
+                    //Given that we're running the instructions in a bundle to build it, there's no reason to go out of our way to gather the world inertia.
+                    bodies.GatherLocalInertia(ref bodyIndices, count, out var localInertia);
+                    IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
+                    //The scatter will be able to ignore any lanes which have a zeroed integration mask.
+                    bodies.ScatterPoseAndInertia<BatchShouldConditionallyIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
+                }
+                else
+                {
+                    bodies.GatherWorldInertia(ref bodyIndices, count, out inertia);
+                }
             }
         }
 
-        public unsafe override void WarmStart2<TIntegratorCallbacks>(
+        public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode>(
             ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
@@ -464,9 +512,9 @@ namespace BepuPhysics.Constraints
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
                 Prefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, i, exclusiveEndBundle);
-                GatherAndIntegrate(bodies, ref integratorCallbacks, ref integrationFlags[0], dt, workerIndex, i, ref references.IndexA, count,
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(bodies, ref integratorCallbacks, ref integrationFlags[0], dt, workerIndex, i, ref references.IndexA, count,
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
-                GatherAndIntegrate(bodies, ref integratorCallbacks, ref integrationFlags[1], dt, workerIndex, i, ref references.IndexB, count,
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(bodies, ref integratorCallbacks, ref integrationFlags[1], dt, workerIndex, i, ref references.IndexB, count,
                     out var positionB, out var orientationB, out var wsvB, out var inertiaB);
                 var ab = positionB - positionA;
                 if (typeof(TConstraintFunctions) == typeof(WeldFunctions))

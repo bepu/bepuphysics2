@@ -8,6 +8,8 @@ using BepuUtilities;
 
 namespace BepuPhysics.Constraints
 {
+
+
     /// <summary>
     /// Superclass of constraint type batch processors. Responsible for interpreting raw type batches for the purposes of bookkeeping and solving.
     /// </summary>
@@ -136,8 +138,10 @@ namespace BepuPhysics.Constraints
         public abstract void JacobiSolveStep(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
 
-        public abstract void WarmStart2<TIntegratorCallbacks>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks, 
-            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex) where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks;
+        public abstract void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks,
+            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
+            where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
+            where TBatchIntegrationMode : struct, IBatchIntegrationMode;
         public abstract void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
 
