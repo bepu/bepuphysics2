@@ -520,8 +520,9 @@ namespace BepuPhysics
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ScatterPoseAndInertia(
-            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyInertiaWide inertia, ref Vector<int> references, ref Vector<int> mask)
+        public unsafe void ScatterPoseAndInertia<TBatchIntegrationMode>(
+            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyInertiaWide inertia, ref Vector<int> references, int count, ref Vector<int> mask)
+            where TBatchIntegrationMode : struct, IBatchIntegrationMode
         {
             if (Avx.IsSupported)
             {
@@ -555,14 +556,29 @@ namespace BepuPhysics
                     var maskPointer = (int*)Unsafe.AsPointer(ref mask);
                     var indices = (int*)Unsafe.AsPointer(ref references);
                     var motionStates = ActiveSet.MotionStates.Memory;
-                    if (maskPointer[0] != 0) Avx.StoreAligned((float*)(motionStates + indices[0]), Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
-                    if (maskPointer[1] != 0) Avx.StoreAligned((float*)(motionStates + indices[1]), Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
-                    if (maskPointer[2] != 0) Avx.StoreAligned((float*)(motionStates + indices[2]), Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
-                    if (maskPointer[3] != 0) Avx.StoreAligned((float*)(motionStates + indices[3]), Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
-                    if (maskPointer[4] != 0) Avx.StoreAligned((float*)(motionStates + indices[4]), Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
-                    if (maskPointer[5] != 0) Avx.StoreAligned((float*)(motionStates + indices[5]), Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
-                    if (maskPointer[6] != 0) Avx.StoreAligned((float*)(motionStates + indices[6]), Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
-                    if (maskPointer[7] != 0) Avx.StoreAligned((float*)(motionStates + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));               
+                    if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
+                    {
+                        //If we are in an 'always integrate' batch, then the mask is not guaranteed to mask out out-of-range lanes, since we don't otherwise need the mask.
+                        Avx.StoreAligned((float*)(motionStates + indices[0]), Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                        if (count > 1) Avx.StoreAligned((float*)(motionStates + indices[1]), Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                        if (count > 2) Avx.StoreAligned((float*)(motionStates + indices[2]), Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                        if (count > 3) Avx.StoreAligned((float*)(motionStates + indices[3]), Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                        if (count > 4) Avx.StoreAligned((float*)(motionStates + indices[4]), Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                        if (count > 5) Avx.StoreAligned((float*)(motionStates + indices[5]), Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                        if (count > 6) Avx.StoreAligned((float*)(motionStates + indices[6]), Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                        if (count > 7) Avx.StoreAligned((float*)(motionStates + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                    }
+                    else
+                    {
+                        if (maskPointer[0] != 0) Avx.StoreAligned((float*)(motionStates + indices[0]), Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                        if (maskPointer[1] != 0) Avx.StoreAligned((float*)(motionStates + indices[1]), Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                        if (maskPointer[2] != 0) Avx.StoreAligned((float*)(motionStates + indices[2]), Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                        if (maskPointer[3] != 0) Avx.StoreAligned((float*)(motionStates + indices[3]), Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                        if (maskPointer[4] != 0) Avx.StoreAligned((float*)(motionStates + indices[4]), Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                        if (maskPointer[5] != 0) Avx.StoreAligned((float*)(motionStates + indices[5]), Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                        if (maskPointer[6] != 0) Avx.StoreAligned((float*)(motionStates + indices[6]), Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                        if (maskPointer[7] != 0) Avx.StoreAligned((float*)(motionStates + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                    }
                 }
                 {
                     var m0 = inertia.InverseInertiaTensor.XX.AsVector256();
@@ -595,14 +611,29 @@ namespace BepuPhysics
                     var indices = (int*)Unsafe.AsPointer(ref references);
                     //Note the offset; we're scattering into the world inertias.
                     var inertias = ActiveSet.Inertias.Memory;
-                    if (maskPointer[0] != 0) Avx.StoreAligned((float*)(inertias + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
-                    if (maskPointer[1] != 0) Avx.StoreAligned((float*)(inertias + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
-                    if (maskPointer[2] != 0) Avx.StoreAligned((float*)(inertias + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
-                    if (maskPointer[3] != 0) Avx.StoreAligned((float*)(inertias + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
-                    if (maskPointer[4] != 0) Avx.StoreAligned((float*)(inertias + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
-                    if (maskPointer[5] != 0) Avx.StoreAligned((float*)(inertias + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
-                    if (maskPointer[6] != 0) Avx.StoreAligned((float*)(inertias + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
-                    if (maskPointer[7] != 0) Avx.StoreAligned((float*)(inertias + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                    if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
+                    {
+                        //If we are in an 'always integrate' batch, then the mask is not guaranteed to mask out out-of-range lanes, since we don't otherwise need the mask.
+                        Avx.StoreAligned((float*)(inertias + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                        if (count > 1) Avx.StoreAligned((float*)(inertias + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                        if (count > 2) Avx.StoreAligned((float*)(inertias + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                        if (count > 3) Avx.StoreAligned((float*)(inertias + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                        if (count > 4) Avx.StoreAligned((float*)(inertias + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                        if (count > 5) Avx.StoreAligned((float*)(inertias + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                        if (count > 6) Avx.StoreAligned((float*)(inertias + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                        if (count > 7) Avx.StoreAligned((float*)(inertias + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                    }
+                    else
+                    {
+                        if (maskPointer[0] != 0) Avx.StoreAligned((float*)(inertias + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                        if (maskPointer[1] != 0) Avx.StoreAligned((float*)(inertias + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                        if (maskPointer[2] != 0) Avx.StoreAligned((float*)(inertias + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                        if (maskPointer[3] != 0) Avx.StoreAligned((float*)(inertias + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                        if (maskPointer[4] != 0) Avx.StoreAligned((float*)(inertias + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                        if (maskPointer[5] != 0) Avx.StoreAligned((float*)(inertias + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                        if (maskPointer[6] != 0) Avx.StoreAligned((float*)(inertias + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                        if (maskPointer[7] != 0) Avx.StoreAligned((float*)(inertias + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                    }
                 }
             }
             else
