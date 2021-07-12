@@ -350,7 +350,7 @@ namespace BepuPhysics
             GatherMotionState(ref references.IndexA, count, out var positionA, out orientationA, out velocityA);
             GatherWorldInertia(ref references.IndexA, count, out inertiaA);
             GatherMotionState(ref references.IndexB, count, out var positionB, out orientationB, out velocityB);
-            GatherWorldInertia(ref references.IndexA, count, out inertiaB);
+            GatherWorldInertia(ref references.IndexB, count, out inertiaB);
 
             //for (int i = 0; i < count; ++i)
             //{
@@ -530,14 +530,14 @@ namespace BepuPhysics
                     var m1 = orientation.Y.AsVector256();
                     var m2 = orientation.Z.AsVector256();
                     var m3 = orientation.W.AsVector256();
-                    var m4 = position.Y.AsVector256();
+                    var m4 = position.X.AsVector256();
                     var m5 = position.Y.AsVector256();
                     var m6 = position.Z.AsVector256();
 
                     var n0 = Avx.UnpackLow(m0, m1);
                     var n1 = Avx.UnpackLow(m2, m3);
                     var n2 = Avx.UnpackLow(m4, m5);
-                    var n3 = Avx.UnpackLow(m6, m6);
+                    var n3 = Avx.UnpackLow(m6, m6); //Laze alert.
                     var n4 = Avx.UnpackHigh(m0, m1);
                     var n5 = Avx.UnpackHigh(m2, m3);
                     var n6 = Avx.UnpackHigh(m4, m5);
@@ -562,7 +562,7 @@ namespace BepuPhysics
                     if (maskPointer[4] != 0) Avx.StoreAligned((float*)(motionStates + indices[4]), Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
                     if (maskPointer[5] != 0) Avx.StoreAligned((float*)(motionStates + indices[5]), Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
                     if (maskPointer[6] != 0) Avx.StoreAligned((float*)(motionStates + indices[6]), Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
-                    if (maskPointer[7] != 0) Avx.StoreAligned((float*)(motionStates + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                    if (maskPointer[7] != 0) Avx.StoreAligned((float*)(motionStates + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));               
                 }
                 {
                     var m0 = inertia.InverseInertiaTensor.XX.AsVector256();
@@ -576,7 +576,7 @@ namespace BepuPhysics
                     var n0 = Avx.UnpackLow(m0, m1);
                     var n1 = Avx.UnpackLow(m2, m3);
                     var n2 = Avx.UnpackLow(m4, m5);
-                    var n3 = Avx.UnpackLow(m6, m6);
+                    var n3 = Avx.UnpackLow(m6, m6); //Laze alert.
                     var n4 = Avx.UnpackHigh(m0, m1);
                     var n5 = Avx.UnpackHigh(m2, m3);
                     var n6 = Avx.UnpackHigh(m4, m5);

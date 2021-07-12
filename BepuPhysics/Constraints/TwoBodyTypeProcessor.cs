@@ -355,9 +355,10 @@ namespace BepuPhysics.Constraints
             Debug.Assert(Vector<float>.Count <= 32, "Wait, what? The integration mask isn't big enough to handle a vector this big.");
             var constraintStartIndex = bundleIndex * Vector<float>.Count;
             var flagBundleIndex = constraintStartIndex >> 6;
-            var flagInnerIndex = constraintStartIndex - flagBundleIndex;
-            var scalarIntegrationMask = ((int)(integrationFlags.Flags[flagBundleIndex] >> flagInnerIndex)) & BundleIndexing.VectorMask;
-            if (scalarIntegrationMask == BundleIndexing.VectorMask)
+            var flagInnerIndex = constraintStartIndex - (flagBundleIndex << 6);
+            var flagMask = (1 << Vector<float>.Count) - 1;
+            var scalarIntegrationMask = ((int)(integrationFlags.Flags[flagBundleIndex] >> flagInnerIndex)) & flagMask;
+            if (scalarIntegrationMask == flagMask)
             {
                 //No need to carefully expand a bitstring into a vector mask if we know that a single broadcast will suffice.
                 integrationMask = new Vector<int>(-1);
@@ -371,7 +372,7 @@ namespace BepuPhysics.Constraints
                 {
                     mask[i] = (scalarIntegrationMask & (1 << i)) > 0 ? -1 : 0;
                 }
-                integrationMask = new Vector<int>(scalarIntegrationMask);
+                integrationMask = new Vector<int>(mask);
                 return true;
             }
             integrationMask = default;
@@ -417,7 +418,6 @@ namespace BepuPhysics.Constraints
                 QuaternionWide.ConditionalSelect(integrationMask, newOrientation, orientation, out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
             }
-
             integratorCallbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), Vector<int>.Count), position, orientation, localInertia, integrationMask, workerIndex, new Vector<float>(dt), ref velocity);
             //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
             Vector3Wide.ConditionalSelect(integrationMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
