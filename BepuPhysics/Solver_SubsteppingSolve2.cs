@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Runtime.Intrinsics.X86;
+using System.Numerics;
 
 namespace BepuPhysics
 {
@@ -58,8 +59,9 @@ namespace BepuPhysics
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
                 if (block.BatchIndex == 0)
                 {
+                    Buffer<IndexSet> noFlagsRequired = default;
                     typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate>(
-                        ref typeBatch, ref this.solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], this.solver.bodies, ref this.solver.PoseIntegrator.Callbacks,
+                        ref typeBatch, ref noFlagsRequired, this.solver.bodies, ref this.solver.PoseIntegrator.Callbacks,
                         Dt, InverseDt, block.StartBundle, block.End, workerIndex);
                 }
                 else
@@ -174,68 +176,179 @@ namespace BepuPhysics
 
         Buffer<Buffer<Buffer<IndexSet>>> integrationFlags;
 
-        public override void PrepareConstraintIntegrationResponsibilities()
+        public override unsafe void PrepareConstraintIntegrationResponsibilities()
         {
             //var start = Stopwatch.GetTimestamp();
             pool.Take(ActiveSet.Batches.Count, out integrationFlags);
-            for (int i = 0; i < integrationFlags.Length; ++i)
+            integrationFlags[0] = default;
+            for (int batchIndex = 1; batchIndex < integrationFlags.Length; ++batchIndex)
             {
-                ref var batch = ref ActiveSet.Batches[i];
-                ref var flagsForBatch = ref integrationFlags[i];
+                ref var batch = ref ActiveSet.Batches[batchIndex];
+                ref var flagsForBatch = ref integrationFlags[batchIndex];
                 pool.Take(batch.TypeBatches.Count, out flagsForBatch);
-                for (int j = 0; j < flagsForBatch.Length; ++j)
+                for (int typeBatchIndex = 0; typeBatchIndex < flagsForBatch.Length; ++typeBatchIndex)
                 {
-                    ref var flagsForTypeBatch = ref flagsForBatch[j];
-                    ref var typeBatch = ref batch.TypeBatches[j];
+                    ref var flagsForTypeBatch = ref flagsForBatch[typeBatchIndex];
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
                     var bodiesPerConstraint = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
                     pool.Take(bodiesPerConstraint, out flagsForTypeBatch);
-                    for (int k = 0; k < bodiesPerConstraint; ++k)
+                    for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraint; ++bodyIndexInConstraint)
                     {
-                        flagsForTypeBatch[k] = new IndexSet(pool, typeBatch.ConstraintCount);
+                        flagsForTypeBatch[bodyIndexInConstraint] = new IndexSet(pool, typeBatch.ConstraintCount);
                     }
                 }
             }
-            for (int i = 0; i < bodies.ActiveSet.Count; ++i)
-            {
-                ref var constraints = ref bodies.ActiveSet.Constraints[i];
-                ConstraintHandle minimumConstraint;
-                minimumConstraint.Value = -1;
-                int minimumBatchIndex = int.MaxValue;
-                int minimumIndexInConstraint = -1;
-                for (int j = 0; j < constraints.Count; ++j)
-                {
-                    ref var constraint = ref constraints[j];
-                    var batchIndex = HandleToConstraint[constraint.ConnectingConstraintHandle.Value].BatchIndex;
-                    if (batchIndex < minimumBatchIndex)
-                    {
-                        minimumBatchIndex = batchIndex;
-                        minimumIndexInConstraint = constraint.BodyIndexInConstraint;
-                        minimumConstraint = constraint.ConnectingConstraintHandle;
-                    }
-                }
-                if (minimumConstraint.Value >= 0)
-                {
-                    ref var location = ref HandleToConstraint[minimumConstraint.Value];
-                    var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
-                    ref var indexSet = ref integrationFlags[location.BatchIndex][typeBatchIndex][minimumIndexInConstraint];
-                    indexSet.AddUnsafely(location.IndexInTypeBatch);
-                }
-            }
+            //for (int i = 0; i < bodies.ActiveSet.Count; ++i)
+            //{
+            //    ref var constraints = ref bodies.ActiveSet.Constraints[i];
+            //    ConstraintHandle minimumConstraint;
+            //    minimumConstraint.Value = -1;
+            //    int minimumBatchIndex = int.MaxValue;
+            //    int minimumIndexInConstraint = -1;
+            //    for (int j = 0; j < constraints.Count; ++j)
+            //    {
+            //        ref var constraint = ref constraints[j];
+            //        var batchIndex = HandleToConstraint[constraint.ConnectingConstraintHandle.Value].BatchIndex;
+            //        if (batchIndex < minimumBatchIndex)
+            //        {
+            //            minimumBatchIndex = batchIndex;
+            //            minimumIndexInConstraint = constraint.BodyIndexInConstraint;
+            //            minimumConstraint = constraint.ConnectingConstraintHandle;
+            //        }
+            //    }
+            //    if (minimumConstraint.Value >= 0)
+            //    {
+            //        ref var location = ref HandleToConstraint[minimumConstraint.Value];
+            //        var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
+            //        ref var indexSet = ref integrationFlags[location.BatchIndex][typeBatchIndex][minimumIndexInConstraint];
+            //        indexSet.AddUnsafely(location.IndexInTypeBatch);
+            //    }
+            //}
             //Console.WriteLine($"body count: {bodies.ActiveSet.Count}, constraint count: {CountConstraints()}");
             //var end = Stopwatch.GetTimestamp();
             //Console.WriteLine($"Brute force time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
+
+            pool.Take<IndexSet>(batchReferencedHandles.Count, out var bodiesFirstObservedInBatches);
+            IndexSet merged;
+            //We don't have to consider the first batch, since we know ahead of time that the first batch will be the first time we see any bodies in it.
+            //Just copy directly from the first batch into the merged to initialize it.
+            pool.Take((bodies.HandlePool.HighestPossiblyClaimedId + 63) / 64, out merged.Flags);
+            var copyLength = Math.Min(merged.Flags.Length, batchReferencedHandles[0].Flags.Length);
+            batchReferencedHandles[0].Flags.CopyTo(0, merged.Flags, 0, copyLength);
+            batchReferencedHandles[0].Flags.Clear(copyLength, batchReferencedHandles[0].Flags.Length - copyLength);
+
+            //Yup, we're just leaving the first slot unallocated to avoid having to offset indices all over the place. Slight wonk, but not a big deal.
+            bodiesFirstObservedInBatches[0] = default;
+            for (int batchIndex = 1; batchIndex < bodiesFirstObservedInBatches.Length; ++batchIndex)
+            {
+                ref var batchHandles = ref batchReferencedHandles[batchIndex];
+                var bundleCount = Math.Min(merged.Flags.Length, batchHandles.Flags.Length);
+                //Note that we bypass the constructor to avoid zeroing unnecessarily. Every bundle will be fully assigned.
+                pool.Take(bundleCount, out bodiesFirstObservedInBatches[batchIndex].Flags);
+            }
+            for (int batchIndex = 1; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
+            {
+                ref var batchHandles = ref batchReferencedHandles[batchIndex];
+                ref var firstObservedInBatch = ref bodiesFirstObservedInBatches[batchIndex];
+                var bundleCount = Math.Min(merged.Flags.Length, batchHandles.Flags.Length);
+                for (int flagBundleIndex = 0; flagBundleIndex < bundleCount; ++flagBundleIndex)
+                {
+                    var mergeBundle = merged.Flags[flagBundleIndex];
+                    var batchBundle = batchHandles.Flags[flagBundleIndex];
+                    merged.Flags[flagBundleIndex] = mergeBundle | batchBundle;
+                    //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
+                    firstObservedInBatch.Flags[flagBundleIndex] = ~mergeBundle & batchBundle;
+                }
+            }
+            var start = Stopwatch.GetTimestamp();
+            //We now have index sets representing the first time each body handle is observed in a batch.
+            for (int batchIndex = 1; batchIndex < bodiesFirstObservedInBatches.Length; ++batchIndex)
+            {
+                ref var integrationFlagsForBatch = ref integrationFlags[batchIndex];
+                ref var firstObservedForBatch = ref bodiesFirstObservedInBatches[batchIndex];
+                ref var batch = ref ActiveSet.Batches[batchIndex];
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                {
+                    ref var integrationFlagsForTypeBatch = ref integrationFlagsForBatch[typeBatchIndex];
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    var typeBatchBodyReferences = typeBatch.BodyReferences.As<int>();
+                    var bodiesPerConstraintInTypeBatch = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
+                    var intsPerBundle = Vector<int>.Count * bodiesPerConstraintInTypeBatch;
+                    for (int bundleIndex = 0; bundleIndex < typeBatch.BundleCount; ++bundleIndex)
+                    {
+                        int bundleStartIndexInConstraints = bundleIndex * Vector<int>.Count;
+                        int countInBundle = Math.Min(Vector<float>.Count, typeBatch.ConstraintCount - bundleStartIndexInConstraints);
+                        //Body references are stored in AOSOA layout.
+                        var bundleBodyReferencesStart = typeBatchBodyReferences.Memory + bundleIndex * intsPerBundle;
+                        for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraintInTypeBatch; ++bodyIndexInConstraint)
+                        {
+                            ref var integrationFlagsForBodyInConstraint = ref integrationFlagsForTypeBatch[bodyIndexInConstraint];
+                            var bundleStart = bundleBodyReferencesStart + bodyIndexInConstraint * Vector<int>.Count;
+                            for (int bundleInnerIndex = 0; bundleInnerIndex < countInBundle; ++bundleInnerIndex)
+                            {
+                                //Constraints refer to bodies by index when they're in the active set, so we need to transform to handle to look up our merged batch results.
+                                var bodyHandle = bodies.ActiveSet.IndexToHandle[bundleStart[bundleInnerIndex]].Value;
+                                if (firstObservedForBatch.Contains(bodyHandle))
+                                {
+                                    integrationFlagsForBodyInConstraint.AddUnsafely(bundleStartIndexInConstraints + bundleInnerIndex);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            var end = Stopwatch.GetTimestamp();
+            //Console.WriteLine($"Time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
+            //for (int i = 0; i < bodies.ActiveSet.Count; ++i)
+            //{
+            //    ref var constraints = ref bodies.ActiveSet.Constraints[i];
+            //    ConstraintHandle minimumConstraint;
+            //    minimumConstraint.Value = -1;
+            //    int minimumBatchIndex = int.MaxValue;
+            //    int minimumIndexInConstraint = -1;
+            //    for (int j = 0; j < constraints.Count; ++j)
+            //    {
+            //        ref var constraint = ref constraints[j];
+            //        var batchIndex = HandleToConstraint[constraint.ConnectingConstraintHandle.Value].BatchIndex;
+            //        if (batchIndex < minimumBatchIndex)
+            //        {
+            //            minimumBatchIndex = batchIndex;
+            //            minimumIndexInConstraint = constraint.BodyIndexInConstraint;
+            //            minimumConstraint = constraint.ConnectingConstraintHandle;
+            //        }
+            //    }
+            //    if (minimumConstraint.Value >= 0)
+            //    {
+            //        ref var location = ref HandleToConstraint[minimumConstraint.Value];
+            //        var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
+            //        if (location.BatchIndex > 0)
+            //        {
+            //            ref var indexSet = ref integrationFlags[location.BatchIndex][typeBatchIndex][minimumIndexInConstraint];
+            //            Debug.Assert(indexSet.Contains(location.IndexInTypeBatch));
+            //        }
+            //    }
+            //}
+
+            merged.Dispose(pool);
+            Debug.Assert(!bodiesFirstObservedInBatches[0].Flags.Allocated, "Remember, we're assuming we're just leaving the first batch's slot empty to avoid indexing complexity.");
+            for (int batchIndex = 1; batchIndex < bodiesFirstObservedInBatches.Length; ++batchIndex)
+            {
+                bodiesFirstObservedInBatches[batchIndex].Dispose(pool);
+            }
+            pool.Return(ref bodiesFirstObservedInBatches);
         }
         public override void DisposeConstraintIntegrationResponsibilities()
         {
-            for (int i = 0; i < integrationFlags.Length; ++i)
+            Debug.Assert(!integrationFlags[0].Allocated, "Remember, we're assuming we're just leaving the first batch's slot empty to avoid indexing complexity.");
+            for (int batchIndex = 1; batchIndex < integrationFlags.Length; ++batchIndex)
             {
-                ref var flagsForBatch = ref integrationFlags[i];
-                for (int j = 0; j < flagsForBatch.Length; ++j)
+                ref var flagsForBatch = ref integrationFlags[batchIndex];
+                for (int typeBatchIndex = 0; typeBatchIndex < flagsForBatch.Length; ++typeBatchIndex)
                 {
-                    ref var flagsForTypeBatch = ref flagsForBatch[j];
-                    for (int k = 0; k < flagsForTypeBatch.Length; ++k)
+                    ref var flagsForTypeBatch = ref flagsForBatch[typeBatchIndex];
+                    for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < flagsForTypeBatch.Length; ++bodyIndexInConstraint)
                     {
-                        flagsForTypeBatch[k].Dispose(pool);
+                        flagsForTypeBatch[bodyIndexInConstraint].Dispose(pool);
                     }
                     pool.Return(ref flagsForTypeBatch);
                 }
@@ -262,7 +375,8 @@ namespace BepuPhysics
                         ref var typeBatch = ref batch.TypeBatches[j];
                         if (i == 0)
                         {
-                            TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate>(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks,
+                            Buffer<IndexSet> noFlagsRequired = default;
+                            TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate>(ref typeBatch, ref noFlagsRequired, bodies, ref PoseIntegrator.Callbacks,
                                 dt, inverseDt, 0, typeBatch.BundleCount, 0);
                         }
                         else
@@ -276,7 +390,6 @@ namespace BepuPhysics
                 for (int i = 0; i < synchronizedBatchCount; ++i)
                 {
                     ref var batch = ref activeSet.Batches[i];
-                    ref var integrationFlagsForBatch = ref integrationFlags[i];
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
