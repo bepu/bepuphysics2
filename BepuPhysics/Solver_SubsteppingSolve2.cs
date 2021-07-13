@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Runtime.Intrinsics.X86;
 
 namespace BepuPhysics
 {
