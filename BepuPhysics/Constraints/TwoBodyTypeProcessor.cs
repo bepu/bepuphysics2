@@ -494,7 +494,7 @@ namespace BepuPhysics.Constraints
             bodies.ScatterPoseAndInertia<BatchShouldAlwaysIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
         }
         public static unsafe void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(
-            Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref IndexSet integrationFlags, float dt, int workerIndex, int bundleIndex,
+            Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref Buffer<IndexSet> integrationFlags, int bodyIndexInConstraint, float dt, int workerIndex, int bundleIndex,
             ref Vector<int> bodyIndices, int count, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
             where TBatchIntegrationMode : struct, IBatchIntegrationMode
@@ -515,7 +515,7 @@ namespace BepuPhysics.Constraints
                 Debug.Assert(typeof(TBatchIntegrationMode) == typeof(BatchShouldConditionallyIntegrate));
                 //This executes in warmstart, and warmstarts are typically quite simple from an instruction stream perspective.
                 //Having a dynamically chosen codepath is unlikely to cause instruction fetching issues.
-                switch (BundleShouldIntegrate(bundleIndex, integrationFlags, out var integrationMask))
+                switch (BundleShouldIntegrate(bundleIndex, integrationFlags[bodyIndexInConstraint], out var integrationMask))
                 {
                     case BundleIntegrationMode.All:
                         {
@@ -560,9 +560,9 @@ namespace BepuPhysics.Constraints
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
                 Prefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, i, exclusiveEndBundle);
-                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(bodies, ref integratorCallbacks, ref integrationFlags[0], dt, workerIndex, i, ref references.IndexA, count,
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references.IndexA, count,
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
-                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(bodies, ref integratorCallbacks, ref integrationFlags[1], dt, workerIndex, i, ref references.IndexB, count,
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(bodies, ref integratorCallbacks, ref integrationFlags, 1, dt, workerIndex, i, ref references.IndexB, count,
                     out var positionB, out var orientationB, out var wsvB, out var inertiaB);
                 var ab = positionB - positionA;
                 if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
