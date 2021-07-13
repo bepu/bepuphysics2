@@ -5,7 +5,9 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using System.Runtime.Intrinsics.Arm;
 
 namespace BepuPhysics.Constraints
 {
@@ -356,7 +358,7 @@ namespace BepuPhysics.Constraints
             All = 2
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BundleIntegrationMode BundleShouldIntegrate(int bundleIndex, in IndexSet integrationFlags, out Vector<int> integrationMask)
         {
             Debug.Assert(Vector<float>.Count <= 32, "Wait, what? The integration mask isn't big enough to handle a vector this big.");
@@ -373,13 +375,33 @@ namespace BepuPhysics.Constraints
             }
             else if (scalarIntegrationMask > 0)
             {
-                //TODO: This is bad prototype code.
-                Span<int> mask = stackalloc int[Vector<int>.Count];
-                for (int i = 0; i < mask.Length; ++i)
+                if (Vector<int>.Count == 4 || Vector<int>.Count == 8)
                 {
-                    mask[i] = (scalarIntegrationMask & (1 << i)) > 0 ? -1 : 0;
+                    Vector<int> selectors;
+                    if (Vector<int>.Count == 8)
+                    {
+                        selectors = Vector256.Create(1, 2, 4, 8, 16, 32, 64, 128).AsVector();
+                    }
+                    else
+                    {
+                        selectors = Vector128.Create(1, 2, 4, 8).AsVector();
+                    }
+                    var scalarBroadcast = new Vector<int>(scalarIntegrationMask);
+                    var selected = Vector.BitwiseAnd(selectors, scalarBroadcast);
+                    integrationMask = Vector.Equals(selected, selectors);
                 }
-                integrationMask = new Vector<int>(mask);
+                else
+                {
+                    //This is not a good implementation, but I don't know of any target platforms that will hit this.
+                    //TODO: AVX512 being enabled by the runtime could force this path to be taken; it'll require an update!
+                    Debug.Assert(Vector<int>.Count < 16, "The vector path assumes that AVX512 is not supported, so this is hitting a fallback path.");
+                    Span<int> mask = stackalloc int[Vector<int>.Count];
+                    for (int i = 0; i < Vector<int>.Count; ++i)
+                    {
+                        mask[i] = (scalarIntegrationMask & (1 << i)) > 0 ? -1 : 0;
+                    }
+                    integrationMask = new Vector<int>(mask);
+                }
                 return BundleIntegrationMode.Partial;
             }
             integrationMask = default;
@@ -478,6 +500,7 @@ namespace BepuPhysics.Constraints
             where TBatchIntegrationMode : struct, IBatchIntegrationMode
         {
             bodies.GatherMotionState(ref bodyIndices, count, out position, out orientation, out velocity);
+            //These type tests are compile time constants and will be specialized.
             if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
             {
                 var integrationMask = new Vector<int>(-1);
