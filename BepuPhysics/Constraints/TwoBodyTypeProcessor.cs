@@ -394,7 +394,7 @@ namespace BepuPhysics.Constraints
                 {
                     //This is not a good implementation, but I don't know of any target platforms that will hit this.
                     //TODO: AVX512 being enabled by the runtime could force this path to be taken; it'll require an update!
-                    Debug.Assert(Vector<int>.Count < 16, "The vector path assumes that AVX512 is not supported, so this is hitting a fallback path.");
+                    Debug.Assert(Vector<int>.Count <= 8, "The vector path assumes that AVX512 is not supported, so this is hitting a fallback path.");
                     Span<int> mask = stackalloc int[Vector<int>.Count];
                     for (int i = 0; i < Vector<int>.Count; ++i)
                     {
