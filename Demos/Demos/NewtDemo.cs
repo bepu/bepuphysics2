@@ -838,6 +838,8 @@ namespace Demos.Demos
                 //CreateDeformable(Simulation, new Vector3(i * 3, 5 + i * 1.5f, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
                 CreateDeformable(Simulation, new Vector3(i * 3, cellSize * 2f + i * 0f, 0), Quaternion.Identity, 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
             }
+            //Console.WriteLine($"body count: {Simulation.Bodies.ActiveSet.Count}");
+            //Console.WriteLine($"constraint count: {Simulation.Solver.CountConstraints()}");
 
             BufferPool.Return(ref vertices);
             vertexSpatialIndices.Dispose(BufferPool);
