@@ -78,7 +78,7 @@ namespace BepuPhysics
             Debug.Assert(SubstepCount >= 0, "Substep count should be positive.");
             var substepDt = dt / SubstepCount;
 
-            simulation.Solver.PrepareConstraintIntegrationResponsibilities();
+            simulation.Solver.PrepareConstraintIntegrationResponsibilities(threadDispatcher);
             for (int substepIndex = 0; substepIndex < SubstepCount; ++substepIndex)
             {
                 SubstepStarted?.Invoke(substepIndex, dt, threadDispatcher);
