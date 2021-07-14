@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Runtime.Intrinsics.X86;
 using System.Numerics;
+using System.Runtime.Intrinsics;
 
 namespace BepuPhysics
 {
@@ -267,19 +268,52 @@ namespace BepuPhysics
             {
                 ref var batchHandles = ref batchReferencedHandles[batchIndex];
                 ref var firstObservedInBatch = ref bodiesFirstObservedInBatches[batchIndex];
-                var bundleCount = Math.Min(merged.Flags.Length, batchHandles.Flags.Length);
-                ulong horizontalMerge = 0;
-                for (int flagBundleIndex = 0; flagBundleIndex < bundleCount; ++flagBundleIndex)
+                var flagBundleCount = Math.Min(merged.Flags.Length, batchHandles.Flags.Length);
+                if (Avx2.IsSupported)
                 {
-                    var mergeBundle = merged.Flags[flagBundleIndex];
-                    var batchBundle = batchHandles.Flags[flagBundleIndex];
-                    merged.Flags[flagBundleIndex] = mergeBundle | batchBundle;
-                    //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
-                    var firstObservedBundle = ~mergeBundle & batchBundle;
-                    horizontalMerge |= firstObservedBundle;
-                    firstObservedInBatch.Flags[flagBundleIndex] = firstObservedBundle;
+                    var avxBundleCount = flagBundleCount / 4;
+                    var horizontalAvxMerge = Vector256<ulong>.Zero;
+                    for (int avxBundleIndex = 0; avxBundleIndex < avxBundleCount; ++avxBundleIndex)
+                    {
+                        var mergeBundle = ((Vector256<ulong>*)merged.Flags.Memory)[avxBundleIndex];
+                        var batchBundle = ((Vector256<ulong>*)batchHandles.Flags.Memory)[avxBundleIndex];
+                        ((Vector256<ulong>*)merged.Flags.Memory)[avxBundleIndex] = Avx2.Or(mergeBundle, batchBundle);
+                        //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
+                        var firstObservedBundle = Avx2.AndNot(mergeBundle, batchBundle);
+                        horizontalAvxMerge = Avx2.Or(firstObservedBundle, horizontalAvxMerge);
+                        ((Vector256<ulong>*)firstObservedInBatch.Flags.Memory)[avxBundleIndex] = firstObservedBundle;
+                    }
+                    var notEqual = Avx2.CompareNotEqual(horizontalAvxMerge.AsDouble(), Vector256<double>.Zero);
+                    ulong horizontalMerge = (ulong)Avx.MoveMask(notEqual);
+
+                    //Cleanup loop.
+                    for (int flagBundleIndex = avxBundleCount * 4; flagBundleIndex < flagBundleCount; ++flagBundleIndex)
+                    {
+                        var mergeBundle = merged.Flags[flagBundleIndex];
+                        var batchBundle = batchHandles.Flags[flagBundleIndex];
+                        merged.Flags[flagBundleIndex] = mergeBundle | batchBundle;
+                        //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
+                        var firstObservedBundle = ~mergeBundle & batchBundle;
+                        horizontalMerge |= firstObservedBundle;
+                        firstObservedInBatch.Flags[flagBundleIndex] = firstObservedBundle;
+                    }
+                    batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
                 }
-                batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
+                else
+                {
+                    ulong horizontalMerge = 0;
+                    for (int flagBundleIndex = 0; flagBundleIndex < flagBundleCount; ++flagBundleIndex)
+                    {
+                        var mergeBundle = merged.Flags[flagBundleIndex];
+                        var batchBundle = batchHandles.Flags[flagBundleIndex];
+                        merged.Flags[flagBundleIndex] = mergeBundle | batchBundle;
+                        //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
+                        var firstObservedBundle = ~mergeBundle & batchBundle;
+                        horizontalMerge |= firstObservedBundle;
+                        firstObservedInBatch.Flags[flagBundleIndex] = firstObservedBundle;
+                    }
+                    batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
+                }
             }
             var start = Stopwatch.GetTimestamp();
             //We now have index sets representing the first time each body handle is observed in a batch.
