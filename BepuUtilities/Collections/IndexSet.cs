@@ -25,7 +25,7 @@ namespace BepuUtilities.Collections
         const int mask = 63;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int GetBundleCapacity(int count)
+        public static int GetBundleCapacity(int count)
         {
             return (count + mask) >> shift;
         }
