@@ -220,6 +220,8 @@ namespace BepuPhysics
                 }
             }
             //Precompute which type batches have *any* integration responsibilities, allowing us to use a all-or-nothing test before dispatching a workblock.
+            //Note that this could be vectorized the same way we did in the batch merging, but... less likely to be useful. Less constraints in sequence in type batches,
+            //and we're already within a multithreaded context. Saving 1 microsecond not terribly meaningful.
             var flagBundleCount = IndexSet.GetBundleCapacity(typeBatch.ConstraintCount);
             ulong mergedFlagBundles = 0;
             for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraintInTypeBatch; ++bodyIndexInConstraint)
@@ -279,6 +281,8 @@ namespace BepuPhysics
                     }
                 }
             }
+
+            //Brute force fallback for debugging:
             //for (int i = 0; i < bodies.ActiveSet.Count; ++i)
             //{
             //    ref var constraints = ref bodies.ActiveSet.Constraints[i];
@@ -305,9 +309,6 @@ namespace BepuPhysics
             //        indexSet.AddUnsafely(location.IndexInTypeBatch);
             //    }
             //}
-            //Console.WriteLine($"body count: {bodies.ActiveSet.Count}, constraint count: {CountConstraints()}");
-            //var end = Stopwatch.GetTimestamp();
-            //Console.WriteLine($"Brute force time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
 
             pool.Take(batchReferencedHandles.Count, out bodiesFirstObservedInBatches);
             IndexSet merged;
@@ -455,120 +456,11 @@ namespace BepuPhysics
                         coarseBatchIntegrationResponsibilities[i][j] = ComputeIntegrationResponsibilitiesForConstraintRegion(i, j, 0, typeBatch.ConstraintCount);
                     }
                 }
-
-
             }
 
-            //for (int batchIndex = 1; batchIndex < bodiesFirstObservedInBatches.Length; ++batchIndex)
-            //{
-            //    if (!batchHasAnyIntegrationResponsibilities[batchIndex])
-            //        continue;
-            //    ref var integrationFlagsForBatch = ref integrationFlags[batchIndex];
-            //    ref var firstObservedForBatch = ref bodiesFirstObservedInBatches[batchIndex];
-            //    ref var batch = ref ActiveSet.Batches[batchIndex];
-
-            //    //ulong totalConstraintCount = 0;
-            //    //ulong integratingConstraintCount = 0;
-            //    //ulong totalLanes = 0;
-            //    //ulong integratingLanes = 0;
-
-            //    for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
-            //    {
-            //        ref var integrationFlagsForTypeBatch = ref integrationFlagsForBatch[typeBatchIndex];
-            //        ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-            //        var typeBatchBodyReferences = typeBatch.BodyReferences.As<int>();
-            //        var bodiesPerConstraintInTypeBatch = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
-            //        var intsPerBundle = Vector<int>.Count * bodiesPerConstraintInTypeBatch;
-            //        for (int bundleIndex = 0; bundleIndex < typeBatch.BundleCount; ++bundleIndex)
-            //        {
-            //            int bundleStartIndexInConstraints = bundleIndex * Vector<int>.Count;
-            //            int countInBundle = Math.Min(Vector<float>.Count, typeBatch.ConstraintCount - bundleStartIndexInConstraints);
-            //            //Body references are stored in AOSOA layout.
-            //            var bundleBodyReferencesStart = typeBatchBodyReferences.Memory + bundleIndex * intsPerBundle;
-            //            for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraintInTypeBatch; ++bodyIndexInConstraint)
-            //            {
-            //                ref var integrationFlagsForBodyInConstraint = ref integrationFlagsForTypeBatch[bodyIndexInConstraint];
-            //                var bundleStart = bundleBodyReferencesStart + bodyIndexInConstraint * Vector<int>.Count;
-            //                for (int bundleInnerIndex = 0; bundleInnerIndex < countInBundle; ++bundleInnerIndex)
-            //                {
-            //                    //Constraints refer to bodies by index when they're in the active set, so we need to transform to handle to look up our merged batch results.
-            //                    var bodyHandle = bodies.ActiveSet.IndexToHandle[bundleStart[bundleInnerIndex]].Value;
-            //                    if (firstObservedForBatch.Contains(bodyHandle))
-            //                    {
-            //                        integrationFlagsForBodyInConstraint.AddUnsafely(bundleStartIndexInConstraints + bundleInnerIndex);
-            //                    }
-            //                }
-            //            }
-            //        }
-            //        //Precompute which type batches have *any* integration responsibilities, allowing us to use a all-or-nothing test before dispatching a workblock.
-            //        var flagBundleCount = IndexSet.GetBundleCapacity(typeBatch.ConstraintCount);
-            //        ulong mergedFlagBundles = 0;
-            //        for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraintInTypeBatch; ++bodyIndexInConstraint)
-            //        {
-            //            ref var integrationFlagsForBodyInTypeBatch = ref integrationFlagsForTypeBatch[bodyIndexInConstraint];
-            //            for (int i = 0; i < flagBundleCount; ++i)
-            //            {
-            //                mergedFlagBundles |= integrationFlagsForBodyInTypeBatch.Flags[i];
-            //            }
-            //        }
-            //        coarseBatchIntegrationResponsibilities[batchIndex][typeBatchIndex] = mergedFlagBundles != 0;
-
-            //        //for (int i = 0; i < flagBundleCount; ++i)
-            //        //{
-            //        //    ulong countMerge = 0;
-            //        //    for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraintInTypeBatch; ++bodyIndexInConstraint)
-            //        //    {
-            //        //        var flagsForBody = integrationFlagsForTypeBatch[bodyIndexInConstraint].Flags[i];
-            //        //        countMerge |= flagsForBody;
-            //        //        integratingLanes += Popcnt.X64.PopCount(flagsForBody);
-            //        //        totalLanes += (ulong)Math.Min(64, typeBatch.ConstraintCount - i * 64);
-            //        //    }
-            //        //    integratingConstraintCount += Popcnt.X64.PopCount(countMerge);
-            //        //    totalConstraintCount += (ulong)Math.Min(64, typeBatch.ConstraintCount - i * 64);
-            //        //}
-            //    }
-            //    //Console.WriteLine($"Batch {batchIndex} integrating constraints: {integratingConstraintCount} over {totalConstraintCount}, {integratingConstraintCount / (double)totalConstraintCount}");
-            //    //Console.WriteLine($"Batch {batchIndex} integrating lanes:       {integratingLanes} over {totalLanes}, {integratingLanes / (double)totalLanes}");
-            //}
             pool.Return(ref batchHasAnyIntegrationResponsibilities);
-            //for (int batchIndex = 1; batchIndex < bodiesFirstObservedInBatches.Length; ++batchIndex)
-            //{
-            //    ref var integrationFlagsForBatch = ref integrationFlags[batchIndex];
-            //    ref var firstObservedForBatch = ref bodiesFirstObservedInBatches[batchIndex];
-            //    ref var batch = ref ActiveSet.Batches[batchIndex];
-            //    for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
-            //    {
-            //        ref var integrationFlagsForTypeBatch = ref integrationFlagsForBatch[typeBatchIndex];
-            //        ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-            //        var typeBatchBodyReferences = typeBatch.BodyReferences.As<int>();
-            //        var bodiesPerConstraintInTypeBatch = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
-            //        var intsPerBundle = Vector<int>.Count * bodiesPerConstraintInTypeBatch;
-            //        //We process over one strip of bodies in the constraint in each pass, constructing contiguous flag sequences as we go.
-            //        for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraintInTypeBatch; ++bodyIndexInConstraint)
-            //        {
-            //            ref var integrationFlagsForBodyInConstraint = ref integrationFlagsForTypeBatch[bodyIndexInConstraint];
-            //            for (int flagBundleIndex = 0; flagBundleIndex < integrationFlagsForBodyInConstraint.Flags.Length; ++flagBundleIndex)
-            //            {
-            //                ulong flagBundle = 0;
-            //                var constraintBundleStartIndexInConstraints = flagBundleIndex * 64;
-            //                int countInFlagBundle = Math.Min(64, typeBatch.ConstraintCount - constraintBundleStartIndexInConstraints);
-            //                for (int indexInFlagBundle = 0; indexInFlagBundle < countInFlagBundle; ++indexInFlagBundle)
-            //                {
-            //                    var constraintIndex = constraintBundleStartIndexInConstraints + indexInFlagBundle;
-            //                    BundleIndexing.GetBundleIndices(constraintIndex, out var constraintBundleIndex, out var constraintIndexInBundle);
-            //                    var bodyHandle = bodies.ActiveSet.IndexToHandle[typeBatchBodyReferences.Memory[constraintBundleIndex * intsPerBundle + Vector<int>.Count * bodyIndexInConstraint]].Value;
-            //                    if (firstObservedForBatch.Contains(bodyHandle))
-            //                    {
-            //                        integrationFlagsForBodyInConstraint.AddUnsafely(constraintIndex);
-            //                    }
-            //                }
-            //                integrationFlagsForBodyInConstraint.Flags[flagBundleIndex] = flagBundle;
-            //            }
-            //        }
-            //    }
-            //}
-            var end = Stopwatch.GetTimestamp();
-            //Console.WriteLine($"Time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
+            
+            //Validation:
             //for (int i = 0; i < bodies.ActiveSet.Count; ++i)
             //{
             //    ref var constraints = ref bodies.ActiveSet.Constraints[i];
