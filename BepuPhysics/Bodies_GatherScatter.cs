@@ -134,6 +134,7 @@ namespace BepuPhysics
                 pMass[i] = inertiaValues[6];
             }
         }
+
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherMotionState(ref Vector<int> bodyIndices, int count, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity)
         {
@@ -166,7 +167,7 @@ namespace BepuPhysics
                 {
                     //Load every body for the first half of the motion state.
                     //Note that buffers are allocated on cache line boundaries, so we can use aligned loads for all that matters.
-                    var m0 = Avx.LoadVector256(s0);
+                    var m0 = Avx.LoadAlignedVector256(s0);
                     var m1 = count > 1 ? Avx.LoadAlignedVector256(s1) : Vector256<float>.Zero;
                     var m2 = count > 2 ? Avx.LoadAlignedVector256(s2) : Vector256<float>.Zero;
                     var m3 = count > 3 ? Avx.LoadAlignedVector256(s3) : Vector256<float>.Zero;
@@ -204,7 +205,7 @@ namespace BepuPhysics
 
                 {
                     //Second half.
-                    var m0 = Avx.LoadVector256(s0 + 8);
+                    var m0 = Avx.LoadAlignedVector256(s0 + 8);
                     var m1 = count > 1 ? Avx.LoadAlignedVector256(s1 + 8) : Vector256<float>.Zero;
                     var m2 = count > 2 ? Avx.LoadAlignedVector256(s2 + 8) : Vector256<float>.Zero;
                     var m3 = count > 3 ? Avx.LoadAlignedVector256(s3 + 8) : Vector256<float>.Zero;
@@ -268,7 +269,7 @@ namespace BepuPhysics
                     var s7 = (float*)(inertias + indices[7]) + offsetInFloats;
 
                     //Load every inertia vector.
-                    var m0 = Avx.LoadVector256(s0);
+                    var m0 = Avx.LoadAlignedVector256(s0);
                     var m1 = count > 1 ? Avx.LoadAlignedVector256(s1) : Vector256<float>.Zero;
                     var m2 = count > 2 ? Avx.LoadAlignedVector256(s2) : Vector256<float>.Zero;
                     var m3 = count > 3 ? Avx.LoadAlignedVector256(s3) : Vector256<float>.Zero;

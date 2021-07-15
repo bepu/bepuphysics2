@@ -259,7 +259,6 @@ namespace BepuPhysics
         {
             //TODO: we're caching it on a per call basis because we are still using the old substeppingtimestepper frame externally. Once we bite the bullet 100% on bundling, we can make it equivalent to IterationCount.
             this.substepCount = substepCount;
-            //var start = Stopwatch.GetTimestamp();
             pool.Take(ActiveSet.Batches.Count, out integrationFlags);
             integrationFlags[0] = default;
             pool.Take(ActiveSet.Batches.Count, out coarseBatchIntegrationResponsibilities);
@@ -382,7 +381,7 @@ namespace BepuPhysics
                     batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
                 }
             }
-            var start = Stopwatch.GetTimestamp();
+            //var start = Stopwatch.GetTimestamp();
             //We now have index sets representing the first time each body handle is observed in a batch.
             //This process is significantly more expensive than the batch merging phase and can benefit from multithreading.
             //It is still fairly cheap, though- we can't use really fine grained jobs or the cost of swapping jobs will exceed productive work.
@@ -457,7 +456,8 @@ namespace BepuPhysics
                     }
                 }
             }
-
+            //var end = Stopwatch.GetTimestamp();
+            //Console.WriteLine($"time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
             pool.Return(ref batchHasAnyIntegrationResponsibilities);
 
             ////Validation:
