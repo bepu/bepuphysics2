@@ -17,7 +17,7 @@ namespace BepuPhysics
 {
     public partial class Solver
     {
-        public virtual void PrepareConstraintIntegrationResponsibilities(IThreadDispatcher threadDispatcher = null)
+        public virtual void PrepareConstraintIntegrationResponsibilities(int substepCount, IThreadDispatcher threadDispatcher = null)
         {
         }
         public virtual void DisposeConstraintIntegrationResponsibilities()
@@ -151,38 +151,35 @@ namespace BepuPhysics
                 InverseDt = 1f / context.Dt,
                 solver = this
             };
-            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
-            {
-                var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
-                ExecuteStage(ref warmstartStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
-                    ref batchStarts[batchIndex], ref syncStage, claimedState, unclaimedState);
-            }
-            claimedState ^= 1;
-            unclaimedState ^= 1;
             var solveStage = new SolveStep2StageFunction
             {
                 Dt = context.Dt,
                 InverseDt = 1f / context.Dt,
                 solver = this
             };
-            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+
+            for (int i = 0; i < substepCount; ++i)
             {
-                var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
-                ExecuteStage(ref solveStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
-                    ref batchStarts[batchIndex], ref syncStage, claimedState, unclaimedState);
+                for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+                {
+                    var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
+                    ExecuteStage(ref warmstartStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
+                        ref batchStarts[batchIndex], ref syncStage, claimedState, unclaimedState);
+                }
+                claimedState ^= 1;
+                unclaimedState ^= 1;
+                for (int j = 0; j < IterationCount; ++j)
+                {
+                    for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+                    {
+                        var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
+                        ExecuteStage(ref solveStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
+                            ref batchStarts[batchIndex], ref syncStage, claimedState, unclaimedState);
+                    }
+                    claimedState ^= 1;
+                    unclaimedState ^= 1;
+                }
             }
-            //if (fallbackExists)
-            //{
-            //    var solveFallbackStage = new FallbackSolveStepStageFunction();
-            //    var fallbackScatterStage = new FallbackScatterStageFunction();
-            //    var batchOffset = FallbackBatchThreshold > 0 ? context.BatchBoundaries[FallbackBatchThreshold - 1] : 0;
-            //    ExecuteStage(ref solveFallbackStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[FallbackBatchThreshold],
-            //        ref batchStarts[FallbackBatchThreshold], ref syncStage, claimedState, unclaimedState);
-            //    ExecuteStage(ref fallbackScatterStage, ref context.FallbackBlocks, ref bounds, ref boundsBackBuffer,
-            //        workerIndex, 0, context.FallbackBlocks.Blocks.Count, ref fallbackStart, ref syncStage, claimedState, unclaimedState);
-            //}
-            claimedState ^= 1;
-            unclaimedState ^= 1;
         }
 
 
@@ -257,8 +254,11 @@ namespace BepuPhysics
         Buffer<Buffer<bool>> coarseBatchIntegrationResponsibilities;
         Action<int> constraintIntegrationResponsibilitiesWorker;
 
-        public override unsafe void PrepareConstraintIntegrationResponsibilities(IThreadDispatcher threadDispatcher = null)
+        int substepCount;
+        public override unsafe void PrepareConstraintIntegrationResponsibilities(int substepCount, IThreadDispatcher threadDispatcher = null)
         {
+            //TODO: we're caching it on a per call basis because we are still using the old substeppingtimestepper frame externally. Once we bite the bullet 100% on bundling, we can make it equivalent to IterationCount.
+            this.substepCount = substepCount;
             //var start = Stopwatch.GetTimestamp();
             pool.Take(ActiveSet.Batches.Count, out integrationFlags);
             integrationFlags[0] = default;
@@ -459,8 +459,8 @@ namespace BepuPhysics
             }
 
             pool.Return(ref batchHasAnyIntegrationResponsibilities);
-            
-            //Validation:
+
+            ////Validation:
             //for (int i = 0; i < bodies.ActiveSet.Count; ++i)
             //{
             //    ref var constraints = ref bodies.ActiveSet.Constraints[i];
@@ -521,57 +521,64 @@ namespace BepuPhysics
             pool.Return(ref coarseBatchIntegrationResponsibilities);
         }
 
-        public override void SolveStep2(float dt, IThreadDispatcher threadDispatcher = null)
+        public override void SolveStep2(float totalDt, IThreadDispatcher threadDispatcher = null)
         {
+            var substepDt = totalDt / substepCount;
             if (threadDispatcher == null)
             {
-                var inverseDt = 1f / dt;
+                var inverseDt = 1f / substepDt;
                 ref var activeSet = ref ActiveSet;
                 GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
                 Debug.Assert(!fallbackExists, "Not handling this yet.");
 
-                for (int i = 0; i < synchronizedBatchCount; ++i)
+                for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
                 {
-                    ref var batch = ref activeSet.Batches[i];
-                    ref var integrationFlagsForBatch = ref integrationFlags[i];
-                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                    for (int i = 0; i < synchronizedBatchCount; ++i)
                     {
-                        ref var typeBatch = ref batch.TypeBatches[j];
-                        if (i == 0)
+                        ref var batch = ref activeSet.Batches[i];
+                        ref var integrationFlagsForBatch = ref integrationFlags[i];
+                        for (int j = 0; j < batch.TypeBatches.Count; ++j)
                         {
-                            Buffer<IndexSet> noFlagsRequired = default;
-                            TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate>(ref typeBatch, ref noFlagsRequired, bodies, ref PoseIntegrator.Callbacks,
-                                dt, inverseDt, 0, typeBatch.BundleCount, 0);
-                        }
-                        else
-                        {
-                            if (coarseBatchIntegrationResponsibilities[i][j])
+                            ref var typeBatch = ref batch.TypeBatches[j];
+                            if (i == 0)
                             {
-                                TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate>(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks,
-                                    dt, inverseDt, 0, typeBatch.BundleCount, 0);
+                                Buffer<IndexSet> noFlagsRequired = default;
+                                TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate>(ref typeBatch, ref noFlagsRequired, bodies, ref PoseIntegrator.Callbacks,
+                                    substepDt, inverseDt, 0, typeBatch.BundleCount, 0);
                             }
                             else
                             {
-                                TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldNeverIntegrate>(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks,
-                                    dt, inverseDt, 0, typeBatch.BundleCount, 0);
+                                if (coarseBatchIntegrationResponsibilities[i][j])
+                                {
+                                    TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate>(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks,
+                                        substepDt, inverseDt, 0, typeBatch.BundleCount, 0);
+                                }
+                                else
+                                {
+                                    TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldNeverIntegrate>(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks,
+                                        substepDt, inverseDt, 0, typeBatch.BundleCount, 0);
+                                }
                             }
                         }
                     }
-                }
 
-                for (int i = 0; i < synchronizedBatchCount; ++i)
-                {
-                    ref var batch = ref activeSet.Batches[i];
-                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                    for (int iterationIndex = 0; iterationIndex < IterationCount; ++iterationIndex)
                     {
-                        ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, dt, inverseDt, 0, typeBatch.BundleCount);
+                        for (int i = 0; i < synchronizedBatchCount; ++i)
+                        {
+                            ref var batch = ref activeSet.Batches[i];
+                            for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                            {
+                                ref var typeBatch = ref batch.TypeBatches[j];
+                                TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
+                            }
+                        }
                     }
                 }
             }
             else
             {
-                ExecuteMultithreaded<MainSolveFilter>(dt, threadDispatcher, solveStep2Worker);
+                ExecuteMultithreaded<MainSolveFilter>(substepDt, threadDispatcher, solveStep2Worker);
             }
         }
     }
