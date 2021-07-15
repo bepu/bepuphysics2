@@ -251,7 +251,7 @@ namespace BepuPhysics
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void GatherInertia(ref Vector<int> bodyIndices, int count, int offsetInFloats, out BodyInertiaWide inertia)
         {
             var inertias = ActiveSet.Inertias.Memory;
@@ -312,12 +312,12 @@ namespace BepuPhysics
             }
         }
 
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherWorldInertia(ref Vector<int> bodyIndices, int count, out BodyInertiaWide inertia)
         {
             GatherInertia(ref bodyIndices, count, 8, out inertia);
         }
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherLocalInertia(ref Vector<int> bodyIndices, int count, out BodyInertiaWide inertia)
         {
             GatherInertia(ref bodyIndices, count, 0, out inertia);
@@ -520,7 +520,7 @@ namespace BepuPhysics
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ScatterPoseAndInertia<TBatchIntegrationMode>(
             ref Vector3Wide position, ref QuaternionWide orientation, ref BodyInertiaWide inertia, ref Vector<int> references, int count, ref Vector<int> mask)
             where TBatchIntegrationMode : struct, IBatchIntegrationMode
@@ -644,7 +644,7 @@ namespace BepuPhysics
 
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocities, ref int baseIndex, int innerIndex)
         {
             //TODO: How much value would there be in branching on kinematic state and avoiding a write? Depends a lot on the number of kinematics.
@@ -654,7 +654,7 @@ namespace BepuPhysics
             target.Angular = new Vector3(sourceSlot.Angular.X[0], sourceSlot.Angular.Y[0], sourceSlot.Angular.Z[0]);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void TransposeScatterVelocities(ref BodyVelocityWide sourceVelocities, MotionState* motionStates, ref Vector<int> references, int count)
         {
             if (Avx.IsSupported && Vector<float>.Count == 8)
@@ -718,7 +718,7 @@ namespace BepuPhysics
         /// <param name="sourceVelocities">Velocities of body bundle A to scatter.</param>
         /// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
         /// <param name="count">Number of body pairs in the bundle.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocities, ref Vector<int> references, int count)
         {
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
@@ -738,7 +738,6 @@ namespace BepuPhysics
         /// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
         /// <param name="count">Number of body pairs in the bundle.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB,
             ref TwoBodyReferences references, int count)
         {
@@ -764,7 +763,7 @@ namespace BepuPhysics
         /// <param name="sourceVelocitiesC">Velocities of body bundle C to scatter.</param>
         /// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
         /// <param name="count">Number of body pairs in the bundle.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ScatterVelocities(
             ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB, ref BodyVelocityWide sourceVelocitiesC,
             ref ThreeBodyReferences references, int count)
