@@ -28,7 +28,7 @@ namespace BepuUtilities
             Symmetric3x3Wide.Scale(m.D, scale, out result.D);
         }
 
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Invert(in Symmetric3x3Wide a, in Matrix3x3Wide b, in Symmetric3x3Wide d, out Symmetric6x6Wide result)
         {
             // [ A  B ]^-1 = [ (A - B * D^-1 * BT)^-1, -(A - B * D^-1 * BT)^-1 * B * D^-1                   ]
@@ -62,7 +62,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to transform with.</param>
         /// <param name="result0">First half of the result.</param>
         /// <param name="result1">Second half of the result.</param>
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void TransformWithoutOverlap(in Vector3Wide v0, in Vector3Wide v1, in Symmetric6x6Wide m, out Vector3Wide result0, out Vector3Wide result1)
         {
             result0.X = v0.X * m.A.XX + v0.Y * m.A.YX + v0.Z * m.A.ZX + v1.X * m.B.X.X + v1.Y * m.B.X.Y + v1.Z * m.B.X.Z;
@@ -85,7 +85,7 @@ namespace BepuUtilities
         /// <param name="d">Lower right 3x3 region of the matrix.</param>
         /// <param name="result0">First 3 values of the result vector.</param>
         /// <param name="result1">Second 3 values of the result vector.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LDLTSolve(
             in Vector3Wide v0, in Vector3Wide v1, in Symmetric3x3Wide a, in Matrix3x3Wide b, in Symmetric3x3Wide d, out Vector3Wide result0, out Vector3Wide result1)
         {
