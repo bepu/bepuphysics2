@@ -76,32 +76,11 @@ namespace BepuPhysics
             CollisionsDetected?.Invoke(dt, threadDispatcher);
 
             Debug.Assert(SubstepCount >= 0, "Substep count should be positive.");
-            var substepDt = dt / SubstepCount;
 
-            simulation.Solver.PrepareConstraintIntegrationResponsibilities(threadDispatcher);
-            for (int substepIndex = 0; substepIndex < SubstepCount; ++substepIndex)
-            {
-                SubstepStarted?.Invoke(substepIndex, dt, threadDispatcher);
-                if (substepIndex > 0)
-                {
-                    //This takes the place of collision detection for the substeps. It uses the current velocity to update penetration depths.
-                    //It's definitely an approximation, but it's important for avoiding some obviously weird behavior.
-                    //Note that we do not run this on the first iteration- the actual collision detection above takes care of it.
-                    simulation.IncrementallyUpdateContactConstraints(substepDt, threadDispatcher);
-                    ContactConstraintsUpdatedForSubstep?.Invoke(substepIndex, substepDt, threadDispatcher);
-                }
-                //simulation.IntegrateVelocitiesAndUpdateInertias(substepDt, threadDispatcher);
-                //VelocitiesIntegrated?.Invoke(substepIndex, substepDt, threadDispatcher);
-
-                simulation.Profiler.Start(simulation.Solver);
-                simulation.Solver.SolveStep2(substepDt, threadDispatcher);
-                simulation.Profiler.End(simulation.Solver);
-                ConstraintsSolved?.Invoke(substepIndex, substepDt, threadDispatcher);
-
-                //simulation.IntegratePoses(substepDt, threadDispatcher);
-                //PosesIntegrated?.Invoke(substepIndex, substepDt, threadDispatcher);
-                SubstepEnded?.Invoke(substepIndex, substepDt, threadDispatcher);
-            }
+            simulation.Solver.PrepareConstraintIntegrationResponsibilities(SubstepCount, threadDispatcher);
+            simulation.Profiler.Start(simulation.Solver);
+            simulation.Solver.SolveStep2(dt, threadDispatcher);
+            simulation.Profiler.End(simulation.Solver);
             SubstepsComplete?.Invoke(dt, threadDispatcher);
             simulation.Solver.DisposeConstraintIntegrationResponsibilities();
 
