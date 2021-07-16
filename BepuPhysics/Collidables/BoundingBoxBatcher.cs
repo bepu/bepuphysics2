@@ -79,7 +79,7 @@ namespace BepuPhysics
     {
         public TShapeWide Shape;
         public Vector<float> MaximumExpansion;
-        public RigidPoses Pose;
+        public RigidPoseWide Pose;
         public BodyVelocityWide Velocities;
     }
 

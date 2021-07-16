@@ -170,7 +170,7 @@ namespace BepuPhysics.Collidables
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void RayTest(ref RigidPoses pose, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        public void RayTest(ref RigidPoseWide pose, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
             Vector3Wide.Length(rayWide.Direction, out var inverseDLength);

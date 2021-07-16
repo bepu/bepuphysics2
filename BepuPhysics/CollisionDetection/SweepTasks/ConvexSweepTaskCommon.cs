@@ -204,11 +204,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 //Note that the initial orientations are properties of the owning body, not of the child.
                 //The orientation of the child itself is the product of localOrientation * bodyOrientation.
                 var halfSamples = samples * 0.5f;
-                RigidPoses.Broadcast(LocalPoseA, out var localPosesA);
+                RigidPoseWide.Broadcast(LocalPoseA, out var localPosesA);
                 PoseIntegration.Integrate(initialOrientationA, angularA, halfSamples, out var integratedOrientationA);
                 Compound.GetRotatedChildPose(localPosesA, integratedOrientationA, out var childPositionA, out sampleOrientationA);
 
-                RigidPoses.Broadcast(LocalPoseB, out var localPosesB);
+                RigidPoseWide.Broadcast(LocalPoseB, out var localPosesB);
                 PoseIntegration.Integrate(initialOrientationB, angularB, halfSamples, out var integratedOrientationB);
                 Compound.GetRotatedChildPose(localPosesB, integratedOrientationB, out var childPositionB, out sampleOrientationB);
 

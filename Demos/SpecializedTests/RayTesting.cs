@@ -309,7 +309,7 @@ namespace Demos.SpecializedTests
             point = anchor + basisX * localPoint.X + basisZ * localPoint.Y;
         }
 
-        static void CheckWide<TShape, TShapeWide>(ref RigidPoses poses, ref TShapeWide shapeWide, ref Vector3 origin, ref Vector3 direction, bool intersected, float t, ref Vector3 normal)
+        static void CheckWide<TShape, TShapeWide>(ref RigidPoseWide poses, ref TShapeWide shapeWide, ref Vector3 origin, ref Vector3 direction, bool intersected, float t, ref Vector3 normal)
                             where TShape : IConvexShape where TShapeWide : IShapeWide<TShape>
         {
             RayWide rayWide;
@@ -375,7 +375,7 @@ namespace Demos.SpecializedTests
                     pose.Position = new Vector3(positionMin) + positionBoundsSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
                     GetUnitQuaternion(random, out pose.Orientation);
                     Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
-                    RigidPoses poses;
+                    RigidPoseWide poses;
                     Vector3Wide.Broadcast(pose.Position, out poses.Position);
                     QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);
                     for (int rayIndex = 0; rayIndex < outsideToInsideRays; ++rayIndex)

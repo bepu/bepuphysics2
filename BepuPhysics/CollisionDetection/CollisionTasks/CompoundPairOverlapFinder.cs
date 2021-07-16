@@ -56,7 +56,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Unsafe.SkipInit(out Vector<float> maximumAllowedExpansion);
             Unsafe.SkipInit(out Vector<float> maximumRadius);
             Unsafe.SkipInit(out Vector<float> maximumAngularExpansion);
-            Unsafe.SkipInit(out RigidPoses localPosesA);
+            Unsafe.SkipInit(out RigidPoseWide localPosesA);
             Unsafe.SkipInit(out Vector3Wide mins);
             Unsafe.SkipInit(out Vector3Wide maxes);
             for (int i = 0; i < totalCompoundChildCount; i += Vector<float>.Count)
@@ -79,7 +79,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.WriteFirst(subpair.Pair->AngularVelocityB, ref GatherScatter.GetOffsetInstance(ref angularVelocityB, j));
                     Unsafe.Add(ref Unsafe.As<Vector<float>, float>(ref maximumAllowedExpansion), j) = subpair.Pair->MaximumExpansion;
 
-                    RigidPoses.WriteFirst(subpair.Child->LocalPose, ref GatherScatter.GetOffsetInstance(ref localPosesA, j));
+                    RigidPoseWide.WriteFirst(subpair.Child->LocalPose, ref GatherScatter.GetOffsetInstance(ref localPosesA, j));
                 }
 
                 QuaternionWide.Conjugate(orientationB, out var toLocalB);

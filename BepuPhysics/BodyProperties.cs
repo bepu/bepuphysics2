@@ -184,27 +184,27 @@ namespace BepuPhysics
         public BodyInertia World;
     }
 
-    public struct RigidPoses
+    public struct RigidPoseWide
     {
         public Vector3Wide Position;
         public QuaternionWide Orientation;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Broadcast(in RigidPose pose, out RigidPoses poses)
+        public static void Broadcast(in RigidPose pose, out RigidPoseWide poses)
         {
             Vector3Wide.Broadcast(pose.Position, out poses.Position);
             QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteFirst(in RigidPose pose, ref RigidPoses poses)
+        public static void WriteFirst(in RigidPose pose, ref RigidPoseWide poses)
         {
             Vector3Wide.WriteFirst(pose.Position, ref poses.Position);
             QuaternionWide.WriteFirst(pose.Orientation, ref poses.Orientation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ReadFirst(in RigidPoses poses, out RigidPose pose)
+        public static void ReadFirst(in RigidPoseWide poses, out RigidPose pose)
         {
             Vector3Wide.ReadFirst(poses.Position, out pose.Position);
             QuaternionWide.ReadFirst(poses.Orientation, out pose.Orientation);

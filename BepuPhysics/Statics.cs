@@ -93,7 +93,7 @@ namespace BepuPhysics
             Debug.Assert(targetCapacity > 0, "Resize is not meant to be used as Dispose. If you want to return everything to the pool, use Dispose instead.");
             //Note that we base the bundle capacities on the static capacity. This simplifies the conditions on allocation
             targetCapacity = BufferPool.GetCapacityForCount<int>(targetCapacity);
-            Debug.Assert(Poses.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetCapacity), "Should not try to use internal resize of the result won't change the size.");
+            Debug.Assert(Poses.Length != BufferPool.GetCapacityForCount<RigidPoseWide>(targetCapacity), "Should not try to use internal resize of the result won't change the size.");
             pool.ResizeToAtLeast(ref Poses, targetCapacity, Count);
             pool.ResizeToAtLeast(ref IndexToHandle, targetCapacity, Count);
             pool.ResizeToAtLeast(ref HandleToIndex, targetCapacity, Count);
@@ -505,7 +505,7 @@ namespace BepuPhysics
 
         //This looks a little different because it's used by AABB calculation, not constraint pairs.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void GatherDataForBounds(ref int start, int count, out RigidPoses poses, out Vector<int> shapeIndices, out Vector<float> maximumExpansion)
+        internal void GatherDataForBounds(ref int start, int count, out RigidPoseWide poses, out Vector<int> shapeIndices, out Vector<float> maximumExpansion)
         {
             Debug.Assert(count <= Vector<float>.Count);
             Unsafe.SkipInit(out poses);

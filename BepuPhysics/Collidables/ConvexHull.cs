@@ -358,7 +358,7 @@ namespace BepuPhysics.Collidables
             maximumAngularExpansion = maximumRadius;
         }
 
-        public void RayTest(ref RigidPoses poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        public void RayTest(ref RigidPoseWide poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
             Unsafe.SkipInit(out intersected);
             Unsafe.SkipInit(out t);
@@ -366,7 +366,7 @@ namespace BepuPhysics.Collidables
             Debug.Assert(Hulls.Length > 0 && Hulls.Length <= Vector<float>.Count);
             for (int i = 0; i < Hulls.Length; ++i)
             {
-                RigidPoses.ReadFirst(GatherScatter.GetOffsetInstance(ref poses, i), out var pose);
+                RigidPoseWide.ReadFirst(GatherScatter.GetOffsetInstance(ref poses, i), out var pose);
                 ref var offsetRay = ref GatherScatter.GetOffsetInstance(ref rayWide, i);
                 Vector3Wide.ReadFirst(offsetRay.Origin, out var origin);
                 Vector3Wide.ReadFirst(offsetRay.Direction, out var direction);

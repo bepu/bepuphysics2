@@ -253,7 +253,7 @@ namespace BepuPhysics.Collidables
                         Vector.GreaterThanOrEqual(w, Vector<float>.Zero)),
                     Vector.LessThanOrEqual(v + w, dn)));
         }
-        public void RayTest(ref RigidPoses pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
             Vector3Wide.Subtract(ray.Origin, pose.Position, out var offset);
             Matrix3x3Wide.CreateFromQuaternion(pose.Orientation, out var orientation);
