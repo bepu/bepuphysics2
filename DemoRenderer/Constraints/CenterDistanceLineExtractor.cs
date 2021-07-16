@@ -15,8 +15,8 @@ namespace DemoRenderer.Constraints
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
-            ref var poseA = ref bodies.Sets[setIndex].MotionStates[bodyIndices[0]].Pose;
-            ref var poseB = ref bodies.Sets[setIndex].MotionStates[bodyIndices[1]].Pose;
+            ref var poseA = ref bodies.Sets[setIndex].SolverStates[bodyIndices[0]].Motion.Pose;
+            ref var poseB = ref bodies.Sets[setIndex].SolverStates[bodyIndices[1]].Motion.Pose;
             var targetDistance = GatherScatter.GetFirst(ref prestepBundle.TargetDistance);
             var color = new Vector3(0.2f, 0.2f, 1f) * tint;
             var packedColor = Helpers.PackColor(color);

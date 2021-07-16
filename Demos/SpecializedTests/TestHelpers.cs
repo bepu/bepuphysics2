@@ -17,8 +17,9 @@ namespace Demos.SpecializedTests
             float accumulated = 0;
             for (int index = 0; index < bodies.ActiveSet.Count; ++index)
             {
-                accumulated += Vector3.Dot(bodies.ActiveSet.MotionStates[index].Velocity.Linear, bodies.ActiveSet.MotionStates[index].Velocity.Linear);
-                accumulated += Vector3.Dot(bodies.ActiveSet.MotionStates[index].Velocity.Angular, bodies.ActiveSet.MotionStates[index].Velocity.Angular);
+                ref var velocity = ref bodies.ActiveSet.SolverStates[index].Motion.Velocity;
+                accumulated += Vector3.Dot(velocity.Linear, velocity.Linear);
+                accumulated += Vector3.Dot(velocity.Angular, velocity.Angular);
             }
             return accumulated;
         }

@@ -98,7 +98,7 @@ namespace BepuPhysics
             get
             {
                 ref var location = ref MemoryLocation;
-                return ref Bodies.Sets[location.SetIndex].MotionStates[location.Index].Velocity;
+                return ref Bodies.Sets[location.SetIndex].SolverStates[location.Index].Motion.Velocity;
             }
         }
 
@@ -111,7 +111,7 @@ namespace BepuPhysics
             get
             {
                 ref var location = ref MemoryLocation;
-                return ref Bodies.Sets[location.SetIndex].MotionStates[location.Index].Pose;
+                return ref Bodies.Sets[location.SetIndex].SolverStates[location.Index].Motion.Pose;
             }
         }
 
@@ -137,7 +137,7 @@ namespace BepuPhysics
             get
             {
                 ref var location = ref MemoryLocation;
-                return ref Bodies.Sets[location.SetIndex].Inertias[location.Index].Local;
+                return ref Bodies.Sets[location.SetIndex].SolverStates[location.Index].Inertia.Local;
             }
         }
 
@@ -221,9 +221,8 @@ namespace BepuPhysics
             ref var set = ref Bodies.Sets[MemoryLocation.SetIndex];
             //Note that inertia.World is ephemeral data packed into the same cache line for the benefit of the solver.
             //It should not be assumed to contain up to date information outside of the velocity integration to pose integration interval, so this computes world inertia from scratch.
-            ref var inertia = ref set.Inertias[location.Index];
-            ref var pose = ref set.MotionStates[location.Index].Pose;
-            PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, pose.Orientation, out inverseInertia);
+            ref var state = ref set.SolverStates[location.Index];
+            PoseIntegration.RotateInverseInertia(state.Inertia.Local.InverseInertiaTensor, state.Motion.Pose.Orientation, out inverseInertia);
         }
 
         /// <summary>
@@ -343,9 +342,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(in BodySet set, int index, in Vector3 impulse, in Vector3 impulseOffset)
         {
-            ref var localInertia = ref set.Inertias[index].Local;
-            ref var state = ref set.MotionStates[index];
-            ApplyImpulse(impulse, impulseOffset, ref localInertia, ref state.Pose, ref state.Velocity);
+            ref var state = ref set.SolverStates[index];
+            ApplyImpulse(impulse, impulseOffset, ref state.Inertia.Local, ref state.Motion.Pose, ref state.Motion.Velocity);
         }
 
         /// <summary>
@@ -395,7 +393,8 @@ namespace BepuPhysics
         {
             ref var location = ref MemoryLocation;
             ref var set = ref Bodies.Sets[location.SetIndex];
-            ApplyLinearImpulse(impulse, set.Inertias[location.Index].Local.InverseMass, ref set.MotionStates[location.Index].Velocity.Linear);
+            ref var state = ref set.SolverStates[location.Index];
+            ApplyLinearImpulse(impulse, state.Inertia.Local.InverseMass, ref state.Motion.Velocity.Linear);
         }
 
         /// <summary>
@@ -418,12 +417,11 @@ namespace BepuPhysics
         {
             ref var location = ref MemoryLocation;
             ref var set = ref Bodies.Sets[location.SetIndex];
-            ref var inertia = ref set.Inertias[location.Index];
-            ref var state = ref set.MotionStates[location.Index];
+            ref var state = ref set.SolverStates[location.Index];
             //Note that inertia.World is ephemeral data packed into the same cache line for the benefit of the solver.
             //It should not be assumed to contain up to date information outside of the velocity integration to pose integration interval, so this computes world inertia from scratch.
-            PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, state.Pose.Orientation, out var inverseInertia);
-            ApplyAngularImpulse(angularImpulse, inverseInertia, ref state.Velocity.Angular);
+            PoseIntegration.RotateInverseInertia(state.Inertia.Local.InverseInertiaTensor, state.Motion.Pose.Orientation, out var inverseInertia);
+            ApplyAngularImpulse(angularImpulse, inverseInertia, ref state.Motion.Velocity.Angular);
         }
     }
 }

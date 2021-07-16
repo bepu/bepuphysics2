@@ -274,7 +274,7 @@ namespace BepuPhysics.Constraints
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
             ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
-            ref var motionStates = ref bodies.ActiveSet.MotionStates;
+            ref var motionStates = ref bodies.ActiveSet.SolverStates;
             var function = default(TConstraintFunctions);
             ref var jacobiResultsBundlesA = ref jacobiResults.GetVelocitiesForBody(0);
             ref var jacobiResultsBundlesB = ref jacobiResults.GetVelocitiesForBody(1);
@@ -307,11 +307,12 @@ namespace BepuPhysics.Constraints
             if (Sse.IsSupported)
             {
                 Sse.Prefetch0(address);
+                //TODO: prefetch should grab cache line pair anyway, right? not much reason to explicitly do more?
             }
             //TODO: ARM?
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static unsafe void PrefetchBundle(MotionState* motionBase, BodyInertias* inertiaBase, ref TwoBodyReferences references, int countInBundle)
+        static unsafe void PrefetchBundle(SolverState* stateBase, ref TwoBodyReferences references, int countInBundle)
         {
             var indicesA = (int*)Unsafe.AsPointer(ref references.IndexA);
             var indicesB = (int*)Unsafe.AsPointer(ref references.IndexB);
@@ -319,35 +320,33 @@ namespace BepuPhysics.Constraints
             {
                 var indexA = indicesA[i];
                 var indexB = indicesA[i];
-                Prefetch(motionBase + indexA);
-                Prefetch(inertiaBase + indexA);
-                Prefetch(motionBase + indexB);
-                Prefetch(inertiaBase + indexB);
+                Prefetch(stateBase + indexA);
+                Prefetch(stateBase + indexB);
             }
         }
 
         const int warmStartPrefetchDistance = 8;
         const int solvePrefetchDistance = 4;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void EarlyPrefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, ref Buffer<BodyInertias> inertias, int startBundleIndex, int exclusiveEndBundleIndex)
+        unsafe static void EarlyPrefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<SolverState> states, int startBundleIndex, int exclusiveEndBundleIndex)
         {
             exclusiveEndBundleIndex = Math.Min(exclusiveEndBundleIndex, startBundleIndex + prefetchDistance);
             var lastBundleIndex = exclusiveEndBundleIndex - 1;
             for (int i = startBundleIndex; i < lastBundleIndex; ++i)
             {
-                PrefetchBundle(states.Memory, inertias.Memory, ref references[i], Vector<float>.Count);
+                PrefetchBundle(states.Memory, ref references[i], Vector<float>.Count);
             }
             var countInBundle = GetCountInBundle(ref typeBatch, lastBundleIndex);
-            PrefetchBundle(states.Memory, inertias.Memory, ref references[lastBundleIndex], countInBundle);
+            PrefetchBundle(states.Memory, ref references[lastBundleIndex], countInBundle);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void Prefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<MotionState> states, ref Buffer<BodyInertias> inertias, int bundleIndex, int exclusiveEndBundleIndex)
+        unsafe static void Prefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<SolverState> states, int bundleIndex, int exclusiveEndBundleIndex)
         {
             var targetIndex = bundleIndex + prefetchDistance;
             if (targetIndex < exclusiveEndBundleIndex)
             {
-                PrefetchBundle(states.Memory, inertias.Memory, ref references[targetIndex], GetCountInBundle(ref typeBatch, targetIndex));
+                PrefetchBundle(states.Memory, ref references[targetIndex], GetCountInBundle(ref typeBatch, targetIndex));
             }
         }
 
@@ -551,16 +550,15 @@ namespace BepuPhysics.Constraints
             var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
-            ref var motionStates = ref bodies.ActiveSet.MotionStates;
-            ref var inertias = ref bodies.ActiveSet.Inertias;
-            EarlyPrefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, startBundle, exclusiveEndBundle);
+            ref var states = ref bodies.ActiveSet.SolverStates;
+            EarlyPrefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
-                Prefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, i, exclusiveEndBundle);
+                Prefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, i, exclusiveEndBundle);
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references.IndexA, count,
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(bodies, ref integratorCallbacks, ref integrationFlags, 1, dt, workerIndex, i, ref references.IndexB, count,
@@ -592,16 +590,15 @@ namespace BepuPhysics.Constraints
             var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
-            ref var motionStates = ref bodies.ActiveSet.MotionStates;
-            ref var inertias = ref bodies.ActiveSet.Inertias;
-            EarlyPrefetch(solvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, startBundle, exclusiveEndBundle);
+            ref var motionStates = ref bodies.ActiveSet.SolverStates;
+            EarlyPrefetch(solvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
-                Prefetch(solvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, ref inertias, i, exclusiveEndBundle);
+                Prefetch(solvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
                 {

@@ -45,7 +45,7 @@ namespace DemoTests
                 {
                     for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
                     {
-                        ref var state = ref set.MotionStates[bodyIndex];
+                        ref var state = ref set.SolverStates[bodyIndex].Motion;
                         ref var pose = ref state.Pose;
                         ref var velocity = ref state.Velocity;
                         var poseHash = ComputeHash(ref pose.Position, 89) + ComputeHash(ref pose.Orientation.X, 107) + ComputeHash(ref pose.Orientation.Y, 113) + ComputeHash(ref pose.Orientation.Z, 131) + ComputeHash(ref pose.Orientation.W, 149);

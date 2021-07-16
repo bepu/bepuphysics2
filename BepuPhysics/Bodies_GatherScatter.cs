@@ -17,9 +17,9 @@ namespace BepuPhysics
     {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteGatherInertia(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<BodyInertias> inertias, ref BodyInertiaWide gatheredInertias)
+        private static void WriteGatherInertia(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<SolverState> states, ref BodyInertiaWide gatheredInertias)
         {
-            ref var source = ref inertias[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)].World;
+            ref var source = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)].Inertia.World;
             ref var targetSlot = ref GetOffsetInstance(ref gatheredInertias, bodyIndexInBundle);
             GetFirst(ref targetSlot.InverseInertiaTensor.XX) = source.InverseInertiaTensor.XX;
             GetFirst(ref targetSlot.InverseInertiaTensor.YX) = source.InverseInertiaTensor.YX;
@@ -31,10 +31,10 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteGatherState(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<MotionState> states,
+        private static void WriteGatherMotionState(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<SolverState> states,
             ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
         {
-            ref var state = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)];
+            ref var state = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)].Motion;
             Vector3Wide.WriteFirst(state.Pose.Position, ref GetOffsetInstance(ref position, bodyIndexInBundle));
             QuaternionWide.WriteFirst(state.Pose.Orientation, ref GetOffsetInstance(ref orientation, bodyIndexInBundle));
             Vector3Wide.WriteFirst(state.Velocity.Linear, ref GetOffsetInstance(ref velocity.Linear, bodyIndexInBundle));
@@ -68,13 +68,13 @@ namespace BepuPhysics
 
             for (int i = 0; i < count; ++i)
             {
-                WriteGatherState(ref baseIndex, i, ref ActiveSet.MotionStates, ref position, ref orientation, ref velocity);
-                WriteGatherInertia(ref baseIndex, i, ref ActiveSet.Inertias, ref inertia);
+                WriteGatherMotionState(ref baseIndex, i, ref ActiveSet.SolverStates, ref position, ref orientation, ref velocity);
+                WriteGatherInertia(ref baseIndex, i, ref ActiveSet.SolverStates, ref inertia);
             }
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void FallbackGatherMotionState(int count, MotionState* motionStates, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
+        unsafe static void FallbackGatherMotionState(int count, SolverState* states, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
         {
             var indices = (int*)Unsafe.AsPointer(ref baseIndex);
             var pPositionX = (float*)Unsafe.AsPointer(ref position.X);
@@ -94,7 +94,7 @@ namespace BepuPhysics
             for (int i = 0; i < count; ++i)
             {
                 var index = indices[i];
-                var stateValues = (float*)(motionStates + index);
+                var stateValues = (float*)(states + index);
                 pPositionX[i] = stateValues[MotionState.OffsetToPositionX];
                 pPositionY[i] = stateValues[MotionState.OffsetToPositionY];
                 pPositionZ[i] = stateValues[MotionState.OffsetToPositionZ];
@@ -110,7 +110,7 @@ namespace BepuPhysics
                 pAngularZ[i] = stateValues[MotionState.OffsetToAngularZ];
             }
         }
-        unsafe static void FallbackGatherInertia(int count, BodyInertias* inertias, ref Vector<int> baseIndex, ref BodyInertiaWide inertia, int offsetInFloats)
+        unsafe static void FallbackGatherInertia(int count, SolverState* states, ref Vector<int> baseIndex, ref BodyInertiaWide inertia, int offsetInFloats)
         {
             var indices = (int*)Unsafe.AsPointer(ref baseIndex);
             var pMass = (float*)Unsafe.AsPointer(ref inertia.InverseMass);
@@ -124,7 +124,7 @@ namespace BepuPhysics
             for (int i = 0; i < count; ++i)
             {
                 var index = indices[i];
-                var inertiaValues = (float*)(inertias + index) + offsetInFloats;
+                var inertiaValues = (float*)(states + index) + offsetInFloats;
                 pInertiaXX[i] = inertiaValues[0];
                 pInertiaYX[i] = inertiaValues[1];
                 pInertiaYY[i] = inertiaValues[2];
@@ -138,19 +138,19 @@ namespace BepuPhysics
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherMotionState(ref Vector<int> bodyIndices, int count, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity)
         {
-            var motionStates = ActiveSet.MotionStates.Memory;
+            var solverStates = ActiveSet.SolverStates.Memory;
             if (Avx.IsSupported && Vector<float>.Count == 8)
             {
                 var indices = (int*)Unsafe.AsPointer(ref bodyIndices);
 
-                var s0 = (float*)(motionStates + indices[0]);
-                var s1 = (float*)(motionStates + indices[1]);
-                var s2 = (float*)(motionStates + indices[2]);
-                var s3 = (float*)(motionStates + indices[3]);
-                var s4 = (float*)(motionStates + indices[4]);
-                var s5 = (float*)(motionStates + indices[5]);
-                var s6 = (float*)(motionStates + indices[6]);
-                var s7 = (float*)(motionStates + indices[7]);
+                var s0 = (float*)(solverStates + indices[0]);
+                var s1 = (float*)(solverStates + indices[1]);
+                var s2 = (float*)(solverStates + indices[2]);
+                var s3 = (float*)(solverStates + indices[3]);
+                var s4 = (float*)(solverStates + indices[4]);
+                var s5 = (float*)(solverStates + indices[5]);
+                var s6 = (float*)(solverStates + indices[6]);
+                var s7 = (float*)(solverStates + indices[7]);
 
                 //for (int i = 0; i < 8; ++i)
                 //{
@@ -246,7 +246,7 @@ namespace BepuPhysics
                 Unsafe.SkipInit(out position);
                 Unsafe.SkipInit(out orientation);
                 Unsafe.SkipInit(out velocity);
-                FallbackGatherMotionState(count, motionStates, ref bodyIndices, ref position, ref orientation, ref velocity);
+                FallbackGatherMotionState(count, solverStates, ref bodyIndices, ref position, ref orientation, ref velocity);
             }
         }
 
@@ -254,7 +254,7 @@ namespace BepuPhysics
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void GatherInertia(ref Vector<int> bodyIndices, int count, int offsetInFloats, out BodyInertiaWide inertia)
         {
-            var inertias = ActiveSet.Inertias.Memory;
+            var inertias = ActiveSet.SolverStates.Memory;
             if (Avx.IsSupported && Vector<float>.Count == 8)
             {
                 var indices = (int*)Unsafe.AsPointer(ref bodyIndices);
@@ -308,19 +308,19 @@ namespace BepuPhysics
             else
             {
                 Unsafe.SkipInit(out inertia);
-                FallbackGatherInertia(count, ActiveSet.Inertias.Memory, ref bodyIndices, ref inertia, offsetInFloats);
+                FallbackGatherInertia(count, ActiveSet.SolverStates.Memory, ref bodyIndices, ref inertia, offsetInFloats);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherWorldInertia(ref Vector<int> bodyIndices, int count, out BodyInertiaWide inertia)
         {
-            GatherInertia(ref bodyIndices, count, 8, out inertia);
+            GatherInertia(ref bodyIndices, count, 24, out inertia);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherLocalInertia(ref Vector<int> bodyIndices, int count, out BodyInertiaWide inertia)
         {
-            GatherInertia(ref bodyIndices, count, 0, out inertia);
+            GatherInertia(ref bodyIndices, count, 16, out inertia);
         }
 
         /// <summary>
@@ -346,7 +346,7 @@ namespace BepuPhysics
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
 
-            ref var states = ref ActiveSet.MotionStates;
+            ref var states = ref ActiveSet.SolverStates;
 
             GatherMotionState(ref references.IndexA, count, out var positionA, out orientationA, out velocityA);
             GatherWorldInertia(ref references.IndexA, count, out inertiaA);
@@ -417,16 +417,15 @@ namespace BepuPhysics
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
             ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
 
-            ref var states = ref ActiveSet.MotionStates;
-            ref var inertias = ref ActiveSet.Inertias;
+            ref var states = ref ActiveSet.SolverStates;
             for (int i = 0; i < count; ++i)
             {
-                WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
-                WriteGatherInertia(ref baseIndexA, i, ref inertias, ref inertiaA);
-                WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
-                WriteGatherInertia(ref baseIndexB, i, ref inertias, ref inertiaB);
-                WriteGatherState(ref baseIndexC, i, ref states, ref positionC, ref orientationC, ref velocityC);
-                WriteGatherInertia(ref baseIndexC, i, ref inertias, ref inertiaC);
+                WriteGatherMotionState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
+                WriteGatherInertia(ref baseIndexA, i, ref states, ref inertiaA);
+                WriteGatherMotionState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
+                WriteGatherInertia(ref baseIndexB, i, ref states, ref inertiaB);
+                WriteGatherMotionState(ref baseIndexC, i, ref states, ref positionC, ref orientationC, ref velocityC);
+                WriteGatherInertia(ref baseIndexC, i, ref states, ref inertiaC);
             }
             //TODO: In future versions, we will likely store the body position in different forms to allow for extremely large worlds.
             //That will be an opt-in feature. The default implementation will use the FP32 representation, but the user could choose to swap it out for a fp64 or fixed64 representation.
@@ -493,18 +492,17 @@ namespace BepuPhysics
             ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
             ref var baseIndexD = ref Unsafe.As<Vector<int>, int>(ref references.IndexD);
 
-            ref var states = ref ActiveSet.MotionStates;
-            ref var inertias = ref ActiveSet.Inertias;
+            ref var states = ref ActiveSet.SolverStates;
             for (int i = 0; i < count; ++i)
             {
-                WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
-                WriteGatherInertia(ref baseIndexA, i, ref inertias, ref inertiaA);
-                WriteGatherState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
-                WriteGatherInertia(ref baseIndexB, i, ref inertias, ref inertiaB);
-                WriteGatherState(ref baseIndexC, i, ref states, ref positionC, ref orientationC, ref velocityC);
-                WriteGatherInertia(ref baseIndexC, i, ref inertias, ref inertiaC);
-                WriteGatherState(ref baseIndexD, i, ref states, ref positionD, ref orientationD, ref velocityD);
-                WriteGatherInertia(ref baseIndexD, i, ref inertias, ref inertiaD);
+                WriteGatherMotionState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
+                WriteGatherInertia(ref baseIndexA, i, ref states, ref inertiaA);
+                WriteGatherMotionState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
+                WriteGatherInertia(ref baseIndexB, i, ref states, ref inertiaB);
+                WriteGatherMotionState(ref baseIndexC, i, ref states, ref positionC, ref orientationC, ref velocityC);
+                WriteGatherInertia(ref baseIndexC, i, ref states, ref inertiaC);
+                WriteGatherMotionState(ref baseIndexD, i, ref states, ref positionD, ref orientationD, ref velocityD);
+                WriteGatherInertia(ref baseIndexD, i, ref states, ref inertiaD);
             }
             //TODO: In future versions, we will likely store the body position in different forms to allow for extremely large worlds.
             //That will be an opt-in feature. The default implementation will use the FP32 representation, but the user could choose to swap it out for a fp64 or fixed64 representation.
@@ -527,6 +525,7 @@ namespace BepuPhysics
         {
             if (Avx.IsSupported && Vector<float>.Count == 8)
             {
+                var states = ActiveSet.SolverStates.Memory;
                 {
                     var m0 = orientation.X.AsVector256();
                     var m1 = orientation.Y.AsVector256();
@@ -556,29 +555,28 @@ namespace BepuPhysics
 
                     var maskPointer = (int*)Unsafe.AsPointer(ref mask);
                     var indices = (int*)Unsafe.AsPointer(ref references);
-                    var motionStates = ActiveSet.MotionStates.Memory;
                     if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                     {
                         //If we are in an 'always integrate' batch, then the mask is not guaranteed to mask out out-of-range lanes, since we don't otherwise need the mask.
-                        Avx.StoreAligned((float*)(motionStates + indices[0]), Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
-                        if (count > 1) Avx.StoreAligned((float*)(motionStates + indices[1]), Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
-                        if (count > 2) Avx.StoreAligned((float*)(motionStates + indices[2]), Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
-                        if (count > 3) Avx.StoreAligned((float*)(motionStates + indices[3]), Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
-                        if (count > 4) Avx.StoreAligned((float*)(motionStates + indices[4]), Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
-                        if (count > 5) Avx.StoreAligned((float*)(motionStates + indices[5]), Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
-                        if (count > 6) Avx.StoreAligned((float*)(motionStates + indices[6]), Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
-                        if (count > 7) Avx.StoreAligned((float*)(motionStates + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                        Avx.StoreAligned((float*)(states + indices[0]), Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                        if (count > 1) Avx.StoreAligned((float*)(states + indices[1]), Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                        if (count > 2) Avx.StoreAligned((float*)(states + indices[2]), Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                        if (count > 3) Avx.StoreAligned((float*)(states + indices[3]), Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                        if (count > 4) Avx.StoreAligned((float*)(states + indices[4]), Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                        if (count > 5) Avx.StoreAligned((float*)(states + indices[5]), Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                        if (count > 6) Avx.StoreAligned((float*)(states + indices[6]), Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                        if (count > 7) Avx.StoreAligned((float*)(states + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
                     }
                     else
                     {
-                        if (maskPointer[0] != 0) Avx.StoreAligned((float*)(motionStates + indices[0]), Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
-                        if (maskPointer[1] != 0) Avx.StoreAligned((float*)(motionStates + indices[1]), Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
-                        if (maskPointer[2] != 0) Avx.StoreAligned((float*)(motionStates + indices[2]), Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
-                        if (maskPointer[3] != 0) Avx.StoreAligned((float*)(motionStates + indices[3]), Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
-                        if (maskPointer[4] != 0) Avx.StoreAligned((float*)(motionStates + indices[4]), Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
-                        if (maskPointer[5] != 0) Avx.StoreAligned((float*)(motionStates + indices[5]), Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
-                        if (maskPointer[6] != 0) Avx.StoreAligned((float*)(motionStates + indices[6]), Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
-                        if (maskPointer[7] != 0) Avx.StoreAligned((float*)(motionStates + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                        if (maskPointer[0] != 0) Avx.StoreAligned((float*)(states + indices[0]), Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                        if (maskPointer[1] != 0) Avx.StoreAligned((float*)(states + indices[1]), Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                        if (maskPointer[2] != 0) Avx.StoreAligned((float*)(states + indices[2]), Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                        if (maskPointer[3] != 0) Avx.StoreAligned((float*)(states + indices[3]), Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                        if (maskPointer[4] != 0) Avx.StoreAligned((float*)(states + indices[4]), Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                        if (maskPointer[5] != 0) Avx.StoreAligned((float*)(states + indices[5]), Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                        if (maskPointer[6] != 0) Avx.StoreAligned((float*)(states + indices[6]), Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                        if (maskPointer[7] != 0) Avx.StoreAligned((float*)(states + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
                     }
                 }
                 {
@@ -611,29 +609,28 @@ namespace BepuPhysics
                     var maskPointer = (int*)Unsafe.AsPointer(ref mask);
                     var indices = (int*)Unsafe.AsPointer(ref references);
                     //Note the offset; we're scattering into the world inertias.
-                    var inertias = ActiveSet.Inertias.Memory;
                     if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                     {
                         //If we are in an 'always integrate' batch, then the mask is not guaranteed to mask out out-of-range lanes, since we don't otherwise need the mask.
-                        Avx.StoreAligned((float*)(inertias + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
-                        if (count > 1) Avx.StoreAligned((float*)(inertias + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
-                        if (count > 2) Avx.StoreAligned((float*)(inertias + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
-                        if (count > 3) Avx.StoreAligned((float*)(inertias + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
-                        if (count > 4) Avx.StoreAligned((float*)(inertias + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
-                        if (count > 5) Avx.StoreAligned((float*)(inertias + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
-                        if (count > 6) Avx.StoreAligned((float*)(inertias + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
-                        if (count > 7) Avx.StoreAligned((float*)(inertias + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                        Avx.StoreAligned((float*)(states + indices[0]) + 24, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                        if (count > 1) Avx.StoreAligned((float*)(states + indices[1]) + 24, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                        if (count > 2) Avx.StoreAligned((float*)(states + indices[2]) + 24, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                        if (count > 3) Avx.StoreAligned((float*)(states + indices[3]) + 24, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                        if (count > 4) Avx.StoreAligned((float*)(states + indices[4]) + 24, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                        if (count > 5) Avx.StoreAligned((float*)(states + indices[5]) + 24, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                        if (count > 6) Avx.StoreAligned((float*)(states + indices[6]) + 24, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                        if (count > 7) Avx.StoreAligned((float*)(states + indices[7]) + 24, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
                     }
                     else
                     {
-                        if (maskPointer[0] != 0) Avx.StoreAligned((float*)(inertias + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
-                        if (maskPointer[1] != 0) Avx.StoreAligned((float*)(inertias + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
-                        if (maskPointer[2] != 0) Avx.StoreAligned((float*)(inertias + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
-                        if (maskPointer[3] != 0) Avx.StoreAligned((float*)(inertias + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
-                        if (maskPointer[4] != 0) Avx.StoreAligned((float*)(inertias + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
-                        if (maskPointer[5] != 0) Avx.StoreAligned((float*)(inertias + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
-                        if (maskPointer[6] != 0) Avx.StoreAligned((float*)(inertias + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
-                        if (maskPointer[7] != 0) Avx.StoreAligned((float*)(inertias + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                        if (maskPointer[0] != 0) Avx.StoreAligned((float*)(states + indices[0]) + 24, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                        if (maskPointer[1] != 0) Avx.StoreAligned((float*)(states + indices[1]) + 24, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                        if (maskPointer[2] != 0) Avx.StoreAligned((float*)(states + indices[2]) + 24, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                        if (maskPointer[3] != 0) Avx.StoreAligned((float*)(states + indices[3]) + 24, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                        if (maskPointer[4] != 0) Avx.StoreAligned((float*)(states + indices[4]) + 24, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                        if (maskPointer[5] != 0) Avx.StoreAligned((float*)(states + indices[5]) + 24, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                        if (maskPointer[6] != 0) Avx.StoreAligned((float*)(states + indices[6]) + 24, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                        if (maskPointer[7] != 0) Avx.StoreAligned((float*)(states + indices[7]) + 24, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
                     }
                 }
             }
@@ -649,13 +646,13 @@ namespace BepuPhysics
         {
             //TODO: How much value would there be in branching on kinematic state and avoiding a write? Depends a lot on the number of kinematics.
             ref var sourceSlot = ref GetOffsetInstance(ref sourceVelocities, innerIndex);
-            ref var target = ref ActiveSet.MotionStates[Unsafe.Add(ref baseIndex, innerIndex)].Velocity;
+            ref var target = ref ActiveSet.SolverStates[Unsafe.Add(ref baseIndex, innerIndex)].Motion.Velocity;
             target.Linear = new Vector3(sourceSlot.Linear.X[0], sourceSlot.Linear.Y[0], sourceSlot.Linear.Z[0]);
             target.Angular = new Vector3(sourceSlot.Angular.X[0], sourceSlot.Angular.Y[0], sourceSlot.Angular.Z[0]);
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void TransposeScatterVelocities(ref BodyVelocityWide sourceVelocities, MotionState* motionStates, ref Vector<int> references, int count)
+        private unsafe void TransposeScatterVelocities(ref BodyVelocityWide sourceVelocities, SolverState* states, ref Vector<int> references, int count)
         {
             if (Avx.IsSupported && Vector<float>.Count == 8)
             {
@@ -698,14 +695,14 @@ namespace BepuPhysics
                 var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
 
                 var indices = (int*)Unsafe.AsPointer(ref references);
-                Avx.StoreAligned((float*)(motionStates + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
-                if (count > 1) Avx.StoreAligned((float*)(motionStates + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
-                if (count > 2) Avx.StoreAligned((float*)(motionStates + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
-                if (count > 3) Avx.StoreAligned((float*)(motionStates + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
-                if (count > 4) Avx.StoreAligned((float*)(motionStates + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
-                if (count > 5) Avx.StoreAligned((float*)(motionStates + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
-                if (count > 6) Avx.StoreAligned((float*)(motionStates + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
-                if (count > 7) Avx.StoreAligned((float*)(motionStates + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                Avx.StoreAligned((float*)(states + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                if (count > 1) Avx.StoreAligned((float*)(states + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                if (count > 2) Avx.StoreAligned((float*)(states + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                if (count > 3) Avx.StoreAligned((float*)(states + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                if (count > 4) Avx.StoreAligned((float*)(states + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                if (count > 5) Avx.StoreAligned((float*)(states + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                if (count > 6) Avx.StoreAligned((float*)(states + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                if (count > 7) Avx.StoreAligned((float*)(states + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
             }
             else
             {
@@ -742,9 +739,9 @@ namespace BepuPhysics
             ref TwoBodyReferences references, int count)
         {
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
-            var motionStates = ActiveSet.MotionStates.Memory;
-            TransposeScatterVelocities(ref sourceVelocitiesA, motionStates, ref references.IndexA, count);
-            TransposeScatterVelocities(ref sourceVelocitiesB, motionStates, ref references.IndexB, count);
+            var states = ActiveSet.SolverStates.Memory;
+            TransposeScatterVelocities(ref sourceVelocitiesA, states, ref references.IndexA, count);
+            TransposeScatterVelocities(ref sourceVelocitiesB, states, ref references.IndexB, count);
             ////Grab the base references for the body indices. Note that we make use of the references memory layout again.
             //ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
             //ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);

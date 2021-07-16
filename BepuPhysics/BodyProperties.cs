@@ -184,6 +184,23 @@ namespace BepuPhysics
         public BodyInertia World;
     }
 
+    /// <summary>
+    /// Stores all body information needed by the solver together.
+    /// </summary>
+    /// <remarks>
+    /// With 2.4's revamp of the solver, every solving stage loads pose, velocity, and inertia for every body in each constraint.
+    /// L2 prefetchers often fetch memory in even-odd pairs of cache lines (see https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-optimization-manual.pdf#page=162).
+    /// Since L2 is likely pulling in adjacent cache lines when loading either motion state or inertias, they might as well live together in one block.
+    /// Note that this goes along with a change to the buffer pool's default alignment to 128 bytes.
+    /// </remarks>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SolverState
+    {
+        public MotionState Motion;
+        public BodyInertias Inertia;
+    }
+
+
     public struct RigidPoseWide
     {
         public Vector3Wide Position;
