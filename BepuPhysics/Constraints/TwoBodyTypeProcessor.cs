@@ -358,7 +358,7 @@ namespace BepuPhysics.Constraints
             All = 2
         }
 
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BundleIntegrationMode BundleShouldIntegrate(int bundleIndex, in IndexSet integrationFlags, out Vector<int> integrationMask)
         {
             Debug.Assert(Vector<float>.Count <= 32, "Wait, what? The integration mask isn't big enough to handle a vector this big.");
@@ -407,7 +407,7 @@ namespace BepuPhysics.Constraints
             integrationMask = default;
             return BundleIntegrationMode.None;
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void IntegratePoseAndVelocity<TIntegratorCallbacks>(
             ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, int count, in BodyInertiaWide localInertia, float dt, Vector<int> integrationMask,
             ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity,
@@ -452,7 +452,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.ConditionalSelect(integrationMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
             Vector3Wide.ConditionalSelect(integrationMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void IntegratePoseAndVelocity<TIntegratorCallbacks>(
             ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, int count, in BodyInertiaWide localInertia, float dt,
             ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity,
@@ -493,6 +493,7 @@ namespace BepuPhysics.Constraints
             IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
             bodies.ScatterPoseAndInertia<BatchShouldAlwaysIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
         }
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(
             Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref Buffer<IndexSet> integrationFlags, int bodyIndexInConstraint, float dt, int workerIndex, int bundleIndex,
             ref Vector<int> bodyIndices, int count, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
