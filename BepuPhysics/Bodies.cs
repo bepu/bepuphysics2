@@ -107,7 +107,7 @@ namespace BepuPhysics
             ref var collidable = ref set.Collidables[location.Index];
             if (collidable.Shape.Exists)
             {
-                shapes.UpdateBounds(set.MotionStates[location.Index].Pose, ref collidable.Shape, out var bodyBounds);
+                shapes.UpdateBounds(set.SolverStates[location.Index].Motion.Pose, ref collidable.Shape, out var bodyBounds);
                 if (location.SetIndex == 0)
                 {
                     broadPhase.UpdateActiveBounds(collidable.BroadPhaseIndex, bodyBounds.Min, bodyBounds.Max);
@@ -300,7 +300,7 @@ namespace BepuPhysics
             {
                 //The solver's connected bodies enumeration directly provides the constraint-stored reference, which is an index in the active set for active constraints and a handle for inactive constraints.
                 //We forced the dynamic active at the beginning of BecomeKinematic, so we don't have to worry about the inactive side of things.
-                if (!IsKinematic(Bodies.ActiveSet.Inertias[bodyIndex].Local))
+                if (!IsKinematic(Bodies.ActiveSet.SolverStates[bodyIndex].Inertia.Local))
                     ++DynamicCount;
             }
         }
@@ -312,7 +312,7 @@ namespace BepuPhysics
             ref var collidable = ref set.Collidables[location.Index];
             if (collidable.Shape.Exists)
             {
-                var mobility = IsKinematic(set.Inertias[location.Index].Local) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
+                var mobility = IsKinematic(set.SolverStates[location.Index].Inertia.Local) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
                 if (location.SetIndex == 0)
                 {
                     broadPhase.activeLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
@@ -362,8 +362,9 @@ namespace BepuPhysics
             }
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
-            var newlyKinematic = IsKinematic(localInertia) && !IsKinematic(set.Inertias[location.Index].Local);
-            set.Inertias[location.Index].Local = localInertia;
+            ref var localInertiaReference = ref set.SolverStates[location.Index].Inertia.Local;
+            var newlyKinematic = IsKinematic(localInertia) && !IsKinematic(localInertiaReference);
+            localInertiaReference = localInertia;
             UpdateForKinematicStateChange(handle, ref location, ref set, newlyKinematic);
         }
 
@@ -376,7 +377,8 @@ namespace BepuPhysics
                 if (newShape.Exists)
                 {
                     //Add a collidable to the simulation for the new shape.
-                    AddCollidableToBroadPhase(handle, set.MotionStates[activeBodyIndex].Pose, set.Inertias[activeBodyIndex].Local, ref set.Collidables[activeBodyIndex]);
+                    ref var state = ref set.SolverStates[activeBodyIndex];
+                    AddCollidableToBroadPhase(handle, state.Motion.Pose, state.Inertia.Local, ref set.Collidables[activeBodyIndex]);
                 }
                 else
                 {
@@ -429,7 +431,7 @@ namespace BepuPhysics
             ref var set = ref Sets[location.SetIndex];
             ref var collidable = ref set.Collidables[location.Index];
             var oldShape = collidable.Shape;
-            var newlyKinematic = IsKinematic(description.LocalInertia) && !IsKinematic(set.Inertias[location.Index].Local);
+            var newlyKinematic = IsKinematic(description.LocalInertia) && !IsKinematic(set.SolverStates[location.Index].Inertia.Local);
             set.ApplyDescriptionByIndex(location.Index, description);
             UpdateForShapeChange(handle, location.Index, oldShape, description.Collidable.Shape);
             UpdateForKinematicStateChange(handle, ref location, ref set, newlyKinematic);
@@ -498,17 +500,17 @@ namespace BepuPhysics
                 {
                     for (int j = 0; j < set.Count; ++j)
                     {
-                        ref var state = ref set.MotionStates[j];
+                        ref var state = ref set.SolverStates[j];
                         try
                         {
-                            state.Pose.Position.Validate();
-                            state.Pose.Orientation.ValidateOrientation();
-                            state.Velocity.Linear.Validate();
-                            state.Velocity.Angular.Validate();
+                            state.Motion.Pose.Position.Validate();
+                            state.Motion.Pose.Orientation.ValidateOrientation();
+                            state.Motion.Velocity.Linear.Validate();
+                            state.Motion.Velocity.Angular.Validate();
                         }
                         catch
                         {
-                            Console.WriteLine($"Validation failed on body {i} of set {j}. Position: {state.Pose.Position}, orientation: {state.Pose.Orientation}, linear: {state.Velocity.Linear}, angular: {state.Velocity.Angular}");
+                            Console.WriteLine($"Validation failed on body {i} of set {j}. Position: {state.Motion.Pose.Position}, orientation: {state.Motion.Pose.Orientation}, linear: {state.Motion.Velocity.Linear}, angular: {state.Motion.Velocity.Angular}");
                             throw;
                         }
 

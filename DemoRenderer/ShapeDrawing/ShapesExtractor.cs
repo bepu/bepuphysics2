@@ -236,10 +236,10 @@ namespace DemoRenderer.ShapeDrawing
             //3) Activity state
             //The handle is hashed to get variation.
             ref var activity = ref set.Activity[indexInSet];
-            ref var inertia = ref set.Inertias[indexInSet].Local;
             Vector3 color;
             Helpers.UnpackColor((uint)HashHelper.Rehash(handle.Value), out Vector3 colorVariation);
-            if (Bodies.IsKinematic(inertia))
+            ref var state = ref set.SolverStates[indexInSet];
+            if (Bodies.IsKinematic(state.Inertia.Local))
             {
                 var kinematicBase = new Vector3(0, 0.609f, 0.37f);
                 var kinematicVariationSpan = new Vector3(0.1f, 0.1f, 0.1f);
@@ -266,7 +266,7 @@ namespace DemoRenderer.ShapeDrawing
                 color *= sleepTint;
             }
 
-            AddShape(shapes, set.Collidables[indexInSet].Shape, ref set.MotionStates[indexInSet].Pose, color);
+            AddShape(shapes, set.Collidables[indexInSet].Shape, ref state.Motion.Pose, color);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

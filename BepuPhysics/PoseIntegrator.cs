@@ -391,37 +391,37 @@ namespace BepuPhysics
 
         unsafe void IntegrateBodiesAndUpdateBoundingBoxes(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
-            ref var baseStates = ref bodies.ActiveSet.MotionStates[0];
-            ref var baseInertias = ref bodies.ActiveSet.Inertias[0];
+            ref var baseStates = ref bodies.ActiveSet.SolverStates[0];
             ref var baseActivity = ref bodies.ActiveSet.Activity[0];
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
                 ref var state = ref Unsafe.Add(ref baseStates, i);
 
-                var previousOrientation = state.Pose.Orientation; //This is unused if conservation of angular momentum is disabled... compiler *may* remove it...
-                PoseIntegration.Integrate(state.Pose, state.Velocity, dt, out state.Pose);
+                var previousOrientation = state.Motion.Pose.Orientation; //This is unused if conservation of angular momentum is disabled... compiler *may* remove it...
+                ref var motion = ref state.Motion;
+                ref var inertia = ref state.Inertia;
+                PoseIntegration.Integrate(motion.Pose, motion.Velocity, dt, out motion.Pose);
 
                 //Note that this generally is used before velocity integration. That means an object can go inactive with gravity-induced velocity.
                 //That is actually intended: when the narrowphase wakes up an island, the accumulated impulses in the island will be ready for gravity's influence.
                 //To do otherwise would hurt the solver's guess, reducing the quality of the solve and possibly causing a little bump.
                 //This is only relevant when the update order actually puts the sleeper after gravity. For ease of use, this fact may be ignored by the simulation update order.
-                UpdateSleepCandidacy(ref state.Velocity, ref Unsafe.Add(ref baseActivity, i));
+                UpdateSleepCandidacy(ref state.Motion.Velocity, ref Unsafe.Add(ref baseActivity, i));
 
                 //Update the inertia tensors for the new orientation.
                 //TODO: If the pose integrator is positioned at the end of an update, the first frame after any out-of-timestep orientation change or local inertia change
                 //has to get is inertia tensors calculated elsewhere. Either they would need to be computed on addition or something- which is a bit gross, but doable-
                 //or we would need to move this calculation to the beginning of the frame to guarantee that all inertias are up to date. 
-                //This would require a scan through all pose memory to support, but if you do it at the same time as AABB update, that's fine- that stage uses the pose too.
-                ref var inertia = ref Unsafe.Add(ref baseInertias, i);
-                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, state.Pose.Orientation, out inertia.World.InverseInertiaTensor);
+                //This would require a scan through all pose memory to support, but if you do it at the same time as AABB update, that's fine- that stage uses the pose too.Inertias, i);
+                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, motion.Pose.Orientation, out inertia.World.InverseInertiaTensor);
                 //While it's a bit goofy just to copy over the inverse mass every frame even if it doesn't change,
                 //it's virtually always gathered together with the inertia tensor and having a duplicate means we can sometimes avoid loading a lane
                 //(i.e. loading only the last 32 bytes of the cache line into a Vector256).
                 inertia.World.InverseMass = inertia.Local.InverseMass;
 
-                IntegrateAngularVelocity(previousOrientation, state.Pose, inertia.Local, inertia.World, ref state.Velocity.Angular, dt);
-                Callbacks.IntegrateVelocity(i, state.Pose, inertia.Local, workerIndex, ref state.Velocity);
+                IntegrateAngularVelocity(previousOrientation, motion.Pose, inertia.Local, inertia.World, ref motion.Velocity.Angular, dt);
+                Callbacks.IntegrateVelocity(i, motion.Pose, inertia.Local, workerIndex, ref motion.Velocity);
 
                 //Bounding boxes are accumulated in a scalar fashion, but the actual bounding box calculations are deferred until a sufficient number of collidables are accumulated to make
                 //executing a bundle worthwhile. This does two things: 
@@ -433,7 +433,7 @@ namespace BepuPhysics
 
                 //Note that any collidable that lacks a collidable, or any reference that is beyond the set of collidables, will have a specially formed index.
                 //The accumulator will detect that and not try to add a nonexistent collidable.
-                boundingBoxBatcher.Add(i, state.Pose, state.Velocity, Unsafe.Add(ref baseCollidable, i));
+                boundingBoxBatcher.Add(i, motion.Pose, motion.Velocity, Unsafe.Add(ref baseCollidable, i));
 
                 //It's helpful to do the bounding box update here in the pose integrator because they share information. If the phases were split, there could be a penalty
                 //associated with loading all the body poses and velocities from memory again. Even if the L3 cache persisted, it would still be worse than looking into L1 or L2.
@@ -444,90 +444,91 @@ namespace BepuPhysics
 
         unsafe void PredictBoundingBoxes(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
-            ref var baseStates = ref bodies.ActiveSet.MotionStates[0];
-            ref var baseInertia = ref bodies.ActiveSet.Inertias[0];
+            ref var baseStates = ref bodies.ActiveSet.SolverStates[0];
             ref var baseActivity = ref bodies.ActiveSet.Activity[0];
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
                 ref var state = ref Unsafe.Add(ref baseStates, i);
-                state.Pose.Position.Validate();
-                state.Pose.Orientation.ValidateOrientation();
-                state.Velocity.Linear.Validate();
-                state.Velocity.Angular.Validate();
+                ref var motion = ref state.Motion;
+                motion.Pose.Position.Validate();
+                motion.Pose.Orientation.ValidateOrientation();
+                motion.Velocity.Linear.Validate();
+                motion.Velocity.Angular.Validate();
 
-                UpdateSleepCandidacy(ref state.Velocity, ref Unsafe.Add(ref baseActivity, i));
+                UpdateSleepCandidacy(ref motion.Velocity, ref Unsafe.Add(ref baseActivity, i));
 
                 //Bounding box prediction does not need to update inertia tensors.                
-                var integratedVelocity = state.Velocity;
-                Callbacks.IntegrateVelocity(i, state.Pose, Unsafe.Add(ref baseInertia, i).Local, workerIndex, ref integratedVelocity);
+                var integratedVelocity = motion.Velocity;
+                Callbacks.IntegrateVelocity(i, motion.Pose, state.Inertia.Local, workerIndex, ref integratedVelocity);
 
                 //Note that we do not include fancier angular integration for the bounding box prediction- it's not very important.
-                boundingBoxBatcher.Add(i, state.Pose, integratedVelocity, Unsafe.Add(ref baseCollidable, i));
+                boundingBoxBatcher.Add(i, motion.Pose, integratedVelocity, Unsafe.Add(ref baseCollidable, i));
             }
         }
 
         unsafe void IntegrateVelocitiesBoundsAndInertias(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
-            ref var baseStates = ref bodies.ActiveSet.MotionStates[0];
-            ref var baseInertia = ref bodies.ActiveSet.Inertias[0];
+            ref var baseStates = ref bodies.ActiveSet.SolverStates[0];
             ref var baseActivity = ref bodies.ActiveSet.Activity[0];
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
                 ref var state = ref Unsafe.Add(ref baseStates, i);
-                state.Pose.Position.Validate();
-                state.Pose.Orientation.ValidateOrientation();
-                state.Velocity.Linear.Validate();
-                state.Velocity.Angular.Validate();
+                ref var motion = ref state.Motion;
+                motion.Pose.Position.Validate();
+                motion.Pose.Orientation.ValidateOrientation();
+                motion.Velocity.Linear.Validate();
+                motion.Velocity.Angular.Validate();
 
-                UpdateSleepCandidacy(ref state.Velocity, ref Unsafe.Add(ref baseActivity, i));
+                UpdateSleepCandidacy(ref motion.Velocity, ref Unsafe.Add(ref baseActivity, i));
 
-                ref var inertia = ref Unsafe.Add(ref baseInertia, i);
-                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, state.Pose.Orientation, out inertia.World.InverseInertiaTensor);
+                ref var inertia = ref state.Inertia;
+                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, motion.Pose.Orientation, out inertia.World.InverseInertiaTensor);
                 inertia.World.InverseMass = inertia.Local.InverseMass;
 
-                IntegrateAngularVelocity(state.Pose, inertia.Local, inertia.World, ref state.Velocity.Angular, dt);
-                Callbacks.IntegrateVelocity(i, state.Pose, inertia.Local, workerIndex, ref state.Velocity);
+                IntegrateAngularVelocity(motion.Pose, inertia.Local, inertia.World, ref motion.Velocity.Angular, dt);
+                Callbacks.IntegrateVelocity(i, motion.Pose, inertia.Local, workerIndex, ref motion.Velocity);
 
-                boundingBoxBatcher.Add(i, state.Pose, state.Velocity, Unsafe.Add(ref baseCollidable, i));
+                boundingBoxBatcher.Add(i, motion.Pose, motion.Velocity, Unsafe.Add(ref baseCollidable, i));
             }
         }
 
 
         unsafe void IntegrateVelocities(int startIndex, int endIndex, float dt, int workerIndex)
         {
-            ref var baseStates = ref bodies.ActiveSet.MotionStates[0];
-            ref var baseInertia = ref bodies.ActiveSet.Inertias[0];
+            ref var baseStates = ref bodies.ActiveSet.SolverStates[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
                 ref var state = ref Unsafe.Add(ref baseStates, i);
-                state.Pose.Position.Validate();
-                state.Pose.Orientation.ValidateOrientation();
-                state.Velocity.Linear.Validate();
-                state.Velocity.Angular.Validate();
+                ref var motion = ref state.Motion;
+                motion.Pose.Position.Validate();
+                motion.Pose.Orientation.ValidateOrientation();
+                motion.Velocity.Linear.Validate();
+                motion.Velocity.Angular.Validate();
 
-                ref var inertia = ref Unsafe.Add(ref baseInertia, i);
-                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, state.Pose.Orientation, out inertia.World.InverseInertiaTensor);
+                ref var inertia = ref state.Inertia;
+                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, motion.Pose.Orientation, out inertia.World.InverseInertiaTensor);
                 inertia.World.InverseMass = inertia.Local.InverseMass;
 
-                IntegrateAngularVelocity(state.Pose, inertia.Local, inertia.World, ref state.Velocity.Angular, dt);
-                Callbacks.IntegrateVelocity(i, state.Pose, inertia.Local, workerIndex, ref state.Velocity);
+                IntegrateAngularVelocity(motion.Pose, inertia.Local, inertia.World, ref motion.Velocity.Angular, dt);
+                Callbacks.IntegrateVelocity(i, motion.Pose, inertia.Local, workerIndex, ref motion.Velocity);
             }
         }
 
         unsafe void IntegratePoses(int startIndex, int endIndex, float dt, int workerIndex)
         {
-            ref var baseStates = ref bodies.ActiveSet.MotionStates[0];
+            ref var baseStates = ref bodies.ActiveSet.SolverStates[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
                 ref var state = ref Unsafe.Add(ref baseStates, i);
-                state.Pose.Position.Validate();
-                state.Pose.Orientation.ValidateOrientation();
-                state.Velocity.Linear.Validate();
-                state.Velocity.Angular.Validate();
+                ref var motion = ref state.Motion;
+                motion.Pose.Position.Validate();
+                motion.Pose.Orientation.ValidateOrientation();
+                motion.Velocity.Linear.Validate();
+                motion.Velocity.Angular.Validate();
 
-                PoseIntegration.Integrate(state.Pose, state.Velocity, dt, out state.Pose);
+                PoseIntegration.Integrate(motion.Pose, motion.Velocity, dt, out motion.Pose);
             }
         }
 

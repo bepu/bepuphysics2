@@ -29,13 +29,14 @@ namespace BepuUtilities.Memory
                 //Suballocations from the block will always occur on pow2 boundaries, so the only way for a suballocation to violate this alignment is if an individual 
                 //suballocation is smaller than the alignment- in which case it doesn't require the alignment to be that wide. Also, since the alignment and 
                 //suballocations are both pow2 sized, they won't drift out of sync.
-                const int cacheLineSize = 64; //Making an assumption here! But it's a reasonably good one.
-                Array = new byte[blockSize + cacheLineSize];
+                //We pick 128 bytes to allow alignment with cache line pairs: https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-optimization-manual.pdf#page=162
+                const int allocationAlignment = 128;
+                Array = new byte[blockSize + allocationAlignment];
                 Handle = GCHandle.Alloc(Array, GCHandleType.Pinned);
                 Pointer = (byte*)Handle.AddrOfPinnedObject();
-                var mask = cacheLineSize - 1;
+                var mask = allocationAlignment - 1;
                 var offset = (uint)Pointer & mask;
-                Pointer += cacheLineSize - offset;
+                Pointer += allocationAlignment - offset;
             }
 
 

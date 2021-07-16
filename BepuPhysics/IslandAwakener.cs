@@ -281,16 +281,13 @@ namespace BepuPhysics
                         {
                             var sourceIndex = job.SourceStart + i;
                             var targetIndex = job.TargetStart + i;
-                            ref var sourceInertia = ref sourceSet.Inertias[sourceIndex];
-                            ref var targetInertia = ref targetSet.Inertias[targetIndex];
-                            ref var sourceState = ref sourceSet.MotionStates[sourceIndex];
-                            ref var targetState = ref targetSet.MotionStates[targetIndex];
+                            ref var sourceState = ref sourceSet.SolverStates[sourceIndex];
+                            ref var targetState = ref targetSet.SolverStates[targetIndex];
                             targetState = sourceState;
-                            targetInertia.Local = sourceInertia.Local;
                             //TODO: In principle, if velocity integration is always a part of the solver, then there is no need for this. That's not the case in 2.3.0, but embedded substepping should change that.
                             //Leaving this here for now so we don't break the other substeppers (and because it's a fairly tiny concern), but something to consider later.
-                            PoseIntegration.RotateInverseInertia(sourceInertia.Local.InverseInertiaTensor, sourceState.Pose.Orientation, out targetInertia.World.InverseInertiaTensor);
-                            targetInertia.World.InverseMass = sourceInertia.Local.InverseMass;
+                            PoseIntegration.RotateInverseInertia(sourceState.Inertia.Local.InverseInertiaTensor, sourceState.Motion.Pose.Orientation, out targetState.Inertia.World.InverseInertiaTensor);
+                            targetState.Inertia.Local.InverseMass = sourceState.Inertia.Local.InverseMass;
                         }
                         sourceSet.Activity.CopyTo(job.SourceStart, targetSet.Activity, job.TargetStart, job.Count);
                         if (resetActivityStates)

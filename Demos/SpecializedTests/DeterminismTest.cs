@@ -12,11 +12,6 @@ namespace Demos.SpecializedTests
 {
     public static class DeterminismTest<T> where T : Demo, new()
     {
-        struct MotionState
-        {
-            public RigidPose Pose;
-            public BodyVelocity Velocity;
-        }
         static Dictionary<int, MotionState> ExecuteSimulation(ContentArchive content, int frameCount)
         {
             var demo = new T();
@@ -36,7 +31,7 @@ namespace Demos.SpecializedTests
                 {
                     for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
                     {
-                        motionStates.Add(set.IndexToHandle[bodyIndex].Value, new MotionState { Pose = set.MotionStates[bodyIndex].Pose, Velocity = set.MotionStates[bodyIndex].Velocity });
+                        motionStates.Add(set.IndexToHandle[bodyIndex].Value, set.SolverStates[bodyIndex].Motion);
                     }
                 }
             }

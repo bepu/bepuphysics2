@@ -359,8 +359,7 @@ namespace BepuPhysics
                         //Note that we are just copying the constraint list reference; we don't have to reallocate it.
                         //Keep this in mind when removing the object from the active set. We don't want to dispose the list since we're still using it.
                         targetSet.Constraints[targetIndex] = sourceSet.Constraints[sourceIndex];
-                        targetSet.Inertias[targetIndex] = sourceSet.Inertias[sourceIndex];
-                        targetSet.MotionStates[targetIndex] = sourceSet.MotionStates[sourceIndex];
+                        targetSet.SolverStates[targetIndex] = sourceSet.SolverStates[sourceIndex];
 
                         if (sourceCollidable.Shape.Exists)
                         {

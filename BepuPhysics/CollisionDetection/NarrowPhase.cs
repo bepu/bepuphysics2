@@ -416,12 +416,12 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(bodyLocationA.SetIndex == 0 || bodyLocationB.SetIndex == 0, "One of the two bodies must be active. Otherwise, something is busted!");
                 ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
                 ref var setB = ref Bodies.Sets[bodyLocationB.SetIndex];
-                ref var stateA = ref setA.MotionStates[bodyLocationA.Index];
-                ref var stateB = ref setB.MotionStates[bodyLocationB.Index];
+                ref var stateA = ref setA.SolverStates[bodyLocationA.Index];
+                ref var stateB = ref setB.SolverStates[bodyLocationB.Index];
                 AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
                     ref setA.Collidables[bodyLocationA.Index], ref setB.Collidables[bodyLocationB.Index],
-                    ref stateA.Pose, ref stateB.Pose,
-                    ref stateA.Velocity, ref stateB.Velocity);
+                    ref stateA.Motion.Pose, ref stateB.Motion.Pose,
+                    ref stateA.Motion.Velocity, ref stateB.Motion.Velocity);
             }
             else
             {
@@ -436,11 +436,11 @@ namespace BepuPhysics.CollisionDetection
                 //TODO: Ideally, the compiler would see this and optimize away the relevant math in AddBatchEntries. That's a longshot, though. May want to abuse some generics to force it.
                 var zeroVelocity = default(BodyVelocity);
                 ref var bodySet = ref Bodies.ActiveSet;
-                ref var bodyState = ref bodySet.MotionStates[bodyLocation.Index];
+                ref var bodyState = ref bodySet.SolverStates[bodyLocation.Index];
                 AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
                     ref bodySet.Collidables[bodyLocation.Index], ref Statics.Collidables[staticIndex],
-                    ref bodyState.Pose, ref Statics.Poses[staticIndex],
-                    ref bodyState.Velocity, ref zeroVelocity);
+                    ref bodyState.Motion.Pose, ref Statics.Poses[staticIndex],
+                    ref bodyState.Motion.Velocity, ref zeroVelocity);
             }
 
         }
