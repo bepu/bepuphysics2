@@ -69,7 +69,7 @@ namespace Demos.SpecializedTests
 
             TriangleWide wide = default;
             wide.Broadcast(triangle);
-            RigidPoses.Broadcast(pose, out var poses);
+            RigidPoseWide.Broadcast(pose, out var poses);
             RayWide rayWide;
             Vector3Wide.Broadcast(rayOrigin, out rayWide.Origin);
             Vector3Wide.Broadcast(rayDirection, out rayWide.Direction);

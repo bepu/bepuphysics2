@@ -236,7 +236,7 @@ namespace BepuPhysics
             //Note that we base the bundle capacities on post-resize capacity of the IndexToHandle array. This simplifies the conditions on allocation, but increases memory use.
             //You may want to change this in the future if memory use is concerning.
             targetBodyCapacity = BufferPool.GetCapacityForCount<int>(targetBodyCapacity);
-            Debug.Assert(MotionStates.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
+            Debug.Assert(MotionStates.Length != BufferPool.GetCapacityForCount<RigidPoseWide>(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
             pool.ResizeToAtLeast(ref MotionStates, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref Inertias, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref IndexToHandle, targetBodyCapacity, Count);

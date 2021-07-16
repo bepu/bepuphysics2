@@ -27,7 +27,7 @@ namespace BepuPhysics.CollisionDetection
                 wide.Initialize(new RawBuffer(memory, wide.InternalAllocationSize));
             }
             wide.Broadcast(shape);
-            RigidPoses poses;
+            RigidPoseWide poses;
             Vector3Wide.Broadcast(pose.Position, out poses.Position);
             QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);
             for (int i = 0; i < raySource.RayCount; i += Vector<float>.Count)
