@@ -100,7 +100,7 @@ namespace BepuPhysics.Constraints
         public Vector3Wide AngularImpulseToVelocityB;
     }
 
-    public struct LinearAxisServoFunctions : IConstraintFunctions<LinearAxisServoPrestepData, LinearAxisServoProjection, Vector<float>>
+    public struct LinearAxisServoFunctions : ITwoBodyConstraintFunctions<LinearAxisServoPrestepData, LinearAxisServoProjection, Vector<float>>
     {
         public interface IJacobianModifier
         {

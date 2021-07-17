@@ -27,7 +27,7 @@ namespace BepuPhysics.Constraints
     /// <typeparam name="TPrestepData">Type of the prestep data used by the constraint.</typeparam>
     /// <typeparam name="TAccumulatedImpulse">Type of the accumulated impulses used by the constraint.</typeparam>
     /// <typeparam name="TProjection">Type of the projection to input.</typeparam>
-    public interface IConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+    public interface ITwoBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TPrestepData prestepData, out TProjection projection);
         void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
@@ -40,7 +40,7 @@ namespace BepuPhysics.Constraints
     /// <typeparam name="TPrestepData">Type of the prestep data used by the constraint.</typeparam>
     /// <typeparam name="TAccumulatedImpulse">Type of the accumulated impulses used by the constraint.</typeparam>
     /// <typeparam name="TProjection">Type of the projection to input.</typeparam>
-    public interface IContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse> : IConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+    public interface IContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse> : ITwoBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref TPrestepData prestepData);
     }
@@ -53,7 +53,7 @@ namespace BepuPhysics.Constraints
     public abstract class TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         : TypeProcessor<TwoBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
         where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
-        where TConstraintFunctions : unmanaged, IConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        where TConstraintFunctions : unmanaged, ITwoBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         protected sealed override int InternalBodiesPerConstraint => 2;
 

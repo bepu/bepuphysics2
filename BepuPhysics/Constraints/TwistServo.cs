@@ -93,7 +93,7 @@ namespace BepuPhysics.Constraints
     }
 
 
-    public struct TwistServoFunctions : IConstraintFunctions<TwistServoPrestepData, TwistServoProjection, Vector<float>>
+    public struct TwistServoFunctions : ITwoBodyConstraintFunctions<TwistServoPrestepData, TwistServoProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeJacobian(in QuaternionWide orientationA, in QuaternionWide orientationB, in QuaternionWide localBasisA, in QuaternionWide localBasisB,

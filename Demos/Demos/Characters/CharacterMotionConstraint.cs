@@ -439,7 +439,7 @@ namespace Demos.Demos.Characters
 
     }
 
-    public struct DynamicCharacterMotionFunctions : IConstraintFunctions<DynamicCharacterMotionPrestep, DynamicCharacterMotionProjection, CharacterMotionAccumulatedImpulse>
+    public struct DynamicCharacterMotionFunctions : ITwoBodyConstraintFunctions<DynamicCharacterMotionPrestep, DynamicCharacterMotionProjection, CharacterMotionAccumulatedImpulse>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ComputeJacobians(in Vector3Wide offsetA, in Vector3Wide offsetB, in QuaternionWide basisQuaternion,

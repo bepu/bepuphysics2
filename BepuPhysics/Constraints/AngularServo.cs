@@ -76,7 +76,7 @@ namespace BepuPhysics.Constraints
     }
 
 
-    public struct AngularServoFunctions : IConstraintFunctions<AngularServoPrestepData, AngularServoProjection, Vector3Wide>
+    public struct AngularServoFunctions : ITwoBodyConstraintFunctions<AngularServoPrestepData, AngularServoProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,

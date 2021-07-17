@@ -78,7 +78,7 @@ namespace BepuPhysics.Constraints
     }
 
 
-    public struct AngularAxisGearMotorFunctions : IConstraintFunctions<AngularAxisGearMotorPrestepData, AngularAxisGearMotorProjection, Vector<float>>
+    public struct AngularAxisGearMotorFunctions : ITwoBodyConstraintFunctions<AngularAxisGearMotorPrestepData, AngularAxisGearMotorProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,

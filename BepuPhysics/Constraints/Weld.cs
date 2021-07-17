@@ -91,7 +91,7 @@ namespace BepuPhysics.Constraints
         public Vector3Wide Offset;
     }
 
-    public struct WeldFunctions : IConstraintFunctions<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>
+    public struct WeldFunctions : ITwoBodyConstraintFunctions<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,

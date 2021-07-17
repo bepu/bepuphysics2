@@ -92,7 +92,7 @@ namespace BepuPhysics.Constraints
         public BodyInertiaWide InertiaB;
     }
 
-    public struct PointOnLineServoFunctions : IConstraintFunctions<PointOnLineServoPrestepData, PointOnLineServoProjection, Vector2Wide>
+    public struct PointOnLineServoFunctions : ITwoBodyConstraintFunctions<PointOnLineServoPrestepData, PointOnLineServoProjection, Vector2Wide>
     {
         static void GetAngularJacobians(in Matrix2x3Wide linearJacobians, in Vector3Wide offsetA, in Vector3Wide offsetB, out Matrix2x3Wide angularJacobianA, out Matrix2x3Wide angularJacobianB)
         {

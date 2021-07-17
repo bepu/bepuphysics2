@@ -79,7 +79,7 @@ namespace BepuPhysics.Constraints
         public MotorSettingsWide Settings;
     }
     
-    public struct LinearAxisMotorFunctions : IConstraintFunctions<LinearAxisMotorPrestepData, LinearAxisServoProjection, Vector<float>>
+    public struct LinearAxisMotorFunctions : ITwoBodyConstraintFunctions<LinearAxisMotorPrestepData, LinearAxisServoProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,

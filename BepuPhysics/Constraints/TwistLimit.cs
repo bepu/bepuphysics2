@@ -92,7 +92,7 @@ namespace BepuPhysics.Constraints
     }
 
 
-    public struct TwistLimitFunctions : IConstraintFunctions<TwistLimitPrestepData, TwistLimitProjection, Vector<float>>
+    public struct TwistLimitFunctions : ITwoBodyConstraintFunctions<TwistLimitPrestepData, TwistLimitProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
