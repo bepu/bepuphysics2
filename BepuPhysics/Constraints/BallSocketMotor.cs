@@ -117,7 +117,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket motor constraints.
     /// </summary>
-    public class BallSocketMotorTypeProcessor : TwoBodyTypeProcessor<BallSocketMotorPrestepData, BallSocketMotorProjection, Vector3Wide, BallSocketMotorFunctions>
+    public class BallSocketMotorTypeProcessor : TwoBodyTypeProcessor<BallSocketMotorPrestepData, BallSocketMotorProjection, Vector3Wide, BallSocketMotorFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 52;
     }

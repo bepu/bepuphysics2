@@ -247,7 +247,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of distance servos.
     /// </summary>
-    public class DistanceServoTypeProcessor : TwoBodyTypeProcessor<DistanceServoPrestepData, DistanceServoProjection, Vector<float>, DistanceServoFunctions>
+    public class DistanceServoTypeProcessor : TwoBodyTypeProcessor<DistanceServoPrestepData, DistanceServoProjection, Vector<float>, DistanceServoFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 33;
     }

@@ -226,7 +226,7 @@ namespace BepuPhysics.Constraints
 
     }
 
-    public class HingeTypeProcessor : TwoBodyTypeProcessor<HingePrestepData, HingeProjection, HingeAccumulatedImpulses, HingeFunctions>
+    public class HingeTypeProcessor : TwoBodyTypeProcessor<HingePrestepData, HingeProjection, HingeAccumulatedImpulses, HingeFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 47;
     }

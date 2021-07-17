@@ -132,7 +132,7 @@ namespace BepuPhysics.Constraints
 
     }
 
-    public class TwistMotorTypeProcessor : TwoBodyTypeProcessor<TwistMotorPrestepData, TwistMotorProjection, Vector<float>, TwistMotorFunctions>
+    public class TwistMotorTypeProcessor : TwoBodyTypeProcessor<TwistMotorPrestepData, TwistMotorProjection, Vector<float>, TwistMotorFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 28;
     }

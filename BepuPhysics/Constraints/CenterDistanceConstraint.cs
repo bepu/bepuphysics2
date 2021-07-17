@@ -133,7 +133,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of distance servos.
     /// </summary>
-    public class CenterDistanceTypeProcessor : TwoBodyTypeProcessor<CenterDistancePrestepData, CenterDistanceProjection, Vector<float>, CenterDistanceConstraintFunctions>
+    public class CenterDistanceTypeProcessor : TwoBodyTypeProcessor<CenterDistancePrestepData, CenterDistanceProjection, Vector<float>, CenterDistanceConstraintFunctions, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear>
     {
         public const int BatchTypeId = 35;
     }

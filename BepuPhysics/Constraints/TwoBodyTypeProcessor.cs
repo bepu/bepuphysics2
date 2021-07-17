@@ -50,10 +50,15 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Shared implementation across all two body constraints.
     /// </summary>
-    public abstract class TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
+    public abstract class TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions,
+        TWarmStartAccessFilterA, TWarmStartAccessFilterB, TSolveAccessFilterA, TSolveAccessFilterB>
         : TypeProcessor<TwoBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
         where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
         where TConstraintFunctions : unmanaged, ITwoBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        where TWarmStartAccessFilterA : unmanaged, IBodyAccessFilter
+        where TWarmStartAccessFilterB : unmanaged, IBodyAccessFilter
+        where TSolveAccessFilterA : unmanaged, IBodyAccessFilter
+        where TSolveAccessFilterB : unmanaged, IBodyAccessFilter
     {
         protected sealed override int InternalBodiesPerConstraint => 2;
 
@@ -301,12 +306,15 @@ namespace BepuPhysics.Constraints
         }
 
 
+        const int warmStartPrefetchDistance = 8;
+        const int solvePrefetchDistance = 4;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static unsafe void Prefetch(void* address)
         {
             if (Sse.IsSupported)
             {
                 Sse.Prefetch0(address);
+                //Sse.Prefetch0((byte*)address + 64);
                 //TODO: prefetch should grab cache line pair anyway, right? not much reason to explicitly do more?
             }
             //TODO: ARM?
@@ -325,9 +333,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        const int warmStartPrefetchDistance = 8;
-        const int solvePrefetchDistance = 4;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("PREFETCH")]
         unsafe static void EarlyPrefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<SolverState> states, int startBundleIndex, int exclusiveEndBundleIndex)
         {
             exclusiveEndBundleIndex = Math.Min(exclusiveEndBundleIndex, startBundleIndex + prefetchDistance);
@@ -341,6 +348,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("PREFETCH")]
         unsafe static void Prefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<SolverState> states, int bundleIndex, int exclusiveEndBundleIndex)
         {
             var targetIndex = bundleIndex + prefetchDistance;
@@ -646,7 +654,7 @@ namespace BepuPhysics.Constraints
     }
 
     public abstract class TwoBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
-        : TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
+        : TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
         where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
         where TConstraintFunctions : unmanaged, IContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
