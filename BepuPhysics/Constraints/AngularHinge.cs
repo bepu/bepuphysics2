@@ -79,7 +79,7 @@ namespace BepuPhysics.Constraints
     }
 
 
-    public struct AngularHingeFunctions : IConstraintFunctions<AngularHingePrestepData, AngularHingeProjection, Vector2Wide>
+    public struct AngularHingeFunctions : ITwoBodyConstraintFunctions<AngularHingePrestepData, AngularHingeProjection, Vector2Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetErrorAngles(in Vector3Wide hingeAxisA, in Vector3Wide hingeAxisB, in Matrix2x3Wide jacobianA, out Vector2Wide errorAngles)

@@ -118,7 +118,7 @@ namespace BepuPhysics.Constraints
         public Vector3Wide AngularImpulseToVelocityB;
     }
 
-    public struct DistanceServoFunctions : IConstraintFunctions<DistanceServoPrestepData, DistanceServoProjection, Vector<float>>
+    public struct DistanceServoFunctions : ITwoBodyConstraintFunctions<DistanceServoPrestepData, DistanceServoProjection, Vector<float>>
     {
         public static void GetDistance(in QuaternionWide orientationA, in Vector3Wide ab, in QuaternionWide orientationB, in Vector3Wide localOffsetA, in Vector3Wide localOffsetB,
             out Vector3Wide anchorOffsetA, out Vector3Wide anchorOffsetB, out Vector3Wide anchorOffset, out Vector<float> distance)

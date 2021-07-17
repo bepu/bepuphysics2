@@ -78,7 +78,7 @@ namespace BepuPhysics.Constraints
         public Vector3Wide NegatedImpulseToVelocityB;
     }
 
-    public struct AngularSwivelHingeFunctions : IConstraintFunctions<AngularSwivelHingePrestepData, AngularSwivelHingeProjection, Vector<float>>
+    public struct AngularSwivelHingeFunctions : ITwoBodyConstraintFunctions<AngularSwivelHingePrestepData, AngularSwivelHingeProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,

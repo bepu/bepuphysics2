@@ -99,7 +99,7 @@ namespace BepuPhysics.Constraints
         public Vector2Wide Hinge;
     }
 
-    public struct HingeFunctions : IConstraintFunctions<HingePrestepData, HingeProjection, HingeAccumulatedImpulses>
+    public struct HingeFunctions : ITwoBodyConstraintFunctions<HingePrestepData, HingeProjection, HingeAccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,

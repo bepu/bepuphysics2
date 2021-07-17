@@ -75,7 +75,7 @@ namespace BepuPhysics.Constraints
         public BodyInertiaWide InertiaB;
     }
 
-    public struct BallSocketFunctions : IConstraintFunctions<BallSocketPrestepData, BallSocketProjection, Vector3Wide>
+    public struct BallSocketFunctions : ITwoBodyConstraintFunctions<BallSocketPrestepData, BallSocketProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,

@@ -113,7 +113,7 @@ namespace BepuPhysics.Constraints
         public Vector3Wide AngularImpulseToVelocityB;
     }
 
-    public struct DistanceLimitFunctions : IConstraintFunctions<DistanceLimitPrestepData, DistanceLimitProjection, Vector<float>>
+    public struct DistanceLimitFunctions : ITwoBodyConstraintFunctions<DistanceLimitPrestepData, DistanceLimitProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,

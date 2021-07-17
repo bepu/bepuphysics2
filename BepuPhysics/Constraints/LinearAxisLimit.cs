@@ -87,7 +87,7 @@ namespace BepuPhysics.Constraints
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct LinearAxisLimitFunctions : IConstraintFunctions<LinearAxisLimitPrestepData, LinearAxisServoProjection, Vector<float>>
+    public struct LinearAxisLimitFunctions : ITwoBodyConstraintFunctions<LinearAxisLimitPrestepData, LinearAxisServoProjection, Vector<float>>
     {
         public struct LimitJacobianModifier : LinearAxisServoFunctions.IJacobianModifier
         {

@@ -99,7 +99,7 @@ namespace BepuPhysics.Constraints
         public Vector3Wide NegatedImpulseToVelocityB;
     }
 
-    public struct SwingLimitFunctions : IConstraintFunctions<SwingLimitPrestepData, SwingLimitProjection, Vector<float>>
+    public struct SwingLimitFunctions : ITwoBodyConstraintFunctions<SwingLimitPrestepData, SwingLimitProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,

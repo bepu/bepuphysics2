@@ -76,7 +76,7 @@ namespace BepuPhysics.Constraints
         public Vector<float> InverseMassB;
     }
 
-    public struct CenterDistanceConstraintFunctions : IConstraintFunctions<CenterDistancePrestepData, CenterDistanceProjection, Vector<float>>
+    public struct CenterDistanceConstraintFunctions : ITwoBodyConstraintFunctions<CenterDistancePrestepData, CenterDistanceProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
