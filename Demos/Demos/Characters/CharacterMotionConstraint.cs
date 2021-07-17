@@ -642,7 +642,7 @@ namespace Demos.Demos.Characters
 
     //Each constraint type has its own 'type processor'- it acts as the outer loop that handles all the common logic across batches of constraints and invokes
     //the per-constraint logic as needed. The CharacterMotionFunctions type provides the actual implementation.
-    public class DynamicCharacterMotionTypeProcessor : TwoBodyTypeProcessor<DynamicCharacterMotionPrestep, DynamicCharacterMotionProjection, CharacterMotionAccumulatedImpulse, DynamicCharacterMotionFunctions>
+    public class DynamicCharacterMotionTypeProcessor : TwoBodyTypeProcessor<DynamicCharacterMotionPrestep, DynamicCharacterMotionProjection, CharacterMotionAccumulatedImpulse, DynamicCharacterMotionFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         /// <summary>
         /// Simulation-wide unique id for the character motion constraint. Every type has needs a unique compile time id; this is a little bit annoying to guarantee given that there is no central

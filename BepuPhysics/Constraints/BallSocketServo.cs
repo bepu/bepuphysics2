@@ -123,7 +123,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket servo constraints.
     /// </summary>
-    public class BallSocketServoTypeProcessor : TwoBodyTypeProcessor<BallSocketServoPrestepData, BallSocketServoProjection, Vector3Wide, BallSocketServoFunctions>
+    public class BallSocketServoTypeProcessor : TwoBodyTypeProcessor<BallSocketServoPrestepData, BallSocketServoProjection, Vector3Wide, BallSocketServoFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 53;
     }

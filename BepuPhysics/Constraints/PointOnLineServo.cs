@@ -223,7 +223,7 @@ namespace BepuPhysics.Constraints
 
     }
 
-    public class PointOnLineServoTypeProcessor : TwoBodyTypeProcessor<PointOnLineServoPrestepData, PointOnLineServoProjection, Vector2Wide, PointOnLineServoFunctions>
+    public class PointOnLineServoTypeProcessor : TwoBodyTypeProcessor<PointOnLineServoPrestepData, PointOnLineServoProjection, Vector2Wide, PointOnLineServoFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 37;
     }

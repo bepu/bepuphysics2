@@ -229,7 +229,7 @@ namespace BepuPhysics.Constraints
 
     }
 
-    public class LinearAxisServoTypeProcessor : TwoBodyTypeProcessor<LinearAxisServoPrestepData, LinearAxisServoProjection, Vector<float>, LinearAxisServoFunctions>
+    public class LinearAxisServoTypeProcessor : TwoBodyTypeProcessor<LinearAxisServoPrestepData, LinearAxisServoProjection, Vector<float>, LinearAxisServoFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 38;
     }

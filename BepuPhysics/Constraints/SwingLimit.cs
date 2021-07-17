@@ -181,7 +181,7 @@ namespace BepuPhysics.Constraints
 
     }
 
-    public class SwingLimitTypeProcessor : TwoBodyTypeProcessor<SwingLimitPrestepData, SwingLimitProjection, Vector<float>, SwingLimitFunctions>
+    public class SwingLimitTypeProcessor : TwoBodyTypeProcessor<SwingLimitPrestepData, SwingLimitProjection, Vector<float>, SwingLimitFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 25;
     }

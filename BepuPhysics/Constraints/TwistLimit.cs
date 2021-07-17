@@ -147,7 +147,7 @@ namespace BepuPhysics.Constraints
 
     }
 
-    public class TwistLimitTypeProcessor : TwoBodyTypeProcessor<TwistLimitPrestepData, TwistLimitProjection, Vector<float>, TwistLimitFunctions>
+    public class TwistLimitTypeProcessor : TwoBodyTypeProcessor<TwistLimitPrestepData, TwistLimitProjection, Vector<float>, TwistLimitFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 27;
     }

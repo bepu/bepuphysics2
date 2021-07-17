@@ -144,7 +144,7 @@ namespace BepuPhysics.Constraints
 
     }
 
-    public class AngularServoTypeProcessor : TwoBodyTypeProcessor<AngularServoPrestepData, AngularServoProjection, Vector3Wide, AngularServoFunctions>
+    public class AngularServoTypeProcessor : TwoBodyTypeProcessor<AngularServoPrestepData, AngularServoProjection, Vector3Wide, AngularServoFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 29;
     }

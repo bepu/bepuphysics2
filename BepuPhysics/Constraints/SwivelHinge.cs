@@ -213,7 +213,7 @@ namespace BepuPhysics.Constraints
 
     }
 
-    public class SwivelHingeTypeProcessor : TwoBodyTypeProcessor<SwivelHingePrestepData, SwivelHingeProjection, Vector4Wide, SwivelHingeFunctions>
+    public class SwivelHingeTypeProcessor : TwoBodyTypeProcessor<SwivelHingePrestepData, SwivelHingeProjection, Vector4Wide, SwivelHingeFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 46;
     }
