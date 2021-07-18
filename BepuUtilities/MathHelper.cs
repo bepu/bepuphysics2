@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.Arm;
+using System.Runtime.Intrinsics.X86;
 
 namespace BepuUtilities
 {
@@ -328,11 +331,22 @@ namespace BepuUtilities
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Floor(in Vector<float> x, out Vector<float> result)
+        public static Vector<float> Floor(Vector<float> v)
         {
-            //This is far from ideal. You could probably do better- especially with platform intrinsics.
-            var intX = Vector.ConvertToInt32(x);
-            result = Vector.ConvertToSingle(Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), intX - Vector<int>.One, intX));
+            if (Avx.IsSupported && Vector<float>.Count == 8)
+            {
+                return Avx.Floor(v.AsVector256()).AsVector();
+            }
+            else if (Sse41.IsSupported && Vector<float>.Count == 4)
+            {
+                return Sse41.Floor(v.AsVector128()).AsVector();
+            }
+            else
+            {
+                var intX = Vector.ConvertToInt32(v);
+                return Vector.ConvertToSingle(Vector.ConditionalSelect(Vector.LessThan(v, Vector<float>.Zero), intX - Vector<int>.One, intX));
+            }
+            //TODO: Arm!
         }
 
         /// <summary>
@@ -344,11 +358,45 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetSignedAngleDifference(in Vector<float> a, in Vector<float> b, out Vector<float> difference)
         {
-            var pi = new Vector<float>(Pi);
             var half = new Vector<float>(0.5f);
             var x = (b - a) * new Vector<float>(1f / TwoPi) + half;
-            Floor(x, out var flooredX);
-            difference = (x - flooredX - half) * TwoPi;
+            difference = (x - Floor(x) - half) * new Vector<float>(TwoPi);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector<float> FastReciprocal(Vector<float> v)
+        {
+            if (Avx.IsSupported && Vector<float>.Count == 8)
+            {
+                return Avx.Reciprocal(v.AsVector256()).AsVector();
+            }
+            else if (Sse.IsSupported && Vector<float>.Count == 4)
+            {
+                return Sse.Reciprocal(v.AsVector128()).AsVector();
+            }
+            else
+            {
+                return Vector<float>.One / v;
+            }
+            //TODO: Arm!
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector<float> FastReciprocalSquareRoot(Vector<float> v)
+        {
+            if (Avx.IsSupported && Vector<float>.Count == 8)
+            {
+                return Avx.ReciprocalSqrt(v.AsVector256()).AsVector();
+            }
+            else if (Sse.IsSupported && Vector<float>.Count == 4)
+            {
+                return Sse.ReciprocalSqrt(v.AsVector128()).AsVector();
+            }
+            else
+            {
+                return Vector<float>.One / Vector.SquareRoot(v);
+            }
+            //TODO: Arm!
         }
     }
 }

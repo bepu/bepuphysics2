@@ -141,7 +141,7 @@ namespace BepuPhysics.Constraints
         public abstract void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
-            where TBatchIntegrationMode : struct, IBatchIntegrationMode;
+            where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode;
         public abstract void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
 

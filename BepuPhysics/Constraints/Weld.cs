@@ -287,7 +287,7 @@ namespace BepuPhysics.Constraints
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             //var offset = prestep.LocalOffset * orientationA;
-            Transform(prestep.LocalOffset, orientationA, out var offset);            
+            Transform(prestep.LocalOffset, orientationA, out var offset);
 
             //Effective mass = (J * M^-1 * JT)^-1, which is going to be a little tricky because J * M^-1 * JT is a 6x6 matrix:
             //J * M^-1 * JT = [ Ia^-1 + Ib^-1,                                     Ia^-1 * transpose(skewSymmetric(localOffset * orientationA))                                                             ]
@@ -362,11 +362,30 @@ namespace BepuPhysics.Constraints
 
     }
 
+    public struct WeldWarmStartAccessFilterA : IBodyAccessFilter
+    {
+        public bool GatherPosition => false;
+        public bool GatherOrientation => true;
+        public bool GatherMass => true;
+        public bool GatherInertiaTensor => true;
+        public bool AccessLinearVelocity => true;
+        public bool AccessAngularVelocity => true;
+    }
+    public struct WeldWarmStartAccessFilterB : IBodyAccessFilter
+    {
+        public bool GatherPosition => false;
+        public bool GatherOrientation => false;
+        public bool GatherMass => true;
+        public bool GatherInertiaTensor => true;
+        public bool AccessLinearVelocity => true;
+        public bool AccessAngularVelocity => true;
+    }
+
 
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket constraints.
     /// </summary>
-    public class WeldTypeProcessor : TwoBodyTypeProcessor<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses, WeldFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
+    public class WeldTypeProcessor : TwoBodyTypeProcessor<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses, WeldFunctions, WeldWarmStartAccessFilterA, WeldWarmStartAccessFilterB, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 31;
     }

@@ -494,29 +494,29 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe void IntegrateUniformly<TIntegratorCallbacks>(
             Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, float dt, int workerIndex, ref Vector<int> bodyIndices, int count, ref Vector<int> integrationMask,
-            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity, out BodyInertiaWide inertia) where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
+            out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia) where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
         {
-            bodies.GatherLocalInertia(ref bodyIndices, count, out var localInertia);
+            bodies.GatherState<AccessAll>(ref bodyIndices, count, false, out position, out orientation, out velocity, out var localInertia);
             IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
             bodies.ScatterPoseAndInertia<BatchShouldAlwaysIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(
+        public static unsafe void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TAccessFilter>(
             Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref Buffer<IndexSet> integrationFlags, int bodyIndexInConstraint, float dt, int workerIndex, int bundleIndex,
             ref Vector<int> bodyIndices, int count, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
-            where TBatchIntegrationMode : struct, IBatchIntegrationMode
+            where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode
+            where TAccessFilter : unmanaged, IBodyAccessFilter
         {
-            bodies.GatherMotionState(ref bodyIndices, count, out position, out orientation, out velocity);
             //These type tests are compile time constants and will be specialized.
             if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
             {
                 var integrationMask = new Vector<int>(-1);
-                IntegrateUniformly(bodies, ref integratorCallbacks, dt, workerIndex, ref bodyIndices, count, ref integrationMask, ref position, ref orientation, ref velocity, out inertia);
+                IntegrateUniformly(bodies, ref integratorCallbacks, dt, workerIndex, ref bodyIndices, count, ref integrationMask, out position, out orientation, out velocity, out inertia);
             }
             else if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
             {
-                bodies.GatherWorldInertia(ref bodyIndices, count, out inertia);
+                bodies.GatherState<TAccessFilter>(ref bodyIndices, count, true, out position, out orientation, out velocity, out inertia);
             }
             else
             {
@@ -527,7 +527,7 @@ namespace BepuPhysics.Constraints
                 {
                     case BundleIntegrationMode.All:
                         {
-                            IntegrateUniformly(bodies, ref integratorCallbacks, dt, workerIndex, ref bodyIndices, count, ref integrationMask, ref position, ref orientation, ref velocity, out inertia);
+                            IntegrateUniformly(bodies, ref integratorCallbacks, dt, workerIndex, ref bodyIndices, count, ref integrationMask, out position, out orientation, out velocity, out inertia);
                         }
                         break;
                     case BundleIntegrationMode.Partial:
@@ -535,7 +535,7 @@ namespace BepuPhysics.Constraints
                             //Note that if we take this codepath, the integration routine will reconstruct the world inertias from local inertia given the current pose.
                             //The changes to pose and velocity for integration inactive lanes will be masked out, so it'll just be identical to the world inertia if we had gathered it.
                             //Given that we're running the instructions in a bundle to build it, there's no reason to go out of our way to gather the world inertia.
-                            bodies.GatherLocalInertia(ref bodyIndices, count, out var localInertia);
+                            bodies.GatherState<AccessAll>(ref bodyIndices, count, false, out position, out orientation, out velocity, out var localInertia);
                             IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
                             //The scatter will be able to ignore any lanes which have a zeroed integration mask.
                             bodies.ScatterPoseAndInertia<BatchShouldConditionallyIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
@@ -543,7 +543,7 @@ namespace BepuPhysics.Constraints
                         break;
                     default:
                         {
-                            bodies.GatherWorldInertia(ref bodyIndices, count, out inertia);
+                            bodies.GatherState<TAccessFilter>(ref bodyIndices, count, true, out position, out orientation, out velocity, out inertia);
                         }
                         break;
                 }
@@ -567,9 +567,9 @@ namespace BepuPhysics.Constraints
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
                 Prefetch(warmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, i, exclusiveEndBundle);
-                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references.IndexA, count,
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterA>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references.IndexA, count,
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
-                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode>(bodies, ref integratorCallbacks, ref integrationFlags, 1, dt, workerIndex, i, ref references.IndexB, count,
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterB>(bodies, ref integratorCallbacks, ref integrationFlags, 1, dt, workerIndex, i, ref references.IndexB, count,
                     out var positionB, out var orientationB, out var wsvB, out var inertiaB);
                 var ab = positionB - positionA;
                 if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
@@ -582,12 +582,18 @@ namespace BepuPhysics.Constraints
                     default(BallSocketFunctions).WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB,
                         Unsafe.As<TPrestepData, BallSocketPrestepData>(ref prestep), Unsafe.As<TAccumulatedImpulse, Vector3Wide>(ref accumulatedImpulses), ref wsvA, ref wsvB);
                 }
+                else if (typeof(TConstraintFunctions) == typeof(CenterDistanceConstraint))
+                {
+                    default(CenterDistanceConstraintFunctions).WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB,
+                        Unsafe.As<TPrestepData, CenterDistancePrestepData>(ref prestep), Unsafe.As<TAccumulatedImpulse, Vector<float>>(ref accumulatedImpulses), ref wsvA, ref wsvB);
+                }
                 else
                 {
                     function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out var projection);
                     function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
                 }
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref references, count);
+                bodies.ScatterVelocities<TWarmStartAccessFilterA>(ref wsvA, ref references.IndexA, count);
+                bodies.ScatterVelocities<TWarmStartAccessFilterB>(ref wsvB, ref references.IndexB, count);
             }
         }
 
@@ -607,7 +613,9 @@ namespace BepuPhysics.Constraints
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
                 Prefetch(solvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
-                bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
+                bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, count, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+                bodies.GatherState<TSolveAccessFilterB>(ref references.IndexB, count, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
+                var ab = positionB - positionA;
                 if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
                 {
                     default(WeldFunctions).Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt,
@@ -618,12 +626,18 @@ namespace BepuPhysics.Constraints
                     default(BallSocketFunctions).Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt,
                         Unsafe.As<TPrestepData, BallSocketPrestepData>(ref prestep), ref Unsafe.As<TAccumulatedImpulse, Vector3Wide>(ref accumulatedImpulses), ref wsvA, ref wsvB);
                 }
+                else if (typeof(TConstraintFunctions) == typeof(CenterDistanceConstraint))
+                {
+                    default(CenterDistanceConstraintFunctions).Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt,
+                        Unsafe.As<TPrestepData, CenterDistancePrestepData>(ref prestep), ref Unsafe.As<TAccumulatedImpulse, Vector<float>>(ref accumulatedImpulses), ref wsvA, ref wsvB);
+                }
                 else
                 {
                     function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out var projection);
                     function.Solve(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
                 }
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref references, count);
+                bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references.IndexA, count);
+                bodies.ScatterVelocities<TSolveAccessFilterB>(ref wsvB, ref references.IndexB, count);
             }
         }
 
