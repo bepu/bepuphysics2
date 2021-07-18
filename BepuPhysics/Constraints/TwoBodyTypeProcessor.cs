@@ -500,7 +500,7 @@ namespace BepuPhysics.Constraints
         {
             bodies.GatherState<AccessAll>(ref bodyIndices, count, false, out position, out orientation, out velocity, out var localInertia);
             IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-            bodies.ScatterPoseAndInertia<BatchShouldAlwaysIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
+            bodies.ScatterPoseAndInertia(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TAccessFilter>(
@@ -537,11 +537,7 @@ namespace BepuPhysics.Constraints
                     //The changes to pose and velocity for integration inactive lanes will be masked out, so it'll just be identical to the world inertia if we had gathered it.
                     //Given that we're running the instructions in a bundle to build it, there's no reason to go out of our way to gather the world inertia.
                     IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, gatheredInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-                    //TODO: Worth checking if scatterposeandinertia benefits at all from type specialization. might very well not; it still has to do count masking...
-                    if (bundleIntegrationMode == BundleIntegrationMode.All)
-                        bodies.ScatterPoseAndInertia<BatchShouldAlwaysIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
-                    else
-                        bodies.ScatterPoseAndInertia<BatchShouldConditionallyIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
+                    bodies.ScatterPoseAndInertia(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
                 }
                 else
                 {

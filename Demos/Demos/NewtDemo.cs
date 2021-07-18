@@ -676,15 +676,15 @@ namespace Demos.Demos
             {
                 ref var edge = ref edges[i];
                 var offset = vertices[edge.B] - vertices[edge.A];
-                //simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
-                //    new Weld
-                //    {
-                //        LocalOffset = offset,
-                //        LocalOrientation = Quaternion.Identity,
-                //        SpringSettings = weldSpringiness
-                //    });
                 simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
-                    new CenterDistanceConstraint(offset.Length(), weldSpringiness));
+                    new Weld
+                    {
+                        LocalOffset = offset,
+                        LocalOrientation = Quaternion.Identity,
+                        SpringSettings = weldSpringiness
+                    });
+                //simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
+                //    new CenterDistanceConstraint(offset.Length(), weldSpringiness));
                 //simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
                 //    new BallSocket { LocalOffsetA = offset * 0.5f, LocalOffsetB = offset * -0.5f, SpringSettings = weldSpringiness });
             }
