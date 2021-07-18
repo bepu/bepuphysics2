@@ -161,11 +161,12 @@ namespace BepuPhysics.Constraints
             {
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
+                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState(ref bodyReferences, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
+                bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references.IndexA, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref references.IndexB, count);
 
             }
         }
@@ -180,11 +181,12 @@ namespace BepuPhysics.Constraints
             {
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
+                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState(ref bodyReferences, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
+                bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 function.Solve(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references.IndexA, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref references.IndexB, count);
             }
         }
 
@@ -242,11 +244,11 @@ namespace BepuPhysics.Constraints
             {
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
+                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
                 ref var wsvA = ref jacobiResultsBundlesA[i];
                 ref var wsvB = ref jacobiResultsBundlesB[i];
-                bodies.GatherState(ref bodyReferences, count, out var orientationA, out wsvA, out var inertiaA, out var ab, out var orientationB, out wsvB, out var inertiaB);
+                bodies.GatherState(ref references, count, out var orientationA, out wsvA, out var inertiaA, out var ab, out var orientationB, out wsvB, out var inertiaB);
                 function.Solve(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
             }
         }
@@ -262,14 +264,14 @@ namespace BepuPhysics.Constraints
             {
                 ref var prestep = ref Unsafe.Add(ref prestepBase, i);
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out var projection);
                 function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
                 function.Solve(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references.IndexA, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref references.IndexB, count);
             }
         }
 
@@ -523,29 +525,27 @@ namespace BepuPhysics.Constraints
                 Debug.Assert(typeof(TBatchIntegrationMode) == typeof(BatchShouldConditionallyIntegrate));
                 //This executes in warmstart, and warmstarts are typically quite simple from an instruction stream perspective.
                 //Having a dynamically chosen codepath is unlikely to cause instruction fetching issues.
-                switch (BundleShouldIntegrate(bundleIndex, integrationFlags[bodyIndexInConstraint], out var integrationMask))
+                var bundleIntegrationMode = BundleShouldIntegrate(bundleIndex, integrationFlags[bodyIndexInConstraint], out var integrationMask);
+                //Note that this will gather world inertia if there is no integration in the bundle, but that it is guaranteed to load all motion state information.
+                //This avoids complexity around later velocity scattering- we don't have to condition on whether the bundle is integrating.
+                //In practice, since the access filters are only reducing instruction counts and not memory bandwidth,
+                //the slightly increased unnecessary gathering is no worse than the more complex scatter condition in performance, and remains simpler.
+                bodies.GatherState<AccessAll>(ref bodyIndices, count, bundleIntegrationMode == BundleIntegrationMode.None, out position, out orientation, out velocity, out var gatheredInertia);
+                if (bundleIntegrationMode != BundleIntegrationMode.None)
                 {
-                    case BundleIntegrationMode.All:
-                        {
-                            IntegrateUniformly(bodies, ref integratorCallbacks, dt, workerIndex, ref bodyIndices, count, ref integrationMask, out position, out orientation, out velocity, out inertia);
-                        }
-                        break;
-                    case BundleIntegrationMode.Partial:
-                        {
-                            //Note that if we take this codepath, the integration routine will reconstruct the world inertias from local inertia given the current pose.
-                            //The changes to pose and velocity for integration inactive lanes will be masked out, so it'll just be identical to the world inertia if we had gathered it.
-                            //Given that we're running the instructions in a bundle to build it, there's no reason to go out of our way to gather the world inertia.
-                            bodies.GatherState<AccessAll>(ref bodyIndices, count, false, out position, out orientation, out velocity, out var localInertia);
-                            IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-                            //The scatter will be able to ignore any lanes which have a zeroed integration mask.
-                            bodies.ScatterPoseAndInertia<BatchShouldConditionallyIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
-                        }
-                        break;
-                    default:
-                        {
-                            bodies.GatherState<TAccessFilter>(ref bodyIndices, count, true, out position, out orientation, out velocity, out inertia);
-                        }
-                        break;
+                    //Note that if we take this codepath, the integration routine will reconstruct the world inertias from local inertia given the current pose.
+                    //The changes to pose and velocity for integration inactive lanes will be masked out, so it'll just be identical to the world inertia if we had gathered it.
+                    //Given that we're running the instructions in a bundle to build it, there's no reason to go out of our way to gather the world inertia.
+                    IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, gatheredInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
+                    //TODO: Worth checking if scatterposeandinertia benefits at all from type specialization. might very well not; it still has to do count masking...
+                    if (bundleIntegrationMode == BundleIntegrationMode.All)
+                        bodies.ScatterPoseAndInertia<BatchShouldAlwaysIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
+                    else
+                        bodies.ScatterPoseAndInertia<BatchShouldConditionallyIntegrate>(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
+                }
+                else
+                {
+                    inertia = gatheredInertia;
                 }
             }
         }
@@ -592,8 +592,19 @@ namespace BepuPhysics.Constraints
                     function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out var projection);
                     function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
                 }
-                bodies.ScatterVelocities<TWarmStartAccessFilterA>(ref wsvA, ref references.IndexA, count);
-                bodies.ScatterVelocities<TWarmStartAccessFilterB>(ref wsvB, ref references.IndexB, count);
+                if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
+                {
+                    bodies.ScatterVelocities<TWarmStartAccessFilterA>(ref wsvA, ref references.IndexA, count);
+                    bodies.ScatterVelocities<TWarmStartAccessFilterB>(ref wsvB, ref references.IndexB, count);
+                }
+                else
+                {
+                    //This batch has some integrators, which means that every bundle is going to gather all velocities.
+                    //(We don't make per-bundle determinations about this to avoid an extra branch and instruction complexity, and the difference is very small.)
+                    bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references.IndexA, count);
+                    bodies.ScatterVelocities<AccessAll>(ref wsvB, ref references.IndexB, count);
+                }
+
             }
         }
 
@@ -658,7 +669,8 @@ namespace BepuPhysics.Constraints
                 bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
                 function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out projection);
                 function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref references, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references.IndexA, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref references.IndexB, count);
             }
         }
         public override void JacobiPrestep2(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)

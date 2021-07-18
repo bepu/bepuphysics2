@@ -120,7 +120,7 @@ namespace BepuPhysics.Constraints
                 int count = GetCountInBundle(ref typeBatch, i);
                 bodies.GatherState(ref bodyReferences, count, out _, out _, out var wsvA, out _);
                 function.WarmStart(ref wsvA, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences, count);
             }
         }
 
@@ -138,7 +138,7 @@ namespace BepuPhysics.Constraints
                 int count = GetCountInBundle(ref typeBatch, i);
                 bodies.GatherState(ref bodyReferences, count, out _, out _, out var wsvA, out _);
                 function.Solve(ref wsvA, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences, count);
             }
         }
 
@@ -217,7 +217,7 @@ namespace BepuPhysics.Constraints
                 function.Prestep(position, orientation, inertiaA, dt, inverseDt, ref prestep, out var projection);
                 function.WarmStart(ref wsvA, ref projection, ref accumulatedImpulses);
                 function.Solve(ref wsvA, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences, count);
             }
         }
 
@@ -267,7 +267,7 @@ namespace BepuPhysics.Constraints
                 bodies.GatherState(ref bodyReferences, count, out var position, out var orientation, out var wsvA, out var inertiaA);
                 function.Prestep(position, orientation, inertiaA, dt, inverseDt, ref prestep, out var projection);
                 function.WarmStart(ref wsvA, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences, count);
             }
         }
         public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
@@ -286,7 +286,7 @@ namespace BepuPhysics.Constraints
                 bodies.GatherState(ref bodyReferences, count, out var position, out var orientation, out var wsvA, out var inertiaA);
                 function.Prestep(position, orientation, inertiaA, dt, inverseDt, ref prestep, out var projection);
                 function.Solve(ref wsvA, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences, count);
             }
         }
 
@@ -307,7 +307,7 @@ namespace BepuPhysics.Constraints
                 bodies.GatherState(ref references, count, out var position, out var orientation, out var wsvA, out var inertiaA);
                 function.Prestep(position, orientation, inertiaA, dt, inverseDt, ref prestep, out projection);
                 function.WarmStart(ref wsvA, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref references, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references, count);
             }
         }
         public override void JacobiPrestep2(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)

@@ -134,8 +134,11 @@ namespace BepuPhysics.Constraints
                     out var ab, out var orientationB, out var wsvB, out var inertiaB,
                     out var ac, out var orientationC, out var wsvC, out var inertiaC,
                     out var ad, out var orientationD, out var wsvD, out var inertiaD);
-                function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref bodyReferences, count);
+                function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref projection, ref accumulatedImpulses); 
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences.IndexA, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref bodyReferences.IndexB, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvC, ref bodyReferences.IndexC, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvD, ref bodyReferences.IndexD, count);
 
             }
         }
@@ -158,7 +161,10 @@ namespace BepuPhysics.Constraints
                     out var ac, out var orientationC, out var wsvC, out var inertiaC,
                     out var ad, out var orientationD, out var wsvD, out var inertiaD);
                 function.Solve(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences.IndexA, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref bodyReferences.IndexB, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvC, ref bodyReferences.IndexC, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvD, ref bodyReferences.IndexD, count);
             }
         }
 
@@ -271,7 +277,10 @@ namespace BepuPhysics.Constraints
                 function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, ad, orientationD, inertiaD, dt, inverseDt, ref prestep, out var projection);
                 function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref projection, ref accumulatedImpulses);
                 function.Solve(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences.IndexA, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref bodyReferences.IndexB, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvC, ref bodyReferences.IndexC, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvD, ref bodyReferences.IndexD, count);
             }
         }
 

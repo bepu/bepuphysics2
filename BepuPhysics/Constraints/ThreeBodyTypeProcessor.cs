@@ -127,7 +127,9 @@ namespace BepuPhysics.Constraints
                     out var ab, out var orientationB, out var wsvB, out var inertiaB,
                     out var ac, out var orientationC, out var wsvC, out var inertiaC);
                 function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences.IndexA, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref bodyReferences.IndexB, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvC, ref bodyReferences.IndexC, count);
 
             }
         }
@@ -149,7 +151,9 @@ namespace BepuPhysics.Constraints
                     out var ab, out var orientationB, out var wsvB, out var inertiaB,
                     out var ac, out var orientationC, out var wsvC, out var inertiaC);
                 function.Solve(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences.IndexA, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref bodyReferences.IndexB, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvC, ref bodyReferences.IndexC, count);
             }
         }
 
@@ -253,7 +257,9 @@ namespace BepuPhysics.Constraints
                 function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, dt, inverseDt, ref prestep, out var projection);
                 function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
                 function.Solve(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities(ref wsvA, ref wsvB, ref wsvC, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences.IndexA, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref bodyReferences.IndexB, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvC, ref bodyReferences.IndexC, count);
             }
         }
 

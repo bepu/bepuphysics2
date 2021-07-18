@@ -742,8 +742,7 @@ namespace BepuPhysics
 
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ScatterVelocities<TAccessFilter>(ref BodyVelocityWide sourceVelocities, ref Vector<int> references, int count)
-            where TAccessFilter : unmanaged, IBodyAccessFilter
+        public unsafe void ScatterVelocities<TAccessFilter>(ref BodyVelocityWide sourceVelocities, ref Vector<int> references, int count) where TAccessFilter : unmanaged, IBodyAccessFilter
         {
             if (Avx.IsSupported && Vector<float>.Count == 8)
             {
@@ -828,111 +827,111 @@ namespace BepuPhysics
                 }
             }
         }
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocities, ref int baseIndex, int innerIndex)
-        {
-            //TODO: How much value would there be in branching on kinematic state and avoiding a write? Depends a lot on the number of kinematics.
-            ref var sourceSlot = ref GetOffsetInstance(ref sourceVelocities, innerIndex);
-            ref var target = ref ActiveSet.SolverStates[Unsafe.Add(ref baseIndex, innerIndex)].Motion.Velocity;
-            target.Linear = new Vector3(sourceSlot.Linear.X[0], sourceSlot.Linear.Y[0], sourceSlot.Linear.Z[0]);
-            target.Angular = new Vector3(sourceSlot.Angular.X[0], sourceSlot.Angular.Y[0], sourceSlot.Angular.Z[0]);
-        }
+        ////[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //private unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocities, ref int baseIndex, int innerIndex)
+        //{
+        //    //TODO: How much value would there be in branching on kinematic state and avoiding a write? Depends a lot on the number of kinematics.
+        //    ref var sourceSlot = ref GetOffsetInstance(ref sourceVelocities, innerIndex);
+        //    ref var target = ref ActiveSet.SolverStates[Unsafe.Add(ref baseIndex, innerIndex)].Motion.Velocity;
+        //    target.Linear = new Vector3(sourceSlot.Linear.X[0], sourceSlot.Linear.Y[0], sourceSlot.Linear.Z[0]);
+        //    target.Angular = new Vector3(sourceSlot.Angular.X[0], sourceSlot.Angular.Y[0], sourceSlot.Angular.Z[0]);
+        //}
 
-        /// <summary>
-        /// Scatters velocities for one body bundle into the active body set.
-        /// </summary>
-        /// <param name="sourceVelocities">Velocities of body bundle A to scatter.</param>
-        /// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
-        /// <param name="count">Number of body pairs in the bundle.</param>
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocities, ref Vector<int> references, int count)
-        {
-            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
-            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
-            ref var baseIndex = ref Unsafe.As<Vector<int>, int>(ref references);
-            for (int i = 0; i < count; ++i)
-            {
-                ScatterVelocities(ref sourceVelocities, ref baseIndex, i);
-            }
-        }
+        ///// <summary>
+        ///// Scatters velocities for one body bundle into the active body set.
+        ///// </summary>
+        ///// <param name="sourceVelocities">Velocities of body bundle A to scatter.</param>
+        ///// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
+        ///// <param name="count">Number of body pairs in the bundle.</param>
+        ////[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //public unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocities, ref Vector<int> references, int count)
+        //{
+        //    Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+        //    //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+        //    ref var baseIndex = ref Unsafe.As<Vector<int>, int>(ref references);
+        //    for (int i = 0; i < count; ++i)
+        //    {
+        //        ScatterVelocities(ref sourceVelocities, ref baseIndex, i);
+        //    }
+        //}
 
-        /// <summary>
-        /// Scatters velocities for two body bundles into the active body set.
-        /// </summary>
-        /// <param name="sourceVelocitiesA">Velocities of body bundle A to scatter.</param>
-        /// <param name="sourceVelocitiesA">Velocities of body bundle B to scatter.</param>
-        /// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
-        /// <param name="count">Number of body pairs in the bundle.</param>
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB,
-            ref TwoBodyReferences references, int count)
-        {
-            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
-            ScatterVelocities<AccessAll>(ref sourceVelocitiesA, ref references.IndexA, count);
-            ScatterVelocities<AccessAll>(ref sourceVelocitiesB, ref references.IndexB, count);
-            ////Grab the base references for the body indices. Note that we make use of the references memory layout again.
-            //ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
-            //ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
-            //for (int i = 0; i < count; ++i)
-            //{
-            //    ScatterVelocities(ref sourceVelocitiesA, ref baseIndexA, i);
-            //    ScatterVelocities(ref sourceVelocitiesB, ref baseIndexB, i);
-            //}
-        }
+        ///// <summary>
+        ///// Scatters velocities for two body bundles into the active body set.
+        ///// </summary>
+        ///// <param name="sourceVelocitiesA">Velocities of body bundle A to scatter.</param>
+        ///// <param name="sourceVelocitiesA">Velocities of body bundle B to scatter.</param>
+        ///// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
+        ///// <param name="count">Number of body pairs in the bundle.</param>
+        ////[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //public unsafe void ScatterVelocities(ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB,
+        //    ref TwoBodyReferences references, int count)
+        //{
+        //    Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+        //    ScatterVelocities(ref sourceVelocitiesA, ref references.IndexA, count);
+        //    ScatterVelocities(ref sourceVelocitiesB, ref references.IndexB, count);
+        //    ////Grab the base references for the body indices. Note that we make use of the references memory layout again.
+        //    //ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+        //    //ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+        //    //for (int i = 0; i < count; ++i)
+        //    //{
+        //    //    ScatterVelocities(ref sourceVelocitiesA, ref baseIndexA, i);
+        //    //    ScatterVelocities(ref sourceVelocitiesB, ref baseIndexB, i);
+        //    //}
+        //}
 
-        /// <summary>
-        /// Scatters velocities for three body bundles into the active body set.
-        /// </summary>
-        /// <param name="sourceVelocitiesA">Velocities of body bundle A to scatter.</param>
-        /// <param name="sourceVelocitiesB">Velocities of body bundle B to scatter.</param>
-        /// <param name="sourceVelocitiesC">Velocities of body bundle C to scatter.</param>
-        /// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
-        /// <param name="count">Number of body pairs in the bundle.</param>
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ScatterVelocities(
-            ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB, ref BodyVelocityWide sourceVelocitiesC,
-            ref ThreeBodyReferences references, int count)
-        {
-            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
-            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
-            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
-            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
-            ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
-            for (int i = 0; i < count; ++i)
-            {
-                ScatterVelocities(ref sourceVelocitiesA, ref baseIndexA, i);
-                ScatterVelocities(ref sourceVelocitiesB, ref baseIndexB, i);
-                ScatterVelocities(ref sourceVelocitiesC, ref baseIndexC, i);
-            }
-        }
+        ///// <summary>
+        ///// Scatters velocities for three body bundles into the active body set.
+        ///// </summary>
+        ///// <param name="sourceVelocitiesA">Velocities of body bundle A to scatter.</param>
+        ///// <param name="sourceVelocitiesB">Velocities of body bundle B to scatter.</param>
+        ///// <param name="sourceVelocitiesC">Velocities of body bundle C to scatter.</param>
+        ///// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
+        ///// <param name="count">Number of body pairs in the bundle.</param>
+        ////[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //public unsafe void ScatterVelocities(
+        //    ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB, ref BodyVelocityWide sourceVelocitiesC,
+        //    ref ThreeBodyReferences references, int count)
+        //{
+        //    Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+        //    //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+        //    ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+        //    ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+        //    ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
+        //    for (int i = 0; i < count; ++i)
+        //    {
+        //        ScatterVelocities(ref sourceVelocitiesA, ref baseIndexA, i);
+        //        ScatterVelocities(ref sourceVelocitiesB, ref baseIndexB, i);
+        //        ScatterVelocities(ref sourceVelocitiesC, ref baseIndexC, i);
+        //    }
+        //}
 
-        /// <summary>
-        /// Scatters velocities for four body bundles into the active body set.
-        /// </summary>
-        /// <param name="sourceVelocitiesA">Velocities of body bundle A to scatter.</param>
-        /// <param name="sourceVelocitiesB">Velocities of body bundle B to scatter.</param>
-        /// <param name="sourceVelocitiesC">Velocities of body bundle C to scatter.</param>
-        /// <param name="sourceVelocitiesD">Velocities of body bundle D to scatter.</param>
-        /// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
-        /// <param name="count">Number of body pairs in the bundle.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ScatterVelocities(
-            ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB, ref BodyVelocityWide sourceVelocitiesC, ref BodyVelocityWide sourceVelocitiesD,
-            ref FourBodyReferences references, int count)
-        {
-            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
-            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
-            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
-            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
-            ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
-            ref var baseIndexD = ref Unsafe.As<Vector<int>, int>(ref references.IndexD);
-            for (int i = 0; i < count; ++i)
-            {
-                ScatterVelocities(ref sourceVelocitiesA, ref baseIndexA, i);
-                ScatterVelocities(ref sourceVelocitiesB, ref baseIndexB, i);
-                ScatterVelocities(ref sourceVelocitiesC, ref baseIndexC, i);
-                ScatterVelocities(ref sourceVelocitiesD, ref baseIndexD, i);
-            }
-        }
+        ///// <summary>
+        ///// Scatters velocities for four body bundles into the active body set.
+        ///// </summary>
+        ///// <param name="sourceVelocitiesA">Velocities of body bundle A to scatter.</param>
+        ///// <param name="sourceVelocitiesB">Velocities of body bundle B to scatter.</param>
+        ///// <param name="sourceVelocitiesC">Velocities of body bundle C to scatter.</param>
+        ///// <param name="sourceVelocitiesD">Velocities of body bundle D to scatter.</param>
+        ///// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
+        ///// <param name="count">Number of body pairs in the bundle.</param>
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //public unsafe void ScatterVelocities(
+        //    ref BodyVelocityWide sourceVelocitiesA, ref BodyVelocityWide sourceVelocitiesB, ref BodyVelocityWide sourceVelocitiesC, ref BodyVelocityWide sourceVelocitiesD,
+        //    ref FourBodyReferences references, int count)
+        //{
+        //    Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+        //    //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+        //    ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+        //    ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+        //    ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
+        //    ref var baseIndexD = ref Unsafe.As<Vector<int>, int>(ref references.IndexD);
+        //    for (int i = 0; i < count; ++i)
+        //    {
+        //        ScatterVelocities(ref sourceVelocitiesA, ref baseIndexA, i);
+        //        ScatterVelocities(ref sourceVelocitiesB, ref baseIndexB, i);
+        //        ScatterVelocities(ref sourceVelocitiesC, ref baseIndexC, i);
+        //        ScatterVelocities(ref sourceVelocitiesD, ref baseIndexD, i);
+        //    }
+        //}
     }
 }
