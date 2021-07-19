@@ -136,7 +136,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Subtract(b.Linear, negatedChangeB, out b.Linear);
         }
 
-        //[MethodImpl(MethodImplOptions.NoInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             in CenterDistancePrestepData prestep, in Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {

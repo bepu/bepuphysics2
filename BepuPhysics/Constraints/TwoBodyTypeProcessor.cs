@@ -493,15 +493,6 @@ namespace BepuPhysics.Constraints
             integratorCallbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), count), position, orientation, localInertia, new Vector<int>(-1), workerIndex, new Vector<float>(dt), ref velocity);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void IntegrateUniformly<TIntegratorCallbacks>(
-            Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, float dt, int workerIndex, ref Vector<int> bodyIndices, int count, ref Vector<int> integrationMask,
-            out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia) where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
-        {
-            bodies.GatherState<AccessAll>(ref bodyIndices, count, false, out position, out orientation, out velocity, out var localInertia);
-            IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-            bodies.ScatterPoseAndInertia(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
-        }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TAccessFilter>(
             Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref Buffer<IndexSet> integrationFlags, int bodyIndexInConstraint, float dt, int workerIndex, int bundleIndex,
@@ -514,7 +505,16 @@ namespace BepuPhysics.Constraints
             if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
             {
                 var integrationMask = new Vector<int>(-1);
-                IntegrateUniformly(bodies, ref integratorCallbacks, dt, workerIndex, ref bodyIndices, count, ref integrationMask, out position, out orientation, out velocity, out inertia);
+                //var bodySpan = new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), count);
+                //for (int i = 0; i < bodySpan.Length; ++i)
+                //{
+                //    var bodyIndex = bodySpan[i];
+                //    ref var state = ref bodies.ActiveSet.SolverStates[bodyIndex];
+                //    integratorCallbacks.IntegrateVelocity(bodyIndex, state.Motion.Pose, state.Inertia.Local, workerIndex, ref state.Motion.Velocity);
+                //}
+                bodies.GatherState<AccessAll>(ref bodyIndices, count, false, out position, out orientation, out velocity, out var localInertia);
+                IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
+                bodies.ScatterPoseAndInertia(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
             }
             else if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
             {
@@ -526,6 +526,17 @@ namespace BepuPhysics.Constraints
                 //This executes in warmstart, and warmstarts are typically quite simple from an instruction stream perspective.
                 //Having a dynamically chosen codepath is unlikely to cause instruction fetching issues.
                 var bundleIntegrationMode = BundleShouldIntegrate(bundleIndex, integrationFlags[bodyIndexInConstraint], out var integrationMask);
+                //var bodySpan = new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), count);
+                //var integrationMaskPointer = (int*)&integrationMask;
+                //for (int i = 0; i < bodySpan.Length; ++i)
+                //{
+                //    if (integrationMaskPointer[i] != 0)
+                //    {
+                //        var bodyIndex = bodySpan[i];
+                //        ref var state = ref bodies.ActiveSet.SolverStates[bodyIndex];
+                //        integratorCallbacks.IntegrateVelocity(bodyIndex, state.Motion.Pose, state.Inertia.Local, workerIndex, ref state.Motion.Velocity);
+                //    }
+                //}
                 //Note that this will gather world inertia if there is no integration in the bundle, but that it is guaranteed to load all motion state information.
                 //This avoids complexity around later velocity scattering- we don't have to condition on whether the bundle is integrating.
                 //In practice, since the access filters are only reducing instruction counts and not memory bandwidth,
