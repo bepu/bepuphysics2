@@ -27,7 +27,9 @@ namespace Demos.Demos
             public float Gravity;
             float gravityDt;
 
-            public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
+            public readonly AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
+
+            public readonly bool AllowSubstepsForUnconstrainedBodies => false;
 
             public void Initialize(Simulation simulation)
             {

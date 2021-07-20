@@ -19,6 +19,8 @@ namespace Demos.Demos
         //Unless your simulation requires the extra fidelity, there's not much reason to spend the extra time on it.
         DemoPoseIntegratorCallbacks innerCallbacks;
         public readonly AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque;
+        //For this demo, we'll allow substepping for unconstrained bodies.
+        public readonly bool AllowSubstepsForUnconstrainedBodies => true;
 
         public void Initialize(Simulation simulation)
         {

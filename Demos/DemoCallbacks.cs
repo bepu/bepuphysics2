@@ -29,7 +29,17 @@ namespace Demos
         float linearDampingDt;
         float angularDampingDt;
 
+        /// <summary>
+        /// Gets how the pose integrator should handle angular velocity integration.
+        /// </summary>
         public readonly AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
+
+        /// <summary>
+        /// Gets whether the integrator should use substepping for unconstrained bodies when using a substepping solver.
+        /// If true, unconstrained bodies will be integrated with the same number of substeps as the constrained bodies in the solver.
+        /// If false, unconstrained bodies use a single step of length equal to the dt provided to Simulation.Timestep. 
+        /// </summary>
+        public readonly bool AllowSubstepsForUnconstrainedBodies => false;
 
         public void Initialize(Simulation simulation)
         {

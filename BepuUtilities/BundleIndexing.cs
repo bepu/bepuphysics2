@@ -2,9 +2,11 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace BepuUtilities
-{    
+{
     /// <summary>
     /// Some helpers for indexing into vector bundles.
     /// </summary>
@@ -56,6 +58,29 @@ namespace BepuUtilities
         public static int GetBundleCount(int elementCount)
         {
             return (elementCount + VectorMask) >> VectorShift;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe Vector<int> CreateMaskForCountInBundle(int countInBundle)
+        {
+            if (Avx.IsSupported && Vector<int>.Count == 8)
+            {
+                return Avx.CompareGreaterThan(Vector256.Create((float)countInBundle), Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)).AsInt32().AsVector();
+            }
+            else if (Sse.IsSupported && Vector<int>.Count == 4)
+            {
+                return Sse.CompareGreaterThan(Vector128.Create((float)countInBundle), Vector128.Create(0f, 1f, 2f, 3f)).AsInt32().AsVector();
+            }
+            else
+            {
+                Vector<int> mask;
+                var toReturnPointer = (int*)&mask;
+                for (int i = 0; i < Vector<int>.Count; ++i)
+                {
+                    toReturnPointer[i] = i < countInBundle ? -1 : 0;
+                }
+                return mask;
+            }
         }
     }
 }

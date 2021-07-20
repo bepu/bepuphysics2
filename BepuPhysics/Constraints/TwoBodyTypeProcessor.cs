@@ -441,14 +441,14 @@ namespace BepuPhysics.Constraints
                 PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out newOrientation);
                 QuaternionWide.ConditionalSelect(integrationMask, newOrientation, orientation, out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
-                PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia, inertia, ref velocity.Angular);
+                PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia.InverseInertiaTensor, inertia.InverseInertiaTensor, ref velocity.Angular);
             }
             else if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
             {
                 PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out newOrientation);
                 QuaternionWide.ConditionalSelect(integrationMask, newOrientation, orientation, out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
-                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia, inertia, ref velocity.Angular, dt);
+                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dt);
             }
             else
             {
@@ -477,13 +477,13 @@ namespace BepuPhysics.Constraints
                 var previousOrientation = orientation;
                 PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
-                PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia, inertia, ref velocity.Angular);
+                PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia.InverseInertiaTensor, inertia.InverseInertiaTensor, ref velocity.Angular);
             }
             else if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
             {
                 PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
-                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia, inertia, ref velocity.Angular, dt);
+                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dt);
             }
             else
             {
@@ -505,16 +505,10 @@ namespace BepuPhysics.Constraints
             if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
             {
                 var integrationMask = new Vector<int>(-1);
-                //var bodySpan = new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), count);
-                //for (int i = 0; i < bodySpan.Length; ++i)
-                //{
-                //    var bodyIndex = bodySpan[i];
-                //    ref var state = ref bodies.ActiveSet.SolverStates[bodyIndex];
-                //    integratorCallbacks.IntegrateVelocity(bodyIndex, state.Motion.Pose, state.Inertia.Local, workerIndex, ref state.Motion.Velocity);
-                //}
                 bodies.GatherState<AccessAll>(ref bodyIndices, count, false, out position, out orientation, out velocity, out var localInertia);
                 IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-                bodies.ScatterPoseAndInertia(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
+                bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integrationMask);
+                bodies.ScatterInertia(ref inertia, ref bodyIndices, ref integrationMask);
             }
             else if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
             {
@@ -526,17 +520,6 @@ namespace BepuPhysics.Constraints
                 //This executes in warmstart, and warmstarts are typically quite simple from an instruction stream perspective.
                 //Having a dynamically chosen codepath is unlikely to cause instruction fetching issues.
                 var bundleIntegrationMode = BundleShouldIntegrate(bundleIndex, integrationFlags[bodyIndexInConstraint], out var integrationMask);
-                //var bodySpan = new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), count);
-                //var integrationMaskPointer = (int*)&integrationMask;
-                //for (int i = 0; i < bodySpan.Length; ++i)
-                //{
-                //    if (integrationMaskPointer[i] != 0)
-                //    {
-                //        var bodyIndex = bodySpan[i];
-                //        ref var state = ref bodies.ActiveSet.SolverStates[bodyIndex];
-                //        integratorCallbacks.IntegrateVelocity(bodyIndex, state.Motion.Pose, state.Inertia.Local, workerIndex, ref state.Motion.Velocity);
-                //    }
-                //}
                 //Note that this will gather world inertia if there is no integration in the bundle, but that it is guaranteed to load all motion state information.
                 //This avoids complexity around later velocity scattering- we don't have to condition on whether the bundle is integrating.
                 //In practice, since the access filters are only reducing instruction counts and not memory bandwidth,
@@ -548,7 +531,8 @@ namespace BepuPhysics.Constraints
                     //The changes to pose and velocity for integration inactive lanes will be masked out, so it'll just be identical to the world inertia if we had gathered it.
                     //Given that we're running the instructions in a bundle to build it, there's no reason to go out of our way to gather the world inertia.
                     IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, gatheredInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-                    bodies.ScatterPoseAndInertia(ref position, ref orientation, ref inertia, ref bodyIndices, count, ref integrationMask);
+                    bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integrationMask);
+                    bodies.ScatterInertia(ref inertia, ref bodyIndices, ref integrationMask);
                 }
                 else
                 {

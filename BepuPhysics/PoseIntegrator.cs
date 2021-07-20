@@ -49,6 +49,13 @@ namespace BepuPhysics
         AngularIntegrationMode AngularIntegrationMode { get; }
 
         /// <summary>
+        /// Gets whether the integrator should use only one step for unconstrained bodies when using a substepping solver.
+        /// If true, unconstrained bodies use a single step of length equal to the dt provided to Simulation.Timestep. 
+        /// If false, unconstrained bodies will be integrated with the same number of substeps as the constrained bodies in the solver.
+        /// </summary>
+        bool AllowSubstepsForUnconstrainedBodies { get; }
+
+        /// <summary>
         /// Performs any required initialization logic after the Simulation instance has been constructed.
         /// </summary>
         /// <param name="simulation">Simulation that owns these callbacks.</param>
@@ -169,22 +176,22 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void IntegrateAngularVelocityConserveMomentum(in QuaternionWide previousOrientation, in BodyInertiaWide localInertia, in BodyInertiaWide inertia, ref Vector3Wide angularVelocity)
+        public static void IntegrateAngularVelocityConserveMomentum(in QuaternionWide previousOrientation, in Symmetric3x3Wide localInverseInertia, in Symmetric3x3Wide worldInverseInertia, ref Vector3Wide angularVelocity)
         {
             //Note that this effectively recomputes the previous frame's inertia. There may not have been a previous inertia stored in the inertias buffer.
             //This just avoids the need for quite a bit of complexity around keeping the world inertias buffer updated with adds/removes/moves and other state changes that we can't easily track.
             //Also, even if it were cached, the memory bandwidth requirements of loading another inertia tensor would hurt multithreaded scaling enough to eliminate any performance advantage.
             Matrix3x3Wide.CreateFromQuaternion(previousOrientation, out var previousOrientationMatrix);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(angularVelocity, previousOrientationMatrix, out var localPreviousAngularVelocity);
-            Symmetric3x3Wide.Invert(localInertia.InverseInertiaTensor, out var localInertiaTensor);
+            Symmetric3x3Wide.Invert(localInverseInertia, out var localInertiaTensor);
             Symmetric3x3Wide.TransformWithoutOverlap(localPreviousAngularVelocity, localInertiaTensor, out var localAngularMomentum);
             Matrix3x3Wide.Transform(localAngularMomentum, previousOrientationMatrix, out var angularMomentum);
-            Symmetric3x3Wide.TransformWithoutOverlap(angularMomentum, inertia.InverseInertiaTensor, out angularVelocity);
+            Symmetric3x3Wide.TransformWithoutOverlap(angularMomentum, worldInverseInertia, out angularVelocity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(
-            in QuaternionWide orientation, in BodyInertiaWide localInertia, in BodyInertiaWide inertia, ref Vector3Wide angularVelocity, float dt)
+            in QuaternionWide orientation, in Symmetric3x3Wide localInverseInertia, ref Vector3Wide angularVelocity, float dt)
         {
             //Integrating the gyroscopic force explicitly can result in some instability, so we'll use an approximate implicit approach.
             //angularVelocity1 * inertia1 = angularVelocity0 * inertia1 + dt * ((angularVelocity1 * inertia1) x angularVelocity1)
@@ -208,7 +215,7 @@ namespace BepuPhysics
             Matrix3x3Wide.CreateFromQuaternion(orientation, out var orientationMatrix);
             //Using localAngularVelocity0 as the first guess for localAngularVelocity1.
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(angularVelocity, orientationMatrix, out var localAngularVelocity);
-            Symmetric3x3Wide.Invert(localInertia.InverseInertiaTensor, out var localInertiaTensor);
+            Symmetric3x3Wide.Invert(localInverseInertia, out var localInertiaTensor);
 
             Symmetric3x3Wide.TransformWithoutOverlap(localAngularVelocity, localInertiaTensor, out var localAngularMomentum);
             var dtWide = new Vector<float>(dt);
