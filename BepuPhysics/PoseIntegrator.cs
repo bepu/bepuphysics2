@@ -7,6 +7,8 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using BepuUtilities.Collections;
+using BepuPhysics.Constraints;
 
 namespace BepuPhysics
 {
@@ -17,6 +19,7 @@ namespace BepuPhysics
         void IntegrateVelocitiesBoundsAndInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
         void IntegrateVelocitiesAndUpdateInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
         void IntegratePoses(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
+        void IntegrateAfterSubstepping(IndexSet constrainedBodies, float dt, int substepCount, IThreadDispatcher threadDispatcher = null);
     }
 
     /// <summary>
@@ -90,7 +93,7 @@ namespace BepuPhysics
         /// <param name="dt">Durations to integrate the velocity over. Can vary over lanes.</param>
         /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
         void IntegrateVelocity(
-            ReadOnlySpan<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, 
+            ReadOnlySpan<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia,
             in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity);
     }
 
@@ -143,7 +146,7 @@ namespace BepuPhysics
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Integrate(in QuaternionWide start, in Vector3Wide angularVelocity, in Vector<float> halfDt, out QuaternionWide integrated)
         {
             Vector3Wide.Length(angularVelocity, out var speed);
@@ -277,6 +280,7 @@ namespace BepuPhysics
             integrateVelocitiesBoundsAndInertiasWorker = IntegrateVelocitiesBoundsAndInertiasWorker;
             integrateVelocitiesWorker = IntegrateVelocitiesWorker;
             integratePosesWorker = IntegratePosesWorker;
+            integrateAfterSubsteppingWorker = IntegrateAfterSubsteppingWorker;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -541,7 +545,8 @@ namespace BepuPhysics
 
 
         float cachedDt;
-        int bodiesPerJob;
+        int jobSize;
+        int substepCount;
         IThreadDispatcher threadDispatcher;
 
         //Note that we aren't using a very cache-friendly work distribution here.
@@ -549,7 +554,7 @@ namespace BepuPhysics
         //If this turns out to be false, this could be swapped over to a system similar to the solver-
         //preschedule offset regions for each worker to allow each one to consume a contiguous region before workstealing.
         int availableJobCount;
-        bool TryGetJob(int bodyCount, out int start, out int exclusiveEnd)
+        bool TryGetJob(int maximumJobInterval, out int start, out int exclusiveEnd)
         {
             var jobIndex = Interlocked.Decrement(ref availableJobCount);
             if (jobIndex < 0)
@@ -558,10 +563,10 @@ namespace BepuPhysics
                 exclusiveEnd = 0;
                 return false;
             }
-            start = jobIndex * bodiesPerJob;
-            exclusiveEnd = start + bodiesPerJob;
-            if (exclusiveEnd > bodyCount)
-                exclusiveEnd = bodyCount;
+            start = jobIndex * jobSize;
+            exclusiveEnd = start + jobSize;
+            if (exclusiveEnd > maximumJobInterval)
+                exclusiveEnd = maximumJobInterval;
             Debug.Assert(exclusiveEnd > start, "Jobs that would involve bundles beyond the body count should not be created.");
             return true;
         }
@@ -618,16 +623,17 @@ namespace BepuPhysics
             }
         }
 
-        void PrepareForMultithreadedExecution(float dt, int workerCount)
+        void PrepareForMultithreadedExecution(int loopIterationCount, float dt, int workerCount, int substepCount = 1)
         {
             cachedDt = dt;
-            const int jobsPerWorker = 4;
+            this.substepCount = substepCount;
+            const int jobsPerWorker = 2;
             var targetJobCount = workerCount * jobsPerWorker;
-            bodiesPerJob = bodies.ActiveSet.Count / targetJobCount;
-            if (bodiesPerJob == 0)
-                bodiesPerJob = 1;
-            availableJobCount = bodies.ActiveSet.Count / bodiesPerJob;
-            if (bodiesPerJob * availableJobCount < bodies.ActiveSet.Count)
+            jobSize = loopIterationCount / targetJobCount;
+            if (jobSize == 0)
+                jobSize = 1;
+            availableJobCount = loopIterationCount / jobSize;
+            if (jobSize * availableJobCount < loopIterationCount)
                 ++availableJobCount;
         }
 
@@ -648,7 +654,7 @@ namespace BepuPhysics
 
                 //Note that this bottleneck means the fact that we're working through bodies in a nonvectorized fashion (in favor of optimizing storage for solver access) is not a problem.
 
-                PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
+                PrepareForMultithreadedExecution(bodies.ActiveSet.Count, dt, threadDispatcher.ThreadCount);
                 this.threadDispatcher = threadDispatcher;
                 threadDispatcher.DispatchWorkers(integrateBodiesAndUpdateBoundingBoxesWorker);
                 this.threadDispatcher = null;
@@ -669,7 +675,7 @@ namespace BepuPhysics
             Callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
             {
-                PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
+                PrepareForMultithreadedExecution(bodies.ActiveSet.Count, dt, threadDispatcher.ThreadCount);
                 this.threadDispatcher = threadDispatcher;
                 threadDispatcher.DispatchWorkers(predictBoundingBoxesWorker);
                 this.threadDispatcher = null;
@@ -690,7 +696,7 @@ namespace BepuPhysics
             Callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
             {
-                PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
+                PrepareForMultithreadedExecution(bodies.ActiveSet.Count, dt, threadDispatcher.ThreadCount);
                 this.threadDispatcher = threadDispatcher;
                 threadDispatcher.DispatchWorkers(integrateVelocitiesBoundsAndInertiasWorker);
                 this.threadDispatcher = null;
@@ -710,7 +716,7 @@ namespace BepuPhysics
             Callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
             {
-                PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
+                PrepareForMultithreadedExecution(bodies.ActiveSet.Count, dt, threadDispatcher.ThreadCount);
                 this.threadDispatcher = threadDispatcher;
                 threadDispatcher.DispatchWorkers(integrateVelocitiesWorker);
                 this.threadDispatcher = null;
@@ -729,7 +735,7 @@ namespace BepuPhysics
             Callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
             {
-                PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
+                PrepareForMultithreadedExecution(bodies.ActiveSet.Count, dt, threadDispatcher.ThreadCount);
                 this.threadDispatcher = threadDispatcher;
                 threadDispatcher.DispatchWorkers(integratePosesWorker);
                 this.threadDispatcher = null;
@@ -737,6 +743,165 @@ namespace BepuPhysics
             else
             {
                 IntegratePoses(0, bodies.ActiveSet.Count, dt, 0);
+            }
+        }
+
+        unsafe void IntegrateBundlesAfterSubstepping(ref IndexSet mergedConstrainedBodyHandles, int bundleStartIndex, int bundleEndIndex, float dt, float substepDt, int substepCount, int workerIndex)
+        {
+            var bodyCount = bodies.ActiveSet.Count;
+            var bundleCount = BundleIndexing.GetBundleCount(bodyCount);
+            var bundleDt = new Vector<float>(dt);
+            var bundleSubstepDt = new Vector<float>(substepDt);
+
+            Vector<int> unconstrainedMask;
+            Vector<int> bodyIndices;
+            int* unconstrainedMaskPointer = (int*)&unconstrainedMask;
+            int* bodyIndicesPointer = (int*)&bodyIndices;
+            ref var callbacks = ref Callbacks;
+            ref var indexToHandle = ref bodies.ActiveSet.IndexToHandle;
+
+            for (int i = bundleStartIndex; i < bundleEndIndex; ++i)
+            {
+                var bundleBaseIndex = i * Vector<float>.Count;
+                var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<float>.Count);
+                //This is executed at the end of the frame, after all constraints are complete.
+                //It covers both constrained and unconstrained bodies.
+                //There is no need to write world inertia, since the solver is done.
+                //Bodies that are unconstrained should undergo velocity callbacks, velocity integration, and pose integration.
+                //Unconstrained bodies can optionally perform a single step for the whole timestep, or do multiple steps to match the integration behavior of constrained bodies.
+                //Bodies that are constrained should only undergo one substep of pose integration.
+                bool anyBodyInBundleIsUnconstrained = false;
+                for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
+                {
+                    var bodyIndex = bundleBaseIndex + innerIndex;
+                    bodyIndicesPointer[innerIndex] = bodyIndex;
+                    var bodyHandle = indexToHandle[bodyIndex].Value;
+                    //Note the use of the solver-merged body handles set. In principle, you could check the body constraints list- if it's empty, then you know all you need to know.
+                    //The merged set is preferred here just for the sake of less memory bandwidth.
+                    if (mergedConstrainedBodyHandles.Contains(bodyHandle))
+                    {
+                        unconstrainedMaskPointer[innerIndex] = 0;
+                    }
+                    else
+                    {
+                        unconstrainedMaskPointer[innerIndex] = -1;
+                        anyBodyInBundleIsUnconstrained = true;
+                    }
+                }
+
+
+                Vector<float> bundleEffectiveDt;
+                if (callbacks.AllowSubstepsForUnconstrainedBodies)
+                {
+                    bundleEffectiveDt = bundleSubstepDt;
+                }
+                else
+                {
+                    bundleEffectiveDt = Vector.ConditionalSelect(unconstrainedMask, bundleDt, bundleSubstepDt);
+                }
+                var halfDt = bundleEffectiveDt * new Vector<float>(0.5f);
+                bodies.GatherState<AccessAll>(ref bodyIndices, countInBundle, false, out var position, out var orientation, out var velocity, out var localInertia);
+                if (anyBodyInBundleIsUnconstrained)
+                {
+                    int integrationStepCount;
+                    if (callbacks.AllowSubstepsForUnconstrainedBodies)
+                    {
+                        integrationStepCount = substepCount;
+                    }
+                    else
+                    {
+                        integrationStepCount = 1;
+                    }
+                    for (int stepIndex = 0; stepIndex < integrationStepCount; ++stepIndex)
+                    {
+                        //Note that the following integrates velocities, then poses.
+                        var previousVelocity = velocity;
+                        callbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), countInBundle), position, orientation, localInertia, unconstrainedMask, workerIndex, bundleEffectiveDt, ref velocity);
+                        //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
+                        Vector3Wide.ConditionalSelect(unconstrainedMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
+                        Vector3Wide.ConditionalSelect(unconstrainedMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);
+
+                        position += velocity.Linear * bundleEffectiveDt;
+
+                        //(Note that the constraints in the embedded substepper integrate pose, then velocity- this is because the first substep only integrates velocity,
+                        //so in reality, the full loop for constrained bodies with 3 substeps looks like:
+                        //(velocity -> solve) -> (pose -> velocity -> solve) -> (pose -> velocity -> solve) -> pose
+                        //For unconstrained bodies, it's a tight loop of just:
+                        //(velocity -> pose) -> (velocity -> pose) -> (velocity -> pose)
+                        if (callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
+                        {
+                            var previousOrientation = orientation;
+                            PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
+                            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out var inverseInertiaTensor);
+                            PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia.InverseInertiaTensor, inverseInertiaTensor, ref velocity.Angular);
+                        }
+                        else if (callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
+                        {
+                            PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
+                            PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dt);
+                        }
+                        else
+                        {
+                            PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
+                        }
+                        var integratePoseMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
+                        if (callbacks.AllowSubstepsForUnconstrainedBodies)
+                        {
+                            if (stepIndex > 0)
+                            {
+                                //Only the first substep should integrate poses for the constrained bodies, so mask them out for later substeps.
+                                integratePoseMask = Vector.BitwiseAnd(integratePoseMask, unconstrainedMask);
+                            }
+                        }
+                        bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integratePoseMask);
+                        //We already masked the velocities above, so scattering them doesn't need its own mask.
+                        bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndices, countInBundle);
+                    }
+                }
+                else
+                {
+                    //var halfDt = substepDt * 0.5f;
+                    //for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
+                    //{
+                    //    ref var state = ref bodies.ActiveSet.SolverStates[bundleBaseIndex + innerIndex];
+                    //    PoseIntegration.Integrate(state.Motion.Pose.Orientation, state.Motion.Velocity.Angular, halfDt, out state.Motion.Pose.Orientation);
+                    //    state.Motion.Pose.Position += substepDt * state.Motion.Velocity.Linear;
+                    //}
+                    //All bodies in the bundle are constrained, so we do not need to do any kind of velocity integration.
+                    PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
+                    position += velocity.Linear * bundleEffectiveDt;
+                    var integratePoseMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
+                    bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integratePoseMask);
+                }
+            }
+        }
+
+        Action<int> integrateAfterSubsteppingWorker;
+        IndexSet constrainedBodies;
+        private void IntegrateAfterSubsteppingWorker(int workerIndex)
+        {
+            var bundleCount = BundleIndexing.GetBundleCount(bodies.ActiveSet.Count);
+            var substepDt = cachedDt / substepCount;
+            while (TryGetJob(bundleCount, out var start, out var exclusiveEnd))
+            {
+                IntegrateBundlesAfterSubstepping(ref constrainedBodies, start, exclusiveEnd, cachedDt, substepDt, substepCount, workerIndex);
+            }
+        }
+
+        public void IntegrateAfterSubstepping(IndexSet constrainedBodies, float dt, int substepCount, IThreadDispatcher threadDispatcher)
+        {
+            if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
+            {
+                PrepareForMultithreadedExecution(BundleIndexing.GetBundleCount(bodies.ActiveSet.Count), dt, threadDispatcher.ThreadCount, substepCount);
+                this.constrainedBodies = constrainedBodies;
+                this.threadDispatcher = threadDispatcher;
+                threadDispatcher.DispatchWorkers(integrateAfterSubsteppingWorker);
+                this.threadDispatcher = null;
+                this.constrainedBodies = default;
+            }
+            else
+            {
+                IntegrateBundlesAfterSubstepping(ref constrainedBodies, 0, BundleIndexing.GetBundleCount(bodies.ActiveSet.Count), dt, dt / substepCount, substepCount, 0);
             }
         }
     }

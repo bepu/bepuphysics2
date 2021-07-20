@@ -17,16 +17,18 @@ namespace BepuPhysics
 {
     public partial class Solver
     {
-        public virtual void PrepareConstraintIntegrationResponsibilities(int substepCount, IThreadDispatcher threadDispatcher = null)
+        public virtual IndexSet PrepareConstraintIntegrationResponsibilities(int substepCount, IThreadDispatcher threadDispatcher = null)
         {
+            throw new NotImplementedException();
         }
         public virtual void DisposeConstraintIntegrationResponsibilities()
         {
+            throw new NotImplementedException();
         }
 
         public virtual void SolveStep2(float dt, IThreadDispatcher threadDispatcher = null)
         {
-
+            throw new NotImplementedException();
         }
     }
     public class Solver<TIntegrationCallbacks> : Solver where TIntegrationCallbacks : struct, IPoseIntegratorCallbacks
@@ -256,7 +258,7 @@ namespace BepuPhysics
         IndexSet mergedConstrainedBodyHandles;
 
         int substepCount;
-        public override unsafe void PrepareConstraintIntegrationResponsibilities(int substepCount, IThreadDispatcher threadDispatcher = null)
+        public override unsafe IndexSet PrepareConstraintIntegrationResponsibilities(int substepCount, IThreadDispatcher threadDispatcher = null)
         {
             //TODO: we're caching it on a per call basis because we are still using the old substeppingtimestepper frame externally. Once we bite the bullet 100% on bundling, we can make it equivalent to IterationCount.
             this.substepCount = substepCount;
@@ -497,6 +499,7 @@ namespace BepuPhysics
                 bodiesFirstObservedInBatches[batchIndex].Dispose(pool);
             }
             pool.Return(ref bodiesFirstObservedInBatches);
+            return mergedConstrainedBodyHandles;
         }
         public override void DisposeConstraintIntegrationResponsibilities()
         {
@@ -520,117 +523,6 @@ namespace BepuPhysics
             pool.Return(ref coarseBatchIntegrationResponsibilities);
             mergedConstrainedBodyHandles.Dispose(pool);
 
-        }
-
-        unsafe void IntegratePoses(int bundleStartIndex, int bundleEndIndex, float dt, float substepDt, int substepCount, int workerIndex)
-        {
-            var bodyCount = bodies.ActiveSet.Count;
-            var bundleCount = BundleIndexing.GetBundleCount(bodyCount);
-            var bundleDt = new Vector<float>(dt);
-            var bundleSubstepDt = new Vector<float>(substepDt);
-            int* unconstrainedMaskPointer = stackalloc int[Vector<int>.Count];
-            int* bodyIndicesPointer = stackalloc int[Vector<int>.Count];
-            for (int i = bundleStartIndex; i < bundleEndIndex; ++i)
-            {
-                var bundleBaseIndex = i * Vector<float>.Count;
-                var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<float>.Count);
-                //This is executed at the end of the frame, after all constraints are complete.
-                //It covers both constrained and unconstrained bodies.
-                //There is no need to write world inertia, since the solver is done.
-                //Bodies that are unconstrained should undergo velocity callbacks, velocity integration, and pose integration.
-                //Unconstrained bodies can optionally perform a single step for the whole timestep, or do multiple steps to match the integration behavior of constrained bodies.
-                //Bodies that are constrained should only undergo one substep of pose integration.
-                bool anyBodyInBundleIsUnconstrained = false;
-                for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
-                {
-                    bodyIndicesPointer[innerIndex] = bundleBaseIndex + innerIndex;
-                    var bodyHandle = bodies.ActiveSet.IndexToHandle[bundleBaseIndex + innerIndex].Value;
-                    //Note the use of the solver-merged body handles set. In principle, you could check the body constraints list- if it's empty, then you know all you need to know.
-                    //The merged set is preferred here just for the sake of less memory bandwidth.
-                    if (mergedConstrainedBodyHandles.Contains(bodyHandle))
-                    {
-                        unconstrainedMaskPointer[innerIndex] = 0;
-                    }
-                    else
-                    {
-                        unconstrainedMaskPointer[innerIndex] = -1;
-                        anyBodyInBundleIsUnconstrained = true;
-                    }
-                }
-
-                var unconstrainedMask = Unsafe.AsRef<Vector<int>>(unconstrainedMaskPointer);
-                var bundleEffectiveDt = Vector.ConditionalSelect(unconstrainedMask, bundleDt, bundleSubstepDt);
-                var halfDt = bundleEffectiveDt * new Vector<float>(0.5f);
-
-                var bodyIndices = Unsafe.AsRef<Vector<int>>(bodyIndicesPointer);
-                bodies.GatherState<AccessAll>(ref bodyIndices, countInBundle, false, out var position, out var orientation, out var velocity, out var localInertia);
-                if (anyBodyInBundleIsUnconstrained)
-                {
-                    int integrationStepCount;
-                    if (PoseIntegrator.Callbacks.AllowSubstepsForUnconstrainedBodies)
-                    {
-                        integrationStepCount = substepCount;
-                    }
-                    else
-                    {
-                        integrationStepCount = 1;
-                    }
-                    for (int stepIndex = 0; stepIndex < integrationStepCount; ++stepIndex)
-                    {
-                        //Note that the following integrates velocities, then poses.
-                        var previousVelocity = velocity;
-                        PoseIntegrator.Callbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), countInBundle), position, orientation, localInertia, unconstrainedMask, workerIndex, bundleEffectiveDt, ref velocity);
-                        //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
-                        Vector3Wide.ConditionalSelect(unconstrainedMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
-                        Vector3Wide.ConditionalSelect(unconstrainedMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);
-
-                        position += velocity.Linear * bundleEffectiveDt;
-
-                        //(Note that the constraints in the embedded substepper integrate pose, then velocity- this is because the first substep only integrates velocity,
-                        //so in reality, the full loop for constrained bodies with 3 substeps looks like:
-                        //(velocity -> solve) -> (pose -> velocity -> solve) -> (pose -> velocity -> solve) -> pose
-                        //For unconstrained bodies, it's a tight loop of just:
-                        //(velocity -> pose) -> (velocity -> pose) -> (velocity -> pose)
-                        if (PoseIntegrator.Callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
-                        {
-                            var previousOrientation = orientation;
-                            PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
-                            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out var inverseInertiaTensor);
-                            PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia.InverseInertiaTensor, inverseInertiaTensor, ref velocity.Angular);
-                        }
-                        else if (PoseIntegrator.Callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
-                        {
-                            PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
-                            PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dt);
-                        }
-                        else
-                        {
-                            PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
-                        }
-                        var integratePoseMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
-                        if (PoseIntegrator.Callbacks.AllowSubstepsForUnconstrainedBodies)
-                        {
-                            if (stepIndex > 0)
-                            {
-                                //Only the first substep should integrate poses for the constrained bodies, so mask them out for later substeps.
-                                integratePoseMask = Vector.BitwiseAnd(integratePoseMask, unconstrainedMask);
-                            }
-                        }
-                        bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integratePoseMask);
-                        //We already masked the velocities above, so scattering them doesn't need its own mask.
-                        bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndices, countInBundle);
-                    }
-                }
-                else
-                {
-                    //All bodies are constrained, so we do not need to do any kind of velocity integration.
-                    //TODO: while vector gather for multiple substeps can make some sense, it seems unlikely that doing a full gather + scatter is justified for single step pose integration.
-                    PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
-                    position += velocity.Linear * bundleEffectiveDt;
-                    var integratePoseMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
-                    bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integratePoseMask);
-                }
-            }
         }
 
         public override void SolveStep2(float totalDt, IThreadDispatcher threadDispatcher = null)

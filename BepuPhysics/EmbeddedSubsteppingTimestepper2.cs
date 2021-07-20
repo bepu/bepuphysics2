@@ -31,29 +31,9 @@ namespace BepuPhysics
         /// </summary>
         public event TimestepperStageHandler CollisionsDetected;
         /// <summary>
-        /// Fires at the beginning of a substep.
+        /// Fires after the solver executes and before the final integration step.
         /// </summary>
-        public event TimestepperSubstepStageHandler SubstepStarted;
-        /// <summary>
-        /// Fires after contact constraints are incrementally updated at the beginning of substeps after the first and before velocities are integrated.
-        /// </summary>
-        public event TimestepperSubstepStageHandler ContactConstraintsUpdatedForSubstep;
-        /// <summary>
-        /// Fires after bodies have their velocities integrated and before the solver executes.
-        /// </summary>
-        public event TimestepperSubstepStageHandler VelocitiesIntegrated;
-        /// <summary>
-        /// Fires after the solver executes and before body poses are integrated.
-        /// </summary>
-        public event TimestepperSubstepStageHandler ConstraintsSolved;
-        /// <summary>
-        /// Fires after bodies have their poses integrated and before the substep ends.
-        /// </summary>
-        public event TimestepperSubstepStageHandler PosesIntegrated;
-        /// <summary>
-        /// Fires at the end of a substep.
-        /// </summary>
-        public event TimestepperSubstepStageHandler SubstepEnded;
+        public event TimestepperStageHandler ConstraintsSolved;
         /// <summary>
         /// Fires after all substeps are finished executing and before data structures are incrementally optimized.
         /// </summary>
@@ -77,12 +57,16 @@ namespace BepuPhysics
 
             Debug.Assert(SubstepCount >= 0, "Substep count should be positive.");
 
-            simulation.Solver.PrepareConstraintIntegrationResponsibilities(SubstepCount, threadDispatcher);
+            var constrainedBodySet = simulation.Solver.PrepareConstraintIntegrationResponsibilities(SubstepCount, threadDispatcher);
             simulation.Profiler.Start(simulation.Solver);
             simulation.Solver.SolveStep2(dt, threadDispatcher);
             simulation.Profiler.End(simulation.Solver);
-            SubstepsComplete?.Invoke(dt, threadDispatcher);
+            ConstraintsSolved?.Invoke(dt, threadDispatcher);
+            simulation.Profiler.Start(simulation.PoseIntegrator);
+            simulation.PoseIntegrator.IntegrateAfterSubstepping(constrainedBodySet, dt, SubstepCount, threadDispatcher);
+            simulation.Profiler.End(simulation.PoseIntegrator);
             simulation.Solver.DisposeConstraintIntegrationResponsibilities();
+            SubstepsComplete?.Invoke(dt, threadDispatcher);
 
             simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
         }

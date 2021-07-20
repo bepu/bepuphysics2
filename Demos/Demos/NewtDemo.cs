@@ -846,6 +846,8 @@ namespace Demos.Demos
             BufferPool.Return(ref cellVertexIndices);
             BufferPool.Return(ref tetrahedraVertexIndices);
 
+            //Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(0, 10, 0)), new BodyVelocity(default, new Vector3(1,2,3)), default, new CollidableDescription(Simulation.Shapes.Add(new Box(1, 2, 3)), 0.1f), new BodyActivityDescription(-1)));
+
             //Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)), 0.1f)));
