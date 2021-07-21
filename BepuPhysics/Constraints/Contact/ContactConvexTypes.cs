@@ -352,13 +352,13 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact1OneBodyPrestepData prestep, in Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact1OneBodyPrestepData prestep, in Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             throw new NotImplementedException();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact1OneBodyPrestepData prestep, ref Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact1OneBodyPrestepData prestep, ref Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             throw new NotImplementedException();
         }
@@ -544,13 +544,13 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact2OneBodyPrestepData prestep, in Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact2OneBodyPrestepData prestep, in Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             throw new NotImplementedException();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact2OneBodyPrestepData prestep, ref Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact2OneBodyPrestepData prestep, ref Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             throw new NotImplementedException();
         }
@@ -750,13 +750,13 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact3OneBodyPrestepData prestep, in Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact3OneBodyPrestepData prestep, in Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             throw new NotImplementedException();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact3OneBodyPrestepData prestep, ref Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact3OneBodyPrestepData prestep, ref Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             throw new NotImplementedException();
         }
@@ -970,13 +970,13 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact4OneBodyPrestepData prestep, in Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact4OneBodyPrestepData prestep, in Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             throw new NotImplementedException();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact4OneBodyPrestepData prestep, ref Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact4OneBodyPrestepData prestep, ref Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             throw new NotImplementedException();
         }

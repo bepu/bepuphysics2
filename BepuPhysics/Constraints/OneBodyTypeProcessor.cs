@@ -19,6 +19,11 @@ namespace BepuPhysics.Constraints
         void Prestep(in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide inertia, float dt, float inverseDt, ref TPrestepData prestepData, out TProjection projection);
         void WarmStart(ref BodyVelocityWide velocity, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
         void Solve(ref BodyVelocityWide velocity, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
+
+        void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+            in TPrestepData prestep, in TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA);
+        void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt,
+            in TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA);
     }
 
     /// <summary>

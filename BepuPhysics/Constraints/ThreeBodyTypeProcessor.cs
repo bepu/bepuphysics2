@@ -30,6 +30,17 @@ namespace BepuPhysics.Constraints
             float dt, float inverseDt, ref TPrestepData prestepData, out TProjection projection);
         void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
         void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
+
+        void WarmStart2(
+            in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
+            in TPrestepData prestep, in TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC);
+        void Solve2(
+            in QuaternionWide orientationA, in BodyInertiaWide inertiaA, 
+            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, float dt, float inverseDt,
+            in TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC);
     }
 
     /// <summary>
@@ -301,7 +312,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TBatchShouldIntegratePoses>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks, 
+        public override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TBatchShouldIntegratePoses>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             throw new NotImplementedException();

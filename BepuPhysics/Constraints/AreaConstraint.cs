@@ -184,6 +184,16 @@ namespace BepuPhysics.Constraints
 
             ApplyImpulse(ref velocityA, ref velocityB, ref velocityC, ref projection, ref negatedJacobianA, ref csi);
         }
+
+        public void WarmStart2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in AreaConstraintPrestepData prestep, in Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Solve2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, float dt, float inverseDt, in AreaConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC)
+        {
+            throw new NotImplementedException();
+        }
     }
 
 

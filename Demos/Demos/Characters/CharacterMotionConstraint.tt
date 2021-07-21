@@ -393,12 +393,12 @@ namespace Demos.Demos.Characters
             ApplyVerticalImpulse(basis, verticalAngularJacobianA, <#if (dynamic) {#>verticalAngularJacobianB, <#}#>verticalCorrectiveImpulse, projection.InertiaA, <#if (dynamic) {#>projection.InertiaB, <#}#>ref velocityA<#if (dynamic) {#>, ref velocityB<#}#>);
         }
 
-        public void WarmStart2(<#if(!dynamic) {#>in Vector3Wide positionA, <#}#>in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(dynamic) {#>in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>in DynamicCharacterMotionPrestep prestep, in CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(<#if(!dynamic) {#>in Vector3Wide positionA, <#}#>in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(dynamic) {#>in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>in <#=prefix#>CharacterMotionPrestep prestep, in CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA<#if(dynamic) {#>, ref BodyVelocityWide wsvB<#}#>)
         {
             throw new NotImplementedException();
         }
 
-        public void Solve2(<#if(!dynamic) {#>in Vector3Wide positionA, <#}#>in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(dynamic) {#>in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>float dt, float inverseDt, in DynamicCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(<#if(!dynamic) {#>in Vector3Wide positionA, <#}#>in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(dynamic) {#>in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>float dt, float inverseDt, in <#=prefix#>CharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA<#if(dynamic) {#>, ref BodyVelocityWide wsvB<#}#>)
         {
             throw new NotImplementedException();
         }

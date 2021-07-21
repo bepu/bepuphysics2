@@ -133,6 +133,16 @@ namespace BepuPhysics.Constraints
             Solve(ref velocityA, projection.VelocityToImpulse, projection.SoftnessImpulseScale, projection.BiasImpulse,
                 projection.MaximumImpulse, projection.ImpulseToVelocity, ref accumulatedImpulse);
         }
+
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in OneBodyAngularServoPrestepData prestep, in Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in OneBodyAngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class OneBodyAngularServoTypeProcessor : OneBodyTypeProcessor<OneBodyAngularServoPrestepData, OneBodyAngularServoProjection, Vector3Wide, OneBodyAngularServoFunctions>

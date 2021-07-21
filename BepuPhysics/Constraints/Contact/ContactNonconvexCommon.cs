@@ -293,6 +293,16 @@ namespace BepuPhysics.Constraints.Contact
                 PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestepContact.Offset, prestepContact.Normal, velocity, ref prestepContact.Depth);
             }
         }
+
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in TPrestep prestep, in TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 
     public struct ContactNonconvexTwoBodyFunctions<TPrestep, TProjection, TAccumulatedImpulses> :

@@ -306,12 +306,12 @@ namespace Demos.Demos.Characters
             ApplyVerticalImpulse(basis, verticalAngularJacobianA, verticalCorrectiveImpulse, projection.InertiaA, ref velocityA);
         }
 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in DynamicCharacterMotionPrestep prestep, in CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in StaticCharacterMotionPrestep prestep, in CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             throw new NotImplementedException();
         }
 
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in DynamicCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in StaticCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             throw new NotImplementedException();
         }

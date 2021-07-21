@@ -35,6 +35,18 @@ namespace BepuPhysics.Constraints
             float dt, float inverseDt, ref TPrestepData prestepData, out TProjection projection);
         void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
         void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
+        void WarmStart2(
+        in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+        in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+        in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
+        in Vector3Wide ad, in QuaternionWide orientationD, in BodyInertiaWide inertiaD,
+        in TPrestepData prestep, in TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD);
+        void Solve2(
+            in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
+            in Vector3Wide ad, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, float dt, float inverseDt,
+            in TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD);
     }
 
     /// <summary>
