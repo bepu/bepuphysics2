@@ -194,7 +194,7 @@ namespace BepuPhysics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(
-            in QuaternionWide orientation, in Symmetric3x3Wide localInverseInertia, ref Vector3Wide angularVelocity, float dt)
+            in QuaternionWide orientation, in Symmetric3x3Wide localInverseInertia, ref Vector3Wide angularVelocity, in Vector<float> dt)
         {
             //Integrating the gyroscopic force explicitly can result in some instability, so we'll use an approximate implicit approach.
             //angularVelocity1 * inertia1 = angularVelocity0 * inertia1 + dt * ((angularVelocity1 * inertia1) x angularVelocity1)
@@ -221,14 +221,13 @@ namespace BepuPhysics
             Symmetric3x3Wide.Invert(localInverseInertia, out var localInertiaTensor);
 
             Symmetric3x3Wide.TransformWithoutOverlap(localAngularVelocity, localInertiaTensor, out var localAngularMomentum);
-            var dtWide = new Vector<float>(dt);
-            var residual = dtWide * Vector3Wide.Cross(localAngularMomentum, localAngularVelocity);
+            var residual = dt * Vector3Wide.Cross(localAngularMomentum, localAngularVelocity);
 
             Matrix3x3Wide.CreateCrossProduct(localAngularMomentum, out var skewMomentum);
             Matrix3x3Wide.CreateCrossProduct(localAngularVelocity, out var skewVelocity);
             var transformedSkewVelocity = skewVelocity * localInertiaTensor;
             Matrix3x3Wide.Subtract(transformedSkewVelocity, skewMomentum, out var changeOverDt);
-            Matrix3x3Wide.Scale(changeOverDt, dtWide, out var change);
+            Matrix3x3Wide.Scale(changeOverDt, dt, out var change);
             var jacobian = localInertiaTensor + change;
 
             Matrix3x3Wide.Invert(jacobian, out var inverseJacobian);
@@ -838,7 +837,7 @@ namespace BepuPhysics
                         else if (callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
                         {
                             PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
-                            PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dt);
+                            PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, bundleEffectiveDt);
                         }
                         else
                         {

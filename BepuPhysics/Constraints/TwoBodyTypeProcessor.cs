@@ -429,7 +429,8 @@ namespace BepuPhysics.Constraints
             //This ensures that velocities set externally are still solved before being integrated.
             //So, the solver runs velocity integration alone on the first substep. All later substeps then run pose + velocity, and then after the last substep, a final pose integration.
             //This is equivalent in ordering to running each substep as velocity, warmstart, solve, pose integration, but just shifting the execution context.
-            var newPosition = position + velocity.Linear * new Vector<float>(dt);
+            var dtWide = new Vector<float>(dt);
+            var newPosition = position + velocity.Linear * dtWide;
             //Note that we only take results for slots which actually need integration. Reintegration would be an error.
             Vector3Wide.ConditionalSelect(integrationMask, newPosition, position, out position);
             QuaternionWide newOrientation;
@@ -438,21 +439,21 @@ namespace BepuPhysics.Constraints
             if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
             {
                 var previousOrientation = orientation;
-                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out newOrientation);
+                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out newOrientation);
                 QuaternionWide.ConditionalSelect(integrationMask, newOrientation, orientation, out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
                 PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia.InverseInertiaTensor, inertia.InverseInertiaTensor, ref velocity.Angular);
             }
             else if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
             {
-                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out newOrientation);
+                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out newOrientation);
                 QuaternionWide.ConditionalSelect(integrationMask, newOrientation, orientation, out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
-                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dt);
+                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dtWide);
             }
             else
             {
-                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out newOrientation);
+                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out newOrientation);
                 QuaternionWide.ConditionalSelect(integrationMask, newOrientation, orientation, out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
             }
@@ -470,24 +471,25 @@ namespace BepuPhysics.Constraints
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
         {
             //This is identical to the other IntegratePoseAndVelocity, but it avoids any masking because we know ahead of time that the entire bundle is integrating.
-            position += velocity.Linear * new Vector<float>(dt);
+            var dtWide = new Vector<float>(dt);
+            position += velocity.Linear * dtWide;
             inertia.InverseMass = localInertia.InverseMass;
             if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
             {
                 var previousOrientation = orientation;
-                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out orientation);
+                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
                 PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia.InverseInertiaTensor, inertia.InverseInertiaTensor, ref velocity.Angular);
             }
             else if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
             {
-                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out orientation);
+                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
-                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dt);
+                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dtWide);
             }
             else
             {
-                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * 0.5f), out orientation);
+                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
             }
             integratorCallbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), count), position, orientation, localInertia, new Vector<int>(-1), workerIndex, new Vector<float>(dt), ref velocity);
@@ -513,7 +515,7 @@ namespace BepuPhysics.Constraints
             }
             else if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
             {
-                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dt);
+                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, new Vector<float>(dt));
             }
             if (typeof(TBatchIntegrationMode) == typeof(BatchShouldConditionallyIntegrate))
             {

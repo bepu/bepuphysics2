@@ -833,24 +833,24 @@ namespace Demos.Demos
                 out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
             var weldSpringiness = new SpringSettings(30f, 1f);
             var volumeSpringiness = new SpringSettings(30f, 1);
-            int terboTotal = 0;
-            var terboShape = new Box(0.5f, 0.5f, 3);
-            terboShape.ComputeInertia(1, out var terboInertia);
-            var bodyDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(0, 10, 0)), new BodyVelocity(default, new Vector3(1, 2, 3)), terboInertia, new CollidableDescription(Simulation.Shapes.Add(terboShape), 0.1f), new BodyActivityDescription(-1));
+            //int terboTotal = 0;
+            //var terboShape = new Box(0.5f, 0.5f, 3);
+            //terboShape.ComputeInertia(1, out var terboInertia);
+            //var bodyDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(0, 10, 0)), new BodyVelocity(default, new Vector3(1, 2, 3)), terboInertia, new CollidableDescription(Simulation.Shapes.Add(terboShape), 0.1f), new BodyActivityDescription(-1));
 
             for (int i = 0; i < 40; ++i)
             {
                 //CreateDeformable(Simulation, new Vector3(i * 3, 5 + i * 1.5f, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
                 CreateDeformable(Simulation, new Vector3(i * 3, cellSize * 2f + i * 0f, 0), Quaternion.Identity, 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
 
-                for (int terbo = 0; terbo < 3; ++terbo)
-                {
-                    bodyDescription.Pose.Position = new Vector3((terboTotal++) * 6, 10, 3);
-                    Simulation.Bodies.Add(bodyDescription);
-                }
+                //for (int terbo = 0; terbo < 17; ++terbo)
+                //{
+                //    bodyDescription.Pose.Position = new Vector3((terboTotal++) * 6, 10, 3);
+                //    Simulation.Bodies.Add(bodyDescription);
+                //}
             }
-            Console.WriteLine($"body count: {Simulation.Bodies.ActiveSet.Count}");
-            Console.WriteLine($"constraint count: {Simulation.Solver.CountConstraints()}");
+            //Console.WriteLine($"body count: {Simulation.Bodies.ActiveSet.Count}");
+            //Console.WriteLine($"constraint count: {Simulation.Solver.CountConstraints()}");
 
             BufferPool.Return(ref vertices);
             vertexSpatialIndices.Dispose(BufferPool);
