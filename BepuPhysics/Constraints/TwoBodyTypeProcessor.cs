@@ -543,7 +543,7 @@ namespace BepuPhysics.Constraints
             {
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                 {
-                    var integrationMask = new Vector<int>(-1);
+                    var integrationMask = BundleIndexing.CreateMaskForCountInBundle(count);
                     bodies.GatherState<AccessAll>(ref bodyIndices, count, false, out position, out orientation, out velocity, out var localInertia);
                     IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
                     bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integrationMask);
@@ -591,7 +591,7 @@ namespace BepuPhysics.Constraints
                 //Note that world inertia is still scattered as a part of velocity integration; we need the updated value since we can't trust the cached value across frames.
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                 {
-                    var integrationMask = new Vector<int>(-1);
+                    var integrationMask = BundleIndexing.CreateMaskForCountInBundle(count);
                     bodies.GatherState<AccessAll>(ref bodyIndices, count, false, out position, out orientation, out velocity, out var localInertia);
                     IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(ref integratorCallbacks, ref bodyIndices, count, localInertia, dt, integrationMask, position, orientation, ref velocity, workerIndex, out inertia);
                     bodies.ScatterInertia(ref inertia, ref bodyIndices, ref integrationMask);
