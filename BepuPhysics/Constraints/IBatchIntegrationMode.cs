@@ -34,4 +34,25 @@
 
     }
 
+    /// <summary>
+    /// Marks a type as determining whether pose integration should be performed on bodies within the constraint batch.
+    /// </summary>
+    public interface IBatchPoseIntegrationAllowed
+    {
+
+    }
+
+    /// <summary>
+    /// Marks a batch as integrating poses for any bodies with integration responsibility within the constraint batch.
+    /// </summary>
+    public struct BatchShouldIntegratePoses : IBatchPoseIntegrationAllowed
+    {
+    }
+    /// <summary>
+    /// Marks a batch as not integrating poses for any bodies within the constraint batch.
+    /// </summary>
+    public struct BatchShouldNotIntegratePoses : IBatchPoseIntegrationAllowed
+    {
+    }
+
 }

@@ -301,7 +301,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks, 
+        public override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TBatchShouldIntegratePoses>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks, 
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             throw new NotImplementedException();

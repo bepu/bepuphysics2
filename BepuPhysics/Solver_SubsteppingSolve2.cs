@@ -46,6 +46,36 @@ namespace BepuPhysics
 
         public PoseIntegrator<TIntegrationCallbacks> PoseIntegrator { get; private set; }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WarmStartBlock<TBatchShouldIntegratePoses>(int workerIndex, int batchIndex, int typeBatchIndex, int startBundle, int endBundle, ref TypeBatch typeBatch, TypeProcessor typeProcessor, float dt, float inverseDt)
+            where TBatchShouldIntegratePoses : unmanaged, IBatchPoseIntegrationAllowed
+        {
+            if (batchIndex == 0)
+            {
+                Buffer<IndexSet> noFlagsRequired = default;
+                typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate, TBatchShouldIntegratePoses>(
+                    ref typeBatch, ref noFlagsRequired, bodies, ref PoseIntegrator.Callbacks,
+                    dt, inverseDt, startBundle, endBundle, workerIndex);
+            }
+            else
+            {
+                if (coarseBatchIntegrationResponsibilities[batchIndex][typeBatchIndex])
+                {
+                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate, TBatchShouldIntegratePoses>(
+                        ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks,
+                        dt, inverseDt, startBundle, endBundle, workerIndex);
+                }
+                else
+                {
+                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldNeverIntegrate, TBatchShouldIntegratePoses>(
+                        ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks,
+                        dt, inverseDt, startBundle, endBundle, workerIndex);
+                }
+            }
+        }
+
+
         //Split the solve process into a warmstart and solve, where warmstart doesn't try to store out anything. It just computes jacobians and modifies velocities according to the accumulated impulse.
         //The solve step then *recomputes* jacobians from prestep data and pose information.
         //Why? Memory bandwidth. Redoing the calculation is cheaper than storing it out.
@@ -53,6 +83,7 @@ namespace BepuPhysics
         {
             public float Dt;
             public float InverseDt;
+            public int SubstepIndex;
             public Solver<TIntegrationCallbacks> solver;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -61,28 +92,15 @@ namespace BepuPhysics
                 ref var block = ref this.solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                if (block.BatchIndex == 0)
+                if (SubstepIndex == 0)
                 {
-                    Buffer<IndexSet> noFlagsRequired = default;
-                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate>(
-                        ref typeBatch, ref noFlagsRequired, this.solver.bodies, ref this.solver.PoseIntegrator.Callbacks,
-                        Dt, InverseDt, block.StartBundle, block.End, workerIndex);
+                    this.solver.WarmStartBlock<BatchShouldNotIntegratePoses>(workerIndex, block.BatchIndex, block.TypeBatchIndex, block.StartBundle, block.End, ref typeBatch, typeProcessor, Dt, InverseDt);
                 }
                 else
                 {
-                    if (this.solver.coarseBatchIntegrationResponsibilities[block.BatchIndex][block.TypeBatchIndex])
-                    {
-                        typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate>(
-                            ref typeBatch, ref this.solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], this.solver.bodies, ref this.solver.PoseIntegrator.Callbacks,
-                            Dt, InverseDt, block.StartBundle, block.End, workerIndex);
-                    }
-                    else
-                    {
-                        typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldNeverIntegrate>(
-                            ref typeBatch, ref this.solver.integrationFlags[block.BatchIndex][block.TypeBatchIndex], this.solver.bodies, ref this.solver.PoseIntegrator.Callbacks,
-                            Dt, InverseDt, block.StartBundle, block.End, workerIndex);
-                    }
+                    this.solver.WarmStartBlock<BatchShouldIntegratePoses>(workerIndex, block.BatchIndex, block.TypeBatchIndex, block.StartBundle, block.End, ref typeBatch, typeProcessor, Dt, InverseDt);
                 }
+
             }
         }
         //no fallback warmstart; the last constraint batch is always handled by the solve instead, and if the fallback batch exists, it's guaranteed to be the last batch.
@@ -162,6 +180,7 @@ namespace BepuPhysics
 
             for (int i = 0; i < substepCount; ++i)
             {
+                warmstartStage.SubstepIndex = i;
                 for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
                 {
                     var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
@@ -544,24 +563,13 @@ namespace BepuPhysics
                         for (int j = 0; j < batch.TypeBatches.Count; ++j)
                         {
                             ref var typeBatch = ref batch.TypeBatches[j];
-                            if (i == 0)
+                            if (substepIndex == 0)
                             {
-                                Buffer<IndexSet> noFlagsRequired = default;
-                                TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate>(ref typeBatch, ref noFlagsRequired, bodies, ref PoseIntegrator.Callbacks,
-                                    substepDt, inverseDt, 0, typeBatch.BundleCount, 0);
+                                WarmStartBlock<BatchShouldNotIntegratePoses>(0, i, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepDt, inverseDt);
                             }
                             else
                             {
-                                if (coarseBatchIntegrationResponsibilities[i][j])
-                                {
-                                    TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate>(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks,
-                                        substepDt, inverseDt, 0, typeBatch.BundleCount, 0);
-                                }
-                                else
-                                {
-                                    TypeProcessors[typeBatch.TypeId].WarmStart2<TIntegrationCallbacks, BatchShouldNeverIntegrate>(ref typeBatch, ref integrationFlagsForBatch[j], bodies, ref PoseIntegrator.Callbacks,
-                                        substepDt, inverseDt, 0, typeBatch.BundleCount, 0);
-                                }
+                                WarmStartBlock<BatchShouldIntegratePoses>(0, i, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepDt, inverseDt);
                             }
                         }
                     }
