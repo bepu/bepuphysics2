@@ -93,10 +93,11 @@ namespace BepuPhysics.Constraints
             //CFM/dt * softenedEffectiveMass = 1 / (d * dt + 1)
             //(For more, see the Inequality1DOF example constraint.)
 
-            var dtd = dt * settings.Damping;
+            var dtWide = new Vector<float>(dt);
+            var dtd = dtWide * settings.Damping;
+            maximumImpulse = settings.MaximumForce * dtWide;
             softnessImpulseScale = Vector<float>.One / (dtd + Vector<float>.One);
             effectiveMassCFMScale = dtd * softnessImpulseScale;
-            maximumImpulse = settings.MaximumForce * dt;
         }
     }
 }

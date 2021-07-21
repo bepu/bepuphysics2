@@ -129,6 +129,38 @@ namespace BepuPhysics.Constraints
 
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyImpulse(in Vector3Wide jA, in Vector3Wide negatedJB, in Vector<float> csi, in Symmetric3x3Wide inertiaA, in Symmetric3x3Wide inertiaB, ref Vector3Wide angularVelocityA, ref Vector3Wide angularVelocityB)
+        {
+            Symmetric3x3Wide.TransformWithoutOverlap(jA * csi, inertiaA, out var changeA);
+            angularVelocityA += changeA;
+            Symmetric3x3Wide.TransformWithoutOverlap(negatedJB * csi, inertiaB, out var negatedChangeB);
+            angularVelocityA -= negatedChangeB;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WarmStart2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in AngularAxisGearMotorPrestepData prestep, in Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        {
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axis);
+            ApplyImpulse(axis * prestep.VelocityScale, axis, accumulatedImpulses, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, ref wsvA.Angular, ref wsvB.Angular);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Solve2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, in AngularAxisGearMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        {
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axis);
+            Vector3Wide.Scale(axis, prestep.VelocityScale, out var jA);
+            Symmetric3x3Wide.TransformWithoutOverlap(jA, inertiaA.InverseInertiaTensor, out var jIA);
+            Vector3Wide.Dot(jA, jIA, out var contributionA);
+            Symmetric3x3Wide.TransformWithoutOverlap(axis, inertiaB.InverseInertiaTensor, out var jIB);
+            Vector3Wide.Dot(axis, jIB, out var contributionB);
+            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out var softnessImpulseScale, out var maximumImpulse);
+
+            //csi = projection.BiasImpulse - accumulatedImpulse * softnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
+            var csi = effectiveMassCFMScale * (Vector3Wide.Dot(wsvB.Angular, axis) - Vector3Wide.Dot(wsvA.Angular, axis)) / (contributionA + contributionB) - accumulatedImpulses * softnessImpulseScale;
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
+            ApplyImpulse(jA, axis, accumulatedImpulses, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, ref wsvA.Angular, ref wsvB.Angular);
+        }
     }
 
     public class AngularAxisGearMotorTypeProcessor : TwoBodyTypeProcessor<AngularAxisGearMotorPrestepData, AngularAxisGearMotorProjection, Vector<float>, AngularAxisGearMotorFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>

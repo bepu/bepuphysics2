@@ -224,6 +224,15 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref csi);
         }
 
+        public void WarmStart2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in HingePrestepData prestep, in HingeAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Solve2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, in HingePrestepData prestep, ref HingeAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class HingeTypeProcessor : TwoBodyTypeProcessor<HingePrestepData, HingeProjection, HingeAccumulatedImpulses, HingeFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
