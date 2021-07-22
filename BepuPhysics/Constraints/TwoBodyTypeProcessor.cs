@@ -312,7 +312,57 @@ namespace BepuPhysics.Constraints
             }
         }
 
+        //public const int WarmStartPrefetchDistance = 8;
+        //public const int SolvePrefetchDistance = 4;
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //static unsafe void Prefetch(void* address)
+        //{
+        //    if (Sse.IsSupported)
+        //    {
+        //        Sse.Prefetch0(address);
+        //        //Sse.Prefetch0((byte*)address + 64);
+        //        //TODO: prefetch should grab cache line pair anyway, right? not much reason to explicitly do more?
+        //    }
+        //    //TODO: ARM?
+        //}
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //static unsafe void PrefetchBundle(SolverState* stateBase, ref TwoBodyReferences references, int countInBundle)
+        //{
+        //    var indicesA = (int*)Unsafe.AsPointer(ref references.IndexA);
+        //    var indicesB = (int*)Unsafe.AsPointer(ref references.IndexB);
+        //    for (int i = 0; i < countInBundle; ++i)
+        //    {
+        //        var indexA = indicesA[i];
+        //        var indexB = indicesA[i];
+        //        Prefetch(stateBase + indexA);
+        //        Prefetch(stateBase + indexB);
+        //    }
+        //}
 
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[Conditional("PREFETCH")]
+        //public unsafe static void EarlyPrefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<SolverState> states, int startBundleIndex, int exclusiveEndBundleIndex)
+        //{
+        //    exclusiveEndBundleIndex = Math.Min(exclusiveEndBundleIndex, startBundleIndex + prefetchDistance);
+        //    var lastBundleIndex = exclusiveEndBundleIndex - 1;
+        //    for (int i = startBundleIndex; i < lastBundleIndex; ++i)
+        //    {
+        //        PrefetchBundle(states.Memory, ref references[i], Vector<float>.Count);
+        //    }
+        //    var countInBundle = GetCountInBundle(ref typeBatch, lastBundleIndex);
+        //    PrefetchBundle(states.Memory, ref references[lastBundleIndex], countInBundle);
+        //}
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[Conditional("PREFETCH")]
+        //public unsafe static void Prefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<SolverState> states, int bundleIndex, int exclusiveEndBundleIndex)
+        //{
+        //    var targetIndex = bundleIndex + prefetchDistance;
+        //    if (targetIndex < exclusiveEndBundleIndex)
+        //    {
+        //        PrefetchBundle(states.Memory, ref references[targetIndex], GetCountInBundle(ref typeBatch, targetIndex));
+        //    }
+        //}
 
         public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
             ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
@@ -322,14 +372,14 @@ namespace BepuPhysics.Constraints
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
             ref var states = ref bodies.ActiveSet.SolverStates;
-            EarlyPrefetch(WarmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, startBundle, exclusiveEndBundle);
+            //EarlyPrefetch(WarmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
-                Prefetch(WarmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, i, exclusiveEndBundle);
+                //Prefetch(WarmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, i, exclusiveEndBundle);
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterA, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references.IndexA, count,
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterB, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 1, dt, workerIndex, i, ref references.IndexB, count,
@@ -361,14 +411,14 @@ namespace BepuPhysics.Constraints
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
             ref var motionStates = ref bodies.ActiveSet.SolverStates;
-            EarlyPrefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, startBundle, exclusiveEndBundle);
+            //EarlyPrefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
-                Prefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
+                //Prefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
                 bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, count, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
                 bodies.GatherState<TSolveAccessFilterB>(ref references.IndexB, count, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
                 var ab = positionB - positionA;

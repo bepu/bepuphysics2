@@ -28,7 +28,7 @@ namespace BepuPhysics.Constraints
     public interface IFourBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         void Prestep(
-            in QuaternionWide orientationA, in BodyInertiaWide inertiaA, 
+            in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
             in Vector3Wide ad, in QuaternionWide orientationD, in BodyInertiaWide inertiaD,
@@ -52,10 +52,19 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Shared implementation across all four body constraints.
     /// </summary>
-    public abstract class FourBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
+    public abstract class FourBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions,
+        TWarmStartAccessFilterA, TWarmStartAccessFilterB, TWarmStartAccessFilterC, TWarmStartAccessFilterD, TSolveAccessFilterA, TSolveAccessFilterB, TSolveAccessFilterC, TSolveAccessFilterD>
         : TypeProcessor<FourBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
         where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
         where TConstraintFunctions : unmanaged, IFourBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        where TWarmStartAccessFilterA : unmanaged, IBodyAccessFilter
+        where TWarmStartAccessFilterB : unmanaged, IBodyAccessFilter
+        where TWarmStartAccessFilterC : unmanaged, IBodyAccessFilter
+        where TWarmStartAccessFilterD : unmanaged, IBodyAccessFilter
+        where TSolveAccessFilterA : unmanaged, IBodyAccessFilter
+        where TSolveAccessFilterB : unmanaged, IBodyAccessFilter
+        where TSolveAccessFilterC : unmanaged, IBodyAccessFilter
+        where TSolveAccessFilterD : unmanaged, IBodyAccessFilter
     {
         protected sealed override int InternalBodiesPerConstraint => 4;
 
@@ -146,7 +155,7 @@ namespace BepuPhysics.Constraints
                     out var ab, out var orientationB, out var wsvB, out var inertiaB,
                     out var ac, out var orientationC, out var wsvC, out var inertiaC,
                     out var ad, out var orientationD, out var wsvD, out var inertiaD);
-                function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref projection, ref accumulatedImpulses); 
+                function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref wsvD, ref projection, ref accumulatedImpulses);
                 bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences.IndexA, count);
                 bodies.ScatterVelocities<AccessAll>(ref wsvB, ref bodyReferences.IndexB, count);
                 bodies.ScatterVelocities<AccessAll>(ref wsvC, ref bodyReferences.IndexC, count);
@@ -340,16 +349,83 @@ namespace BepuPhysics.Constraints
         }
 
 
-        public override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TBatchShouldIntegratePoses>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks, 
-            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
+        public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
+            ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
-            throw new NotImplementedException();
-        }
-        public override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
-        {
-            throw new NotImplementedException();
+            var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<FourBodyReferences>();
+            var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
+            var function = default(TConstraintFunctions);
+            ref var states = ref bodies.ActiveSet.SolverStates;
+            for (int i = startBundle; i < exclusiveEndBundle; ++i)
+            {
+                ref var prestep = ref prestepBundles[i];
+                ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
+                ref var references = ref bodyReferencesBundles[i];
+                var count = GetCountInBundle(ref typeBatch, i);
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterA, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references.IndexA, count,
+                    out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterB, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 1, dt, workerIndex, i, ref references.IndexB, count,
+                    out var positionB, out var orientationB, out var wsvB, out var inertiaB);
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterC, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 2, dt, workerIndex, i, ref references.IndexC, count,
+                    out var positionC, out var orientationC, out var wsvC, out var inertiaC);
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterD, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 3, dt, workerIndex, i, ref references.IndexD, count,
+                    out var positionD, out var orientationD, out var wsvD, out var inertiaD);
+                var ab = positionB - positionA;
+                var ac = positionC - positionA;
+                var ad = positionD - positionA;
+
+                function.WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, ad, orientationD, inertiaD, prestep, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
+
+                if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
+                {
+                    bodies.ScatterVelocities<TWarmStartAccessFilterA>(ref wsvA, ref references.IndexA, count);
+                    bodies.ScatterVelocities<TWarmStartAccessFilterB>(ref wsvB, ref references.IndexB, count);
+                    bodies.ScatterVelocities<TWarmStartAccessFilterC>(ref wsvC, ref references.IndexC, count);
+                    bodies.ScatterVelocities<TWarmStartAccessFilterD>(ref wsvD, ref references.IndexD, count);
+                }
+                else
+                {
+                    //This batch has some integrators, which means that every bundle is going to gather all velocities.
+                    //(We don't make per-bundle determinations about this to avoid an extra branch and instruction complexity, and the difference is very small.)
+                    bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references.IndexA, count);
+                    bodies.ScatterVelocities<AccessAll>(ref wsvB, ref references.IndexB, count);
+                    bodies.ScatterVelocities<AccessAll>(ref wsvC, ref references.IndexC, count);
+                    bodies.ScatterVelocities<AccessAll>(ref wsvD, ref references.IndexD, count);
+                }
+
+            }
         }
 
+        public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<FourBodyReferences>();
+            var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
+            var function = default(TConstraintFunctions);
+            ref var motionStates = ref bodies.ActiveSet.SolverStates;
+            for (int i = startBundle; i < exclusiveEndBundle; ++i)
+            {
+                ref var prestep = ref prestepBundles[i];
+                ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
+                ref var references = ref bodyReferencesBundles[i];
+                var count = GetCountInBundle(ref typeBatch, i);
+                bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, count, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+                bodies.GatherState<TSolveAccessFilterB>(ref references.IndexB, count, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
+                bodies.GatherState<TSolveAccessFilterC>(ref references.IndexC, count, true, out var positionC, out var orientationC, out var wsvC, out var inertiaC);
+                bodies.GatherState<TSolveAccessFilterD>(ref references.IndexD, count, true, out var positionD, out var orientationD, out var wsvD, out var inertiaD);
+                var ab = positionB - positionA;
+                var ac = positionC - positionA;
+                var ad = positionD - positionA;
+
+                function.Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, ad, orientationD, inertiaD, dt, inverseDt, prestep, ref accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
+
+                bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references.IndexA, count);
+                bodies.ScatterVelocities<TSolveAccessFilterB>(ref wsvB, ref references.IndexB, count);
+                bodies.ScatterVelocities<TSolveAccessFilterC>(ref wsvC, ref references.IndexC, count);
+                bodies.ScatterVelocities<TSolveAccessFilterD>(ref wsvD, ref references.IndexD, count);
+            }
+        }
 
         public override void Prestep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {

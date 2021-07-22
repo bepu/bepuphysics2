@@ -198,9 +198,9 @@ namespace BepuPhysics.Constraints
 
 
     /// <summary>
-    /// Handles the solve iterations of a bunch of ball socket constraints.
+    /// Handles the solve iterations of a bunch of area constraints.
     /// </summary>
-    public class AreaConstraintTypeProcessor : ThreeBodyTypeProcessor<AreaConstraintPrestepData, AreaConstraintProjection, Vector<float>, AreaConstraintFunctions>
+    public class AreaConstraintTypeProcessor : ThreeBodyTypeProcessor<AreaConstraintPrestepData, AreaConstraintProjection, Vector<float>, AreaConstraintFunctions, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear>
     {
         public const int BatchTypeId = 36;
     }

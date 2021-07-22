@@ -696,58 +696,6 @@ namespace BepuPhysics.Constraints
         }
 
 
-        public const int WarmStartPrefetchDistance = 8;
-        public const int SolvePrefetchDistance = 4;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static unsafe void Prefetch(void* address)
-        {
-            if (Sse.IsSupported)
-            {
-                Sse.Prefetch0(address);
-                //Sse.Prefetch0((byte*)address + 64);
-                //TODO: prefetch should grab cache line pair anyway, right? not much reason to explicitly do more?
-            }
-            //TODO: ARM?
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static unsafe void PrefetchBundle(SolverState* stateBase, ref TwoBodyReferences references, int countInBundle)
-        {
-            var indicesA = (int*)Unsafe.AsPointer(ref references.IndexA);
-            var indicesB = (int*)Unsafe.AsPointer(ref references.IndexB);
-            for (int i = 0; i < countInBundle; ++i)
-            {
-                var indexA = indicesA[i];
-                var indexB = indicesA[i];
-                Prefetch(stateBase + indexA);
-                Prefetch(stateBase + indexB);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [Conditional("PREFETCH")]
-        public unsafe static void EarlyPrefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<SolverState> states, int startBundleIndex, int exclusiveEndBundleIndex)
-        {
-            exclusiveEndBundleIndex = Math.Min(exclusiveEndBundleIndex, startBundleIndex + prefetchDistance);
-            var lastBundleIndex = exclusiveEndBundleIndex - 1;
-            for (int i = startBundleIndex; i < lastBundleIndex; ++i)
-            {
-                PrefetchBundle(states.Memory, ref references[i], Vector<float>.Count);
-            }
-            var countInBundle = GetCountInBundle(ref typeBatch, lastBundleIndex);
-            PrefetchBundle(states.Memory, ref references[lastBundleIndex], countInBundle);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [Conditional("PREFETCH")]
-        public unsafe static void Prefetch(int prefetchDistance, ref TypeBatch typeBatch, ref Buffer<TwoBodyReferences> references, ref Buffer<SolverState> states, int bundleIndex, int exclusiveEndBundleIndex)
-        {
-            var targetIndex = bundleIndex + prefetchDistance;
-            if (targetIndex < exclusiveEndBundleIndex)
-            {
-                PrefetchBundle(states.Memory, ref references[targetIndex], GetCountInBundle(ref typeBatch, targetIndex));
-            }
-        }
-
         public enum BundleIntegrationMode
         {
             None = 0,
