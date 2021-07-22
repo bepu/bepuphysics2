@@ -135,7 +135,7 @@ namespace BepuPhysics.Constraints
             Symmetric3x3Wide.TransformWithoutOverlap(jA * csi, inertiaA, out var changeA);
             angularVelocityA += changeA;
             Symmetric3x3Wide.TransformWithoutOverlap(negatedJB * csi, inertiaB, out var negatedChangeB);
-            angularVelocityA -= negatedChangeB;
+            angularVelocityB -= negatedChangeB;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
