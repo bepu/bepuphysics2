@@ -335,26 +335,9 @@ namespace BepuPhysics.Constraints
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterB, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 1, dt, workerIndex, i, ref references.IndexB, count,
                     out var positionB, out var orientationB, out var wsvB, out var inertiaB);
                 var ab = positionB - positionA;
-                if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
-                {
-                    default(WeldFunctions).WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB,
-                        Unsafe.As<TPrestepData, WeldPrestepData>(ref prestep), Unsafe.As<TAccumulatedImpulse, WeldAccumulatedImpulses>(ref accumulatedImpulses), ref wsvA, ref wsvB);
-                }
-                else if (typeof(TConstraintFunctions) == typeof(BallSocketFunctions))
-                {
-                    default(BallSocketFunctions).WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB,
-                        Unsafe.As<TPrestepData, BallSocketPrestepData>(ref prestep), Unsafe.As<TAccumulatedImpulse, Vector3Wide>(ref accumulatedImpulses), ref wsvA, ref wsvB);
-                }
-                else if (typeof(TConstraintFunctions) == typeof(CenterDistanceConstraint))
-                {
-                    default(CenterDistanceConstraintFunctions).WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB,
-                        Unsafe.As<TPrestepData, CenterDistancePrestepData>(ref prestep), Unsafe.As<TAccumulatedImpulse, Vector<float>>(ref accumulatedImpulses), ref wsvA, ref wsvB);
-                }
-                else
-                {
-                    function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out var projection);
-                    function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                }
+
+                function.WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB, prestep, accumulatedImpulses, ref wsvA, ref wsvB);
+
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
                     bodies.ScatterVelocities<TWarmStartAccessFilterA>(ref wsvA, ref references.IndexA, count);
@@ -370,7 +353,6 @@ namespace BepuPhysics.Constraints
 
             }
         }
-
 
         public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
@@ -390,26 +372,9 @@ namespace BepuPhysics.Constraints
                 bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, count, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
                 bodies.GatherState<TSolveAccessFilterB>(ref references.IndexB, count, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
                 var ab = positionB - positionA;
-                if (typeof(TConstraintFunctions) == typeof(WeldFunctions))
-                {
-                    default(WeldFunctions).Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt,
-                        Unsafe.As<TPrestepData, WeldPrestepData>(ref prestep), ref Unsafe.As<TAccumulatedImpulse, WeldAccumulatedImpulses>(ref accumulatedImpulses), ref wsvA, ref wsvB);
-                }
-                else if (typeof(TConstraintFunctions) == typeof(BallSocketFunctions))
-                {
-                    default(BallSocketFunctions).Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt,
-                        Unsafe.As<TPrestepData, BallSocketPrestepData>(ref prestep), ref Unsafe.As<TAccumulatedImpulse, Vector3Wide>(ref accumulatedImpulses), ref wsvA, ref wsvB);
-                }
-                else if (typeof(TConstraintFunctions) == typeof(CenterDistanceConstraint))
-                {
-                    default(CenterDistanceConstraintFunctions).Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt,
-                        Unsafe.As<TPrestepData, CenterDistancePrestepData>(ref prestep), ref Unsafe.As<TAccumulatedImpulse, Vector<float>>(ref accumulatedImpulses), ref wsvA, ref wsvB);
-                }
-                else
-                {
-                    function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out var projection);
-                    function.Solve(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                }
+
+                function.Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, prestep, ref accumulatedImpulses, ref wsvA, ref wsvB);
+
                 bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references.IndexA, count);
                 bodies.ScatterVelocities<TSolveAccessFilterB>(ref wsvB, ref references.IndexB, count);
             }

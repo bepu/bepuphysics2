@@ -121,7 +121,7 @@ namespace BepuPhysics.Constraints
         }
     }
 
-    public class OneBodyAngularMotorTypeProcessor : OneBodyTypeProcessor<OneBodyAngularMotorPrestepData, OneBodyAngularServoProjection, Vector3Wide, OneBodyAngularMotorFunctions>
+    public class OneBodyAngularMotorTypeProcessor : OneBodyTypeProcessor<OneBodyAngularMotorPrestepData, OneBodyAngularServoProjection, Vector3Wide, OneBodyAngularMotorFunctions, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 43;
     }

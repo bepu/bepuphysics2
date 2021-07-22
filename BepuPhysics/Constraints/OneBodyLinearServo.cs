@@ -179,7 +179,7 @@ namespace BepuPhysics.Constraints
         }
     }
 
-    public class OneBodyLinearServoTypeProcessor : OneBodyTypeProcessor<OneBodyLinearServoPrestepData, OneBodyLinearServoProjection, Vector3Wide, OneBodyLinearServoFunctions>
+    public class OneBodyLinearServoTypeProcessor : OneBodyTypeProcessor<OneBodyLinearServoPrestepData, OneBodyLinearServoProjection, Vector3Wide, OneBodyLinearServoFunctions, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 44;
     }

@@ -42,10 +42,13 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Shared implementation across all one body constraints.
     /// </summary>
-    public abstract class OneBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
+    public abstract class OneBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions,
+        TWarmStartAccessFilterA, TSolveAccessFilterA>
         : TypeProcessor<Vector<int>, TPrestepData, TProjection, TAccumulatedImpulse>
         where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
         where TConstraintFunctions : unmanaged, IOneBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        where TWarmStartAccessFilterA : unmanaged, IBodyAccessFilter
+        where TSolveAccessFilterA : unmanaged, IBodyAccessFilter
     {
         protected sealed override int InternalBodiesPerConstraint => 1;
 
@@ -254,44 +257,61 @@ namespace BepuPhysics.Constraints
         }
 
 
-
-        public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TBatchShouldIntegratePoses>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks,
-            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
+        public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
+          ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
-            ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
-            ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
-            ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
+            var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
+            var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
+            ref var states = ref bodies.ActiveSet.SolverStates;
+            EarlyPrefetch(WarmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
-                ref var prestep = ref Unsafe.Add(ref prestepBase, i);
-                ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
-                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
+                ref var prestep = ref prestepBundles[i];
+                ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
+                ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState(ref bodyReferences, count, out var position, out var orientation, out var wsvA, out var inertiaA);
-                function.Prestep(position, orientation, inertiaA, dt, inverseDt, ref prestep, out var projection);
-                function.WarmStart(ref wsvA, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences, count);
+                Prefetch(WarmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, i, exclusiveEndBundle);
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterA, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references.IndexA, count,
+                    out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+
+                function.WarmStart2(positionA, orientationA, inertiaA, prestep, accumulatedImpulses, ref wsvA);
+
+                if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
+                {
+                    bodies.ScatterVelocities<TWarmStartAccessFilterA>(ref wsvA, ref references.IndexA, count);
+                }
+                else
+                {
+                    //This batch has some integrators, which means that every bundle is going to gather all velocities.
+                    //(We don't make per-bundle determinations about this to avoid an extra branch and instruction complexity, and the difference is very small.)
+                    bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references.IndexA, count);
+                }
+
             }
         }
+
         public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
-            ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
-            ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
-            ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
+            var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
+            var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
+            ref var motionStates = ref bodies.ActiveSet.SolverStates;
+            EarlyPrefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
-                ref var prestep = ref Unsafe.Add(ref prestepBase, i);
-                ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
-                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
+                ref var prestep = ref prestepBundles[i];
+                ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
+                ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState(ref bodyReferences, count, out var position, out var orientation, out var wsvA, out var inertiaA);
-                function.Prestep(position, orientation, inertiaA, dt, inverseDt, ref prestep, out var projection);
-                function.Solve(ref wsvA, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences, count);
+                Prefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
+                bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, count, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+
+                function.Solve2(positionA, orientationA, inertiaA, dt, inverseDt, prestep, ref accumulatedImpulses, ref wsvA);
+
+                bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references.IndexA, count);
             }
         }
 
@@ -323,7 +343,7 @@ namespace BepuPhysics.Constraints
     }
 
     public abstract class OneBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
-        : OneBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
+        : OneBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions, AccessAll, AccessAll>
         where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
         where TConstraintFunctions : unmanaged, IOneBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
