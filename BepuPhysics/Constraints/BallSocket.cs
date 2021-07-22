@@ -109,7 +109,7 @@ namespace BepuPhysics.Constraints
             BallSocketShared.Solve(ref velocityA, ref velocityB, projection.OffsetA, projection.OffsetB, projection.BiasVelocity, projection.EffectiveMass, projection.SoftnessImpulseScale, ref accumulatedImpulse, projection.InertiaA, projection.InertiaB);
         }
 
-        public void WarmStart2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             in BallSocketPrestepData prestep, in Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
@@ -118,7 +118,7 @@ namespace BepuPhysics.Constraints
             BallSocketShared.ApplyImpulse(ref wsvA, ref wsvB, offsetA, offsetB, inertiaA, inertiaB, accumulatedImpulses);
         }
 
-        public void Solve2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, 
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, 
             in BallSocketPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {    
             //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
@@ -128,6 +128,7 @@ namespace BepuPhysics.Constraints
             BallSocketShared.ComputeEffectiveMass(inertiaA, inertiaB, ref offsetA, ref offsetB, ref effectiveMassCFMScale, out var effectiveMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
+            var ab = positionB - positionA;
             Vector3Wide.Add(ab, offsetB, out var anchorB);
             Vector3Wide.Subtract(anchorB, offsetA, out var error);
             Vector3Wide.Scale(error, positionErrorToVelocity, out var biasVelocity);

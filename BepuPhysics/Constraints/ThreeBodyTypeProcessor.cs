@@ -32,14 +32,14 @@ namespace BepuPhysics.Constraints
         void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
 
         void WarmStart2(
-            in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
-            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
             in TPrestepData prestep, in TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC);
         void Solve2(
-            in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
-            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, float dt, float inverseDt,
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, float dt, float inverseDt,
             in TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC);
     }
 
@@ -340,10 +340,8 @@ namespace BepuPhysics.Constraints
                     out var positionB, out var orientationB, out var wsvB, out var inertiaB);
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterC, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 2, dt, workerIndex, i, ref references.IndexC, count,
                     out var positionC, out var orientationC, out var wsvC, out var inertiaC);
-                var ab = positionB - positionA;
-                var ac = positionC - positionA;
 
-                function.WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, prestep, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC);
+                function.WarmStart2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, prestep, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC);
 
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
@@ -379,10 +377,8 @@ namespace BepuPhysics.Constraints
                 bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, count, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
                 bodies.GatherState<TSolveAccessFilterB>(ref references.IndexB, count, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
                 bodies.GatherState<TSolveAccessFilterC>(ref references.IndexC, count, true, out var positionC, out var orientationC, out var wsvC, out var inertiaC);
-                var ab = positionB - positionA;
-                var ac = positionC - positionA;
 
-                function.Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, dt, inverseDt, prestep, ref accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC);
+                function.Solve2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, dt, inverseDt, prestep, ref accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC);
 
                 bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references.IndexA, count);
                 bodies.ScatterVelocities<TSolveAccessFilterB>(ref wsvB, ref references.IndexB, count);

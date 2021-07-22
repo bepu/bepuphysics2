@@ -137,9 +137,10 @@ namespace BepuPhysics.Constraints
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             in CenterDistancePrestepData prestep, in Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
+            var ab = positionB - positionA;
             var lengthSquared = ab.LengthSquared();
             var inverseDistance = MathHelper.FastReciprocalSquareRoot(lengthSquared);
             var useFallback = Vector.LessThan(lengthSquared, new Vector<float>(1e-10f));
@@ -151,10 +152,11 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(jacobianA, inertiaA.InverseMass, inertiaB.InverseMass, accumulatedImpulses, ref wsvA, ref wsvB);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
             in CenterDistancePrestepData prestep, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Note that we need the actual length for error calculation.
+            var ab = positionB - positionA;
             var distance = ab.Length();
             var inverseDistance = MathHelper.FastReciprocal(distance);
             var useFallback = Vector.LessThan(distance, new Vector<float>(1e-5f));

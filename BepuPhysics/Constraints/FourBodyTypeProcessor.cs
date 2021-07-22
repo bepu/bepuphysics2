@@ -36,16 +36,16 @@ namespace BepuPhysics.Constraints
         void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
         void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
         void WarmStart2(
-        in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
-        in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-        in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
-        in Vector3Wide ad, in QuaternionWide orientationD, in BodyInertiaWide inertiaD,
+        in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+        in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+        in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
+        in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD,
         in TPrestepData prestep, in TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD);
         void Solve2(
-            in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
-            in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
-            in Vector3Wide ad, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, float dt, float inverseDt,
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
+            in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, float dt, float inverseDt,
             in TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD);
     }
 
@@ -371,11 +371,8 @@ namespace BepuPhysics.Constraints
                     out var positionC, out var orientationC, out var wsvC, out var inertiaC);
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterD, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 3, dt, workerIndex, i, ref references.IndexD, count,
                     out var positionD, out var orientationD, out var wsvD, out var inertiaD);
-                var ab = positionB - positionA;
-                var ac = positionC - positionA;
-                var ad = positionD - positionA;
 
-                function.WarmStart2(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, ad, orientationD, inertiaD, prestep, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
+                function.WarmStart2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, positionD, orientationD, inertiaD, prestep, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
 
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
@@ -414,11 +411,8 @@ namespace BepuPhysics.Constraints
                 bodies.GatherState<TSolveAccessFilterB>(ref references.IndexB, count, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
                 bodies.GatherState<TSolveAccessFilterC>(ref references.IndexC, count, true, out var positionC, out var orientationC, out var wsvC, out var inertiaC);
                 bodies.GatherState<TSolveAccessFilterD>(ref references.IndexD, count, true, out var positionD, out var orientationD, out var wsvD, out var inertiaD);
-                var ab = positionB - positionA;
-                var ac = positionC - positionA;
-                var ad = positionD - positionA;
 
-                function.Solve2(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, ad, orientationD, inertiaD, dt, inverseDt, prestep, ref accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
+                function.Solve2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, positionD, orientationD, inertiaD, dt, inverseDt, prestep, ref accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
 
                 bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references.IndexA, count);
                 bodies.ScatterVelocities<TSolveAccessFilterB>(ref wsvB, ref references.IndexB, count);
