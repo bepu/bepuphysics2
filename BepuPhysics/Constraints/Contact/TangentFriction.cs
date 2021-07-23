@@ -28,7 +28,7 @@ namespace BepuPhysics.Constraints.Contact
         }
         //Since this is an unshared specialized implementation, the jacobian calculation is kept in here rather than in the batch.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeJacobians(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Vector3Wide offsetA, ref Vector3Wide offsetB,
+        public static void ComputeJacobians(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetA, in Vector3Wide offsetB,
             out Jacobians jacobians)
         {
             //Two velocity constraints: 
@@ -68,7 +68,7 @@ namespace BepuPhysics.Constraints.Contact
             ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB,
             out Projection projection)
         {
-            ComputeJacobians(ref tangentX, ref tangentY, ref offsetA, ref offsetB, out var jacobians);
+            ComputeJacobians(tangentX, tangentY, offsetA, offsetB, out var jacobians);
             //Compute effective mass matrix contributions.
             Symmetric2x2Wide.SandwichScale(jacobians.LinearA, inertiaA.InverseMass, out var linearContributionA);
             Symmetric2x2Wide.SandwichScale(jacobians.LinearA, inertiaB.InverseMass, out var linearContributionB);
@@ -91,8 +91,8 @@ namespace BepuPhysics.Constraints.Contact
         /// Transforms an impulse from constraint space to world space, uses it to modify the cached world space velocities of the bodies.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref Jacobians jacobians, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB,
-            ref Vector2Wide correctiveImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void ApplyImpulse(in Jacobians jacobians, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
+            in Vector2Wide correctiveImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Matrix2x3Wide.Transform(correctiveImpulse, jacobians.LinearA, out var linearImpulseA);
             Matrix2x3Wide.Transform(correctiveImpulse, jacobians.AngularA, out var angularImpulseA);
@@ -112,10 +112,10 @@ namespace BepuPhysics.Constraints.Contact
         public static void WarmStart(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref TangentFriction.Projection projection, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB,
             ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            ComputeJacobians(ref tangentX, ref tangentY, ref projection.OffsetA, ref projection.OffsetB, out var jacobians);
+            ComputeJacobians(tangentX, tangentY, projection.OffsetA, projection.OffsetB, out var jacobians);
             //TODO: If the previous frame and current frame are associated with different time steps, the previous frame's solution won't be a good solution anymore.
             //To compensate for this, the accumulated impulse should be scaled if dt changes.
-            ApplyImpulse(ref jacobians, ref inertiaA, ref inertiaB, ref accumulatedImpulse, ref wsvA, ref wsvB);
+            ApplyImpulse(jacobians, inertiaA, inertiaB, accumulatedImpulse, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -151,11 +151,32 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Solve(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref TangentFriction.Projection projection, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB, ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            ComputeJacobians(ref tangentX, ref tangentY, ref projection.OffsetA, ref projection.OffsetB, out var jacobians);
+            ComputeJacobians(tangentX, tangentY, projection.OffsetA, projection.OffsetB, out var jacobians);
             ComputeCorrectiveImpulse(ref wsvA, ref wsvB, ref projection, ref jacobians, ref maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
-            ApplyImpulse(ref jacobians, ref inertiaA, ref inertiaB, ref correctiveCSI, ref wsvA, ref wsvB);
+            ApplyImpulse(jacobians, inertiaA, inertiaB, correctiveCSI, ref wsvA, ref wsvB);
 
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WarmStart2(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetToManifoldCenterA, in Vector3Wide offsetToManifoldCenterB, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
+            in Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        {
+            ComputeJacobians(tangentX, tangentY, offsetToManifoldCenterA, offsetToManifoldCenterB, out var jacobians);
+            //TODO: If the previous frame and current frame are associated with different time steps, the previous frame's solution won't be a good solution anymore.
+            //To compensate for this, the accumulated impulse should be scaled if dt changes.
+            ApplyImpulse(jacobians, inertiaA, inertiaB, accumulatedImpulse, ref wsvA, ref wsvB);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Solve2(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetToManifoldCenterA, in Vector3Wide offsetToManifoldCenterB, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB,
+            in Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        {
+            ComputeJacobians(tangentX, tangentY, offsetToManifoldCenterA, offsetToManifoldCenterB, out var jacobians);
+            //TODO: If the previous frame and current frame are associated with different time steps, the previous frame's solution won't be a good solution anymore.
+            //To compensate for this, the accumulated impulse should be scaled if dt changes.
+            ApplyImpulse(jacobians, inertiaA, inertiaB, accumulatedImpulse, ref wsvA, ref wsvB);
+        }
     }
 }

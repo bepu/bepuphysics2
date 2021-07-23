@@ -354,7 +354,10 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact1OneBodyPrestepData prestep, in Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new NotImplementedException();
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
+            TangentFrictionOneBody.WarmStart2(x, z, prestep.Contact0.OffsetA, inertiaA, accumulatedImpulses.Tangent, ref wsvA);
+            PenetrationLimitOneBody.WarmStart2(inertiaA, prestep.Normal, prestep.Contact0.OffsetA, accumulatedImpulses.Penetration0, ref wsvA);
+            TwistFrictionOneBody.WarmStart2(prestep.Normal, inertiaA, accumulatedImpulses.Twist, ref wsvA);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -546,7 +549,12 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact2OneBodyPrestepData prestep, in Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new NotImplementedException();
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
+            FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, out var offsetToManifoldCenterA);
+            TangentFrictionOneBody.WarmStart2(x, z, offsetToManifoldCenterA, inertiaA, accumulatedImpulses.Tangent, ref wsvA);
+            PenetrationLimitOneBody.WarmStart2(inertiaA, prestep.Normal, prestep.Contact0.OffsetA, accumulatedImpulses.Penetration0, ref wsvA);
+            PenetrationLimitOneBody.WarmStart2(inertiaA, prestep.Normal, prestep.Contact1.OffsetA, accumulatedImpulses.Penetration0, ref wsvA);
+            TwistFrictionOneBody.WarmStart2(prestep.Normal, inertiaA, accumulatedImpulses.Twist, ref wsvA);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -752,7 +760,13 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact3OneBodyPrestepData prestep, in Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new NotImplementedException();
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
+            FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, out var offsetToManifoldCenterA);
+            TangentFrictionOneBody.WarmStart2(x, z, offsetToManifoldCenterA, inertiaA, accumulatedImpulses.Tangent, ref wsvA);
+            PenetrationLimitOneBody.WarmStart2(inertiaA, prestep.Normal, prestep.Contact0.OffsetA, accumulatedImpulses.Penetration0, ref wsvA);
+            PenetrationLimitOneBody.WarmStart2(inertiaA, prestep.Normal, prestep.Contact1.OffsetA, accumulatedImpulses.Penetration0, ref wsvA);
+            PenetrationLimitOneBody.WarmStart2(inertiaA, prestep.Normal, prestep.Contact2.OffsetA, accumulatedImpulses.Penetration0, ref wsvA);
+            TwistFrictionOneBody.WarmStart2(prestep.Normal, inertiaA, accumulatedImpulses.Twist, ref wsvA);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -972,7 +986,14 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact4OneBodyPrestepData prestep, in Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new NotImplementedException();
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
+            FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact3.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, prestep.Contact3.Depth, out var offsetToManifoldCenterA);
+            TangentFrictionOneBody.WarmStart2(x, z, offsetToManifoldCenterA, inertiaA, accumulatedImpulses.Tangent, ref wsvA);
+            PenetrationLimitOneBody.WarmStart2(inertiaA, prestep.Normal, prestep.Contact0.OffsetA, accumulatedImpulses.Penetration0, ref wsvA);
+            PenetrationLimitOneBody.WarmStart2(inertiaA, prestep.Normal, prestep.Contact1.OffsetA, accumulatedImpulses.Penetration0, ref wsvA);
+            PenetrationLimitOneBody.WarmStart2(inertiaA, prestep.Normal, prestep.Contact2.OffsetA, accumulatedImpulses.Penetration0, ref wsvA);
+            PenetrationLimitOneBody.WarmStart2(inertiaA, prestep.Normal, prestep.Contact3.OffsetA, accumulatedImpulses.Penetration0, ref wsvA);
+            TwistFrictionOneBody.WarmStart2(prestep.Normal, inertiaA, accumulatedImpulses.Twist, ref wsvA);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1167,7 +1188,11 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Contact1PrestepData prestep, in Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
+            Vector3Wide.Subtract(prestep.Contact0.OffsetA, prestep.OffsetB, out var offsetToManifoldCenterB);
+            TangentFriction.WarmStart2(x, z, prestep.Contact0.OffsetA, offsetToManifoldCenterB, inertiaA, inertiaB, accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+            PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestep.Normal, prestep.Contact0.OffsetA, prestep.Contact0.OffsetA - prestep.OffsetB, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            TwistFriction.WarmStart2(prestep.Normal, inertiaA, inertiaB, accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1376,7 +1401,13 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Contact2PrestepData prestep, in Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
+            FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, out var offsetToManifoldCenterA);
+            Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
+            TangentFriction.WarmStart2(x, z, offsetToManifoldCenterA, offsetToManifoldCenterB, inertiaA, inertiaB, accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+            PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestep.Normal, prestep.Contact0.OffsetA, prestep.Contact0.OffsetA - prestep.OffsetB, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestep.Normal, prestep.Contact1.OffsetA, prestep.Contact1.OffsetA - prestep.OffsetB, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            TwistFriction.WarmStart2(prestep.Normal, inertiaA, inertiaB, accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1600,7 +1631,14 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Contact3PrestepData prestep, in Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
+            FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, out var offsetToManifoldCenterA);
+            Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
+            TangentFriction.WarmStart2(x, z, offsetToManifoldCenterA, offsetToManifoldCenterB, inertiaA, inertiaB, accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+            PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestep.Normal, prestep.Contact0.OffsetA, prestep.Contact0.OffsetA - prestep.OffsetB, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestep.Normal, prestep.Contact1.OffsetA, prestep.Contact1.OffsetA - prestep.OffsetB, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestep.Normal, prestep.Contact2.OffsetA, prestep.Contact2.OffsetA - prestep.OffsetB, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            TwistFriction.WarmStart2(prestep.Normal, inertiaA, inertiaB, accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1839,7 +1877,15 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Contact4PrestepData prestep, in Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
+            FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact3.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, prestep.Contact3.Depth, out var offsetToManifoldCenterA);
+            Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
+            TangentFriction.WarmStart2(x, z, offsetToManifoldCenterA, offsetToManifoldCenterB, inertiaA, inertiaB, accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+            PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestep.Normal, prestep.Contact0.OffsetA, prestep.Contact0.OffsetA - prestep.OffsetB, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestep.Normal, prestep.Contact1.OffsetA, prestep.Contact1.OffsetA - prestep.OffsetB, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestep.Normal, prestep.Contact2.OffsetA, prestep.Contact2.OffsetA - prestep.OffsetB, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestep.Normal, prestep.Contact3.OffsetA, prestep.Contact3.OffsetA - prestep.OffsetB, accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            TwistFriction.WarmStart2(prestep.Normal, inertiaA, inertiaB, accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

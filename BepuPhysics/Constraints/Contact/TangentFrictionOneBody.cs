@@ -25,7 +25,7 @@ namespace BepuPhysics.Constraints.Contact
 
         //Since this is an unshared specialized implementation, the jacobian calculation is kept in here rather than in the batch.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeJacobians(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Vector3Wide offsetA, out Jacobians jacobians)
+        public static void ComputeJacobians(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetA, out Jacobians jacobians)
         {
             //TODO: there would be a minor benefit in eliminating this copy manually, since it's very likely that the compiler won't. And it's probably also introducing more locals init.
             jacobians.LinearA.X = tangentX;
@@ -38,7 +38,7 @@ namespace BepuPhysics.Constraints.Contact
         public static void Prestep(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Vector3Wide offsetA, ref BodyInertiaWide inertiaA,
             out Projection projection)
         {
-            ComputeJacobians(ref tangentX, ref tangentY, ref offsetA, out var jacobians);
+            ComputeJacobians(tangentX, tangentY, offsetA, out var jacobians);
             //Compute effective mass matrix contributions.
             Symmetric2x2Wide.SandwichScale(jacobians.LinearA, inertiaA.InverseMass, out var linearContributionA);
             Symmetric3x3Wide.MatrixSandwich(jacobians.AngularA, inertiaA.InverseInertiaTensor, out var angularContributionA);
@@ -55,8 +55,8 @@ namespace BepuPhysics.Constraints.Contact
         /// Transforms an impulse from constraint space to world space, uses it to modify the cached world space velocities of the bodies.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref Jacobians jacobians, ref BodyInertiaWide inertiaA,
-            ref Vector2Wide correctiveImpulse, ref BodyVelocityWide wsvA)
+        public static void ApplyImpulse(in Jacobians jacobians, in BodyInertiaWide inertiaA,
+            in Vector2Wide correctiveImpulse, ref BodyVelocityWide wsvA)
         {
             Matrix2x3Wide.Transform(correctiveImpulse, jacobians.LinearA, out var linearImpulseA);
             Matrix2x3Wide.Transform(correctiveImpulse, jacobians.AngularA, out var angularImpulseA);
@@ -71,10 +71,10 @@ namespace BepuPhysics.Constraints.Contact
         public static void WarmStart(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Projection projection, ref BodyInertiaWide inertiaA,
             ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
-            ComputeJacobians(ref tangentX, ref tangentY, ref projection.OffsetA, out var jacobians);
+            ComputeJacobians(tangentX, tangentY, projection.OffsetA, out var jacobians);
             //TODO: If the previous frame and current frame are associated with different time steps, the previous frame's solution won't be a good solution anymore.
             //To compensate for this, the accumulated impulse should be scaled if dt changes.
-            ApplyImpulse(ref jacobians, ref inertiaA, ref accumulatedImpulse, ref wsvA);
+            ApplyImpulse(jacobians, inertiaA, accumulatedImpulse, ref wsvA);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -103,11 +103,22 @@ namespace BepuPhysics.Constraints.Contact
         public static void Solve(ref Vector3Wide tangentX, ref Vector3Wide tangentY,
             ref Projection projection, ref BodyInertiaWide inertiaA, ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
-            ComputeJacobians(ref tangentX, ref tangentY, ref projection.OffsetA, out var jacobians);
+            ComputeJacobians(tangentX, tangentY, projection.OffsetA, out var jacobians);
             ComputeCorrectiveImpulse(ref wsvA, ref projection, ref jacobians, ref maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
-            ApplyImpulse(ref jacobians, ref inertiaA, ref correctiveCSI, ref wsvA);
+            ApplyImpulse(jacobians, inertiaA, correctiveCSI, ref wsvA);
 
         }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WarmStart2(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetToManifoldCenterA, in BodyInertiaWide inertiaA, in Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
+        {
+            ComputeJacobians(tangentX, tangentY, offsetToManifoldCenterA, out var jacobians);
+            //TODO: If the previous frame and current frame are associated with different time steps, the previous frame's solution won't be a good solution anymore.
+            //To compensate for this, the accumulated impulse should be scaled if dt changes.
+            ApplyImpulse(jacobians, inertiaA, accumulatedImpulse, ref wsvA);
+        }
+
 
     }
 }

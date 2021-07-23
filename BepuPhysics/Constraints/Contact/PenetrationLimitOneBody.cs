@@ -101,5 +101,25 @@ namespace BepuPhysics.Constraints.Contact
             penetrationDepth -= estimatedDepthChange * dt;
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyImpulse(in BodyInertiaWide inertiaA, in Vector3Wide normal, in Vector3Wide angularA, in Vector<float> correctiveImpulse, ref BodyVelocityWide wsvA)
+        {
+            var linearVelocityChangeA = correctiveImpulse * inertiaA.InverseMass;
+            Vector3Wide.Scale(normal, linearVelocityChangeA, out var correctiveVelocityALinearVelocity);
+            Vector3Wide.Scale(angularA, correctiveImpulse, out var correctiveAngularImpulseA);
+            Symmetric3x3Wide.TransformWithoutOverlap(correctiveAngularImpulseA, inertiaA.InverseInertiaTensor, out var correctiveVelocityAAngularVelocity);
+
+            Vector3Wide.Add(wsvA.Linear, correctiveVelocityALinearVelocity, out wsvA.Linear);
+            Vector3Wide.Add(wsvA.Angular, correctiveVelocityAAngularVelocity, out wsvA.Angular);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WarmStart2(in BodyInertiaWide inertiaA, in Vector3Wide normal, in Vector3Wide contactOffsetA, in Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA)
+        {
+            Vector3Wide.CrossWithoutOverlap(contactOffsetA, normal, out var angularA);
+            ApplyImpulse(inertiaA, normal, angularA, accumulatedImpulse, ref wsvA);
+        }
+
     }
 }

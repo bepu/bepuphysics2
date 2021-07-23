@@ -44,8 +44,8 @@ namespace BepuPhysics.Constraints.Contact
         /// Transforms an impulse from constraint space to world space, uses it to modify the cached world space velocities of the bodies.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref Vector3Wide angularJacobianA, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB,
-            ref Vector<float> correctiveImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void ApplyImpulse(in Vector3Wide angularJacobianA, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
+            in Vector<float> correctiveImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Vector3Wide.Scale(angularJacobianA, correctiveImpulse, out var worldCorrectiveImpulseA);
             Symmetric3x3Wide.TransformWithoutOverlap(worldCorrectiveImpulseA, inertiaA.InverseInertiaTensor, out var worldCorrectiveVelocityA);
@@ -58,7 +58,7 @@ namespace BepuPhysics.Constraints.Contact
         public static void WarmStart(ref Vector3Wide angularJacobianA, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB,
             ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            ApplyImpulse(ref angularJacobianA, ref inertiaA, ref inertiaB, ref accumulatedImpulse, ref wsvA, ref wsvB);
+            ApplyImpulse(angularJacobianA, inertiaA, inertiaB, accumulatedImpulse, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -82,8 +82,15 @@ namespace BepuPhysics.Constraints.Contact
             ref Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeCorrectiveImpulse(ref angularJacobianA, ref projection, ref wsvA, ref wsvB, ref maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
-            ApplyImpulse(ref angularJacobianA, ref inertiaA, ref inertiaB, ref correctiveCSI, ref wsvA, ref wsvB);
+            ApplyImpulse(angularJacobianA, inertiaA, inertiaB, correctiveCSI, ref wsvA, ref wsvB);
 
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WarmStart2(in Vector3Wide angularJacobianA, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
+            in Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        {
+            ApplyImpulse(angularJacobianA, inertiaA, inertiaB, accumulatedImpulse, ref wsvA, ref wsvB);
         }
 
     }

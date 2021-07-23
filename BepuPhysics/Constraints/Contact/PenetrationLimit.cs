@@ -150,5 +150,36 @@ namespace BepuPhysics.Constraints.Contact
             Vector3Wide.Dot(normal, contactVelocityDifference, out var estimatedDepthChangeVelocity);
             penetrationDepth -= estimatedDepthChangeVelocity * dt;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyImpulse(in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB, in Vector3Wide normal, in Vector3Wide angularA, in Vector3Wide angularB,
+            in Vector<float> correctiveImpulse,
+            ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        {
+            var linearVelocityChangeA = correctiveImpulse * inertiaA.InverseMass;
+            Vector3Wide.Scale(normal, linearVelocityChangeA, out var correctiveVelocityALinearVelocity);
+            Vector3Wide.Scale(angularA, correctiveImpulse, out var correctiveAngularImpulseA);
+            Symmetric3x3Wide.TransformWithoutOverlap(correctiveAngularImpulseA, inertiaA.InverseInertiaTensor, out var correctiveVelocityAAngularVelocity);
+
+            var linearVelocityChangeB = correctiveImpulse * inertiaB.InverseMass;
+            Vector3Wide.Scale(normal, linearVelocityChangeB, out var correctiveVelocityBLinearVelocity);
+            Vector3Wide.Scale(angularB, correctiveImpulse, out var correctiveAngularImpulseB);
+            Symmetric3x3Wide.TransformWithoutOverlap(correctiveAngularImpulseB, inertiaB.InverseInertiaTensor, out var correctiveVelocityBAngularVelocity);
+
+            Vector3Wide.Add(wsvA.Linear, correctiveVelocityALinearVelocity, out wsvA.Linear);
+            Vector3Wide.Add(wsvA.Angular, correctiveVelocityAAngularVelocity, out wsvA.Angular);
+            Vector3Wide.Subtract(wsvB.Linear, correctiveVelocityBLinearVelocity, out wsvB.Linear); //Note subtract; normal = -jacobianLinearB
+            Vector3Wide.Add(wsvB.Angular, correctiveVelocityBAngularVelocity, out wsvB.Angular);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WarmStart2(
+            in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB, in Vector3Wide normal, in Vector3Wide contactOffsetA, in Vector3Wide contactOffsetB,
+            in Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        {
+            Vector3Wide.CrossWithoutOverlap(contactOffsetA, normal, out var angularA);
+            Vector3Wide.CrossWithoutOverlap(normal, contactOffsetB, out var angularB);
+            ApplyImpulse(inertiaA, inertiaB, normal, angularA, angularB, accumulatedImpulse, ref wsvA, ref wsvB);
+        }
     }
 }
