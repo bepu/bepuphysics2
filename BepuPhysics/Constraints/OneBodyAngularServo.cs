@@ -134,14 +134,39 @@ namespace BepuPhysics.Constraints
                 projection.MaximumImpulse, projection.ImpulseToVelocity, ref accumulatedImpulse);
         }
 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in OneBodyAngularServoPrestepData prestep, in Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyImpulse(in Symmetric3x3Wide inverseInertia, in Vector3Wide csi, ref Vector3Wide angularVelocity)
         {
-            throw new NotImplementedException();
+            Symmetric3x3Wide.TransformWithoutOverlap(csi, inverseInertia, out var velocityChange);
+            Vector3Wide.Add(angularVelocity, velocityChange, out angularVelocity);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in OneBodyAngularServoPrestepData prestep, in Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        {
+            ApplyImpulse(inertiaA.InverseInertiaTensor, accumulatedImpulses, ref wsvA.Angular);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in OneBodyAngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new NotImplementedException();
+            //Jacobians are just the identity matrix.
+            QuaternionWide.Conjugate(orientationA, out var inverseOrientation);
+            QuaternionWide.ConcatenateWithoutOverlap(inverseOrientation, prestep.TargetOrientation, out var errorRotation);
+            QuaternionWide.GetApproximateAxisAngleFromQuaternion(errorRotation, out var errorAxis, out var errorLength);
+
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+            Symmetric3x3Wide.Invert(inertiaA.InverseInertiaTensor, out var effectiveMass);
+
+            ServoSettingsWide.ComputeClampedBiasVelocity(errorAxis, errorLength, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out var clampedBiasVelocity, out var maximumImpulse);
+
+            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - csiaAngular;
+            var csv = clampedBiasVelocity - wsvA.Angular;
+            Symmetric3x3Wide.TransformWithoutOverlap(csv, effectiveMass, out var csi);
+            csi = csi * effectiveMassCFMScale - accumulatedImpulses * softnessImpulseScale;
+
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
+            ApplyImpulse(inertiaA.InverseInertiaTensor, csi, ref wsvA.Angular);
         }
     }
 

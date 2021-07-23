@@ -168,14 +168,52 @@ namespace BepuPhysics.Constraints
             SharedSolve(ref velocityA, projection, ref accumulatedImpulse);
         }
 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in OneBodyLinearServoPrestepData prestep, in Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyImpulse(in Vector3Wide offset, in BodyInertiaWide inertia, ref BodyVelocityWide velocityA, in Vector3Wide csi)
         {
-            throw new NotImplementedException();
+            Vector3Wide.CrossWithoutOverlap(offset, csi, out var wsi);
+            Symmetric3x3Wide.TransformWithoutOverlap(wsi, inertia.InverseInertiaTensor, out var change);
+            Vector3Wide.Add(velocityA.Angular, change, out velocityA.Angular);
+
+            Vector3Wide.Scale(csi, inertia.InverseMass, out change);
+            Vector3Wide.Add(velocityA.Linear, change, out velocityA.Linear);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in OneBodyLinearServoPrestepData prestep, in Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        {
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
+            ApplyImpulse(offset, inertiaA, ref wsvA, accumulatedImpulses);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in OneBodyLinearServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new NotImplementedException();
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+
+            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
+            Vector3Wide.Add(offset, positionA, out var worldGrabPoint);
+            Vector3Wide.Subtract(prestep.Target, worldGrabPoint, out var error);
+            ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out var biasVelocity, out var maximumImpulse);
+
+            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular);
+            var csv = biasVelocity - Vector3Wide.Cross(wsvA.Angular, offset) - wsvA.Linear;
+
+            //The grabber is roughly equivalent to a ball socket joint with a nonzero goal (and only one body).
+            Symmetric3x3Wide.SkewSandwichWithoutOverlap(offset, inertiaA.InverseInertiaTensor, out var inverseEffectiveMass);
+
+            //Linear contributions are simply I * inverseMass * I, which is just boosting the diagonal.
+            inverseEffectiveMass.XX += inertiaA.InverseMass;
+            inverseEffectiveMass.YY += inertiaA.InverseMass;
+            inverseEffectiveMass.ZZ += inertiaA.InverseMass;
+            Symmetric3x3Wide.Invert(inverseEffectiveMass, out var effectiveMass);
+            Symmetric3x3Wide.TransformWithoutOverlap(csv, effectiveMass, out var csi);
+            csi = csi * effectiveMassCFMScale - accumulatedImpulses * softnessImpulseScale;
+
+            //The motor has a limited maximum force, so clamp the accumulated impulse. Watch out for division by zero.
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
+            ApplyImpulse(offset, inertiaA, ref wsvA, accumulatedImpulses);
         }
     }
 
