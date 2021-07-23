@@ -727,74 +727,103 @@ namespace BepuPhysics
         {
             if (Avx.IsSupported && Vector<float>.Count == 8)
             {
+                //TODO: High precision poses means we'll end up with 64 bits of the second lane containing either orientation components or a position component.
+                //That'll require a revamp of this approach to mask out any writes to the pose components, but it'll all be compile time conditional.
                 Unsafe.SkipInit(out TAccessFilter filter);
-                //for (int i = 0; i < 8; ++i)
-                //{
-                //    Get(ref sourceVelocities.Linear.X, i) = i + 100;
-                //    Get(ref sourceVelocities.Linear.Y, i) = i + 200;
-                //    Get(ref sourceVelocities.Linear.Z, i) = i + 300;
-                //    Get(ref sourceVelocities.Angular.X, i) = i + 500;
-                //    Get(ref sourceVelocities.Angular.Y, i) = i + 600;
-                //    Get(ref sourceVelocities.Angular.Z, i) = i + 700;
-                //}
 
-                //Just like the gather but... transposed, we transpose from the wide representation into per-body velocities.
-                //The motion state struct puts the velocities into the second 32 byte chunk, so we can do a single write per body.
-                Vector256<float> m0, m1, m2, m4, m5, m6;
-                if (filter.AccessLinearVelocity)
+                if (filter.AccessLinearVelocity ^ filter.AccessAngularVelocity)
                 {
+                    //for (int i = 0; i < 8; ++i)
+                    //{
+                    //    Get(ref sourceVelocities.Linear.X, i) = i + 100;
+                    //    Get(ref sourceVelocities.Linear.Y, i) = i + 200;
+                    //    Get(ref sourceVelocities.Linear.Z, i) = i + 300;
+                    //    Get(ref sourceVelocities.Angular.X, i) = i + 500;
+                    //    Get(ref sourceVelocities.Angular.Y, i) = i + 600;
+                    //    Get(ref sourceVelocities.Angular.Z, i) = i + 700;
+                    //}
+                    //We can't write the entire lane if we only want linear or angular velocity; that would overwrite existing values with invalid data.
+                    Vector256<float> m0, m1, m2;
+                    int targetOffset;
+                    if (filter.AccessLinearVelocity)
+                    {
+                        targetOffset = 8;
+                        m0 = sourceVelocities.Linear.X.AsVector256();
+                        m1 = sourceVelocities.Linear.Y.AsVector256();
+                        m2 = sourceVelocities.Linear.Z.AsVector256();
+                    }
+                    else
+                    {
+                        targetOffset = 12;
+                        m0 = sourceVelocities.Angular.X.AsVector256();
+                        m1 = sourceVelocities.Angular.Y.AsVector256();
+                        m2 = sourceVelocities.Angular.Z.AsVector256();
+                    }
+                    //We're being a bit lazy here- you could reduce the instructions a bit more given the two empty source lanes.
+                    var n0 = Avx.UnpackLow(m0, m1);
+                    var n1 = Avx.UnpackLow(m2, m2);
+                    var n4 = Avx.UnpackHigh(m0, m1);
+                    var n5 = Avx.UnpackHigh(m2, m2);
+
+                    var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+
+                    var indices = (int*)Unsafe.AsPointer(ref references);
+                    var states = ActiveSet.SolverStates.Memory;
+                    Sse.StoreAligned((float*)(states + indices[0]) + targetOffset, o0.GetLower());
+                    if (count > 1) Sse.StoreAligned((float*)(states + indices[1]) + targetOffset, o4.GetLower());
+                    if (count > 2) Sse.StoreAligned((float*)(states + indices[2]) + targetOffset, o2.GetLower());
+                    if (count > 3) Sse.StoreAligned((float*)(states + indices[3]) + targetOffset, o6.GetLower());
+                    if (count > 4) Sse.StoreAligned((float*)(states + indices[4]) + targetOffset, o0.GetUpper());
+                    if (count > 5) Sse.StoreAligned((float*)(states + indices[5]) + targetOffset, o4.GetUpper());
+                    if (count > 6) Sse.StoreAligned((float*)(states + indices[6]) + targetOffset, o2.GetUpper());
+                    if (count > 7) Sse.StoreAligned((float*)(states + indices[7]) + targetOffset, o6.GetUpper());
+
+                }
+                else
+                {
+                    //Just like the gather but... transposed, we transpose from the wide representation into per-body velocities.
+                    //The motion state struct puts the velocities into the second 32 byte chunk, so we can do a single write per body.
+                    Vector256<float> m0, m1, m2, m4, m5, m6;
                     m0 = sourceVelocities.Linear.X.AsVector256();
                     m1 = sourceVelocities.Linear.Y.AsVector256();
                     m2 = sourceVelocities.Linear.Z.AsVector256();
-                }
-                else
-                {
-                    m0 = Vector256<float>.Zero;
-                    m1 = Vector256<float>.Zero;
-                    m2 = Vector256<float>.Zero;
-                }
-                if (filter.AccessAngularVelocity)
-                {
                     m4 = sourceVelocities.Angular.X.AsVector256();
                     m5 = sourceVelocities.Angular.Y.AsVector256();
                     m6 = sourceVelocities.Angular.Z.AsVector256();
+
+                    //We're being a bit lazy here- you could reduce the instructions a bit more given the two empty source lanes.
+                    var n0 = Avx.UnpackLow(m0, m1);
+                    var n1 = Avx.UnpackLow(m2, m2);
+                    var n2 = Avx.UnpackLow(m4, m5);
+                    var n3 = Avx.UnpackLow(m6, m6);
+                    var n4 = Avx.UnpackHigh(m0, m1);
+                    var n5 = Avx.UnpackHigh(m2, m2);
+                    var n6 = Avx.UnpackHigh(m4, m5);
+                    var n7 = Avx.UnpackHigh(m6, m6);
+
+                    var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o3 = Avx.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o5 = Avx.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+
+                    var indices = (int*)Unsafe.AsPointer(ref references);
+                    var states = ActiveSet.SolverStates.Memory;
+                    Avx.StoreAligned((float*)(states + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                    if (count > 1) Avx.StoreAligned((float*)(states + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                    if (count > 2) Avx.StoreAligned((float*)(states + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                    if (count > 3) Avx.StoreAligned((float*)(states + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                    if (count > 4) Avx.StoreAligned((float*)(states + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                    if (count > 5) Avx.StoreAligned((float*)(states + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                    if (count > 6) Avx.StoreAligned((float*)(states + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                    if (count > 7) Avx.StoreAligned((float*)(states + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
                 }
-                else
-                {
-                    m4 = Vector256<float>.Zero;
-                    m5 = Vector256<float>.Zero;
-                    m6 = Vector256<float>.Zero;
-                }
-
-                //We're being a bit lazy here- you could reduce the instructions a bit more given the two empty source lanes.
-                var n0 = Avx.UnpackLow(m0, m1);
-                var n1 = Avx.UnpackLow(m2, m2);
-                var n2 = Avx.UnpackLow(m4, m5);
-                var n3 = Avx.UnpackLow(m6, m6);
-                var n4 = Avx.UnpackHigh(m0, m1);
-                var n5 = Avx.UnpackHigh(m2, m2);
-                var n6 = Avx.UnpackHigh(m4, m5);
-                var n7 = Avx.UnpackHigh(m6, m6);
-
-                var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                var o3 = Avx.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
-                var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-                var o5 = Avx.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-                var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-                var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
-
-                var indices = (int*)Unsafe.AsPointer(ref references);
-                var states = ActiveSet.SolverStates.Memory;
-                Avx.StoreAligned((float*)(states + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
-                if (count > 1) Avx.StoreAligned((float*)(states + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
-                if (count > 2) Avx.StoreAligned((float*)(states + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
-                if (count > 3) Avx.StoreAligned((float*)(states + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
-                if (count > 4) Avx.StoreAligned((float*)(states + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
-                if (count > 5) Avx.StoreAligned((float*)(states + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
-                if (count > 6) Avx.StoreAligned((float*)(states + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
-                if (count > 7) Avx.StoreAligned((float*)(states + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
             }
             else
             {
