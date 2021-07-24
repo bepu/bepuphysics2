@@ -265,8 +265,6 @@ namespace BepuPhysics.Constraints
         {
             Transform(prestep.LocalOffset, orientationA, out var offset);
             ApplyImpulse(inertiaA, inertiaB, offset, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
-            //var offset = prestep.LocalOffset * orientationA;
-            //ApplyImpulse(inertiaA, inertiaB, prestep.LocalOffset * orientationA, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
@@ -286,7 +284,6 @@ namespace BepuPhysics.Constraints
             //where I is the 3x3 identity matrix.
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            //var offset = prestep.LocalOffset * orientationA;
             Transform(prestep.LocalOffset, orientationA, out var offset);
 
             //Effective mass = (J * M^-1 * JT)^-1, which is going to be a little tricky because J * M^-1 * JT is a 6x6 matrix:

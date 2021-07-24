@@ -49,12 +49,12 @@ namespace BepuPhysics.Constraints
             out Vector<float> clampedBiasVelocity, out Vector<float> maximumImpulse)
         {
             //Can't request speed that would cause an overshoot.
-            var baseSpeed = Vector.Min(servoSettings.BaseSpeed, Vector.Abs(error) * inverseDt);
+            var baseSpeed = Vector.Min(servoSettings.BaseSpeed, Vector.Abs(error) * new Vector<float>(inverseDt));
             var biasVelocity = error * positionErrorToVelocity;
             clampedBiasVelocity = Vector.ConditionalSelect(Vector.LessThan(biasVelocity, Vector<float>.Zero),
                 Vector.Max(-servoSettings.MaximumSpeed, Vector.Min(-baseSpeed, biasVelocity)),
                 Vector.Min(servoSettings.MaximumSpeed, Vector.Max(baseSpeed, biasVelocity)));
-            maximumImpulse = servoSettings.MaximumForce * dt;
+            maximumImpulse = servoSettings.MaximumForce * new Vector<float>(dt);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -62,7 +62,7 @@ namespace BepuPhysics.Constraints
             float dt, float inverseDt, out Vector2Wide clampedBiasVelocity, out Vector<float> maximumImpulse)
         {
             //Can't request speed that would cause an overshoot.
-            var baseSpeed = Vector.Min(servoSettings.BaseSpeed, errorLength * inverseDt);
+            var baseSpeed = Vector.Min(servoSettings.BaseSpeed, errorLength * new Vector<float>(inverseDt));
             var unclampedBiasSpeed = errorLength * positionErrorToBiasVelocity;
             var targetSpeed = Vector.Max(baseSpeed, unclampedBiasSpeed);
             var scale = Vector.Min(Vector<float>.One, servoSettings.MaximumSpeed / targetSpeed);
@@ -70,7 +70,7 @@ namespace BepuPhysics.Constraints
             var useFallback = Vector.LessThan(targetSpeed, new Vector<float>(1e-10f));
             scale = Vector.ConditionalSelect(useFallback, Vector<float>.One, scale);
             Vector2Wide.Scale(errorAxis, scale * unclampedBiasSpeed, out clampedBiasVelocity);
-            maximumImpulse = servoSettings.MaximumForce * dt;
+            maximumImpulse = servoSettings.MaximumForce * new Vector<float>(dt);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -90,7 +90,7 @@ namespace BepuPhysics.Constraints
             float dt, float inverseDt, out Vector3Wide clampedBiasVelocity, out Vector<float> maximumImpulse)
         {
             //Can't request speed that would cause an overshoot.
-            var baseSpeed = Vector.Min(servoSettings.BaseSpeed, errorLength * inverseDt);
+            var baseSpeed = Vector.Min(servoSettings.BaseSpeed, errorLength * new Vector<float>(inverseDt));
             var unclampedBiasSpeed = errorLength * positionErrorToBiasVelocity;
             var targetSpeed = Vector.Max(baseSpeed, unclampedBiasSpeed);
             var scale = Vector.Min(Vector<float>.One, servoSettings.MaximumSpeed / targetSpeed);
@@ -98,7 +98,7 @@ namespace BepuPhysics.Constraints
             var useFallback = Vector.LessThan(targetSpeed, new Vector<float>(1e-10f));
             scale = Vector.ConditionalSelect(useFallback, Vector<float>.One, scale);
             Vector3Wide.Scale(errorAxis, scale * unclampedBiasSpeed, out clampedBiasVelocity);
-            maximumImpulse = servoSettings.MaximumForce * dt;
+            maximumImpulse = servoSettings.MaximumForce * new Vector<float>(dt);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

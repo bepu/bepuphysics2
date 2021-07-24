@@ -213,7 +213,7 @@ namespace BepuPhysics.Constraints
 
             //The motor has a limited maximum force, so clamp the accumulated impulse. Watch out for division by zero.
             ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
-            ApplyImpulse(offset, inertiaA, ref wsvA, accumulatedImpulses);
+            ApplyImpulse(offset, inertiaA, ref wsvA, csi);
         }
     }
 
