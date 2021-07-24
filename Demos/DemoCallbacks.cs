@@ -67,7 +67,9 @@ namespace Demos
             //Since these callbacks don't use per-body damping values, we can precalculate everything.
             linearDampingDt = MathF.Pow(MathHelper.Clamp(1 - LinearDamping, 0, 1), dt);
             angularDampingDt = MathF.Pow(MathHelper.Clamp(1 - AngularDamping, 0, 1), dt);
+            gravityWide = Vector3Wide.Broadcast(Gravity);
         }
+        Vector3Wide gravityWide;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IntegrateVelocity(int bodyIndex, in RigidPose pose, in BodyInertia localInertia, int workerIndex, ref BodyVelocity velocity)
         {
@@ -93,6 +95,7 @@ namespace Demos
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IntegrateVelocity(ReadOnlySpan<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
         {
+            velocity.Linear += gravityWide * dt;
         }
     }
     public unsafe struct DemoNarrowPhaseCallbacks : INarrowPhaseCallbacks

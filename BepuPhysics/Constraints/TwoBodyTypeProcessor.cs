@@ -456,7 +456,7 @@ namespace BepuPhysics.Constraints
     }
 
     public abstract class TwoBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
-        : TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
+        : TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions, AccessNoPoses, AccessNoPoses, AccessNoPoses, AccessNoPoses>
         where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
         where TConstraintFunctions : unmanaged, IContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {

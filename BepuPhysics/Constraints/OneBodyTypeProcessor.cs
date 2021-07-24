@@ -338,7 +338,7 @@ namespace BepuPhysics.Constraints
     }
 
     public abstract class OneBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
-        : OneBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions, AccessAll, AccessAll>
+        : OneBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions, AccessNoPoses, AccessNoPoses>
         where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
         where TConstraintFunctions : unmanaged, IOneBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
