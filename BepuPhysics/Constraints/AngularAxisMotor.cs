@@ -157,6 +157,11 @@ namespace BepuPhysics.Constraints
             ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
             ApplyImpulse(jA, accumulatedImpulses, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, ref wsvA.Angular, ref wsvB.Angular);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateForNewPose(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, in Vector<float> accumulatedImpulses, ref AngularAxisMotorPrestepData prestep)
+        {
+        }
     }
 
     public class AngularAxisMotorTypeProcessor : TwoBodyTypeProcessor<AngularAxisMotorPrestepData, AngularAxisMotorProjection, Vector<float>, AngularAxisMotorFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>

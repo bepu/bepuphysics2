@@ -101,6 +101,11 @@ namespace BepuPhysics.Constraints
         {
             throw new NotImplementedException();
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateForNewPose(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, in Vector3Wide accumulatedImpulses, ref OneBodyLinearMotorPrestepData prestep)
+        {
+        }
     }
 
     public class OneBodyLinearMotorTypeProcessor : OneBodyTypeProcessor<OneBodyLinearMotorPrestepData, OneBodyLinearServoProjection, Vector3Wide, OneBodyLinearMotorFunctions, AccessAll, AccessAll>

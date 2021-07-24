@@ -168,6 +168,11 @@ namespace BepuPhysics.Constraints
             ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
             ApplyImpulse(inertiaA.InverseInertiaTensor, csi, ref wsvA.Angular);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateForNewPose(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, in Vector3Wide accumulatedImpulses, ref OneBodyAngularServoPrestepData prestep)
+        {
+        }
     }
 
     public class OneBodyAngularServoTypeProcessor : OneBodyTypeProcessor<OneBodyAngularServoPrestepData, OneBodyAngularServoProjection, Vector3Wide, OneBodyAngularServoFunctions, AccessOnlyAngular, AccessOnlyAngular>

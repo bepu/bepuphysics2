@@ -37,6 +37,11 @@ namespace BepuPhysics.Constraints
             in TPrestepData prestep, in TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB);
         void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
             in TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB);
+
+        void UpdateForNewPose(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
+            in TAccumulatedImpulse accumulatedImpulses, ref TPrestepData prestep);
     }
 
     /// <summary>
@@ -384,6 +389,9 @@ namespace BepuPhysics.Constraints
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterB, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 1, dt, workerIndex, i, ref references.IndexB, count,
                     out var positionB, out var orientationB, out var wsvB, out var inertiaB);
+
+                if (typeof(TAllowPoseIntegration) == typeof(AllowPoseIntegration))
+                    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, positionB, orientationB, inertiaB, wsvB, accumulatedImpulses, ref prestep);
 
                 function.WarmStart2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, prestep, accumulatedImpulses, ref wsvA, ref wsvB);
 

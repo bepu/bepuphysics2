@@ -224,6 +224,11 @@ namespace BepuPhysics.Constraints
         {
             throw new NotImplementedException();
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateForNewPose(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, in Vector<float> accumulatedImpulses, ref TwistServoPrestepData prestep)
+        {
+        }
     }
 
     public class TwistServoTypeProcessor : TwoBodyTypeProcessor<TwistServoPrestepData, TwistServoProjection, Vector<float>, TwistServoFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>

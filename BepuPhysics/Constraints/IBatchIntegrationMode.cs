@@ -44,14 +44,16 @@
 
     /// <summary>
     /// Marks a batch as integrating poses for any bodies with integration responsibility within the constraint batch.
+    /// Constraints which need to be updated in response to pose integration will also have their UpdateForNewPose function called.
     /// </summary>
-    public struct BatchShouldIntegratePoses : IBatchPoseIntegrationAllowed
+    public struct AllowPoseIntegration : IBatchPoseIntegrationAllowed
     {
     }
+
     /// <summary>
     /// Marks a batch as not integrating poses for any bodies within the constraint batch.
     /// </summary>
-    public struct BatchShouldNotIntegratePoses : IBatchPoseIntegrationAllowed
+    public struct DisallowPoseIntegration : IBatchPoseIntegrationAllowed
     {
     }
 

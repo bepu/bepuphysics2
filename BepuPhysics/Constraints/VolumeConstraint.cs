@@ -215,6 +215,16 @@ namespace BepuPhysics.Constraints
         {
             throw new NotImplementedException();
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateForNewPose(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
+            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in BodyVelocityWide wsvC,
+            in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, in BodyVelocityWide wsvD,
+            in Vector<float> accumulatedImpulses, ref VolumeConstraintPrestepData prestep)
+        {
+        }
     }
 
 

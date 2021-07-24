@@ -877,7 +877,7 @@ namespace BepuPhysics.Constraints
             where TShouldIntegratePoses : unmanaged, IBatchPoseIntegrationAllowed
         {
             //These type tests are compile time constants and will be specialized.
-            if (typeof(TShouldIntegratePoses) == typeof(BatchShouldIntegratePoses))
+            if (typeof(TShouldIntegratePoses) == typeof(AllowPoseIntegration))
             {
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                 {
@@ -919,7 +919,7 @@ namespace BepuPhysics.Constraints
             }
             else
             {
-                Debug.Assert(typeof(TShouldIntegratePoses) == typeof(BatchShouldNotIntegratePoses));
+                Debug.Assert(typeof(TShouldIntegratePoses) == typeof(DisallowPoseIntegration));
                 //There is no need to integrate poses; this is the first substep. 
                 //Note that the full loop for constrained bodies with 3 substeps looks like:
                 //(velocity -> solve) -> (pose -> velocity -> solve) -> (pose -> velocity -> solve) -> pose

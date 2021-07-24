@@ -220,6 +220,11 @@ namespace BepuPhysics.Constraints
         {
             throw new NotImplementedException();
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateForNewPose(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, in Vector4Wide accumulatedImpulses, ref SwivelHingePrestepData prestep)
+        {
+        }
     }
 
     public class SwivelHingeTypeProcessor : TwoBodyTypeProcessor<SwivelHingePrestepData, SwivelHingeProjection, Vector4Wide, SwivelHingeFunctions, AccessAll, AccessAll, AccessAll, AccessAll>

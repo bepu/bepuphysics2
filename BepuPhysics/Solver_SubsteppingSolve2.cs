@@ -94,11 +94,11 @@ namespace BepuPhysics
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
                 if (SubstepIndex == 0)
                 {
-                    this.solver.WarmStartBlock<BatchShouldNotIntegratePoses>(workerIndex, block.BatchIndex, block.TypeBatchIndex, block.StartBundle, block.End, ref typeBatch, typeProcessor, Dt, InverseDt);
+                    this.solver.WarmStartBlock<DisallowPoseIntegration>(workerIndex, block.BatchIndex, block.TypeBatchIndex, block.StartBundle, block.End, ref typeBatch, typeProcessor, Dt, InverseDt);
                 }
                 else
                 {
-                    this.solver.WarmStartBlock<BatchShouldIntegratePoses>(workerIndex, block.BatchIndex, block.TypeBatchIndex, block.StartBundle, block.End, ref typeBatch, typeProcessor, Dt, InverseDt);
+                    this.solver.WarmStartBlock<AllowPoseIntegration>(workerIndex, block.BatchIndex, block.TypeBatchIndex, block.StartBundle, block.End, ref typeBatch, typeProcessor, Dt, InverseDt);
                 }
 
             }
@@ -565,11 +565,11 @@ namespace BepuPhysics
                             ref var typeBatch = ref batch.TypeBatches[j];
                             if (substepIndex == 0)
                             {
-                                WarmStartBlock<BatchShouldNotIntegratePoses>(0, i, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepDt, inverseDt);
+                                WarmStartBlock<DisallowPoseIntegration>(0, i, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepDt, inverseDt);
                             }
                             else
                             {
-                                WarmStartBlock<BatchShouldIntegratePoses>(0, i, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepDt, inverseDt);
+                                WarmStartBlock<AllowPoseIntegration>(0, i, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepDt, inverseDt);
                             }
                         }
                     }

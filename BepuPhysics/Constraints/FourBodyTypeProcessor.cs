@@ -36,17 +36,24 @@ namespace BepuPhysics.Constraints
         void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
         void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
         void WarmStart2(
-        in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
-        in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-        in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
-        in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD,
-        in TPrestepData prestep, in TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD);
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
+            in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD,
+            in TPrestepData prestep, in TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD);
         void Solve2(
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
             in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, float dt, float inverseDt,
             in TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD);
+
+        void UpdateForNewPose(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
+            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in BodyVelocityWide wsvC,
+            in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, in BodyVelocityWide wsvD,
+            in TAccumulatedImpulse accumulatedImpulses, ref TPrestepData prestep);
     }
 
     /// <summary>
@@ -371,6 +378,9 @@ namespace BepuPhysics.Constraints
                     out var positionC, out var orientationC, out var wsvC, out var inertiaC);
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterD, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 3, dt, workerIndex, i, ref references.IndexD, count,
                     out var positionD, out var orientationD, out var wsvD, out var inertiaD);
+
+                if (typeof(TAllowPoseIntegration) == typeof(AllowPoseIntegration))
+                    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, positionB, orientationB, inertiaB, wsvB, positionC, orientationC, inertiaC, wsvC, positionD, orientationD, inertiaD, wsvD, accumulatedImpulses, ref prestep);
 
                 function.WarmStart2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, positionD, orientationD, inertiaD, prestep, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
 

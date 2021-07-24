@@ -24,6 +24,10 @@ namespace BepuPhysics.Constraints
             in TPrestepData prestep, in TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA);
         void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt,
             in TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA);
+
+        void UpdateForNewPose(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
+            in TAccumulatedImpulse accumulatedImpulses, ref TPrestepData prestep);
     }
 
     /// <summary>
@@ -273,7 +277,10 @@ namespace BepuPhysics.Constraints
                 var count = GetCountInBundle(ref typeBatch, i);
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterA, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references, count,
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
-;
+
+                if (typeof(TAllowPoseIntegration) == typeof(AllowPoseIntegration))
+                    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, accumulatedImpulses, ref prestep);
+                ;
                 function.WarmStart2(positionA, orientationA, inertiaA, prestep, accumulatedImpulses, ref wsvA);
 
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
