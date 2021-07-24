@@ -27,7 +27,7 @@ namespace BepuPhysics.Constraints
 
         void UpdateForNewPose(
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
-            in TAccumulatedImpulse accumulatedImpulses, ref TPrestepData prestep);
+            in Vector<float> dt, in TAccumulatedImpulse accumulatedImpulses, ref TPrestepData prestep);
     }
 
     /// <summary>
@@ -279,7 +279,7 @@ namespace BepuPhysics.Constraints
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
 
                 if (typeof(TAllowPoseIntegration) == typeof(AllowPoseIntegration))
-                    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, accumulatedImpulses, ref prestep);
+                    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, new Vector<float>(dt), accumulatedImpulses, ref prestep);
                 ;
                 function.WarmStart2(positionA, orientationA, inertiaA, prestep, accumulatedImpulses, ref wsvA);
 

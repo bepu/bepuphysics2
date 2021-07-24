@@ -217,7 +217,9 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, in Vector3Wide accumulatedImpulses, ref OneBodyLinearServoPrestepData prestep)
+        public void UpdateForNewPose(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
+            in Vector<float> dt, in Vector3Wide accumulatedImpulses, ref OneBodyLinearServoPrestepData prestep)
         {
         }
     }

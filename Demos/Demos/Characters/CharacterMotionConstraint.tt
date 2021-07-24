@@ -397,10 +397,20 @@ namespace Demos.Demos.Characters
         {
             throw new NotImplementedException();
         }
-
+        
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(dynamic) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>float dt, float inverseDt, in <#=prefix#>CharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA<#if(dynamic) {#>, ref BodyVelocityWide wsvB<#}#>)
         {
             throw new NotImplementedException();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateForNewPose(
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
+<#if(dynamic){#>
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
+<#}#>
+            in Vector<float> dt, in CharacterMotionAccumulatedImpulse accumulatedImpulses, ref <#=prefix#>CharacterMotionPrestep prestep)
+        {
         }
     }
 

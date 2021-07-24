@@ -53,7 +53,7 @@ namespace BepuPhysics.Constraints
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
             in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in BodyVelocityWide wsvC,
             in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, in BodyVelocityWide wsvD,
-            in TAccumulatedImpulse accumulatedImpulses, ref TPrestepData prestep);
+            in Vector<float> dt, in TAccumulatedImpulse accumulatedImpulses, ref TPrestepData prestep);
     }
 
     /// <summary>
@@ -380,7 +380,7 @@ namespace BepuPhysics.Constraints
                     out var positionD, out var orientationD, out var wsvD, out var inertiaD);
 
                 if (typeof(TAllowPoseIntegration) == typeof(AllowPoseIntegration))
-                    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, positionB, orientationB, inertiaB, wsvB, positionC, orientationC, inertiaC, wsvC, positionD, orientationD, inertiaD, wsvD, accumulatedImpulses, ref prestep);
+                    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, positionB, orientationB, inertiaB, wsvB, positionC, orientationC, inertiaC, wsvC, positionD, orientationD, inertiaD, wsvD, new Vector<float>(dt), accumulatedImpulses, ref prestep);
 
                 function.WarmStart2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, positionD, orientationD, inertiaD, prestep, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
 
