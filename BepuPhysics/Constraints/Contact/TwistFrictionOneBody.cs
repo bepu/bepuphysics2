@@ -52,12 +52,12 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(ref Vector3Wide angularJacobianA, ref TwistFrictionProjection projection,
-            ref BodyVelocityWide wsvA, ref Vector<float> maximumImpulse,
+        public static void ComputeCorrectiveImpulse(in Vector3Wide angularJacobianA, in Vector<float> effectiveMass,
+            in BodyVelocityWide wsvA, in Vector<float> maximumImpulse,
             ref Vector<float> accumulatedImpulse, out Vector<float> correctiveCSI)
         {
             Vector3Wide.Dot(wsvA.Angular, angularJacobianA, out var csvA);
-            var negativeCSI = csvA * projection.EffectiveMass; //Since there is no bias or softness to give us the negative, we just do it when we apply to the accumulated impulse.
+            var negativeCSI = csvA * effectiveMass; //Since there is no bias or softness to give us the negative, we just do it when we apply to the accumulated impulse.
 
             var previousAccumulated = accumulatedImpulse;
             //The maximum force of friction depends upon the normal impulse.
@@ -71,7 +71,7 @@ namespace BepuPhysics.Constraints.Contact
         public static void Solve(ref Vector3Wide angularJacobianA, ref BodyInertiaWide inertiaA, ref TwistFrictionProjection projection,
             ref Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
-            ComputeCorrectiveImpulse(ref angularJacobianA, ref projection, ref wsvA, ref maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
+            ComputeCorrectiveImpulse(angularJacobianA, projection.EffectiveMass, wsvA, maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
             ApplyImpulse(angularJacobianA, inertiaA, correctiveCSI, ref wsvA);
 
         }
@@ -81,6 +81,27 @@ namespace BepuPhysics.Constraints.Contact
         public static void WarmStart2(in Vector3Wide angularJacobianA, in BodyInertiaWide inertiaA, in Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
             ApplyImpulse(angularJacobianA, inertiaA, accumulatedImpulse, ref wsvA);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Solve2(in Vector3Wide angularJacobianA, in BodyInertiaWide inertiaA, in Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA)
+        {
+            //Compute effective mass matrix contributions. No linear contributions for the twist constraint.
+            //Note that we use the angularJacobianA (that is, the normal) for both, despite angularJacobianB = -angularJacobianA. That's fine- J * M * JT is going to be positive regardless.
+            Symmetric3x3Wide.VectorSandwich(angularJacobianA, inertiaA.InverseInertiaTensor, out var angularA);
+
+            //No softening; this constraint is rigid by design. (It does support a maximum force, but that is distinct from a proper damping ratio/natural frequency.)
+            //Note that we have to guard against two bodies with infinite inertias. This is a valid state! 
+            //(We do not have to do such guarding on constraints with linear jacobians; dynamic bodies cannot have zero *mass*.)
+            //(Also note that there's no need for epsilons here... users shouldn't be setting their inertias to the absurd values it would take to cause a problem.
+            //Invalid conditions can't arise dynamically.)
+            var inverseIsZero = Vector.Equals(Vector<float>.Zero, angularA);
+            var effectiveMass = Vector.ConditionalSelect(inverseIsZero, Vector<float>.Zero, Vector<float>.One / angularA);
+
+            //Note that friction constraints have no bias velocity. They target zero velocity.
+            ComputeCorrectiveImpulse(angularJacobianA, effectiveMass, wsvA, maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
+            ApplyImpulse(angularJacobianA, inertiaA, correctiveCSI, ref wsvA);
+
         }
     }
 }

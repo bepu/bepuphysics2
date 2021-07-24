@@ -334,15 +334,47 @@ for (int i = 0; i < contactCount; ++i)
 <#}#>
             TangentFriction<#=suffix#>.WarmStart2(x, z, <#if(contactCount > 1) {#>offsetToManifoldCenterA<#} else {#>prestep.Contact0.OffsetA<#}#>, <#if(bodyCount == 2) {#>offsetToManifoldCenterB, <#}#>inertiaA, <#if(bodyCount == 2) {#>inertiaB, <#}#>accumulatedImpulses.Tangent, ref wsvA<#if(bodyCount == 2) {#>, ref wsvB<#}#>);
 <#for (int i = 0; i < contactCount; ++i) {#>
-            PenetrationLimit<#=suffix#>.WarmStart2(inertiaA, <#if(bodyCount == 2) {#>inertiaB, <#}#>prestep.Normal, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.Contact<#=i#>.OffsetA - prestep.OffsetB, <#}#>accumulatedImpulses.Penetration0, ref wsvA<#if(bodyCount == 2) {#>, ref wsvB<#}#>);
+            PenetrationLimit<#=suffix#>.WarmStart2(inertiaA, <#if(bodyCount == 2) {#>inertiaB, <#}#>prestep.Normal, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.Contact<#=i#>.OffsetA - prestep.OffsetB, <#}#>accumulatedImpulses.Penetration<#=i#>, ref wsvA<#if(bodyCount == 2) {#>, ref wsvB<#}#>);
 <#}#>
             TwistFriction<#=suffix#>.WarmStart2(prestep.Normal, inertiaA, <#if(bodyCount == 2) {#>inertiaB, <#}#>accumulatedImpulses.Twist, ref wsvA<#if(bodyCount == 2) {#>, ref wsvB<#}#>);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(bodyCount == 2) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>float dt, float inverseDt, in Contact<#=contactCount#><#=suffix#>PrestepData prestep, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA<#if(bodyCount == 2) {#>, ref BodyVelocityWide wsvB<#}#>)
-        {
-            throw new NotImplementedException();
+        {            
+            Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
+<#if (contactCount > 1) {#>
+            var premultipliedFrictionCoefficient = new Vector<float>(1f / <#=contactCount#>f) * prestep.MaterialProperties.FrictionCoefficient;
+<#}#>
+            var maximumTangentImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * (<#for (int i = 0; i < contactCount; ++i) {#>accumulatedImpulses.Penetration<#=i#><#if(i < contactCount - 1){#> + <#}}#>);
+<#if (contactCount > 1) {#>
+            FrictionHelpers.ComputeFrictionCenter(<#for (int i = 0; i < contactCount; ++i) {#>prestep.Contact<#=i#>.OffsetA, <#}#><#for (int i = 0; i < contactCount; ++i) {#>prestep.Contact<#=i#>.Depth, <#}#>out var offsetToManifoldCenterA);
+<#if (bodyCount == 2) {#>
+            Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
+<#}#>
+<#} else if(bodyCount == 2) {#>
+            Vector3Wide.Subtract(prestep.Contact0.OffsetA, prestep.OffsetB, out var offsetToManifoldCenterB);
+<#}#>
+            TangentFriction<#=suffix#>.Solve2(x, z, <#=contactCount == 1 ? "prestep.Contact0.OffsetA" : "offsetToManifoldCenterA"#><#=bodyCount == 2 ? ", offsetToManifoldCenterB" : ""#>, inertiaA<#=bodyCount == 2 ? ", inertiaB" : ""#>, maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
+            //Note that we solve the penetration constraints after the friction constraints. 
+            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+            //It's a pretty minor effect either way.
+            SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+            var inverseDtWide = new Vector<float>(inverseDt);
+<#for (int i = 0; i < contactCount; ++i) {#>
+            PenetrationLimit<#=suffix#>.Solve2(inertiaA<#=bodyCount == 2 ? ", inertiaB" : ""#>, prestep.Normal, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.Contact<#=i#>.OffsetA - prestep.OffsetB, <#}#>prestep.Contact<#=i#>.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration<#=i#>, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
+<#}#>
+<#if (contactCount == 1) {#>
+            //If there's only one contact, then the contact patch as determined by contact distance would be zero.
+            //That can cause some subtle behavioral issues sometimes, so we approximate lever arm with the contact depth, assuming that the contact surface area will increase as the depth increases.
+            var maximumTwistImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * accumulatedImpulses.Penetration0 * prestep.Contact0.Depth;
+<#} else {#>
+            var maximumTwistImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * (
+<#for (int i = 0; i < contactCount; ++i) {#>
+                accumulatedImpulses.Penetration<#=i#> * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact<#=i#>.OffsetA)<#=i == contactCount - 1 ? ");" : " +"#>
+<#}#>
+<#}#>
+            TwistFriction<#=suffix#>.Solve2(prestep.Normal, inertiaA, <#if (bodyCount == 2) {#>inertiaB, <#}#>maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
         }
     }
     

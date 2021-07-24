@@ -78,14 +78,14 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(ref BodyVelocityWide wsvA, ref Projection data, ref Jacobians jacobians,
-            ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, out Vector2Wide correctiveCSI)
+        public static void ComputeCorrectiveImpulse(in BodyVelocityWide wsvA, in Symmetric2x2Wide effectiveMass, in Jacobians jacobians,
+            in Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, out Vector2Wide correctiveCSI)
         {
             Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvA.Linear, jacobians.LinearA, out var csvaLinear);
             Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvA.Angular, jacobians.AngularA, out var csvaAngular);
             Vector2Wide.Add(csvaLinear, csvaAngular, out var csv);
             //Required corrective velocity is the negation of the current constraint space velocity.
-            Symmetric2x2Wide.TransformWithoutOverlap(csv, data.EffectiveMass, out var negativeCSI);
+            Symmetric2x2Wide.TransformWithoutOverlap(csv, effectiveMass, out var negativeCSI);
 
             var previousAccumulated = accumulatedImpulse;
             Vector2Wide.Subtract(accumulatedImpulse, negativeCSI, out accumulatedImpulse);
@@ -104,7 +104,7 @@ namespace BepuPhysics.Constraints.Contact
             ref Projection projection, ref BodyInertiaWide inertiaA, ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
             ComputeJacobians(tangentX, tangentY, projection.OffsetA, out var jacobians);
-            ComputeCorrectiveImpulse(ref wsvA, ref projection, ref jacobians, ref maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
+            ComputeCorrectiveImpulse(wsvA, projection.EffectiveMass, jacobians, maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
             ApplyImpulse(jacobians, inertiaA, correctiveCSI, ref wsvA);
 
         }
@@ -119,6 +119,23 @@ namespace BepuPhysics.Constraints.Contact
             ApplyImpulse(jacobians, inertiaA, accumulatedImpulse, ref wsvA);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Solve2(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetToManifoldCenterA, in BodyInertiaWide inertiaA,
+            in Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
+        {
+            ComputeJacobians(tangentX, tangentY, offsetToManifoldCenterA, out var jacobians);
+            //Compute effective mass matrix contributions.
+            Symmetric2x2Wide.SandwichScale(jacobians.LinearA, inertiaA.InverseMass, out var linearContributionA);
+
+            Symmetric3x3Wide.MatrixSandwich(jacobians.AngularA, inertiaA.InverseInertiaTensor, out var angularContributionA);
+
+            //No softening; this constraint is rigid by design. (It does support a maximum force, but that is distinct from a proper damping ratio/natural frequency.)
+            Symmetric2x2Wide.Add(linearContributionA, angularContributionA, out var inverseEffectiveMass);
+            Symmetric2x2Wide.InvertWithoutOverlap(inverseEffectiveMass, out var effectiveMass);
+
+            ComputeCorrectiveImpulse(wsvA, effectiveMass, jacobians, maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
+            ApplyImpulse(jacobians, inertiaA, correctiveCSI, ref wsvA);
+        }
 
     }
 }
