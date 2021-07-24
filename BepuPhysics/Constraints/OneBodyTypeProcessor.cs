@@ -261,7 +261,7 @@ namespace BepuPhysics.Constraints
           ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
-            var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<Vector<int>>();
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
             ref var states = ref bodies.ActiveSet.SolverStates;
@@ -271,29 +271,28 @@ namespace BepuPhysics.Constraints
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
-                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterA, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references.IndexA, count,
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterA, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references, count,
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
-
+;
                 function.WarmStart2(positionA, orientationA, inertiaA, prestep, accumulatedImpulses, ref wsvA);
 
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
-                    bodies.ScatterVelocities<TWarmStartAccessFilterA>(ref wsvA, ref references.IndexA, count);
+                    bodies.ScatterVelocities<TWarmStartAccessFilterA>(ref wsvA, ref references, count);
                 }
                 else
                 {
                     //This batch has some integrators, which means that every bundle is going to gather all velocities.
                     //(We don't make per-bundle determinations about this to avoid an extra branch and instruction complexity, and the difference is very small.)
-                    bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references.IndexA, count);
+                    bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references, count);
                 }
-
             }
         }
 
         public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
-            var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<Vector<int>>();
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
             ref var motionStates = ref bodies.ActiveSet.SolverStates;
@@ -303,11 +302,11 @@ namespace BepuPhysics.Constraints
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
                 var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, count, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+                bodies.GatherState<TSolveAccessFilterA>(ref references, count, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
 
                 function.Solve2(positionA, orientationA, inertiaA, dt, inverseDt, prestep, ref accumulatedImpulses, ref wsvA);
 
-                bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references.IndexA, count);
+                bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references, count); 
             }
         }
 

@@ -786,13 +786,12 @@ namespace BepuPhysics
                 {
                     //Just like the gather but... transposed, we transpose from the wide representation into per-body velocities.
                     //The motion state struct puts the velocities into the second 32 byte chunk, so we can do a single write per body.
-                    Vector256<float> m0, m1, m2, m4, m5, m6;
-                    m0 = sourceVelocities.Linear.X.AsVector256();
-                    m1 = sourceVelocities.Linear.Y.AsVector256();
-                    m2 = sourceVelocities.Linear.Z.AsVector256();
-                    m4 = sourceVelocities.Angular.X.AsVector256();
-                    m5 = sourceVelocities.Angular.Y.AsVector256();
-                    m6 = sourceVelocities.Angular.Z.AsVector256();
+                    var m0 = sourceVelocities.Linear.X.AsVector256();
+                    var m1 = sourceVelocities.Linear.Y.AsVector256();
+                    var m2 = sourceVelocities.Linear.Z.AsVector256();
+                    var m4 = sourceVelocities.Angular.X.AsVector256();
+                    var m5 = sourceVelocities.Angular.Y.AsVector256();
+                    var m6 = sourceVelocities.Angular.Z.AsVector256();
 
                     //We're being a bit lazy here- you could reduce the instructions a bit more given the two empty source lanes.
                     var n0 = Avx.UnpackLow(m0, m1);
