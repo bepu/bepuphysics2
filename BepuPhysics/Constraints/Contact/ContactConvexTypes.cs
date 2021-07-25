@@ -383,6 +383,7 @@ namespace BepuPhysics.Constraints.Contact
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
             in Vector<float> dt, in Contact1AccumulatedImpulses accumulatedImpulses, ref Contact1OneBodyPrestepData prestep)
         {
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, wsvA, ref prestep.Contact0.Depth);
         }
     }
     
@@ -602,6 +603,8 @@ namespace BepuPhysics.Constraints.Contact
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
             in Vector<float> dt, in Contact2AccumulatedImpulses accumulatedImpulses, ref Contact2OneBodyPrestepData prestep)
         {
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, wsvA, ref prestep.Contact0.Depth);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, wsvA, ref prestep.Contact1.Depth);
         }
     }
     
@@ -838,6 +841,9 @@ namespace BepuPhysics.Constraints.Contact
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
             in Vector<float> dt, in Contact3AccumulatedImpulses accumulatedImpulses, ref Contact3OneBodyPrestepData prestep)
         {
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, wsvA, ref prestep.Contact0.Depth);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, wsvA, ref prestep.Contact1.Depth);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact2.OffsetA, prestep.Normal, wsvA, ref prestep.Contact2.Depth);
         }
     }
     
@@ -1091,6 +1097,10 @@ namespace BepuPhysics.Constraints.Contact
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
             in Vector<float> dt, in Contact4AccumulatedImpulses accumulatedImpulses, ref Contact4OneBodyPrestepData prestep)
         {
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, wsvA, ref prestep.Contact0.Depth);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, wsvA, ref prestep.Contact1.Depth);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact2.OffsetA, prestep.Normal, wsvA, ref prestep.Contact2.Depth);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact3.OffsetA, prestep.Normal, wsvA, ref prestep.Contact3.Depth);
         }
     }
     
@@ -1311,6 +1321,8 @@ namespace BepuPhysics.Constraints.Contact
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, 
             in Vector<float> dt, in Contact1AccumulatedImpulses accumulatedImpulses, ref Contact1PrestepData prestep)
         {
+            prestep.OffsetB = positionB - positionA;
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact0.Depth);
         }
     }
     
@@ -1550,6 +1562,9 @@ namespace BepuPhysics.Constraints.Contact
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, 
             in Vector<float> dt, in Contact2AccumulatedImpulses accumulatedImpulses, ref Contact2PrestepData prestep)
         {
+            prestep.OffsetB = positionB - positionA;
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact0.Depth);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact1.Depth);
         }
     }
     
@@ -1807,6 +1822,10 @@ namespace BepuPhysics.Constraints.Contact
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, 
             in Vector<float> dt, in Contact3AccumulatedImpulses accumulatedImpulses, ref Contact3PrestepData prestep)
         {
+            prestep.OffsetB = positionB - positionA;
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact0.Depth);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact1.Depth);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact2.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact2.Depth);
         }
     }
     
@@ -2082,6 +2101,11 @@ namespace BepuPhysics.Constraints.Contact
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, 
             in Vector<float> dt, in Contact4AccumulatedImpulses accumulatedImpulses, ref Contact4PrestepData prestep)
         {
+            prestep.OffsetB = positionB - positionA;
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact0.Depth);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact1.Depth);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact2.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact2.Depth);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact3.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact3.Depth);
         }
     }
     
