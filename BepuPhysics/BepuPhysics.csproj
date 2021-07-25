@@ -43,7 +43,7 @@
 
   <PropertyGroup Condition="'$(Configuration)'=='ReleaseStripNoProfiling'">
     <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE;NETSTANDARD2_0;RELEASESTRIP</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;RELEASE;NETSTANDARD2_0;RELEASESTRIP;FAST_MESH_BOUNDS</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

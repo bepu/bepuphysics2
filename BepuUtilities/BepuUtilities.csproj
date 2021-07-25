@@ -39,13 +39,13 @@
 
   <PropertyGroup Condition="'$(Configuration)'=='ReleaseStrip'">
     <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE;NETSTANDARD2_0;RELEASESTRIP</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;RELEASE;NETSTANDARD2_0;RELEASESTRIP</DefineConstants>
   </PropertyGroup>
     
   <ItemGroup>
-    <PackageReference Include="System.Memory" Version="4.5.3" />
+    <PackageReference Include="System.Memory" Version="4.5.4" />
     <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.7.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
   </ItemGroup>
     
   <ItemGroup>

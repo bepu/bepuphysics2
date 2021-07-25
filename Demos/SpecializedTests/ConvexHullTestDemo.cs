@@ -49,6 +49,19 @@ namespace Demos.SpecializedTests
             var pointsBuffer = points.Span.Slice(points.Count);
             CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
 
+
+            Matrix3x3.CreateScale(new Vector3(5, 0.5f, 3), out var scale);
+            var transform = Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(3, 2, 1)), 1207) * scale;
+            const int transformCount = 10000;
+            var transformStart = Stopwatch.GetTimestamp();
+            for (int i = 0; i < transformCount; ++i)
+            {
+                CreateTransformedCopy(hullShape, transform, BufferPool, out var transformedHullShape);
+                transformedHullShape.Dispose(BufferPool);
+            }
+            var transformEnd = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Transform hull computation time (us): {(transformEnd - transformStart) * 1e6 / (transformCount * Stopwatch.Frequency)}");
+
             hullShape.RayTest(RigidPose.Identity, new Vector3(0, 1, 0), -Vector3.UnitY, out var t, out var normal);
 
             const int rayIterationCount = 10000;
@@ -60,7 +73,7 @@ namespace Demos.SpecializedTests
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < rayIterationCount; ++i)
             {
-                if(hullShape.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
+                if (hullShape.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
                 {
                     ++hitCounter;
                 }

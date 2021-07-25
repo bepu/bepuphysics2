@@ -32,7 +32,12 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     offsetB, orientationB, velocityB, maximumT, out var sweep, out var min, out var max);
                 ref var childOverlaps = ref overlaps.GetOverlapsForChild(i);
                 childOverlaps.ChildIndex = i;
-                compoundB.FindLocalOverlaps<ChildOverlapsCollection>(min, max, sweep, maximumT, pool, shapes, Unsafe.AsPointer(ref childOverlaps));
+
+                ShapeTreeSweepLeafTester<ChildOverlapsCollection> enumerator;
+                enumerator.Pool = pool;
+                enumerator.Overlaps = Unsafe.AsPointer(ref childOverlaps);
+
+                compoundB.FindLocalOverlaps(min, max, sweep, maximumT, pool, shapes, ref enumerator);
             }
         }
     }

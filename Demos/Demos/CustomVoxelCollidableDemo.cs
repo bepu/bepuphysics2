@@ -225,6 +225,12 @@ namespace Demos.Demos
             }
         }
 
+        public unsafe void FindLocalOverlaps<TLeafTester>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, ref TLeafTester leafTester)
+            where TLeafTester : ISweepLeafTester
+        {
+            Tree.Sweep(min, max, sweep, maximumT, ref leafTester);
+        }
+
         public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             //Similar to the non-swept FindLocalOverlaps function above, this just adds the overlaps to the provided collection.
@@ -233,7 +239,7 @@ namespace Demos.Demos
             ShapeTreeSweepLeafTester<TOverlaps> enumerator;
             enumerator.Pool = pool;
             enumerator.Overlaps = overlaps;
-            Tree.Sweep(min, max, sweep, maximumT, ref enumerator);
+            FindLocalOverlaps(min, max, sweep, maximumT, pool, shapes, ref enumerator);
         }
 
         public void Dispose(BufferPool pool)

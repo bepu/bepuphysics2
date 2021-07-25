@@ -17,6 +17,10 @@ namespace BepuPhysics.Trees
             {
                 return nodeCount;
             }
+            set
+            {
+                nodeCount = value;
+            }
         }
 
         public Buffer<Leaf> Leaves;
@@ -26,6 +30,10 @@ namespace BepuPhysics.Trees
             get
             {
                 return leafCount;
+            }
+            set
+            {
+                leafCount = value;
             }
         }
 

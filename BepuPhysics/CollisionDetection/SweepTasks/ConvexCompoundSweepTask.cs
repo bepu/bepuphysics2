@@ -30,7 +30,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             t1 = float.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
-            default(TOverlapFinder).FindOverlaps(ref convex, orientationA, velocityA, ref compound, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
+            var overlapFinder = default(TOverlapFinder);
+            overlapFinder.FindOverlaps(ref convex, orientationA, velocityA, ref compound, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
             for (int i = 0; i < overlaps.Count; ++i)
             {
                 var compoundChildIndex = overlaps.Overlaps[i];
