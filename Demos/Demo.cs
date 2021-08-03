@@ -43,7 +43,7 @@ namespace Demos
 
             //It may be worth using something like hwloc to extract extra information to reason about.
             //var targetThreadCount = Math.Max(1, Environment.ProcessorCount > 4 ? Environment.ProcessorCount - 2 : Environment.ProcessorCount - 1);
-            var targetThreadCount = 3;
+            var targetThreadCount = 30;
             ThreadDispatcher = new SimpleThreadDispatcher(targetThreadCount);
         }
 
@@ -62,7 +62,7 @@ namespace Demos
             //fully decouple simulation and rendering rates across different threads.
             //(In either case, you'd also want to interpolate or extrapolate simulation results during rendering for smoothness.)
             //Note that taking steps of variable length can reduce stability. Gradual or one-off changes can work reasonably well.
-            Simulation.Timestep(1 / 60f);
+            Simulation.Timestep(1 / 60f, ThreadDispatcher);
 
             ////Here's an example of how it would look to use more frequent updates, but still with a fixed amount of time simulated per update call:
             //const float timeToSimulate = 1 / 60f;
