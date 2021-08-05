@@ -9,9 +9,8 @@ namespace BepuPhysics.Constraints.Contact
 {
     public struct ConvexContactWide
     {
-        public Vector3Wide LocalOffsetA;
+        public Vector3Wide OffsetA;
         public Vector<float> Depth;
-        public Vector<float> PlaneOffsetB;
     }
 
     public struct MaterialPropertiesWide
@@ -31,14 +30,14 @@ namespace BepuPhysics.Constraints.Contact
 
     public interface IConvexContactPrestep<TPrestep> : IContactPrestep<TPrestep> where TPrestep : struct, IConvexContactPrestep<TPrestep>
     {
-        ref Vector3Wide GetLocalNormalB(ref TPrestep prestep);
+        ref Vector3Wide GetNormal(ref TPrestep prestep);
         ref ConvexContactWide GetContact(ref TPrestep prestep, int index);
 
     }
 
     public interface ITwoBodyConvexContactPrestep<TPrestep> : IConvexContactPrestep<TPrestep> where TPrestep : struct, ITwoBodyConvexContactPrestep<TPrestep>
     {
-        //TODO: Purge this!
+        ref Vector3Wide GetOffsetB(ref TPrestep prestep);
     }
 
     public interface IContactAccumulatedImpulses<TAccumulatedImpulses> where TAccumulatedImpulses : struct, IContactAccumulatedImpulses<TAccumulatedImpulses>

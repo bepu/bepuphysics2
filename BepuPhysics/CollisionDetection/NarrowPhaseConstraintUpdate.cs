@@ -309,7 +309,7 @@ namespace BepuPhysics.CollisionDetection
             contactConstraintAccessors[manifoldTypeAsConstraintType].UpdateConstraintForManifold(this, manifoldTypeAsConstraintType, workerIndex, ref pair, ref manifold, ref collisionCache, ref material, bodyHandles);
         }
 
-        public unsafe void UpdateConstraintsForPair<TContactManifold, TCollisionCache>(int workerIndex, ref CollidablePair pair, ref TContactManifold manifold, ref TCollisionCache collisionCache)
+        public unsafe void UpdateConstraintsForPair<TContactManifold, TCollisionCache>(int workerIndex, ref CollidablePair pair, ref TContactManifold manifold, ref TCollisionCache collisionCache) 
             where TCollisionCache : unmanaged, IPairCacheEntry
             where TContactManifold : unmanaged, IContactManifold<TContactManifold>
         {

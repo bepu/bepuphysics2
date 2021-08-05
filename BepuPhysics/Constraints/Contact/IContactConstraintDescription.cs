@@ -8,20 +8,19 @@ namespace BepuPhysics.Constraints.Contact
 {
     public struct ConstraintContactData
     {
-        public Vector3 LocalOffsetA;
+        public Vector3 OffsetA;
         public float PenetrationDepth;
-        public float PlaneOffsetB;
     }
     public interface IConvexOneBodyContactConstraintDescription<TDescription> : IOneBodyConstraintDescription<TDescription> 
         where TDescription : unmanaged, IConvexOneBodyContactConstraintDescription<TDescription>
     {
-        void CopyManifoldWideProperties(ref Vector3 localNormalB, ref PairMaterialProperties material);
+        void CopyManifoldWideProperties(ref Vector3 normal, ref PairMaterialProperties material);
         ref ConstraintContactData GetFirstContact(ref TDescription description);
     }
     public interface IConvexTwoBodyContactConstraintDescription<TDescription> : ITwoBodyConstraintDescription<TDescription> 
         where TDescription : unmanaged, IConvexTwoBodyContactConstraintDescription<TDescription>
     {
-        void CopyManifoldWideProperties(ref Vector3 localNormalB, ref PairMaterialProperties material);
+        void CopyManifoldWideProperties(ref Vector3 offsetB, ref Vector3 normal, ref PairMaterialProperties material);
         ref ConstraintContactData GetFirstContact(ref TDescription description);
     }
 

@@ -116,32 +116,6 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Gets a reference to the body's motion state, including both pose and velocity.
-        /// </summary>
-        public ref MotionState MotionState
-        {
-            [MethodImpl(MethodImplOptions.NoInlining)]
-            get
-            {
-                ref var location = ref MemoryLocation;
-                return ref Bodies.Sets[location.SetIndex].SolverStates[location.Index].Motion;
-            }
-        }
-
-        /// <summary>
-        /// Gets a reference to the body's solver-relevant state, including both pose, velocity, and inertia.
-        /// </summary>
-        public ref SolverState SolverState
-        {
-            [MethodImpl(MethodImplOptions.NoInlining)]
-            get
-            {
-                ref var location = ref MemoryLocation;
-                return ref Bodies.Sets[location.SetIndex].SolverStates[location.Index];
-            }
-        }
-
-        /// <summary>
         /// Gets a reference to the body's collidable.
         /// </summary>
         public ref Collidable Collidable
