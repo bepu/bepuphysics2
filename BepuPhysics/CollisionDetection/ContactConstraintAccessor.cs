@@ -349,7 +349,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 ref var manifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifoldPointer);
                 CopyContactData(ref manifold, out var constraintCache, out var description);
-                description.CopyManifoldWideProperties(ref manifold.OffsetB, ref manifold.Normal, ref material);
+                description.CopyManifoldWideProperties(ref manifold.Normal, ref material);
                 UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
             }
             else
@@ -360,7 +360,7 @@ namespace BepuPhysics.CollisionDetection
                 Unsafe.SkipInit(out TConstraintCache constraintCache);
                 Unsafe.SkipInit(out TConstraintDescription description);
                 CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
-                description.CopyManifoldWideProperties(ref manifold.OffsetB, ref manifold.Contact0.Normal, ref material);
+                description.CopyManifoldWideProperties(ref manifold.Contact0.Normal, ref material);
                 UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
             }
         }

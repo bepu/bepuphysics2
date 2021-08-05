@@ -48,18 +48,12 @@ namespace BepuPhysics.CollisionDetection
             struct ContinuousPair
             {
                 public CollidablePair Pair;
-                public Vector3 RelativeLinearVelocity;
-                public Vector3 AngularA;
-                public Vector3 AngularB;
                 public float T;
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Initialize(ref CollidablePair pair, in Vector3 relativeLinearVelocity, in Vector3 angularVelocityA, in Vector3 angularVelocityB, float t)
+                public void Initialize(ref CollidablePair pair, float t)
                 {
                     Pair = pair;
-                    AngularA = angularVelocityA;
-                    AngularB = angularVelocityB;
-                    RelativeLinearVelocity = relativeLinearVelocity;
                     T = t;
                 }
             }
@@ -122,7 +116,7 @@ namespace BepuPhysics.CollisionDetection
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public CCDContinuationIndex AddContinuous(ref CollidablePair pair, in Vector3 relativeLinearVelocity, in Vector3 angularVelocityA, in Vector3 angularVelocityB, float t)
             {
-                continuous.Allocate(pool, out var index).Initialize(ref pair, relativeLinearVelocity, angularVelocityA, angularVelocityB, t);
+                continuous.Allocate(pool, out var index).Initialize(ref pair, t);
                 return new CCDContinuationIndex((int)ConstraintGeneratorType.Continuous, index);
             }
 
@@ -165,9 +159,25 @@ namespace BepuPhysics.CollisionDetection
                                 for (int i = 0; i < manifold.Count; ++i)
                                 {
                                     ref var contact = ref Unsafe.Add(ref manifold.Contact0, i);
-                                    var angularContributionA = Vector3.Cross(continuation.AngularA, contact.Offset);
-                                    var angularContributionB = Vector3.Cross(continuation.AngularB, contact.Offset - manifold.OffsetB);
-                                    var velocityAtContact = Vector3.Dot(angularContributionB - angularContributionA + continuation.RelativeLinearVelocity, manifold.Normal);
+                                    var a = narrowPhase.Bodies.GetBodyReference(continuation.Pair.A.BodyHandle);
+                                    ref var motionA = ref a.MotionState;
+                                    QuaternionEx.TransformWithoutOverlap(contact.LocalOffsetA, motionA.Pose.Orientation, out var contactOffsetA);
+                                    var angularContributionA = Vector3.Cross(motionA.Velocity.Angular, contactOffsetA);
+                                    float velocityAtContact;
+                                    if (continuation.Pair.B.Mobility != CollidableMobility.Static)
+                                    {
+                                        var b = narrowPhase.Bodies.GetBodyReference(continuation.Pair.B.BodyHandle);
+                                        ref var motionB = ref b.MotionState;
+                                        var offsetB = motionB.Pose.Position - motionA.Pose.Position;
+                                        var angularContributionB = Vector3.Cross(motionB.Velocity.Angular, contactOffsetA - offsetB);
+                                        QuaternionEx.TransformWithoutOverlap(manifold.LocalNormalB, motionB.Pose.Orientation, out var normal);
+                                        velocityAtContact = Vector3.Dot(angularContributionB - angularContributionA + motionB.Velocity.Linear - motionA.Velocity.Linear, normal);
+                                    }
+                                    else
+                                    {
+                                        //For statics, 'local' normal B is just world space since statics do not rotate over substeps.
+                                        velocityAtContact = -Vector3.Dot(motionA.Velocity.Linear + angularContributionA, manifold.LocalNormalB);
+                                    }
                                     contact.Depth -= velocityAtContact * continuation.T;
                                 }
                             }

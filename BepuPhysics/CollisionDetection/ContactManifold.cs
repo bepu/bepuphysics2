@@ -14,20 +14,20 @@ namespace BepuPhysics.CollisionDetection
     public struct NonconvexContact
     {
         /// <summary>
-        /// Offset from the position of collidable A to the contact position. 
+        /// Offset from the position of collidable A to the contact position in collidable A's local space.. 
         /// </summary>
         [FieldOffset(0)]
-        public Vector3 Offset;
+        public Vector3 LocalOffsetA;
         /// <summary>
         /// Penetration depth between the two collidables at this contact. Negative values represent separation.
         /// </summary>
         [FieldOffset(12)]
         public float Depth;
         /// <summary>
-        /// Surface basis of the contact. If transformed into a rotation matrix, X and Z represent tangent directions and Y represents the contact normal. Points from collidable B to collidable A.
+        /// Normal of the surface at the contact point in collidable B's local space, or world space if B is a static.
         /// </summary>
         [FieldOffset(16)]
-        public Vector3 Normal;
+        public Vector3 LocalNormalB;
         /// <summary>
         /// Id of the features involved in the collision that generated this contact. If a contact has the same feature id as in a previous frame, it is an indication that the
         /// same parts of the shape contributed to its creation. This is useful for carrying information from frame to frame.
@@ -42,10 +42,10 @@ namespace BepuPhysics.CollisionDetection
     public struct ConvexContact
     {
         /// <summary>
-        /// Offset from the position of collidable A to the contact position. 
+        /// Offset from the position of collidable A to the contact position in collidable A's local space.. 
         /// </summary>
         [FieldOffset(0)]
-        public Vector3 Offset;
+        public Vector3 LocalOffsetA;
         /// <summary>
         /// Penetration depth between the two collidables at this contact. Negative values represent separation.
         /// </summary>
@@ -82,12 +82,12 @@ namespace BepuPhysics.CollisionDetection
         /// Retrieves a copy of a contact's data.
         /// </summary>
         /// <param name="contactIndex">Index of the contact to copy data from.</param>
-        /// <param name="offset">Offset from the first collidable's position to the contact position.</param>
-        /// <param name="normal">Normal of the contact surface at the requested contact. Points from collidable B to collidable A.</param>
+        /// <param name="localOffsetA">Offset from collidable A's position to the contact position in collidable A's local space.</param>
+        /// <param name="localNormalB">Normal of the contact surface at the requested contact in collidable B's local space, or world space if B is a static. Points from collidable B to collidable A.</param>
         /// <param name="depth">Penetration depth at the requested contact.</param>
         /// <param name="featureId">Feature id of the requested contact.
         /// Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</param>
-        void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId);
+        void GetContact(int contactIndex, out Vector3 localOffsetA, out Vector3 localNormalB, out float depth, out int featureId);
 
         //Can't return refs to the this instance, but it's convenient to have ref returns for parameters and interfaces can't require static functions, so...
         /// <summary>
@@ -99,20 +99,20 @@ namespace BepuPhysics.CollisionDetection
         ref float GetDepth(ref TManifold manifold, int contactIndex);
 
         /// <summary>
-        /// Pulls a reference to a contact's normal. Points from collidable B to collidable A. For convex manifolds that share a normal, all contact indices will simply return a reference to the manifold-wide normal.
+        /// Pulls a reference to a contact's normal in collidable B's local space, or world space if B is a static. Points from collidable B to collidable A. For convex manifolds that share a normal, all contact indices will simply return a reference to the manifold-wide normal.
         /// </summary>
         /// <param name="manifold">Manifold to pull a reference from.</param>
         /// <param name="contactIndex">Contact to pull data from.</param>
         /// <returns>Reference to a contact's normal (or the manifold-wide normal in a convex manifold).</returns>
-        ref Vector3 GetNormal(ref TManifold manifold, int contactIndex);
+        ref Vector3 GetLocalNormalB(ref TManifold manifold, int contactIndex);
 
         /// <summary>
-        /// Pulls a reference to a contact's offset.
+        /// Pulls a reference to a contact's offset in collidable A's local space.
         /// </summary>
         /// <param name="manifold">Manifold to pull a reference from.</param>
         /// <param name="contactIndex">Contact to pull data from.</param>
         /// <returns>Reference to a contact's offset.</returns>
-        ref Vector3 GetOffset(ref TManifold manifold, int contactIndex);
+        ref Vector3 GetLocalOffsetA(ref TManifold manifold, int contactIndex);
 
         /// <summary>
         /// Pulls a reference to a contact's feature id.
@@ -168,18 +168,18 @@ namespace BepuPhysics.CollisionDetection
         /// Retrieves a copy of a contact's data.
         /// </summary>
         /// <param name="contactIndex">Index of the contact to copy data from.</param>
-        /// <param name="offset">Offset from the first collidable's position to the contact position.</param>
-        /// <param name="normal">Normal of the contact surface at the requested contact. Points from collidable B to collidable A.</param>
+        /// <param name="localOffsetA">Offset from collidable A's position to the contact position in collidable A's local space..</param>
+        /// <param name="localNormalB">Normal of the contact surface at the requested contact in collidable B's local space, or world space if B is a static. Points from collidable B to collidable A.</param>
         /// <param name="depth">Penetration depth at the requested contact.</param>
         /// <param name="featureId">Feature id of the requested contact.
         /// Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId)
+        public void GetContact(int contactIndex, out Vector3 localOffsetA, out Vector3 localNormalB, out float depth, out int featureId)
         {
             ValidateIndex(contactIndex);
             ref var contact = ref Unsafe.Add(ref Contact0, contactIndex);
-            offset = contact.Offset;
-            normal = contact.Normal;
+            localOffsetA = contact.LocalOffsetA;
+            localNormalB = contact.LocalNormalB;
             depth = contact.Depth;
             featureId = contact.FeatureId;
         }
@@ -207,13 +207,13 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(NonconvexContactManifold* manifold, ref Vector3 normal, ref ConvexContact convexContact)
+        public static void Add(NonconvexContactManifold* manifold, ref Vector3 localNormalB, ref ConvexContact convexContact)
         {
             Debug.Assert(manifold->Count < MaximumContactCount);
             ref var targetContact = ref (&manifold->Contact0)[manifold->Count++];
             targetContact.Depth = convexContact.Depth;
-            targetContact.Offset = convexContact.Offset;
-            targetContact.Normal = normal;
+            targetContact.LocalOffsetA = convexContact.LocalOffsetA;
+            targetContact.LocalNormalB = localNormalB;
             targetContact.FeatureId = convexContact.FeatureId;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -236,28 +236,28 @@ namespace BepuPhysics.CollisionDetection
         }
 
         /// <summary>
-        /// Pulls a reference to a contact's normal. Points from collidable B to collidable A.
+        /// Pulls a reference to a contact's normal in collidable B's local space, or world space if B is a static. Points from collidable B to collidable A.
         /// </summary>
         /// <param name="manifold">Manifold to pull a reference from.</param>
         /// <param name="contactIndex">Contact to pull data from.</param>
         /// <returns>Reference to a contact's normal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3 GetNormal(ref NonconvexContactManifold manifold, int contactIndex)
+        public ref Vector3 GetLocalNormalB(ref NonconvexContactManifold manifold, int contactIndex)
         {
-            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).Normal;
+            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).LocalNormalB;
         }
 
 
         /// <summary>
-        /// Pulls a reference to a contact's offset.
+        /// Pulls a reference to a contact's offset in collidable A's local space.
         /// </summary>
         /// <param name="manifold">Manifold to pull a reference from.</param>
         /// <param name="contactIndex">Contact to pull data from.</param>
         /// <returns>Reference to a contact's offset.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3 GetOffset(ref NonconvexContactManifold manifold, int contactIndex)
+        public ref Vector3 GetLocalOffsetA(ref NonconvexContactManifold manifold, int contactIndex)
         {
-            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).Offset;
+            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).LocalOffsetA;
         }
 
         /// <summary>
@@ -276,30 +276,25 @@ namespace BepuPhysics.CollisionDetection
     /// <summary>
     /// Contains the data associated with a convex contact manifold.
     /// </summary>
-    [StructLayout(LayoutKind.Explicit, Size = 108)]
+    [StructLayout(LayoutKind.Explicit, Size = 96)]
     public unsafe struct ConvexContactManifold : IContactManifold<ConvexContactManifold>
     {
         /// <summary>
-        /// Offset from collidable A to collidable B.
+        /// Surface normal shared by all contacts, stored in collidable B's local space if it is a body, or world space if it is a static. Points from collidable B to collidable A.
         /// </summary>
         [FieldOffset(0)]
-        public Vector3 OffsetB;
+        public Vector3 LocalNormalB;
+
         [FieldOffset(12)]
         public int Count;
 
-        /// <summary>
-        /// Surface normal shared by all contacts. Points from collidable B to collidable A.
-        /// </summary>
         [FieldOffset(16)]
-        public Vector3 Normal;
-
-        [FieldOffset(28)]
         public ConvexContact Contact0;
-        [FieldOffset(48)]
+        [FieldOffset(36)]
         public ConvexContact Contact1;
-        [FieldOffset(68)]
+        [FieldOffset(56)]
         public ConvexContact Contact2;
-        [FieldOffset(88)]
+        [FieldOffset(76)]
         public ConvexContact Contact3;
 
         readonly int IContactManifold<ConvexContactManifold>.Count => Count;
@@ -328,18 +323,18 @@ namespace BepuPhysics.CollisionDetection
         /// Retrieves a copy of a contact's data.
         /// </summary>
         /// <param name="contactIndex">Index of the contact to copy data from.</param>
-        /// <param name="offset">Offset from the first collidable's position to the contact position.</param>
-        /// <param name="normal">Normal of the contact surface at the requested contact. Points from collidable B to collidable A.</param>
+        /// <param name="localOffsetA">Offset from collidable A's position to the contact position in collidable A's local space.</param>
+        /// <param name="localNormalB">Normal of the contact surface at the requested contact in collidable B's local space, or world space if B is a static. Points from collidable B to collidable A.</param>
         /// <param name="depth">Penetration depth at the requested contact.</param>
         /// <param name="featureId">Feature id of the requested contact.
         /// Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId)
+        public void GetContact(int contactIndex, out Vector3 localOffsetA, out Vector3 localNormalB, out float depth, out int featureId)
         {
             ValidateIndex(contactIndex);
             ref var contact = ref Unsafe.Add(ref Contact0, contactIndex);
-            offset = contact.Offset;
-            normal = Normal;
+            localOffsetA = contact.LocalOffsetA;
+            localNormalB = LocalNormalB;
             depth = contact.Depth;
             featureId = contact.FeatureId;
         }
@@ -367,28 +362,28 @@ namespace BepuPhysics.CollisionDetection
         }
 
         /// <summary>
-        /// Pulls a reference to a contact manifold's normal. Points from collidable B to collidable A. Convex manifolds share a single normal across all contacts.
+        /// Pulls a reference to a contact manifold's normal in collidable B's local space, or world space if B is a static. Points from collidable B to collidable A. Convex manifolds share a single normal across all contacts.
         /// </summary>
         /// <param name="manifold">Manifold to pull a reference from.</param>
         /// <param name="contactIndex">Contact to pull data from.</param>
         /// <returns>Reference to the contact manifold's normal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3 GetNormal(ref ConvexContactManifold manifold, int contactIndex)
+        public ref Vector3 GetLocalNormalB(ref ConvexContactManifold manifold, int contactIndex)
         {
-            return ref manifold.Normal;
+            return ref manifold.LocalNormalB;
         }
 
 
         /// <summary>
-        /// Pulls a reference to a contact's offset.
+        /// Pulls a reference to a contact's offset in collidable A's local space.
         /// </summary>
         /// <param name="manifold">Manifold to pull a reference from.</param>
         /// <param name="contactIndex">Contact to pull data from.</param>
         /// <returns>Reference to a contact's offset.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3 GetOffset(ref ConvexContactManifold manifold, int contactIndex)
+        public ref Vector3 GetLocalOffsetA(ref ConvexContactManifold manifold, int contactIndex)
         {
-            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).Offset;
+            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).LocalOffsetA;
         }
 
         /// <summary>
