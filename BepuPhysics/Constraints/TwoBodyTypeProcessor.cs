@@ -479,7 +479,8 @@ namespace BepuPhysics.Constraints
                 ref var prestep = ref Unsafe.Add(ref prestepBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState(ref references, count, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
+                bodies.GatherState<AccessOnlyVelocity>(ref references.IndexA, count, true, out _, out _, out var wsvA, out _);
+                bodies.GatherState<AccessOnlyVelocity>(ref references.IndexB, count, true, out _, out _, out var wsvB, out _);
                 function.IncrementallyUpdateContactData(dtWide, wsvA, wsvB, ref prestep);
             }
         }

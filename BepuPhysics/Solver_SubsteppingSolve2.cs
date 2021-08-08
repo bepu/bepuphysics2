@@ -136,6 +136,21 @@ namespace BepuPhysics
         //    }
         //}
 
+        struct IncrementalUpdateStageFunction : IStageFunction
+        {
+            public float Dt;
+            public float InverseDt;
+            public Solver<TIntegrationCallbacks> solver;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
+            {
+                ref var block = ref this.solver.context.IncrementalUpdateBlocks.Blocks[blockIndex];
+                ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                solver.TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
+            }
+        }
+
         Action<int> solveStep2Worker;
         void SolveStep2Worker(int workerIndex)
         {
@@ -177,9 +192,28 @@ namespace BepuPhysics
                 InverseDt = 1f / context.Dt,
                 solver = this
             };
+            var incrementalUpdateStage = new IncrementalUpdateStageFunction
+            {
+                Dt = context.Dt,
+                InverseDt = 1f / context.Dt,
+                solver = this
+            };
 
+            //We have a different set of work blocks for incremental updates, so they used a different set of claimed/unclaimed state ping ponging locals.
+            var incrementalClaimedState = 1;
+            int incrementalUnclaimedState = 0;
+
+            var incrementalUpdateWorkerStart = GetUniformlyDistributedStart(workerIndex, context.IncrementalUpdateBlocks.Blocks.Count, context.WorkerCount, 0);
             for (int i = 0; i < substepCount; ++i)
             {
+                if (i > 0)
+                {
+                    ExecuteStage(
+                        ref incrementalUpdateStage, ref context.IncrementalUpdateBlocks, ref bounds, ref boundsBackBuffer, workerIndex, 0, context.IncrementalUpdateBlocks.Blocks.Count,
+                        ref incrementalUpdateWorkerStart, ref syncStage, incrementalClaimedState, incrementalUnclaimedState);
+                    incrementalClaimedState ^= 1;
+                    incrementalUnclaimedState ^= 1;
+                }
                 warmstartStage.SubstepIndex = i;
                 for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
                 {
@@ -563,8 +597,22 @@ namespace BepuPhysics
                 GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
                 Debug.Assert(!fallbackExists, "Not handling this yet.");
 
+                var incrementalUpdateFilter = default(IncrementalContactDataUpdateFilter);
                 for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
                 {
+                    if (substepIndex > 0)
+                    {
+                        for (int i = 0; i < ActiveSet.Batches.Count; ++i)
+                        {
+                            ref var batch = ref activeSet.Batches[i];
+                            for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                            {
+                                ref var typeBatch = ref batch.TypeBatches[j];
+                                if (incrementalUpdateFilter.AllowType(typeBatch.TypeId))
+                                    TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
+                            }
+                        }
+                    }
                     for (int i = 0; i < synchronizedBatchCount; ++i)
                     {
                         ref var batch = ref activeSet.Batches[i];
@@ -599,7 +647,7 @@ namespace BepuPhysics
             }
             else
             {
-                ExecuteMultithreaded<MainSolveFilter>(substepDt, threadDispatcher, solveStep2Worker);
+                ExecuteMultithreaded<MainSolveFilter>(substepDt, threadDispatcher, solveStep2Worker, includeIncrementalUpdate: true);
             }
         }
     }

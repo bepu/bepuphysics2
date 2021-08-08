@@ -118,11 +118,32 @@ namespace BepuPhysics
             }
         }
 
-        protected unsafe void BuildWorkBlocks<TTypeBatchFilter>(BufferPool pool, int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlocksPerBatch, ref TTypeBatchFilter typeBatchFilter) where TTypeBatchFilter : ITypeBatchSolveFilter
+        void BuildFallbackScatterWorkBlocks(int targetBlocksPerBatch)
         {
             ref var activeSet = ref ActiveSet;
-            context.ConstraintBlocks.Blocks = new QuickList<WorkBlock>(targetBlocksPerBatch * activeSet.Batches.Count, pool);
-            pool.Take(activeSet.Batches.Count, out context.BatchBoundaries);
+            if (activeSet.Batches.Count > FallbackBatchThreshold)
+            {
+                //There is a fallback batch, so we need to create fallback work blocks for it.
+                var blockCount = Math.Min(targetBlocksPerBatch, ActiveSet.Fallback.BodyCount);
+                context.FallbackBlocks.Blocks = new QuickList<FallbackScatterWorkBlock>(blockCount, pool);
+                var baseBodiesPerBlock = activeSet.Fallback.BodyCount / blockCount;
+                var remainder = activeSet.Fallback.BodyCount - baseBodiesPerBlock * blockCount;
+                int previousEnd = 0;
+                for (int i = 0; i < blockCount; ++i)
+                {
+                    var bodiesInBlock = i < remainder ? baseBodiesPerBlock + 1 : baseBodiesPerBlock;
+                    context.FallbackBlocks.Blocks.AllocateUnsafely() = new FallbackScatterWorkBlock { Start = previousEnd, End = previousEnd += bodiesInBlock };
+                }
+            }
+        }
+
+        protected unsafe void BuildWorkBlocks<TTypeBatchFilter>(
+            BufferPool pool, int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlocksPerBatch, ref TTypeBatchFilter typeBatchFilter,
+            out QuickList<WorkBlock> workBlocks, out Buffer<int> batchBoundaries) where TTypeBatchFilter : ITypeBatchSolveFilter
+        {
+            ref var activeSet = ref ActiveSet;
+            workBlocks = new QuickList<WorkBlock>(targetBlocksPerBatch * activeSet.Batches.Count, pool);
+            pool.Take(activeSet.Batches.Count, out batchBoundaries);
             var inverseMinimumBlockSizeInBundles = 1f / minimumBlockSizeInBundles;
             var inverseMaximumBlockSizeInBundles = 1f / maximumBlockSizeInBundles;
             for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
@@ -152,7 +173,7 @@ namespace BepuPhysics
                     var remainder = typeBatch.BundleCount - baseBlockSizeInBundles * typeBatchBlockCount;
                     for (int newBlockIndex = 0; newBlockIndex < typeBatchBlockCount; ++newBlockIndex)
                     {
-                        ref var block = ref context.ConstraintBlocks.Blocks.Allocate(pool);
+                        ref var block = ref workBlocks.Allocate(pool);
                         var blockBundleCount = newBlockIndex < remainder ? baseBlockSizeInBundles + 1 : baseBlockSizeInBundles;
                         block.BatchIndex = batchIndex;
                         block.TypeBatchIndex = typeBatchIndex;
@@ -163,21 +184,7 @@ namespace BepuPhysics
                         Debug.Assert(block.End >= block.StartBundle + Math.Min(minimumBlockSizeInBundles, typeBatch.BundleCount) && block.End <= typeBatch.BundleCount);
                     }
                 }
-                context.BatchBoundaries[batchIndex] = context.ConstraintBlocks.Blocks.Count;
-            }
-            if (typeBatchFilter.AllowFallback && activeSet.Batches.Count > FallbackBatchThreshold)
-            {
-                //There is a fallback batch, so we need to create fallback work blocks for it.
-                var blockCount = Math.Min(targetBlocksPerBatch, ActiveSet.Fallback.BodyCount);
-                context.FallbackBlocks.Blocks = new QuickList<FallbackScatterWorkBlock>(blockCount, pool);
-                var baseBodiesPerBlock = activeSet.Fallback.BodyCount / blockCount;
-                var remainder = activeSet.Fallback.BodyCount - baseBodiesPerBlock * blockCount;
-                int previousEnd = 0;
-                for (int i = 0; i < blockCount; ++i)
-                {
-                    var bodiesInBlock = i < remainder ? baseBodiesPerBlock + 1 : baseBodiesPerBlock;
-                    context.FallbackBlocks.Blocks.AllocateUnsafely() = new FallbackScatterWorkBlock { Start = previousEnd, End = previousEnd += bodiesInBlock };
-                }
+                batchBoundaries[batchIndex] = workBlocks.Count;
             }
         }
 
@@ -244,8 +251,13 @@ namespace BepuPhysics
             public int WorkerCount;
             public Buffer<FallbackTypeBatchResults> FallbackResults;
 
+            public WorkBlocks<WorkBlock> IncrementalUpdateBlocks;
+            public Buffer<int> IncrementalUpdateBatchBoundaries;
+
             public Buffer<WorkerBounds> WorkerBoundsA;
             public Buffer<WorkerBounds> WorkerBoundsB;
+
+
 
         }
         protected MultithreadingParameters context;
@@ -713,7 +725,7 @@ namespace BepuPhysics
 
         }
 
-        protected void ExecuteMultithreaded<TTypeBatchSolveFilter>(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate) where TTypeBatchSolveFilter : struct, ITypeBatchSolveFilter
+        protected void ExecuteMultithreaded<TTypeBatchSolveFilter>(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate, bool includeIncrementalUpdate = false) where TTypeBatchSolveFilter : struct, ITypeBatchSolveFilter
         {
             var filter = default(TTypeBatchSolveFilter);
             var workerCount = context.WorkerCount = threadDispatcher.ThreadCount;
@@ -729,11 +741,22 @@ namespace BepuPhysics
             const int maximumBlockSizeInBundles = 1024;
 
             var targetBlocksPerBatch = workerCount * targetBlocksPerBatchPerWorker;
-            BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref filter);
+            BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref filter, out context.ConstraintBlocks.Blocks, out context.BatchBoundaries);
+            if (includeIncrementalUpdate)
+            {
+                //This looks a little weird- having a filter, which is sometimes the incremental filter, as the main filter- then having this internal filter that's conditionally used...
+                //It's just a hack to deal with the fact that we're in the middle of a fairly major restructuring in the solver. Once the old style incremental update is gone, the weirdness can be purged.
+                var incrementalFilter = new IncrementalContactDataUpdateFilter();
+                BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref incrementalFilter, out context.IncrementalUpdateBlocks.Blocks, out context.IncrementalUpdateBatchBoundaries);
+            }
+            if (filter.AllowFallback)
+                BuildFallbackScatterWorkBlocks(targetBlocksPerBatch);
             ValidateWorkBlocks(ref filter);
 
             //Note the clear; the block claims must be initialized to 0 so that the first worker stage knows that the data is available to claim.
             context.ConstraintBlocks.CreateClaims(pool);
+            if (includeIncrementalUpdate)
+                context.IncrementalUpdateBlocks.CreateClaims(pool);
             if (filter.AllowFallback && ActiveSet.Batches.Count > FallbackBatchThreshold)
             {
                 Debug.Assert(context.FallbackBlocks.Blocks.Count > 0);
@@ -754,6 +777,8 @@ namespace BepuPhysics
                 threadDispatcher.DispatchWorkers(workDelegate);
 
             context.ConstraintBlocks.Dispose(pool);
+            if (includeIncrementalUpdate)
+                context.IncrementalUpdateBlocks.Dispose(pool);
             if (filter.AllowFallback && ActiveSet.Batches.Count > FallbackBatchThreshold)
             {
                 FallbackBatch.DisposeResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], ref context.FallbackResults);

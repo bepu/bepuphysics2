@@ -11,7 +11,7 @@ namespace BepuPhysics
 {
     public partial class Solver
     {
-        struct IncrementalContactDataUpdateFilter : ITypeBatchSolveFilter
+        protected struct IncrementalContactDataUpdateFilter : ITypeBatchSolveFilter
         {
             public bool AllowFallback { get { return false; } }
 
