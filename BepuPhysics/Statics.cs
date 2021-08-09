@@ -11,6 +11,40 @@ using BepuPhysics.CollisionDetection;
 
 namespace BepuPhysics
 {
+    /// <summary>
+    /// Defines a type that determines which bodies should be awoken in the bounding box of a static when the static's state changes.
+    /// </summary>
+    /// <remarks>We cannot find bodies depending on a static through constraints, since statics do not maintain constraint lists.
+    /// When a static is added, removed, has SetShape or has ApplyDescription called on it, 
+    /// it looks up bodies in its bounding box that could possibly be affected by change and considers waking them up.
+    /// This filter can be used to ignore some bodies.</remarks>
+    public interface IStaticChangeAwakeningFilter
+    {
+        /// <summary>
+        /// Gets whether to allow awakening for any body. If true, candidates will have the ShouldAwaken function called for them. 
+        /// If false, ShouldAwaken will not be called, and no bodies will be awoken.
+        /// </summary>
+        bool AllowAwakening { get; }
+
+        /// <summary>
+        /// Determines whether a body should be forced awake by the state change of a static.
+        /// </summary>
+        /// <param name="body">Sleeping body under consideration for awakening.</param>
+        /// <returns>True if the body should be forced awake, false otherwise.</returns>
+        bool ShouldAwaken(BodyReference body);
+    }
+
+    /// <summary>
+    /// Default awakening filter that only wakes up dynamic bodies. Kinematic bodies do not respond to any kind of dynamic simulation, so they won't respond to the change in statics.
+    /// </summary>
+    public struct StaticsShouldntAwakenKinematics : IStaticChangeAwakeningFilter
+    {
+        public bool AllowAwakening => true;
+        public bool ShouldAwaken(BodyReference body)
+        {
+            return !body.Kinematic;
+        }
+    }
 
     /// <summary>
     /// Collection of allocated static collidables.
@@ -94,24 +128,24 @@ namespace BepuPhysics
                 "This static handle doesn't seem to exist, or the mappings are out of sync. If a handle exists, both directions should match.");
         }
 
-        struct InactiveBodyCollector : IBreakableForEach<int>
+        struct SleepingBodyCollector : IBreakableForEach<int>
         {
             BroadPhase broadPhase;
             BufferPool pool;
-            public QuickList<BodyHandle> InactiveBodyHandles;
+            public QuickList<BodyHandle> SleepingBodyHandles;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public InactiveBodyCollector(BroadPhase broadPhase, BufferPool pool)
+            public SleepingBodyCollector(BroadPhase broadPhase, BufferPool pool)
             {
                 this.pool = pool;
                 this.broadPhase = broadPhase;
-                InactiveBodyHandles = new QuickList<BodyHandle>(32, pool);
+                SleepingBodyHandles = new QuickList<BodyHandle>(32, pool);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose()
             {
-                InactiveBodyHandles.Dispose(pool);
+                SleepingBodyHandles.Dispose(pool);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -120,38 +154,44 @@ namespace BepuPhysics
                 ref var leaf = ref broadPhase.staticLeaves[leafIndex];
                 if (leaf.Mobility != CollidableMobility.Static)
                 {
-                    InactiveBodyHandles.Add(leaf.BodyHandle, pool);
+                    SleepingBodyHandles.Add(leaf.BodyHandle, pool);
                 }
                 return true;
             }
         }
 
-        void AwakenBodiesInBounds(ref BoundingBox bounds)
+        void AwakenBodiesInBounds<TFilter>(ref BoundingBox bounds, ref TFilter filter) where TFilter : struct, IStaticChangeAwakeningFilter
         {
-            var collector = new InactiveBodyCollector(broadPhase, pool);
-            broadPhase.StaticTree.GetOverlaps(bounds, ref collector);
-            for (int i = 0; i < collector.InactiveBodyHandles.Count; ++i)
+            if (filter.AllowAwakening)
             {
-                awakener.AwakenBody(collector.InactiveBodyHandles[i]);
+                var collector = new SleepingBodyCollector(broadPhase, pool);
+                broadPhase.StaticTree.GetOverlaps(bounds, ref collector);
+                for (int i = 0; i < collector.SleepingBodyHandles.Count; ++i)
+                {
+                    if (filter.ShouldAwaken(bodies.GetBodyReference(collector.SleepingBodyHandles[i])))
+                        awakener.AwakenBody(collector.SleepingBodyHandles[i]);
+                }
+                collector.Dispose();
             }
-            collector.Dispose();
         }
 
-        unsafe void AwakenBodiesInExistingBounds(ref Collidable collidable)
+        unsafe void AwakenBodiesInExistingBounds<TFilter>(ref Collidable collidable, ref TFilter filter) where TFilter : struct, IStaticChangeAwakeningFilter
         {
             Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < broadPhase.StaticTree.LeafCount);
             broadPhase.GetStaticBoundsPointers(collidable.BroadPhaseIndex, out var minPointer, out var maxPointer);
             BoundingBox oldBounds;
             oldBounds.Min = *minPointer;
             oldBounds.Max = *maxPointer;
-            AwakenBodiesInBounds(ref oldBounds);
+            AwakenBodiesInBounds(ref oldBounds, ref filter);
         }
 
         /// <summary>
-        /// Removes a static from the set by index. Any inactive bodies with bounding boxes overlapping the removed static's bounding box will be forced active.
+        /// Removes a static from the set by index. Any sleeping bodies with bounding boxes overlapping the removed static's bounding box and passing the given filter will be forced awake.
         /// </summary>
         /// <param name="index">Index of the static to remove.</param>
-        public void RemoveAt(int index)
+        /// <param name="filter">Filter to apply to sleeping bodies near the removed static to see if they should be awoken.</param>
+        /// <typeparam name="TAwakeningFilter">Type of the filter to apply to sleeping bodies.</typeparam>
+        public void RemoveAt<TAwakeningFilter>(int index, ref TAwakeningFilter filter) where TAwakeningFilter : struct, IStaticChangeAwakeningFilter
         {
             Debug.Assert(index >= 0 && index < Count);
             ValidateExistingHandle(IndexToHandle[index]);
@@ -159,7 +199,7 @@ namespace BepuPhysics
 
             ref var collidable = ref Collidables[index];
             Debug.Assert(collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
-            AwakenBodiesInExistingBounds(ref collidable);
+            AwakenBodiesInExistingBounds(ref collidable, ref filter);
 
             var removedBroadPhaseIndex = collidable.BroadPhaseIndex;
             if (broadPhase.RemoveStaticAt(removedBroadPhaseIndex, out var movedLeaf))
@@ -167,7 +207,7 @@ namespace BepuPhysics
                 //When a leaf is removed from the broad phase, another leaf will move to take its place in the leaf set.
                 //We must update the collidable->leaf index pointer to match the new position of the leaf in the broadphase.
                 //There are two possible cases for the moved leaf:
-                //1) it is an inactive body collidable,
+                //1) it is a sleeping body collidable,
                 //2) it is a static collidable.
                 //The collidable reference we retrieved tells us whether it's a body or a static.
                 if (movedLeaf.Mobility == CollidableMobility.Static)
@@ -177,7 +217,7 @@ namespace BepuPhysics
                 }
                 else
                 {
-                    //This is an inactive body.
+                    //This is a sleeping body.
                     bodies.UpdateCollidableBroadPhaseIndex(movedLeaf.BodyHandle, removedBroadPhaseIndex);
                 }
             }
@@ -202,17 +242,39 @@ namespace BepuPhysics
             }
             HandlePool.Return(handle.Value, pool);
             HandleToIndex[handle.Value] = -1;
-
         }
+
         /// <summary>
-        /// Removes a static from the set. Any inactive bodies with bounding boxes overlapping the removed static's bounding box will be forced active.
+        /// Removes a static from the set by index. Any sleeping dynamic bodies with bounding boxes overlapping the removed static's bounding box will be forced active.
+        /// </summary>
+        /// <param name="index">Index of the static to remove.</param>
+        public void RemoveAt(int index)
+        {
+            var defaultFilter = default(StaticsShouldntAwakenKinematics);
+            RemoveAt(index, ref defaultFilter);
+        }
+
+        /// <summary>
+        /// Removes a static from the set. Any sleeping bodies with bounding boxes overlapping the removed static's bounding box and passing the given filter will be forced active.
+        /// </summary>
+        /// <param name="handle">Handle of the static to remove.</param>
+        /// <param name="filter">Filter to apply to sleeping bodies near the removed static to see if they should be awoken.</param>
+        /// <typeparam name="TAwakeningFilter">Type of the filter to apply to sleeping bodies.</typeparam>
+        public void Remove<TAwakeningFilter>(StaticHandle handle, ref TAwakeningFilter filter) where TAwakeningFilter : struct, IStaticChangeAwakeningFilter
+        {
+            ValidateExistingHandle(handle);
+            var removedIndex = HandleToIndex[handle.Value];
+            RemoveAt(removedIndex, ref filter);
+        }
+
+        /// <summary>
+        /// Removes a static from the set. Any sleeping dynamic bodies with bounding boxes overlapping the removed static's bounding box will be forced active.
         /// </summary>
         /// <param name="handle">Handle of the static to remove.</param>
         public void Remove(StaticHandle handle)
         {
-            ValidateExistingHandle(handle);
-            var removedIndex = HandleToIndex[handle.Value];
-            RemoveAt(removedIndex);
+            var defaultFilter = default(StaticsShouldntAwakenKinematics);
+            Remove(handle, ref defaultFilter);
         }
 
         /// <summary>
@@ -226,15 +288,18 @@ namespace BepuPhysics
             broadPhase.UpdateStaticBounds(collidable.BroadPhaseIndex, bodyBounds.Min, bodyBounds.Max);
         }
 
-        void ComputeNewBoundsAndAwaken(in RigidPose pose, TypedIndex shape, out BoundingBox bounds)
+        void ComputeNewBoundsAndAwaken<TAwakeningFilter>(in RigidPose pose, TypedIndex shape, ref TAwakeningFilter filter, out BoundingBox bounds) where TAwakeningFilter : struct, IStaticChangeAwakeningFilter
         {
             Debug.Assert(shape.Exists, "Statics must have a shape.");
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
             shapes[shape.Type].ComputeBounds(shape.Index, pose, out bounds.Min, out bounds.Max);
-            AwakenBodiesInBounds(ref bounds);
+            AwakenBodiesInBounds(ref bounds, ref filter);
         }
 
-        internal void ApplyDescriptionByIndexWithoutBroadPhaseModification(int index, in StaticDescription description, out BoundingBox bounds)
+
+
+
+        internal void ApplyDescriptionByIndexWithoutBroadPhaseModification<TAwakeningFilter>(int index, in StaticDescription description, ref TAwakeningFilter filter, out BoundingBox bounds) where TAwakeningFilter : struct, IStaticChangeAwakeningFilter
         {
             Poses[index] = description.Pose;
             ref var collidable = ref Collidables[index];
@@ -243,15 +308,17 @@ namespace BepuPhysics
             collidable.SpeculativeMargin = description.Collidable.SpeculativeMargin;
             collidable.Shape = description.Collidable.Shape;
 
-            ComputeNewBoundsAndAwaken(description.Pose, description.Collidable.Shape, out bounds);
+            ComputeNewBoundsAndAwaken(description.Pose, description.Collidable.Shape, ref filter, out bounds);
         }
 
         /// <summary>
-        /// Adds a new static body to the simulation. All inactive bodies whose bounding boxes overlap the new static are forced active.
+        /// Adds a new static body to the simulation. All sleeping bodies whose bounding boxes overlap the new static and pass the given filter are forced active.
         /// </summary>
         /// <param name="description">Description of the static to add.</param>
+        /// <param name="filter">Filter to apply to sleeping bodies near the new static to see if they should be awoken.</param>
+        /// <typeparam name="TAwakeningFilter">Type of the filter to apply to sleeping bodies.</typeparam>
         /// <returns>Handle of the new static.</returns>
-        public StaticHandle Add(in StaticDescription description)
+        public StaticHandle Add<TAwakeningFilter>(in StaticDescription description, ref TAwakeningFilter filter) where TAwakeningFilter : struct, IStaticChangeAwakeningFilter
         {
             if (Count == HandleToIndex.Length)
             {
@@ -265,45 +332,83 @@ namespace BepuPhysics
             var index = Count++;
             HandleToIndex[handle.Value] = index;
             IndexToHandle[index] = handle;
-            ApplyDescriptionByIndexWithoutBroadPhaseModification(index, description, out var bounds);
+            ApplyDescriptionByIndexWithoutBroadPhaseModification(index, description, ref filter, out var bounds);
             //This is a new add, so we need to add it to the broad phase.
             Collidables[index].BroadPhaseIndex = broadPhase.AddStatic(new CollidableReference(handle), ref bounds);
             return handle;
         }
 
         /// <summary>
-        /// Changes the shape of a static and updates its bounds in the broad phase.
+        /// Adds a new static body to the simulation. All sleeping dynamic bodies whose bounding boxes overlap the new static are forced active.
+        /// </summary>
+        /// <param name="description">Description of the static to add.</param>
+        /// <returns>Handle of the new static.</returns>
+        public StaticHandle Add(in StaticDescription description)
+        {
+            var defaultFilter = default(StaticsShouldntAwakenKinematics);
+            return Add(description, ref defaultFilter);
+        }
+
+        /// <summary>
+        /// Changes the shape of a static and updates its bounds in the broad phase. All sleeping bodies with bounding boxes overlapping the old or new static collidable and pass the given filter are forced active.
         /// </summary>
         /// <param name="handle">Handle of the static to change the shape of.</param>
         /// <param name="newShape">Index of the new shape to use for the static.</param>
-        public void SetShape(StaticHandle handle, TypedIndex newShape)
+        /// <param name="filter">Filter to apply to sleeping bodies near the static to see if they should be awoken.</param>
+        /// <typeparam name="TAwakeningFilter">Type of the filter to apply to sleeping bodies.</typeparam>
+        public void SetShape<TAwakeningFilter>(StaticHandle handle, TypedIndex newShape, ref TAwakeningFilter filter) where TAwakeningFilter : struct, IStaticChangeAwakeningFilter
         {
             ValidateExistingHandle(handle);
             Debug.Assert(newShape.Exists, "Statics must have a shape.");
             var index = HandleToIndex[handle.Value];
             ref var collidable = ref Collidables[index];
-            AwakenBodiesInExistingBounds(ref collidable);
+            AwakenBodiesInExistingBounds(ref collidable, ref filter);
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            ComputeNewBoundsAndAwaken(Poses[index], newShape, out var bounds);
+            ComputeNewBoundsAndAwaken(Poses[index], newShape, ref filter, out var bounds);
             broadPhase.UpdateStaticBounds(collidable.BroadPhaseIndex, bounds.Min, bounds.Max);
         }
 
         /// <summary>
-        /// Applies a new description to an existing static object. All inactive bodies with bounding boxes overlapping the old or new static collidable are forced active.
+        /// Changes the shape of a static and updates its bounds in the broad phase. All sleeping dyanmic bodies with bounding boxes overlapping the old or new static collidable are forced active.
+        /// </summary>
+        /// <param name="handle">Handle of the static to change the shape of.</param>
+        /// <param name="newShape">Index of the new shape to use for the static.</param>
+        public void SetShape(StaticHandle handle, TypedIndex newShape)
+        {
+            var defaultFilter = default(StaticsShouldntAwakenKinematics);
+            SetShape(handle, newShape, ref defaultFilter);
+        }
+
+        /// <summary>
+        /// Applies a new description to an existing static object. All sleeping bodies with bounding boxes overlapping the old or new static collidable and pass the given filter are forced active.
+        /// Updates the bounds of the static in the broad phase.
+        /// </summary>
+        /// <param name="handle">Handle of the static to apply the description to.</param>
+        /// <param name="description">Description to apply to the static.</param>
+        /// <param name="filter">Filter to apply to sleeping bodies near the static to see if they should be awoken.</param>
+        /// <typeparam name="TAwakeningFilter">Type of the filter to apply to sleeping bodies.</typeparam>
+        public unsafe void ApplyDescription<TAwakeningFilter>(StaticHandle handle, in StaticDescription description, ref TAwakeningFilter filter) where TAwakeningFilter : struct, IStaticChangeAwakeningFilter
+        {
+            ValidateExistingHandle(handle);
+            var index = HandleToIndex[handle.Value];
+            Debug.Assert(description.Collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
+            //Wake all bodies up in the old bounds AND the new bounds. Sleeping bodies that may have been resting on the old static need to be aware of the new environment.
+            AwakenBodiesInExistingBounds(ref Collidables[index], ref filter);
+            ApplyDescriptionByIndexWithoutBroadPhaseModification(index, description, ref filter, out var bounds);
+            //This applies to an existing static, so we should modify the static's bounds in the broad phase.
+            broadPhase.UpdateStaticBounds(Collidables[index].BroadPhaseIndex, bounds.Min, bounds.Max);
+        }
+
+        /// <summary>
+        /// Applies a new description to an existing static object. All sleeping bodies with bounding boxes overlapping the old or new static collidable and pass the given filter are forced active.
         /// Updates the bounds of the static in the broad phase.
         /// </summary>
         /// <param name="handle">Handle of the static to apply the description to.</param>
         /// <param name="description">Description to apply to the static.</param>
         public unsafe void ApplyDescription(StaticHandle handle, in StaticDescription description)
         {
-            ValidateExistingHandle(handle);
-            var index = HandleToIndex[handle.Value];
-            Debug.Assert(description.Collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
-            //Wake all bodies up in the old bounds AND the new bounds. Inactive bodies that may have been resting on the old static need to be aware of the new environment.
-            AwakenBodiesInExistingBounds(ref Collidables[index]);
-            ApplyDescriptionByIndexWithoutBroadPhaseModification(index, description, out var bounds);
-            //This applies to an existing static, so we should modify the static's bounds in the broad phase.
-            broadPhase.UpdateStaticBounds(Collidables[index].BroadPhaseIndex, bounds.Min, bounds.Max);
+            var defaultFilter = default(StaticsShouldntAwakenKinematics);
+            ApplyDescription(handle, description, ref defaultFilter);
         }
 
         /// <summary>
