@@ -907,7 +907,7 @@ namespace BepuPhysics.Constraints
                         //Note that if we take this codepath, the integration routine will reconstruct the world inertias from local inertia given the current pose.
                         //The changes to pose and velocity for integration inactive lanes will be masked out, so it'll just be identical to the world inertia if we had gathered it.
                         //Given that we're running the instructions in a bundle to build it, there's no reason to go out of our way to gather the world inertia.
-                        IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, gatheredInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
+                        IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, count, gatheredInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
                         bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integrationMask);
                         bodies.ScatterInertia(ref inertia, ref bodyIndices, ref integrationMask);
                     }

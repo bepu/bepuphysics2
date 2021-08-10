@@ -280,7 +280,7 @@ namespace BepuPhysics.Constraints
 
                 //if (typeof(TAllowPoseIntegration) == typeof(AllowPoseIntegration))
                 //    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, new Vector<float>(dt), accumulatedImpulses, ref prestep);
-                
+
                 function.WarmStart2(positionA, orientationA, inertiaA, prestep, accumulatedImpulses, ref wsvA);
 
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
@@ -313,7 +313,7 @@ namespace BepuPhysics.Constraints
 
                 function.Solve2(positionA, orientationA, inertiaA, dt, inverseDt, prestep, ref accumulatedImpulses, ref wsvA);
 
-                bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references, count); 
+                bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references, count);
             }
         }
 
