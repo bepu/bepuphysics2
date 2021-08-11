@@ -266,8 +266,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 negative.X = localOffsetA.X - endpointOffset.X;
                 negative.Y = localOffsetA.Y - endpointOffset.Y - capHeight;
                 negative.Z = localOffsetA.Z - endpointOffset.Z;
-                var centerOffsetAlongY = localOffsetA.Y - capHeight;
-                var endpointOffsetAlongY = capsuleAxis.Y * a.HalfLength;
                 var tNegative = negative.Y * inverseNormalY;
                 var tPositive = positive.Y * inverseNormalY;
                 Vector2Wide projectedPositive, projectedNegative;
@@ -318,7 +316,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(faceNormalA, localNormal, out var faceNormalADotLocalNormal);
             //Don't have to perform any calibration on the faceNormalA; it appears in both the numerator and denominator so the sign and magnitudes cancel.
             var inverseFaceNormalADotLocalNormal = Vector<float>.One / faceNormalADotLocalNormal;
-            Vector3Wide.Scale(faceNormalA, faceNormalADotLocalNormal, out var scaledFaceNormalA);
             Vector3Wide.Add(localOffsetB, contact0, out var offset0);
             Vector3Wide.Add(localOffsetB, contact1, out var offset1);
             Vector3Wide.Dot(offset0, faceNormalA, out var t0);
@@ -330,7 +327,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //If the capsule axis is parallel with the normal, then the contacts collapse to one point and we can use the initially computed depth.
             //In this case, both contact positions should be extremely close together anyway.
-            var collapse = Vector.LessThan(Vector.Abs(faceNormalADotLocalNormal), new Vector<float>(1e-14f));
+            var collapse = Vector.LessThan(Vector.Abs(faceNormalADotLocalNormal), new Vector<float>(1e-10f));
             manifold.Depth0 = Vector.ConditionalSelect(collapse, depth, manifold.Depth0);
             var negativeMargin = -speculativeMargin;
             manifold.Contact0Exists = Vector.GreaterThan(manifold.Depth0, negativeMargin);
