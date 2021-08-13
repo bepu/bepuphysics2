@@ -95,7 +95,7 @@ namespace Demos
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IntegrateVelocity(ReadOnlySpan<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
         {
-            velocity.Linear += gravityWide * dt;
+            velocity.Linear = Vector3Wide.ConditionalSelect(Vector.Equals(localInertia.InverseMass, Vector<float>.Zero), velocity.Linear, velocity.Linear + gravityWide * dt);
         }
     }
     public unsafe struct DemoNarrowPhaseCallbacks : INarrowPhaseCallbacks

@@ -19,7 +19,7 @@ namespace Demos.Demos
     /// </summary>
     public class RopeStabilityDemo : Demo
     {
-        static BodyHandle[] BuildRopeBodies(Simulation simulation, in Vector3 start, int bodyCount, float bodySize, float bodySpacing, float massPerBody, float inverseInertiaScale)
+        public static BodyHandle[] BuildRopeBodies(Simulation simulation, in Vector3 start, int bodyCount, float bodySize, float bodySpacing, float massPerBody, float inverseInertiaScale, float speculativeMargin = 0.1f)
         {
             BodyHandle[] handles = new BodyHandle[bodyCount + 1];
             var ropeShape = new Sphere(bodySize);
@@ -31,7 +31,7 @@ namespace Demos.Demos
             {
                 //Make the uppermost block kinematic to hold up the rest of the chain.
                 Activity = new BodyActivityDescription(.01f),
-                Collidable = new CollidableDescription(ropeShapeIndex, 0.1f),
+                Collidable = new CollidableDescription(ropeShapeIndex, speculativeMargin),
             };
             for (int linkIndex = 0; linkIndex < bodyCount + 1; ++linkIndex)
             {
