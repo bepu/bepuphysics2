@@ -370,7 +370,8 @@ namespace BepuPhysics
                 pool.Take(batchReferencedHandles.Count, out bodiesFirstObservedInBatches);
                 //We don't have to consider the first batch, since we know ahead of time that the first batch will be the first time we see any bodies in it.
                 //Just copy directly from the first batch into the merged to initialize it.
-                pool.Take((bodies.HandlePool.HighestPossiblyClaimedId + 63) / 64, out mergedConstrainedBodyHandles.Flags);
+                //Note "+ 64" instead of "+ 63": the highest possibly claimed id is inclusive!
+                pool.Take((bodies.HandlePool.HighestPossiblyClaimedId + 64) / 64, out mergedConstrainedBodyHandles.Flags);
                 var copyLength = Math.Min(mergedConstrainedBodyHandles.Flags.Length, batchReferencedHandles[0].Flags.Length);
                 batchReferencedHandles[0].Flags.CopyTo(0, mergedConstrainedBodyHandles.Flags, 0, copyLength);
                 batchReferencedHandles[0].Flags.Clear(copyLength, batchReferencedHandles[0].Flags.Length - copyLength);

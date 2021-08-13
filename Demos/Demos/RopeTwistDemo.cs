@@ -76,38 +76,36 @@ namespace Demos.Demos
 
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(0, 25, 45);
+            camera.Position = new Vector3(0, 20, 20);
             camera.Yaw = 0;
             camera.Pitch = 0;
 
             var filters = new CollidableProperty<Filter>();
             Simulation = Simulation.Create(BufferPool,
-                new RopeNarrowPhaseCallbacks { ContactSpringiness = new SpringSettings(1200, 1), Filters = filters },
-                new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)), new EmbeddedSubsteppingTimestepper2(30), solverIterationCount: 1);
+                new RopeNarrowPhaseCallbacks { ContactSpringiness = new SpringSettings(2000, 1), Filters = filters },
+                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(60), solverIterationCount: 1, solverFallbackBatchThreshold: 128);
             //Simulation = Simulation.Create(BufferPool,
-            //    new RopeNarrowPhaseCallbacks { ContactSpringiness = new SpringSettings(1200, 1), Filters = filters },
-            //    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper2(30), solverIterationCount: 1);
+            //    new RopeNarrowPhaseCallbacks { ContactSpringiness = new SpringSettings(2000, 1), Filters = filters },
+            //    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper2(60), solverIterationCount: 1, solverFallbackBatchThreshold: 128);
 
 
-            for (int twistIndex = 0; twistIndex < 5; ++twistIndex)
+            for (int twistIndex = 0; twistIndex < 1; ++twistIndex)
             {
                 const int ropeCount = 4;
-                var startLocation = new Vector3(-30 + twistIndex * 15, 50, 0);
+                var startLocation = new Vector3(0 + twistIndex * 15, 30, 0);
 
                 var bigWreckingBall = new Sphere(3);
                 //This wrecking ball is much, much heavier.
                 bigWreckingBall.ComputeInertia(10000, out var bigWreckingBallInertia);
                 var bigWreckingBallIndex = Simulation.Shapes.Add(bigWreckingBall);
                 const float ropeBodySpacing = -0.1f;
-                const float ropeBodyRadius = 0.2f;
+                const float ropeBodyRadius = 0.1f;
                 const int ropeBodyCount = 130;
                 var wreckingBallPosition = startLocation - new Vector3(0, ropeBodyRadius + (ropeBodyRadius * 2 + ropeBodySpacing) * ropeBodyCount + bigWreckingBall.Radius, 0);
                 var description = BodyDescription.CreateDynamic(wreckingBallPosition, bigWreckingBallInertia, new CollidableDescription(bigWreckingBallIndex, 25f), new BodyActivityDescription(-0.01f));
-                //Give it a little bump.
-                //description.Velocity = new BodyVelocity(new Vector3(-10, 0, 0), default);
                 var wreckingBallBodyHandle = Simulation.Bodies.Add(description);
                 var wreckingBallBody = Simulation.Bodies.GetBodyReference(wreckingBallBodyHandle);
-                wreckingBallBody.Velocity.Angular = new Vector3(0, 0, 0);
+                wreckingBallBody.Velocity.Angular = new Vector3(0, 20, 0);
                 filters.Allocate(wreckingBallBodyHandle) = new Filter { RopeIndex = (short)(16384 + twistIndex), IndexInRope = ropeBodyCount };
 
                 for (int ropeIndex = 0; ropeIndex < ropeCount; ++ropeIndex)
@@ -117,7 +115,7 @@ namespace Demos.Demos
                     var horizontalOffset = ropeDistributionRadius * new Vector3(MathF.Sin(angle), 0, MathF.Cos(angle));
                     var ropeStartLocation = startLocation + horizontalOffset;
 
-                    var springSettings = new SpringSettings(300, 1);
+                    var springSettings = new SpringSettings(600, 1);
                     var bodyHandles = RopeStabilityDemo.BuildRopeBodies(Simulation, ropeStartLocation, ropeBodyCount, ropeBodyRadius, ropeBodySpacing, 1f, 0, 25f);
                     for (int i = 0; i < bodyHandles.Length; ++i)
                     {
@@ -168,6 +166,14 @@ namespace Demos.Demos
             //    new Vector3(100, 70, 0), BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f),
             //    new CollidableDescription(Simulation.Shapes.Add(new Capsule(8, 64)), 0.1f)));
 
+        }
+        public override void Update(Window window, Camera camera, Input input, float dt)
+        {
+            //This demo is an extreme case.
+            //As of this writing, extremely high substep counts and extremely high batch counts with a relatively small simulations (like in this demo)
+            //actually run faster on a single thread. The overhead of synchronizing the thread group thousands of times overwhelms the actual work being done.
+            //On the upside, this means that adding more bodies uninvolved to this simulation is almost free if using multithreading.
+            Simulation.Timestep(1 / 60f);
         }
 
     }
