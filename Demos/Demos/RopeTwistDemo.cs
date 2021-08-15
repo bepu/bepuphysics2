@@ -173,7 +173,7 @@ namespace Demos.Demos
             //As of this writing, extremely high substep counts and extremely high batch counts with a relatively small simulations (like in this demo)
             //actually run faster on a single thread. The overhead of synchronizing the thread group thousands of times overwhelms the actual work being done.
             //On the upside, this means that adding more bodies uninvolved to this simulation is almost free if using multithreading.
-            Simulation.Timestep(1 / 60f);
+            Simulation.Timestep(1 / 60f, ThreadDispatcher);
         }
 
     }

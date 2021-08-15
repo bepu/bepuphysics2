@@ -257,7 +257,7 @@ namespace BepuPhysics
             public Buffer<WorkerBounds> WorkerBoundsA;
             public Buffer<WorkerBounds> WorkerBoundsB;
 
-
+            public Buffer<int> SyncStageWorkCounters;
 
         }
         protected MultithreadingParameters context;
@@ -772,6 +772,10 @@ namespace BepuPhysics
                 context.WorkerBoundsA[i] = new WorkerBounds { Min = int.MaxValue, Max = int.MinValue };
             }
 
+            pool.Take(2, out context.SyncStageWorkCounters);
+            context.SyncStageWorkCounters[0] = -1;
+            context.SyncStageWorkCounters[1] = -1;
+
             //While we could be a little more aggressive about culling work with this condition, it doesn't matter much. Have to do it for correctness; worker relies on it.
             if (ActiveSet.Batches.Count > 0)
                 threadDispatcher.DispatchWorkers(workDelegate);
@@ -787,6 +791,7 @@ namespace BepuPhysics
             pool.Return(ref context.BatchBoundaries);
             pool.Return(ref context.WorkerBoundsA);
             pool.Return(ref context.WorkerBoundsB);
+            pool.Return(ref context.SyncStageWorkCounters);
         }
 
 

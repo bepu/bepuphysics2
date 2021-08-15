@@ -33,6 +33,35 @@ namespace BepuPhysics
     }
     public class Solver<TIntegrationCallbacks> : Solver where TIntegrationCallbacks : struct, IPoseIntegratorCallbacks
     {
+        void ExecuteStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, int availableBlocksStartIndex, int availableBlocksCount, ref int syncStage) where TStageFunction : IStageFunction
+        {
+            var workCounterIndex = syncStage & 1;
+            while (true)
+            {
+                var workBlockIndexOffset = Interlocked.Increment(ref context.SyncStageWorkCounters[workCounterIndex]); //note counters are initialized to -1.
+                Debug.Assert(workBlockIndexOffset >= 0, "A stage cannot try to execute a work block that came before the current stage!");
+                if (workBlockIndexOffset < availableBlocksCount)
+                {
+                    stageFunction.Execute(this, availableBlocksStartIndex + workBlockIndexOffset, workerIndex);
+                }
+                else
+                {
+                    //No more work available.
+                    break;
+                }
+            }
+
+            if (workerIndex == 0)
+            {
+                //Clear the work counter for the next sync stage.
+                context.SyncStageWorkCounters[workCounterIndex ^ 1] = -1;
+            }
+            InterstageSync(ref syncStage);
+
+
+
+        }
+
         public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
             int initialCapacity,
             int initialIslandCapacity,
@@ -208,9 +237,10 @@ namespace BepuPhysics
             {
                 if (i > 0)
                 {
-                    ExecuteStage(
-                        ref incrementalUpdateStage, ref context.IncrementalUpdateBlocks, ref bounds, ref boundsBackBuffer, workerIndex, 0, context.IncrementalUpdateBlocks.Blocks.Count,
-                        ref incrementalUpdateWorkerStart, ref syncStage, incrementalClaimedState, incrementalUnclaimedState);
+                    ExecuteStage(ref incrementalUpdateStage, workerIndex, 0, context.IncrementalUpdateBlocks.Blocks.Count, ref syncStage);
+                    //ExecuteStage(
+                    //    ref incrementalUpdateStage, ref context.IncrementalUpdateBlocks, ref bounds, ref boundsBackBuffer, workerIndex, 0, context.IncrementalUpdateBlocks.Blocks.Count,
+                    //    ref incrementalUpdateWorkerStart, ref syncStage, incrementalClaimedState, incrementalUnclaimedState);
                     incrementalClaimedState ^= 1;
                     incrementalUnclaimedState ^= 1;
                 }
@@ -218,8 +248,9 @@ namespace BepuPhysics
                 for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
                 {
                     var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
-                    ExecuteStage(ref warmstartStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
-                        ref batchStarts[batchIndex], ref syncStage, claimedState, unclaimedState);
+                    ExecuteStage(ref warmstartStage, workerIndex, batchOffset, context.BatchBoundaries[batchIndex] - batchOffset, ref syncStage);
+                    //ExecuteStage(ref warmstartStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
+                    //    ref batchStarts[batchIndex], ref syncStage, claimedState, unclaimedState);
                 }
                 claimedState ^= 1;
                 unclaimedState ^= 1;
@@ -228,8 +259,9 @@ namespace BepuPhysics
                     for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
                     {
                         var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
-                        ExecuteStage(ref solveStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
-                            ref batchStarts[batchIndex], ref syncStage, claimedState, unclaimedState);
+                        ExecuteStage(ref solveStage, workerIndex, batchOffset, context.BatchBoundaries[batchIndex] - batchOffset, ref syncStage);
+                        //ExecuteStage(ref solveStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
+                        //    ref batchStarts[batchIndex], ref syncStage, claimedState, unclaimedState);
                     }
                     claimedState ^= 1;
                     unclaimedState ^= 1;

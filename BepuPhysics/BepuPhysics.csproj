@@ -28,12 +28,14 @@
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>embedded</DebugType>
+    <DebugType>full</DebugType>
     <Optimize>true</Optimize>
     <DefineConstants>TRACE;RELEASE;PROFILE</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='ReleaseNoProfiling'">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
     <Optimize>true</Optimize>
     <DefineConstants>TRACE;RELEASE</DefineConstants>
   </PropertyGroup>
