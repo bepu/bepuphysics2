@@ -420,11 +420,10 @@ namespace BepuPhysics
         }
 
 
-        //TODO: It's very likely that this spin wait isn't ideal for some newer systems like threadripper.
         /// <summary>
         /// Behaves like a framework SpinWait, but never voluntarily relinquishes the timeslice to off-core threads.
         /// </summary>
-        /// <remarks><para>There are three big reasons for using this over the regular framework SpinWait:</para>
+        /// <remarks><para>There are two big reasons for using this over the regular framework SpinWait:</para>
         /// <para>1) The framework spinwait relies on spins for quite a while before resorting to any form of timeslice surrender.
         /// Empirically, this is not ideal for the solver- if the sync condition isn't met within several nanoseconds, it will tend to be some microseconds away.
         /// This spinwait is much more aggressive about moving to yields.</para>
@@ -432,11 +431,10 @@ namespace BepuPhysics
         /// This widens the potential set of schedulable threads to those not native to the current core. If we permit that transition, it is likely to evict cached solver data.
         /// (For very large simulations, the use of Sleep(0) isn't that concerning- every iteration can be large enough to evict all of cache- 
         /// but there still isn't much benefit to using it over yields in context.)</para>
-        /// <para>3) After a particularly long wait, the framework SpinWait resorts to Sleep(1). This is catastrophic for the solver- worse than merely interfering with cached data,
-        /// it also simply prevents the thread from being rescheduled for an extremely long period of time (potentially most of a frame!) under the default clock resolution.</para>
+        /// <para>SpinWait will also fall back to Sleep(1) by default which obliterates performance, but that behavior can be disabled.</para>
         /// <para>Note that this isn't an indication that the framework SpinWait should be changed, but rather that the solver's requirements are extremely specific and don't match
         /// a general purpose solution very well.</para></remarks>
-        struct LocalSpinWait
+        protected struct LocalSpinWait
         {
             public int WaitCount;
 
