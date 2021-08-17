@@ -12,9 +12,63 @@ using System.Threading;
 using System.Runtime.Intrinsics.X86;
 using System.Numerics;
 using System.Runtime.Intrinsics;
+using static BepuPhysics.Solver;
 
 namespace BepuPhysics
 {
+    internal enum SolverJobType
+    {
+        IncrementalUpdate,
+        WarmStart,
+        WarmStartFallback,
+        Solve,
+        SolveFallback,
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct SolverSyncStage
+    {
+        [FieldOffset(0)]
+        public Buffer<int> Claims;
+        [FieldOffset(20)]
+        public SolverJobType JobType;
+        [FieldOffset(24)]
+        public int BatchIndex;
+        [FieldOffset(28)]
+        public int WorkBlockStartIndex;
+        [FieldOffset(32)]
+        public int SubstepIndex;
+
+        [FieldOffset(128)]
+        public int CompletedWorkBlockCount;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct SubstepMultithreadingContext
+    {
+        [FieldOffset(0)]
+        public Buffer<SolverSyncStage> Stages;
+        [FieldOffset(16)]
+        public Buffer<WorkBlock> IncrementalUpdateBlocks;
+        [FieldOffset(32)]
+        public Buffer<WorkBlock> ConstraintBlocks;
+        [FieldOffset(48)]
+        public Buffer<FallbackScatterWorkBlock> FallbackBlocks;
+        [FieldOffset(64)]
+        public Buffer<int> ConstraintBatchBoundaries;
+        [FieldOffset(80)]
+        public float Dt;
+        [FieldOffset(84)]
+        public float InverseDt;
+        [FieldOffset(88)]
+        public int WorkerCount;
+
+        //Stage index is written during multithreaded execution; don't want to infest any of the more frequently read properties, so it's shoved out of any dangerous cache line.
+        [FieldOffset(256)]
+        public int StageIndex;
+    }
+
+
     public partial class Solver
     {
         public virtual IndexSet PrepareConstraintIntegrationResponsibilities(int substepCount, IThreadDispatcher threadDispatcher = null)
@@ -53,6 +107,7 @@ namespace BepuPhysics
         {
             PoseIntegrator = poseIntegrator;
             solveStep2Worker = SolveStep2Worker;
+            solveStep2Worker2 = SolveStep2Worker2;
             constraintIntegrationResponsibilitiesWorker = ConstraintIntegrationResponsibilitiesWorker;
         }
 
@@ -101,7 +156,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
-                ref var block = ref this.solver.context.ConstraintBlocks.Blocks[blockIndex];
+                ref var block = ref this.solver.substepContext.ConstraintBlocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
                 if (SubstepIndex == 0)
@@ -115,7 +170,6 @@ namespace BepuPhysics
 
             }
         }
-        //no fallback warmstart; the last constraint batch is always handled by the solve instead, and if the fallback batch exists, it's guaranteed to be the last batch.
 
         struct SolveStep2StageFunction : IStageFunction
         {
@@ -126,7 +180,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
-                ref var block = ref this.solver.context.ConstraintBlocks.Blocks[blockIndex];
+                ref var block = ref this.solver.substepContext.ConstraintBlocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
                 typeProcessor.SolveStep2(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
@@ -157,7 +211,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
-                ref var block = ref this.solver.context.IncrementalUpdateBlocks.Blocks[blockIndex];
+                ref var block = ref this.solver.substepContext.IncrementalUpdateBlocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 solver.TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
             }
@@ -217,9 +271,9 @@ namespace BepuPhysics
             int incrementalUnclaimedState = 0;
 
             var incrementalUpdateWorkerStart = GetUniformlyDistributedStart(workerIndex, context.IncrementalUpdateBlocks.Blocks.Count, workerCount, 0);
-            for (int i = 0; i < substepCount; ++i)
+            for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
             {
-                if (i > 0)
+                if (substepIndex > 0)
                 {
                     ExecuteStage(ref incrementalUpdateStage, workerIndex, workerCount, 0, context.IncrementalUpdateBlocks.Blocks.Count, ref syncStage);
                     //ExecuteStage(
@@ -228,7 +282,7 @@ namespace BepuPhysics
                     incrementalClaimedState ^= 1;
                     incrementalUnclaimedState ^= 1;
                 }
-                warmstartStage.SubstepIndex = i;
+                warmstartStage.SubstepIndex = substepIndex;
                 for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
                 {
                     var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
@@ -253,7 +307,7 @@ namespace BepuPhysics
             }
         }
 
-        void ExecuteWorkerStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, int workerStart, int availableBlocksStartIndex, int availableBlocksCount, ref Buffer<int> claims, ref int completedWorkBlocks) where TStageFunction : IStageFunction
+        void ExecuteWorkerStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, int workerStart, int availableBlocksStartIndex, ref Buffer<int> claims, ref int completedWorkBlocks) where TStageFunction : IStageFunction
         {
             if (workerStart == -1)
             {
@@ -263,16 +317,15 @@ namespace BepuPhysics
                 return;
             }
             int workBlockIndex = workerStart;
-            var availableBlocksEndIndex = availableBlocksStartIndex + availableBlocksCount;
             int locallyCompletedCount = 0;
             //Try to claim blocks by traversing forward until we're blocked by another claim.
             while (Interlocked.CompareExchange(ref claims[workBlockIndex], -1, 0) == 0)
             {
                 //Successfully claimed a work block.
-                stageFunction.Execute(this, workBlockIndex, workerIndex);
+                stageFunction.Execute(this, availableBlocksStartIndex + workBlockIndex, workerIndex);
                 ++locallyCompletedCount;
                 workBlockIndex++;
-                if (workBlockIndex >= availableBlocksEndIndex)
+                if (workBlockIndex >= claims.Length)
                 {
                     //Wrap around.
                     workBlockIndex = 0;
@@ -293,16 +346,24 @@ namespace BepuPhysics
                     break;
                 }
                 //Successfully claimed a work block.
-                stageFunction.Execute(this, workBlockIndex, workerIndex);
+                stageFunction.Execute(this, availableBlocksStartIndex + workBlockIndex, workerIndex);
                 ++locallyCompletedCount;
                 workBlockIndex--;
             }
             //No more adjacent work blocks are available. This thread is done!
             Interlocked.Add(ref completedWorkBlocks, locallyCompletedCount);
         }
-        void ExecuteMainStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, int workerStart, int availableBlocksStartIndex, int availableBlocksCount, ref int stageIndex) where TStageFunction : IStageFunction
+        void ExecuteMainStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, int workerStart, int availableBlocksStartIndex, ref SolverSyncStage stage, int stageIndex) where TStageFunction : IStageFunction
         {
+            var availableBlocksCount = stage.Claims.Length;
             Debug.Assert(availableBlocksCount > 0, "We assume any zero count batches are not included in the stages available to execute.");
+
+            //for (int i = 0; i < availableBlocksCount; ++i)
+            //{
+            //    stageFunction.Execute(this, availableBlocksStartIndex + i, workerIndex);
+            //}
+            //return;
+
             if (availableBlocksCount == 1)
             {
                 //There is only one work block available. There's no reason to notify other threads about it or do any claims management; just execute it sequentially.
@@ -312,8 +373,7 @@ namespace BepuPhysics
             {
                 //Write the new stage index so other spinning threads will begin work on it.
                 Volatile.Write(ref substepContext.StageIndex, stageIndex);
-                ref var stage = ref substepContext.Stages[stageIndex];
-                ExecuteWorkerStage(ref stageFunction, workerIndex, workerStart, availableBlocksStartIndex, availableBlocksCount, ref stage.Claims, ref stage.CompletedWorkBlockCount);
+                ExecuteWorkerStage(ref stageFunction, workerIndex, workerStart, availableBlocksStartIndex, ref stage.Claims, ref stage.CompletedWorkBlockCount);
 
                 //Since we asked other threads to do work, we must wait until the requested work is done before proceeding.
                 //Note that we DO NOT yield on the main thread! 
@@ -329,71 +389,11 @@ namespace BepuPhysics
                     Thread.SpinWait(3);
                 }
             }
-            ++stageIndex;
         }
-        enum JobType
-        {
-            IncrementalUpdate,
-            WarmStart,
-            WarmStartFallback,
-            Solve,
-            SolveFallback,
-        }
-
-        [StructLayout(LayoutKind.Explicit)]
-        struct SyncStage
-        {
-            [FieldOffset(0)]
-            public Buffer<int> Claims;
-
-            [FieldOffset(20)]
-            public JobType JobType;
-
-            [FieldOffset(24)]
-            public int BatchIndex;
-
-            [FieldOffset(128)]
-            public int CompletedWorkBlockCount;
-
-            public SyncStage(BufferPool pool, int claimCount, JobType jobType, int batchIndex = 0)
-            {
-                CompletedWorkBlockCount = 0;
-                JobType = jobType;
-                BatchIndex = batchIndex;
-                pool.Take(claimCount, out Claims);
-            }
-            public void Dispose(BufferPool pool)
-            {
-                pool.Return(ref Claims);
-            }
-        }
-
-        [StructLayout(LayoutKind.Explicit)]
-        struct SubstepMultithreadingContext
-        {
-            [FieldOffset(0)]
-            public Buffer<SyncStage> Stages;
-            [FieldOffset(16)]
-            public WorkBlocks<WorkBlock> IncrementalUpdateBlocks;
-            [FieldOffset(64)]
-            public WorkBlocks<WorkBlock> ConstraintBlocks;
-            [FieldOffset(112)]
-            public WorkBlocks<FallbackScatterWorkBlock> FallbackBlocks;
-            [FieldOffset(160)]
-            public Buffer<int> BatchBoundaries;
-            [FieldOffset(176)]
-            public float Dt;
-            [FieldOffset(180)]
-            public float InverseDt;
-
-            //Stage index is written; don't want to infest any of the more frequently read properties, so it's shoved out of any dangerous cache line.
-            [FieldOffset(256)]
-            public int StageIndex;
-        }
-
         SubstepMultithreadingContext substepContext;
 
 
+        Action<int> solveStep2Worker2;
         void SolveStep2Worker2(int workerIndex)
         {
             //The solver has two codepaths: one thread, acting as an orchestrator, and the others, just waiting to be used.
@@ -404,9 +404,9 @@ namespace BepuPhysics
             //There's still nothing done if the OS unschedules an active worker that claimed work, but that's a far, far rarer concern.
             //Note that this attempts to maintain a given worker's relationship to a set of work blocks. This increases the probability that 
             //data will remain in some cache that's reasonably close to the core.
-            int workerCount = context.WorkerCount;
-            var incrementalUpdateWorkerStart = GetUniformlyDistributedStart(workerIndex, substepContext.IncrementalUpdateBlocks.Blocks.Count, workerCount, 0);
-            int fallbackStart = GetUniformlyDistributedStart(workerIndex, substepContext.FallbackBlocks.Blocks.Count, workerCount, 0);
+            int workerCount = substepContext.WorkerCount;
+            var incrementalUpdateWorkerStart = GetUniformlyDistributedStart(workerIndex, substepContext.IncrementalUpdateBlocks.Length, workerCount, 0);
+            int fallbackStart = GetUniformlyDistributedStart(workerIndex, substepContext.FallbackBlocks.Length, workerCount, 0);
             Buffer<int> batchStarts;
             ref var activeSet = ref ActiveSet;
             unsafe
@@ -416,9 +416,9 @@ namespace BepuPhysics
             }
             for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
-                var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
-                var batchCount = substepContext.BatchBoundaries[batchIndex] - batchOffset;
-                batchStarts[batchIndex] = GetUniformlyDistributedStart(workerIndex, batchCount, workerCount, batchOffset);
+                var batchOffset = batchIndex > 0 ? substepContext.ConstraintBatchBoundaries[batchIndex - 1] : 0;
+                var batchCount = substepContext.ConstraintBatchBoundaries[batchIndex] - batchOffset;
+                batchStarts[batchIndex] = GetUniformlyDistributedStart(workerIndex, batchCount, workerCount, 0);
             }
 
             Debug.Assert(activeSet.Batches.Count > 0, "Don't dispatch if there are no constraints.");
@@ -445,29 +445,42 @@ namespace BepuPhysics
 
             if (workerIndex == 0)
             {
-                int stageIndex = 0;
                 //This is the main 'orchestrator' thread. It tracks execution progress and notifies other threads that's it's time to work.
-                for (int i = 0; i < substepCount; ++i)
+                for (int stageIndex = 0; stageIndex < substepContext.Stages.Length; ++stageIndex)
                 {
-                    if (i > 0)
+                    ref var stage = ref substepContext.Stages[stageIndex];
+                    switch (stage.JobType)
                     {
-                        ExecuteMainStage(ref incrementalUpdateStage, workerIndex, workerCount, 0, substepContext.IncrementalUpdateBlocks.Blocks.Count, ref stageIndex);
-                    }
-                    warmstartStage.SubstepIndex = i;
-                    for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
-                    {
-                        var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
-                        ExecuteMainStage(ref warmstartStage, workerIndex, workerCount, batchOffset, substepContext.BatchBoundaries[batchIndex] - batchOffset, ref stageIndex);
-                    }
-                    for (int j = 0; j < IterationCount; ++j)
-                    {
-                        for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
-                        {
-                            var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
-                            ExecuteMainStage(ref solveStage, workerIndex, workerCount, batchOffset, substepContext.BatchBoundaries[batchIndex] - batchOffset, ref stageIndex);
-                        }
+                        case SolverJobType.IncrementalUpdate:
+                            {
+                                ExecuteMainStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, 0, ref stage, stageIndex);
+                            }
+                            break;
+                        case SolverJobType.WarmStart:
+                            {
+                                warmstartStage.SubstepIndex = stage.SubstepIndex;
+                                ExecuteMainStage(ref warmstartStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage, stageIndex);
+                            }
+                            break;
+                        case SolverJobType.WarmStartFallback:
+                            {
+                                Debug.Fail("Not yet supported.");
+                            }
+                            break;
+                        case SolverJobType.Solve:
+                            {
+                                ExecuteMainStage(ref solveStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage, stageIndex);
+                            }
+                            break;
+                        case SolverJobType.SolveFallback:
+                            {
+                                Debug.Fail("Not yet supported.");
+                            }
+                            break;
                     }
                 }
+                //All done; notify waiting threads to join.
+                Volatile.Write(ref substepContext.StageIndex, substepContext.Stages.Length);
             }
             else
             {
@@ -489,40 +502,151 @@ namespace BepuPhysics
                         //No more stages; exit the work loop.
                         break;
                     }
-                    var stage = substepContext.Stages[stageIndex];
+                    ref var stage = ref substepContext.Stages[stageIndex];
                     switch (stage.JobType)
                     {
-                        case JobType.IncrementalUpdate:
+                        case SolverJobType.IncrementalUpdate:
                             {
-                                ExecuteWorkerStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, 0, substepContext.IncrementalUpdateBlocks.Blocks.Count, ref stage.Claims, ref stage.CompletedWorkBlockCount);
+                                ExecuteWorkerStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, 0, ref stage.Claims, ref stage.CompletedWorkBlockCount);
                             }
                             break;
-                        case JobType.WarmStart:
+                        case SolverJobType.WarmStart:
                             {
-                                var batchStart = stage.BatchIndex > 0 ? context.BatchBoundaries[stage.BatchIndex - 1] : 0;
-                                ExecuteWorkerStage(ref warmstartStage, workerIndex, batchStarts[stage.BatchIndex], batchStart, substepContext.BatchBoundaries[stage.BatchIndex] - batchStart, ref stage.Claims, ref stage.CompletedWorkBlockCount);
+                                warmstartStage.SubstepIndex = stage.SubstepIndex;
+                                ExecuteWorkerStage(ref warmstartStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, ref stage.CompletedWorkBlockCount);
                             }
                             break;
-                        case JobType.WarmStartFallback:
+                        case SolverJobType.WarmStartFallback:
                             {
                                 Debug.Fail("Not yet supported.");
                             }
                             break;
-                        case JobType.Solve:
+                        case SolverJobType.Solve:
                             {
-                                var batchStart = stage.BatchIndex > 0 ? context.BatchBoundaries[stage.BatchIndex - 1] : 0;
-                                ExecuteWorkerStage(ref solveStage, workerIndex, batchStarts[stage.BatchIndex], batchStart, substepContext.BatchBoundaries[stage.BatchIndex] - batchStart, ref stage.Claims, ref stage.CompletedWorkBlockCount);
+                                ExecuteWorkerStage(ref solveStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, ref stage.CompletedWorkBlockCount);
                             }
                             break;
-                        case JobType.SolveFallback:
+                        case SolverJobType.SolveFallback:
                             {
                                 Debug.Fail("Not yet supported.");
                             }
                             break;
                     }
+                    latestCompletedStageIndex = stageIndex;
 
                 }
             }
+
+        }
+
+        protected void ExecuteMultithreaded2(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate)
+        {
+            var workerCount = substepContext.WorkerCount = threadDispatcher.ThreadCount;
+            substepContext.Dt = dt;
+            substepContext.InverseDt = 1f / dt;
+            //First build a set of work blocks.
+            //The block size should be relatively small to give the workstealer something to do, but we don't want to go crazy with the number of blocks.
+            //These values are found by empirical tuning. The optimal values may vary by architecture.
+            //The goal here is to have just enough blocks that, in the event that we end up some underpowered threads (due to competition or hyperthreading), 
+            //there are enough blocks that workstealing will still generally allow the extra threads to be useful.
+            const int targetBlocksPerBatchPerWorker = 1;
+            const int minimumBlockSizeInBundles = 1;
+            const int maximumBlockSizeInBundles = 1024;
+
+            var targetBlocksPerBatch = workerCount * targetBlocksPerBatchPerWorker;
+            var mainFilter = new MainSolveFilter();
+            var incrementalFilter = new IncrementalContactDataUpdateFilter();
+            BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref mainFilter, out var constraintBlocks, out substepContext.ConstraintBatchBoundaries);
+            BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref incrementalFilter, out var incrementalBlocks, out var incrementalUpdateBatchBoundaries);
+            pool.Return(ref incrementalUpdateBatchBoundaries); //TODO: No need to create this in the first place. Doesn't really cost anything, but...
+            substepContext.ConstraintBlocks = constraintBlocks.Span.Slice(constraintBlocks.Count);
+            substepContext.IncrementalUpdateBlocks = incrementalBlocks.Span.Slice(incrementalBlocks.Count);
+
+            //Not every batch will actually have work blocks associated with it; the batch compressor could be falling behind, which means older constraints could be at higher batches than they need to be, leaving gaps.
+            //We don't want to include those empty batches as sync points in the solver.
+            var batchSyncPointCount = ActiveSet.Batches.Count;
+            for (int i = 0; i < ActiveSet.Batches.Count; ++i)
+            {
+                var batchStart = i == 0 ? 0 : substepContext.ConstraintBatchBoundaries[i - 1];
+                var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[i] - batchStart;
+                if (workBlocksInBatch == 0)
+                    --batchSyncPointCount;
+            }
+            var syncStageCount = substepCount * (1 + batchSyncPointCount * (1 + IterationCount)) - 1;
+            pool.Take(syncStageCount, out substepContext.Stages);
+            substepContext.StageIndex = -1;
+
+            int syncStageIndex = 0;
+            var totalConstraintBatchWorkBlockCount = substepContext.ConstraintBatchBoundaries[^1];
+            var totalClaimCount = substepCount * (incrementalBlocks.Count + (totalConstraintBatchWorkBlockCount * (1 + IterationCount))) - incrementalBlocks.Count;
+            //var timeStart = Stopwatch.GetTimestamp();
+            pool.Take<int>(totalClaimCount, out var claims);
+            claims.Clear(0, claims.Length);
+            int claimStart = 0;
+            for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
+            {
+                if (substepIndex > 0)
+                {
+                    //Incremental update.
+                    if (incrementalBlocks.Count > 0)
+                    {
+                        ref var stage = ref substepContext.Stages[syncStageIndex];
+                        stage.Claims = claims.Slice(claimStart, incrementalBlocks.Count);
+                        claimStart += incrementalBlocks.Count;
+                        stage.JobType = SolverJobType.IncrementalUpdate;
+                        stage.WorkBlockStartIndex = 0;
+                        stage.CompletedWorkBlockCount = 0;
+                        ++syncStageIndex;
+                    }
+                }
+                //Warm start.
+                for (int batchIndex = 0; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
+                {
+                    var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+                    var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+                    if (workBlocksInBatch > 0)
+                    {
+                        ref var stage = ref substepContext.Stages[syncStageIndex];
+                        stage.Claims = claims.Slice(claimStart, workBlocksInBatch);
+                        claimStart += workBlocksInBatch;
+                        stage.JobType = SolverJobType.WarmStart;
+                        stage.BatchIndex = batchIndex;
+                        stage.WorkBlockStartIndex = batchStart;
+                        stage.SubstepIndex = substepIndex;
+                        stage.CompletedWorkBlockCount = 0;
+                        ++syncStageIndex;
+                    }
+                }
+                //Solve.
+                for (int batchIndex = 0; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
+                {
+                    var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+                    var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+                    if (workBlocksInBatch > 0)
+                    {
+                        ref var stage = ref substepContext.Stages[syncStageIndex];
+                        stage.Claims = claims.Slice(claimStart, workBlocksInBatch);
+                        claimStart += workBlocksInBatch;
+                        stage.JobType = SolverJobType.Solve;
+                        stage.BatchIndex = batchIndex;
+                        stage.WorkBlockStartIndex = batchStart;
+                        stage.CompletedWorkBlockCount = 0;
+                        ++syncStageIndex;
+                    }
+                }
+            }
+            //var timeEnd = Stopwatch.GetTimestamp();
+            //Console.WriteLine($"Time (ms): {(timeEnd - timeStart) * 1e3 / Stopwatch.Frequency}");
+
+            //While we could be a little more aggressive about culling work with this condition, it doesn't matter much. Have to do it for correctness; worker relies on it.
+            if (ActiveSet.Batches.Count > 0)
+                threadDispatcher.DispatchWorkers(workDelegate);
+
+            pool.Return(ref claims);
+            pool.Return(ref substepContext.Stages);
+            pool.Return(ref substepContext.ConstraintBatchBoundaries);
+            pool.Return(ref substepContext.IncrementalUpdateBlocks);
+            pool.Return(ref substepContext.ConstraintBlocks);
 
         }
 
@@ -937,7 +1061,8 @@ namespace BepuPhysics
             }
             else
             {
-                ExecuteMultithreaded<MainSolveFilter>(substepDt, threadDispatcher, solveStep2Worker, includeIncrementalUpdate: true);
+                //ExecuteMultithreaded<MainSolveFilter>(substepDt, threadDispatcher, solveStep2Worker, includeIncrementalUpdate: true);
+                ExecuteMultithreaded2(substepDt, threadDispatcher, solveStep2Worker2);
             }
         }
     }

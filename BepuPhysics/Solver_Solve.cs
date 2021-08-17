@@ -74,7 +74,7 @@ namespace BepuPhysics
         //Without sticky scheduling, memory bandwidth use could skyrocket during iterations as the L3 gets missed over and over.
 
 
-        protected struct WorkBlock
+        protected internal struct WorkBlock
         {
             public int BatchIndex;
             public int TypeBatchIndex;
@@ -88,7 +88,7 @@ namespace BepuPhysics
             public int End;
         }
 
-        protected struct FallbackScatterWorkBlock
+        protected internal struct FallbackScatterWorkBlock
         {
             public int Start;
             public int End;
