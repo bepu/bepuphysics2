@@ -86,7 +86,7 @@ namespace Demos.Demos
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(60), solverIterationCount: 1, solverFallbackBatchThreshold: 512);
             //Simulation = Simulation.Create(BufferPool,
             //    new RopeNarrowPhaseCallbacks { ContactSpringiness = new SpringSettings(2000, 1), Filters = filters },
-            //    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper2(60), solverIterationCount: 1, solverFallbackBatchThreshold: 128);
+            //    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper2(60), solverIterationCount: 1, solverFallbackBatchThreshold: 512);
 
 
             for (int twistIndex = 0; twistIndex < 1; ++twistIndex)
@@ -162,19 +162,7 @@ namespace Demos.Demos
 
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
-            //Simulation.Statics.Add(new StaticDescription(
-            //    new Vector3(100, 70, 0), BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f),
-            //    new CollidableDescription(Simulation.Shapes.Add(new Capsule(8, 64)), 0.1f)));
 
         }
-        public override void Update(Window window, Camera camera, Input input, float dt)
-        {
-            //This demo is an extreme case.
-            //As of this writing, extremely high substep counts and extremely high batch counts with a relatively small simulations (like in this demo)
-            //actually run faster on a single thread. The overhead of synchronizing the thread group thousands of times overwhelms the actual work being done.
-            //On the upside, this means that adding more bodies uninvolved to this simulation is almost free if using multithreading.
-            Simulation.Timestep(1 / 60f, ThreadDispatcher);
-        }
-
     }
 }
