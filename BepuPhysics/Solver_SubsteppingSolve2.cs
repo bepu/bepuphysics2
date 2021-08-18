@@ -236,7 +236,6 @@ namespace BepuPhysics
                     workBlockIndex = 0;
                 }
             }
-            //TODO: Technically, given wrap around of forward traversal, backwards looping seems.. questionable. Verify.
             //Try to claim work blocks going backward.
             workBlockIndex = workerStart - 1;
             while (true)
@@ -257,6 +256,7 @@ namespace BepuPhysics
             }
             //No more adjacent work blocks are available. This thread is done!
             Interlocked.Add(ref completedWorkBlocks, locallyCompletedCount);
+            //debugStageWorkBlocksCompleted[syncIndex - 1][workerIndex] = locallyCompletedCount;
             //if (workerIndex == 3)
             //{
             //    Console.WriteLine($"Worker {workerIndex} completed {locallyCompletedCount / (double)claims.Length:G2} ({locallyCompletedCount} of {claims.Length}).");
@@ -307,6 +307,7 @@ namespace BepuPhysics
             }
         }
         SubstepMultithreadingContext substepContext;
+
 
 
         Action<int> solveStep2Worker2;
@@ -454,6 +455,7 @@ namespace BepuPhysics
 
         }
 
+        Buffer<Buffer<int>> debugStageWorkBlocksCompleted;
         protected void ExecuteMultithreaded2(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate)
         {
             var workerCount = substepContext.WorkerCount = threadDispatcher.ThreadCount;
@@ -499,16 +501,89 @@ namespace BepuPhysics
                 claimStart += workBlocksInBatch;
             }
 
+            //var syncCount = substepCount * (1 + synchronizedBatchCount * (1 + IterationCount)) - 1;
+            //pool.Take(syncCount, out debugStageWorkBlocksCompleted);
+            //pool.Take<int>(syncCount * workerCount, out var workBlocksCompleted);
+            //workBlocksCompleted.Clear(0, workBlocksCompleted.Length);
+            //for (int i = 0; i < syncCount; ++i)
+            //{
+            //    debugStageWorkBlocksCompleted[i] = workBlocksCompleted.Slice(i * workerCount, workerCount);
+            //}
 
             //While we could be a little more aggressive about culling work with this condition, it doesn't matter much. Have to do it for correctness; worker relies on it.
             if (ActiveSet.Batches.Count > 0)
                 threadDispatcher.DispatchWorkers(workDelegate);
+
+            //pool.Take<int>(syncCount, out var availableCountPerSync);
+            //var syncIndex = 0;
+            //for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
+            //{
+            //    if (substepIndex > 0)
+            //    {
+            //        availableCountPerSync[syncIndex] = incrementalBlocks.Count;
+            //        ++syncIndex;
+            //    }
+            //    for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+            //    {
+            //        var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+            //        var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+            //        availableCountPerSync[syncIndex] = workBlocksInBatch;
+            //        ++syncIndex;
+            //    }
+            //    for (int i = 0; i < IterationCount; ++i)
+            //    {
+            //        for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+            //        {
+            //            var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+            //            var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+            //            availableCountPerSync[syncIndex] = workBlocksInBatch;
+            //            ++syncIndex;
+            //        }
+            //    }
+            //}
+
+            //pool.Take<int>(workerCount, out var workerBlocksCompletedSums);
+            //pool.Take<double>(workerCount, out var workerFractionSum);
+            //workerBlocksCompletedSums.Clear(0, workerBlocksCompletedSums.Length);
+            //var availableCountSum = 0;
+            //for (int i = 0; i < syncCount; ++i)
+            //{
+            //    if (availableCountPerSync[i] <= 1)
+            //        continue;
+            //    Console.WriteLine($"Sync {i}, available {availableCountPerSync[i]}, ideal {(availableCountPerSync[i] / (double)workerCount):G2}:");
+            //    var stageWorkerBlockCounts = debugStageWorkBlocksCompleted[i];
+            //    for (int j = 0; j < workerCount; ++j)
+            //    {
+            //        workerBlocksCompletedSums[j] += stageWorkerBlockCounts[j];
+            //        var expectedCount = availableCountPerSync[i] / (double)workerCount;
+            //        if (j >= availableCountPerSync[i])
+            //            workerFractionSum[j] += 1;
+            //        else
+            //            workerFractionSum[j] += stageWorkerBlockCounts[j] / expectedCount;
+            //        Console.WriteLine($"{j}: {stageWorkerBlockCounts[j]}");
+            //    }
+            //    availableCountSum += availableCountPerSync[i];
+            //}
+            ////var idealOccupancy = 1.0 / workerCount;
+            ////Console.WriteLine($"Worker occupancy (ideal {idealOccupancy}):");
+            ////for (int i = 0; i < workerCount; ++i)
+            ////{
+            ////    //Console.WriteLine($"{i}: {(workerBlocksCompletedSums[i] / (double)availableCountSum):G3}");
+            ////    Console.WriteLine($"{i}: {workerFractionSum[i] / syncCount:G3}");
+            ////}
+
+            //pool.Return(ref workerBlocksCompletedSums);
+            //pool.Return(ref workBlocksCompleted);
+            //pool.Return(ref debugStageWorkBlocksCompleted);
+            //pool.Return(ref availableCountPerSync);
 
             pool.Return(ref claims);
             pool.Return(ref substepContext.Stages);
             pool.Return(ref substepContext.ConstraintBatchBoundaries);
             pool.Return(ref substepContext.IncrementalUpdateBlocks);
             pool.Return(ref substepContext.ConstraintBlocks);
+
+
 
         }
 

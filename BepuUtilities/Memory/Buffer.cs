@@ -304,5 +304,4 @@ namespace BepuUtilities.Memory
             return new ReadOnlySpan<T>(buffer.Memory, buffer.Length);
         }
     }
-
 }
