@@ -211,59 +211,65 @@ namespace BepuPhysics
             }
         }
 
-        void ExecuteWorkerStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, int workerStart, int availableBlocksStartIndex, ref Buffer<int> claims, int previousSyncIndexOffset, int syncIndex, ref int completedWorkBlocks) where TStageFunction : IStageFunction
+        void ExecuteWorkerStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, Buffer<int> workerStarts, int availableBlocksStartIndex, ref Buffer<int> claims, int previousSyncIndexOffset, int syncIndex, ref int completedWorkBlocks) where TStageFunction : IStageFunction
         {
-            if (workerStart == -1)
+            if (workerStarts.Length == 0)
             {
                 //Thread count exceeds work block count; nothing for this worker to do.
                 //(Technically, there's a possibility that an earlier thread would fail to wake and allowing this thread to steal that block COULD help,
                 //but on average it's better to keep jobs scheduled to the same core to avoid excess memory traffic, and we can rely on some other active worker to take care of it.)
                 return;
             }
-            int workBlockIndex = workerStart;
             int locallyCompletedCount = 0;
-            var previousSyncIndex = Math.Max(0, syncIndex - previousSyncIndexOffset);
-            //Try to claim blocks by traversing forward until we're blocked by another claim.
-            while (Interlocked.CompareExchange(ref claims[workBlockIndex], syncIndex, previousSyncIndex) == previousSyncIndex)
+            for (int indexInWorkerStarts = 0; indexInWorkerStarts < workerStarts.Length; ++indexInWorkerStarts)
             {
-                //Successfully claimed a work block.
-                stageFunction.Execute(this, availableBlocksStartIndex + workBlockIndex, workerIndex);
-                ++locallyCompletedCount;
-                ++workBlockIndex;
-                if (workBlockIndex >= claims.Length)
+                var workerStart = workerStarts[indexInWorkerStarts];
+                int workBlockIndex = workerStart;
+                var previousSyncIndex = Math.Max(0, syncIndex - previousSyncIndexOffset);
+                //Try to claim blocks by traversing forward until we're blocked by another claim.
+                while (Interlocked.CompareExchange(ref claims[workBlockIndex], syncIndex, previousSyncIndex) == previousSyncIndex)
                 {
-                    //Wrap around.
-                    workBlockIndex = 0;
+                    //Successfully claimed a work block.
+                    stageFunction.Execute(this, availableBlocksStartIndex + workBlockIndex, workerIndex);
+                    ++locallyCompletedCount;
+                    ++workBlockIndex;
+                    if (workBlockIndex >= claims.Length)
+                    {
+                        //Wrap around.
+                        workBlockIndex = 0;
+                    }
+                }
+                //Try to claim work blocks going backward.
+                workBlockIndex = workerStart - 1;
+                while (true)
+                {
+                    if (workBlockIndex < 0)
+                    {
+                        //Wrap around.
+                        workBlockIndex = claims.Length - 1;
+                    }
+                    if (Interlocked.CompareExchange(ref claims[workBlockIndex], syncIndex, previousSyncIndex) != previousSyncIndex)
+                    {
+                        break;
+                    }
+                    //Successfully claimed a work block.
+                    stageFunction.Execute(this, availableBlocksStartIndex + workBlockIndex, workerIndex);
+                    ++locallyCompletedCount;
+                    workBlockIndex--;
                 }
             }
-            //Try to claim work blocks going backward.
-            workBlockIndex = workerStart - 1;
-            while (true)
-            {
-                if (workBlockIndex < 0)
-                {
-                    //Wrap around.
-                    workBlockIndex = claims.Length - 1;
-                }
-                if (Interlocked.CompareExchange(ref claims[workBlockIndex], syncIndex, previousSyncIndex) != previousSyncIndex)
-                {
-                    break;
-                }
-                //Successfully claimed a work block.
-                stageFunction.Execute(this, availableBlocksStartIndex + workBlockIndex, workerIndex);
-                ++locallyCompletedCount;
-                workBlockIndex--;
-            }
-            //No more adjacent work blocks are available. This thread is done!
+            //No more work blocks are available. This thread is done!
             Interlocked.Add(ref completedWorkBlocks, locallyCompletedCount);
+
             //debugStageWorkBlocksCompleted[syncIndex - 1][workerIndex] = locallyCompletedCount;
             //if (workerIndex == 3)
             //{
             //    Console.WriteLine($"Worker {workerIndex} completed {locallyCompletedCount / (double)claims.Length:G2} ({locallyCompletedCount} of {claims.Length}).");
             //}
 
+
         }
-        void ExecuteMainStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, int workerStart, ref SolverSyncStage stage, int previousSyncIndexOffset, ref int syncIndex) where TStageFunction : IStageFunction
+        void ExecuteMainStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, Buffer<int> workerStarts, ref SolverSyncStage stage, int previousSyncIndexOffset, ref int syncIndex) where TStageFunction : IStageFunction
         {
             //Note that the main thread's view of the sync index increments every single time, even if there is no work.
             //This ensures that the workers are able to advance to the appropriate stage by examining the sync index snapshot.
@@ -287,7 +293,7 @@ namespace BepuPhysics
             {
                 //Write the new stage index so other spinning threads will begin work on it.
                 Volatile.Write(ref substepContext.SyncIndex, syncIndex);
-                ExecuteWorkerStage(ref stageFunction, workerIndex, workerStart, stage.WorkBlockStartIndex, ref stage.Claims, previousSyncIndexOffset, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                ExecuteWorkerStage(ref stageFunction, workerIndex, workerStarts, stage.WorkBlockStartIndex, ref stage.Claims, previousSyncIndexOffset, syncIndex, ref substepContext.CompletedWorkBlockCount);
 
                 //Since we asked other threads to do work, we must wait until the requested work is done before proceeding.
                 //Note that we DO NOT yield on the main thread! 
@@ -309,6 +315,47 @@ namespace BepuPhysics
         SubstepMultithreadingContext substepContext;
 
 
+        const int targetStartsPerWorker = 2;
+        protected static Buffer<int> GetUniformlyDistributedStarts(int workerIndex, int blockCount, int workerCount, ref int startsCounter, Buffer<int> startsAllocation)
+        {
+            var startCount = startsCounter;
+            if (blockCount <= workerCount)
+            {
+                //Too few blocks to give every worker a job; give the jobs to the first context.WorkBlocks.Count workers.
+                if (workerIndex >= blockCount)
+                {
+                    return default;
+                }
+                else
+                {
+                    startsAllocation[startsCounter++] = workerIndex;
+                }
+                return startsAllocation.Slice(startCount, 1);
+            }
+            var blocksPerWorker = blockCount / workerCount;
+            var remainder = blockCount - blocksPerWorker * workerCount;
+            var previousStart = blocksPerWorker * workerIndex + Math.Min(remainder, workerIndex);
+            startsAllocation[startsCounter++] = previousStart;
+            previousStart += blocksPerWorker / 2;
+            if (blocksPerWorker >= 2)
+            {
+                for (int i = 1; i < targetStartsPerWorker; ++i)
+                {
+                    var nextStart = previousStart + blocksPerWorker;
+                    if (nextStart >= blockCount)
+                        nextStart -= blockCount;
+                    startsAllocation[startsCounter++] = nextStart;
+                    previousStart = nextStart;
+                }
+            }
+            var toReturn = startsAllocation.Slice(startCount, startsCounter - startCount);
+            //for (int i = 0; i < toReturn.Length; ++i)
+            //{
+            //    if (toReturn[i] < 0 || toReturn[i] >= blockCount)
+            //        Console.WriteLine("sugh");
+            //}
+            return toReturn;
+        }
 
         Action<int> solveStep2Worker2;
         void SolveStep2Worker2(int workerIndex)
@@ -321,21 +368,32 @@ namespace BepuPhysics
             //There's still nothing done if the OS unschedules an active worker that claimed work, but that's a far, far rarer concern.
             //Note that this attempts to maintain a given worker's relationship to a set of work blocks. This increases the probability that 
             //data will remain in some cache that's reasonably close to the core.
-            int workerCount = substepContext.WorkerCount;
-            var incrementalUpdateWorkerStart = GetUniformlyDistributedStart(workerIndex, substepContext.IncrementalUpdateBlocks.Length, workerCount, 0);
-            int fallbackStart = GetUniformlyDistributedStart(workerIndex, substepContext.FallbackBlocks.Length, workerCount, 0);
-            Buffer<int> batchStarts;
+
+            var totalStartCount = 0;
             ref var activeSet = ref ActiveSet;
+            totalStartCount = targetStartsPerWorker * (ActiveSet.Batches.Count + 2);
+
+            Buffer<int> startsAllocation;
             unsafe
             {
-                var batchStartsData = stackalloc int[activeSet.Batches.Count];
-                batchStarts = new Buffer<int>(batchStartsData, activeSet.Batches.Count);
+                var rawWorkerStarts = stackalloc int[totalStartCount];
+                startsAllocation = new Buffer<int>(rawWorkerStarts, totalStartCount);
+            }
+            var startsCounter = 0;
+            int workerCount = substepContext.WorkerCount;
+            var incrementalUpdateWorkerStarts = GetUniformlyDistributedStarts(workerIndex, substepContext.IncrementalUpdateBlocks.Length, workerCount, ref startsCounter, startsAllocation);
+            var fallbackStarts = GetUniformlyDistributedStarts(workerIndex, substepContext.FallbackBlocks.Length, workerCount, ref startsCounter, startsAllocation);
+            Buffer<Buffer<int>> batchStarts;
+            unsafe
+            {
+                var batchStartsData = stackalloc Buffer<int>[activeSet.Batches.Count];
+                batchStarts = new Buffer<Buffer<int>>(batchStartsData, activeSet.Batches.Count);
             }
             for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
                 var batchOffset = batchIndex > 0 ? substepContext.ConstraintBatchBoundaries[batchIndex - 1] : 0;
                 var batchCount = substepContext.ConstraintBatchBoundaries[batchIndex] - batchOffset;
-                batchStarts[batchIndex] = GetUniformlyDistributedStart(workerIndex, batchCount, workerCount, 0);
+                batchStarts[batchIndex] = GetUniformlyDistributedStarts(workerIndex, batchCount, workerCount, ref startsCounter, startsAllocation);
             }
 
             Debug.Assert(activeSet.Batches.Count > 0, "Don't dispatch if there are no constraints.");
@@ -369,7 +427,7 @@ namespace BepuPhysics
                 {
                     if (substepIndex > 0)
                     {
-                        ExecuteMainStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, ref substepContext.Stages[0], 1 + baseStageCountInSubstep, ref syncIndex);
+                        ExecuteMainStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStarts, ref substepContext.Stages[0], 1 + baseStageCountInSubstep, ref syncIndex);
                     }
                     for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
                     {
@@ -432,7 +490,7 @@ namespace BepuPhysics
                     {
                         //Incremental update.
                         ref var stage = ref substepContext.Stages[stageIndex];
-                        ExecuteWorkerStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, 0, ref stage.Claims, 1 + baseStageCountInSubstep, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                        ExecuteWorkerStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStarts, 0, ref stage.Claims, 1 + baseStageCountInSubstep, syncIndex, ref substepContext.CompletedWorkBlockCount);
                     }
                     else if (stageIndex < 1 + synchronizedBatchCount)
                     {
@@ -466,7 +524,7 @@ namespace BepuPhysics
             //These values are found by empirical tuning. The optimal values may vary by architecture.
             //The goal here is to have just enough blocks that, in the event that we end up some underpowered threads (due to competition or hyperthreading), 
             //there are enough blocks that workstealing will still generally allow the extra threads to be useful.
-            const int targetBlocksPerBatchPerWorker = 32;
+            const int targetBlocksPerBatchPerWorker = 4;
             const int minimumBlockSizeInBundles = 1;
             const int maximumBlockSizeInBundles = 1024;
 
@@ -564,13 +622,13 @@ namespace BepuPhysics
             //    }
             //    availableCountSum += availableCountPerSync[i];
             //}
-            ////var idealOccupancy = 1.0 / workerCount;
-            ////Console.WriteLine($"Worker occupancy (ideal {idealOccupancy}):");
-            ////for (int i = 0; i < workerCount; ++i)
-            ////{
-            ////    //Console.WriteLine($"{i}: {(workerBlocksCompletedSums[i] / (double)availableCountSum):G3}");
-            ////    Console.WriteLine($"{i}: {workerFractionSum[i] / syncCount:G3}");
-            ////}
+            //var idealOccupancy = 1.0 / workerCount;
+            //Console.WriteLine($"Worker occupancy (ideal {idealOccupancy}):");
+            //for (int i = 0; i < workerCount; ++i)
+            //{
+            //    //Console.WriteLine($"{i}: {(workerBlocksCompletedSums[i] / (double)availableCountSum):G3}");
+            //    Console.WriteLine($"{i}: {workerFractionSum[i] / syncCount:G3}");
+            //}
 
             //pool.Return(ref workerBlocksCompletedSums);
             //pool.Return(ref workBlocksCompleted);
