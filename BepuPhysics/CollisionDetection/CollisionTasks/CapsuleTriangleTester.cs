@@ -68,11 +68,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useSecondFallbackNormal = Vector.LessThan(normalLengthSquared, new Vector<float>(1e-15f));
             Vector3Wide.ConditionalSelect(useSecondFallbackNormal, secondFallbackNormal, normal, out normal);
             normalLengthSquared = Vector.ConditionalSelect(useSecondFallbackNormal, secondFallbackNormalLengthSquared, normalLengthSquared);
-            //Calibrate the normal to point from the triangle to the capsule. Note that this may not be the same direction as the *edge* to the capsule.
-            Vector3Wide.Subtract(capsuleCenter, triangleCenter, out var ba);
-            Vector3Wide.Dot(normal, ba, out var normalBA);
-            var numerator = Vector.ConditionalSelect(Vector.LessThan(normalBA, Vector<float>.Zero), new Vector<float>(-1f), Vector<float>.One);
-            Vector3Wide.Scale(normal, numerator / Vector.SquareRoot(normalLengthSquared), out normal);
+            //Note that we DO NOT 'calibrate' the normal here! The edge winding should avoid the need for any calibration,
+            //and attempting to calibrate this normal can actually result in normals pointing into the triangle face.
+            //That can cause backfaces to generate contacts incorrectly.
+            Vector3Wide.Scale(normal, Vector<float>.One / Vector.SquareRoot(normalLengthSquared), out normal);
 
             //Note that the normal between the closest points is not necessarily perpendicular to both the edge and capsule axis due to clamping, so to compute depth
             //we need to include the extent of both.
@@ -186,8 +185,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useEdge = Vector.LessThan(edgeDepth, faceDepth);
             Vector3Wide.ConditionalSelect(useEdge, edgeNormal, faceNormal, out var localNormal);
             Vector3Wide.Dot(localNormal, faceNormal, out var localNormalDotFaceNormal);
+            const float backfaceNormalDotRejectionThreshold = -1e-6f;
             if (Vector.EqualsAll(Vector.BitwiseOr(
-                    Vector.LessThanOrEqual(localNormalDotFaceNormal, Vector<float>.Zero),
+                    Vector.LessThanOrEqual(localNormalDotFaceNormal, new Vector<float>(backfaceNormalDotRejectionThreshold)),
                     Vector.LessThan(depth + a.Radius, -speculativeMargin)), new Vector<int>(-1)))
             {
                 //All contact normals are on the back of the triangle or the distance is too large for the margin, so we can immediately quit.
@@ -343,7 +343,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //(Zero velocity shouldn't happen because the local normal points toward the capsule axis, so the only way for the capsuleAxisPlane and the normal to be perpendicular
             //is for the normal and capsuleAxis to be parallel, which is explicitly protected against earlier.)
             Debug.Assert(Vector.EqualsAll(Vector.BitwiseOr(
-                Vector.GreaterThan(Vector.Abs(velocity), new Vector<float>(1e-15f)), 
+                Vector.GreaterThan(Vector.Abs(velocity), new Vector<float>(1e-15f)),
                 Vector.OnesComplement(Vector.Equals(velocity, velocity))), new Vector<int>(-1)), "Velocity should be nonzero except in numerical corner cases.");
             var useFallbackDepth = Vector.LessThan(Vector.Abs(velocity), new Vector<float>(1e-15f));
             manifold.Depth0 = Vector.ConditionalSelect(useFallbackDepth, Vector<float>.Zero, manifold.Depth0);
@@ -370,7 +370,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.FeatureId1 = Vector.ConditionalSelect(flipFeatureIds, Vector<int>.Zero, Vector<int>.One);
 
             var faceFlag = Vector.ConditionalSelect(
-                Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<float>(MeshReduction.MinimumDotForFaceCollision)), 
+                Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<float>(MeshReduction.MinimumDotForFaceCollision)),
                 new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
             manifold.FeatureId0 += faceFlag;
 
@@ -381,8 +381,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(contact1RelativeToB, offsetB, out manifold.OffsetA1);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out manifold.Normal);
 
+            if (Vector.EqualsAny(Vector.BitwiseAnd(Vector.GreaterThan(contactCount, Vector<int>.Zero), Vector.GreaterThan(manifold.Depth0, new Vector<float>(0.5f))), new Vector<int>(-1)))
+                Console.WriteLine($"face depth: {faceDepth[0]}, depth: {depth[0]}, depth0: {manifold.Depth0[0]}");
+
             //If the normal we found points away from the triangle normal, then it it's hitting the wrong side and should be ignored. (Note that we had an early out for this earlier.)
-            contactCount = Vector.ConditionalSelect(Vector.GreaterThanOrEqual(localNormalDotFaceNormal, Vector<float>.Zero), contactCount, Vector<int>.Zero);
+            contactCount = Vector.ConditionalSelect(Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<float>(backfaceNormalDotRejectionThreshold)), contactCount, Vector<int>.Zero);
             var depthThreshold = -speculativeMargin;
             manifold.Contact0Exists = Vector.BitwiseAnd(Vector.GreaterThan(manifold.Depth0, depthThreshold), Vector.GreaterThan(contactCount, Vector<int>.Zero));
             manifold.Contact1Exists = Vector.BitwiseAnd(Vector.GreaterThan(manifold.Depth1, depthThreshold), Vector.GreaterThan(contactCount, Vector<int>.One));

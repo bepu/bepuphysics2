@@ -680,6 +680,11 @@ namespace BepuUtilities.Collections
         {
             return new ReadOnlySpan<T>(list.Span.Memory, list.Count);
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static implicit operator Buffer<T>(in QuickList<T> list)
+        {
+            return new Buffer<T>(list.Span.Memory, list.Count);
+        }
 
 
         public Enumerator GetEnumerator()
