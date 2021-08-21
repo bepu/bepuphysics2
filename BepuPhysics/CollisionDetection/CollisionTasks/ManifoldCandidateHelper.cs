@@ -34,6 +34,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Unsafe.Add(ref laneMasks, i) = -1;
             }
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CreateActiveMask(int pairCount, out Vector<int> activeLanes)
+        {
+            activeLanes = Vector<int>.Zero;
+            ref var laneMasks = ref Unsafe.As<Vector<int>, int>(ref activeLanes);
+            for (int i = 0; i < pairCount; ++i)
+            {
+                Unsafe.Add(ref laneMasks, i) = -1;
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void AddCandidate(ref ManifoldCandidate candidates, ref Vector<int> count, in ManifoldCandidate candidate, in Vector<int> newContactExists, int pairCount)

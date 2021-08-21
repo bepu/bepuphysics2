@@ -185,10 +185,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useEdge = Vector.LessThan(edgeDepth, faceDepth);
             Vector3Wide.ConditionalSelect(useEdge, edgeNormal, faceNormal, out var localNormal);
             Vector3Wide.Dot(localNormal, faceNormal, out var localNormalDotFaceNormal);
-            const float backfaceNormalDotRejectionThreshold = -1e-6f;
-            if (Vector.EqualsAll(Vector.BitwiseOr(
-                    Vector.LessThanOrEqual(localNormalDotFaceNormal, new Vector<float>(backfaceNormalDotRejectionThreshold)),
-                    Vector.LessThan(depth + a.Radius, -speculativeMargin)), new Vector<int>(-1)))
+            var collidingWithSolidSide = Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<float>(SphereTriangleTester.BackfaceNormalDotRejectionThreshold));
+            if (Vector.EqualsAll(Vector.BitwiseAnd(collidingWithSolidSide, Vector.GreaterThanOrEqual(depth + a.Radius, -speculativeMargin)), Vector<int>.Zero))
             {
                 //All contact normals are on the back of the triangle or the distance is too large for the margin, so we can immediately quit.
                 manifold.Contact0Exists = Vector<int>.Zero;
@@ -381,11 +379,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(contact1RelativeToB, offsetB, out manifold.OffsetA1);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out manifold.Normal);
 
-            if (Vector.EqualsAny(Vector.BitwiseAnd(Vector.GreaterThan(contactCount, Vector<int>.Zero), Vector.GreaterThan(manifold.Depth0, new Vector<float>(0.5f))), new Vector<int>(-1)))
-                Console.WriteLine($"face depth: {faceDepth[0]}, depth: {depth[0]}, depth0: {manifold.Depth0[0]}");
-
             //If the normal we found points away from the triangle normal, then it it's hitting the wrong side and should be ignored. (Note that we had an early out for this earlier.)
-            contactCount = Vector.ConditionalSelect(Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<float>(backfaceNormalDotRejectionThreshold)), contactCount, Vector<int>.Zero);
+            contactCount = Vector.ConditionalSelect(collidingWithSolidSide, contactCount, Vector<int>.Zero);
             var depthThreshold = -speculativeMargin;
             manifold.Contact0Exists = Vector.BitwiseAnd(Vector.GreaterThan(manifold.Depth0, depthThreshold), Vector.GreaterThan(contactCount, Vector<int>.Zero));
             manifold.Contact1Exists = Vector.BitwiseAnd(Vector.GreaterThan(manifold.Depth1, depthThreshold), Vector.GreaterThan(contactCount, Vector<int>.One));

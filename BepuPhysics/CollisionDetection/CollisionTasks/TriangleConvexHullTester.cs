@@ -105,10 +105,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Merely being above the surface is insufficient- imagine a hull off to the side of the triangle, wedged beneath it.
             var triangleNormalIsMinimal = Vector.BitwiseAnd(
                 Vector.BitwiseAnd(
-                    Vector.AndNot(hullInsideTriangleEdgePlanes, hullBelowPlane), 
-                    Vector.LessThanOrEqual(extremeABPlaneTest, Vector<float>.Zero)), 
+                    Vector.AndNot(hullInsideTriangleEdgePlanes, hullBelowPlane),
+                    Vector.LessThanOrEqual(extremeABPlaneTest, Vector<float>.Zero)),
                 Vector.BitwiseAnd(
-                    Vector.LessThanOrEqual(extremeBCPlaneTest, Vector<float>.Zero), 
+                    Vector.LessThanOrEqual(extremeBCPlaneTest, Vector<float>.Zero),
                     Vector.LessThanOrEqual(extremeCAPlaneTest, Vector<float>.Zero)));
 
             var depthThreshold = -speculativeMargin;
@@ -123,7 +123,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(skipDepthRefine, hullSupportAlongNegatedTriangleNormal, refinedClosestOnHull, out closestOnHull);
                 Vector3Wide.ConditionalSelect(skipDepthRefine, negatedTriangleNormal, refinedNormal, out localNormal);
                 depth = Vector.ConditionalSelect(skipDepthRefine, triangleFaceDepth, refinedDepth);
-                
+
             }
             else
             {
@@ -135,7 +135,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
             Vector3Wide.Dot(triangleNormal, localNormal, out var triangleNormalDotLocalNormal);
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThanOrEqual(triangleNormalDotLocalNormal, Vector<float>.Zero), Vector.LessThan(depth, depthThreshold)));
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThan(triangleNormalDotLocalNormal, new Vector<float>(-SphereTriangleTester.BackfaceNormalDotRejectionThreshold)), Vector.LessThan(depth, depthThreshold)));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //No contacts generated.
@@ -219,7 +219,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //Since we're sensitive to the sign of the denominator, the winding of the triangle edges matters.
                     var denominator = triangleEdgePlaneNormalX * hullEdgeOffsetX + triangleEdgePlaneNormalY * hullEdgeOffsetY + triangleEdgePlaneNormalZ * hullEdgeOffsetZ;
                     var edgeIntersections = numerator / denominator;
-
+                    //TODO: This branchspew could be improved, especially with some tactical deployment of platform intrinsics now that we're off NS2.0.
 
                     //A plane is being 'entered' if the ray direction opposes the face normal.
                     //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
@@ -236,8 +236,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     }
                     else
                     {
-                        latestEntry = float.MinValue;
-                        earliestExit = float.MaxValue;
+                        //The hull edge is perpendicular to the triangle edge.
+                        //If the edge is outside of the triangle edge (by numerator sign), then this edge should be killed by setting the interval to latestEntry > earliestExit.
+                        //If the edge is inside the triangle edge (by numerator sign), then the triangle edge does not constrain the interval at all.
+                        if (numerator.X < 0)
+                        {
+                            latestEntry = float.MaxValue;
+                            earliestExit = float.MinValue;
+                        }
+                        else
+                        {
+                            latestEntry = float.MinValue;
+                            earliestExit = float.MaxValue;
+                        }
                     }
                     if (denominator.Y < 0)
                     {
@@ -249,6 +260,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         if (edgeIntersections.Y < earliestExit)
                             earliestExit = edgeIntersections.Y;
                     }
+                    else if (numerator.Y < 0)
+                    {
+                        latestEntry = float.MaxValue;
+                        earliestExit = float.MinValue;
+                    }
                     if (denominator.Z < 0)
                     {
                         if (edgeIntersections.Z > latestEntry)
@@ -258,6 +274,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     {
                         if (edgeIntersections.Z < earliestExit)
                             earliestExit = edgeIntersections.Z;
+                    }
+                    else if (numerator.Z < 0)
+                    {
+                        latestEntry = float.MaxValue;
+                        earliestExit = float.MinValue;
                     }
 
                     //We now have a convex hull edge interval. Add contacts for it.
