@@ -327,7 +327,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //If the capsule axis is parallel with the normal, then the contacts collapse to one point and we can use the initially computed depth.
             //In this case, both contact positions should be extremely close together anyway.
-            var collapse = Vector.LessThan(Vector.Abs(faceNormalADotLocalNormal), new Vector<float>(1e-10f));
+            var collapse = Vector.LessThan(Vector.Abs(faceNormalADotLocalNormal), new Vector<float>(1e-7f));
             manifold.Depth0 = Vector.ConditionalSelect(collapse, depth, manifold.Depth0);
             var negativeMargin = -speculativeMargin;
             manifold.Contact0Exists = Vector.GreaterThan(manifold.Depth0, negativeMargin);
