@@ -314,43 +314,35 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 contactCount = Vector.ConditionalSelect(useCandidateForSecondContact, new Vector<int>(2), contactCount);
             }
 
-            //Measure the depths for the two contacts by seeing how far they are along the normal from the capsule.
-            //We'll do this by creating a plane positioned at the capsule center with a normal pointing against the contact normal.
-            //capsuleAxisPlaneNormal = (N x capsuleAxis) x capsuleAxis
-            //The depths are derived from testing a ray against that plane, starting from the contact position and going along the contact normal.
-            Vector3Wide.CrossWithoutOverlap(localNormal, localCapsuleAxis, out var nxa);
-            Vector3Wide.CrossWithoutOverlap(nxa, localCapsuleAxis, out var capsuleAxisPlaneNormal);
-            //If the local normal and capsule axis are aligned, then the above capsuleAxisPlaneNormal will be zero length and useless.
-            //In that case, simply use the flipped face normal.
-            Vector3Wide.Negate(localNormal, out var negatedNormal);
-            Vector3Wide.ConditionalSelect(Vector.GreaterThan(localNormalDotFaceNormal, new Vector<float>(1 - 1e-7f)), negatedNormal, capsuleAxisPlaneNormal, out capsuleAxisPlaneNormal);
-            //Given that we have a special case that creates a plane normal that isn't perpendicular to the capsule axis, we need to pick a center point for the capsule plane
-            //which gives us the desired result- both contacts have the same depth matching the capsule endpoint closer to the triangle.
-            Vector3Wide.Dot(capsuleAxisPlaneNormal, localCapsuleAxis, out var capsuleAxisPlaneDot);
-            var planeAnchorOnCapsuleT = Vector.ConditionalSelect(Vector.LessThan(capsuleAxisPlaneDot, Vector<float>.Zero), -a.HalfLength, a.HalfLength);
-            Vector3Wide.Scale(localCapsuleAxis, planeAnchorOnCapsuleT, out var capsulePlaneAnchor);
-            Vector3Wide.Add(capsulePlaneAnchor, localOffsetA, out capsulePlaneAnchor);
+            //While we have computed a global depth, each contact has its own depth.
+            //Project the contact on B along the contact normal to the 'face' of A.
+            //A is a capsule, but we can treat it as having a faceNormalA = (localNormal x capsuleAxis) x capsuleAxis.
+            //The full computation is: 
+            //t = dot(contact + localOffsetB, faceNormalA) / dot(faceNormalA, localNormal)
+            //depth = dot(t * localNormal, localNormal) = t
+            Vector3Wide.CrossWithoutOverlap(localNormal, localCapsuleAxis, out var capsuleTangent);
+            Vector3Wide.CrossWithoutOverlap(capsuleTangent, localCapsuleAxis, out var faceNormalA);
+            Vector3Wide.Dot(faceNormalA, localNormal, out var faceNormalADotLocalNormal);
+            //Don't have to perform any calibration on the faceNormalA; it appears in both the numerator and denominator so the sign and magnitudes cancel.
+            var inverseFaceNormalADotLocalNormal = Vector<float>.One / faceNormalADotLocalNormal;
+            Vector3Wide.Add(localOffsetB, b0, out var offset0);
+            Vector3Wide.Add(localOffsetB, b1, out var offset1);
+            Vector3Wide.Dot(offset0, faceNormalA, out var t0);
+            Vector3Wide.Dot(offset1, faceNormalA, out var t1);
+            t0 *= inverseFaceNormalADotLocalNormal;
+            t1 *= inverseFaceNormalADotLocalNormal;
+            manifold.Depth0 = a.Radius + t0;
+            manifold.Depth1 = a.Radius + t1;
 
-            Vector3Wide.Subtract(capsulePlaneAnchor, b0, out var offset0);
-            Vector3Wide.Dot(capsuleAxisPlaneNormal, offset0, out var planeDistance0);
-            Vector3Wide.Subtract(capsulePlaneAnchor, b1, out var offset1);
-            Vector3Wide.Dot(capsuleAxisPlaneNormal, offset1, out var planeDistance1);
-            Vector3Wide.Dot(localNormal, capsuleAxisPlaneNormal, out var velocity);
-            var inverseVelocity = Vector<float>.One / velocity;
-            var separation0 = planeDistance0 * inverseVelocity;
-            var separation1 = planeDistance1 * inverseVelocity;
-            manifold.Depth0 = a.Radius - separation0;
-            manifold.Depth1 = a.Radius - separation1;
-            //While zero velocity should not occur mathematically, it is possible numerically.
-            //If it happens, we assume it's an extremely temporary state and just use a hack.
-            //(Zero velocity shouldn't happen because the local normal points toward the capsule axis, so the only way for the capsuleAxisPlane and the normal to be perpendicular
-            //is for the normal and capsuleAxis to be parallel, which is explicitly protected against earlier.)
-            Debug.Assert(Vector.EqualsAll(Vector.BitwiseOr(
-                Vector.GreaterThan(Vector.Abs(velocity), new Vector<float>(1e-15f)),
-                Vector.OnesComplement(Vector.Equals(velocity, velocity))), new Vector<int>(-1)), "Velocity should be nonzero except in numerical corner cases.");
-            var useFallbackDepth = Vector.LessThan(Vector.Abs(velocity), new Vector<float>(1e-15f));
-            manifold.Depth0 = Vector.ConditionalSelect(useFallbackDepth, Vector<float>.Zero, manifold.Depth0);
-            manifold.Depth1 = Vector.ConditionalSelect(useFallbackDepth, Vector<float>.Zero, manifold.Depth1);
+            //If the 'velocity' above is very small, it means that the local normal and capsule axis are very nearly aligned and depths computed using it are likely numerically poor.
+            //In this situation, using more than one contact is pretty pointless anyway, so collapse the manifold to only one point and use the previously computed depth.
+            var collapse = Vector.LessThan(Vector.Abs(faceNormalADotLocalNormal), new Vector<float>(1e-7f));
+            manifold.Depth0 = Vector.ConditionalSelect(collapse, a.Radius + depth, manifold.Depth0);
+            var negativeMargin = -speculativeMargin;
+            //If the normal we found points away from the triangle normal, then it it's hitting the wrong side and should be ignored. (Note that we had an early out for this earlier.)
+            contactCount = Vector.ConditionalSelect(collidingWithSolidSide, contactCount, Vector<int>.Zero);
+            manifold.Contact0Exists = Vector.BitwiseAnd(Vector.GreaterThan(contactCount, Vector<int>.Zero), Vector.GreaterThan(manifold.Depth0, negativeMargin));
+            manifold.Contact1Exists = Vector.BitwiseAnd(Vector.AndNot(Vector.Equals(contactCount, new Vector<int>(2)), collapse), Vector.GreaterThan(manifold.Depth1, negativeMargin));
 
             //For feature ids, note that we have a few different potential sources of contacts. While we could go through and force each potential source to output ids,
             //there is a useful single unifying factor: where the contacts occur on the capsule axis. Using this, it doesn't matter if contacts are generated from face or edge cases,
@@ -378,12 +370,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformWithoutOverlap(localOffsetA0, rB, out manifold.OffsetA0);
             Matrix3x3Wide.TransformWithoutOverlap(localOffsetA1, rB, out manifold.OffsetA1);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out manifold.Normal);
-
-            //If the normal we found points away from the triangle normal, then it it's hitting the wrong side and should be ignored. (Note that we had an early out for this earlier.)
-            contactCount = Vector.ConditionalSelect(collidingWithSolidSide, contactCount, Vector<int>.Zero);
-            var depthThreshold = -speculativeMargin;
-            manifold.Contact0Exists = Vector.BitwiseAnd(Vector.GreaterThan(manifold.Depth0, depthThreshold), Vector.GreaterThan(contactCount, Vector<int>.Zero));
-            manifold.Contact1Exists = Vector.BitwiseAnd(Vector.GreaterThan(manifold.Depth1, depthThreshold), Vector.GreaterThan(contactCount, Vector<int>.One));
         }
 
 
