@@ -320,11 +320,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //The depths are derived from testing a ray against that plane, starting from the contact position and going along the contact normal.
             Vector3Wide.CrossWithoutOverlap(localNormal, localCapsuleAxis, out var nxa);
             Vector3Wide.CrossWithoutOverlap(nxa, localCapsuleAxis, out var capsuleAxisPlaneNormal);
-            //If the resulting plane normal is near zero, then the capsule axis and face normal were roughly parallel.
-            //In that case, we can simply use the flipped face normal.
-            Vector3Wide.LengthSquared(capsuleAxisPlaneNormal, out var capsuleAxisPlaneNormalLengthSquared);
+            //If the local normal and capsule axis are aligned, then the above capsuleAxisPlaneNormal will be zero length and useless.
+            //In that case, simply use the flipped face normal.
             Vector3Wide.Negate(localNormal, out var negatedNormal);
-            Vector3Wide.ConditionalSelect(Vector.LessThan(capsuleAxisPlaneNormalLengthSquared, new Vector<float>(1e-10f)), negatedNormal, capsuleAxisPlaneNormal, out capsuleAxisPlaneNormal);
+            Vector3Wide.ConditionalSelect(Vector.GreaterThan(localNormalDotFaceNormal, new Vector<float>(1 - 1e-7f)), negatedNormal, capsuleAxisPlaneNormal, out capsuleAxisPlaneNormal);
             //Given that we have a special case that creates a plane normal that isn't perpendicular to the capsule axis, we need to pick a center point for the capsule plane
             //which gives us the desired result- both contacts have the same depth matching the capsule endpoint closer to the triangle.
             Vector3Wide.Dot(capsuleAxisPlaneNormal, localCapsuleAxis, out var capsuleAxisPlaneDot);
