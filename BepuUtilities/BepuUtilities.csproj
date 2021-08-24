@@ -32,13 +32,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
-    
-  <ItemGroup>
-    <PackageReference Include="System.Memory" Version="4.5.3" />
-    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.7.0" />
-  </ItemGroup>
-    
+        
   <ItemGroup>
     <None Include="..\Documentation\images\bepuphysicslogo256.png">
       <Pack>True</Pack>
