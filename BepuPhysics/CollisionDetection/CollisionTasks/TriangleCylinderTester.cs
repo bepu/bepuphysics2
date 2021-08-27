@@ -122,7 +122,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var cylinderInsideTriangleEdgePlanes = Vector.BitwiseAnd(
                 Vector.LessThanOrEqual(abPlaneTest, Vector<float>.Zero),
                 Vector.BitwiseAnd(
-                    Vector.LessThanOrEqual(bcPlaneTest, Vector<float>.Zero), 
+                    Vector.LessThanOrEqual(bcPlaneTest, Vector<float>.Zero),
                     Vector.LessThanOrEqual(caPlaneTest, Vector<float>.Zero)));
             var cylinderInsideAndBelowTriangle = Vector.BitwiseAnd(cylinderInsideTriangleEdgePlanes, cylinderBelowPlane);
 
@@ -145,7 +145,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(cylinderSupportAlongNegatedTriangleNormal, localTriangleCenter, out var negatedTriangleNormalSupport);
             Vector3Wide.Dot(negatedTriangleNormalSupport, negatedTriangleNormal, out var triangleFaceDepth);
 
-            //Check if the extreme point on the hull is contained within the bounds of the triangle face. If it is, there is no need for a full depth refinement.
+            //Check if the extreme point on the cylinder is contained within the bounds of the triangle face. If it is, there is no need for a full depth refinement.
             Vector3Wide.Subtract(triangleA, cylinderSupportAlongNegatedTriangleNormal, out var closestToA);
             Vector3Wide.Subtract(triangleB, cylinderSupportAlongNegatedTriangleNormal, out var closestToB);
             Vector3Wide.Subtract(triangleC, cylinderSupportAlongNegatedTriangleNormal, out var closestToC);
@@ -200,6 +200,34 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
 
             var useCap = Vector.AndNot(Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f)), inactiveLanes);
+
+            //When the contact normal is nearly perpendicular to the triangle normal, computing per contact depths can become numerically impossible.
+            //To help with this case, we use an 'effective' triangle face normal for anything related to computing contact depths.
+            Vector3Wide effectiveFaceNormal;
+            var absFaceNormalADotNormal = Vector.Abs(faceNormalADotNormal);
+            const float faceNormalFallbackThreshold = 1e-4f;
+            var needsFallbackFaceNormal = Vector.AndNot(Vector.LessThan(absFaceNormalADotNormal, new Vector<float>(faceNormalFallbackThreshold)), inactiveLanes);
+            Vector<int> effectiveFaceNormalFromAB, effectiveFaceNormalFromBC;
+            if (Vector.EqualsAny(needsFallbackFaceNormal, new Vector<int>(-1)))
+            {
+                //Near-zero faceNormalADotNormal values only occur during edge or vertex collisions.
+                //During edge collisions, the local normal is perpendicular to the edge.
+                //We can safely push the triangle normal along the local normal to get an 'effective' normal that doesn't cause numerical catastrophe.
+                var pushScale = Vector.Max(Vector<float>.Zero, (absFaceNormalADotNormal - new Vector<float>(faceNormalFallbackThreshold)) / new Vector<float>(-faceNormalFallbackThreshold));
+                Vector3Wide.Scale(localNormal, pushScale * new Vector<float>(-0.1f), out var effectiveFaceNormalPush);
+                Vector3Wide.Add(triangleNormal, effectiveFaceNormalPush, out effectiveFaceNormal);
+                //Length is guaranteed to be nonzero since this is only used when normal is near perpendicular.
+                Vector3Wide.Normalize(effectiveFaceNormal, out effectiveFaceNormal);
+                //Normalization could change things numerically, so we can't normalize any lanes that aren't supposed to be taking this code path.
+                Vector3Wide.ConditionalSelect(needsFallbackFaceNormal, effectiveFaceNormal, triangleNormal, out effectiveFaceNormal);
+            }
+            else
+            {
+                //No near-perpendicular contacts in this bundle.
+                effectiveFaceNormal = triangleNormal;
+                effectiveFaceNormalFromAB = Vector<int>.Zero;
+                effectiveFaceNormalFromBC = Vector<int>.Zero;
+            }
 
             if (Vector.LessThanAny(useCap, Vector<int>.Zero))
             {
@@ -301,21 +329,31 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.CrossWithoutOverlap(localNormal, triangleBC, out var edgeNormalBC);
                 Vector3Wide.CrossWithoutOverlap(localNormal, triangleCA, out var edgeNormalCA);
 
+                //Beware, the edge normals could be very close to parallel with the local normal, causing numerical poopiness.
+                //angle between localNormal and triangleAB = asin(length(edgeNormalAB) / length(triangleAB))
+                //sin(angle)^2 = lengthSquared(edgeNormalAB) / lengthSquared(triangleAB)
+                //So we can check against a scale invariant threshold without any square roots or divisions.
+                const float minimumSinAngle = 1e-5f;
+                var edgeNormalThreshold = new Vector<float>(minimumSinAngle * minimumSinAngle);
+                Vector3Wide.LengthSquared(edgeNormalAB, out var edgeNormalABLengthSquared);
+                Vector3Wide.LengthSquared(triangleAB, out var triangleABLengthSquared);
+                var useFallbackAB = Vector.LessThan(edgeNormalABLengthSquared, edgeNormalThreshold * triangleABLengthSquared);
+                Vector3Wide.LengthSquared(edgeNormalBC, out var edgeNormalBCLengthSquared);
+                Vector3Wide.LengthSquared(triangleBC, out var triangleBCLengthSquared);
+                var useFallbackBC = Vector.LessThan(edgeNormalBCLengthSquared, edgeNormalThreshold * triangleBCLengthSquared);
+                Vector3Wide.LengthSquared(edgeNormalCA, out var edgeNormalCALengthSquared);
+                Vector3Wide.LengthSquared(triangleCA, out var triangleCALengthSquared);
+                var useFallbackCA = Vector.LessThan(edgeNormalCALengthSquared, edgeNormalThreshold * triangleCALengthSquared);
+
                 //Center of the side line is just (closestOnB.X, 0, closestOnB.Z), sideLineDirection is just (0, 1, 0).
                 //t = dot(sideLineStart - pointOnFaceEdge, edgeNormal) / dot(sideLineDirection, edgeNormal)
                 var negativeOne = new Vector<float>(-1f);
                 //Guard against divisions by zero to avoid NaN infection.
                 var minValue = new Vector<float>(float.MinValue);
                 var maxValue = new Vector<float>(float.MaxValue);
-                var abDenominator = Vector.ConditionalSelect(Vector.Equals(edgeNormalAB.Y, Vector<float>.Zero), minValue, negativeOne / edgeNormalAB.Y);
-                var bcDenominator = Vector.ConditionalSelect(Vector.Equals(edgeNormalBC.Y, Vector<float>.Zero), minValue, negativeOne / edgeNormalBC.Y);
-                var caDenominator = Vector.ConditionalSelect(Vector.Equals(edgeNormalCA.Y, Vector<float>.Zero), minValue, negativeOne / edgeNormalCA.Y);
-                Vector3Wide.LengthSquared(edgeNormalAB, out var edgeNormalABLengthSquared);
-                Vector3Wide.LengthSquared(edgeNormalBC, out var edgeNormalBCLengthSquared);
-                Vector3Wide.LengthSquared(edgeNormalCA, out var edgeNormalCALengthSquared);
-                var inverseEdgeNormalABLengthSquared = Vector.ConditionalSelect(Vector.Equals(edgeNormalABLengthSquared, Vector<float>.Zero), maxValue, Vector<float>.One / edgeNormalABLengthSquared);
-                var inverseEdgeNormalBCLengthSquared = Vector.ConditionalSelect(Vector.Equals(edgeNormalBCLengthSquared, Vector<float>.Zero), maxValue, Vector<float>.One / edgeNormalBCLengthSquared);
-                var inverseEdgeNormalCALengthSquared = Vector.ConditionalSelect(Vector.Equals(edgeNormalCALengthSquared, Vector<float>.Zero), maxValue, Vector<float>.One / edgeNormalCALengthSquared);
+                var abDenominator = negativeOne / edgeNormalAB.Y;
+                var bcDenominator = negativeOne / edgeNormalBC.Y;
+                var caDenominator = negativeOne / edgeNormalCA.Y;
                 Vector3Wide aToSideLine, bToSideLine, cToSideLine;
                 aToSideLine.X = closestOnB.X - triangleA.X;
                 aToSideLine.Y = -triangleA.Y;
@@ -347,6 +385,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
                 var interpolationMin = new Vector<float>(upperThreshold);
                 var inverseInterpolationSpan = new Vector<float>(1f / (upperThreshold - lowerThreshold));
+                var inverseEdgeNormalABLengthSquared = Vector.ConditionalSelect(Vector.Equals(edgeNormalABLengthSquared, Vector<float>.Zero), maxValue, Vector<float>.One / edgeNormalABLengthSquared);
+                var inverseEdgeNormalBCLengthSquared = Vector.ConditionalSelect(Vector.Equals(edgeNormalBCLengthSquared, Vector<float>.Zero), maxValue, Vector<float>.One / edgeNormalBCLengthSquared);
+                var inverseEdgeNormalCALengthSquared = Vector.ConditionalSelect(Vector.Equals(edgeNormalCALengthSquared, Vector<float>.Zero), maxValue, Vector<float>.One / edgeNormalCALengthSquared);
                 var unrestrictWeightAB = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (interpolationMin - edgeNormalAB.Y * edgeNormalAB.Y * inverseEdgeNormalABLengthSquared) * inverseInterpolationSpan));
                 var unrestrictWeightBC = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (interpolationMin - edgeNormalBC.Y * edgeNormalBC.Y * inverseEdgeNormalBCLengthSquared) * inverseInterpolationSpan));
                 var unrestrictWeightCA = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (interpolationMin - edgeNormalCA.Y * edgeNormalCA.Y * inverseEdgeNormalCALengthSquared) * inverseInterpolationSpan));
@@ -367,15 +408,27 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var tBCExit = Vector.ConditionalSelect(enteringBC, maxValue, unrestrictWeightBC * b.HalfLength + weightedBC);
                 var tCAEntry = Vector.ConditionalSelect(enteringCA, unrestrictWeightCA * negativeHalfLength + weightedCA, minValue);
                 var tCAExit = Vector.ConditionalSelect(enteringCA, maxValue, unrestrictWeightCA * b.HalfLength + weightedCA);
-                var tMax = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, Vector.Min(tABExit, Vector.Min(tBCExit, tCAExit))));
-                var tMin = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, Vector.Max(tABEntry, Vector.Max(tBCEntry, tCAEntry))));
+                tABEntry = Vector.ConditionalSelect(useFallbackAB, minValue, tABEntry);
+                tABExit = Vector.ConditionalSelect(useFallbackAB, maxValue, tABExit);
+                tBCEntry = Vector.ConditionalSelect(useFallbackBC, minValue, tBCEntry);
+                tBCExit = Vector.ConditionalSelect(useFallbackBC, maxValue, tBCExit);
+                tCAEntry = Vector.ConditionalSelect(useFallbackCA, minValue, tCAEntry);
+                tCAExit = Vector.ConditionalSelect(useFallbackCA, maxValue, tCAExit);
+                var tMax = Vector.Min(b.HalfLength, Vector.Max(negativeHalfLength, Vector.Min(tABExit, Vector.Min(tBCExit, tCAExit))));
+                var tMin = Vector.Min(b.HalfLength, Vector.Max(negativeHalfLength, Vector.Max(tABEntry, Vector.Max(tBCEntry, tCAEntry))));
 
-                var inverseFaceNormalDotLocalNormal = Vector<float>.One / faceNormalADotNormal;
+                //Note the use of the 'effective' normal. It's either the face normal, or a fallback created from edge normals and the local normal above.
+                //We have to handle the case where the normal was perpendicular to the face normal, making a direct projection numerically impossible.
+                //The effective face normal is guaranteed to not be perpendicular to the local normal.
+                Vector3Wide.Dot(effectiveFaceNormal, localNormal, out var effectiveFaceNormalDotNormal);
+                var inverseFaceNormalDotLocalNormal = Vector<float>.One / effectiveFaceNormalDotNormal;
                 Vector3Wide localContact0, localContact1;
                 localContact0.X = localContact1.X = closestOnB.X;
-                localContact0.Y = tMin;
-                localContact1.Y = tMax;
+                //Mathematically, closestOnB.Y should be in the tMin to tMax interval. Numerically, this is not guaranteed. So force it.
+                localContact0.Y = Vector.Min(closestOnB.Y, tMin);
+                localContact1.Y = Vector.Max(closestOnB.Y, tMax);
                 localContact0.Z = localContact1.Z = closestOnB.Z;
+
                 Matrix3x3Wide.TransformWithoutOverlap(localContact0, worldRB, out var contact0);
                 Matrix3x3Wide.TransformWithoutOverlap(localContact1, worldRB, out var contact1);
                 Vector3Wide.Add(contact0, offsetB, out contact0);
@@ -384,17 +437,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(useSide, contact1, manifold.OffsetA1, out manifold.OffsetA1);
                 manifold.FeatureId0 = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.FeatureId0);
                 manifold.FeatureId1 = Vector.ConditionalSelect(useSide, Vector<int>.One, manifold.FeatureId1);
-                //depth = dot(pointOnFaceB - faceCenterA, faceNormalA) / dot(faceNormalA, normal)
-                Vector3Wide.Subtract(localContact0, triangleA, out var faceToContact0);
-                Vector3Wide.Subtract(localContact1, triangleA, out var faceToContact1);
-                Vector3Wide.Dot(faceToContact0, triangleNormal, out var contact0Dot);
-                Vector3Wide.Dot(faceToContact1, triangleNormal, out var contact1Dot);
-                var depth0 = contact0Dot * inverseFaceNormalDotLocalNormal;
-                var depth1 = contact1Dot * inverseFaceNormalDotLocalNormal;
+
+                //We know the depth to the minimum contact at t = closestOnB.Y.
+                //Map movement along the cylinder side edge to a change in depth:
+                //contactDepth = depth + (t - closestOnB.Y) * dot(localCapsuleAxis, triangleNormal) / dot(localNormal, triangleNormal)
+                //             = depth + (t - closestOnB.Y) * triangleNormal.Y / dot(localNormal, triangleNormal)
+                var depthScale = effectiveFaceNormal.Y * inverseFaceNormalDotLocalNormal;
+                var o0 = localContact0.Y - closestOnB.Y;
+                var o1 = localContact1.Y - closestOnB.Y;
+                var depth0 = depth + Vector.Min(o0 * localNormal.Y, o0 * depthScale);
+                var depth1 = depth + Vector.Min(o1 * localNormal.Y, o1 * depthScale);
+
                 manifold.Depth0 = Vector.ConditionalSelect(useSide, depth0, manifold.Depth0);
                 manifold.Depth1 = Vector.ConditionalSelect(useSide, depth1, manifold.Depth1);
                 manifold.Contact0Exists = Vector.ConditionalSelect(useSide, Vector.GreaterThan(depth0, depthThreshold), manifold.Contact0Exists);
-                manifold.Contact1Exists = Vector.ConditionalSelect(useSide, Vector.BitwiseAnd(Vector.GreaterThan(depth1, depthThreshold), Vector.GreaterThan(tMax, tMin)), manifold.Contact1Exists);
+                manifold.Contact1Exists = Vector.ConditionalSelect(useSide, Vector.BitwiseAnd(Vector.GreaterThan(depth1, depthThreshold), Vector.GreaterThan(localContact1.Y, localContact0.Y)), manifold.Contact1Exists);
                 manifold.Contact2Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact2Exists);
                 manifold.Contact3Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact3Exists);
             }
