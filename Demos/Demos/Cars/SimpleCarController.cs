@@ -9,7 +9,7 @@ namespace Demos.Demos.Cars
 
         private float steeringAngle;
 
-        public float SteeringAngle { get { return steeringAngle; } }
+        public readonly float SteeringAngle { get { return steeringAngle; } }
 
         public float SteeringSpeed;
         public float MaximumSteeringAngle;

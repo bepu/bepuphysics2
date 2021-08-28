@@ -7,7 +7,7 @@ Most constraint-related stability issues take one of two forms:
 1. Failure to completely propagate forces through the constraint graph.
 2. Excessive constraint stiffness.
 
-Incomplete force propagation usually manifests as bouncing or mild oscillation. This is often observed in tall stacks of bodies. With insufficient iterations or timesteps, stacks can start to bounce and wiggle a bit. Generally, if you zoom in, any local pair of bodies in the stack is behaving reasonably, but tiny errors accumulate and make the whole the dance. In other words, the solver can't converge to a solution for all the constraints at once. In this case, increasing `Simulation.Solver.IterationCount` or setting it to a higher value in `Simulation.Create` usually helps.
+Incomplete force propagation usually manifests as bouncing or mild oscillation. This is often observed in tall stacks of bodies. With insufficient iterations or timesteps, stacks can start to bounce and wiggle a bit. Generally, if you zoom in, any local pair of bodies in the stack is behaving reasonably, but tiny errors accumulate and make the whole thing dance. In other words, the solver can't converge to a solution for all the constraints at once. In this case, increasing `Simulation.Solver.IterationCount` or setting it to a higher value in `Simulation.Create` usually helps.
 
 An example of what it looks like when the solver needs more iterations:
 

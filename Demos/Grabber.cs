@@ -49,7 +49,7 @@ namespace Demos
             }
         }
 
-        void CreateMotorDescription(in Vector3 target, float inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularServo angularDescription)
+        readonly void CreateMotorDescription(in Vector3 target, float inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularServo angularDescription)
         {
             linearDescription = new OneBodyLinearServo
             {

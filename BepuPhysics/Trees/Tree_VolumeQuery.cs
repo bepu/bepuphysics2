@@ -7,7 +7,7 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-        unsafe void GetOverlaps<TEnumerator>(int nodeIndex, in Vector3 min, in Vector3 max, int* stack, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
+        unsafe readonly void GetOverlaps<TEnumerator>(int nodeIndex, in Vector3 min, in Vector3 max, int* stack, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
             Debug.Assert((nodeIndex >= 0 && nodeIndex < nodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < leafCount));
             Debug.Assert(leafCount >= 2, "This implementation assumes all nodes are filled.");
@@ -58,7 +58,7 @@ namespace BepuPhysics.Trees
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetOverlaps<TEnumerator>(in Vector3 min, in Vector3 max, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
+        public readonly unsafe void GetOverlaps<TEnumerator>(in Vector3 min, in Vector3 max, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
             if (leafCount > 1)
             {
@@ -80,7 +80,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetOverlaps<TEnumerator>(in BoundingBox boundingBox, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
+        public readonly unsafe void GetOverlaps<TEnumerator>(in BoundingBox boundingBox, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
             GetOverlaps(boundingBox.Min, boundingBox.Max, ref leafEnumerator);
         }

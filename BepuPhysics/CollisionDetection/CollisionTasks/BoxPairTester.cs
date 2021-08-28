@@ -113,7 +113,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(vertex, offset, out var vertexOnBFace);
 
             Vector3Wide.Subtract(vertexOnBFace, faceCenterB, out var vertexOffsetOnBFace);
-            ManifoldCandidate candidate;
+            Unsafe.SkipInit(out ManifoldCandidate candidate);
             Vector3Wide.Dot(vertexOffsetOnBFace, faceTangentBX, out candidate.X);
             Vector3Wide.Dot(vertexOffsetOnBFace, faceTangentBY, out candidate.Y);
             candidate.FeatureId = featureId;
@@ -132,7 +132,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AddBoxAVertices(in Vector3Wide faceCenterB, in Vector3Wide faceTangentBX, in Vector3Wide faceTangentBY, in Vector<float> halfSpanBX, in Vector<float> halfSpanBY,
+        private static void AddBoxAVertices(in Vector3Wide faceCenterB, in Vector3Wide faceTangentBX, in Vector3Wide faceTangentBY, in Vector<float> halfSpanBX, in Vector<float> halfSpanBY,
             in Vector3Wide faceNormalB, in Vector3Wide contactNormal,
             in Vector3Wide v00, in Vector3Wide v01, in Vector3Wide v10, in Vector3Wide v11,
             in Vector<int> f00, in Vector<int> f01, in Vector<int> f10, in Vector<int> f11,
@@ -275,7 +275,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //We now have intervals for all four box B edges.
             var edgeFeatureIdOffset = new Vector<int>(64);
             var epsilon = epsilonScale * 1e-5f;
-            ManifoldCandidate min, max;
+            Unsafe.SkipInit(out ManifoldCandidate min);
+            Unsafe.SkipInit(out ManifoldCandidate max);
             //X0
             min.FeatureId = featureIdX0;
             min.X = minX0;
@@ -322,6 +323,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex4ContactManifoldWide manifold)
         {
+            Unsafe.SkipInit(out manifold);
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var worldRA);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var worldRB);
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(worldRB, worldRA, out var rB);

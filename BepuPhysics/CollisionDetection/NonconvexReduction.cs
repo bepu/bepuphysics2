@@ -278,7 +278,7 @@ namespace BepuPhysics.CollisionDetection
                 if (populatedChildManifolds > 1)
                 {
                     //There are multiple contributing child manifolds, so just assume that the resulting manifold is going to be nonconvex.
-                    NonconvexContactManifold reducedManifold;
+                    Unsafe.SkipInit(out NonconvexContactManifold reducedManifold);
                     //We should assume that the stack memory backing the reduced manifold is uninitialized. We rely on the count, so initialize it manually.
                     reducedManifold.Count = 0;
 
@@ -302,7 +302,7 @@ namespace BepuPhysics.CollisionDetection
 
                     //The manifold offsetB is the offset from shapeA origin to shapeB origin.
                     reducedManifold.OffsetB = sampleChild->Manifold.OffsetB - sampleChild->OffsetB + sampleChild->OffsetA;
-                    batcher.Callbacks.OnPairCompleted(pairId, ref *&reducedManifold);
+                    batcher.Callbacks.OnPairCompleted(pairId, ref reducedManifold);
                 }
                 else
                 {

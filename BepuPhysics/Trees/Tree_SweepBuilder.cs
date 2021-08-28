@@ -38,7 +38,7 @@ namespace BepuPhysics.Trees
         }
 
 
-        unsafe void FindPartitionForAxis(BoundingBox* boundingBoxes, BoundingBox* aMerged, float* centroids, int* indexMap, int count,
+        readonly unsafe void FindPartitionForAxis(BoundingBox* boundingBoxes, BoundingBox* aMerged, float* centroids, int* indexMap, int count,
             out int splitIndex, out float cost, out BoundingBox a, out BoundingBox b, out int leafCountA, out int leafCountB)
         {
             Debug.Assert(count > 1);
@@ -67,7 +67,7 @@ namespace BepuPhysics.Trees
             }
 
             //Sweep from high to low.
-            BoundingBox bMerged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
+            var bMerged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
             cost = float.MaxValue;
             splitIndex = 0;
             a = bMerged;
@@ -105,7 +105,7 @@ namespace BepuPhysics.Trees
 
         }
 
-        unsafe void FindPartition(ref SweepResources leaves, int start, int count,
+        unsafe readonly void FindPartition(ref SweepResources leaves, int start, int count,
                out int splitIndex, out BoundingBox a, out BoundingBox b, out int leafCountA, out int leafCountB)
         {
             //A variety of potential microoptimizations exist here.

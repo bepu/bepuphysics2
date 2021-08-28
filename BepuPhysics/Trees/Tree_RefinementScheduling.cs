@@ -93,7 +93,7 @@ namespace BepuPhysics.Trees
 
             ref var children = ref Nodes[0].A;
             float childChange = 0;
-            BoundingBox merged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
+            var merged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
             for (int i = 0; i < 2; ++i)
             {
                 //Note: these conditions mean the root will never be considered a wavefront node. That's acceptable;
@@ -150,7 +150,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        void GetRefitAndMarkTuning(out int maximumSubtrees, out int estimatedRefinementCandidateCount, out int refinementLeafCountThreshold)
+        readonly void GetRefitAndMarkTuning(out int maximumSubtrees, out int estimatedRefinementCandidateCount, out int refinementLeafCountThreshold)
         {
             maximumSubtrees = (int)(Math.Sqrt(leafCount) * 3);
             estimatedRefinementCandidateCount = (leafCount * 2) / maximumSubtrees;
@@ -158,7 +158,7 @@ namespace BepuPhysics.Trees
             refinementLeafCountThreshold = Math.Min(leafCount, maximumSubtrees);
         }
 
-        void GetRefineTuning(int frameIndex, int refinementCandidatesCount, float refineAggressivenessScale, float costChange,
+        readonly void GetRefineTuning(int frameIndex, int refinementCandidatesCount, float refineAggressivenessScale, float costChange,
             out int targetRefinementCount, out int refinementPeriod, out int refinementOffset)
         {
             if (float.IsNaN(costChange) || float.IsInfinity(costChange))

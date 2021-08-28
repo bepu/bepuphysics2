@@ -112,7 +112,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             in Vector<int> exists, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
         {
             Vector3Wide.Subtract(pointOnTriangle, triangleCenter, out var offset);
-            ManifoldCandidate candidate;
+            Unsafe.SkipInit(out ManifoldCandidate candidate);
             Vector3Wide.Dot(offset, triangleTangentX, out candidate.X);
             Vector3Wide.Dot(offset, triangleTangentY, out candidate.Y);
             candidate.FeatureId = featureId;
@@ -253,7 +253,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AddBoxVertices(in Vector3Wide a, in Vector3Wide b, in Vector3Wide ab, in Vector3Wide bc, in Vector3Wide ca, in Vector3Wide triangleNormal, in Vector3Wide contactNormal,
+        private static void AddBoxVertices(in Vector3Wide a, in Vector3Wide b, in Vector3Wide ab, in Vector3Wide bc, in Vector3Wide ca, in Vector3Wide triangleNormal, in Vector3Wide contactNormal,
             in Vector3Wide v00, in Vector3Wide v01, in Vector3Wide v10, in Vector3Wide v11,
             in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY, in Vector<int> baseFeatureId, in Vector<int> featureIdX, in Vector<int> featureIdY,
             in Vector<int> allowContacts, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
@@ -332,6 +332,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var triangleFaceDepth =
                 Vector.Abs(triangleNormal.X) * a.HalfWidth + Vector.Abs(triangleNormal.Y) * a.HalfHeight + Vector.Abs(triangleNormal.Z) * a.HalfLength - Vector.Abs(trianglePlaneOffset);
             Select(ref depth, ref localNormal, triangleFaceDepth, calibratedTriangleNormal);
+
+            //If the local normal points against the triangle normal, then it's on the backside and should not collide.
+            Vector3Wide.Dot(localNormal, triangleNormal, out var normalDot);
+            var allowContacts = Vector.GreaterThanOrEqual(normalDot, new Vector<float>(SphereTriangleTester.BackfaceNormalDotRejectionThreshold));
+            if (Vector.EqualsAll(allowContacts, Vector<int>.Zero))
+            {
+                //All lanes are inactive; early out.
+                manifold = default;
+                return;
+            }
 
             //At this point, we have computed the minimum depth and associated local normal.
             //We now need to compute some contact locations, their per-contact depths, and the feature ids.
@@ -426,9 +436,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(negativeX, boxEdgeOffsetY, out var boxVertex01);
             Vector3Wide.Subtract(positiveX, boxEdgeOffsetY, out var boxVertex10);
             Vector3Wide.Add(positiveX, boxEdgeOffsetY, out var boxVertex11);
-            //If the local normal points against the triangle normal, then it's on the backside and should not collide.
-            Vector3Wide.Dot(localNormal, triangleNormal, out var normalDot);
-            var allowContacts = Vector.GreaterThan(normalDot, Vector<float>.Zero);
             AddBoxVertices(vA, vB, ab, bc, ca, triangleNormal, localNormal, boxVertex00, boxVertex01, boxVertex10, boxVertex11,
                 localTriangleCenter, triangleTangentX, triangleTangentY, axisIdNormal, axisIdTangentX, axisIdTangentY, allowContacts, ref candidates, ref candidateCount, pairCount);
 

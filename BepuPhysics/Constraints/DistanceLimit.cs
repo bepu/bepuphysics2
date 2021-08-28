@@ -53,7 +53,7 @@ namespace BepuPhysics.Constraints
             SpringSettings = springSettings;
         }
         
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -62,9 +62,9 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type TypeProcessorType => typeof(DistanceLimitTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(DistanceLimitTypeProcessor);
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(MinimumDistance >= 0, "DistanceLimit.MinimumDistance must be nonnegative.");
             Debug.Assert(MaximumDistance >= 0, "DistanceLimit.MaximumDistance must be nonnegative.");
@@ -79,7 +79,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out DistanceLimit description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out DistanceLimit description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<DistanceLimitPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);

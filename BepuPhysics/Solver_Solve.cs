@@ -174,7 +174,7 @@ namespace BepuPhysics
                 for (int i = 0; i < blockCount; ++i)
                 {
                     var bodiesInBlock = i < remainder ? baseBodiesPerBlock + 1 : baseBodiesPerBlock;
-                    context.FallbackBlocks.Blocks.AllocateUnsafely() = new FallbackScatterWorkBlock { Start = previousEnd, End = previousEnd = previousEnd + bodiesInBlock };
+                    context.FallbackBlocks.Blocks.AllocateUnsafely() = new FallbackScatterWorkBlock { Start = previousEnd, End = previousEnd += bodiesInBlock };
                 }
             }
         }

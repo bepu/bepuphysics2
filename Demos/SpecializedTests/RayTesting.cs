@@ -363,7 +363,7 @@ namespace Demos.SpecializedTests
             const float outwardPointingSpan = 1000f;
 
             var tester = default(TTester);
-            Random random = new Random(5);
+            var random = new Random(5);
             TShapeWide shapeWide = default;
             for (int shapeIteration = 0; shapeIteration < shapeIterations; ++shapeIteration)
             {

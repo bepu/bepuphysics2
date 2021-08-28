@@ -39,7 +39,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var basis);
             Matrix3x3.Transform(A, basis, out var worldA);
@@ -50,7 +50,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        public readonly void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
         {
             maximumRadius = (float)Math.Sqrt(MathHelper.Max(A.LengthSquared(), MathHelper.Max(B.LengthSquared(), C.LengthSquared())));
             maximumAngularExpansion = maximumRadius;
@@ -95,7 +95,7 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
-        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
             var offset = origin - pose.Position;
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
@@ -109,14 +109,14 @@ namespace BepuPhysics.Collidables
             return false;
         }
 
-        public void ComputeInertia(float mass, out BodyInertia inertia)
+        public readonly void ComputeInertia(float mass, out BodyInertia inertia)
         {
             MeshInertiaHelper.ComputeTriangleContribution(A, B, C, mass, out var inertiaTensor);
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
             inertia.InverseMass = 1f / mass;
         }
 
-        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new ConvexShapeBatch<Triangle, TriangleWide>(pool, initialCapacity);
         }
@@ -125,7 +125,7 @@ namespace BepuPhysics.Collidables
         /// Type id of triangle shapes.
         /// </summary>
         public const int Id = 3;
-        public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public readonly int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
 

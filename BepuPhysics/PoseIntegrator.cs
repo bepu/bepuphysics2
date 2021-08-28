@@ -97,7 +97,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void Integrate(in Quaternion orientation, in Vector3 angularVelocity, float dt, out Quaternion integratedOrientation)
+        public static void Integrate(in Quaternion orientation, in Vector3 angularVelocity, float dt, out Quaternion integratedOrientation)
         {
             orientation.ValidateOrientation();
             angularVelocity.Validate();
@@ -107,8 +107,8 @@ namespace BepuPhysics
             if (speed > 1e-15f)
             {
                 var halfAngle = speed * dt * 0.5f;
-                Quaternion q;
-                Unsafe.As<Quaternion, Vector3>(ref *&q) = angularVelocity * (MathHelper.Sin(halfAngle) / speed);
+                Unsafe.SkipInit(out Quaternion q);
+                Unsafe.As<Quaternion, Vector3>(ref q) = angularVelocity * (MathHelper.Sin(halfAngle) / speed);
                 q.W = MathHelper.Cos(halfAngle);
                 //Note that the input and output may overlap.
                 QuaternionEx.Concatenate(orientation, q, out integratedOrientation);

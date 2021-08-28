@@ -204,7 +204,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact1OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -217,7 +217,7 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.MaterialProperties.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact1OneBody description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact1OneBody description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact1OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -244,13 +244,13 @@ namespace BepuPhysics.Constraints.Contact
             return ref description.Contact0;
         }
         
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact1OneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact1OneBodyTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact1OneBodyTypeProcessor);
 
     }
 
@@ -264,8 +264,8 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide Normal;
         public MaterialPropertiesWide MaterialProperties;
 		
-        public int BodyCount => 1;
-        public int ContactCount => 1;
+        public readonly int BodyCount => 1;
+        public readonly int ContactCount => 1;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Vector3Wide GetNormal(ref Contact1OneBodyPrestepData prestep)
@@ -372,7 +372,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact2OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -387,7 +387,7 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.MaterialProperties.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact2OneBody description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact2OneBody description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact2OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -416,13 +416,13 @@ namespace BepuPhysics.Constraints.Contact
             return ref description.Contact0;
         }
         
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact2OneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact2OneBodyTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact2OneBodyTypeProcessor);
 
     }
 
@@ -437,8 +437,8 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide Normal;
         public MaterialPropertiesWide MaterialProperties;
 		
-        public int BodyCount => 1;
-        public int ContactCount => 2;
+        public readonly int BodyCount => 1;
+        public readonly int ContactCount => 2;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Vector3Wide GetNormal(ref Contact2OneBodyPrestepData prestep)
@@ -553,7 +553,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact3OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -570,7 +570,7 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.MaterialProperties.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact3OneBody description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact3OneBody description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact3OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -601,13 +601,13 @@ namespace BepuPhysics.Constraints.Contact
             return ref description.Contact0;
         }
         
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact3OneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact3OneBodyTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact3OneBodyTypeProcessor);
 
     }
 
@@ -623,8 +623,8 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide Normal;
         public MaterialPropertiesWide MaterialProperties;
 		
-        public int BodyCount => 1;
-        public int ContactCount => 3;
+        public readonly int BodyCount => 1;
+        public readonly int ContactCount => 3;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Vector3Wide GetNormal(ref Contact3OneBodyPrestepData prestep)
@@ -748,7 +748,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact4OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -767,7 +767,7 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.MaterialProperties.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact4OneBody description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact4OneBody description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact4OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -800,13 +800,13 @@ namespace BepuPhysics.Constraints.Contact
             return ref description.Contact0;
         }
         
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact4OneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact4OneBodyTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact4OneBodyTypeProcessor);
 
     }
 
@@ -823,8 +823,8 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide Normal;
         public MaterialPropertiesWide MaterialProperties;
 		
-        public int BodyCount => 1;
-        public int ContactCount => 4;
+        public readonly int BodyCount => 1;
+        public readonly int ContactCount => 4;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Vector3Wide GetNormal(ref Contact4OneBodyPrestepData prestep)
@@ -954,7 +954,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact1PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -968,7 +968,7 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.MaterialProperties.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact1 description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact1 description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact1PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -998,13 +998,13 @@ namespace BepuPhysics.Constraints.Contact
             return ref description.Contact0;
         }
         
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact1TypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact1TypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact1TypeProcessor);
 
     }
 
@@ -1019,8 +1019,8 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide Normal;
         public MaterialPropertiesWide MaterialProperties;
 		
-        public int BodyCount => 2;
-        public int ContactCount => 1;
+        public readonly int BodyCount => 2;
+        public readonly int ContactCount => 1;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Vector3Wide GetNormal(ref Contact1PrestepData prestep)
@@ -1138,7 +1138,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact2PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -1154,7 +1154,7 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.MaterialProperties.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact2 description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact2 description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact2PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -1186,13 +1186,13 @@ namespace BepuPhysics.Constraints.Contact
             return ref description.Contact0;
         }
         
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact2TypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact2TypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact2TypeProcessor);
 
     }
 
@@ -1208,8 +1208,8 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide Normal;
         public MaterialPropertiesWide MaterialProperties;
 		
-        public int BodyCount => 2;
-        public int ContactCount => 2;
+        public readonly int BodyCount => 2;
+        public readonly int ContactCount => 2;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Vector3Wide GetNormal(ref Contact2PrestepData prestep)
@@ -1336,7 +1336,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact3PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -1354,7 +1354,7 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.MaterialProperties.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact3 description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact3 description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact3PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -1388,13 +1388,13 @@ namespace BepuPhysics.Constraints.Contact
             return ref description.Contact0;
         }
         
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact3TypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact3TypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact3TypeProcessor);
 
     }
 
@@ -1411,8 +1411,8 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide Normal;
         public MaterialPropertiesWide MaterialProperties;
 		
-        public int BodyCount => 2;
-        public int ContactCount => 3;
+        public readonly int BodyCount => 2;
+        public readonly int ContactCount => 3;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Vector3Wide GetNormal(ref Contact3PrestepData prestep)
@@ -1549,7 +1549,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -1569,7 +1569,7 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.MaterialProperties.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact4 description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact4 description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -1605,13 +1605,13 @@ namespace BepuPhysics.Constraints.Contact
             return ref description.Contact0;
         }
         
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact4TypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact4TypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact4TypeProcessor);
 
     }
 
@@ -1629,8 +1629,8 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide Normal;
         public MaterialPropertiesWide MaterialProperties;
 		
-        public int BodyCount => 2;
-        public int ContactCount => 4;
+        public readonly int BodyCount => 2;
+        public readonly int ContactCount => 4;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Vector3Wide GetNormal(ref Contact4PrestepData prestep)

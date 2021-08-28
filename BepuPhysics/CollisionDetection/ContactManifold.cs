@@ -149,9 +149,9 @@ namespace BepuPhysics.CollisionDetection
         [FieldOffset(112)]
         public NonconvexContact Contact3;
 
-        int IContactManifold<NonconvexContactManifold>.Count => Count;
+        readonly int IContactManifold<NonconvexContactManifold>.Count => Count;
 
-        bool IContactManifold<NonconvexContactManifold>.Convex => false;
+        readonly bool IContactManifold<NonconvexContactManifold>.Convex => false;
 
         /// <summary>
         /// The maximum number of contacts that can exist within a nonconvex manifold.
@@ -159,7 +159,7 @@ namespace BepuPhysics.CollisionDetection
         public const int MaximumContactCount = 4;
 
         [Conditional("DEBUG")]
-        private void ValidateIndex(int contactIndex)
+        private readonly void ValidateIndex(int contactIndex)
         {
             Debug.Assert(contactIndex >= 0 && contactIndex < Count, "Contact index must be within the contact count.");
         }
@@ -302,9 +302,9 @@ namespace BepuPhysics.CollisionDetection
         [FieldOffset(88)]
         public ConvexContact Contact3;
 
-        int IContactManifold<ConvexContactManifold>.Count => Count;
+        readonly int IContactManifold<ConvexContactManifold>.Count => Count;
 
-        bool IContactManifold<ConvexContactManifold>.Convex => true;
+        readonly bool IContactManifold<ConvexContactManifold>.Convex => true;
 
         [Conditional("DEBUG")]
         private void ValidateIndex(int contactIndex)

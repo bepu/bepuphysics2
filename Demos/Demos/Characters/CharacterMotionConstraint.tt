@@ -5,18 +5,11 @@
 <#@ import namespace="System.Collections.Generic" #>
 <#@ output extension=".cs" #>
 using BepuUtilities;
-using DemoRenderer;
 using BepuPhysics;
-using BepuPhysics.Collidables;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using System;
-using BepuPhysics.CollisionDetection;
 using System.Runtime.CompilerServices;
-using System.Diagnostics;
 using BepuPhysics.Constraints;
-using DemoContentLoader;
-using DemoUtilities;
 using BepuUtilities.Memory;
 using static BepuUtilities.GatherScatter;
 
@@ -86,18 +79,18 @@ namespace Demos.Demos.Characters
         /// <summary>
         /// Gets the constraint type id that this description is associated with. 
         /// </summary>
-        public int ConstraintTypeId => <#=prefix#>CharacterMotionTypeProcessor.BatchTypeId;
+        public readonly int ConstraintTypeId => <#=prefix#>CharacterMotionTypeProcessor.BatchTypeId;
 
         /// <summary>
         /// Gets the TypeProcessor type that is associated with this description.
         /// </summary>
-        public Type TypeProcessorType => typeof(<#=prefix#>CharacterMotionTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(<#=prefix#>CharacterMotionTypeProcessor);
 
         //Note that these mapping functions use a "GetOffsetInstance" function. Each CharacterMotionPrestep is a bundle of multiple constraints;
         //by grabbing an offset instance, we're selecting a specific slot in the bundle to modify. For simplicity and to guarantee consistency of field strides,
         //we refer to that slot using the same struct and then write only to the first slot.
         //(Note that accessing slots after the first may result in access violations; the 'offset instance' is not guaranteed to refer to valid data beyond the first slot!)
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             ref var target = ref GetOffsetInstance(ref Buffer<<#=prefix#>CharacterMotionPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             QuaternionWide.WriteFirst(SurfaceBasis, ref target.SurfaceBasis);
@@ -111,7 +104,7 @@ namespace Demos.Demos.Characters
 <#}#>
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out <#=prefix#>CharacterMotionConstraint description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out <#=prefix#>CharacterMotionConstraint description)
         {
             ref var source = ref GetOffsetInstance(ref Buffer<<#=prefix#>CharacterMotionPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             QuaternionWide.ReadFirst(source.SurfaceBasis, out description.SurfaceBasis);

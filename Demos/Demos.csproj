@@ -3,14 +3,14 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    <Configurations>Debug;Release;ReleaseStrip</Configurations>
+    <Configurations>Debug;Release</Configurations>
     <LangVersion>latest</LangVersion>
     <!--<TieredCompilation>false</TieredCompilation>-->
   </PropertyGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Condition="'$(Configuration)'=='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\$(Configuration)\netcoreapp3.1\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot; -debug" />
-    <Exec Condition="'$(Configuration)'!='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\Release\netcoreapp3.1\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot;" />
+    <Exec Condition="'$(Configuration)'=='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\$(Configuration)\net5.0\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot; -debug" />
+    <Exec Condition="'$(Configuration)'!='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\Release\net5.0\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot;" />
   </Target>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -18,11 +18,6 @@
     <DefineConstants>TRACE;RELEASE</DefineConstants>
     <DebugType>embedded</DebugType>
     <DebugSymbols>true</DebugSymbols>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)'=='ReleaseStrip'">
-    <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">

@@ -14,7 +14,7 @@ namespace BepuPhysics.Trees
     }
     partial struct Tree
     {
-        unsafe void Sweep<TLeafTester>(int nodeIndex, in Vector3 expansion, in Vector3 origin, in Vector3 direction, TreeRay* treeRay, int* stack, ref TLeafTester leafTester) where TLeafTester : ISweepLeafTester
+        readonly unsafe void Sweep<TLeafTester>(int nodeIndex, in Vector3 expansion, in Vector3 origin, in Vector3 direction, TreeRay* treeRay, int* stack, ref TLeafTester leafTester) where TLeafTester : ISweepLeafTester
         {
             Debug.Assert((nodeIndex >= 0 && nodeIndex < nodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < leafCount));
             Debug.Assert(leafCount >= 2, "This implementation assumes all nodes are filled.");
@@ -81,7 +81,7 @@ namespace BepuPhysics.Trees
 
         }
 
-        internal unsafe void Sweep<TLeafTester>(in Vector3 expansion, in Vector3 origin, in Vector3 direction, TreeRay* treeRay, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
+        internal readonly unsafe void Sweep<TLeafTester>(in Vector3 expansion, in Vector3 origin, in Vector3 direction, TreeRay* treeRay, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
         {
             if (leafCount == 0)
                 return;
@@ -112,14 +112,14 @@ namespace BepuPhysics.Trees
             origin = halfMax + halfMin;
         }
 
-        public unsafe void Sweep<TLeafTester>(in Vector3 min, in Vector3 max, in Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
+        public readonly unsafe void Sweep<TLeafTester>(in Vector3 min, in Vector3 max, in Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
         {
             ConvertBoxToCentroidWithExtent(min, max, out var origin, out var expansion);
             TreeRay.CreateFrom(origin, direction, maximumT, out var treeRay);
             Sweep(expansion, origin, direction, &treeRay, ref sweepTester);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Sweep<TLeafTester>(in BoundingBox boundingBox, in Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
+        public readonly unsafe void Sweep<TLeafTester>(in BoundingBox boundingBox, in Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
         {
             Sweep(boundingBox.Min, boundingBox.Max, direction, maximumT, ref sweepTester);
         }

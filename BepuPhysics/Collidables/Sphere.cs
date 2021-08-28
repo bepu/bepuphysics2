@@ -44,19 +44,19 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        public readonly void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
         {
             maximumRadius = Radius;
             maximumAngularExpansion = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             min = new Vector3(-Radius);
             max = new Vector3(Radius);
         }
-        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
             var inverseDLength = 1f / direction.Length();
@@ -95,7 +95,7 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
-        public void ComputeInertia(float mass, out BodyInertia inertia)
+        public readonly void ComputeInertia(float mass, out BodyInertia inertia)
         {
             inertia.InverseMass = 1f / mass;
             inertia.InverseInertiaTensor.XX = inertia.InverseMass / ((2f / 5f) * Radius * Radius);
@@ -106,7 +106,7 @@ namespace BepuPhysics.Collidables
             inertia.InverseInertiaTensor.ZZ = inertia.InverseInertiaTensor.XX;
         }
 
-        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
+        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
         {
             return new ConvexShapeBatch<Sphere, SphereWide>(pool, initialCapacity);
         }
@@ -116,7 +116,7 @@ namespace BepuPhysics.Collidables
         /// Type id of sphere shapes.
         /// </summary>
         public const int Id = 0;
-        public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public readonly int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
     public struct SphereWide : IShapeWide<Sphere>

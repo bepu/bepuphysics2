@@ -369,7 +369,7 @@ namespace Demos.Demos
             out Buffer<Vector3> vertices, out CellSet vertexSpatialIndices, out Buffer<CellVertexIndices> cellVertexIndices, out Buffer<TetrahedronVertices> tetrahedraVertexIndices)
         {
             //Compute the size of the 3d grid by scanning all vertices.
-            Vector3 min = new Vector3(float.MaxValue), max = new Vector3(float.MinValue);
+            Vector3 min = new(float.MaxValue), max = new(float.MinValue);
             for (int i = 0; i < triangles.Length; ++i)
             {
                 ref var triangle = ref triangles[i];

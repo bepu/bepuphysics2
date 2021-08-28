@@ -29,7 +29,7 @@ namespace Demos
         float linearDampingDt;
         float angularDampingDt;
 
-        public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
+        public readonly AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
 
         public void Initialize(Simulation simulation)
         {

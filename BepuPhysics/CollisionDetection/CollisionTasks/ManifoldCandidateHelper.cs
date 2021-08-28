@@ -34,6 +34,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Unsafe.Add(ref laneMasks, i) = -1;
             }
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CreateActiveMask(int pairCount, out Vector<int> activeLanes)
+        {
+            activeLanes = Vector<int>.Zero;
+            ref var laneMasks = ref Unsafe.As<Vector<int>, int>(ref activeLanes);
+            for (int i = 0; i < pairCount; ++i)
+            {
+                Unsafe.Add(ref laneMasks, i) = -1;
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void AddCandidate(ref ManifoldCandidate candidates, ref Vector<int> count, in ManifoldCandidate candidate, in Vector<int> newContactExists, int pairCount)
@@ -91,6 +101,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
             out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
         {
+            Unsafe.SkipInit(out contact0);
+            Unsafe.SkipInit(out contact1);
+            Unsafe.SkipInit(out contact2);
+            Unsafe.SkipInit(out contact3);
             //See if we can avoid visiting some of the higher indices.
             //Mask out any contacts generated on the pairs which don't actually exist. They can waste time and cause problems.
             Vector<int> maskedContactCount = rawContactCount;

@@ -18,7 +18,7 @@ namespace Demos.Demos
         //Pose integration isn't very expensive so using the higher quality option isn't that much of an issue, but it's also pretty subtle.
         //Unless your simulation requires the extra fidelity, there's not much reason to spend the extra time on it.
         DemoPoseIntegratorCallbacks innerCallbacks;
-        public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque;
+        public readonly AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque;
 
         public void Initialize(Simulation simulation)
         {
@@ -62,7 +62,7 @@ namespace Demos.Demos
             Simulation.Solver.Add(gyroBaseBody, gyroSpinnerBody, new BallSocket { LocalOffsetA = new Vector3(0, 2, 0), LocalOffsetB = new Vector3(-2, 0, 0), SpringSettings = new SpringSettings(30, 1) });
 
 
-            CompoundBuilder builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
+            var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
             builder.Add(new Box(1, 0.3f, 0.3f), new RigidPose(new Vector3(-0.5f, 0, 0)), 1);
             builder.Add(new Box(0.3f, 2f, 0.3f), new RigidPose(new Vector3(0.15f, 0, 0)), 2);
             builder.BuildDynamicCompound(out var children, out var inertia, out _);

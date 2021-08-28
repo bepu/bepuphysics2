@@ -36,7 +36,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public SpringSettings SpringSettings;
 
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -45,9 +45,9 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type TypeProcessorType => typeof(TwistLimitTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(TwistLimitTypeProcessor);
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             ConstraintChecker.AssertUnitLength(LocalBasisA, nameof(TwistLimit), nameof(LocalBasisA));
             ConstraintChecker.AssertUnitLength(LocalBasisB, nameof(TwistLimit), nameof(LocalBasisB));
@@ -61,7 +61,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistLimit description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistLimit description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<TwistLimitPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -98,6 +98,7 @@ namespace BepuPhysics.Constraints
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
             ref TwistLimitPrestepData prestep, out TwistLimitProjection projection)
         {
+            Unsafe.SkipInit(out projection);
             TwistServoFunctions.ComputeJacobian(bodies, bodyReferences, count, prestep.LocalBasisA, prestep.LocalBasisB,
                 out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
 

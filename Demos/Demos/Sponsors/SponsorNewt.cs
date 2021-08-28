@@ -93,7 +93,7 @@ namespace Demos.Demos.Sponsors
             body.Velocity.Angular = errorAxis * (errorAngle * inverseDt);
         }
 
-        public void Render(Simulation simulation, List<Sponsor> sponsors, Renderer renderer, in Matrix viewProjection, in Vector2 resolution, TextBuilder text, Font font)
+        public readonly void Render(Simulation simulation, List<Sponsor> sponsors, Renderer renderer, in Matrix viewProjection, in Vector2 resolution, TextBuilder text, Font font)
         {
             var name = sponsors[SponsorIndex].Name;
             var body = simulation.Bodies.GetBodyReference(BodyHandle);

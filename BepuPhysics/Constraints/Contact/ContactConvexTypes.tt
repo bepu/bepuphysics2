@@ -108,7 +108,7 @@ for (int i = 0; i < contactCount; ++i)
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact<#=contactCount#><#=suffix#>PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -125,7 +125,7 @@ for (int i = 0; i < contactCount; ++i)
             GetFirst(ref target.MaterialProperties.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
         }
 
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact<#= contactCount #><#=suffix#> description)
+        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact<#= contactCount #><#=suffix#> description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact<#=contactCount#><#=suffix#>PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -160,13 +160,13 @@ for (int i = 0; i < contactCount; ++i)
             return ref description.Contact0;
         }
         
-        public int ConstraintTypeId
+        public readonly int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact<#= contactCount #><#=suffix#>TypeProcessor.BatchTypeId;
         }
 
-        public Type TypeProcessorType => typeof(Contact<#= contactCount #><#=suffix#>TypeProcessor);
+        public readonly Type TypeProcessorType => typeof(Contact<#= contactCount #><#=suffix#>TypeProcessor);
 
     }
 
@@ -185,8 +185,8 @@ for (int i = 0; i < contactCount; ++i)
         public Vector3Wide Normal;
         public MaterialPropertiesWide MaterialProperties;
 		
-        public int BodyCount => <#=bodyCount#>;
-        public int ContactCount => <#=contactCount#>;
+        public readonly int BodyCount => <#=bodyCount#>;
+        public readonly int ContactCount => <#=contactCount#>;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Vector3Wide GetNormal(ref Contact<#= contactCount #><#=suffix#>PrestepData prestep)

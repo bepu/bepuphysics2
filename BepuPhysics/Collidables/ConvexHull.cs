@@ -40,7 +40,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public Buffer<Vector3Wide> Points;
         /// <summary>
-        /// Bundled bounding planes of the convex hull. 
+        /// Bundled bounding planes associated with the convex hull's faces.
         /// </summary>
         public Buffer<HullBoundingPlanes> BoundingPlanes;
         /// <summary>
@@ -64,7 +64,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetVertexIndicesForFace(int faceIndex, out Buffer<HullVertexIndex> faceVertexIndices)
+        public readonly void GetVertexIndicesForFace(int faceIndex, out Buffer<HullVertexIndex> faceVertexIndices)
         {
             var start = FaceToVertexIndicesStart[faceIndex];
             var nextFaceIndex = faceIndex + 1;
@@ -74,13 +74,13 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPoint(HullVertexIndex pointIndex, out Vector3 point)
+        public readonly void GetPoint(HullVertexIndex pointIndex, out Vector3 point)
         {
             Vector3Wide.ReadSlot(ref Points[pointIndex.BundleIndex], pointIndex.InnerIndex, out point);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPoint(int pointIndex, out Vector3 point)
+        public readonly void GetPoint(int pointIndex, out Vector3 point)
         {
             BundleIndexing.GetBundleIndices(pointIndex, out var bundleIndex, out var innerIndex);
             Vector3Wide.ReadSlot(ref Points[bundleIndex], innerIndex, out point);
@@ -88,10 +88,10 @@ namespace BepuPhysics.Collidables
         }
 
         //TODO: With platform intrinsics, we could improve the 'horizontal' parts of these functions.
-        public void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        public readonly void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
         {
             Vector<float> maximumRadiusSquaredWide = default;
-            Vector<float> minimumRadiusSquaredWide = new Vector<float>(float.MaxValue);
+            Vector<float> minimumRadiusSquaredWide = new(float.MaxValue);
             for (int i = 0; i < Points.Length; ++i)
             {
                 Vector3Wide.LengthSquared(Points[i], out var candidate);
@@ -115,7 +115,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void ComputeBounds(in QuaternionWide orientationWide, out Vector3 min, out Vector3 max)
+        internal readonly void ComputeBounds(in QuaternionWide orientationWide, out Vector3 min, out Vector3 max)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationWide, out var orientationMatrix);
             Vector3Wide minWide = default, maxWide = default;
@@ -137,7 +137,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             QuaternionWide.Broadcast(orientation, out var orientationWide);
             ComputeBounds(orientationWide, out min, out max);
@@ -188,7 +188,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
         /// <param name="inertia">Inertia of the convex hull.</param>
-        public void ComputeInertia(float mass, out BodyInertia inertia)
+        public readonly void ComputeInertia(float mass, out BodyInertia inertia)
         {
             var triangleSource = new ConvexHullTriangleSource(this);
             MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor);
@@ -196,12 +196,12 @@ namespace BepuPhysics.Collidables
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
         }
 
-        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new ConvexHullShapeBatch(pool, initialCapacity);
         }
 
-        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             var shapeToRay = origin - pose.Position;
@@ -285,7 +285,7 @@ namespace BepuPhysics.Collidables
         /// Type id of convex hull shapes.
         /// </summary>
         public const int Id = 5;
-        public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public readonly int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
     public struct ConvexHullWide : IShapeWide<ConvexHull>
@@ -313,6 +313,9 @@ namespace BepuPhysics.Collidables
 
         public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
+            Unsafe.SkipInit(out maximumRadius);
+            Unsafe.SkipInit(out min);
+            Unsafe.SkipInit(out max);
             for (int i = 0; i < countInBundle; ++i)
             {
                 Vector3Wide.Broadcast(new Vector3(float.MaxValue), out var minWide);
@@ -357,6 +360,9 @@ namespace BepuPhysics.Collidables
 
         public void RayTest(ref RigidPoses poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
+            Unsafe.SkipInit(out intersected);
+            Unsafe.SkipInit(out t);
+            Unsafe.SkipInit(out normal);
             Debug.Assert(Hulls.Length > 0 && Hulls.Length <= Vector<float>.Count);
             for (int i = 0; i < Hulls.Length; ++i)
             {
@@ -380,7 +386,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EstimateEpsilonScale(in Vector<int> terminatedLanes, out Vector<float> epsilonScale)
         {
-            Vector3Wide bundle;
+            Unsafe.SkipInit(out Vector3Wide bundle);
             for (int i = 0; i < Vector<float>.Count; ++i)
             {
                 if (terminatedLanes[i] < 0)
@@ -411,6 +417,7 @@ namespace BepuPhysics.Collidables
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeLocalSupport(in ConvexHullWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
+            Unsafe.SkipInit(out support);
             Helpers.FillVectorWithLaneIndices(out var indexOffsets);
             for (int slotIndex = 0; slotIndex < Vector<float>.Count; ++slotIndex)
             {

@@ -243,8 +243,8 @@ namespace DemoRenderer
             //This isn't exactly a clever packing, but with 64 bits, cleverness isn't required.
             ref var vectorSource = ref Unsafe.As<float, Vector4>(ref source.X);
             var clamped = Vector4.Max(new Vector4(-1), Vector4.Min(new Vector4(1), vectorSource));
-            ulong packed;
-            ref var packedShorts = ref Unsafe.As<ulong, ushort>(ref *&packed);
+            Unsafe.SkipInit(out ulong packed);
+            ref var packedShorts = ref Unsafe.As<ulong, ushort>(ref packed);
             PackDuplicateZeroSNORM(clamped.X, out packedShorts);
             PackDuplicateZeroSNORM(clamped.Y, out Unsafe.Add(ref packedShorts, 1));
             PackDuplicateZeroSNORM(clamped.Z, out Unsafe.Add(ref packedShorts, 2));
@@ -256,7 +256,7 @@ namespace DemoRenderer
         static unsafe float UnpackDuplicateZeroSNORM(ushort packed)
         {
             var unpacked = (packed & ((1 << 15) - 1)) * (1f / ((1 << 15) - 1));
-            ref var reinterpreted = ref Unsafe.As<float, uint>(ref *&unpacked);
+            ref var reinterpreted = ref Unsafe.As<float, uint>(ref unpacked);
             //Set the sign bit.
             reinterpreted |= (packed & (1u << 15)) << 16;
             return unpacked;

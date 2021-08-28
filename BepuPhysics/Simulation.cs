@@ -9,6 +9,10 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using BepuPhysics.Trees;
 
+#if !DEBUG
+[module: SkipLocalsInit]
+#endif
+
 namespace BepuPhysics
 {
     /// <summary>
@@ -30,7 +34,7 @@ namespace BepuPhysics
         public CollidableOverlapFinder BroadPhaseOverlapFinder { get; private set; }
         public NarrowPhase NarrowPhase { get; private set; }
 
-        SimulationProfiler profiler = new SimulationProfiler(13);
+        SimulationProfiler profiler = new(13);
         /// <summary>
         /// Gets the simulation profiler. Note that the SimulationProfiler implementation only exists when the library is compiled with the PROFILE compilation symbol; if not defined, returned times are undefined.
         /// </summary>
@@ -135,7 +139,7 @@ namespace BepuPhysics
 
 
 
-        private int ValidateAndCountShapefulBodies(ref BodySet bodySet, ref Tree tree, ref Buffer<CollidableReference> leaves)
+        private static int ValidateAndCountShapefulBodies(ref BodySet bodySet, ref Tree tree, ref Buffer<CollidableReference> leaves)
         {
             int shapefulBodyCount = 0;
             for (int i = 0; i < bodySet.Count; ++i)
@@ -344,7 +348,7 @@ namespace BepuPhysics
         public void Timestep(float dt, IThreadDispatcher threadDispatcher = null)
         {
             if (dt <= 0)
-                throw new ArgumentException("Timestep duration must be positive.", "dt");
+                throw new ArgumentException("Timestep duration must be positive.", nameof(dt));
             profiler.Clear();
             profiler.Start(this);
 

@@ -56,7 +56,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector<float> maximumAllowedExpansion = default;
             Vector<float> maximumRadius = default;
             Vector<float> maximumAngularExpansion = default;
-            RigidPoses localPosesA;
+            Unsafe.SkipInit(out RigidPoses localPosesA);
             Vector3Wide mins = default;
             Vector3Wide maxes = default;
             for (int i = 0; i < totalCompoundChildCount; i += Vector<float>.Count)

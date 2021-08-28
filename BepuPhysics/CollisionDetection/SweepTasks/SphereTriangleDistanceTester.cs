@@ -1,6 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
@@ -45,7 +46,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var outsideBC = Vector.LessThan(edgePlaneTestBC, Vector<float>.Zero);
 
             var outsideAnyEdge = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideAC, outsideBC));
-            Vector3Wide localClosestOnTriangle;
+            Unsafe.SkipInit(out Vector3Wide localClosestOnTriangle);
             var negativeOne = new Vector<int>(-1);
             if (Vector.EqualsAny(outsideAnyEdge, negativeOne))
             {
