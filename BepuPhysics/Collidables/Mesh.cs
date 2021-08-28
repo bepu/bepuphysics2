@@ -46,6 +46,33 @@ namespace BepuPhysics.Collidables
         public Buffer<Triangle> Triangles;
         internal Vector3 scale;
         internal Vector3 inverseScale;
+#if FAST_MESH_BOUNDS
+        internal Vector3 boundsCenter;
+        internal Vector3 boundsHalfSize;
+
+        public Vector3 BoundsCenter
+        {
+            get
+            {
+                return boundsCenter;
+            }
+            set
+            {
+                boundsCenter = value;
+            }
+        }
+        public Vector3 BoundsSize
+        {
+            get
+            {
+                return boundsHalfSize * 2;
+            }
+            set
+            {
+                boundsHalfSize = value * 0.5f;
+            }
+        }
+#endif
         /// <summary>
         /// Gets or sets the scale of the mesh.
         /// </summary>
