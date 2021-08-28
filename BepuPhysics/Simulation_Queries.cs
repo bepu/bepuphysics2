@@ -321,20 +321,28 @@ namespace BepuPhysics
         public unsafe void Sweep<TShape, TSweepHitHandler>(in TShape shape, in RigidPose pose, in BodyVelocity velocity, float maximumT, BufferPool pool, ref TSweepHitHandler hitHandler, bool checkOnly = false)
             where TShape : unmanaged, IConvexShape where TSweepHitHandler : ISweepHitHandler
         {
+            ComputeSweepParameters(shape, velocity, maximumT, out var minimumProgressionT, out var convergenceThresholdT);
+            var maximumIterationCount = 25;
+            Sweep(shape, pose, velocity, maximumT, pool, ref hitHandler, minimumProgressionT, convergenceThresholdT, maximumIterationCount, checkOnly);
+        }
+
+        public void ComputeSweepParameters<TShape>(in TShape shape, in BodyVelocity velocity, float maximumT,
+            out float minimumProgressionT, out float convergenceThresholdT,
+            float progressionDistanceRatio = 0.1f, float convergenceThresholdDistanceRatio = 1e-5f)
+            where TShape : unmanaged, IConvexShape
+        {
             //Estimate some reasonable termination conditions for iterative sweeps based on the input shape size.
             shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
             var minimumRadius = maximumRadius - maximumAngularExpansion;
             var sizeEstimate = Math.Max(minimumRadius, maximumRadius * 0.25f);
             //By default, lean towards precision. This may often trip the maximum iteration count, but that's okay. Performance sensitive users can tune it down with the other overload.
             //It would be far more disconcerting for new users to use a 'fast' default tuning and get visibly incorrect results.
-            var minimumProgressionDistance = .1f * sizeEstimate;
-            var convergenceThresholdDistance = 1e-5f * sizeEstimate;
+            var minimumProgressionDistance = progressionDistanceRatio * sizeEstimate;
+            var convergenceThresholdDistance = convergenceThresholdDistanceRatio * sizeEstimate;
             var tangentVelocity = Math.Min(velocity.Angular.Length() * maximumRadius, maximumAngularExpansion / maximumT);
             var inverseVelocity = 1f / (velocity.Linear.Length() + tangentVelocity);
-            var minimumProgressionT = minimumProgressionDistance * inverseVelocity;
-            var convergenceThresholdT = convergenceThresholdDistance * inverseVelocity;
-            var maximumIterationCount = 25;
-            Sweep(shape, pose, velocity, maximumT, pool, ref hitHandler, minimumProgressionT, convergenceThresholdT, maximumIterationCount, checkOnly);
+            minimumProgressionT = minimumProgressionDistance * inverseVelocity;
+            convergenceThresholdT = convergenceThresholdDistance * inverseVelocity;
         }
     }
 }

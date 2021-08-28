@@ -29,15 +29,29 @@ namespace BepuPhysics
         /// </summary>
         public float TestedFractionPerFrame { get; set; } = 0.01f;
         /// <summary>
+        /// Gets or sets the minimum number of active bodies used to calculate the number of sleep traversals in a given timestep.
+        /// </summary>
+        public int MinimumTestedPerFrame { get; set; } = 1;
+        /// <summary>
         /// Gets or sets the fraction of the active set to target as the number of bodies slept in a given frame.
         /// This is only a goal; the actual number of slept bodies may be more or less.
         /// </summary>
         public float TargetSleptFraction { get; set; } = 0.005f;
         /// <summary>
+        /// Gets or sets minimum number of the active set to target as the number of bodies slept in a given frame.
+        /// </summary>
+        public int MinimumTargetSlept { get; set; } = 1;
+        /// <summary>
         /// Gets or sets the fraction of the active set to target as the number of bodies traversed for sleeping in a given frame.
         /// This is only a goal; the actual number of traversed bodies may be more or less.
         /// </summary>
         public float TargetTraversedFraction { get; set; } = 0.01f;
+        /// <summary>
+        /// Gets or sets minimum number of the active set to target as the number of bodies traversed for sleeping in a given frame.
+        /// </summary>
+        public int MinimumTargetTraversed { get; set; } = 1;
+
+        public int LastIslandCount { get; private set; }
 
         public IslandSleeper(Bodies bodies, Solver solver, BroadPhase broadPhase, ConstraintRemover constraintRemover, BufferPool pool)
         {
@@ -656,6 +670,7 @@ namespace BepuPhysics
                 }
                 pool.Return(ref workerTraversalResults);
             }
+            LastIslandCount = totalIslandCount;
             if (totalIslandCount == 0)
             {
                 DisposeWorkerTraversalResults();
@@ -925,7 +940,7 @@ namespace BepuPhysics
             if (bodies.ActiveSet.Count == 0)
                 return;
 
-            int candidateCount = (int)Math.Max(1, bodies.ActiveSet.Count * TestedFractionPerFrame);
+            int candidateCount = (int)Math.Max(Math.Min(bodies.ActiveSet.Count, MinimumTestedPerFrame), bodies.ActiveSet.Count * TestedFractionPerFrame);
 
             var traversalStartBodyIndices = new QuickList<int>(candidateCount, pool);
 
@@ -976,7 +991,9 @@ namespace BepuPhysics
                 }
                 pool.Return(ref sortedIndices);
             }
-            Sleep(ref traversalStartBodyIndices, threadDispatcher, deterministic, (int)Math.Ceiling(bodies.ActiveSet.Count * TargetSleptFraction), (int)Math.Ceiling(bodies.ActiveSet.Count * TargetTraversedFraction), false);
+            Sleep(ref traversalStartBodyIndices, threadDispatcher, deterministic, 
+                Math.Max(Math.Min(MinimumTargetSlept, bodies.ActiveSet.Count), (int)Math.Ceiling(bodies.ActiveSet.Count * TargetSleptFraction)), 
+                Math.Max(Math.Min(MinimumTargetTraversed, bodies.ActiveSet.Count), (int)Math.Ceiling(bodies.ActiveSet.Count * TargetTraversedFraction)), false);
 
             traversalStartBodyIndices.Dispose(pool);
         }
