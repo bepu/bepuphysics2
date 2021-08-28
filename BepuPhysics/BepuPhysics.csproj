@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <Version>2.4.0-beta6</Version>
     <Company>Bepu Entertainment LLC</Company>
     <Authors>Ross Nordby</Authors>
@@ -10,7 +10,7 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/bepu/bepuphysics2</RepositoryUrl>
     <PackageIcon>bepuphysicslogo256.png</PackageIcon>
-    <Configurations>Debug;Release;ReleaseNoProfiling</Configurations>
+    <Configurations>Debug;Release;ReleaseStrip;ReleaseStripNoProfiling</Configurations>
     <LangVersion>latest</LangVersion>
     <PackageTags>physics;3d;rigid body;real time;simulation</PackageTags>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -19,20 +19,29 @@
     <DelaySign>false</DelaySign>
     <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Condition="'$(Configuration)'=='ReleaseStrip' Or '$(Configuration)'=='ReleaseStripNoProfiling'" Command="dotnet &quot;$(ProjectDir)..\Dependencies\ilopt\ilopt.dll&quot; &quot;$(TargetPath)&quot;" />
+  </Target>
     
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <Optimize>false</Optimize>
-    <DefineConstants>TRACE;DEBUG;CHECKMATH;PROFILE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;CHECKMATH;PROFILE;NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
     <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE;PROFILE</DefineConstants>
+    <DefineConstants>TRACE;RELEASE;PROFILE;NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)'=='ReleaseNoProfiling'">
+  <PropertyGroup Condition="'$(Configuration)'=='ReleaseStrip'">
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;RELEASE;NETSTANDARD2_0;RELEASESTRIP;FAST_MESH_BOUNDS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='ReleaseStripNoProfiling'">
     <Optimize>true</Optimize>
     <DefineConstants>TRACE;RELEASE</DefineConstants>
   </PropertyGroup>
