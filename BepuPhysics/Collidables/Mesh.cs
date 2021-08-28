@@ -167,6 +167,25 @@ namespace BepuPhysics.Collidables
             Vector3Wide.WriteFirst(source.C * scale, ref target.C);
         }
 
+#if FAST_MESH_BOUNDS
+        public void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        {
+            Matrix3x3.CreateFromQuaternion(orientation, out var basis);
+            var x = scale.X * boundsHalfSize.X * basis.X;
+            var y = scale.Y * boundsHalfSize.Y * basis.Y;
+            var z = scale.Z * boundsHalfSize.Z * basis.Z;
+            max = Vector3.Abs(x) + Vector3.Abs(y) + Vector3.Abs(z);
+            min = -max;
+
+            var rotatedPose = Vector3.Transform(scale * boundsCenter, orientation);
+
+            min += rotatedPose;
+            max += rotatedPose;
+
+            MathChecker.Validate(min, "MeshBounds min");
+            MathChecker.Validate(max, "MeshBounds max");
+        }
+#else
         public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var r);
@@ -191,6 +210,7 @@ namespace BepuPhysics.Collidables
                 max = Vector3.Max(max0, max1);
             }
         }
+#endif
 
         public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
@@ -294,17 +314,14 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public readonly unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
-            where TOverlaps : ICollisionTaskSubpairOverlaps
+        public unsafe void FindLocalOverlaps<TLeafTester>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, ref TLeafTester leafTester)
+            where TLeafTester : ISweepLeafTester
         {
             var scaledMin = min * inverseScale;
             var scaledMax = max * inverseScale;
             var scaledSweep = sweep * inverseScale;
-            ShapeTreeSweepLeafTester<TOverlaps> enumerator;
-            enumerator.Pool = pool;
-            enumerator.Overlaps = overlaps;
             //Take a min/max to compensate for negative scales.
-            Tree.Sweep(Vector3.Min(scaledMin, scaledMax), Vector3.Max(scaledMin, scaledMax), scaledSweep, maximumT, ref enumerator);
+            Tree.Sweep(Vector3.Min(scaledMin, scaledMax), Vector3.Max(scaledMin, scaledMax), scaledSweep, maximumT, ref leafTester);
         }
 
         public struct MeshTriangleSource : ITriangleSource
