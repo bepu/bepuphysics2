@@ -209,8 +209,8 @@ namespace BepuPhysics.Collidables
             min += rotatedPose;
             max += rotatedPose;
 
-            MathChecker.Validate(min, "MeshBounds min");
-            MathChecker.Validate(max, "MeshBounds max");
+            MathChecker.Validate(min);
+            MathChecker.Validate(max);
         }
 #else
         public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
