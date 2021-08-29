@@ -214,7 +214,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //During edge collisions, the local normal is perpendicular to the edge.
                 //We can safely push the triangle normal along the local normal to get an 'effective' normal that doesn't cause numerical catastrophe.
                 var pushScale = Vector.Max(Vector<float>.Zero, (absFaceNormalADotNormal - new Vector<float>(faceNormalFallbackThreshold)) / new Vector<float>(-faceNormalFallbackThreshold));
-                Vector3Wide.Scale(localNormal, pushScale * new Vector<float>(-0.1f), out var effectiveFaceNormalPush);
+                Vector3Wide.Scale(localNormal, pushScale * new Vector<float>(0.1f), out var effectiveFaceNormalPush);
                 Vector3Wide.Add(triangleNormal, effectiveFaceNormalPush, out effectiveFaceNormal);
                 //Length is guaranteed to be nonzero since this is only used when normal is near perpendicular.
                 Vector3Wide.Normalize(effectiveFaceNormal, out effectiveFaceNormal);
@@ -268,10 +268,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 TryAddInteriorPoint(interior2, new Vector<int>(10), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
                 TryAddInteriorPoint(interior3, new Vector<int>(11), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
 
-                Vector3Wide capCenterToTriangle;
-                capCenterToTriangle.X = triangleA.X;
-                capCenterToTriangle.Y = triangleA.Y - capCenterBY;
-                capCenterToTriangle.Z = triangleA.Z;
+                //Use the closest point on the triangle as the face origin.
+                //The effective normal is not necessarily the same as the triangle normal at near parallel angles as a numerical safety,
+                //so the projection plane anchor must be on the feature that is responsible for the normal.
+                Vector3Wide.Scale(localNormal, depth, out var closestOnAToClosestOnB);
+                Vector3Wide.Subtract(closestOnB, closestOnAToClosestOnB, out var capCenterToTriangle);
+                capCenterToTriangle.Y -= capCenterBY;
                 Vector3Wide tangentBX, tangentBY;
                 tangentBX.X = Vector<float>.One;
                 tangentBX.Y = Vector<float>.Zero;
@@ -279,7 +281,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 tangentBY.X = Vector<float>.Zero;
                 tangentBY.Y = Vector<float>.Zero;
                 tangentBY.Z = Vector<float>.One;
-                ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 10, triangleNormal, localNormal, capCenterToTriangle, tangentBX, tangentBY, epsilonScale, depthThreshold, pairCount,
+                ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 10, effectiveFaceNormal, localNormal, capCenterToTriangle, tangentBX, tangentBY, epsilonScale, depthThreshold, pairCount,
                     out var candidate0, out var candidate1, out var candidate2, out var candidate3,
                     out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
