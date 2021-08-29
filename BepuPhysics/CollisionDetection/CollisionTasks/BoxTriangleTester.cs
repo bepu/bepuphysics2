@@ -445,7 +445,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 boxVertex00, boxVertex11, boxTangentX, boxTangentY, localNormal, allowContacts, ref candidates, ref candidateCount, pairCount);
 
             Vector3Wide.Subtract(boxFaceCenter, localTriangleCenter, out var faceCenterBToFaceCenterA);
-            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, boxFaceNormal, localNormal, faceCenterBToFaceCenterA, triangleTangentX, triangleTangentY, epsilonScale, -speculativeMargin, pairCount,
+            Vector3Wide.Dot(boxFaceNormal, localNormal, out var faceNormalDotNormal);
+            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, boxFaceNormal, Vector<float>.One / faceNormalDotNormal, faceCenterBToFaceCenterA, triangleTangentX, triangleTangentY, epsilonScale, -speculativeMargin, pairCount,
                 out var contact0, out var contact1, out var contact2, out var contact3,
                 out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 

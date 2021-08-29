@@ -294,7 +294,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             max.X = halfSpanBX;
             max.Y = maxY1;
             AddContactsForEdge(minY1, min, maxY1, max, halfSpanBY, epsilon, ref candidates, ref candidateCount, pairCount);
-            
+
             //X1
             min.FeatureId = featureIdX1;
             min.X = unflippedMaxX1;
@@ -456,7 +456,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             normalB.X = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.X, normalB.X);
             normalB.Y = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Y, normalB.Y);
             normalB.Z = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Z, normalB.Z);
- 
+
             //Note that we only allocate up to 8 candidates. It is not possible for this process to generate more than 8 (unless there are numerical problems, which we guard against).
             int byteCount = Unsafe.SizeOf<ManifoldCandidate>() * 8;
             var buffer = stackalloc byte[byteCount];
@@ -499,8 +499,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var vertexId11 = -(axisIdAZ + axisIdAX + axisIdAY);
             AddBoxAVertices(faceCenterB, tangentBX, tangentBY, halfSpanBX, halfSpanBY, normalB, manifold.Normal,
                 vertexA00, vertexA01, vertexA10, vertexA11, vertexId00, vertexId01, vertexId10, vertexId11, ref candidates, ref candidateCount, pairCount);
-                 
-            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 8, normalA, manifold.Normal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin, pairCount,
+
+            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 8, normalA, new Vector<float>(-1f) / Vector.Abs(calibrationDotA), faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin, pairCount,
               out var contact0, out var contact1, out var contact2, out var contact3,
               out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
