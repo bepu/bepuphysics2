@@ -256,7 +256,7 @@ namespace BepuPhysics.Collidables
             public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
             {
                 ref var triangle = ref Triangles[leafIndex];
-                if (Triangle.RayTest(triangle.A, triangle.B, triangle.C, rayData->Origin, rayData->Direction, out var t, out var normal) && t <= *maximumT)
+                if (Triangle.RayTestDualSided(triangle.A, triangle.B, triangle.C, rayData->Origin, rayData->Direction, out var t, out var normal) && t <= *maximumT)
                 {
                     //Pull the hit back into world space before handing it off to the user. This does cost a bit more, but not much, and you can always add a specialized no-transform path later.
                     Matrix3x3.Transform(normal * InverseScale, Orientation, out normal);
