@@ -87,12 +87,14 @@ namespace BepuPhysics.Collidables
         {
             Debug.Assert(projectedOnX.Length >= pointBundles.Length && projectedOnY.Length >= pointBundles.Length && vertexIndices.Count == 0 && vertexIndices.Span.Length >= pointBundles.Length * Vector<float>.Count);
             //Find the candidate-basisOrigin which has the smallest angle with basisY when projected onto the plane spanned by basisX and basisY.
-            //angle = acos(y / ||(x, y)||)
-            //cosAngle = y / ||(x, y)||
-            //cosAngle^2 = y^2 / ||(x, y)||^2
+            //angle = atan(y / x)
+            //tanAngle = y / x
+            //x is guaranteed to be nonnegative, so its sign doesn't change.
+            //tanAngle is monotonically increasing with respect to y / x, so a higher angle corresponds to a higher y/x, always.
             //We can then compare samples 0 and 1 using:
-            //sign(y0) * y0^2 * ||(x1,y1)||^2 > sign(y1) * y1^2 * ||(x0,y0)||^2
-            //with no divisions, square roots, or trigonometry.
+            //tanAngle0 > tanAngle1
+            //y0 / x0 > y1 / x1
+            //y0 * x1 > y1 * x0
             Vector3Wide.Subtract(pointBundles[0], basisOrigin, out var toCandidate);
             ref var x = ref projectedOnX[0];
             ref var y = ref projectedOnY[0];
@@ -101,21 +103,18 @@ namespace BepuPhysics.Collidables
             //We'll treat it as if it's on the plane.
             x = Vector.Max(Vector<float>.Zero, x);
             Vector3Wide.Dot(basisY, toCandidate, out y);
-            var bestNumerators = y * y;
-            var bestDenominators = bestNumerators + x * x;
-            bestNumerators = Vector.ConditionalSelect(Vector.LessThan(y, Vector<float>.Zero), -bestNumerators, bestNumerators);
+            var bestY = y;
+            var bestX = x;
             //Ignore the source edge.
             var edgeIndexA = new Vector<int>(sourceEdgeEndpoints.A);
             var edgeIndexB = new Vector<int>(sourceEdgeEndpoints.B);
             var pointCountBundle = new Vector<int>(pointCount);
-            const float minimumDistanceSquaredScalar = 1e-14f;
-            var minimumDistanceSquared = new Vector<float>(minimumDistanceSquaredScalar);
+            //Note that any slot that would have been considered coplanar with the edge triggering this test is ignored by the plane epsilon.
             var ignoreSlot = Vector.BitwiseOr(
-                Vector.BitwiseOr(Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle), Vector.LessThan(bestDenominators, minimumDistanceSquared)),
+                Vector.BitwiseOr(Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle), Vector.LessThan(bestX, planeEpsilon)),
                 Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
-            bestDenominators = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestDenominators);
-            bestNumerators = Vector.ConditionalSelect(ignoreSlot, new Vector<float>(float.MinValue), bestNumerators);
-            var bestIndices = indexOffsets;
+            bestX = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestX);
+            bestY = Vector.ConditionalSelect(ignoreSlot, new Vector<float>(float.MinValue), bestY);
             for (int i = 1; i < pointBundles.Length; ++i)
             {
                 Vector3Wide.Subtract(pointBundles[i], basisOrigin, out toCandidate);
@@ -124,42 +123,33 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Dot(basisX, toCandidate, out x);
                 x = Vector.Max(Vector<float>.Zero, x); //Same as earlier- protect against numerical error finding points beyond the bounding plane.
                 Vector3Wide.Dot(basisY, toCandidate, out y);
-                var candidateNumerator = y * y;
-                var candidateDenominator = candidateNumerator + x * x;
-                candidateNumerator = Vector.ConditionalSelect(Vector.LessThan(y, Vector<float>.Zero), -candidateNumerator, candidateNumerator);
 
                 var candidateIndices = indexOffsets + new Vector<int>(i << BundleIndexing.VectorShift);
                 ignoreSlot = Vector.BitwiseOr(
-                    Vector.BitwiseOr(Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle), Vector.LessThan(candidateDenominator, minimumDistanceSquared)),
+                    Vector.BitwiseOr(Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle), Vector.LessThan(x, planeEpsilon)),
                     Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
-                var useCandidate = Vector.AndNot(Vector.GreaterThan(candidateNumerator * bestDenominators, bestNumerators * candidateDenominator), ignoreSlot);
-                bestIndices = Vector.ConditionalSelect(useCandidate, candidateIndices, bestIndices);
-                bestNumerators = Vector.ConditionalSelect(useCandidate, candidateNumerator, bestNumerators);
-                bestDenominators = Vector.ConditionalSelect(useCandidate, candidateDenominator, bestDenominators);
+                var useCandidate = Vector.AndNot(Vector.GreaterThan(y * bestX, bestY * x), ignoreSlot);
+                bestY = Vector.ConditionalSelect(useCandidate, y, bestY);
+                bestX = Vector.ConditionalSelect(useCandidate, x, bestX);
             }
-            var bestNumerator = bestNumerators[0];
-            var bestDenominator = bestDenominators[0];
-            var bestIndex = bestIndices[0];
+            var bestYNarrow = bestY[0];
+            var bestXNarrow = bestX[0];
             for (int i = 1; i < Vector<float>.Count; ++i)
             {
-                var candidateNumerator = bestNumerators[i];
-                var candidateDenominator = bestDenominators[i];
-                if (candidateNumerator * bestDenominator > bestNumerator * candidateDenominator)
+                var candidateNumerator = bestY[i];
+                var candidateDenominator = bestX[i];
+                if (candidateNumerator * bestXNarrow > bestYNarrow * candidateDenominator)
                 {
-                    bestNumerator = candidateNumerator;
-                    bestDenominator = candidateDenominator;
-                    bestIndex = bestIndices[i];
+                    bestYNarrow = candidateNumerator;
+                    bestXNarrow = candidateDenominator;
                 }
             }
             //We now have the best index, but there may have been multiple vertices on the same plane. Capture all of them at once by doing a second pass over the results.
             //The plane normal we want to examine is (-bestY, bestX) / ||(-bestY, bestX)||.
             //(This isn't wonderfully fast, but it's fairly simple. The alternatives are things like incrementally combining coplanar triangles as they are discovered
             //or using a postpass that looks for coplanar triangles after they've been created.)
-            BundleIndexing.GetBundleIndices(bestIndex, out var bestBundleIndex, out int bestInnerIndex);
-            var bestX = projectedOnX[bestBundleIndex][bestInnerIndex];
-            var bestY = projectedOnY[bestBundleIndex][bestInnerIndex];
             //Rotate the offset to point outward.
-            var projectedPlaneNormalNarrow = Vector2.Normalize(new Vector2(-bestY, bestX));
+            var projectedPlaneNormalNarrow = Vector2.Normalize(new Vector2(-bestYNarrow, bestXNarrow));
             Vector2Wide.Broadcast(projectedPlaneNormalNarrow, out var projectedPlaneNormal);
             for (int i = 0; i < pointBundles.Length; ++i)
             {
@@ -186,53 +176,71 @@ namespace BepuPhysics.Collidables
         }
 
 
-        static int FindNextIndexForFaceHull(in Vector2 start, in Vector2 previousEdgeDirection, ref QuickList<Vector2> facePoints)
+        static int FindNextIndexForFaceHull(Vector2 start, Vector2 previousEdgeDirection, float planeEpsilon, ref QuickList<Vector2> facePoints)
         {
             //Use a AOS version since the number of points on a given face will tend to be very small in most cases.
             //Same idea as the 3d version- find the next edge which is closest to the previous edge. Not going to worry about collinear points here for now.
             var bestIndex = -1;
-            float bestNumerator = -float.MaxValue;
-            float bestDenominator = 1;
+            float best = -float.MaxValue;
+            float bestDistanceSquared = 0;
             var startToCandidate = facePoints[0] - start;
-            var candidateDenominator = startToCandidate.LengthSquared();
-            var dot = Vector2.Dot(startToCandidate, previousEdgeDirection);
-            var candidateNumerator = dot * dot;
-            candidateNumerator = dot < 0 ? -candidateNumerator : candidateNumerator;
-            if (candidateDenominator > 0)
+            var xDirection = new Vector2(previousEdgeDirection.Y, -previousEdgeDirection.X);
+            var candidateX = Vector2.Dot(startToCandidate, xDirection);
+            var candidateY = Vector2.Dot(startToCandidate, previousEdgeDirection);
+            var currentEdgeDirectionX = previousEdgeDirection.X;
+            var currentEdgeDirectionY = previousEdgeDirection.Y;
+            if (candidateX > 0)
             {
-                bestNumerator = candidateNumerator;
-                bestDenominator = candidateDenominator;
+                best = candidateY / candidateX;
                 bestIndex = 0;
+                bestDistanceSquared = candidateX * candidateX + candidateY * candidateY;
+                var inverseBestDistance = 1f / MathF.Sqrt(bestDistanceSquared);
+                currentEdgeDirectionX = candidateX * inverseBestDistance;
+                currentEdgeDirectionY = candidateY * inverseBestDistance;
             }
             for (int i = 1; i < facePoints.Count; ++i)
             {
                 startToCandidate = facePoints[i] - start;
-                dot = Vector2.Dot(startToCandidate, previousEdgeDirection);
-                var absCandidateNumerator = dot * dot;
-                candidateNumerator = dot < 0 ? -absCandidateNumerator : absCandidateNumerator;
-                candidateDenominator = startToCandidate.LengthSquared();
-                //Watch out for collinear points. If the angle is the same, then pick the more distant point.
-                var candidate = candidateNumerator * bestDenominator;
-                var currentBest = bestNumerator * candidateDenominator;
-                var epsilon = 1e-6 * absCandidateNumerator * bestDenominator;
-                if (candidate > currentBest - epsilon)
+                candidateY = Vector2.Dot(startToCandidate, previousEdgeDirection);
+                candidateX = Vector2.Dot(startToCandidate, xDirection);
+                //Any points that are collinear *with the previous edge* cannot be a part of the current edge without numerical failure; the previous edge should include them.
+                if (candidateX <= 0)
                 {
-                    //Candidate and current best angle may be extremely similar.
-                    //Only use the candidate if it's further away.
-                    if (candidate < currentBest + epsilon && candidateDenominator <= bestDenominator)
+                    Debug.Assert(candidateY <= 0,
+                        "Previous edge should include any collinear points, so this edge should not see any further collinear points beyond its start." +
+                        "If you run into this, it implies you've found some content that violates the convex huller's assumptions, and I'd appreciate it if you reported it on github.com/bepu/bepuphysics2/issues!" + 
+                        "A .obj or other simple demos-compatible reproduction case would help me fix it.");
+                    continue;
+                }
+                //We accept a candidate if it is either:
+                //1) collinear with the previous best by the plane epsilon test BUT is more distant, or
+                //2) has a greater angle than the previous best.
+                var planeOffset = -candidateX * currentEdgeDirectionY + candidateY * currentEdgeDirectionX;
+                if (MathF.Abs(planeOffset) < planeEpsilon)
+                {
+                    //The candidate is collinear. Only accept it if it's further away.
+                    if (candidateX * candidateX + candidateY * candidateY <= bestDistanceSquared)
                     {
                         continue;
                     }
-                    bestNumerator = candidateNumerator;
-                    bestDenominator = candidateDenominator;
-                    bestIndex = i;
                 }
+                else if (candidateY < best * candidateX) //candidateY / candidateX < best, given candidate X > 0; just avoiding a division for bulk testing.
+                {
+                    //Candidate is a smaller angle. Rejected.
+                    continue;
+                }
+                best = candidateY / candidateX;
+                bestDistanceSquared = candidateX * candidateX + candidateY * candidateY;
+                var inverseBestDistance = 1f / MathF.Sqrt(bestDistanceSquared);
+                currentEdgeDirectionX = candidateX * inverseBestDistance;
+                currentEdgeDirectionY = candidateY * inverseBestDistance;
+                bestIndex = i;
             }
             //Note that this can return -1 if all points were on top of the start.
             return bestIndex;
         }
 
-        static void ReduceFace(ref QuickList<int> faceVertexIndices, in Vector3 faceNormal, ref Span<Vector3> points, ref QuickList<Vector2> facePoints, ref Buffer<bool> allowVertex, ref QuickList<int> reducedIndices)
+        static void ReduceFace(ref QuickList<int> faceVertexIndices, in Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<bool> allowVertex, ref QuickList<int> reducedIndices)
         {
             Debug.Assert(facePoints.Count == 0 && reducedIndices.Count == 0 && facePoints.Span.Length >= faceVertexIndices.Count && reducedIndices.Span.Length >= faceVertexIndices.Count);
             for (int i = faceVertexIndices.Count - 1; i >= 0; --i)
@@ -326,7 +334,7 @@ namespace BepuPhysics.Collidables
             while (true)
             {
                 //This can return -1 in the event of a completely degenerate face.
-                var nextIndex = FindNextIndexForFaceHull(facePoints[previousEndIndex], previousEdgeDirection, ref facePoints);
+                var nextIndex = FindNextIndexForFaceHull(facePoints[previousEndIndex], previousEdgeDirection, planeEpsilon, ref facePoints);
                 if (nextIndex == -1 || nextIndex == initialIndex)
                 {
                     break;
@@ -420,7 +428,16 @@ namespace BepuPhysics.Collidables
 
 
         //}
-
+        ///// <summary>
+        ///// Computes the convex hull of a set of points.
+        ///// </summary>
+        ///// <param name="points">Point set to compute the convex hull of.</param>
+        ///// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
+        ///// <param name="hullData">Convex hull of the input point set.</param>
+        //public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
+        //{
+        //    ComputeHull(points, pool, out hullData, out _);
+        //}
         /// <summary>
         /// Computes the convex hull of a set of points.
         /// </summary>
@@ -529,7 +546,8 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
-            var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-6f);
+            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-6f;
+            var planeEpsilon = new Vector<float>(planeEpsilonNarrow);
             var rawFaceVertexIndices = new QuickList<int>(pointBundles.Length * Vector<float>.Count, pool);
             var initialSourceEdge = new EdgeEndpoints { A = initialIndex, B = initialIndex };
             FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, initialSourceEdge, ref pointBundles, indexOffsetBundle, points.Length,
@@ -547,7 +565,7 @@ namespace BepuPhysics.Collidables
             //steps = new List<DebugStep>();
             //var step = new DebugStep(initialSourceEdge, ref rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY);
 
-            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, ref points, ref facePoints, ref allowVertex, ref reducedFaceIndices);
+            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
             //step.AddReduced(ref reducedFaceIndices, ref allowVertex);
             //steps.Add(step);
 
@@ -616,7 +634,7 @@ namespace BepuPhysics.Collidables
                 //step = new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY);
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
-                ReduceFace(ref rawFaceVertexIndices, faceNormal, ref points, ref facePoints, ref allowVertex, ref reducedFaceIndices);
+                ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
                 if (reducedFaceIndices.Count < 3)
                 {
                     //Degenerate face found; don't bother creating work for it.
