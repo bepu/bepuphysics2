@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>ilopt</name>
+    </assembly>
+    <members>
+        <member name="T:IlOptimizer.Optimization">
+            <summary>Defines an optimization that can be performed by the tool.</summary>
+        </member>
+        <member name="M:IlOptimizer.Optimization.#ctor(System.String,System.String,System.Collections.Generic.Dictionary{System.String,System.String},System.Func{Mono.Cecil.MethodDefinition,System.String,System.Nullable{System.Boolean}})">
+            <summary>Initializes a new instance of the <see cref="T:IlOptimizer.Optimization" /> struct.</summary>
+            <param name="name">The name of the optimization.</param>
+            <param name="description">The description of the optimization.</param>
+            <param name="availableParameters">The parameters available to the optimization.</param>
+            <param name="optimizeMethod">The method to use when performing the optimization.</param>
+        </member>
+        <member name="P:IlOptimizer.Optimization.AvailableParameters">
+            <summary>Gets the parameters available to the optimization.</summary>
+        </member>
+        <member name="P:IlOptimizer.Optimization.Name">
+            <summary>Gets the name of the optimization.</summary>
+        </member>
+        <member name="P:IlOptimizer.Optimization.Description">
+            <summary>Gets the description of the optimization.</summary>
+        </member>
+        <member name="P:IlOptimizer.Optimization.FailedMethodCount">
+            <summary>Gets or sets the number of methods that were failed by the optimization.</summary>
+        </member>
+        <member name="P:IlOptimizer.Optimization.OptimizeMethod">
+            <summary>Gets the method to use when performing the optimization.</summary>
+        </member>
+        <member name="P:IlOptimizer.Optimization.Parameter">
+            <summary>Gets or sets the parameter to use when performing the optimization.</summary>
+        </member>
+        <member name="P:IlOptimizer.Optimization.SkippedMethodCount">
+            <summary>Gets or sets the number of methods that were skipped by the optimization.</summary>
+        </member>
+        <member name="P:IlOptimizer.Optimization.UpdatedMethodCount">
+            <summary>Gets or sets the number of methods that were updated by the optimization.</summary>
+        </member>
+        <member name="T:IlOptimizer.Optimizations.StripLocalsInit">
+            <summary>Provides methods for stripping the 'init' flag from the '.locals' directive for a method.</summary>
+        </member>
+        <member name="T:IlOptimizer.ProcessedData">
+            <summary>Defines the types and counts of data that was processed by the tool.</summary>
+        </member>
+        <member name="P:IlOptimizer.ProcessedData.ModuleCount">
+            <summary>The number of modules that were processed.</summary>
+        </member>
+        <member name="P:IlOptimizer.ProcessedData.TypeCount">
+            <summary>The number of types that were processed.</summary>
+        </member>
+        <member name="P:IlOptimizer.ProcessedData.EventCount">
+            <summary>The number of events that were processed.</summary>
+        </member>
+        <member name="P:IlOptimizer.ProcessedData.PropertyCount">
+            <summary>The number of properties that were processed.</summary>
+        </member>
+        <member name="P:IlOptimizer.ProcessedData.MethodCount">
+            <summary>The number of methods that were processed.</summary>
+        </member>
+        <member name="T:IlOptimizer.Program">
+            <summary>Provides a set of methods for executing a program.</summary>
+        </member>
+        <member name="M:IlOptimizer.Program.Main(System.String[])">
+            <summary>The entry point of the program.</summary>
+            <param name="args">The arguments that should be used when running the program.</param>
+            <returns>The exit code of the program.</returns>
+        </member>
+    </members>
+</doc>
