@@ -45,9 +45,6 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<CharacterDemo>();
-            AddOption<ContactEventsDemo>();
-            AddOption<BouncinessDemo>();
             AddOption<CarDemo>();
             AddOption<CharacterDemo>();
             AddOption<TankDemo>();
@@ -57,7 +54,6 @@ namespace Demos
             AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<ClothDemo>();
             AddOption<NewtDemo>();
-            AddOption<NewtVideoDemo>();
             AddOption<PlanetDemo>();
             AddOption<CompoundTestDemo>();
             AddOption<BlockChainDemo>();
@@ -65,14 +61,11 @@ namespace Demos
             AddOption<SweepDemo>();
             AddOption<RopeStabilityDemo>();
             AddOption<SubsteppingDemo>();
+            AddOption<ContactEventsDemo>();
             AddOption<CollisionQueryDemo>();
             AddOption<SolverContactEnumerationDemo>();
             AddOption<CustomVoxelCollidableDemo>();
             AddOption<SponsorDemo>();
-            AddOption<MeshSerializationTestDemo>();
-            AddOption<FountainStressTestDemo>();
-            AddOption<BroadPhaseStressTestDemo>();
-            AddOption<PyramidAwakenerTestDemo>();
         }
 
         public int Count { get { return options.Count; } }

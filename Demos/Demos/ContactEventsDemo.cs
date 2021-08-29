@@ -57,7 +57,6 @@ namespace Demos.Demos
         void OnContactAdded<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold,
             in Vector3 contactOffset, in Vector3 contactNormal, float depth, int featureId, int contactIndex, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            Console.WriteLine($"OnContactAdded<{typeof(TManifold)}>");
         }
 
         /// <summary>
@@ -71,7 +70,6 @@ namespace Demos.Demos
         /// <param name="workerIndex">Index of the worker thread that fired this event.</param>
         void OnContactRemoved<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold, int removedFeatureId, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            Console.WriteLine($"OnContactAdded<{typeof(TManifold)}>");
         }
 
         /// <summary>
@@ -84,7 +82,6 @@ namespace Demos.Demos
         /// <param name="workerIndex">Index of the worker thread that fired this event.</param>
         void OnStartedTouching<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            Console.WriteLine($"OnStartedTouching<{typeof(TManifold)}>");
         }
 
         /// <summary>
@@ -97,7 +94,6 @@ namespace Demos.Demos
         /// <param name="workerIndex">Index of the worker thread that fired this event.</param>
         void OnTouching<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            //Console.WriteLine($"OnTouching<{typeof(TManifold)}>");
         }
 
 
@@ -111,7 +107,6 @@ namespace Demos.Demos
         /// <param name="workerIndex">Index of the worker thread that fired this event.</param>
         void OnStoppedTouching<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            Console.WriteLine($"OnStoppedTouching<{typeof(TManifold)}>");
         }
 
 
@@ -125,7 +120,6 @@ namespace Demos.Demos
         /// <param name="workerIndex">Index of the worker thread that fired this event.</param>
         void OnPairCreated<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            Console.WriteLine($"OnPairCreated<{typeof(TManifold)}>");
         }
 
         /// <summary>
@@ -138,7 +132,6 @@ namespace Demos.Demos
         /// <param name="workerIndex">Index of the worker thread that fired this event.</param>
         void OnPairUpdated<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            //Console.WriteLine($"OnPairUpdated<{typeof(TManifold)}>");
         }
 
         /// <summary>
@@ -149,7 +142,6 @@ namespace Demos.Demos
         /// <param name="pair">Collidable pair triggering the event.</param>
         void OnPairEnded(CollidableReference eventSource, CollidablePair pair)
         {
-            Console.WriteLine($"OnPairEnded");
         }
     }
 

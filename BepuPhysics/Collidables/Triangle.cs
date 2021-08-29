@@ -101,7 +101,7 @@ namespace BepuPhysics.Collidables
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             Matrix3x3.TransformTranspose(offset, orientation, out var localOffset);
             Matrix3x3.TransformTranspose(direction, orientation, out var localDirection);
-            if (RayTestDualSided(A, B, C, localOffset, localDirection, out t, out normal))
+            if (RayTest(A, B, C, localOffset, localDirection, out t, out normal))
             {
                 Matrix3x3.Transform(normal, orientation, out normal);
                 return true;
