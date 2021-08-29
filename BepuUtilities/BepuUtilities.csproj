@@ -39,7 +39,7 @@
 
   <PropertyGroup Condition="'$(Configuration)'=='ReleaseStrip'">
     <Optimize>true</Optimize>
-    <DefineConstants>TRACE;DEBUG;RELEASE;NETSTANDARD2_0;RELEASESTRIP</DefineConstants>
+    <DefineConstants>TRACE;RELEASE;NETSTANDARD2_0;RELEASESTRIP</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
