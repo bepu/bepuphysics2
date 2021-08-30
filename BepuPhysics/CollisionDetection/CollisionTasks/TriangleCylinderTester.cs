@@ -207,14 +207,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var absFaceNormalADotNormal = Vector.Abs(faceNormalADotNormal);
             const float faceNormalFallbackThreshold = 1e-4f;
             var needsFallbackFaceNormal = Vector.AndNot(Vector.LessThan(absFaceNormalADotNormal, new Vector<float>(faceNormalFallbackThreshold)), inactiveLanes);
-            Vector<int> effectiveFaceNormalFromAB, effectiveFaceNormalFromBC;
+            Vector<float> effectiveFaceNormalDotNormal;
             if (Vector.EqualsAny(needsFallbackFaceNormal, new Vector<int>(-1)))
             {
                 //Near-zero faceNormalADotNormal values only occur during edge or vertex collisions.
                 //During edge collisions, the local normal is perpendicular to the edge.
                 //We can safely push the triangle normal along the local normal to get an 'effective' normal that doesn't cause numerical catastrophe.
                 var pushScale = Vector.Max(Vector<float>.Zero, (absFaceNormalADotNormal - new Vector<float>(faceNormalFallbackThreshold)) / new Vector<float>(-faceNormalFallbackThreshold));
-                Vector3Wide.Scale(localNormal, pushScale * new Vector<float>(-0.1f), out var effectiveFaceNormalPush);
+                Vector3Wide.Scale(localNormal, pushScale * new Vector<float>(0.1f), out var effectiveFaceNormalPush);
                 Vector3Wide.Add(triangleNormal, effectiveFaceNormalPush, out effectiveFaceNormal);
                 //Length is guaranteed to be nonzero since this is only used when normal is near perpendicular.
                 Vector3Wide.Normalize(effectiveFaceNormal, out effectiveFaceNormal);
@@ -225,9 +225,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             {
                 //No near-perpendicular contacts in this bundle.
                 effectiveFaceNormal = triangleNormal;
-                effectiveFaceNormalFromAB = Vector<int>.Zero;
-                effectiveFaceNormalFromBC = Vector<int>.Zero;
+                effectiveFaceNormalDotNormal = faceNormalADotNormal;
+
             }
+            //Given the push above, this is guaranteed not to divide by zero.
+            Vector3Wide.Dot(effectiveFaceNormal, localNormal, out effectiveFaceNormalDotNormal);
+            var inverseEffectiveFaceNormalDotNormal = Vector<float>.One / effectiveFaceNormalDotNormal;
 
             if (Vector.LessThanAny(useCap, Vector<int>.Zero))
             {
@@ -268,10 +271,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 TryAddInteriorPoint(interior2, new Vector<int>(10), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
                 TryAddInteriorPoint(interior3, new Vector<int>(11), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
 
-                Vector3Wide capCenterToTriangle;
-                capCenterToTriangle.X = triangleA.X;
-                capCenterToTriangle.Y = triangleA.Y - capCenterBY;
-                capCenterToTriangle.Z = triangleA.Z;
+                //Use the closest point on the triangle as the face origin.
+                //The effective normal is not necessarily the same as the triangle normal at near parallel angles as a numerical safety,
+                //so the projection plane anchor must be on the feature that is responsible for the normal.
+                Vector3Wide.Scale(localNormal, depth, out var closestOnAToClosestOnB);
+                Vector3Wide.Subtract(closestOnB, closestOnAToClosestOnB, out var capCenterToTriangle);
+                capCenterToTriangle.Y -= capCenterBY;
                 Vector3Wide tangentBX, tangentBY;
                 tangentBX.X = Vector<float>.One;
                 tangentBX.Y = Vector<float>.Zero;
@@ -279,7 +284,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 tangentBY.X = Vector<float>.Zero;
                 tangentBY.Y = Vector<float>.Zero;
                 tangentBY.Z = Vector<float>.One;
-                ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 10, triangleNormal, localNormal, capCenterToTriangle, tangentBX, tangentBY, epsilonScale, depthThreshold, pairCount,
+                ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 10, effectiveFaceNormal, inverseEffectiveFaceNormalDotNormal, capCenterToTriangle, tangentBX, tangentBY, epsilonScale, depthThreshold, pairCount,
                     out var candidate0, out var candidate1, out var candidate2, out var candidate3,
                     out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
@@ -417,11 +422,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var tMax = Vector.Min(b.HalfLength, Vector.Max(negativeHalfLength, Vector.Min(tABExit, Vector.Min(tBCExit, tCAExit))));
                 var tMin = Vector.Min(b.HalfLength, Vector.Max(negativeHalfLength, Vector.Max(tABEntry, Vector.Max(tBCEntry, tCAEntry))));
 
-                //Note the use of the 'effective' normal. It's either the face normal, or a fallback created from edge normals and the local normal above.
-                //We have to handle the case where the normal was perpendicular to the face normal, making a direct projection numerically impossible.
-                //The effective face normal is guaranteed to not be perpendicular to the local normal.
-                Vector3Wide.Dot(effectiveFaceNormal, localNormal, out var effectiveFaceNormalDotNormal);
-                var inverseFaceNormalDotLocalNormal = Vector<float>.One / effectiveFaceNormalDotNormal;
                 Vector3Wide localContact0, localContact1;
                 localContact0.X = localContact1.X = closestOnB.X;
                 //Mathematically, closestOnB.Y should be in the tMin to tMax interval. Numerically, this is not guaranteed. So force it.
@@ -442,7 +442,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Map movement along the cylinder side edge to a change in depth:
                 //contactDepth = depth + (t - closestOnB.Y) * dot(localCapsuleAxis, triangleNormal) / dot(localNormal, triangleNormal)
                 //             = depth + (t - closestOnB.Y) * triangleNormal.Y / dot(localNormal, triangleNormal)
-                var depthScale = effectiveFaceNormal.Y * inverseFaceNormalDotLocalNormal;
+                //Note the use of the 'effective' normal. It's either the face normal, or a fallback created from edge normals and the local normal above.
+                //We have to handle the case where the normal was perpendicular to the face normal, making a direct projection numerically impossible.
+                //The effective face normal is guaranteed to not be perpendicular to the local normal.
+                var depthScale = effectiveFaceNormal.Y * inverseEffectiveFaceNormalDotNormal;
                 var o0 = localContact0.Y - closestOnB.Y;
                 var o1 = localContact1.Y - closestOnB.Y;
                 var depth0 = depth + Vector.Min(o0 * localNormal.Y, o0 * depthScale);

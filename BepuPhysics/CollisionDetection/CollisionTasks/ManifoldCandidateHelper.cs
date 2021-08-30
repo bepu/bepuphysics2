@@ -95,9 +95,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             exists = Vector.BitwiseAnd(Vector.GreaterThan(candidate.Depth, minimumDepth), Vector.LessThan(new Vector<int>(i), rawContactCount));
         }
 
-        public static void Reduce(ref ManifoldCandidate candidates, in Vector<int> rawContactCount, int maxCandidateCount,
-            in Vector3Wide faceNormalA, in Vector3Wide normal, in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
-            in Vector<float> epsilonScale, in Vector<float> minimumDepth, int pairCount,
+        public static void Reduce(ref ManifoldCandidate candidates, Vector<int> rawContactCount, int maxCandidateCount,
+            in Vector3Wide faceNormalA, Vector<float> inverseFaceNormalDotNormal, in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
+            Vector<float> epsilonScale, Vector<float> minimumDepth, int pairCount,
             out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
             out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
         {
@@ -137,9 +137,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //depth = dot(pointOnFaceB - faceCenterA, dotAxis)
             //depth = dot(faceCenterB + tangentBX * candidate.X + tangentBY * candidate.Y - faceCenterA, dotAxis)
             //depth = dot(faceCenterB - faceCenterA, dotAxis) + dot(tangentBX, dotAxis) * candidate.X + dot(tangentBY, dotAxis) * candidate.Y
-            Vector3Wide.Dot(faceNormalA, normal, out var axisScale);
-            axisScale = Vector<float>.One / axisScale;
-            Vector3Wide.Scale(faceNormalA, axisScale, out var dotAxis);
+            Vector3Wide.Scale(faceNormalA, inverseFaceNormalDotNormal, out var dotAxis);
             Vector3Wide.Dot(faceCenterBToFaceCenterA, dotAxis, out var negativeBaseDot);
             Vector3Wide.Dot(tangentBX, dotAxis, out var xDot);
             Vector3Wide.Dot(tangentBY, dotAxis, out var yDot);

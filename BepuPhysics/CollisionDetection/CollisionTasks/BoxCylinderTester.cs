@@ -180,6 +180,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             var useCap = Vector.AndNot(Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f)), inactiveLanes);
 
+            Vector3Wide.Dot(boxFaceNormal, localNormal, out var faceNormalDotLocalNormal);
+            var inverseFaceNormalDotLocalNormal = Vector<float>.One / faceNormalDotLocalNormal;
+
             if (Vector.LessThanAny(useCap, Vector<int>.Zero))
             {
                 //At least one lane needs a cap-face manifold.
@@ -250,7 +253,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 tangentBY.X = Vector<float>.Zero;
                 tangentBY.Y = Vector<float>.Zero;
                 tangentBY.Z = Vector<float>.One;
-                ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 12, boxFaceNormal, localNormal, capCenterToBoxFaceCenter, tangentBX, tangentBY, epsilonScale, depthThreshold, pairCount,
+                ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 12, boxFaceNormal, inverseFaceNormalDotLocalNormal, capCenterToBoxFaceCenter, tangentBX, tangentBY, epsilonScale, depthThreshold, pairCount,
                     out var candidate0, out var candidate1, out var candidate2, out var candidate3,
                     out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
@@ -354,8 +357,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var tMax = Vector.Min(Vector.Max(negativeHalfLength, Vector.Min(tXMax, tYMax)), b.HalfLength);
                 var tMin = Vector.Min(Vector.Max(negativeHalfLength, Vector.Max(tXMin, tYMin)), b.HalfLength);
 
-                Vector3Wide.Dot(boxFaceNormal, localNormal, out var faceNormalDotLocalNormal);
-                var inverseFaceNormalDotLocalNormal = Vector<float>.One / faceNormalDotLocalNormal;
                 Vector3Wide localContact0, localContact1;
                 localContact0.X = localContact1.X = closestOnB.X;
                 localContact0.Y = tMin;
