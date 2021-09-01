@@ -486,7 +486,7 @@ namespace Demos
                     MoveFaster = (MouseWheelAction.ScrollUp, Key.U),
                     Grab = MouseButton.Right,
                     GrabRotate = Key.Q,
-                    MouseSensitivity = 3e-3f,
+                    MouseSensitivity = 1.5e-3f,
                     CameraSlowMoveSpeed = 0.5f,
                     CameraMoveSpeed = 5,
                     CameraFastMoveSpeed = 50,

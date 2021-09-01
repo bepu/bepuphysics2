@@ -80,7 +80,7 @@ namespace Demos.SpecializedTests
                             }
                         };
                         var index = shapeCount++;
-                        switch (2 + index % 5)
+                        switch (index % 5)
                         {
                             case 0:
                                 bodyDescription.Collidable.Shape = sphereIndex;

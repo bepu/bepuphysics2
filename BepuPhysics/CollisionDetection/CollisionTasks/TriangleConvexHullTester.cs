@@ -142,6 +142,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 return;
             }
 
+            
+            TriangleCylinderTester.CreateEffectiveTriangleFaceNormal(triangleNormal, localNormal, triangleNormalDotLocalNormal, inactiveLanes, out var effectiveFaceNormal, out var inverseEffectiveFaceNormalDotNormal);
+
+            //Use the closest point on the triangle as the triangle face origin.
+            //The effective normal is not necessarily the same as the triangle normal at near parallel angles as a numerical safety,
+            //so the projection plane anchor must be on the feature that is responsible for the normal.
+            Vector3Wide.Scale(localNormal, depth, out var closestOnAToClosestOnB);
+            Vector3Wide.Subtract(closestOnHull, closestOnAToClosestOnB, out var closestOnTriangle);
+
             //To find the contact manifold, we'll clip the triangle edges against the hull face as usual, but we're dealing with potentially
             //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
@@ -370,11 +379,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 SkipVertexCandidates:;
                 }
                 //We have found all contacts for this hull slot. There may be more contacts than we want (4), so perform a reduction.
-                Vector3Wide.ReadSlot(ref localTriangleCenter, slotIndex, out var slotTriangleCenter);
-                Vector3Wide.ReadSlot(ref triangleNormal, slotIndex, out var slotTriangleFaceNormal);
+                //Note the potential use of an effective normal means the triangle face representative is chosen as the closest point.
+                Vector3Wide.ReadSlot(ref closestOnTriangle, slotIndex, out var slotClosestOnTriangle);
+                Vector3Wide.ReadSlot(ref effectiveFaceNormal, slotIndex, out var slotTriangleEffectiveFaceNormal);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                 Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
-                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotTriangleFaceNormal, slotLocalNormal, slotTriangleCenter, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotTriangleEffectiveFaceNormal, slotLocalNormal, slotClosestOnTriangle, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                    slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
             }
             //Push contacts to the triangle for the sake of MeshReduction. 

@@ -65,6 +65,40 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CreateEffectiveTriangleFaceNormal(in Vector3Wide triangleNormal, in Vector3Wide normal, Vector<float> faceNormalADotNormal, Vector<int> inactiveLanes,
+            out Vector3Wide effectiveFaceNormal, out Vector<float> inverseEffectiveFaceNormalDotNormal)
+        {
+            //NOTE: Triangle normal is expected by convention to be pointing in the direction of the backface.
+            //When the contact normal is nearly perpendicular to the triangle normal, computing per contact depths can become numerically impossible.
+            //To help with this case, we use an 'effective' triangle face normal for anything related to computing contact depths.
+            var absFaceNormalADotNormal = Vector.Abs(faceNormalADotNormal);
+            const float faceNormalFallbackThreshold = 1e-4f;
+            var needsFallbackFaceNormal = Vector.AndNot(Vector.LessThan(absFaceNormalADotNormal, new Vector<float>(faceNormalFallbackThreshold)), inactiveLanes);
+            if (Vector.EqualsAny(needsFallbackFaceNormal, new Vector<int>(-1)))
+            {
+                //Near-zero faceNormalADotNormal values only occur during edge or vertex collisions.
+                //During edge collisions, the local normal is perpendicular to the edge.
+                //We can safely push the triangle normal along the local normal to get an 'effective' normal that doesn't cause numerical catastrophe.
+                var pushScale = Vector.Max(Vector<float>.Zero, (absFaceNormalADotNormal - new Vector<float>(faceNormalFallbackThreshold)) / new Vector<float>(-faceNormalFallbackThreshold));
+                Vector3Wide.Scale(normal, pushScale * new Vector<float>(0.1f), out var effectiveFaceNormalPush);
+                Vector3Wide.Add(triangleNormal, effectiveFaceNormalPush, out effectiveFaceNormal);
+                //Length is guaranteed to be nonzero since this is only used when normal is near perpendicular.
+                Vector3Wide.Normalize(effectiveFaceNormal, out effectiveFaceNormal);
+                //Normalization could change things numerically, so we can't normalize any lanes that aren't supposed to be taking this code path.
+                Vector3Wide.ConditionalSelect(needsFallbackFaceNormal, effectiveFaceNormal, triangleNormal, out effectiveFaceNormal);
+            }
+            else
+            {
+                //No near-perpendicular contacts in this bundle.
+                effectiveFaceNormal = triangleNormal;
+
+            }
+            //Given the push above, this is guaranteed not to divide by zero.
+            Vector3Wide.Dot(effectiveFaceNormal, normal, out var effectiveFaceNormalDotNormal);
+            inverseEffectiveFaceNormalDotNormal = Vector<float>.One / effectiveFaceNormalDotNormal;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(
             ref TriangleWide a, ref CylinderWide b, ref Vector<float> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
@@ -192,45 +226,46 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 return;
             }
 
+            //Swap over to an edge case if the normal is not face aligned. For other shapes we tend to take the closest feature regardless, but here we're favoring the face a bit more by choosing a lower threshold.
+            var useTriangleEdgeCase = Vector.AndNot(Vector.LessThan(Vector.Abs(faceNormalADotNormal), new Vector<float>(0.2f)), inactiveLanes);
+
             //We generate contacts according to the dominant features along the collision normal.
             //The possible pairs are:
-            //Face A-Cap A
-            //Face A-Side A
+            //Face A-Cap B
+            //Edge A-Cap B
+            //Face A-Side B
+            //Edge A-Side B
+
+            Vector3Wide dominantEdgeStart;
+            Vector3Wide dominantEdgeOffset;
+            if (Vector.LessThanAny(useTriangleEdgeCase, Vector<int>.Zero))
+            {
+                //At least one lane is going to use the triangle edge case.
+                //Identify the dominant edge based on alignment with the local normal.
+                Vector3Wide.Dot(edgePlaneAB, localNormal, out var abEdgeAlignment);
+                Vector3Wide.Dot(edgePlaneBC, localNormal, out var bcEdgeAlignment);
+                Vector3Wide.Dot(edgePlaneCA, localNormal, out var caEdgeAlignment);
+
+                var max = Vector.Max(abEdgeAlignment, Vector.Max(bcEdgeAlignment, caEdgeAlignment));
+                var useAB = Vector.Equals(max, abEdgeAlignment);
+                var useBC = Vector.Equals(max, abEdgeAlignment);
+
+                Vector3Wide.ConditionalSelect(useAB, triangleA, triangleC, out dominantEdgeStart);
+                Vector3Wide.ConditionalSelect(useBC, triangleB, dominantEdgeStart, out dominantEdgeStart);
+                Vector3Wide.ConditionalSelect(useAB, triangleAB, triangleCA, out dominantEdgeOffset);
+                Vector3Wide.ConditionalSelect(useBC, triangleBC, dominantEdgeOffset, out dominantEdgeOffset);
+            }
+            else
+            {
+                Unsafe.SkipInit(out dominantEdgeStart);
+                Unsafe.SkipInit(out dominantEdgeOffset);
+            }
 
             var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
 
             var useCap = Vector.AndNot(Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f)), inactiveLanes);
 
-            //When the contact normal is nearly perpendicular to the triangle normal, computing per contact depths can become numerically impossible.
-            //To help with this case, we use an 'effective' triangle face normal for anything related to computing contact depths.
-            Vector3Wide effectiveFaceNormal;
-            var absFaceNormalADotNormal = Vector.Abs(faceNormalADotNormal);
-            const float faceNormalFallbackThreshold = 1e-4f;
-            var needsFallbackFaceNormal = Vector.AndNot(Vector.LessThan(absFaceNormalADotNormal, new Vector<float>(faceNormalFallbackThreshold)), inactiveLanes);
-            Vector<float> effectiveFaceNormalDotNormal;
-            if (Vector.EqualsAny(needsFallbackFaceNormal, new Vector<int>(-1)))
-            {
-                //Near-zero faceNormalADotNormal values only occur during edge or vertex collisions.
-                //During edge collisions, the local normal is perpendicular to the edge.
-                //We can safely push the triangle normal along the local normal to get an 'effective' normal that doesn't cause numerical catastrophe.
-                var pushScale = Vector.Max(Vector<float>.Zero, (absFaceNormalADotNormal - new Vector<float>(faceNormalFallbackThreshold)) / new Vector<float>(-faceNormalFallbackThreshold));
-                Vector3Wide.Scale(localNormal, pushScale * new Vector<float>(0.1f), out var effectiveFaceNormalPush);
-                Vector3Wide.Add(triangleNormal, effectiveFaceNormalPush, out effectiveFaceNormal);
-                //Length is guaranteed to be nonzero since this is only used when normal is near perpendicular.
-                Vector3Wide.Normalize(effectiveFaceNormal, out effectiveFaceNormal);
-                //Normalization could change things numerically, so we can't normalize any lanes that aren't supposed to be taking this code path.
-                Vector3Wide.ConditionalSelect(needsFallbackFaceNormal, effectiveFaceNormal, triangleNormal, out effectiveFaceNormal);
-            }
-            else
-            {
-                //No near-perpendicular contacts in this bundle.
-                effectiveFaceNormal = triangleNormal;
-                effectiveFaceNormalDotNormal = faceNormalADotNormal;
-
-            }
-            //Given the push above, this is guaranteed not to divide by zero.
-            Vector3Wide.Dot(effectiveFaceNormal, localNormal, out effectiveFaceNormalDotNormal);
-            var inverseEffectiveFaceNormalDotNormal = Vector<float>.One / effectiveFaceNormalDotNormal;
+            CreateEffectiveTriangleFaceNormal(triangleNormal, localNormal, faceNormalADotNormal, inactiveLanes, out var effectiveFaceNormal, out var inverseEffectiveFaceNormalDotNormal);
 
             if (Vector.LessThanAny(useCap, Vector<int>.Zero))
             {
@@ -326,6 +361,130 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useSide = Vector.AndNot(Vector.OnesComplement(useCap), inactiveLanes);
             if (Vector.LessThanAny(useSide, Vector<int>.Zero))
             {
+                var useSideEdgeCase = Vector.BitwiseAnd(useSide, useTriangleEdgeCase);
+                //Either triangle edge-cylinder side, or triangle face-cylinder side.
+                if (Vector.LessThanAny(useSideEdgeCase, Vector<int>.Zero))
+                {
+                    //At least one lane is edge-side. This is relatively simple; we need only test the dominant edge of the triangle with the side of the cylinder.
+                    //If the triangle edge and cylinder edge are close to parallel, expand the intersection interval so we can generate more than one contact.
+                    //For the single contact case, all we need is to test the triangle edge versus the plane formed by the cylinder side edge and the local normal.
+                    //(0,1,0) x localNormal = (-localNormal.Z, 0, localNormal.X)
+                    var cylinderEdgeToDominantEdgeStartX = dominantEdgeStart.X - closestOnB.X;
+                    var cylinderEdgeToDominantEdgeStartZ = dominantEdgeStart.Z - closestOnB.Z;
+                    var numerator = cylinderEdgeToDominantEdgeStartZ * localNormal.X - cylinderEdgeToDominantEdgeStartX * localNormal.Z;
+                    var denominator = dominantEdgeOffset.Z * localNormal.X - dominantEdgeOffset.X * localNormal.Z;
+                    var edgeT = numerator / denominator;
+                    //sin(angle between triangle edge direction and cylinder edge direction) = dot(dominantEdgeOffset, (-localNormal.Z, 0, localNormal.X)) / (||dominantEdgeOffset|| * ||(-localNormal.Z, 0, localNormal.X)||)
+                    //sinAngle * (||dominantEdgeOffset|| * ||(-localNormal.Z, 0, localNormal.X)||) = dot(dominantEdgeOffset, (-localNormal.Z, 0, localNormal.X))
+                    //Not concerned about sign; either way works, and we don't really care about perfectly linear interpolation... so square it.
+                    //sinAngle^2 * ||dominantEdgeOffset||^2 * ||(-localNormal.Z, 0, localNormal.X)||^2 = dot(dominantEdgeOffset, (-localNormal.Z, 0, localNormal.X))^2         
+                    const float lowerSinAngleThreshold = 0.01f;
+                    const float upperSinAngleThreshold = 0.02f;
+                    var denominatorSquared = denominator * denominator;
+                    Vector3Wide.LengthSquared(dominantEdgeOffset, out var dominantEdgeLengthSquared);
+                    var horizontalNormalLengthSquared = localNormal.X * localNormal.X + localNormal.Z * localNormal.Z;
+                    var interpolationScale = dominantEdgeLengthSquared * horizontalNormalLengthSquared;
+                    var interpolationMin = interpolationScale * new Vector<float>(upperSinAngleThreshold * upperSinAngleThreshold);
+                    var inverseInterpolationSpan = interpolationScale * new Vector<float>(1f / (upperSinAngleThreshold * upperSinAngleThreshold - lowerSinAngleThreshold * lowerSinAngleThreshold));
+                    var unrestrictWeight = Vector<float>.One - Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (denominatorSquared - interpolationMin) * inverseInterpolationSpan));
+
+                    //As the unrestrict weight increases, expand the interval on the triangle edge until it covers the entire cylinder edge.
+                    //Past the upper bound, we no longer consider the single contact edgeT, since it will be approaching a singularity.
+                    //tCenter = dot(cylinderSideEdgeCenter - dominantEdgeStart, dominantEdgeOffset / ||dominantEdgeOffset||^2)
+                    //tMax = tCenter + cylinder.HalfLength * dominantEdgeOffset.Y / ||dominantEdgeOffset||^2
+                    var inverseEdgeOffsetLengthSquared = Vector<float>.One / dominantEdgeLengthSquared;
+                    var tCenter = -(cylinderEdgeToDominantEdgeStartX * dominantEdgeOffset.X + dominantEdgeStart.Y * dominantEdgeOffset.Y + cylinderEdgeToDominantEdgeStartZ * dominantEdgeOffset.Z) * inverseEdgeOffsetLengthSquared;
+                    var projectedExtentOffset = b.HalfLength * Vector.Abs(dominantEdgeOffset.Y) * inverseEdgeOffsetLengthSquared;
+                    var tEdgeMin = tCenter - projectedExtentOffset;
+                    var tEdgeMax = tCenter + projectedExtentOffset;
+                    //Note that the edgeT value is ignored once the denominator is small enough. Avoids division by zero propagation.
+                    var regularContribution = (Vector<float>.One - unrestrictWeight) * Vector.ConditionalSelect(Vector.LessThan(denominatorSquared, interpolationMin), tCenter, edgeT);
+                    tEdgeMin = regularContribution + unrestrictWeight * tEdgeMin;
+                    tEdgeMax = regularContribution + unrestrictWeight * tEdgeMax;
+
+                    tEdgeMin = Vector.Min(Vector.Max(Vector<float>.Zero, tEdgeMin), Vector<float>.One);
+                    tEdgeMax = Vector.Min(Vector.Max(Vector<float>.Zero, tEdgeMax), Vector<float>.One);
+
+                    manifold.FeatureId0 = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.FeatureId0);
+                    manifold.FeatureId1 = Vector.ConditionalSelect(useSide, Vector<int>.One, manifold.FeatureId1);
+
+                    //Compute depth by projecting back to the cylinder plane. 
+                    //Its normal is the horizontal local normal.
+                    Vector3Wide.Scale(dominantEdgeOffset, tEdgeMin, out var minPush);
+                    Vector3Wide.Add(dominantEdgeStart, minPush, out var min);
+                    var minNumerator = min.X * localNormal.X + min.Z * localNormal.Z;
+                    var inverseDepthDenominator = Vector<float>.One / horizontalNormalLengthSquared;
+                    var depth0 = 
+                    var depthScale = effectiveFaceNormal.Y * inverseEffectiveFaceNormalDotNormal;
+                    var o0 = localContact0.Y - closestOnB.Y;
+                    var o1 = localContact1.Y - closestOnB.Y;
+                    var depth0 = depth + o0 * depthScale;
+                    var depth1 = depth + o1 * depthScale;
+
+                    manifold.Depth0 = Vector.ConditionalSelect(useSideEdgeCase, depth0, manifold.Depth0);
+                    manifold.Depth1 = Vector.ConditionalSelect(useSideEdgeCase, depth1, manifold.Depth1);
+                    manifold.Contact0Exists = Vector.ConditionalSelect(useSideEdgeCase, Vector.GreaterThan(depth0, depthThreshold), manifold.Contact0Exists);
+                    manifold.Contact1Exists = Vector.ConditionalSelect(useSideEdgeCase, Vector.BitwiseAnd(Vector.GreaterThan(depth1, depthThreshold), Vector.GreaterThan(tEdgeMax, tEdgeMin)), manifold.Contact1Exists);
+                    manifold.Contact2Exists = Vector.ConditionalSelect(useSideEdgeCase, Vector<int>.Zero, manifold.Contact2Exists);
+                    manifold.Contact3Exists = Vector.ConditionalSelect(useSideEdgeCase, Vector<int>.Zero, manifold.Contact3Exists);
+
+                }
+                //At least one lane needs a side-face manifold.
+                //Intersect the triangle's edges against the cylinder edge's bounding planes.
+                //The cylinder edge's bounding plane normals are (0,1,0) x localNormal and ((0,1,0) x localNormal) x localNormal.
+                //Since the side edge was chosen as the representative feature, both of these are known to be nonzero.
+
+                var abEdgePlaneDenominator = triangleAB.Z * localNormal.X - triangleAB.X * localNormal.Z;
+                var bcEdgePlaneDenominator = triangleBC.Z * localNormal.X - triangleBC.X * localNormal.Z;
+                var caEdgePlaneDenominator = triangleCA.Z * localNormal.X - triangleCA.X * localNormal.Z;
+                var inverseABEdgePlaneDenominator = Vector<float>.One / abEdgePlaneDenominator;
+                var inverseBCEdgePlaneDenominator = Vector<float>.One / bcEdgePlaneDenominator;
+                var inverseCAEdgePlaneDenominator = Vector<float>.One / caEdgePlaneDenominator;
+                Vector3Wide cylinderIntervalEndPlaneNormal;
+                cylinderIntervalEndPlaneNormal.X = localNormal.X * localNormal.Y;
+                cylinderIntervalEndPlaneNormal.Y = -localNormal.X * localNormal.X - localNormal.Z * localNormal.Z;
+                cylinderIntervalEndPlaneNormal.Z = localNormal.Y * localNormal.Z;
+                Vector3Wide.Dot(triangleAB, cylinderIntervalEndPlaneNormal, out var abEndPlaneDenominator);
+                Vector3Wide.Dot(triangleBC, cylinderIntervalEndPlaneNormal, out var bcEndPlaneDenominator);
+                Vector3Wide.Dot(triangleCA, cylinderIntervalEndPlaneNormal, out var caEndPlaneDenominator);
+                var inverseABEndPlaneDenominator = Vector<float>.One / abEndPlaneDenominator;
+                var inverseBCEndPlaneDenominator = Vector<float>.One / bcEndPlaneDenominator;
+                var inverseCAEndPlaneDenominator = Vector<float>.One / caEndPlaneDenominator;
+
+                //var inverseHorizontalNormalLength = Vector<float>.One / Vector.SquareRoot(localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
+                //var horizontalNormalX = localNormal.X * inverseHorizontalNormalLength;
+                //var horizontalNormalZ = localNormal.Z * inverseHorizontalNormalLength;
+
+                var cylinderEdgeToAX = triangleA.X - closestOnB.X;
+                var cylinderEdgeToAZ = triangleA.Z - closestOnB.Z;
+                var cylinderEdgeToBX = triangleB.X - closestOnB.X;
+                var cylinderEdgeToBZ = triangleB.Z - closestOnB.Z;
+                var cylinderEdgeToCX = triangleC.X - closestOnB.X;
+                var cylinderEdgeToCZ = triangleC.Z - closestOnB.Z;
+
+                var abEdgePlaneT = (cylinderEdgeToAZ * localNormal.X - cylinderEdgeToAX * localNormal.Z) * inverseABEdgePlaneDenominator;
+                var bcEdgePlaneT = (cylinderEdgeToBZ * localNormal.X - cylinderEdgeToBX * localNormal.Z) * inverseABEdgePlaneDenominator;
+                var caEdgePlaneT = (cylinderEdgeToCZ * localNormal.X - cylinderEdgeToCX * localNormal.Z) * inverseABEdgePlaneDenominator;
+
+                var abPartialNumerator = cylinderEdgeToAX * cylinderIntervalEndPlaneNormal.X + cylinderEdgeToAZ * cylinderIntervalEndPlaneNormal.Z;
+                var bcPartialNumerator = cylinderEdgeToBX * cylinderIntervalEndPlaneNormal.X + cylinderEdgeToBZ * cylinderIntervalEndPlaneNormal.Z;
+                var caPartialNumerator = cylinderEdgeToCX * cylinderIntervalEndPlaneNormal.X + cylinderEdgeToCZ * cylinderIntervalEndPlaneNormal.Z;
+                var abEndPlaneTMin = (abPartialNumerator + (triangleA.Y + b.HalfLength) * cylinderIntervalEndPlaneNormal.Y) * inverseABEndPlaneDenominator;
+                var bcEndPlaneTMin = (bcPartialNumerator + (triangleA.Y + b.HalfLength) * cylinderIntervalEndPlaneNormal.Y) * inverseABEndPlaneDenominator;
+                var caEndPlaneTMin = (caPartialNumerator + (triangleA.Y + b.HalfLength) * cylinderIntervalEndPlaneNormal.Y) * inverseABEndPlaneDenominator;
+                var abEndPlaneTMax = (abPartialNumerator + (triangleA.Y - b.HalfLength) * cylinderIntervalEndPlaneNormal.Y) * inverseABEndPlaneDenominator;
+                var bcEndPlaneTMax = (bcPartialNumerator + (triangleA.Y - b.HalfLength) * cylinderIntervalEndPlaneNormal.Y) * inverseABEndPlaneDenominator;
+                var caEndPlaneTMax = (caPartialNumerator + (triangleA.Y - b.HalfLength) * cylinderIntervalEndPlaneNormal.Y) * inverseABEndPlaneDenominator;
+
+                //Any interval with a max >= min can contribute a contact.
+                var tMinAB = Vector.Max(abEdgePlaneT, Vector.Max(abEndPlaneTMin, abEndPlaneTMax));
+                var tMinBC = Vector.Max(bcEdgePlaneT, Vector.Max(bcEndPlaneTMin, bcEndPlaneTMax));
+                var tMinCA = Vector.Max(caEdgePlaneT, Vector.Max(caEndPlaneTMin, caEndPlaneTMax));
+                var tMaxAB = Vector.Min(abEdgePlaneT, Vector.Min(abEndPlaneTMin, abEndPlaneTMax));
+                var tMaxBC = Vector.Min(bcEdgePlaneT, Vector.Min(bcEndPlaneTMin, bcEndPlaneTMax));
+                var tMaxCA = Vector.Min(caEdgePlaneT, Vector.Min(caEndPlaneTMin, caEndPlaneTMax));
+
+
                 //At least one lane needs a side-face manifold.
                 //Intersect the single edge of A with the edge planes of face A.
                 //Note that the edge planes are skewed to follow the local normal. Equivalent to projecting the side edge onto face A.

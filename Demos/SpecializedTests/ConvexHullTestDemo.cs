@@ -29,7 +29,23 @@ namespace Demos.SpecializedTests
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
-            const int pointCount = 16;
+            //var meshContent = content.Load<MeshContent>("Content\\newt.obj");
+
+            ////This is actually a pretty good example of how *not* to make a convex hull shape.
+            ////Generating it directly from a graphical data source tends to have way more surface complexity than needed,
+            ////and it tends to have a lot of near-but-not-quite-coplanar surfaces which can make the contact manifold less stable.
+            ////Prefer a simpler source with more distinct features, possibly created with an automated content-time tool.
+            //points = new QuickList<Vector3>(meshContent.Triangles.Length * 3, BufferPool);
+            //for (int i = 0; i < meshContent.Triangles.Length; ++i)
+            //{
+            //    ref var triangle = ref meshContent.Triangles[i];
+            //    //resisting the urge to just reinterpret the memory
+            //    points.AllocateUnsafely() = triangle.A * new Vector3(1, 1.5f, 1);
+            //    points.AllocateUnsafely() = triangle.B * new Vector3(1, 1.5f, 1);
+            //    points.AllocateUnsafely() = triangle.C * new Vector3(1, 1.5f, 1);
+            //}
+
+            const int pointCount = 50;
             points = new QuickList<Vector3>(pointCount * 2, BufferPool);
             //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
             //points.Allocate(BufferPool) = new Vector3(0, 0, 1);
@@ -48,7 +64,7 @@ namespace Demos.SpecializedTests
 
             var pointsBuffer = points.Span.Slice(points.Count);
             CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
-
+            //ConvexHullHelper.ComputeHull(pointsBuffer, BufferPool, out _, out debugSteps);
 
             Matrix3x3.CreateScale(new Vector3(5, 0.5f, 3), out var scale);
             var transform = Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(3, 2, 1)), 1207) * scale;
@@ -143,7 +159,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        //int stepIndex = 0;
+        int stepIndex = 0;
 
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
