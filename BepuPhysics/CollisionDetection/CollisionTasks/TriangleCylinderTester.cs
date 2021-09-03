@@ -352,14 +352,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector2Wide interior0, interior1, interior2, interior3;
                     var yOnTangentX = yOffset * triangleTangentX.Y;
                     var yOnTangentY = yOffset * triangleTangentY.Y;
-                    interior0.X = tangentLocalNormal.X * t0 - xOffset0 * triangleTangentX.X + yOnTangentX - zOffset0 * triangleTangentX.Z;
-                    interior0.Y = tangentLocalNormal.Y * t0 - xOffset0 * triangleTangentY.X + yOnTangentY - zOffset0 * triangleTangentY.Z;
-                    interior1.X = tangentLocalNormal.X * t1 - xOffset1 * triangleTangentX.X + yOnTangentX - zOffset1 * triangleTangentX.Z;
-                    interior1.Y = tangentLocalNormal.Y * t1 - xOffset1 * triangleTangentY.X + yOnTangentY - zOffset1 * triangleTangentY.Z;
-                    interior2.X = tangentLocalNormal.X * t2 - xOffset2 * triangleTangentX.X + yOnTangentX - zOffset2 * triangleTangentX.Z;
-                    interior2.Y = tangentLocalNormal.Y * t2 - xOffset2 * triangleTangentY.X + yOnTangentY - zOffset2 * triangleTangentY.Z;
-                    interior3.X = tangentLocalNormal.X * t3 - xOffset3 * triangleTangentX.X + yOnTangentX - zOffset3 * triangleTangentX.Z;
-                    interior3.Y = tangentLocalNormal.Y * t3 - xOffset3 * triangleTangentY.X + yOnTangentY - zOffset3 * triangleTangentY.Z;
+                    interior0.X = tangentLocalNormal.X * t0 - xOffset0 * triangleTangentX.X - yOnTangentX - zOffset0 * triangleTangentX.Z;
+                    interior0.Y = tangentLocalNormal.Y * t0 - xOffset0 * triangleTangentY.X - yOnTangentY - zOffset0 * triangleTangentY.Z;
+                    interior1.X = tangentLocalNormal.X * t1 - xOffset1 * triangleTangentX.X - yOnTangentX - zOffset1 * triangleTangentX.Z;
+                    interior1.Y = tangentLocalNormal.Y * t1 - xOffset1 * triangleTangentY.X - yOnTangentY - zOffset1 * triangleTangentY.Z;
+                    interior2.X = tangentLocalNormal.X * t2 - xOffset2 * triangleTangentX.X - yOnTangentX - zOffset2 * triangleTangentX.Z;
+                    interior2.Y = tangentLocalNormal.Y * t2 - xOffset2 * triangleTangentY.X - yOnTangentY - zOffset2 * triangleTangentY.Z;
+                    interior3.X = tangentLocalNormal.X * t3 - xOffset3 * triangleTangentX.X - yOnTangentX - zOffset3 * triangleTangentX.Z;
+                    interior3.Y = tangentLocalNormal.Y * t3 - xOffset3 * triangleTangentY.X - yOnTangentY - zOffset3 * triangleTangentY.Z;
 
                     //Test the four points against the edge plane. Note that signs depend on the orientation of the cylinder.
                     TryAddInteriorPoint(interior0, new Vector<int>(8), tangentA, tangentAB, tangentB, tangentBC, tangentC, tangentCA, useCapTriangleFace, ref candidates, ref candidateCount, pairCount);
@@ -546,8 +546,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var inverseProjectionDenominator = new Vector<float>(-1f) / faceNormalADotNormal;
                     var projectionTCenter = ((localTriangleCenter.X - closestOnB.X) * triangleNormal.X + localTriangleCenter.Y * triangleNormal.Y + (localTriangleCenter.Z - closestOnB.Z) * triangleNormal.Z) * inverseProjectionDenominator;
                     var offsetToDepthChange = triangleNormal.Y * inverseProjectionDenominator;
-                    depthTMin = Vector.ConditionalSelect(useSideTriangleFace, projectionTCenter + cylinderTMin * offsetToDepthChange, depthTMin);
-                    depthTMax = Vector.ConditionalSelect(useSideTriangleFace, projectionTCenter + cylinderTMax * offsetToDepthChange, depthTMax);
+                    depthTMin = Vector.ConditionalSelect(useSideTriangleFace, projectionTCenter - cylinderTMin * offsetToDepthChange, depthTMin);
+                    depthTMax = Vector.ConditionalSelect(useSideTriangleFace, projectionTCenter - cylinderTMax * offsetToDepthChange, depthTMax);
 
                     localOffsetB0.X = Vector.ConditionalSelect(useSideTriangleFace, closestOnB.X - localNormal.X * depthTMin, localOffsetB0.X);
                     localOffsetB0.Y = Vector.ConditionalSelect(useSideTriangleFace, cylinderTMin - localNormal.Y * depthTMin, localOffsetB0.Y);
