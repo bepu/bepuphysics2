@@ -265,8 +265,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             var useCap = Vector.AndNot(Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f)), inactiveLanes);
 
-            CreateEffectiveTriangleFaceNormal(triangleNormal, localNormal, faceNormalADotNormal, inactiveLanes, out var effectiveFaceNormal, out var inverseEffectiveFaceNormalDotNormal);
-
             if (Vector.LessThanAny(useCap, Vector<int>.Zero))
             {
                 //At least one lane needs a cap-face manifold.
@@ -294,32 +292,80 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 tMinCA = Vector.Min(Vector.Max(tMinCA, Vector<float>.Zero), Vector<float>.One);
                 tMaxCA = Vector.Min(Vector.Max(tMaxCA, Vector<float>.Zero), Vector<float>.One);
 
-                BoxCylinderTester.AddCandidateForEdge(pA, projectedAB, tMinAB, tMaxAB, intersectedAB, Vector<int>.Zero, useCap, pairCount, ref candidates, ref candidateCount);
-                BoxCylinderTester.AddCandidateForEdge(pB, projectedBC, tMinBC, tMaxBC, intersectedBC, Vector<int>.One, useCap, pairCount, ref candidates, ref candidateCount);
-                BoxCylinderTester.AddCandidateForEdge(pC, projectedCA, tMinCA, tMaxCA, intersectedCA, new Vector<int>(2), useCap, pairCount, ref candidates, ref candidateCount);
+                //While we projected onto the cylinder cap to do the triangle edge intersections, we use the triangle to create the contact manifold.
+                //There is no guaranteed projection from the cap to the triangle face since the normal can become perpendicular, but we can always measure from triangle to cylinder cap.
+                //Arbitrarily pick the triangle center as the origin of the tangent space, and AB as the x axis.
+                Vector3Wide.Length(triangleAB, out var triangleABLength);
+                Vector3Wide.Scale(triangleAB, Vector<float>.One / triangleABLength, out var triangleTangentX);
+                Vector3Wide.CrossWithoutOverlap(triangleTangentX, triangleNormal, out var triangleTangentY);
 
-                BoxCylinderTester.GenerateInteriorPoints(b, localNormal, closestOnB, out var interior0, out var interior1, out var interior2, out var interior3);
+                Vector2Wide tangentA, tangentB, tangentC;
+                Vector3Wide.Dot(triangle.A, triangleTangentX, out tangentA.X);
+                Vector3Wide.Dot(triangle.A, triangleTangentY, out tangentA.Y);
+                Vector3Wide.Dot(triangle.B, triangleTangentX, out tangentB.X);
+                Vector3Wide.Dot(triangle.B, triangleTangentY, out tangentB.Y);
+                Vector3Wide.Dot(triangle.C, triangleTangentX, out tangentC.X);
+                Vector3Wide.Dot(triangle.C, triangleTangentY, out tangentC.Y);
 
-                //Test the four points against the edge plane. Note that signs depend on the orientation of the cylinder.
-                TryAddInteriorPoint(interior0, new Vector<int>(8), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
-                TryAddInteriorPoint(interior1, new Vector<int>(9), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
-                TryAddInteriorPoint(interior2, new Vector<int>(10), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
-                TryAddInteriorPoint(interior3, new Vector<int>(11), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
+                Vector2Wide.Subtract(tangentB, tangentA, out var tangentAB);
+                Vector2Wide.Subtract(tangentC, tangentB, out var tangentBC);
+                Vector2Wide.Subtract(tangentA, tangentC, out var tangentCA);
 
-                //Use the closest point on the triangle as the face origin.
-                //The effective normal is not necessarily the same as the triangle normal at near parallel angles as a numerical safety,
-                //so the projection plane anchor must be on the feature that is responsible for the normal.
-                Vector3Wide.Scale(localNormal, depth, out var closestOnAToClosestOnB);
-                Vector3Wide.Subtract(closestOnB, closestOnAToClosestOnB, out var capCenterToTriangle);
-                capCenterToTriangle.Y -= capCenterBY;
-                Vector3Wide tangentBX, tangentBY;
-                tangentBX.X = Vector<float>.One;
-                tangentBX.Y = Vector<float>.Zero;
-                tangentBX.Z = Vector<float>.Zero;
-                tangentBY.X = Vector<float>.Zero;
-                tangentBY.Y = Vector<float>.Zero;
-                tangentBY.Z = Vector<float>.One;
-                ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 10, effectiveFaceNormal, inverseEffectiveFaceNormalDotNormal, capCenterToTriangle, tangentBX, tangentBY, epsilonScale, depthThreshold, pairCount,
+                BoxCylinderTester.AddCandidateForEdge(tangentA, tangentAB, tMinAB, tMaxAB, intersectedAB, Vector<int>.Zero, useCap, pairCount, ref candidates, ref candidateCount);
+                BoxCylinderTester.AddCandidateForEdge(tangentB, tangentBC, tMinBC, tMaxBC, intersectedBC, Vector<int>.One, useCap, pairCount, ref candidates, ref candidateCount);
+                BoxCylinderTester.AddCandidateForEdge(tangentC, tangentCA, tMinCA, tMaxCA, intersectedCA, new Vector<int>(2), useCap, pairCount, ref candidates, ref candidateCount);
+
+                var useCapTriangleFace = Vector.AndNot(useCap, useTriangleEdgeCase);
+                var capY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+                int maximumContactCountInBundle = 6;
+                if (Vector.LessThanAny(useCapTriangleFace, Vector<int>.Zero))
+                {
+                    //Project the points on the cylinder down to the triangle. Note that this is only valid if the normal is not perpendicular to the face normal.
+                    maximumContactCountInBundle = 10;
+                    BoxCylinderTester.GenerateInteriorPoints(b, localNormal, closestOnB, out var interiorOnCylinder0, out var interiorOnCylinder1, out var interiorOnCylinder2, out var interiorOnCylinder3);
+                    //pointOnTrianglePlane = pointOnCylinder + localNormal * t
+                    //y = sign(localNormal.Y) * b.HalfLength
+                    //pointOnCylinder = (interiorOnCylinderN.X, y, interiorOnCylinderN.Y)
+                    //t = dot(localTriangleCenter - pointOnCylinder, triangleNormal) / dot(triangleNormal, localNormal)
+                    var inverseDenominator = Vector<float>.One / faceNormalADotNormal;
+                    var yOffset = localTriangleCenter.Y - capY;
+                    var t0 = ((localTriangleCenter.X - interiorOnCylinder0.X) * localNormal.X + yOffset * localNormal.Y + (localTriangleCenter.Z - interiorOnCylinder0.Y) * localNormal.Z) * inverseDenominator;
+                    var t1 = ((localTriangleCenter.X - interiorOnCylinder1.X) * localNormal.X + yOffset * localNormal.Y + (localTriangleCenter.Z - interiorOnCylinder1.Y) * localNormal.Z) * inverseDenominator;
+                    var t2 = ((localTriangleCenter.X - interiorOnCylinder2.X) * localNormal.X + yOffset * localNormal.Y + (localTriangleCenter.Z - interiorOnCylinder2.Y) * localNormal.Z) * inverseDenominator;
+                    var t3 = ((localTriangleCenter.X - interiorOnCylinder3.X) * localNormal.X + yOffset * localNormal.Y + (localTriangleCenter.Z - interiorOnCylinder3.Y) * localNormal.Z) * inverseDenominator;
+                    //Projecting into the triangle's *tangent space* directly.
+                    //pointInTriangleTangentSpace = (dot(pointOnCylinder + localNormal * t, tangentX), dot(pointOnCylinder + localNormal * t, tangentY))
+                    Vector2Wide tangentLocalNormal;
+                    Vector3Wide.Dot(localNormal, triangleTangentX, out tangentLocalNormal.X);
+                    Vector3Wide.Dot(localNormal, triangleTangentY, out tangentLocalNormal.Y);
+                    Vector2Wide interior0, interior1, interior2, interior3;
+                    var yOnTangentX = capY * triangleTangentX.Y;
+                    var yOnTangentY = capY * triangleTangentY.Y;
+                    interior0.X = interiorOnCylinder0.X * triangleTangentX.X + yOnTangentX + interiorOnCylinder0.Y * triangleTangentX.Z + tangentLocalNormal.X * t0;
+                    interior0.Y = interiorOnCylinder0.X * triangleTangentY.X + yOnTangentY + interiorOnCylinder0.Y * triangleTangentY.Z + tangentLocalNormal.Y * t0;
+                    interior1.X = interiorOnCylinder1.X * triangleTangentX.X + yOnTangentX + interiorOnCylinder1.Y * triangleTangentX.Z + tangentLocalNormal.X * t1;
+                    interior1.Y = interiorOnCylinder1.X * triangleTangentY.X + yOnTangentY + interiorOnCylinder1.Y * triangleTangentY.Z + tangentLocalNormal.Y * t1;
+                    interior2.X = interiorOnCylinder2.X * triangleTangentX.X + yOnTangentX + interiorOnCylinder2.Y * triangleTangentX.Z + tangentLocalNormal.X * t2;
+                    interior2.Y = interiorOnCylinder2.X * triangleTangentY.X + yOnTangentY + interiorOnCylinder2.Y * triangleTangentY.Z + tangentLocalNormal.Y * t2;
+                    interior3.X = interiorOnCylinder3.X * triangleTangentX.X + yOnTangentX + interiorOnCylinder3.Y * triangleTangentX.Z + tangentLocalNormal.X * t3;
+                    interior3.Y = interiorOnCylinder3.X * triangleTangentY.X + yOnTangentY + interiorOnCylinder3.Y * triangleTangentY.Z + tangentLocalNormal.Y * t3;
+
+                    //Test the four points against the edge plane. Note that signs depend on the orientation of the cylinder.
+                    TryAddInteriorPoint(interior0, new Vector<int>(8), tangentA, tangentAB, tangentB, tangentBC, tangentC, tangentCA, useCapTriangleFace, ref candidates, ref candidateCount, pairCount);
+                    TryAddInteriorPoint(interior1, new Vector<int>(9), tangentA, tangentAB, tangentB, tangentBC, tangentC, tangentCA, useCapTriangleFace, ref candidates, ref candidateCount, pairCount);
+                    TryAddInteriorPoint(interior2, new Vector<int>(10), tangentA, tangentAB, tangentB, tangentBC, tangentC, tangentCA, useCapTriangleFace, ref candidates, ref candidateCount, pairCount);
+                    TryAddInteriorPoint(interior3, new Vector<int>(11), tangentA, tangentAB, tangentB, tangentBC, tangentC, tangentCA, useCapTriangleFace, ref candidates, ref candidateCount, pairCount);
+                }
+
+                Vector3Wide capNormal;
+                capNormal.X = Vector<float>.Zero;
+                capNormal.Y = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1));
+                capNormal.Z = Vector<float>.Zero;
+                Vector3Wide triangleCenterToCapCenter;
+                triangleCenterToCapCenter.X = -localTriangleCenter.X;
+                triangleCenterToCapCenter.Y = capY - localTriangleCenter.Y;
+                triangleCenterToCapCenter.Z = -localTriangleCenter.Z;
+                ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, maximumContactCountInBundle, capNormal, -capNormal.Y / localNormal.Y, triangleCenterToCapCenter, triangleTangentX, triangleTangentY, epsilonScale, depthThreshold, pairCount,
                     out var candidate0, out var candidate1, out var candidate2, out var candidate3,
                     out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
