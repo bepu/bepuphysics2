@@ -20,6 +20,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //dot(linePosition + lineDirection * t, linePosition + lineDirection * t) = radius * radius
             //dot(linePosition, linePosition) - radius * radius + t * 2 * dot(linePosition, lineDirection) + t^2 * dot(lineDirection, lineDirection) = 0
             Vector2Wide.Dot(lineDirection, lineDirection, out var a);
+            a = Vector.Max(a, new Vector<float>(2e-38f)); //Guard against division by zero.
             var inverseA = Vector<float>.One / a;
             Vector2Wide.Dot(linePosition, lineDirection, out var b);
             Vector2Wide.Dot(linePosition, linePosition, out var c);
@@ -31,10 +32,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var tBase = -b * inverseA;
             tMin = tBase - tOffset;
             tMax = tBase + tOffset;
-            //If the projected line direction is zero, just compress the interval to tBase.
-            var useFallback = Vector.LessThan(Vector.Abs(a), new Vector<float>(1e-12f));
-            tMin = Vector.ConditionalSelect(useFallback, tBase, tMin);
-            tMax = Vector.ConditionalSelect(useFallback, tBase, tMax);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -348,10 +345,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var regularWeightX = Vector<float>.One - unrestrictWeightX;
                 var regularWeightY = Vector<float>.One - unrestrictWeightY;
                 var negativeHalfLength = -b.HalfLength;
-                var tXMin = Vector.ConditionalSelect(xInvalid, maxValue, unrestrictWeightX * negativeHalfLength + regularWeightX * Vector.Min(tX0, tX1));
-                var tXMax = Vector.ConditionalSelect(xInvalid, minValue, unrestrictWeightX * b.HalfLength + regularWeightX * Vector.Max(tX0, tX1));
-                var tYMin = Vector.ConditionalSelect(yInvalid, maxValue, unrestrictWeightY * negativeHalfLength + regularWeightY * Vector.Min(tY0, tY1));
-                var tYMax = Vector.ConditionalSelect(yInvalid, minValue, unrestrictWeightY * b.HalfLength + regularWeightY * Vector.Max(tY0, tY1));
+                var tXMin = Vector.ConditionalSelect(xInvalid, minValue, unrestrictWeightX * negativeHalfLength + regularWeightX * Vector.Min(tX0, tX1));
+                var tXMax = Vector.ConditionalSelect(xInvalid, maxValue, unrestrictWeightX * b.HalfLength + regularWeightX * Vector.Max(tX0, tX1));
+                var tYMin = Vector.ConditionalSelect(yInvalid, minValue, unrestrictWeightY * negativeHalfLength + regularWeightY * Vector.Min(tY0, tY1));
+                var tYMax = Vector.ConditionalSelect(yInvalid, maxValue, unrestrictWeightY * b.HalfLength + regularWeightY * Vector.Max(tY0, tY1));
                 //Shouldn't need to make contact generation conditional here. The closest points are guaranteed to be on these chosen features;
                 //they might just be in the same spot. We do clamp for numerical reasons.
                 var tMax = Vector.Min(Vector.Max(negativeHalfLength, Vector.Min(tXMax, tYMax)), b.HalfLength);
