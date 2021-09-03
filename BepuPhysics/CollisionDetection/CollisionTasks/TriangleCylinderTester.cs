@@ -332,26 +332,34 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //t = dot(localTriangleCenter - pointOnCylinder, triangleNormal) / dot(triangleNormal, localNormal)
                     var inverseDenominator = Vector<float>.One / faceNormalADotNormal;
                     var yOffset = localTriangleCenter.Y - capCenterBY;
-                    var t0 = ((localTriangleCenter.X - interiorOnCylinder0.X) * localNormal.X + yOffset * localNormal.Y + (localTriangleCenter.Z - interiorOnCylinder0.Y) * localNormal.Z) * inverseDenominator;
-                    var t1 = ((localTriangleCenter.X - interiorOnCylinder1.X) * localNormal.X + yOffset * localNormal.Y + (localTriangleCenter.Z - interiorOnCylinder1.Y) * localNormal.Z) * inverseDenominator;
-                    var t2 = ((localTriangleCenter.X - interiorOnCylinder2.X) * localNormal.X + yOffset * localNormal.Y + (localTriangleCenter.Z - interiorOnCylinder2.Y) * localNormal.Z) * inverseDenominator;
-                    var t3 = ((localTriangleCenter.X - interiorOnCylinder3.X) * localNormal.X + yOffset * localNormal.Y + (localTriangleCenter.Z - interiorOnCylinder3.Y) * localNormal.Z) * inverseDenominator;
+                    var xOffset0 = localTriangleCenter.X - interiorOnCylinder0.X;
+                    var zOffset0 = localTriangleCenter.Z - interiorOnCylinder0.Y;
+                    var xOffset1 = localTriangleCenter.X - interiorOnCylinder1.X;
+                    var zOffset1 = localTriangleCenter.Z - interiorOnCylinder1.Y;
+                    var xOffset2 = localTriangleCenter.X - interiorOnCylinder2.X;
+                    var zOffset2 = localTriangleCenter.Z - interiorOnCylinder2.Y;
+                    var xOffset3 = localTriangleCenter.X - interiorOnCylinder3.X;
+                    var zOffset3 = localTriangleCenter.Z - interiorOnCylinder3.Y;
+                    var t0 = (xOffset0 * localNormal.X + yOffset * localNormal.Y + zOffset0 * localNormal.Z) * inverseDenominator;
+                    var t1 = (xOffset1 * localNormal.X + yOffset * localNormal.Y + zOffset1 * localNormal.Z) * inverseDenominator;
+                    var t2 = (xOffset2 * localNormal.X + yOffset * localNormal.Y + zOffset2 * localNormal.Z) * inverseDenominator;
+                    var t3 = (xOffset3 * localNormal.X + yOffset * localNormal.Y + zOffset3 * localNormal.Z) * inverseDenominator;
                     //Projecting into the triangle's *tangent space* directly.
                     //pointInTriangleTangentSpace = (dot(pointOnCylinder + localNormal * t, tangentX), dot(pointOnCylinder + localNormal * t, tangentY))
                     Vector2Wide tangentLocalNormal;
                     Vector3Wide.Dot(localNormal, triangleTangentX, out tangentLocalNormal.X);
                     Vector3Wide.Dot(localNormal, triangleTangentY, out tangentLocalNormal.Y);
                     Vector2Wide interior0, interior1, interior2, interior3;
-                    var yOnTangentX = capCenterBY * triangleTangentX.Y;
-                    var yOnTangentY = capCenterBY * triangleTangentY.Y;
-                    interior0.X = interiorOnCylinder0.X * triangleTangentX.X + yOnTangentX + interiorOnCylinder0.Y * triangleTangentX.Z + tangentLocalNormal.X * t0;
-                    interior0.Y = interiorOnCylinder0.X * triangleTangentY.X + yOnTangentY + interiorOnCylinder0.Y * triangleTangentY.Z + tangentLocalNormal.Y * t0;
-                    interior1.X = interiorOnCylinder1.X * triangleTangentX.X + yOnTangentX + interiorOnCylinder1.Y * triangleTangentX.Z + tangentLocalNormal.X * t1;
-                    interior1.Y = interiorOnCylinder1.X * triangleTangentY.X + yOnTangentY + interiorOnCylinder1.Y * triangleTangentY.Z + tangentLocalNormal.Y * t1;
-                    interior2.X = interiorOnCylinder2.X * triangleTangentX.X + yOnTangentX + interiorOnCylinder2.Y * triangleTangentX.Z + tangentLocalNormal.X * t2;
-                    interior2.Y = interiorOnCylinder2.X * triangleTangentY.X + yOnTangentY + interiorOnCylinder2.Y * triangleTangentY.Z + tangentLocalNormal.Y * t2;
-                    interior3.X = interiorOnCylinder3.X * triangleTangentX.X + yOnTangentX + interiorOnCylinder3.Y * triangleTangentX.Z + tangentLocalNormal.X * t3;
-                    interior3.Y = interiorOnCylinder3.X * triangleTangentY.X + yOnTangentY + interiorOnCylinder3.Y * triangleTangentY.Z + tangentLocalNormal.Y * t3;
+                    var yOnTangentX = yOffset * triangleTangentX.Y;
+                    var yOnTangentY = yOffset * triangleTangentY.Y;
+                    interior0.X = tangentLocalNormal.X * t0 - xOffset0 * triangleTangentX.X + yOnTangentX - zOffset0 * triangleTangentX.Z;
+                    interior0.Y = tangentLocalNormal.Y * t0 - xOffset0 * triangleTangentY.X + yOnTangentY - zOffset0 * triangleTangentY.Z;
+                    interior1.X = tangentLocalNormal.X * t1 - xOffset1 * triangleTangentX.X + yOnTangentX - zOffset1 * triangleTangentX.Z;
+                    interior1.Y = tangentLocalNormal.Y * t1 - xOffset1 * triangleTangentY.X + yOnTangentY - zOffset1 * triangleTangentY.Z;
+                    interior2.X = tangentLocalNormal.X * t2 - xOffset2 * triangleTangentX.X + yOnTangentX - zOffset2 * triangleTangentX.Z;
+                    interior2.Y = tangentLocalNormal.Y * t2 - xOffset2 * triangleTangentY.X + yOnTangentY - zOffset2 * triangleTangentY.Z;
+                    interior3.X = tangentLocalNormal.X * t3 - xOffset3 * triangleTangentX.X + yOnTangentX - zOffset3 * triangleTangentX.Z;
+                    interior3.Y = tangentLocalNormal.Y * t3 - xOffset3 * triangleTangentY.X + yOnTangentY - zOffset3 * triangleTangentY.Z;
 
                     //Test the four points against the edge plane. Note that signs depend on the orientation of the cylinder.
                     TryAddInteriorPoint(interior0, new Vector<int>(8), tangentA, tangentAB, tangentB, tangentBC, tangentC, tangentCA, useCapTriangleFace, ref candidates, ref candidateCount, pairCount);
