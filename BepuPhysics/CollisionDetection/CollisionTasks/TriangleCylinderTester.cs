@@ -486,140 +486,167 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var useSideTriangleFace = Vector.AndNot(useSide, useTriangleEdgeCase);
                 if (Vector.LessThanAny(useSideTriangleFace, Vector<int>.Zero))
                 {
-                    ////Project the cylinder edge down onto the triangle plane. We know it's numerically valid because useTriangleEdgeCase is false for this lane.
-                    ////tCenterToTriangleSurface = dot(localTriangleCenter - (closestOnB.X, 0, closestOnB.Z), triangleNormal) / dot(localNormal, triangleNormal)
-                    ////Note that we *could* use the computed depth for the closest point here, but that would allow some numerical error to compound and it only saves us a single dot product.
-                    //var inverseDenominator = Vector<float>.One / faceNormalADotNormal;
-                    //var xOffset = localTriangleCenter.X - closestToB.X;
-                    //var zOffset = localTriangleCenter.Z - closestToB.Z;
-                    //var tMinToTriangle = (xOffset * triangleNormal.X + (localTriangleCenter.Y + b.HalfLength) * triangleNormal.Y + zOffset * triangleNormal.Z) * inverseDenominator;
-                    //var tMaxToTriangle = (xOffset * triangleNormal.X + (localTriangleCenter.Y - b.HalfLength) * triangleNormal.Y + zOffset * triangleNormal.Z) * inverseDenominator;
-                    //Vector3Wide minOnTriangle, maxOnTriangle;
-                    //minOnTriangle.X = closestToB.X + tMinToTriangle * localNormal.X;
-                    //minOnTriangle.Y = tMinToTriangle * localNormal.Y - b.HalfLength;
-                    //minOnTriangle.Z = closestToB.Z + tMinToTriangle * localNormal.Z;
-                    //maxOnTriangle.X = closestToB.X + tMaxToTriangle * localNormal.X;
-                    //maxOnTriangle.Y = tMaxToTriangle * localNormal.Y - b.HalfLength;
-                    //maxOnTriangle.Z = closestToB.Z + tMaxToTriangle * localNormal.Z;
-                    //Vector3Wide.Subtract(maxOnTriangle, minOnTriangle, out var minToMax);
-                    ////We now have points on the surface of the triangle. Use them as a ray to intersect the triangle's edge planes.
-                    //var numeratorAB = (minOnTriangle.X - triangleA.X) * edgePlaneAB.X + (minOnTriangle.Y - triangleA.Y) * edgePlaneAB.Y + (minOnTriangle.Z - triangleA.Z) * edgePlaneAB.Z;
-                    //var numeratorBC = (minOnTriangle.X - triangleB.X) * edgePlaneBC.X + (minOnTriangle.Y - triangleB.Y) * edgePlaneBC.Y + (minOnTriangle.Z - triangleB.Z) * edgePlaneBC.Z;
-                    //var numeratorCA = (minOnTriangle.X - triangleC.X) * edgePlaneCA.X + (minOnTriangle.Y - triangleC.Y) * edgePlaneCA.Y + (minOnTriangle.Z - triangleC.Z) * edgePlaneCA.Z;
-                    //var denominatorAB = minToMax.X * edgePlaneAB.X + minToMax.Y * edgePlaneAB.Y + minToMax.Z * edgePlaneAB.Z;
-                    //var denominatorBC = minToMax.X * edgePlaneBC.X + minToMax.Y * edgePlaneBC.Y + minToMax.Z * edgePlaneBC.Z;
-                    //var denominatorCA = minToMax.X * edgePlaneCA.X + minToMax.Y * edgePlaneCA.Y + minToMax.Z * edgePlaneCA.Z;
-                    ////Protect against division by zero. This preserves sign and allows values to go to relatively enormous values.
-                    //var threshold = new Vector<float>(1e-30f);
-                    //var negativeThreshold = -threshold;
-                    ////A ray is 'entering' if the ray's direction is aligned with the inward-pointing edge normal, exiting otherwise.
-                    //var exitingAB = Vector.LessThan(denominatorAB, Vector<float>.Zero);
-                    //var exitingBC = Vector.LessThan(denominatorBC, Vector<float>.Zero);
-                    //var exitingCA = Vector.LessThan(denominatorCA, Vector<float>.Zero);
-                    //denominatorAB = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(denominatorAB), threshold), Vector.ConditionalSelect(exitingAB, negativeThreshold, threshold), denominatorAB);
-                    //denominatorBC = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(denominatorBC), threshold), Vector.ConditionalSelect(exitingBC, negativeThreshold, threshold), denominatorBC);
-                    //denominatorCA = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(denominatorCA), threshold), Vector.ConditionalSelect(exitingCA, negativeThreshold, threshold), denominatorCA);
-                    //var edgeTAB = numeratorAB / denominatorAB;
-                    //var edgeTBC = numeratorBC / denominatorBC;
-                    //var edgeTCA = numeratorCA / denominatorCA;
-
-                    ////Take the first exit and last entry to create the interval of intersection.
-                    //var minValue = new Vector<float>(float.MinValue);
-                    //var maxValue = new Vector<float>(float.MaxValue);
-                    //var entryAB = Vector.ConditionalSelect(exitingAB, minValue, edgeTAB);
-                    //var entryBC = Vector.ConditionalSelect(exitingBC, minValue, edgeTBC);
-                    //var entryCA = Vector.ConditionalSelect(exitingCA, minValue, edgeTCA);
-                    //var exitAB = Vector.ConditionalSelect(exitingAB, edgeTAB, maxValue);
-                    //var exitBC = Vector.ConditionalSelect(exitingBC, edgeTBC, maxValue);
-                    //var exitCA = Vector.ConditionalSelect(exitingCA, edgeTCA, maxValue);
-                    //var entryT = Vector.Max(entryAB, Vector.Max(entryBC, entryCA));
-                    //var exitT = Vector.Min(exitAB, Vector.Min(exitBC, exitCA));
-
-                    //Note that the local normal should have been created such that projecting the cylinder edge down along it *should* result in an intersection with the triangle.
-                    //That would mean exitT >= entryT. However, due to numerical error, that is not strictly guaranteed.
-                    //This is most likely to occur in vertex cases.
-                    //The simple approach is to 
-
-                    //At least one lane needs cylinder side-triangle face.
-                    //Intersect all three triangle edges against the cylinder side edge plane formed by the cylinder side edge and the local normal.
-                    //(0,1,0) x localNormal = (-localNormal.Z, 0, localNormal.X)
-                    var cylinderEdgeToAX = triangleA.X - closestOnB.X;
-                    var cylinderEdgeToAZ = triangleA.Z - closestOnB.Z;
-                    var cylinderEdgeToBX = triangleB.X - closestOnB.X;
-                    var cylinderEdgeToBZ = triangleB.Z - closestOnB.Z;
-                    var cylinderEdgeToCX = triangleC.X - closestOnB.X;
-                    var cylinderEdgeToCZ = triangleC.Z - closestOnB.Z;
-                    var numeratorAB = cylinderEdgeToAZ * localNormal.X - cylinderEdgeToAX * localNormal.Z;
-                    var numeratorBC = cylinderEdgeToBZ * localNormal.X - cylinderEdgeToBX * localNormal.Z;
-                    var numeratorCA = cylinderEdgeToCZ * localNormal.X - cylinderEdgeToCX * localNormal.Z;
-                    var denominatorAB = triangleAB.X * localNormal.Z - triangleAB.Z * localNormal.X;
-                    var denominatorBC = triangleBC.X * localNormal.Z - triangleBC.Z * localNormal.X;
-                    var denominatorCA = triangleCA.X * localNormal.Z - triangleCA.Z * localNormal.X;
+                    //Project the cylinder edge down onto the triangle plane. We know it's numerically valid because useTriangleEdgeCase is false for this lane.
+                    //tCenterToTriangleSurface = dot(localTriangleCenter - (closestOnB.X, 0, closestOnB.Z), triangleNormal) / dot(localNormal, triangleNormal)
+                    //Note that we *could* use the computed depth for the closest point here, but that would allow some numerical error to compound and it only saves us a single dot product.
+                    var inverseDenominator = Vector<float>.One / faceNormalADotNormal;
+                    var xzContribution = (localTriangleCenter.X - closestOnB.X) * triangleNormal.X + (localTriangleCenter.Z - closestOnB.Z) * triangleNormal.Z;
+                    var tMinToTriangle = (xzContribution + (localTriangleCenter.Y + b.HalfLength) * triangleNormal.Y) * inverseDenominator;
+                    var tMaxToTriangle = (xzContribution + (localTriangleCenter.Y - b.HalfLength) * triangleNormal.Y) * inverseDenominator;
+                    Vector3Wide minOnTriangle, maxOnTriangle;
+                    minOnTriangle.X = tMinToTriangle * localNormal.X + closestOnB.X;
+                    minOnTriangle.Y = tMinToTriangle * localNormal.Y - b.HalfLength;
+                    minOnTriangle.Z = tMinToTriangle * localNormal.Z + closestOnB.Z;
+                    maxOnTriangle.X = tMaxToTriangle * localNormal.X + closestOnB.X;
+                    maxOnTriangle.Y = tMaxToTriangle * localNormal.Y + b.HalfLength;
+                    maxOnTriangle.Z = tMaxToTriangle * localNormal.Z + closestOnB.Z;
+                    Vector3Wide.Subtract(maxOnTriangle, minOnTriangle, out var minToMax);
+                    //We now have points on the surface of the triangle. Use them as a ray to intersect the triangle's edge planes.
+                    var numeratorAB = (triangleA.X - minOnTriangle.X) * edgePlaneAB.X + (triangleA.Y - minOnTriangle.Y) * edgePlaneAB.Y + (triangleA.Z - minOnTriangle.Z) * edgePlaneAB.Z;
+                    var numeratorBC = (triangleB.X - minOnTriangle.X) * edgePlaneBC.X + (triangleB.Y - minOnTriangle.Y) * edgePlaneBC.Y + (triangleB.Z - minOnTriangle.Z) * edgePlaneBC.Z;
+                    var numeratorCA = (triangleC.X - minOnTriangle.X) * edgePlaneCA.X + (triangleC.Y - minOnTriangle.Y) * edgePlaneCA.Y + (triangleC.Z - minOnTriangle.Z) * edgePlaneCA.Z;
+                    var denominatorAB = minToMax.X * edgePlaneAB.X + minToMax.Y * edgePlaneAB.Y + minToMax.Z * edgePlaneAB.Z;
+                    var denominatorBC = minToMax.X * edgePlaneBC.X + minToMax.Y * edgePlaneBC.Y + minToMax.Z * edgePlaneBC.Z;
+                    var denominatorCA = minToMax.X * edgePlaneCA.X + minToMax.Y * edgePlaneCA.Y + minToMax.Z * edgePlaneCA.Z;
+                    //Protect against division by zero. This preserves sign and allows values to go to relatively enormous values.
+                    var threshold = new Vector<float>(1e-30f);
+                    var negativeThreshold = -threshold;
+                    //A ray is 'exiting' if the ray's direction is aligned with the edge normal, exiting otherwise.
+                    var exitingAB = Vector.LessThanOrEqual(denominatorAB, Vector<float>.Zero);
+                    var exitingBC = Vector.LessThanOrEqual(denominatorBC, Vector<float>.Zero);
+                    var exitingCA = Vector.LessThanOrEqual(denominatorCA, Vector<float>.Zero);
+                    denominatorAB = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(denominatorAB), threshold), Vector.ConditionalSelect(exitingAB, negativeThreshold, threshold), denominatorAB);
+                    denominatorBC = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(denominatorBC), threshold), Vector.ConditionalSelect(exitingBC, negativeThreshold, threshold), denominatorBC);
+                    denominatorCA = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(denominatorCA), threshold), Vector.ConditionalSelect(exitingCA, negativeThreshold, threshold), denominatorCA);
                     var edgeTAB = numeratorAB / denominatorAB;
                     var edgeTBC = numeratorBC / denominatorBC;
                     var edgeTCA = numeratorCA / denominatorCA;
-                    //Numerically, it's possible for all edges to be ruled out. In this case, forcibly shove the intersection point back to where it *should* be, mathematically.
-                    var useA = Vector.BitwiseAnd(Vector.LessThan(edgeTAB, Vector<float>.Zero), Vector.GreaterThan(edgeTCA, Vector<float>.One));
-                    var useB = Vector.BitwiseAnd(Vector.LessThan(edgeTBC, Vector<float>.Zero), Vector.GreaterThan(edgeTAB, Vector<float>.One));
-                    var useC = Vector.BitwiseAnd(Vector.LessThan(edgeTCA, Vector<float>.Zero), Vector.GreaterThan(edgeTBC, Vector<float>.One));
-                    edgeTAB = Vector.ConditionalSelect(useA, Vector<float>.Zero, Vector.ConditionalSelect(useB, Vector<float>.One, edgeTAB));
-                    edgeTBC = Vector.ConditionalSelect(useB, Vector<float>.Zero, Vector.ConditionalSelect(useC, Vector<float>.One, edgeTBC));
-                    edgeTCA = Vector.ConditionalSelect(useC, Vector<float>.Zero, Vector.ConditionalSelect(useA, Vector<float>.One, edgeTCA));
-                    //Guard against division by zero, and don't let out of bounds intersections influence the cylinder interval.
-                    //Note the interval goes from 0 to 1, so we can use fixed epsilons.
-                    var lowerBound = new Vector<float>(-1e-5f);
-                    var upperBound = new Vector<float>(1f + 1e-5f);
-                    var allowAB = Vector.BitwiseAnd(Vector.GreaterThan(edgeTAB, lowerBound), Vector.LessThan(edgeTAB, upperBound));
-                    var allowBC = Vector.BitwiseAnd(Vector.GreaterThan(edgeTBC, lowerBound), Vector.LessThan(edgeTBC, upperBound));
-                    var allowCA = Vector.BitwiseAnd(Vector.GreaterThan(edgeTCA, lowerBound), Vector.LessThan(edgeTCA, upperBound));
-                    //Just in case we were a *little* outside the bounds, clamp it back onto the edge. Just a numerical fidget.
-                    edgeTAB = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, edgeTAB));
-                    edgeTBC = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, edgeTBC));
-                    edgeTCA = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, edgeTCA));
 
-                    //We can tell whether the points are within the triangle by comparing against the interval created by the edge intersections, projected onto the cylinder edge.
-                    var inverseTriangleToCylinderDenominator = Vector<float>.One / (localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
-
-                    var cylinderEdgeToABX = edgeTAB * triangleAB.X + cylinderEdgeToAX;
-                    var cylinderEdgeToBCX = edgeTBC * triangleBC.X + cylinderEdgeToBX;
-                    var cylinderEdgeToCAX = edgeTCA * triangleCA.X + cylinderEdgeToCX;
-                    var cylinderEdgeToABZ = edgeTAB * triangleAB.Z + cylinderEdgeToAZ;
-                    var cylinderEdgeToBCZ = edgeTBC * triangleBC.Z + cylinderEdgeToBZ;
-                    var cylinderEdgeToCAZ = edgeTCA * triangleCA.Z + cylinderEdgeToCZ;
-
-                    var abOnCylinderT = (cylinderEdgeToABX * localNormal.X + cylinderEdgeToABZ * localNormal.Z) * inverseTriangleToCylinderDenominator;
-                    var bcOnCylinderT = (cylinderEdgeToBCX * localNormal.X + cylinderEdgeToBCZ * localNormal.Z) * inverseTriangleToCylinderDenominator;
-                    var caOnCylinderT = (cylinderEdgeToCAX * localNormal.X + cylinderEdgeToCAZ * localNormal.Z) * inverseTriangleToCylinderDenominator;
-
-                    //interval on cylinder is just the Y value.
-                    var cylinderTAB = edgeTAB * triangleAB.Y + triangleA.Y + localNormal.Y * abOnCylinderT;
-                    var cylinderTBC = edgeTBC * triangleBC.Y + triangleB.Y + localNormal.Y * bcOnCylinderT;
-                    var cylinderTCA = edgeTCA * triangleCA.Y + triangleC.Y + localNormal.Y * caOnCylinderT;
-
+                    //Take the first exit and last entry to create the interval of intersection.
                     var minValue = new Vector<float>(float.MinValue);
                     var maxValue = new Vector<float>(float.MaxValue);
-                    cylinderTMin = Vector.ConditionalSelect(useSideTriangleFace, Vector.Max(-b.HalfLength, Vector.Min(
-                        Vector.Min(Vector.ConditionalSelect(allowAB, cylinderTAB, maxValue), b.HalfLength),
-                        Vector.Min(Vector.ConditionalSelect(allowBC, cylinderTBC, maxValue), Vector.ConditionalSelect(allowCA, cylinderTCA, maxValue)))), cylinderTMin);
-                    cylinderTMax = Vector.ConditionalSelect(useSideTriangleFace, Vector.Min(b.HalfLength, Vector.Max(
-                        Vector.Max(Vector.ConditionalSelect(allowAB, cylinderTAB, minValue), -b.HalfLength),
-                        Vector.Max(Vector.ConditionalSelect(allowBC, cylinderTBC, minValue), Vector.ConditionalSelect(allowCA, cylinderTCA, minValue)))), cylinderTMax);
+                    var entryAB = Vector.ConditionalSelect(exitingAB, minValue, edgeTAB);
+                    var entryBC = Vector.ConditionalSelect(exitingBC, minValue, edgeTBC);
+                    var entryCA = Vector.ConditionalSelect(exitingCA, minValue, edgeTCA);
+                    var exitAB = Vector.ConditionalSelect(exitingAB, edgeTAB, maxValue);
+                    var exitBC = Vector.ConditionalSelect(exitingBC, edgeTBC, maxValue);
+                    var exitCA = Vector.ConditionalSelect(exitingCA, edgeTCA, maxValue);
+                    cylinderTMin = Vector.Max(entryAB, Vector.Max(entryBC, entryCA));
+                    cylinderTMax = Vector.Min(exitAB, Vector.Min(exitBC, exitCA));
 
-                    //Project cylinder endpoints down to the triangle face. This codepath is only used when the local normal has a nonzero dot with the triangle normal, so it's numerically safe.
-                    //t = dot(localTriangleCenter - (closestOnB.X, b.HalfLength, closestOnB.Z), triangleNormal) / dot(localNormal, triangleNormal)
-                    //t = dot(localTriangleCenter - (closestOnB.X, 0, closestOnB.Z), triangleNormal) / dot(localNormal, triangleNormal) + (-b.HalfLength) * triangleNormal.Y / dot(localNormal, triangleNormal) 
-                    var inverseProjectionDenominator = new Vector<float>(-1f) / faceNormalADotNormal;
-                    var projectionTCenter = ((localTriangleCenter.X - closestOnB.X) * triangleNormal.X + localTriangleCenter.Y * triangleNormal.Y + (localTriangleCenter.Z - closestOnB.Z) * triangleNormal.Z) * inverseProjectionDenominator;
-                    var offsetToDepthChange = triangleNormal.Y * inverseProjectionDenominator;
-                    depthTMin = Vector.ConditionalSelect(useSideTriangleFace, projectionTCenter - cylinderTMin * offsetToDepthChange, depthTMin);
-                    depthTMax = Vector.ConditionalSelect(useSideTriangleFace, projectionTCenter - cylinderTMax * offsetToDepthChange, depthTMax);
+                    //Note that the local normal should have been created such that projecting the cylinder edge down along it *should * result in an intersection with the triangle.
+                    //That would mean exitT >= entryT.However, due to numerical error, that is not strictly guaranteed.
+                    //This will typically happen in a vertex case.
+                    //We can choose the vertex in these cases by examining which edges contributed the intersections forming the bounds of the interval.
+                    var useVertexFallback = Vector.LessThan(cylinderTMax, cylinderTMin);
+                    var abContributedBound = Vector.BitwiseOr(Vector.Equals(edgeTAB, cylinderTMin), Vector.Equals(edgeTAB, cylinderTMax));
+                    var bcContributedBound = Vector.BitwiseOr(Vector.Equals(edgeTBC, cylinderTMin), Vector.Equals(edgeTBC, cylinderTMax));
+                    var caContributedBound = Vector.BitwiseOr(Vector.Equals(edgeTCA, cylinderTMin), Vector.Equals(edgeTCA, cylinderTMax));
+                    var useA = Vector.BitwiseAnd(caContributedBound, abContributedBound);
+                    var useB = Vector.BitwiseAnd(abContributedBound, bcContributedBound);
+                    //var useC = Vector.BitwiseAnd(bcContributedBound, caContributedBound);
+                    Vector3Wide.ConditionalSelect(useA, triangleA, triangleC, out var vertexFallback);
+                    Vector3Wide.ConditionalSelect(useB, triangleB, vertexFallback, out vertexFallback);
 
-                    localOffsetB0.X = Vector.ConditionalSelect(useSideTriangleFace, closestOnB.X - localNormal.X * depthTMin, localOffsetB0.X);
-                    localOffsetB0.Y = Vector.ConditionalSelect(useSideTriangleFace, cylinderTMin - localNormal.Y * depthTMin, localOffsetB0.Y);
-                    localOffsetB0.Z = Vector.ConditionalSelect(useSideTriangleFace, closestOnB.Z - localNormal.Z * depthTMin, localOffsetB0.Z);
-                    localOffsetB1.X = Vector.ConditionalSelect(useSideTriangleFace, closestOnB.X - localNormal.X * depthTMax, localOffsetB1.X);
-                    localOffsetB1.Y = Vector.ConditionalSelect(useSideTriangleFace, cylinderTMax - localNormal.Y * depthTMax, localOffsetB1.Y);
-                    localOffsetB1.Z = Vector.ConditionalSelect(useSideTriangleFace, closestOnB.Z - localNormal.Z * depthTMax, localOffsetB1.Z);
+                    //Bound the interval to the cylinder's extent.
+                    cylinderTMin = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, cylinderTMin));
+                    cylinderTMax = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, cylinderTMax));
+                    localOffsetB0.X = minOnTriangle.X + minToMax.X * cylinderTMin;
+                    localOffsetB0.Y = minOnTriangle.Y + minToMax.Y * cylinderTMin;
+                    localOffsetB0.Z = minOnTriangle.Z + minToMax.Z * cylinderTMin;
+                    localOffsetB1.X = minOnTriangle.X + minToMax.X * cylinderTMax;
+                    localOffsetB1.Y = minOnTriangle.Y + minToMax.Y * cylinderTMax;
+                    localOffsetB1.Z = minOnTriangle.Z + minToMax.Z * cylinderTMax;
+
+                    Vector3Wide.ConditionalSelect(useVertexFallback, vertexFallback, localOffsetB0, out localOffsetB0);
+
+                    //Ray cast back to the cylinder's side to compute the depth for the contact.
+                    //t = dot(localNormal.X0Z, cylinderSideEdgeCenter - {entry, exit}) / dot(localNormal.X0Z, localNormal)
+                    var inverseDepthDenominator = Vector<float>.One / (localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
+                    depthTMin = (localNormal.X * (closestOnB.X - localOffsetB0.X) + localNormal.Z * (closestOnB.Z - localOffsetB0.Z)) * inverseDepthDenominator;
+                    depthTMax = (localNormal.X * (closestOnB.X - localOffsetB1.X) + localNormal.Z * (closestOnB.Z - localOffsetB1.Z)) * inverseDepthDenominator;
+                    
+
+                    ////At least one lane needs cylinder side-triangle face.
+                    ////Intersect all three triangle edges against the cylinder side edge plane formed by the cylinder side edge and the local normal.
+                    ////(0,1,0) x localNormal = (-localNormal.Z, 0, localNormal.X)
+                    //var cylinderEdgeToAX = triangleA.X - closestOnB.X;
+                    //var cylinderEdgeToAZ = triangleA.Z - closestOnB.Z;
+                    //var cylinderEdgeToBX = triangleB.X - closestOnB.X;
+                    //var cylinderEdgeToBZ = triangleB.Z - closestOnB.Z;
+                    //var cylinderEdgeToCX = triangleC.X - closestOnB.X;
+                    //var cylinderEdgeToCZ = triangleC.Z - closestOnB.Z;
+                    //var numeratorAB = cylinderEdgeToAZ * localNormal.X - cylinderEdgeToAX * localNormal.Z;
+                    //var numeratorBC = cylinderEdgeToBZ * localNormal.X - cylinderEdgeToBX * localNormal.Z;
+                    //var numeratorCA = cylinderEdgeToCZ * localNormal.X - cylinderEdgeToCX * localNormal.Z;
+                    //var denominatorAB = triangleAB.X * localNormal.Z - triangleAB.Z * localNormal.X;
+                    //var denominatorBC = triangleBC.X * localNormal.Z - triangleBC.Z * localNormal.X;
+                    //var denominatorCA = triangleCA.X * localNormal.Z - triangleCA.Z * localNormal.X;
+                    //var edgeTAB = numeratorAB / denominatorAB;
+                    //var edgeTBC = numeratorBC / denominatorBC;
+                    //var edgeTCA = numeratorCA / denominatorCA;
+                    ////Numerically, it's possible for all edges to be ruled out. In this case, forcibly shove the intersection point back to where it *should* be, mathematically.
+                    //var useA = Vector.BitwiseAnd(Vector.LessThan(edgeTAB, Vector<float>.Zero), Vector.GreaterThan(edgeTCA, Vector<float>.One));
+                    //var useB = Vector.BitwiseAnd(Vector.LessThan(edgeTBC, Vector<float>.Zero), Vector.GreaterThan(edgeTAB, Vector<float>.One));
+                    //var useC = Vector.BitwiseAnd(Vector.LessThan(edgeTCA, Vector<float>.Zero), Vector.GreaterThan(edgeTBC, Vector<float>.One));
+                    //edgeTAB = Vector.ConditionalSelect(useA, Vector<float>.Zero, Vector.ConditionalSelect(useB, Vector<float>.One, edgeTAB));
+                    //edgeTBC = Vector.ConditionalSelect(useB, Vector<float>.Zero, Vector.ConditionalSelect(useC, Vector<float>.One, edgeTBC));
+                    //edgeTCA = Vector.ConditionalSelect(useC, Vector<float>.Zero, Vector.ConditionalSelect(useA, Vector<float>.One, edgeTCA));
+                    ////Guard against division by zero, and don't let out of bounds intersections influence the cylinder interval.
+                    ////Note the interval goes from 0 to 1, so we can use fixed epsilons.
+                    //var lowerBound = new Vector<float>(-1e-5f);
+                    //var upperBound = new Vector<float>(1f + 1e-5f);
+                    //var allowAB = Vector.BitwiseAnd(Vector.GreaterThan(edgeTAB, lowerBound), Vector.LessThan(edgeTAB, upperBound));
+                    //var allowBC = Vector.BitwiseAnd(Vector.GreaterThan(edgeTBC, lowerBound), Vector.LessThan(edgeTBC, upperBound));
+                    //var allowCA = Vector.BitwiseAnd(Vector.GreaterThan(edgeTCA, lowerBound), Vector.LessThan(edgeTCA, upperBound));
+                    ////Just in case we were a *little* outside the bounds, clamp it back onto the edge. Just a numerical fidget.
+                    //edgeTAB = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, edgeTAB));
+                    //edgeTBC = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, edgeTBC));
+                    //edgeTCA = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, edgeTCA));
+
+                    ////We can tell whether the points are within the triangle by comparing against the interval created by the edge intersections, projected onto the cylinder edge.
+                    //var inverseTriangleToCylinderDenominator = Vector<float>.One / (localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
+
+                    //var cylinderEdgeToABX = edgeTAB * triangleAB.X + cylinderEdgeToAX;
+                    //var cylinderEdgeToBCX = edgeTBC * triangleBC.X + cylinderEdgeToBX;
+                    //var cylinderEdgeToCAX = edgeTCA * triangleCA.X + cylinderEdgeToCX;
+                    //var cylinderEdgeToABZ = edgeTAB * triangleAB.Z + cylinderEdgeToAZ;
+                    //var cylinderEdgeToBCZ = edgeTBC * triangleBC.Z + cylinderEdgeToBZ;
+                    //var cylinderEdgeToCAZ = edgeTCA * triangleCA.Z + cylinderEdgeToCZ;
+
+                    //var abOnCylinderT = (cylinderEdgeToABX * localNormal.X + cylinderEdgeToABZ * localNormal.Z) * inverseTriangleToCylinderDenominator;
+                    //var bcOnCylinderT = (cylinderEdgeToBCX * localNormal.X + cylinderEdgeToBCZ * localNormal.Z) * inverseTriangleToCylinderDenominator;
+                    //var caOnCylinderT = (cylinderEdgeToCAX * localNormal.X + cylinderEdgeToCAZ * localNormal.Z) * inverseTriangleToCylinderDenominator;
+
+                    ////interval on cylinder is just the Y value.
+                    //var cylinderTAB = edgeTAB * triangleAB.Y + triangleA.Y + localNormal.Y * abOnCylinderT;
+                    //var cylinderTBC = edgeTBC * triangleBC.Y + triangleB.Y + localNormal.Y * bcOnCylinderT;
+                    //var cylinderTCA = edgeTCA * triangleCA.Y + triangleC.Y + localNormal.Y * caOnCylinderT;
+
+                    //var minValue = new Vector<float>(float.MinValue);
+                    //var maxValue = new Vector<float>(float.MaxValue);
+                    //cylinderTMin = Vector.ConditionalSelect(useSideTriangleFace, Vector.Max(-b.HalfLength, Vector.Min(
+                    //    Vector.Min(Vector.ConditionalSelect(allowAB, cylinderTAB, maxValue), b.HalfLength),
+                    //    Vector.Min(Vector.ConditionalSelect(allowBC, cylinderTBC, maxValue), Vector.ConditionalSelect(allowCA, cylinderTCA, maxValue)))), cylinderTMin);
+                    //cylinderTMax = Vector.ConditionalSelect(useSideTriangleFace, Vector.Min(b.HalfLength, Vector.Max(
+                    //    Vector.Max(Vector.ConditionalSelect(allowAB, cylinderTAB, minValue), -b.HalfLength),
+                    //    Vector.Max(Vector.ConditionalSelect(allowBC, cylinderTBC, minValue), Vector.ConditionalSelect(allowCA, cylinderTCA, minValue)))), cylinderTMax);
+
+                    ////Project cylinder endpoints down to the triangle face. This codepath is only used when the local normal has a nonzero dot with the triangle normal, so it's numerically safe.
+                    ////t = dot(localTriangleCenter - (closestOnB.X, b.HalfLength, closestOnB.Z), triangleNormal) / dot(localNormal, triangleNormal)
+                    ////t = dot(localTriangleCenter - (closestOnB.X, 0, closestOnB.Z), triangleNormal) / dot(localNormal, triangleNormal) + (-b.HalfLength) * triangleNormal.Y / dot(localNormal, triangleNormal) 
+                    //var inverseProjectionDenominator = new Vector<float>(-1f) / faceNormalADotNormal;
+                    //var projectionTCenter = ((localTriangleCenter.X - closestOnB.X) * triangleNormal.X + localTriangleCenter.Y * triangleNormal.Y + (localTriangleCenter.Z - closestOnB.Z) * triangleNormal.Z) * inverseProjectionDenominator;
+                    //var offsetToDepthChange = triangleNormal.Y * inverseProjectionDenominator;
+                    //depthTMin = Vector.ConditionalSelect(useSideTriangleFace, projectionTCenter - cylinderTMin * offsetToDepthChange, depthTMin);
+                    //depthTMax = Vector.ConditionalSelect(useSideTriangleFace, projectionTCenter - cylinderTMax * offsetToDepthChange, depthTMax);
+
+                    //localOffsetB0.X = Vector.ConditionalSelect(useSideTriangleFace, closestOnB.X - localNormal.X * depthTMin, localOffsetB0.X);
+                    //localOffsetB0.Y = Vector.ConditionalSelect(useSideTriangleFace, cylinderTMin - localNormal.Y * depthTMin, localOffsetB0.Y);
+                    //localOffsetB0.Z = Vector.ConditionalSelect(useSideTriangleFace, closestOnB.Z - localNormal.Z * depthTMin, localOffsetB0.Z);
+                    //localOffsetB1.X = Vector.ConditionalSelect(useSideTriangleFace, closestOnB.X - localNormal.X * depthTMax, localOffsetB1.X);
+                    //localOffsetB1.Y = Vector.ConditionalSelect(useSideTriangleFace, cylinderTMax - localNormal.Y * depthTMax, localOffsetB1.Y);
+                    //localOffsetB1.Z = Vector.ConditionalSelect(useSideTriangleFace, closestOnB.Z - localNormal.Z * depthTMax, localOffsetB1.Z);
                 }
                 manifold.FeatureId0 = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.FeatureId0);
                 manifold.FeatureId1 = Vector.ConditionalSelect(useSide, Vector<int>.One, manifold.FeatureId1);
