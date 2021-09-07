@@ -11,21 +11,29 @@ namespace BepuPhysics.Trees
         public Buffer<Node> Nodes;
         public Buffer<Metanode> Metanodes;
         int nodeCount;
-        public readonly int NodeCount
+        public int NodeCount
         {
-            get
+            readonly get
             {
                 return nodeCount;
+            }
+            set
+            {
+                nodeCount = value;
             }
         }
 
         public Buffer<Leaf> Leaves;
         int leafCount;
-        public readonly int LeafCount
+        public int LeafCount
         {
-            get
+            readonly get
             {
                 return leafCount;
+            }
+            set
+            {
+                leafCount = value;
             }
         }
 
