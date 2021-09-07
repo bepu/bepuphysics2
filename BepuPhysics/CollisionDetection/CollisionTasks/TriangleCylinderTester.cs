@@ -230,37 +230,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useTriangleEdgeCase = Vector.AndNot(Vector.LessThan(Vector.Abs(faceNormalADotNormal), new Vector<float>(0.2f)), inactiveLanes);
 
             //We generate contacts according to the dominant features along the collision normal.
-            //The possible pairs are:
-            //Face A-Cap B
-            //Edge A-Cap B
-            //Face A-Side B
-            //Edge A-Side B
-
-            Vector3Wide dominantEdgeStart;
-            Vector3Wide dominantEdgeOffset;
-            if (Vector.LessThanAny(useTriangleEdgeCase, Vector<int>.Zero))
-            {
-                //At least one lane is going to use the triangle edge case.
-                //Identify the dominant edge based on alignment with the local normal.
-                Vector3Wide.Dot(edgePlaneAB, localNormal, out var abEdgeAlignment);
-                Vector3Wide.Dot(edgePlaneBC, localNormal, out var bcEdgeAlignment);
-                Vector3Wide.Dot(edgePlaneCA, localNormal, out var caEdgeAlignment);
-
-                var masx = Vector.Max(abEdgeAlignment, Vector.Max(bcEdgeAlignment, caEdgeAlignment));
-                var useAB = Vector.Equals(masx, abEdgeAlignment);
-                var useBC = Vector.Equals(masx, bcEdgeAlignment);
-
-                Vector3Wide.ConditionalSelect(useAB, triangleA, triangleC, out dominantEdgeStart);
-                Vector3Wide.ConditionalSelect(useBC, triangleB, dominantEdgeStart, out dominantEdgeStart);
-                Vector3Wide.ConditionalSelect(useAB, triangleAB, triangleCA, out dominantEdgeOffset);
-                Vector3Wide.ConditionalSelect(useBC, triangleBC, dominantEdgeOffset, out dominantEdgeOffset);
-            }
-            else
-            {
-                Unsafe.SkipInit(out dominantEdgeStart);
-                Unsafe.SkipInit(out dominantEdgeOffset);
-            }
-
             var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
 
             var useCap = Vector.AndNot(Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f)), inactiveLanes);
@@ -418,6 +387,39 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Unsafe.SkipInit(out Vector<float> depthTMax);
                 Unsafe.SkipInit(out Vector<float> cylinderTMin);
                 Unsafe.SkipInit(out Vector<float> cylinderTMax);
+
+                //At least one lane is going to use the side edge case.
+                //Identify the dominant edge based on alignment with the local normal.
+                Vector3Wide.Dot(edgePlaneAB, localNormal, out var abEdgeAlignment);
+                Vector3Wide.Dot(edgePlaneBC, localNormal, out var bcEdgeAlignment);
+                Vector3Wide.Dot(edgePlaneCA, localNormal, out var caEdgeAlignment);
+
+                var max = Vector.Max(abEdgeAlignment, Vector.Max(bcEdgeAlignment, caEdgeAlignment));
+                var abIsDominant = Vector.Equals(max, abEdgeAlignment);
+                var bcIsDominant = Vector.Equals(max, bcEdgeAlignment);
+
+                Vector3Wide.ConditionalSelect(abIsDominant, triangleA, triangleC, out var dominantEdgeStart);
+                Vector3Wide.ConditionalSelect(bcIsDominant, triangleB, dominantEdgeStart, out dominantEdgeStart);
+                Vector3Wide.ConditionalSelect(abIsDominant, triangleAB, triangleCA, out var dominantEdgeOffset);
+                Vector3Wide.ConditionalSelect(bcIsDominant, triangleBC, dominantEdgeOffset, out dominantEdgeOffset);
+
+                //If the contacts are near an edge and the cylinder side is aligned with that edge, it can lead to numerical blippyblips in contact positions.
+                //In this case, expand the contact interval for the parallel edge (so either the cylinder side endpoints or the other triangle edges will bound the interval).
+                //sin(angle between triangle edge direction and cylinder edge direction) = dot(dominantEdgeOffset, (-localNormal.Z, 0, localNormal.X)) / (||dominantEdgeOffset|| * ||(-localNormal.Z, 0, localNormal.X)||)
+                //sinAngle * (||dominantEdgeOffset|| * ||(-localNormal.Z, 0, localNormal.X)||) = dot(dominantEdgeOffset, (-localNormal.Z, 0, localNormal.X))
+                //Not concerned about sign; either way works, and we don't really care about perfectly linear interpolation... so square it.
+                //sinAngle^2 * ||dominantEdgeOffset||^2 * ||(-localNormal.Z, 0, localNormal.X)||^2 = dot(dominantEdgeOffset, (-localNormal.Z, 0, localNormal.X))^2         
+                const float lowerSinAngleThreshold = 0.01f;
+                const float upperSinAngleThreshold = 0.02f;
+                var dominantEdgeDotHorizontalNormal = dominantEdgeOffset.Z * localNormal.X - dominantEdgeOffset.X * localNormal.Z;
+                var dominantEdgeDotHorizontalNormalSquared = dominantEdgeDotHorizontalNormal * dominantEdgeDotHorizontalNormal;
+                Vector3Wide.LengthSquared(dominantEdgeOffset, out var dominantEdgeLengthSquared);
+                var horizontalNormalLengthSquared = localNormal.X * localNormal.X + localNormal.Z * localNormal.Z;
+                var interpolationScale = dominantEdgeLengthSquared * horizontalNormalLengthSquared;
+                var interpolationMin = new Vector<float>(lowerSinAngleThreshold * lowerSinAngleThreshold);
+                var inverseInterpolationSpan = new Vector<float>(1f / (upperSinAngleThreshold * upperSinAngleThreshold - lowerSinAngleThreshold * lowerSinAngleThreshold));
+                var restrictWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (dominantEdgeDotHorizontalNormalSquared / interpolationScale - interpolationMin) * inverseInterpolationSpan));
+
                 //Either triangle edge-cylinder side, or triangle face-cylinder side.
                 if (Vector.LessThanAny(useSideEdgeCase, Vector<int>.Zero))
                 {
@@ -428,21 +430,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var cylinderEdgeToDominantEdgeStartX = dominantEdgeStart.X - closestOnB.X;
                     var cylinderEdgeToDominantEdgeStartZ = dominantEdgeStart.Z - closestOnB.Z;
                     var numerator = cylinderEdgeToDominantEdgeStartX * localNormal.Z - cylinderEdgeToDominantEdgeStartZ * localNormal.X;
-                    var denominator = dominantEdgeOffset.Z * localNormal.X - dominantEdgeOffset.X * localNormal.Z;
-                    var edgeT = numerator / denominator;
-                    //sin(angle between triangle edge direction and cylinder edge direction) = dot(dominantEdgeOffset, (-localNormal.Z, 0, localNormal.X)) / (||dominantEdgeOffset|| * ||(-localNormal.Z, 0, localNormal.X)||)
-                    //sinAngle * (||dominantEdgeOffset|| * ||(-localNormal.Z, 0, localNormal.X)||) = dot(dominantEdgeOffset, (-localNormal.Z, 0, localNormal.X))
-                    //Not concerned about sign; either way works, and we don't really care about perfectly linear interpolation... so square it.
-                    //sinAngle^2 * ||dominantEdgeOffset||^2 * ||(-localNormal.Z, 0, localNormal.X)||^2 = dot(dominantEdgeOffset, (-localNormal.Z, 0, localNormal.X))^2         
-                    const float lowerSinAngleThreshold = 0.01f;
-                    const float upperSinAngleThreshold = 0.02f;
-                    var denominatorSquared = denominator * denominator;
-                    Vector3Wide.LengthSquared(dominantEdgeOffset, out var dominantEdgeLengthSquared);
-                    var horizontalNormalLengthSquared = localNormal.X * localNormal.X + localNormal.Z * localNormal.Z;
-                    var interpolationScale = dominantEdgeLengthSquared * horizontalNormalLengthSquared;
-                    var interpolationMin = new Vector<float>(lowerSinAngleThreshold * lowerSinAngleThreshold);
-                    var inverseInterpolationSpan = new Vector<float>(1f / (upperSinAngleThreshold * upperSinAngleThreshold - lowerSinAngleThreshold * lowerSinAngleThreshold));
-                    var restrictWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (denominatorSquared / interpolationScale - interpolationMin) * inverseInterpolationSpan));
+                    var edgeT = numerator / dominantEdgeDotHorizontalNormal;
 
                     //As the unrestrict weight increases, expand the interval on the triangle edge until it covers the entire cylinder edge.
                     //Past the upper bound, we no longer consider the single contact edgeT, since it will be approaching a singularity.
@@ -454,7 +442,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     cylinderTMin = tCenter - projectedExtentOffset;
                     cylinderTMax = tCenter + projectedExtentOffset;
                     //Note that the edgeT value is ignored once the denominator is small enough. Avoids division by zero propagation.
-                    var regularContribution = restrictWeight * Vector.ConditionalSelect(Vector.LessThan(denominatorSquared, interpolationMin), tCenter, edgeT);
+                    var regularContribution = restrictWeight * Vector.ConditionalSelect(Vector.LessThan(dominantEdgeDotHorizontalNormalSquared, interpolationMin), tCenter, edgeT);
                     var unrestrictWeight = Vector<float>.One - restrictWeight;
                     cylinderTMin = regularContribution + unrestrictWeight * cylinderTMin;
                     cylinderTMax = regularContribution + unrestrictWeight * cylinderTMax;
@@ -531,6 +519,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var exitAB = Vector.ConditionalSelect(exitingAB, edgeTAB, maxValue);
                     var exitBC = Vector.ConditionalSelect(exitingBC, edgeTBC, maxValue);
                     var exitCA = Vector.ConditionalSelect(exitingCA, edgeTCA, maxValue);
+
+                    //If the dominant edge is parallel with the cylinder side edge, then unrestrict the interval.
+                    //Entry T values are unrestricted to 0, exit T values are unrestricted to 1.
+                    var caIsDominant = Vector.AndNot(Vector.OnesComplement(abIsDominant), bcIsDominant);
+                    entryAB = Vector.ConditionalSelect(abIsDominant, entryAB * restrictWeight, entryAB);
+                    entryBC = Vector.ConditionalSelect(bcIsDominant, entryBC * restrictWeight, entryBC);
+                    entryCA = Vector.ConditionalSelect(caIsDominant, entryCA * restrictWeight, entryCA);
+                    var unrestrictWeight = Vector<float>.One - restrictWeight;
+                    exitAB = Vector.ConditionalSelect(abIsDominant, exitAB * restrictWeight + unrestrictWeight, exitAB);
+                    exitBC = Vector.ConditionalSelect(bcIsDominant, exitBC * restrictWeight + unrestrictWeight, exitBC);
+                    exitCA = Vector.ConditionalSelect(caIsDominant, exitCA * restrictWeight + unrestrictWeight, exitCA);
+
                     cylinderTMin = Vector.Max(entryAB, Vector.Max(entryBC, entryCA));
                     cylinderTMax = Vector.Min(exitAB, Vector.Min(exitBC, exitCA));
 
@@ -565,7 +565,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var inverseDepthDenominator = Vector<float>.One / (localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
                     depthTMin = (localNormal.X * (closestOnB.X - localOffsetB0.X) + localNormal.Z * (closestOnB.Z - localOffsetB0.Z)) * inverseDepthDenominator;
                     depthTMax = (localNormal.X * (closestOnB.X - localOffsetB1.X) + localNormal.Z * (closestOnB.Z - localOffsetB1.Z)) * inverseDepthDenominator;
-                    
+
 
                     ////At least one lane needs cylinder side-triangle face.
                     ////Intersect all three triangle edges against the cylinder side edge plane formed by the cylinder side edge and the local normal.
