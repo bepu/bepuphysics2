@@ -46,7 +46,7 @@ namespace BepuPhysics
 #endif
         }
 
-        internal void Start(object o)
+        public void Start(object o)
         {
 #if PROFILE
             Debug.Assert(!startTimeStamps.ContainsKey(o), "Cannot start a stage that has already been started.");
@@ -54,7 +54,7 @@ namespace BepuPhysics
 #endif
         }
 
-        internal void End(object o)
+        public void End(object o)
         {
 #if PROFILE
             var endTimeStamp = Stopwatch.GetTimestamp();
@@ -68,7 +68,7 @@ namespace BepuPhysics
 #endif
         }
 
-        internal void Clear()
+        public void Clear()
         {
 #if PROFILE
             Debug.Assert(startTimeStamps.Count == 0, "It's likely that some stage was left unended from the previous frame.");
