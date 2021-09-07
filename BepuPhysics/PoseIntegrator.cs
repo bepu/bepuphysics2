@@ -198,10 +198,13 @@ namespace BepuPhysics
             }
             else
             {
-                ++activity.TimestepsUnderThresholdCount;
-                if (activity.TimestepsUnderThresholdCount >= activity.MinimumTimestepsUnderThreshold)
+                if (activity.TimestepsUnderThresholdCount < byte.MaxValue)
                 {
-                    activity.SleepCandidate = true;
+                    ++activity.TimestepsUnderThresholdCount;
+                    if (activity.TimestepsUnderThresholdCount >= activity.MinimumTimestepsUnderThreshold)
+                    {
+                        activity.SleepCandidate = true;
+                    }
                 }
             }
 
