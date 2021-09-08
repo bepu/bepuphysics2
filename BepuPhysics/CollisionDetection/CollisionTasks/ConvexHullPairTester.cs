@@ -121,10 +121,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var edgeOffsetB = vertexB - previousVertexB;
                     var edgePlaneNormalB = Vector3.Cross(edgeOffsetB, slotLocalNormal);
 
-                    var latestEntryNumerator = float.MaxValue;
-                    var latestEntryDenominator = -1f;
-                    var earliestExitNumerator = float.MaxValue;
-                    var earliestExitDenominator = 1f;
+                    var latestEntry = float.MinValue;
+                    var earliestExit = float.MaxValue;
                     for (int faceVertexIndexA = 0; faceVertexIndexA < faceVertexIndicesA.Length; ++faceVertexIndexA)
                     {
                         ref var edgeA = ref cachedEdges[faceVertexIndexA];
@@ -145,28 +143,30 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
                         if (denominator < 0)
                         {
-                            if (numerator * latestEntryDenominator > latestEntryNumerator * denominator)
-                            {
-                                latestEntryNumerator = numerator;
-                                latestEntryDenominator = denominator;
-                            }
+                            //Note compare flip for denominator sign.
+                            if (numerator < latestEntry * denominator)
+                                latestEntry = numerator / denominator;
                         }
                         else if (denominator > 0)
                         {
-                            if (numerator * earliestExitDenominator < earliestExitNumerator * denominator)
+                            if (numerator < earliestExit * denominator)
+                                earliestExit = numerator / denominator;
+                        }
+                        else
+                        {
+                            if (numerator < 0)
                             {
-                                earliestExitNumerator = numerator;
-                                earliestExitDenominator = denominator;
+                                //The B edge is parallel and outside the edge A, so there can be no intersection.
+                                earliestExit = float.MinValue;
+                                latestEntry = float.MaxValue;
                             }
                         }
                     }
                     //We now have bounds on B's edge.
                     //Denominator signs are opposed; comparison flipped.
-                    if (earliestExitNumerator * latestEntryDenominator <= latestEntryNumerator * earliestExitDenominator)
+                    if (latestEntry <= earliestExit)
                     {
                         //This edge of B was actually contained in A's face. Add contacts for it.
-                        var latestEntry = latestEntryNumerator / latestEntryDenominator;
-                        var earliestExit = earliestExitNumerator / earliestExitDenominator;
                         latestEntry = latestEntry < 0 ? 0 : latestEntry;
                         earliestExit = earliestExit > 1 ? 1 : earliestExit;
                         //Create max contact if max >= min.
