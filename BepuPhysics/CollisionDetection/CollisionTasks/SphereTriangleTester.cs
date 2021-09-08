@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         /// <summary>
         /// Minimum dot product between the detected local normal and the face normal of a triangle necessary to create contacts.
         /// </summary>
-        public const float BackfaceNormalDotRejectionThreshold = 1e-7f;
+        public const float BackfaceNormalDotRejectionThreshold = -1e-2f;
 
         public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             int pairCount, out Convex1ContactManifoldWide manifold)
