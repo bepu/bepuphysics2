@@ -152,14 +152,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             if (numerator < earliestExit * denominator)
                                 earliestExit = numerator / denominator;
                         }
-                        else
+                        else if (numerator < 0)
                         {
-                            if (numerator < 0)
-                            {
-                                //The B edge is parallel and outside the edge A, so there can be no intersection.
-                                earliestExit = float.MinValue;
-                                latestEntry = float.MaxValue;
-                            }
+                            //The B edge is parallel and outside the edge A, so there can be no intersection.
+                            earliestExit = float.MinValue;
+                            latestEntry = float.MaxValue;
                         }
                     }
                     //We now have bounds on B's edge.
