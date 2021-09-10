@@ -331,7 +331,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ReadSlot(ref boxFaceNormal, slotIndex, out var slotBoxFaceNormal);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                 Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
-                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotBoxFaceNormal, slotLocalNormal, slotBoxFaceCenter, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotBoxFaceNormal, 1f / Vector3.Dot(slotBoxFaceNormal, slotLocalNormal), slotBoxFaceCenter, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                    slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
             }
             //The reduction does not assign the normal. Fill it in.

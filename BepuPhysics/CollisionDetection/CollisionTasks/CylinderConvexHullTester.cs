@@ -276,7 +276,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.ReadSlot(ref hullLocalCylinderOrientation.Z, slotIndex, out var slotCylinderFaceY);
                     Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
                     //Note that we're working on the cylinder's cap, so the parameters get flipped around. Gets pushed back onto the hull in the postpass.
-                    ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotHullFaceNormal, -slotLocalNormal, hullFaceOrigin, slotCapCenter, slotCylinderFaceX, slotCylinderFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                    ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotHullFaceNormal, -1f / Vector3.Dot(slotLocalNormal, slotHullFaceNormal), hullFaceOrigin, slotCapCenter, slotCylinderFaceX, slotCylinderFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                        slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
                 }
                 else

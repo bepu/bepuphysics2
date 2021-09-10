@@ -285,7 +285,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         public unsafe static void Reduce(ManifoldCandidateScalar* candidates, int candidateCount,
-            in Vector3 faceNormalA, in Vector3 localNormal, in Vector3 faceCenterA, in Vector3 faceCenterB, in Vector3 tangentBX, in Vector3 tangentBY,
+            in Vector3 faceNormalA, float inverseFaceNormalADotLocalNormal, in Vector3 faceCenterA, in Vector3 faceCenterB, in Vector3 tangentBX, in Vector3 tangentBY,
             float epsilonScale, float minimumDepth, in Matrix3x3 rotationToWorld, in Vector3 worldOffsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
         {
             if (candidateCount == 0)
@@ -304,7 +304,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //depth = dot(pointOnFaceB - faceCenterA, dotAxis)
             //depth = dot(faceCenterB + tangentBX * candidate.X + tangentBY * candidate.Y - faceCenterA, dotAxis)
             //depth = dot(faceCenterB - faceCenterA, dotAxis) + dot(tangentBX, dotAxis) * candidate.X + dot(tangentBY, dotAxis) * candidate.Y
-            var dotAxis = faceNormalA / Vector3.Dot(faceNormalA, localNormal);
+            var dotAxis = faceNormalA * inverseFaceNormalADotLocalNormal;
             var faceCenterAToFaceCenterB = faceCenterB - faceCenterA;
             var baseDot = Vector3.Dot(faceCenterAToFaceCenterB, dotAxis);
             var xDot = Vector3.Dot(tangentBX, dotAxis);
