@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -144,17 +145,75 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 return;
             }
 
-            var inverseTriangleNormalDotLocalNormal = Vector<float>.One / triangleNormalDotLocalNormal;
-            //To find the contact manifold, we'll clip the triangle edges against the hull face as usual, but we're dealing with potentially
-            //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
             var boundingPlaneEpsilon = 1e-3f * epsilonScale;
+            Vector3* slotHullFaceNormals = stackalloc Vector3[Vector<float>.Count];
+            Buffer<HullVertexIndex>* hullVertexIndices = stackalloc Buffer<HullVertexIndex>[Vector<float>.Count];
+            Unsafe.SkipInit(out Vector3Wide hullFaceNormal);
+            int maximumFaceVertexCount = 0;
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
             {
                 if (inactiveLanes[slotIndex] < 0)
                     continue;
                 ref var hull = ref b.Hulls[slotIndex];
-                ConvexHullTestHelper.PickRepresentativeFace(ref hull, slotIndex, ref localNormal, closestOnHull, slotOffsetIndices, ref boundingPlaneEpsilon, out var slotFaceNormal, out var slotLocalNormal, out var bestFaceIndex);
+
+                ConvexHullTestHelper.PickRepresentativeFace(ref hull, slotIndex, ref localNormal, closestOnHull, slotOffsetIndices, ref boundingPlaneEpsilon, out slotHullFaceNormals[slotIndex], out _, out var bestFaceIndex);
+                Vector3Wide.WriteSlot(slotHullFaceNormals[slotIndex], slotIndex, ref hullFaceNormal);
+                hull.GetVertexIndicesForFace(bestFaceIndex, out hullVertexIndices[slotIndex]);
+                var verticesInFace = hullVertexIndices[slotIndex].Length;
+                if (verticesInFace > maximumFaceVertexCount)
+                    maximumFaceVertexCount = verticesInFace;
+            }
+
+            Vector3Wide.Subtract(triangleA, closestOnHull, out var hullToA);
+            Vector3Wide.Subtract(triangleB, closestOnHull, out var hullToB);
+            Vector3Wide.Subtract(triangleC, closestOnHull, out var hullToC);
+            Vector3Wide.Dot(hullToA, hullFaceNormal, out var numeratorAToHullFace);
+            Vector3Wide.Dot(hullToB, hullFaceNormal, out var numeratorBToHullFace);
+            Vector3Wide.Dot(hullToC, hullFaceNormal, out var numeratorCToHullFace);
+            Vector3Wide.Dot(localNormal, hullFaceNormal, out var denominatorToHullFace);
+            var inverseDenominatorToHullFace = Vector<float>.One / denominatorToHullFace;
+            var tAToHullFace = numeratorAToHullFace * inverseDenominatorToHullFace;
+            var tBToHullFace = numeratorBToHullFace * inverseDenominatorToHullFace;
+            var tCToHullFace = numeratorCToHullFace * inverseDenominatorToHullFace;
+            Vector3Wide aOnHull, bOnHull, cOnHull;
+            aOnHull.X = triangleA.X - localNormal.X * tAToHullFace;
+            aOnHull.Y = triangleA.Y - localNormal.Y * tAToHullFace;
+            aOnHull.Z = triangleA.Z - localNormal.Z * tAToHullFace;
+            bOnHull.X = triangleB.X - localNormal.X * tBToHullFace;
+            bOnHull.Y = triangleB.Y - localNormal.Y * tBToHullFace;
+            bOnHull.Z = triangleB.Z - localNormal.Z * tBToHullFace;
+            cOnHull.X = triangleC.X - localNormal.X * tCToHullFace;
+            cOnHull.Y = triangleC.Y - localNormal.Y * tCToHullFace;
+            cOnHull.Z = triangleC.Z - localNormal.Z * tCToHullFace;
+
+            Vector3Wide.Subtract(bOnHull, aOnHull, out var abOnHull);
+            Vector3Wide.Subtract(cOnHull, bOnHull, out var bcOnHull);
+            Vector3Wide.Subtract(aOnHull, cOnHull, out var caOnHull);
+
+            //We do not generate contacts for degenerate triangles; they would have been marked as inactive in the inactiveLanes mask.
+            //So we're safe to use a triangle edge as a surface basis.
+            Vector3Wide.Normalize(triangleAB, out var triangleTangentX);
+            Vector3Wide.CrossWithoutOverlap(triangleTangentX, triangleNormal, out var triangleTangentY);
+
+            Vector3Wide.CrossWithoutOverlap(abOnHull, hullFaceNormal, out var abEdgePlaneOnHull);
+            Vector3Wide.CrossWithoutOverlap(bcOnHull, hullFaceNormal, out var bcEdgePlaneOnHull);
+            Vector3Wide.CrossWithoutOverlap(caOnHull, hullFaceNormal, out var caEdgePlaneOnHull);
+
+            var inverseTriangleNormalDotLocalNormal = Vector<float>.One / triangleNormalDotLocalNormal;
+
+            int maximumContactCount = Math.Max(6, maximumFaceVertexCount);
+            var candidates = stackalloc ManifoldCandidateScalar[maximumContactCount];
+            //To find the contact manifold, we'll clip the triangle edges against the hull face as usual, but we're dealing with potentially
+            //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
+            for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
+            {
+                if (inactiveLanes[slotIndex] < 0)
+                    continue;
+                ref var hull = ref b.Hulls[slotIndex];
+                var slotFaceNormal = slotHullFaceNormals[slotIndex];
+                Vector3Wide.ReadSlot(ref localNormal, slotIndex, out var slotLocalNormal);
+                var faceVertexIndices = hullVertexIndices[slotIndex];
 
                 //Test each triangle against the hull face by projecting the triangle onto the hull face and then intersecting the triangle edges against the hull edge planes.
                 //While iterating over hull edge planes, also test hull vertices for containment in the *triangle* edge planes to catch triangle vertex contacts.
@@ -163,41 +222,31 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ReadSlot(ref triangleB, slotIndex, out var slotTriangleB);
                 Vector3Wide.ReadSlot(ref triangleC, slotIndex, out var slotTriangleC);
                 Vector3Wide.ReadSlot(ref triangleNormal, slotIndex, out var slotTriangleNormal);
-                Vector3Wide.ReadSlot(ref closestOnHull, slotIndex, out var slotClosestOnHull);
-                var tAToHullFace = Vector3.Dot(slotTriangleA - slotClosestOnHull, slotFaceNormal) / Vector3.Dot(slotFaceNormal, slotLocalNormal);
-                var tBToHullFace = Vector3.Dot(slotTriangleB - slotClosestOnHull, slotFaceNormal) / Vector3.Dot(slotFaceNormal, slotLocalNormal);
-                var tCToHullFace = Vector3.Dot(slotTriangleC - slotClosestOnHull, slotFaceNormal) / Vector3.Dot(slotFaceNormal, slotLocalNormal);
-                var aOnHull = slotTriangleA - slotLocalNormal * tAToHullFace;
-                var bOnHull = slotTriangleB - slotLocalNormal * tBToHullFace;
-                var cOnHull = slotTriangleC - slotLocalNormal * tCToHullFace;
+                var slotInverseTriangleNormalDotLocalNormal = inverseTriangleNormalDotLocalNormal[slotIndex];
+                Vector3Wide.ReadSlot(ref aOnHull, slotIndex, out var slotAOnHull);
+                Vector3Wide.ReadSlot(ref bOnHull, slotIndex, out var slotBOnHull);
+                Vector3Wide.ReadSlot(ref cOnHull, slotIndex, out var slotCOnHull);
+                Vector3Wide.ReadSlot(ref triangleTangentX, slotIndex, out var slotTriangleTangentX);
+                Vector3Wide.ReadSlot(ref triangleTangentY, slotIndex, out var slotTriangleTangentY);
+                Vector3Wide.ReadSlot(ref abEdgePlaneOnHull, slotIndex, out var slotABEdgePlaneOnHull);
+                Vector3Wide.ReadSlot(ref bcEdgePlaneOnHull, slotIndex, out var slotBCEdgePlaneOnHull);
+                Vector3Wide.ReadSlot(ref caEdgePlaneOnHull, slotIndex, out var slotCAEdgePlaneOnHull);
 
-                //We do not generate contacts for degenerate triangles; they would have been marked as inactive in the inactiveLanes mask.
-                //So we're safe to use a triangle edge as a surface basis.
-                var triangleTangentX = Vector3.Normalize(slotTriangleB - slotTriangleA);
-                var triangleTangentY = Vector3.Cross(triangleTangentX, slotTriangleNormal);
-
-                var abOnHull = bOnHull - aOnHull;
-                var bcOnHull = cOnHull - bOnHull;
-                var caOnHull = aOnHull - cOnHull;
-                hull.GetVertexIndicesForFace(bestFaceIndex, out var faceVertexIndices);
                 var previousIndex = faceVertexIndices[faceVertexIndices.Length - 1];
                 Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var hullFaceOrigin);
                 var previousVertex = hullFaceOrigin;
                 var candidateCount = 0;
 
-                var abEdgePlaneOnHull = Vector3.Cross(abOnHull, slotFaceNormal);
-                var bcEdgePlaneOnHull = Vector3.Cross(bcOnHull, slotFaceNormal);
-                var caEdgePlaneOnHull = Vector3.Cross(caOnHull, slotFaceNormal);
-
                 float latestEntryAB = float.MinValue, earliestExitAB = float.MaxValue;
                 float latestEntryBC = float.MinValue, earliestExitBC = float.MaxValue;
                 float latestEntryCA = float.MinValue, earliestExitCA = float.MaxValue;
 
-                //TODO: would be best to hoist this out along with the rest in a wider precomputation phase.
-                int maximumContactCount = Math.Max(6, faceVertexIndices.Length);
-                var candidates = stackalloc ManifoldCandidateScalar[maximumContactCount];
-
-                var slotInverseTriangleNormalDotLocalNormal = inverseTriangleNormalDotLocalNormal[slotIndex];
+                var slotABOnHull = slotBOnHull - slotAOnHull;
+                var slotBCOnHull = slotCOnHull - slotBOnHull;
+                var slotCAOnHull = slotAOnHull - slotCOnHull;
+                var slotTriangleAB = slotTriangleB - slotTriangleA;
+                var slotTriangleBC = slotTriangleC - slotTriangleB;
+                var slotTriangleCA = slotTriangleA - slotTriangleC;
 
                 for (int i = 0; i < faceVertexIndices.Length; ++i)
                 {
@@ -207,11 +256,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var hullEdgeOffset = vertex - previousVertex;
                     previousIndex = index;
                     previousVertex = vertex;
-                    var ap = vertex - aOnHull;
-                    var bp = vertex - bOnHull;
+                    var ap = vertex - slotAOnHull;
+                    var bp = vertex - slotBOnHull;
                     //Note that the edge planes could be zero if the projected edge has zero length. In that case, containment is impossible, because the projected triangle is degenerate.
                     //So, use strict inequality.
-                    var vertexContained = Vector3.Dot(ap, abEdgePlaneOnHull) < 0 && Vector3.Dot(bp, bcEdgePlaneOnHull) < 0 && Vector3.Dot(ap, caEdgePlaneOnHull) < 0;
+                    var vertexContained = Vector3.Dot(ap, slotABEdgePlaneOnHull) < 0 && Vector3.Dot(bp, slotBCEdgePlaneOnHull) < 0 && Vector3.Dot(ap, slotCAEdgePlaneOnHull) < 0;
                     if (vertexContained && candidateCount < maximumContactCount)
                     {
                         //Project the hull vertex down to the triangle's surface. The fact that we determined the vertex was contained means the local normal isn't dangerously perpendicular.
@@ -221,8 +270,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         ref var candidate = ref candidates[newContactIndex];
                         //Use triangle.A as the surface basis origin.
                         var toVertex = projectedVertex - slotTriangleA;
-                        candidate.X = Vector3.Dot(toVertex, triangleTangentX);
-                        candidate.Y = Vector3.Dot(toVertex, triangleTangentY);
+                        candidate.X = Vector3.Dot(toVertex, slotTriangleTangentX);
+                        candidate.Y = Vector3.Dot(toVertex, slotTriangleTangentY);
                         //Vertex contacts occupy the feature indices after the edge slots.
                         candidate.FeatureId = 6 + i;
                     }
@@ -231,7 +280,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //Use the sign of the denominator to determine if a triangle edge is entering or exiting a given hull edge.
                     var hullEdgePlaneNormal = Vector3.Cross(hullEdgeOffset, slotLocalNormal);
                     var abNumerator = Vector3.Dot(ap, hullEdgePlaneNormal);
-                    var abDenominator = Vector3.Dot(hullEdgePlaneNormal, abOnHull);
+                    var abDenominator = Vector3.Dot(hullEdgePlaneNormal, slotABOnHull);
                     if (abDenominator < 0)
                     {
                         if (latestEntryAB * abDenominator > abNumerator) //Note sign flip for comparison.
@@ -252,7 +301,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         }
                     }
                     var bcNumerator = Vector3.Dot(bp, hullEdgePlaneNormal);
-                    var bcDenominator = Vector3.Dot(hullEdgePlaneNormal, bcOnHull);
+                    var bcDenominator = Vector3.Dot(hullEdgePlaneNormal, slotBCOnHull);
                     if (bcDenominator < 0)
                     {
                         if (latestEntryBC * bcDenominator > bcNumerator) //Note sign flip for comparison.
@@ -272,8 +321,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             latestEntryBC = float.MaxValue;
                         }
                     }
-                    var caNumerator = Vector3.Dot(vertex - cOnHull, hullEdgePlaneNormal);
-                    var caDenominator = Vector3.Dot(hullEdgePlaneNormal, caOnHull);
+                    var caNumerator = Vector3.Dot(vertex - slotCOnHull, hullEdgePlaneNormal);
+                    var caDenominator = Vector3.Dot(hullEdgePlaneNormal, slotCAOnHull);
                     if (caDenominator < 0)
                     {
                         if (latestEntryCA * caDenominator > caNumerator) //Note sign flip for comparison.
@@ -304,15 +353,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 earliestExitCA = MathF.Min(earliestExitCA, 1);
                 //Create max contact if max >= min.
                 //Create min if min < max and min > 0.  
-                var slotTriangleAB = slotTriangleB - slotTriangleA;
                 if (earliestExitAB >= latestEntryAB && candidateCount < maximumContactCount)
                 {
                     //Create max contact.
                     var point = slotTriangleAB * earliestExitAB; //Note triangle A is origin for surface basis.
                     var newContactIndex = candidateCount++;
                     ref var candidate = ref candidates[newContactIndex];
-                    candidate.X = Vector3.Dot(point, triangleTangentX);
-                    candidate.Y = Vector3.Dot(point, triangleTangentY);
+                    candidate.X = Vector3.Dot(point, slotTriangleTangentX);
+                    candidate.Y = Vector3.Dot(point, slotTriangleTangentY);
                     candidate.FeatureId = 0;
 
                 }
@@ -322,19 +370,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var point = slotTriangleAB * latestEntryAB; //Note triangle A is origin for surface basis.
                     var newContactIndex = candidateCount++;
                     ref var candidate = ref candidates[newContactIndex];
-                    candidate.X = Vector3.Dot(point, triangleTangentX);
-                    candidate.Y = Vector3.Dot(point, triangleTangentY);
+                    candidate.X = Vector3.Dot(point, slotTriangleTangentX);
+                    candidate.Y = Vector3.Dot(point, slotTriangleTangentY);
                     candidate.FeatureId = 1;
                 }
-                var slotTriangleBC = slotTriangleC - slotTriangleB;
                 if (earliestExitBC >= latestEntryBC && candidateCount < maximumContactCount)
                 {
                     //Create max contact.
                     var point = slotTriangleBC * earliestExitBC + slotTriangleAB;
                     var newContactIndex = candidateCount++;
                     ref var candidate = ref candidates[newContactIndex];
-                    candidate.X = Vector3.Dot(point, triangleTangentX);
-                    candidate.Y = Vector3.Dot(point, triangleTangentY);
+                    candidate.X = Vector3.Dot(point, slotTriangleTangentX);
+                    candidate.Y = Vector3.Dot(point, slotTriangleTangentY);
                     candidate.FeatureId = 2;
 
                 }
@@ -344,20 +391,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var point = slotTriangleBC * latestEntryBC + slotTriangleAB;
                     var newContactIndex = candidateCount++;
                     ref var candidate = ref candidates[newContactIndex];
-                    candidate.X = Vector3.Dot(point, triangleTangentX);
-                    candidate.Y = Vector3.Dot(point, triangleTangentY);
+                    candidate.X = Vector3.Dot(point, slotTriangleTangentX);
+                    candidate.Y = Vector3.Dot(point, slotTriangleTangentY);
                     candidate.FeatureId = 3;
                 }
-
-                var slotTriangleCA = slotTriangleA - slotTriangleC;
                 if (earliestExitCA >= latestEntryCA && candidateCount < maximumContactCount)
                 {
                     //Create max contact.
                     var point = slotTriangleCA * earliestExitCA - slotTriangleCA;
                     var newContactIndex = candidateCount++;
                     ref var candidate = ref candidates[newContactIndex];
-                    candidate.X = Vector3.Dot(point, triangleTangentX);
-                    candidate.Y = Vector3.Dot(point, triangleTangentY);
+                    candidate.X = Vector3.Dot(point, slotTriangleTangentX);
+                    candidate.Y = Vector3.Dot(point, slotTriangleTangentY);
                     candidate.FeatureId = 4;
 
                 }
@@ -367,8 +412,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var point = slotTriangleCA * latestEntryCA - slotTriangleCA;
                     var newContactIndex = candidateCount++;
                     ref var candidate = ref candidates[newContactIndex];
-                    candidate.X = Vector3.Dot(point, triangleTangentX);
-                    candidate.Y = Vector3.Dot(point, triangleTangentY);
+                    candidate.X = Vector3.Dot(point, slotTriangleTangentX);
+                    candidate.Y = Vector3.Dot(point, slotTriangleTangentY);
                     candidate.FeatureId = 5;
                 }
 
@@ -376,7 +421,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Note the potential use of an effective normal means the triangle face representative is chosen as the closest point.
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                 Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
-                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormal, -1f / Vector3.Dot(slotFaceNormal, slotLocalNormal), previousVertex, slotTriangleA, triangleTangentX, triangleTangentY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormal, -1f / Vector3.Dot(slotFaceNormal, slotLocalNormal), previousVertex, slotTriangleA, slotTriangleTangentX, slotTriangleTangentY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                    slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
             }
 
