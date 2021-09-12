@@ -12,16 +12,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public int BatchSize => 16;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ProjectOntoCap(Vector3 capCenter, Vector3 capNormal, Vector3 capTangentX, Vector3 capTangentY, float inverseLocalNormalDotCapNormal, Vector3 localNormal, Vector3 point, out Vector2 projected)
+        static void ProjectOntoCap(Vector3 capCenter, in Matrix3x3 cylinderOrientation, float inverseLocalNormalDotAY, Vector3 localNormal, Vector3 point, out Vector2 projected)
         {
             var pointToCapCenter = capCenter - point;
-            var t = Vector3.Dot(pointToCapCenter, capNormal) * inverseLocalNormalDotCapNormal;
+            var t = Vector3.Dot(pointToCapCenter, cylinderOrientation.Y) * inverseLocalNormalDotAY;
             var projectionOffsetB = localNormal * t;
             var projectedPoint = point - projectionOffsetB;
             var capCenterToProjectedPoint = projectedPoint - capCenter;
             projected = new Vector2(
-                Vector3.Dot(capCenterToProjectedPoint, capTangentX),
-                Vector3.Dot(capCenterToProjectedPoint, capTangentY));
+                Vector3.Dot(capCenterToProjectedPoint, cylinderOrientation.X),
+                Vector3.Dot(capCenterToProjectedPoint, cylinderOrientation.Z));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -122,14 +122,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(localNormal, depth, out var closestOnCylinderOffset);
             Vector3Wide.Subtract(closestOnHull, closestOnCylinderOffset, out var closestOnCylinder);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, hullLocalCylinderOrientation, out var localNormalInA);
-            //The local normal always points toward the cylinder by convention. The cap normal points outward by convention.
-            //So the dot product is always negative.
-            var inverseLocalNormalDotCapNormal = new Vector<float>(-1f) / Vector.Abs(localNormalInA.Y);
+            var inverseLocalNormalDotCapNormal = Vector<float>.One / localNormalInA.Y;
             var useCap = Vector.GreaterThan(Vector.Abs(localNormalInA.Y), new Vector<float>(0.70710678118f));
             Unsafe.SkipInit(out Vector3Wide capCenter);
-            Unsafe.SkipInit(out Vector3Wide capNormal);
-            Unsafe.SkipInit(out Vector3Wide capTangentX);
-            Unsafe.SkipInit(out Vector3Wide capTangentY);
             Unsafe.SkipInit(out Vector2Wide interior0);
             Unsafe.SkipInit(out Vector2Wide interior1);
             Unsafe.SkipInit(out Vector2Wide interior2);
@@ -139,11 +134,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var useBottom = Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero);
                 Vector3Wide.Scale(hullLocalCylinderOrientation.Y, Vector.ConditionalSelect(useBottom, -a.HalfLength, a.HalfLength), out capCenter);
                 Vector3Wide.Add(capCenter, localOffsetA, out capCenter);
-                Vector3Wide.ConditionallyNegate(useBottom, cylinderOrientation.Y, out capNormal);
-                Vector3Wide.ConditionallyNegate(useBottom, cylinderOrientation.X, out capTangentX);
-                //Vector3Wide.ConditionallyNegate(useBottom, cylinderOrientation.Z, out capTangentY);
-                //capTangentX = cylinderOrientation.X;
-                capTangentY = cylinderOrientation.Z;
 
                 Vector3Wide.Subtract(closestOnCylinder, localOffsetA, out var hullLocalCylinderToClosestOnCylinder);
                 Matrix3x3Wide.TransformByTransposedWithoutOverlap(hullLocalCylinderToClosestOnCylinder, hullLocalCylinderOrientation, out var cylinderLocalCylinderToClosestOnCylinder);
@@ -194,20 +184,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var interiorPointsX = new Vector4(interior0Slot.X[0], interior1Slot.X[0], interior2Slot.X[0], interior3Slot.X[0]);
                     var interiorPointsY = new Vector4(interior0Slot.Y[0], interior1Slot.Y[0], interior2Slot.Y[0], interior3Slot.Y[0]);
                     var slotRadius = a.Radius[slotIndex];
-                    Vector3Wide.ReadSlot(ref capNormal, slotIndex, out var slotCapNormal);
-                    Vector3Wide.ReadSlot(ref capTangentX, slotIndex, out var slotCapTangentX);
-                    Vector3Wide.ReadSlot(ref capTangentY, slotIndex, out var slotCapTangentY);
+                    Matrix3x3Wide.ReadSlot(ref hullLocalCylinderOrientation, slotIndex, out var slotCylinderOrientation);
 
                     var previousIndex = faceVertexIndices[faceVertexIndices.Length - 1];
                     Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var hullFaceOrigin);
-                    ProjectOntoCap(slotCapCenter, slotCapNormal, slotCapTangentX, slotCapTangentY, slotInverseLocalNormalDotCapNormal, slotLocalNormal, hullFaceOrigin, out var previousVertex);
+                    ProjectOntoCap(slotCapCenter, slotCylinderOrientation, slotInverseLocalNormalDotCapNormal, slotLocalNormal, hullFaceOrigin, out var previousVertex);
                     var maximumInteriorContainmentDots = Vector4.Zero;
 
                     for (int i = 0; i < faceVertexIndices.Length; ++i)
                     {
                         var index = faceVertexIndices[i];
                         Vector3Wide.ReadSlot(ref hull.Points[index.BundleIndex], index.InnerIndex, out var hullVertex);
-                        ProjectOntoCap(slotCapCenter, slotCapNormal, slotCapTangentX, slotCapTangentY, slotInverseLocalNormalDotCapNormal, slotLocalNormal, hullVertex, out var vertex);
+                        ProjectOntoCap(slotCapCenter, slotCylinderOrientation, slotInverseLocalNormalDotCapNormal, slotLocalNormal, hullVertex, out var vertex);
 
                         //Test all the cap's interior points against this edge's plane normal (which, since we've projected the vertex, is just a perp dot product).
                         var hullEdgeOffset = vertex - previousVertex;
@@ -216,10 +204,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         var hullEdgeOffsetX = new Vector4(hullEdgeOffset.X);
                         var hullEdgeOffsetY = new Vector4(hullEdgeOffset.Y);
                         var interiorPointContainmentDots = (interiorPointsX - previousStartX) * hullEdgeOffsetY - (interiorPointsY - previousStartY) * hullEdgeOffsetX;
+                        //If we're generating contacts with the bottom cap, then the visible winding of the hull is flipped and the containment signs will be negated.
+                        if (slotInverseLocalNormalDotCapNormal > 0)
+                            interiorPointContainmentDots *= -1;
                         maximumInteriorContainmentDots = Vector4.Max(interiorPointContainmentDots, maximumInteriorContainmentDots);
 
                         //Test the projected hull edge against the cap.
-                        if (false && IntersectLineCircle(previousVertex, hullEdgeOffset, slotRadius, out var tMin, out var tMax))
+                        if (IntersectLineCircle(previousVertex, hullEdgeOffset, slotRadius, out var tMin, out var tMax))
                         {
                             //We now have a convex hull edge interval. Add contacts for it.
                             //Create max contact if max >= min.
