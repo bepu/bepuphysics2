@@ -236,7 +236,7 @@ namespace BepuPhysics.CollisionDetection
             //The current quadratic scaling behavior of this reduction can be explosively bad as the count rises into the thousands.
             //Ideally we'll do https://github.com/bepu/bepuphysics2/issues/66 so this will become a nonissue.
             //Until then, attempting to reduce absurdo-manifolds is likely misguided. Better to have some bumps than a multi-second hang.
-            if (count > 1024)
+            if (count > 128)
                 return;
             //Narrow the region of interest.
             continuationTriangles.Slice(start, count, out var triangles);
