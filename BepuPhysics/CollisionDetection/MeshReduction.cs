@@ -206,7 +206,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         public unsafe static void ReduceManifolds(ref Buffer<Triangle> continuationTriangles, ref Buffer<NonconvexReductionChild> continuationChildren, int start, int count,
-           bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation, BufferPool pool)
+           bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation)
         {
             //Before handing responsibility off to the nonconvex reduction, make sure that no contacts create nasty 'bumps' at the border of triangles.
             //Bumps can occur when an isolated triangle test detects a contact pointing outward, like when a box hits the side. This is fine when the triangle truly is isolated,
@@ -232,23 +232,20 @@ namespace BepuPhysics.CollisionDetection
             //You could sacrifice a little bit of reduction quality for faster contact correction (since reduction outputs a low fixed number of contacts), but
             //we should only pursue that if contact correction is a meaningful cost.
 
+            //Note that we don't bother performing any reduction on pairs that have pathological numbers of triangles.
+            //The current quadratic scaling behavior of this reduction can be explosively bad as the count rises into the thousands.
+            //Ideally we'll do https://github.com/bepu/bepuphysics2/issues/66 so this will become a nonissue.
+            //Until then, attempting to reduce absurdo-manifolds is likely misguided. Better to have some bumps than a multi-second hang.
+            if (count > 1024)
+                return;
             //Narrow the region of interest.
             continuationTriangles.Slice(start, count, out var triangles);
             continuationChildren.Slice(start, count, out var children);
             //Allocate enough space for all potential triangles, even though we're only going to be enumerating over the subset which actually have contacts.
+            //Note that the count is limited by the above early-out; there are limits to how much this can allocate on the stack.
             int activeChildCount = 0;
-            Buffer<TestTriangle> activeTriangles;
-            //Avoid a stack explosion in pathological cases. They can happen!
-            const int heapAllocateThreshold = 1024;
-            if (count > heapAllocateThreshold)
-            {
-                pool.Take(count, out activeTriangles);
-            }
-            else
-            {
-                var memory = stackalloc TestTriangle[count];
-                activeTriangles = new Buffer<TestTriangle>(memory, count);
-            }
+            var memory = stackalloc TestTriangle[count];
+            var activeTriangles = new Buffer<TestTriangle>(memory, count);
             for (int i = 0; i < count; ++i)
             {
                 if (children[i].Manifold.Count > 0)
@@ -365,14 +362,8 @@ namespace BepuPhysics.CollisionDetection
                             //The manifold has zero or negative depth; it's clearly not a case where a shape is wedged between triangles. Just get rid of it.
                             manifold.Count = 0;
                         }
-
-
                     }
                 }
-            }
-            if (count > heapAllocateThreshold)
-            {
-                pool.Return(ref activeTriangles);
             }
         }
 
@@ -385,7 +376,7 @@ namespace BepuPhysics.CollisionDetection
                 Matrix3x3.CreateFromQuaternion(MeshOrientation, out var meshOrientation);
                 Matrix3x3.Transpose(meshOrientation, out var meshInverseOrientation);
 
-                ReduceManifolds(ref Triangles, ref Inner.Children, 0, Inner.ChildCount, RequiresFlip, QueryBounds, meshOrientation, meshInverseOrientation, batcher.Pool);
+                ReduceManifolds(ref Triangles, ref Inner.Children, 0, Inner.ChildCount, RequiresFlip, QueryBounds, meshOrientation, meshInverseOrientation);
 
                 //Now that boundary smoothing analysis is done, we no longer need the triangle list.
                 batcher.Pool.Return(ref Triangles);
