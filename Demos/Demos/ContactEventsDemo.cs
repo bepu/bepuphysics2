@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using BepuPhysics.Constraints;
 using System.Diagnostics;
 using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace Demos.Demos
 {
@@ -35,6 +36,7 @@ namespace Demos.Demos
     //Solving the constraints associated with speculative contacts could end up bouncing an object off a surface between two collision detection runs that both show negative depth.
     //7) There are other ways of pulling contact data. For example, check out the SolverContactEnumerationDemo which pulls data from the solver constraints created from contacts.
     //Pulling accumulated impulses from the solver is one way to never miss an actual collision; if the contact constraints applied any force, then there must have been an impact.
+    //8) Pairs involving two sleeping bodies will not generate events. That means OnTouching and OnPairUpdated will not fire for sleeping pairs.
 
     /// <summary>
     /// Implements handlers for various collision events.
@@ -151,6 +153,7 @@ namespace Demos.Demos
     public unsafe class ContactEvents : IDisposable
     {
         //To know what events to emit, we have to track the previous state of a collision. We don't need to keep around old positions/offets/normals/depths, so it's quite a bit lighter.
+        [StructLayout(LayoutKind.Sequential)]
         struct PreviousCollision
         {
             public CollidableReference Collidable;
@@ -185,6 +188,7 @@ namespace Demos.Demos
         struct Listener
         {
             public CollidableReference Source;
+            public bool WasAwake;
             public IContactEventHandler Handler;
             public QuickList<PreviousCollision> PreviousCollisions;
         }
@@ -357,6 +361,18 @@ namespace Demos.Demos
                 var listenerIndex = listenerIndices[source];
                 //This collidable is registered. Is the opposing collidable present?
                 ref var listener = ref listeners[listenerIndex];
+
+                //If this listener is sleeping or static and is getting HandleManifoldForCollidable called on it, it means that there's an active body interacting with it.
+                //That doesn't mean the listener is active *yet*- all other pairs that are only between sleeping bodies and/or statics will not receive any updates.
+                //We don't want those to be considered 'stale' by the postpass for a lack of updating, so we store a note that this listener was sleeping.
+                //That's necessary because if contacts constraints are allowed, the listener's going to be woken up.
+
+                //(There's a risk of thread access contention here. Not wonderfully ideal, but for the purposes of the demo, it's simpler to do this than 
+                //to introduce another phase which checks sleeping status as a prepass.)
+                var awake = listener.Source.Mobility != CollidableMobility.Static && simulation.Bodies.GetBodyReference(listener.Source.BodyHandle).Awake;
+                if (awake != listener.WasAwake)
+                    listener.WasAwake = awake;
+
                 int previousCollisionIndex = -1;
                 bool isTouching = false;
                 for (int i = 0; i < listener.PreviousCollisions.Count; ++i)
@@ -478,17 +494,20 @@ namespace Demos.Demos
             for (int i = 0; i < listenerCount; ++i)
             {
                 ref var listener = ref listeners[i];
-                //Pairs involved with inactive bodies do not need to be checked for freshness. If we did, it would result in inactive manifolds being considered a removal, and 
-                //more contact added events would fire when the bodies woke up.
-                if (listener.Source.Mobility != CollidableMobility.Static && simulation.Bodies.HandleToLocation[listener.Source.BodyHandle.Value].SetIndex > 0)
-                    continue;
+                //If the listener fell asleep at the start of the frame and didn't get woken up, then it wouldn't have been informed that is now asleep, so we'll check for that here.
+                if (listener.WasAwake)
+                    listener.WasAwake = listener.Source.Mobility == CollidableMobility.Static || simulation.Bodies.HandleToLocation[listener.Source.BodyHandle.Value].SetIndex == 0;
                 //Note reverse order. We remove during iteration.
                 for (int j = listener.PreviousCollisions.Count - 1; j >= 0; --j)
                 {
                     ref var collision = ref listener.PreviousCollisions[j];
-                    //Again, any pair involving inactive bodies does not need to be examined.
-                    if (collision.Collidable.Mobility != CollidableMobility.Static && simulation.Bodies.HandleToLocation[collision.Collidable.BodyHandle.Value].SetIndex > 0)
+                    //At least one of the two bodies in a pair must have been awake to warrant examination.
+                    //Pairs involved with only inactive bodies or statics do not need to be checked for freshness. If we did, it would result in inactive manifolds being considered a removal, and 
+                    //more contact added events would fire when the bodies woke up.
+                    if (!listener.WasAwake && (collision.Collidable.Mobility == CollidableMobility.Static || simulation.Bodies.HandleToLocation[collision.Collidable.BodyHandle.Value].SetIndex > 0))
+                    {
                         continue;
+                    }
                     if (!collision.Fresh)
                     {
                         var pair = new CollidablePair(listener.Source, collision.Collidable);
@@ -665,10 +684,11 @@ namespace Demos.Demos
             eventHandler = new EventHandler(Simulation, BufferPool);
 
             var listenedBody1 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 5, 0), 1, Simulation.Shapes, new Box(1, 2, 3)));
-            events.Register(new CollidableReference(CollidableMobility.Dynamic, listenedBody1), eventHandler);
+            events.Register(Simulation.Bodies.GetBodyReference(listenedBody1).CollidableReference, eventHandler);
 
             var listenedBody2 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0.5f, 10, 0), 1, Simulation.Shapes, new Capsule(0.25f, 0.7f)));
-            events.Register(new CollidableReference(CollidableMobility.Dynamic, listenedBody2), eventHandler);
+            events.Register(Simulation.Bodies.GetBodyReference(listenedBody2).CollidableReference, eventHandler);
+
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 1, 30)), 0.04f)));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 3, 15), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 5, 1)), 0.04f)));
