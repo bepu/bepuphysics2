@@ -335,7 +335,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //If the local normal points against the triangle normal, then it's on the backside and should not collide.
             Vector3Wide.Dot(localNormal, triangleNormal, out var normalDot);
-            var allowContacts = Vector.GreaterThanOrEqual(normalDot, new Vector<float>(SphereTriangleTester.BackfaceNormalDotRejectionThreshold));
+            ManifoldCandidateHelper.CreateActiveMask(pairCount, out var activeLanes);
+            var allowContacts = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(normalDot, new Vector<float>(SphereTriangleTester.BackfaceNormalDotRejectionThreshold)), activeLanes);
             if (Vector.EqualsAll(allowContacts, Vector<int>.Zero))
             {
                 //All lanes are inactive; early out.
