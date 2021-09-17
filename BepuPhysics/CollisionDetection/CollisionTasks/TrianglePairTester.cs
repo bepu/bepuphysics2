@@ -116,6 +116,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var validVelocity = Vector.GreaterThan(Vector.Abs(velocity), new Vector<float>(1e-10f));
             entry = Vector.ConditionalSelect(Vector.BitwiseAnd(validVelocity, isEntry), t, new Vector<float>(float.MinValue));
             exit = Vector.ConditionalSelect(Vector.AndNot(validVelocity, isEntry), t, new Vector<float>(float.MaxValue));
+
+            //var minValue = new Vector<float>(float.MinValue);
+            //var maxValue = new Vector<float>(float.MaxValue);
+            //entry = Vector.ConditionalSelect(isEntry, t, minValue);
+            //exit = Vector.ConditionalSelect(isEntry, maxValue, t);
+            ////If the edges are parallel and the edge is outside the plane, then this edge can't contribute.
+            //var edgeParallelAndOutside = Vector.BitwiseAnd(Vector.GreaterThan(edgePlaneNormalDot, Vector<float>.Zero), Vector.LessThan(Vector.Abs(velocity), new Vector<float>(1e-14f)));
+            //entry = Vector.ConditionalSelect(edgeParallelAndOutside, maxValue, entry);
+            //exit = Vector.ConditionalSelect(edgeParallelAndOutside, minValue, exit);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -257,11 +266,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector3Wide.Dot(localNormal, faceNormalA, out var localNormalDotFaceNormalA);
             Vector3Wide.Dot(localNormal, faceNormalB, out var localNormalDotFaceNormalB);
-            //We're going to avoid generating contacts for triangles with normals very near 90 degrees off from the collision normal.
-            //This helps avoid some numerical issues, although it does introduce a quirk- a dotThreshold of 1e-4f corresponds to no collisions being generated within the last degree or so away from the face normal (roughly).
-            //An edge with an angle smaller than this simply won't generate contacts.
-            const float dotThreshold = 1e-4f;
-            var allowContacts = Vector.BitwiseAnd(Vector.LessThan(localNormalDotFaceNormalA, new Vector<float>(-dotThreshold)), Vector.GreaterThan(localNormalDotFaceNormalB, new Vector<float>(dotThreshold)));
+            ManifoldCandidateHelper.CreateActiveMask(pairCount, out var activeLanes);
+            var allowContacts = Vector.BitwiseAnd(activeLanes, Vector.BitwiseAnd(
+                Vector.LessThan(localNormalDotFaceNormalA, new Vector<float>(-SphereTriangleTester.BackfaceNormalDotRejectionThreshold)),
+                Vector.GreaterThan(localNormalDotFaceNormalB, new Vector<float>(SphereTriangleTester.BackfaceNormalDotRejectionThreshold))));
             if (Vector.EqualsAll(allowContacts, Vector<int>.Zero))
             {
                 manifold.Contact0Exists = default;
@@ -274,10 +282,39 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //At this point, we have computed the minimum depth and associated local normal.
             //We now need to compute some contact locations, their per-contact depths, and the feature ids.
 
-            //Contact generation always assumes face-face clipping. Other forms of contact generation are just special cases of face-face, and since we pay
-            //for all code paths, there's no point in handling them separately.            
+            //Flatten both triangles onto a plane with normal equal to the detected local normal to perform clipping.
+            //Note that the final result does not depend on the orientation of the flattening basis, so we can just use the orthonormal builder.
+            Helpers.BuildOrthonormalBasis(localNormal, out var flattenX, out var flattenY);
+            Vector2Wide flatVertexAOnA, flatVertexBOnA, flatVertexCOnA;
+            Vector2Wide flatVertexAOnB, flatVertexBOnB, flatVertexCOnB;
+            Vector3Wide.Dot(a.A, flattenX, out flatVertexAOnA.X);
+            Vector3Wide.Dot(a.A, flattenY, out flatVertexAOnA.Y);
+            Vector3Wide.Dot(a.B, flattenX, out flatVertexBOnA.X);
+            Vector3Wide.Dot(a.B, flattenY, out flatVertexBOnA.Y);
+            Vector3Wide.Dot(a.C, flattenX, out flatVertexCOnA.X);
+            Vector3Wide.Dot(a.C, flattenY, out flatVertexCOnA.Y);
+            Vector3Wide.Dot(bA, flattenX, out flatVertexAOnB.X);
+            Vector3Wide.Dot(bA, flattenY, out flatVertexAOnB.Y);
+            Vector3Wide.Dot(bB, flattenX, out flatVertexBOnB.X);
+            Vector3Wide.Dot(bB, flattenY, out flatVertexBOnB.Y);
+            Vector3Wide.Dot(bC, flattenX, out flatVertexCOnB.X);
+            Vector3Wide.Dot(bC, flattenY, out flatVertexCOnB.Y);
 
-            //We will be working on the surface of the triangle, but we'd still like a 2d parameterization of the surface for contact reduction.
+            Vector2Wide.Subtract(flatVertexBOnB, flatVertexAOnB, out var flatEdgeABOnB);
+            Vector2Wide.Subtract(flatVertexCOnB, flatVertexBOnB, out var flatEdgeBCOnB);
+            Vector2Wide.Subtract(flatVertexAOnB, flatVertexCOnB, out var flatEdgeCAOnB);
+
+            var edgeThreshold = new Vector<float>(0.2f);
+            var useEdgeCaseForA = Vector.LessThan(Vector.Abs(localNormalDotFaceNormalA), edgeThreshold);
+            var useEdgeCaseForB = Vector.LessThan(Vector.Abs(localNormalDotFaceNormalB), edgeThreshold);
+            var useFaceCaseForA = Vector.OnesComplement(useEdgeCaseForA);
+            var useFaceCaseForB = Vector.OnesComplement(useEdgeCaseForB);
+            useEdgeCaseForA = Vector.BitwiseAnd(allowContacts, useEdgeCaseForA);
+            useEdgeCaseForB = Vector.BitwiseAnd(allowContacts, useEdgeCaseForB);
+            useFaceCaseForA = Vector.BitwiseAnd(allowContacts, useFaceCaseForA);
+            useFaceCaseForB = Vector.BitwiseAnd(allowContacts, useFaceCaseForB);
+
+            //We will be working on the surface of triangleB, but we'd still like a 2d parameterization of the surface for contact reduction.
             //So, we'll create tangent axes from the edge and edge x normal.
             Vector3Wide.LengthSquared(abB, out var abBLengthSquared);
             Vector3Wide.Scale(abB, Vector<float>.One / Vector.SquareRoot(abBLengthSquared), out var tangentBX);
@@ -285,23 +322,29 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Note that we only allocate up to 6 candidates. Each triangle edge can contribute at most two contacts (any more would require a nonconvex clip region).
             //Numerical issues can cause more to occur, but they're guarded against (both directly, and in the sense of checking count before adding any candidates beyond the sixth).
-            int byteCount = Unsafe.SizeOf<ManifoldCandidate>() * 6;
-            var buffer = stackalloc byte[byteCount];
+            var buffer = stackalloc ManifoldCandidate[6];
             var candidateCount = Vector<int>.Zero;
-            ref var candidates = ref Unsafe.As<byte, ManifoldCandidate>(ref *buffer);
+            ref var candidates = ref *buffer;
 
-            //While the edge clipping will find any edge-edge or aVertex-bFace contacts, it will not find bVertex-aFace contacts.
-            //Add them independently.
-            //(Adding these first allows us to simply skip capacity tests, since there can only be a total of three bVertex-aFace contacts.)
-            //Note that division by zero is protected by allowContacts.
-            var inverseContactNormalDotFaceNormalB = Vector<float>.One / localNormalDotFaceNormalB;
-            Vector3Wide.CrossWithoutOverlap(abB, localNormal, out var edgeABPlaneNormalB);
-            Vector3Wide.CrossWithoutOverlap(bcB, localNormal, out var edgeBCPlaneNormalB);
-            Vector3Wide.CrossWithoutOverlap(caB, localNormal, out var edgeCAPlaneNormalB);
-            TryAddTriangleAVertex(a.A, Vector<int>.Zero, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, allowContacts, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
-            TryAddTriangleAVertex(a.B, Vector<int>.One, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, allowContacts, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
-            TryAddTriangleAVertex(a.C, new Vector<int>(2), tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, allowContacts, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
 
+            if (Vector.LessThanAny(useFaceCaseForB, Vector<int>.Zero))
+            {
+                //While the edge clipping will find any edge-edge or aVertex-bFace contacts, it will not find bVertex-aFace contacts.
+                //Add them independently.
+                //(Adding these first allows us to simply skip capacity tests, since there can only be a total of three bVertex-aFace contacts.)
+                //Note that division by zero is protected by useFaceCaseForB. These contacts aren't relevant for the edge case anyway.
+                var inverseContactNormalDotFaceNormalB = Vector<float>.One / localNormalDotFaceNormalB;
+                TryAddTriangleAVertex(a.A, Vector<int>.Zero, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, flatEdgeABOnB, flatEdgeBCOnB, flatEdgeCAOnB, flatVertexAOnB, flatVertexBOnB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
+                TryAddTriangleAVertex(a.B, Vector<int>.One, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, flatEdgeABOnB, flatEdgeBCOnB, flatEdgeCAOnB, flatVertexAOnB, flatVertexBOnB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
+                TryAddTriangleAVertex(a.C, new Vector<int>(2), tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, flatEdgeABOnB, flatEdgeBCOnB, flatEdgeCAOnB, flatVertexAOnB, flatVertexBOnB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
+
+                Vector3Wide.CrossWithoutOverlap(abB, localNormal, out var edgeABPlaneNormalB);
+                Vector3Wide.CrossWithoutOverlap(bcB, localNormal, out var edgeBCPlaneNormalB);
+                Vector3Wide.CrossWithoutOverlap(caB, localNormal, out var edgeCAPlaneNormalB);
+                TryAddTriangleAVertex(a.A, Vector<int>.Zero, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
+                TryAddTriangleAVertex(a.B, Vector<int>.One, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
+                TryAddTriangleAVertex(a.C, new Vector<int>(2), tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
+            }
             //Note that edge cases will also add triangle A vertices that are within triangle B's bounds, so no A vertex case is required.
             //Note that each of these calls can generate 4 contacts, so we have to start checking capacities.
 
@@ -313,19 +356,65 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.Max(abALengthSquared, caALengthSquared),
                 Vector.Max(abBLengthSquared, caBLengthSquared)));
             var edgeEpsilon = new Vector<float>(1e-5f) * epsilonScale;
-            var exitIdOffset = new Vector<int>(3);
+            var three = new Vector<int>(3);
             //Note the use of localNormal here, NOT faceNormalA. Why? Just like in the vertexA case, we're not creating contacts in triangle A's face voronoi region.
             //Instead, the test region is skewed along the contact normal. These planes intersect A's edges and have the contact normal as a tangent.
-            //This avoids dependency on pair order (consider what happens when A and B swap) and produces nicer contacts in corner cases (consider two near perpendicular triangles).
-            Vector3Wide.CrossWithoutOverlap(localNormal, abA, out var edgeABPlaneNormalA);
-            Vector3Wide.CrossWithoutOverlap(localNormal, bcA, out var edgeBCPlaneNormalA);
-            Vector3Wide.CrossWithoutOverlap(localNormal, caA, out var edgeCAPlaneNormalA);
-            ClipBEdgeAgainstABounds(edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, abB, bA, new Vector<int>(3), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, allowContacts, ref candidates, ref candidateCount, pairCount);
-            ClipBEdgeAgainstABounds(edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, bcB, bB, new Vector<int>(4), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, allowContacts, ref candidates, ref candidateCount, pairCount);
-            ClipBEdgeAgainstABounds(edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, caB, bC, new Vector<int>(5), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, allowContacts, ref candidates, ref candidateCount, pairCount);
+            //This avoids dependency on pair order (consider what happens when A and B swap).
+            var stillCouldUseClippingContacts = Vector.LessThan(candidateCount, three);
+            var clipBEdgesAgainstABounds = Vector.BitwiseAnd(useFaceCaseForA, stillCouldUseClippingContacts);
+            var useEdgeAContacts = Vector.BitwiseAnd(useEdgeCaseForA, stillCouldUseClippingContacts);
+            if (Vector.LessThanAny(clipBEdgesAgainstABounds, Vector<int>.Zero))
+            {
+                //At least one lane may need edge clipped contacts.
+                //Note that this is only used when A projected onto B is not degenerate (A face normal is not perpendicular to local normal).
+                Vector3Wide.CrossWithoutOverlap(localNormal, abA, out var edgeABPlaneNormalA);
+                Vector3Wide.CrossWithoutOverlap(localNormal, bcA, out var edgeBCPlaneNormalA);
+                Vector3Wide.CrossWithoutOverlap(localNormal, caA, out var edgeCAPlaneNormalA);
+                ClipBEdgeAgainstABounds(edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, abB, bA, new Vector<int>(3), three, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, clipBEdgesAgainstABounds, ref candidates, ref candidateCount, pairCount);
+                ClipBEdgeAgainstABounds(edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, bcB, bB, new Vector<int>(4), three, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, clipBEdgesAgainstABounds, ref candidates, ref candidateCount, pairCount);
+                ClipBEdgeAgainstABounds(edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, caB, bC, new Vector<int>(5), three, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, clipBEdgesAgainstABounds, ref candidates, ref candidateCount, pairCount);
+            }
+            else if (Vector.LessThanAny(useEdgeAContacts, Vector<int>.Zero))
+            {
+                //At least one lane has a triangle A with a face normal approaching perpendicular with the local normal.
+                //Attempting to do the usual edge clipping routine is in danger of failing if the projected triangle A goes degenerate.
+                //For these lanes, note that there is no need to try to find vertex contacts from triangle B- we know that they aren't important, since the contact normal is so far away from the face normal of A.
+                //So we can simply intersect the dominant edge of A with 
+            }
 
-            Vector3Wide.Subtract(localTriangleCenterA, localTriangleCenterB, out var faceCenterBToFaceCenterA);
-            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, faceNormalA, Vector<float>.One / localNormalDotFaceNormalA, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin, pairCount,
+            Vector3Wide featureNormalA;
+            Vector3Wide pointOnFeatureA;
+            Vector<float> localNormalDotFeatureNormalA;
+            if (Vector.LessThanAny(useEdgeCaseForA, Vector<int>.Zero))
+            {
+                //At least one lane needs to use a non-face feature for the reduction feature normal.
+                //Since we should only be generating contacts on the edge, the local normal is actually acceptable.
+                //(Any plane with a normal that is not perpendicular with the local normal, and with a plane offset that passes through the feature point, would suffice.)
+                //Choose the point on the feature by just taking the extreme vertex of triangle A.
+                //Note that vertex case is just a special case here and is handled transparently.
+                Vector3Wide.Dot(localNormal, a.A, out var aDot);
+                Vector3Wide.Dot(localNormal, a.B, out var bDot);
+                Vector3Wide.Dot(localNormal, a.C, out var cDot);
+                var minDot = Vector.Min(aDot, Vector.Min(bDot, cDot));
+                var useA = Vector.Equals(aDot, minDot);
+                var useB = Vector.AndNot(Vector.Equals(bDot, minDot), useA);
+                Vector3Wide.ConditionalSelect(useA, a.A, a.C, out var pointOnEdgeA);
+                Vector3Wide.ConditionalSelect(useB, a.B, pointOnEdgeA, out pointOnEdgeA);
+
+                Vector3Wide.ConditionalSelect(useEdgeCaseForA, localNormal, faceNormalA, out featureNormalA);
+                Vector3Wide.ConditionalSelect(useEdgeCaseForA, pointOnEdgeA, localTriangleCenterA, out pointOnFeatureA);
+                localNormalDotFeatureNormalA = Vector.ConditionalSelect(useEdgeCaseForA, Vector<float>.One, localNormalDotFaceNormalA);
+            }
+            else
+            {
+                //All lanes are okay to use the triangle face normal.
+                pointOnFeatureA = localTriangleCenterA;
+                featureNormalA = faceNormalA;
+                localNormalDotFeatureNormalA = localNormalDotFaceNormalA;
+            }
+
+            Vector3Wide.Subtract(pointOnFeatureA, localTriangleCenterB, out var faceCenterBToFaceCenterA);
+            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, featureNormalA, Vector<float>.One / localNormalDotFeatureNormalA, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin, pairCount,
                 out var contact0, out var contact1, out var contact2, out var contact3,
                 out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
