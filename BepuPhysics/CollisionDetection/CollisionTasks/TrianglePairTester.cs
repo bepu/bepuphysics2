@@ -67,7 +67,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         private static void TryAddTriangleAVertex(in Vector3Wide vertex, in Vector2Wide flattenedVertex, in Vector<int> vertexId,
             in Vector3Wide tangentBX, in Vector3Wide tangentBY, in Vector3Wide triangleCenterB, in Vector3Wide contactNormal, in Vector3Wide faceNormalB,
             in Vector2Wide edgeAB, in Vector2Wide edgeBC, in Vector2Wide edgeCA, in Vector2Wide bA, in Vector2Wide bB,
-            in Vector<int> allowContacts, in Vector<float> inverseContactNormalDotFaceNormalB,
+            in Vector<int> allowContacts, in Vector<float> inverseContactNormalDotFaceNormalB, in Vector<float> minimumDepth,
             ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
         {
             //Test edge edge plane sign for all three edges of B. We can test the vertex directly rather than the unprojected vertex because the ray cast follows the contact normal,
@@ -91,20 +91,23 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //t = (vertexOnA - triangleCenterB) * faceNormalB / (contactNormal * faceNormalB)
             Vector3Wide.Subtract(triangleCenterB, vertex, out var offset);
             Vector3Wide.Dot(offset, faceNormalB, out var distance);
-            var t = distance * inverseContactNormalDotFaceNormalB;
-            Vector3Wide.Scale(contactNormal, t, out var unprojectedVertex);
+            Unsafe.SkipInit(out ManifoldCandidate candidate);
+            candidate.Depth = distance * inverseContactNormalDotFaceNormalB;
+            Vector3Wide.Scale(contactNormal, candidate.Depth, out var unprojectedVertex);
             Vector3Wide.Add(unprojectedVertex, vertex, out unprojectedVertex);
 
-            Unsafe.SkipInit(out ManifoldCandidate candidate);
             Vector3Wide.Subtract(unprojectedVertex, triangleCenterB, out var offsetOnB);
             Vector3Wide.Dot(offsetOnB, tangentBX, out candidate.X);
             Vector3Wide.Dot(offsetOnB, tangentBY, out candidate.Y);
             candidate.FeatureId = vertexId;
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, Vector.BitwiseAnd(allowContacts, contained), pairCount);
+            ManifoldCandidateHelper.AddCandidateWithDepth(ref candidates, ref candidateCount, candidate, Vector.BitwiseAnd(Vector.GreaterThanOrEqual(candidate.Depth, minimumDepth), Vector.BitwiseAnd(allowContacts, contained)), pairCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ClipEdge(in Vector2Wide edgeStartB, in Vector2Wide edgeOffsetB, in Vector2Wide edgeStartA, in Vector2Wide edgeOffsetA, in Vector<float> edgeLengthSquaredA, out Vector<float> entry, out Vector<float> exit)
+        private static void ClipEdge(
+            in Vector2Wide edgeStartB, in Vector2Wide edgeOffsetB,
+            in Vector2Wide edgeStartA, in Vector2Wide edgeOffsetA, in Vector<float> inverseEdgeLengthSquaredA, in Vector<float> edgeStartADotNormal, in Vector<float> edgeOffsetADotNormal,
+            out Vector<int> intersectionExists, out Vector<float> tB, out Vector<float> depthContributionA)
         {
             //The edge plane normal points toward the inside of the bounding triangle.
             //intersection = dot(planeNormal, pointOnPlane - edgeStart) / dot(planeNormal, edgeDirectionB)
@@ -113,15 +116,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var parallelThreshold = new Vector<float>(1e-20f);
             var parallel = Vector.LessThan(Vector.Abs(velocity), parallelThreshold);
             var denominator = Vector.ConditionalSelect(parallel, Vector.ConditionalSelect(Vector.LessThan(velocity, Vector<float>.Zero), -parallelThreshold, parallelThreshold), velocity);
-            var tB = edgePlaneNormalDot / denominator;
-            var isEntry = Vector.GreaterThanOrEqual(velocity, Vector<float>.Zero);
-            //The intersection is only valid if the intersection occurs within edge A's interval.
+            tB = edgePlaneNormalDot / denominator;
+            //To be valid, an intersection must be within both edge bounds.
             var intersectionPointX = tB * edgeOffsetB.X + edgeStartB.X;
             var intersectionPointY = tB * edgeOffsetB.Y + edgeStartB.Y;
-            var tA = (intersectionPointX - edgeStartA.X) * edgeOffsetA.X + (intersectionPointY - edgeStartA.Y) * edgeOffsetA.Y;
-            var intersectionValid = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(tA, Vector<float>.Zero), Vector.LessThanOrEqual(tA, edgeLengthSquaredA));
-            entry = Vector.ConditionalSelect(Vector.BitwiseAnd(intersectionValid, isEntry), tB, new Vector<float>(float.MinValue));
-            exit = Vector.ConditionalSelect(Vector.AndNot(intersectionValid, isEntry), tB, new Vector<float>(float.MaxValue));
+            var tA = ((intersectionPointX - edgeStartA.X) * edgeOffsetA.X + (intersectionPointY - edgeStartA.Y) * edgeOffsetA.Y) * inverseEdgeLengthSquaredA;
+            intersectionExists = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(tA, Vector<float>.Zero), Vector.LessThanOrEqual(tA, Vector<float>.One));
+            depthContributionA = edgeStartADotNormal + edgeOffsetADotNormal * tA;
 
 
             //var minValue = new Vector<float>(float.MinValue);
@@ -135,29 +136,52 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ClipBEdgeAgainstABounds(
+        private static void ClipBEdgeAgainstABounds( //maybe we should have.. MORE parameters
              in Vector2Wide aA, in Vector2Wide aB, in Vector2Wide aC,
              in Vector2Wide edgeOffsetABOnA, in Vector2Wide edgeOffsetBCOnA, in Vector2Wide edgeOffsetCAOnA,
-             in Vector<float> edgeOffsetABOnALengthSquared, in Vector<float> edgeOffsetBCOnALengthSquared, in Vector<float> edgeOffsetCAOnALengthSquared,
+             in Vector<float> inverseEdgeOffsetABOnALengthSquared, in Vector<float> inverseEdgeOffsetBCOnALengthSquared, in Vector<float> inverseEdgeOffsetCAOnALengthSquared,
+             in Vector<float> aDotNormalOnA, in Vector<float> bDotNormalOnA, in Vector<float> cDotNormalOnA,
+             in Vector<float> abDotNormalOnA, in Vector<float> bcDotNormalOnA, in Vector<float> caDotNormalOnA,
              in Vector2Wide flatEdgeStartB, in Vector2Wide flatEdgeOffsetB, in Vector3Wide edgeStartB, in Vector3Wide edgeOffsetB,
              in Vector<int> entryId, in Vector<int> exitIdOffset,
              in Vector3Wide triangleCenterB, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
-             Vector<int> allowContacts, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
+             in Vector3Wide localNormal, in Vector<float> minimumDepth, Vector<int> allowContacts, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
         {
             //The base id is the id of the vertex in the corner along the negative boxEdgeDirection and boxEdgeCenterOffsetDirection.
             //The edgeDirectionId is the amount to add when you move along the boxEdgeDirection to the other vertex.
             //The edgeCenterOffsetId is the amount to add when you move along the boxEdgeCenterOffsetDirection to the other vertex.
             //We have three edge planes created by the edges of triangle A.
             //We want to test the triangle B edge against all three of the edges.
-            ClipEdge(flatEdgeStartB, flatEdgeOffsetB, aA, edgeOffsetABOnA, edgeOffsetABOnALengthSquared, out var entryAB, out var exitAB);
-            ClipEdge(flatEdgeStartB, flatEdgeOffsetB, aB, edgeOffsetBCOnA, edgeOffsetBCOnALengthSquared, out var entryBC, out var exitBC);
-            ClipEdge(flatEdgeStartB, flatEdgeOffsetB, aC, edgeOffsetCAOnA, edgeOffsetCAOnALengthSquared, out var entryCA, out var exitCA);
-            var entry = Vector.Max(entryAB, Vector.Max(entryBC, entryCA));
-            var exit = Vector.Min(exitAB, Vector.Min(exitBC, exitCA));
+            ClipEdge(flatEdgeStartB, flatEdgeOffsetB, aA, edgeOffsetABOnA, inverseEdgeOffsetABOnALengthSquared, aDotNormalOnA, abDotNormalOnA, out var abIntersected, out var tAB, out var depthContributionABOnA);
+            ClipEdge(flatEdgeStartB, flatEdgeOffsetB, aB, edgeOffsetBCOnA, inverseEdgeOffsetBCOnALengthSquared, bDotNormalOnA, bcDotNormalOnA, out var bcIntersected, out var tBC, out var depthContributionBCOnA);
+            ClipEdge(flatEdgeStartB, flatEdgeOffsetB, aC, edgeOffsetCAOnA, inverseEdgeOffsetCAOnALengthSquared, cDotNormalOnA, caDotNormalOnA, out var caIntersected, out var tCA, out var depthContributionCAOnA);
+            var minValue = new Vector<float>(float.MinValue);
+            var maxValue = new Vector<float>(float.MaxValue);
+            var entryAB = Vector.ConditionalSelect(abIntersected, tAB, maxValue);
+            var entryBC = Vector.ConditionalSelect(bcIntersected, tBC, maxValue);
+            var entryCA = Vector.ConditionalSelect(caIntersected, tCA, maxValue);
+            var exitAB = Vector.ConditionalSelect(abIntersected, tAB, minValue);
+            var exitBC = Vector.ConditionalSelect(bcIntersected, tBC, minValue);
+            var exitCA = Vector.ConditionalSelect(caIntersected, tCA, minValue);
+            var entry = Vector.Min(entryAB, Vector.Min(entryBC, entryCA));
+            var exit = Vector.Max(exitAB, Vector.Max(exitBC, exitCA));
+            var useABAsEntry = Vector.Equals(entry, tAB);
+            var useBCAsEntry = Vector.Equals(entry, tBC);
+            //var useCAAsEntry = Vector.Equals(entry, tCA);
+            var useABAsExit = Vector.Equals(exit, tAB);
+            var useBCAsExit = Vector.Equals(exit, tBC);
+            //var useCAAsExit = Vector.Equals(exit, tCA);
+            var depthContributionAAtEntry = Vector.ConditionalSelect(useABAsEntry, depthContributionABOnA, Vector.ConditionalSelect(useBCAsEntry, depthContributionBCOnA, depthContributionCAOnA));
+            var depthContributionAAtExit = Vector.ConditionalSelect(useABAsExit, depthContributionABOnA, Vector.ConditionalSelect(useBCAsExit, depthContributionBCOnA, depthContributionCAOnA));
             //If an edge fails to generate any interval, then it's not intersecting the triangle bounds and should not generate contacts.
-            allowContacts = Vector.AndNot(allowContacts, Vector.BitwiseOr(Vector.Equals(entry, new Vector<float>(float.MinValue)), Vector.Equals(exit, new Vector<float>(float.MaxValue))));
+            allowContacts = Vector.AndNot(allowContacts, Vector.BitwiseOr(Vector.Equals(entry, minValue), Vector.Equals(exit, maxValue)));
             entry = Vector.Max(Vector<float>.Zero, entry);
             exit = Vector.Min(Vector<float>.One, exit);
+
+            Vector3Wide.Dot(edgeStartB, localNormal, out var edgeStartBDotNormal);
+            Vector3Wide.Dot(edgeOffsetB, localNormal, out var edgeOffsetBDotNormal);
+            var depthContributionBAtEntry = edgeStartBDotNormal + entry * edgeOffsetBDotNormal;
+            var depthContributionBAtExit = edgeStartBDotNormal + exit * edgeOffsetBDotNormal;
 
             //entryX = dot(entry * edgeDirectionA + edgeStartA - triangleCenterB, tangentBX)
             //entryY = dot(entry * edgeDirectionA + edgeStartA - triangleCenterB, tangentBY)
@@ -172,7 +196,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Unsafe.SkipInit(out ManifoldCandidate candidate);
             var six = new Vector<int>(6);
             //Entry
-            var exists = Vector.BitwiseAnd(allowContacts, Vector.BitwiseAnd(
+            candidate.Depth = depthContributionBAtEntry - depthContributionAAtEntry;
+            var exists = Vector.BitwiseAnd(Vector.BitwiseAnd(allowContacts, Vector.GreaterThanOrEqual(candidate.Depth, minimumDepth)), Vector.BitwiseAnd(
                 Vector.BitwiseAnd(
                     Vector.LessThan(candidateCount, six),
                     Vector.GreaterThanOrEqual(exit - entry, new Vector<float>(1e-5f))), //note fixed threshold; the exit and entry values are in terms of the edge's length already. 
@@ -182,9 +207,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             candidate.X = entry * edgeDirectionX + offsetX;
             candidate.Y = entry * edgeDirectionY + offsetY;
             candidate.FeatureId = entryId;
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists, pairCount);
+            ManifoldCandidateHelper.AddCandidateWithDepth(ref candidates, ref candidateCount, candidate, exists, pairCount);
             //Exit
-            exists = Vector.BitwiseAnd(allowContacts, Vector.BitwiseAnd(
+            candidate.Depth = depthContributionBAtExit - depthContributionAAtExit;
+            exists = Vector.BitwiseAnd(Vector.BitwiseAnd(allowContacts, Vector.GreaterThanOrEqual(candidate.Depth, minimumDepth)), Vector.BitwiseAnd(
                 Vector.BitwiseAnd(
                     Vector.LessThan(candidateCount, six),
                     Vector.GreaterThanOrEqual(exit, entry)),
@@ -194,7 +220,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             candidate.X = exit * edgeDirectionX + offsetX;
             candidate.Y = exit * edgeDirectionY + offsetY;
             candidate.FeatureId = entryId + exitIdOffset;
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists, pairCount);
+            ManifoldCandidateHelper.AddCandidateWithDepth(ref candidates, ref candidateCount, candidate, exists, pairCount);
         }
 
 
@@ -341,46 +367,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var candidateCount = Vector<int>.Zero;
             ref var candidates = ref *buffer;
 
-            Vector3Wide featureNormalA;
-            Vector3Wide pointOnFeatureA;
-            Vector<float> localNormalDotFeatureNormalA;
-            var absLocalNormalDotFaceNormalA = Vector.Abs(localNormalDotFaceNormalA);
-            const float fallbackMin = 1e-3f;
-            const float fallbackMax = 0.2e-3f;
-            var useFallbackNormal = Vector.LessThan(absLocalNormalDotFaceNormalA, new Vector<float>(fallbackMin));
-            if (Vector.LessThanAny(useFallbackNormal, Vector<int>.Zero))
-            {
-                //At least one lane needs to use a non-face feature for the reduction feature normal.
-                //Ever so slightly push the face normal towards the local normal to avoid division by zero.
-                //This *will* make the depths wrong for any contacts that aren't on the true feature, but the error should be rather slight in practice.
-                var pushAmount = new Vector<float>(0.1f) * Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (absLocalNormalDotFaceNormalA - new Vector<float>(fallbackMin)) / new Vector<float>(fallbackMax - fallbackMin)));
-                Vector3Wide.Scale(localNormal, pushAmount, out var push);
-                Vector3Wide.Subtract(faceNormalA, push, out var pushedFaceNormalA);
-                Vector3Wide.Normalize(pushedFaceNormalA, out pushedFaceNormalA);
-                Vector3Wide.Dot(localNormal, a.A, out var aDot);
-                Vector3Wide.Dot(localNormal, a.B, out var bDot);
-                Vector3Wide.Dot(localNormal, a.C, out var cDot);
-                var minDot = Vector.Min(aDot, Vector.Min(bDot, cDot));
-                var useA = Vector.Equals(aDot, minDot);
-                var useB = Vector.AndNot(Vector.Equals(bDot, minDot), useA);
-                Vector3Wide.ConditionalSelect(useA, a.A, a.C, out var pointOnEdgeA);
-                Vector3Wide.ConditionalSelect(useB, a.B, pointOnEdgeA, out pointOnEdgeA);
-                pushedFaceNormalA = localNormal;
-                Vector3Wide.Dot(pushedFaceNormalA, localNormal, out var pushedDotLocalNormal);
-
-                Vector3Wide.ConditionalSelect(useFallbackNormal, pushedFaceNormalA, faceNormalA, out featureNormalA);
-                Vector3Wide.ConditionalSelect(useFallbackNormal, pointOnEdgeA, localTriangleCenterA, out pointOnFeatureA);
-                localNormalDotFeatureNormalA = Vector.ConditionalSelect(useFallbackNormal, pushedDotLocalNormal, localNormalDotFaceNormalA);
-
-            }
-            else
-            {
-                //All lanes are okay to use the triangle face normal.
-                pointOnFeatureA = localTriangleCenterA;
-                featureNormalA = faceNormalA;
-                localNormalDotFeatureNormalA = localNormalDotFaceNormalA;
-            }
-
+            var minimumDepth = -speculativeMargin;
             if (Vector.LessThanAny(useFaceCaseForB, Vector<int>.Zero))
             {
                 //While the edge clipping will find any edge-edge or bVertex-aFace contacts, it will not find aVertex-bFace contacts.
@@ -388,9 +375,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //(Adding these first allows us to simply skip capacity tests, since there can only be a total of three bVertex-aFace contacts.)
                 //Note that division by zero is protected by useFaceCaseForB. These contacts aren't relevant for the edge case anyway.
                 var inverseContactNormalDotFaceNormalB = Vector<float>.One / localNormalDotFaceNormalB;
-                TryAddTriangleAVertex(a.A, flatVertexAOnA, Vector<int>.Zero, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, flatEdgeABOnB, flatEdgeBCOnB, flatEdgeCAOnB, flatVertexAOnB, flatVertexBOnB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
-                TryAddTriangleAVertex(a.B, flatVertexBOnA, Vector<int>.One, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, flatEdgeABOnB, flatEdgeBCOnB, flatEdgeCAOnB, flatVertexAOnB, flatVertexBOnB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
-                TryAddTriangleAVertex(a.C, flatVertexCOnA, new Vector<int>(2), tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, flatEdgeABOnB, flatEdgeBCOnB, flatEdgeCAOnB, flatVertexAOnB, flatVertexBOnB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
+                TryAddTriangleAVertex(a.A, flatVertexAOnA, Vector<int>.Zero, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, flatEdgeABOnB, flatEdgeBCOnB, flatEdgeCAOnB, flatVertexAOnB, flatVertexBOnB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, minimumDepth, ref candidates, ref candidateCount, pairCount);
+                TryAddTriangleAVertex(a.B, flatVertexBOnA, Vector<int>.One, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, flatEdgeABOnB, flatEdgeBCOnB, flatEdgeCAOnB, flatVertexAOnB, flatVertexBOnB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, minimumDepth, ref candidates, ref candidateCount, pairCount);
+                TryAddTriangleAVertex(a.C, flatVertexCOnA, new Vector<int>(2), tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, flatEdgeABOnB, flatEdgeBCOnB, flatEdgeCAOnB, flatVertexAOnB, flatVertexBOnB, useFaceCaseForB, inverseContactNormalDotFaceNormalB, minimumDepth, ref candidates, ref candidateCount, pairCount);
             }
             //Note that edge cases will also add triangle B vertices that are within triangle A's bounds, so no B vertex case is required.
             var three = new Vector<int>(3);
@@ -404,11 +391,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector2Wide.LengthSquared(flatEdgeABOnA, out var flatEdgeOffsetABOnALengthSquared);
                 Vector2Wide.LengthSquared(flatEdgeBCOnA, out var flatEdgeOffsetBCOnALengthSquared);
                 Vector2Wide.LengthSquared(flatEdgeCAOnA, out var flatEdgeOffsetCAOnALengthSquared);
-                ClipBEdgeAgainstABounds(flatVertexAOnA, flatVertexBOnA, flatVertexCOnA, flatEdgeABOnA, flatEdgeBCOnA, flatEdgeCAOnA, flatEdgeOffsetABOnALengthSquared, flatEdgeOffsetBCOnALengthSquared, flatEdgeOffsetCAOnALengthSquared, flatVertexAOnB, flatEdgeABOnB, bA, abB, new Vector<int>(3), three, localTriangleCenterB, tangentBX, tangentBY, stillCouldUseClippingContacts, ref candidates, ref candidateCount, pairCount);
-                ClipBEdgeAgainstABounds(flatVertexAOnA, flatVertexBOnA, flatVertexCOnA, flatEdgeABOnA, flatEdgeBCOnA, flatEdgeCAOnA, flatEdgeOffsetABOnALengthSquared, flatEdgeOffsetBCOnALengthSquared, flatEdgeOffsetCAOnALengthSquared, flatVertexBOnB, flatEdgeBCOnB, bB, bcB, new Vector<int>(4), three, localTriangleCenterB, tangentBX, tangentBY, stillCouldUseClippingContacts, ref candidates, ref candidateCount, pairCount);
-                ClipBEdgeAgainstABounds(flatVertexAOnA, flatVertexBOnA, flatVertexCOnA, flatEdgeABOnA, flatEdgeBCOnA, flatEdgeCAOnA, flatEdgeOffsetABOnALengthSquared, flatEdgeOffsetBCOnALengthSquared, flatEdgeOffsetCAOnALengthSquared, flatVertexCOnB, flatEdgeCAOnB, bC, caB, new Vector<int>(5), three, localTriangleCenterB, tangentBX, tangentBY, stillCouldUseClippingContacts, ref candidates, ref candidateCount, pairCount);
+                var inverseFlatEdgeOffsetABOnALengthSquared = Vector<float>.One / flatEdgeOffsetABOnALengthSquared;
+                var inverseFlatEdgeOffsetBCOnALengthSquared = Vector<float>.One / flatEdgeOffsetBCOnALengthSquared;
+                var inverseFlatEdgeOffsetCAOnALengthSquared = Vector<float>.One / flatEdgeOffsetCAOnALengthSquared;
+                //These clipping routines compute depth directly, rather than relying on reduction to compute it for us (thanks, triangles).
+                //We can precompute the depth contribution for A's edges.
+                Vector3Wide.Dot(localNormal, a.A, out var aDotNormalOnA);
+                Vector3Wide.Dot(localNormal, a.B, out var bDotNormalOnA);
+                Vector3Wide.Dot(localNormal, a.C, out var cDotNormalOnA);
+                Vector3Wide.Dot(localNormal, abA, out var abDotNormalOnA);
+                Vector3Wide.Dot(localNormal, bcA, out var bcDotNormalOnA);
+                Vector3Wide.Dot(localNormal, caA, out var caDotNormalOnA);
+                ClipBEdgeAgainstABounds(flatVertexAOnA, flatVertexBOnA, flatVertexCOnA, flatEdgeABOnA, flatEdgeBCOnA, flatEdgeCAOnA, inverseFlatEdgeOffsetABOnALengthSquared, inverseFlatEdgeOffsetBCOnALengthSquared, inverseFlatEdgeOffsetCAOnALengthSquared, aDotNormalOnA, bDotNormalOnA, cDotNormalOnA, abDotNormalOnA, bcDotNormalOnA, caDotNormalOnA, flatVertexAOnB, flatEdgeABOnB, bA, abB, new Vector<int>(3), three, localTriangleCenterB, tangentBX, tangentBY, localNormal, minimumDepth, stillCouldUseClippingContacts, ref candidates, ref candidateCount, pairCount);
+                ClipBEdgeAgainstABounds(flatVertexAOnA, flatVertexBOnA, flatVertexCOnA, flatEdgeABOnA, flatEdgeBCOnA, flatEdgeCAOnA, inverseFlatEdgeOffsetABOnALengthSquared, inverseFlatEdgeOffsetBCOnALengthSquared, inverseFlatEdgeOffsetCAOnALengthSquared, aDotNormalOnA, bDotNormalOnA, cDotNormalOnA, abDotNormalOnA, bcDotNormalOnA, caDotNormalOnA, flatVertexBOnB, flatEdgeBCOnB, bB, bcB, new Vector<int>(4), three, localTriangleCenterB, tangentBX, tangentBY, localNormal, minimumDepth, stillCouldUseClippingContacts, ref candidates, ref candidateCount, pairCount);
+                ClipBEdgeAgainstABounds(flatVertexAOnA, flatVertexBOnA, flatVertexCOnA, flatEdgeABOnA, flatEdgeBCOnA, flatEdgeCAOnA, inverseFlatEdgeOffsetABOnALengthSquared, inverseFlatEdgeOffsetBCOnALengthSquared, inverseFlatEdgeOffsetCAOnALengthSquared, aDotNormalOnA, bDotNormalOnA, cDotNormalOnA, abDotNormalOnA, bcDotNormalOnA, caDotNormalOnA, flatVertexCOnB, flatEdgeCAOnB, bC, caB, new Vector<int>(5), three, localTriangleCenterB, tangentBX, tangentBY, localNormal, minimumDepth, stillCouldUseClippingContacts, ref candidates, ref candidateCount, pairCount);
             }
-
 
             //Create a scale-sensitive epsilon for comparisons based on the size of the involved shapes. This helps avoid varying behavior based on how large involved objects are.
             Vector3Wide.LengthSquared(abA, out var abALengthSquared);
@@ -418,8 +415,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.Max(abALengthSquared, caALengthSquared),
                 Vector.Max(abBLengthSquared, caBLengthSquared)));
             var edgeEpsilon = new Vector<float>(1e-5f) * epsilonScale;
-            Vector3Wide.Subtract(pointOnFeatureA, localTriangleCenterB, out var faceCenterBToFaceCenterA);
-            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, featureNormalA, Vector<float>.One / localNormalDotFeatureNormalA, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin, pairCount,
+            ManifoldCandidateHelper.ReduceWithoutComputingDepths(ref candidates, candidateCount, 6, epsilonScale, minimumDepth, pairCount,
                 out var contact0, out var contact1, out var contact2, out var contact3,
                 out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 

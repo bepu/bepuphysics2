@@ -71,9 +71,29 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 {
                     var targetIndex = count[i];
                     ref var target = ref GetOffsetInstance(ref Unsafe.Add(ref candidates, targetIndex), i);
-                    //TODO: Check codegen. May be worth doing another offset instance for source data if the compiler inserts bounds checks.
+                    //TODO: Now that we're free of NS2.0, we could likely intrisify this to reduce some overhead. Still not very vectorization friendly.
                     GetFirst(ref target.X) = candidate.X[i];
                     GetFirst(ref target.Y) = candidate.Y[i];
+                    GetFirst(ref target.FeatureId) = candidate.FeatureId[i];
+                }
+            }
+            count = Vector.ConditionalSelect(newContactExists, count + Vector<int>.One, count);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void AddCandidateWithDepth(ref ManifoldCandidate candidates, ref Vector<int> count, in ManifoldCandidate candidate, in Vector<int> newContactExists, int pairCount)
+        {
+            //Similar to above, but also takes the candidate's depth. Any user of this codepath is not going to rely on the reduction postpass to calculate depths.
+            for (int i = 0; i < pairCount; ++i)
+            {
+                if (newContactExists[i] < 0)
+                {
+                    var targetIndex = count[i];
+                    ref var target = ref GetOffsetInstance(ref Unsafe.Add(ref candidates, targetIndex), i);
+                    //TODO: Now that we're free of NS2.0, we could likely intrisify this to reduce some overhead. Still not very vectorization friendly.
+                    GetFirst(ref target.X) = candidate.X[i];
+                    GetFirst(ref target.Y) = candidate.Y[i];
+                    GetFirst(ref target.Depth) = candidate.Depth[i];
                     GetFirst(ref target.FeatureId) = candidate.FeatureId[i];
                 }
             }
