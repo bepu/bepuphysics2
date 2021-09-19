@@ -11,7 +11,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public interface ICompoundPairOverlapFinder
     {
-        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps);
+        void FindLocalOverlaps<TOverlapTestingOptions>(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps) where TOverlapTestingOptions : unmanaged, IOverlapTestingOptions;
     }
 
     public unsafe interface ICompoundPairContinuationHandler<TContinuation> where TContinuation : struct, ICollisionTestContinuation
@@ -49,12 +49,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
         {
             var pairs = batch.Buffer.As<BoundsTestedPair>();
-            TOverlapFinder overlapFinder = default;
-            TContinuationHandler continuationHandler = default;
-
+            Unsafe.SkipInit(out TOverlapFinder overlapFinder);
+            Unsafe.SkipInit(out TContinuationHandler continuationHandler);
             //We perform all necessary bounding box computations and lookups up front. This helps avoid some instruction pipeline pressure at the cost of some extra data cache requirements.
             //Because of this, you need to be careful with the batch size on this collision task.
-            overlapFinder.FindLocalOverlaps(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out var overlaps);
+            CompoundPairOverlaps overlaps;
+            if (continuationHandler.CollisionContinuationType == CollisionContinuationType.CompoundMeshReduction || continuationHandler.CollisionContinuationType == CollisionContinuationType.MeshReduction)
+                overlapFinder.FindLocalOverlaps<UseEpsilonBoundsExpansion>(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out overlaps);
+            else
+                overlapFinder.FindLocalOverlaps<DontUseEpsilonBoundsExpansion>(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out overlaps);
+
             for (int pairIndex = 0; pairIndex < batch.Count; ++pairIndex)
             {
                 overlaps.GetPairOverlaps(pairIndex, out var pairOverlaps, out var subpairQueries);
