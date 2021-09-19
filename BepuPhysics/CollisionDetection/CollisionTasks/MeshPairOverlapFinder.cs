@@ -38,7 +38,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 }
             }
 
-            TriangleWide triangles = default;
+            Unsafe.SkipInit(out TriangleWide triangles);
             nextSubpairIndex = 0;
             Unsafe.SkipInit(out TOverlapTestingOptions overlapTestingOptions);
             for (int i = 0; i < pairCount; ++i)

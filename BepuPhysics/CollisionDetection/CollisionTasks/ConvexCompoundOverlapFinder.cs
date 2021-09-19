@@ -46,14 +46,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             overlaps = new ConvexCompoundTaskOverlaps(pool, pairCount);
             ref var pairsToTest = ref overlaps.subpairQueries;
-            Vector3Wide offsetB = default;
-            QuaternionWide orientationA = default;
-            QuaternionWide orientationB = default;
-            Vector3Wide relativeLinearVelocityA = default;
-            Vector3Wide angularVelocityA = default;
-            Vector3Wide angularVelocityB = default;
-            Vector<float> maximumAllowedExpansion = default;
-            TConvexWide convexWide = default;
+            Unsafe.SkipInit(out Vector3Wide offsetB);
+            Unsafe.SkipInit(out QuaternionWide orientationA);
+            Unsafe.SkipInit(out QuaternionWide orientationB);
+            Unsafe.SkipInit(out Vector3Wide relativeLinearVelocityA);
+            Unsafe.SkipInit(out Vector3Wide angularVelocityA);
+            Unsafe.SkipInit(out Vector3Wide angularVelocityB);
+            Unsafe.SkipInit(out Vector<float> maximumAllowedExpansion);
+            Unsafe.SkipInit(out TConvexWide convexWide);
             Unsafe.SkipInit(out TOverlapTestingOptions overlapTestingOptions);
             if (convexWide.InternalAllocationSize > 0)
             {
