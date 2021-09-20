@@ -1,4 +1,5 @@
 ﻿using BepuPhysics.Collidables;
+using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
@@ -30,6 +31,8 @@ namespace BepuPhysics.CollisionDetection
         public BoundingBox QueryBounds;
         //This uses all of the nonconvex reduction's logic, so we just nest it.
         public NonconvexReduction Inner;
+
+        public Mesh DebugMesh;
 
         public void Create(int childManifoldCount, BufferPool pool)
         {
@@ -75,7 +78,7 @@ namespace BepuPhysics.CollisionDetection
 
         struct TestTriangle
         {
-            //The test triangle contains AOS-ified layouts for quicker per contact testing.
+            //The test triangle contains SOA-ified layouts for quicker per contact testing.
             public Vector4 AnchorX;
             public Vector4 AnchorY;
             public Vector4 AnchorZ;
@@ -166,7 +169,7 @@ namespace BepuPhysics.CollisionDetection
                 //Note that we are stricter about being on the edge than we were about being nearby.
                 //That's because infringement checks require a normal infringement along every edge that the contact is on;
                 //being too aggressive about edge classification would cause infringements to sometimes be ignored.
-                var negativeThreshold = triangle.DistanceThreshold * -1e-2f;
+                var negativeThreshold = triangle.DistanceThreshold * -1e-1f;
                 var onAB = distanceAlongNormal.Y >= negativeThreshold;
                 var onBC = distanceAlongNormal.Z >= negativeThreshold;
                 var onCA = distanceAlongNormal.W >= negativeThreshold;
@@ -193,7 +196,7 @@ namespace BepuPhysics.CollisionDetection
                     //the normal is alinged with an edge.
                     if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
                     {
-                        const float secondaryInfringementEpsilon = -1e-3f;
+                        const float secondaryInfringementEpsilon = -1e-2f;
                         //At least one edge is infringed. Are all contact-touched edges at least nearly infringed?
                         if ((!onAB || normalDot.Y > secondaryInfringementEpsilon) && (!onBC || normalDot.Z > secondaryInfringementEpsilon) && (!onCA || normalDot.W > secondaryInfringementEpsilon))
                         {
@@ -205,8 +208,18 @@ namespace BepuPhysics.CollisionDetection
             return false;
         }
 
+        struct DebugLeafEnumerator : IBreakableForEach<int>
+        {
+            public QuickList<int> List;
+            public bool LoopBody(int i)
+            {
+                List.AllocateUnsafely() = i;
+                return true;
+            }
+        }
+
         public unsafe static void ReduceManifolds(ref Buffer<Triangle> continuationTriangles, ref Buffer<NonconvexReductionChild> continuationChildren, int start, int count,
-           bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation)
+           bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation, Mesh debugMesh)
         {
             //Before handing responsibility off to the nonconvex reduction, make sure that no contacts create nasty 'bumps' at the border of triangles.
             //Bumps can occur when an isolated triangle test detects a contact pointing outward, like when a box hits the side. This is fine when the triangle truly is isolated,
@@ -243,22 +256,34 @@ namespace BepuPhysics.CollisionDetection
             continuationChildren.Slice(start, count, out var children);
             //Allocate enough space for all potential triangles, even though we're only going to be enumerating over the subset which actually have contacts.
             //Note that the count is limited by the above early-out; there are limits to how much this can allocate on the stack.
-            int activeChildCount = 0;
+            //int activeChildCount = 0;
             var memory = stackalloc TestTriangle[count];
             var activeTriangles = new Buffer<TestTriangle>(memory, count);
             for (int i = 0; i < count; ++i)
             {
-                if (children[i].Manifold.Count > 0)
+                //if (children[i].Manifold.Count > 0)
                 {
-                    activeTriangles[activeChildCount] = new TestTriangle(triangles[i], i);
-                    ++activeChildCount;
+                    activeTriangles[i] = new TestTriangle(triangles[i], i);
+                    //++activeChildCount;
                 }
             }
+            var debugOverlapMemory = stackalloc int[count];
+            var debugOverlapBuffer = new Buffer<int>(debugOverlapMemory, count);
+            var debugKeyMemory = stackalloc int[count];
+            var debugKeys = new Buffer<int>(debugKeyMemory, count);
+            var debugValueMemory = stackalloc TestTriangle[count];
+            var debugValues = new Buffer<TestTriangle>(debugValueMemory, count);
+            var debugTableSize = 1 << SpanHelper.GetContainingPowerOf2(count * 4);
+            var debugTableMemory = stackalloc int[debugTableSize];
+            var debugTable = new Buffer<int>(debugTableMemory, debugTableSize);
+            QuickDictionary<int, TestTriangle, PrimitiveComparer<int>> testTriangles = new(ref debugKeys, ref debugValues, ref debugTable);
             var meshSpaceContacts = stackalloc Vector3[4];
-            for (int i = 0; i < activeChildCount; ++i)
+            for (int i = 0; i < count; ++i)
             {
                 ref var sourceTriangle = ref activeTriangles[i];
                 ref var sourceChild = ref children[sourceTriangle.ChildIndex];
+                if (sourceChild.Manifold.Count == 0)
+                    continue;
                 //Can't correct contacts that were created by face collisions.
                 if ((sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) == 0)
                 {
@@ -283,7 +308,69 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                     ref var meshSpaceContact = ref meshSpaceContacts[deepestIndex];
-                    for (int j = 0; j < activeChildCount; ++j)
+
+                    {
+                        ref var debugSourceTriangle = ref debugMesh.Triangles[sourceChild.ChildIndexB];
+                        var inverse = 1f / Vector3.Cross(debugSourceTriangle.B - debugSourceTriangle.A, debugSourceTriangle.C - debugSourceTriangle.A).Length();
+                        var wa = Vector3.Cross(debugSourceTriangle.B - debugSourceTriangle.A, meshSpaceContact - debugSourceTriangle.A).Length() * inverse;
+                        var wb = Vector3.Cross(debugSourceTriangle.C - debugSourceTriangle.B, meshSpaceContact - debugSourceTriangle.B).Length() * inverse;
+                        var wc = Vector3.Cross(debugSourceTriangle.A - debugSourceTriangle.C, meshSpaceContact - debugSourceTriangle.C).Length() * inverse;
+                        if (wa + wb + wc > 1 + 1e-3f)
+                            Console.WriteLine($"EXTERNAL source contact {wa}, {wb}, {wc}");
+                        else if (wa > 1e-3f && wb > 1e-3f && wc > 1e-3f)
+                            Console.WriteLine($"Internal source contact {wa}, {wb}, {wc}");
+                    }
+
+                    var debugMin = meshSpaceContact - new Vector3(1e-3f);
+                    var debugMax = meshSpaceContact + new Vector3(1e-3f);
+                    var debugLeafEnumerator = new DebugLeafEnumerator();
+                    debugLeafEnumerator.List = new QuickList<int>(debugOverlapBuffer);
+                    debugMesh.Tree.GetOverlaps(debugMin, debugMax, ref debugLeafEnumerator);
+                    for (int j = 0; j < debugLeafEnumerator.List.Count; ++j)
+                    {
+                        TestTriangle targetTriangle;
+                        if (!testTriangles.TryGetValue(debugLeafEnumerator.List[j], out targetTriangle))
+                        {
+                            //Search for the child...
+                            int childIndexForTargetTriangle = -1;
+                            for (int k = 0; k < children.Length; ++k)
+                            {
+                                if (children[k].ChildIndexB == debugLeafEnumerator.List[j])
+                                {
+                                    childIndexForTargetTriangle = k;
+                                    break;
+                                }
+                            }
+                            if (childIndexForTargetTriangle == -1)
+                            {
+                                Console.WriteLine("Bad news bears: a child index that should have existed by query does not exist according to the mesh reduction child set.");
+                            }
+                            targetTriangle = new TestTriangle(debugMesh.Triangles[debugLeafEnumerator.List[j]], childIndexForTargetTriangle);
+                            testTriangles.AddUnsafely(debugLeafEnumerator.List[j], targetTriangle);
+                        }
+
+                        {
+                            ref var debugTriangle = ref debugMesh.Triangles[debugLeafEnumerator.List[j]];
+                            var inverse = 1f / Vector3.Cross(debugTriangle.B - debugTriangle.A, debugTriangle.C - debugTriangle.A).Length();
+                            var wa = Vector3.Cross(debugTriangle.B - debugTriangle.A, meshSpaceContact - debugTriangle.A).Length() * inverse;
+                            var wb = Vector3.Cross(debugTriangle.C - debugTriangle.B, meshSpaceContact - debugTriangle.B).Length() * inverse;
+                            var wc = Vector3.Cross(debugTriangle.A - debugTriangle.C, meshSpaceContact - debugTriangle.C).Length() * inverse;
+                        }
+
+                        if (ShouldBlockNormal(targetTriangle, meshSpaceContact, meshSpaceNormal))
+                        {
+                            if (targetTriangle.ChildIndex != sourceTriangle.ChildIndex)
+                            {
+                                sourceTriangle.Blocked = true;
+                                sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
+                                //Even if the target manifold gets blocked, it should not necessarily be deleted. We made use of it as a blocker.
+                                targetTriangle.ForceDeletionOnBlock = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    for (int j = 0; j < count; ++j)
                     {
                         //No point in trying to check a normal against its own triangle.
                         if (i != j)
@@ -315,6 +402,12 @@ namespace BepuPhysics.CollisionDetection
                             ConvexContactManifold.FastRemoveAt(ref sourceChild.Manifold, j);
                         }
                     }
+
+                    var testDot = Vector3.Dot(meshSpaceNormal, new Vector3(sourceTriangle.NX.X, sourceTriangle.NY.X, sourceTriangle.NZ.X));
+                    if (MathF.Abs(testDot) < 0.3f && !sourceTriangle.Blocked && sourceChild.Manifold.Count > 0)
+                    {
+                        Console.WriteLine($"Iffy dot: {testDot} NOT BLOCKED");
+                    }
                 }
                 else
                 {
@@ -326,7 +419,7 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
             }
-            for (int i = 0; i < activeChildCount; ++i)
+            for (int i = 0; i < count; ++i)
             {
                 ref var triangle = ref activeTriangles[i];
                 if (triangle.Blocked)
@@ -376,7 +469,7 @@ namespace BepuPhysics.CollisionDetection
                 Matrix3x3.CreateFromQuaternion(MeshOrientation, out var meshOrientation);
                 Matrix3x3.Transpose(meshOrientation, out var meshInverseOrientation);
 
-                ReduceManifolds(ref Triangles, ref Inner.Children, 0, Inner.ChildCount, RequiresFlip, QueryBounds, meshOrientation, meshInverseOrientation);
+                ReduceManifolds(ref Triangles, ref Inner.Children, 0, Inner.ChildCount, RequiresFlip, QueryBounds, meshOrientation, meshInverseOrientation, DebugMesh);
 
                 //Now that boundary smoothing analysis is done, we no longer need the triangle list.
                 batcher.Pool.Return(ref Triangles);

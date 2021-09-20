@@ -20,6 +20,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             continuation.RequiresFlip = pair.FlipMask == 0;
             continuation.QueryBounds.Min = pairQuery.Min;
             continuation.QueryBounds.Max = pairQuery.Max;
+            unsafe { continuation.DebugMesh = Unsafe.AsRef<Mesh>(pairQuery.Container); }
             return ref continuation;
         }
 

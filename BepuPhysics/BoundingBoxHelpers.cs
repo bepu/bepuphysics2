@@ -216,7 +216,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void EpsilonExpandLocalBoundingBoxes(Vector<float> maximumRadius, ref Vector3Wide min, ref Vector3Wide max)
         {
-            var expansion = maximumRadius * new Vector<float>(1e-4f);
+            //var expansion = maximumRadius * new Vector<float>(1e-4f);
+            var expansion = maximumRadius + new Vector<float>(10f);
             Vector3Wide.Subtract(min, expansion, out min);
             Vector3Wide.Add(max, expansion, out max);
         }
