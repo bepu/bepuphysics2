@@ -42,6 +42,43 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Protect against bad normals.
             depth = Vector.ConditionalSelect(Vector.LessThan(normalLength, new Vector<float>(1e-10f)), new Vector<float>(float.MaxValue), depth);
         }
+
+        static void TestEdgeEdge2(
+            in Vector3Wide edgeStartA, in Vector3Wide edgeOffsetA, in Vector<float> edgeOffsetALengthSquared, in Vector<float> inverseEdgeOffsetALengthSquared,
+            in Vector3Wide edgeStartB, in Vector3Wide edgeOffsetB, in Vector<float> edgeOffsetBLengthSquared, in Vector<float> inverseEdgeOffsetBLengthSquared,
+            in Vector3Wide aA, in Vector3Wide bA, in Vector3Wide cA, in Vector3Wide aB, in Vector3Wide bB, in Vector3Wide cB,
+            out Vector<float> depth, out Vector3Wide normal)
+        {
+            Vector3Wide.Subtract(edgeStartB, edgeStartA, out var aStartToBStart);
+            Vector3Wide.Dot(edgeOffsetA, aStartToBStart, out var oADotAB);
+            Vector3Wide.Dot(edgeOffsetB, aStartToBStart, out var oBDotAB);
+            Vector3Wide.Dot(edgeOffsetA, edgeOffsetB, out var oADotOB);
+            var denominator = edgeOffsetALengthSquared * edgeOffsetBLengthSquared - oADotOB * oADotOB; //TODO: div 0 guard.
+            //Compute the first guess for tA and clamp it.
+            var tA = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (oADotOB * oBDotAB - oADotAB * edgeOffsetBLengthSquared) / denominator));
+            //Compute the closest point on B to the first guess.
+            var tB = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (oADotOB * tA + oBDotAB) * inverseEdgeOffsetBLengthSquared));
+            //Finally, compute the true tA.
+            tA = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (tB * oADotOB - oADotAB) * inverseEdgeOffsetALengthSquared));
+
+            Vector3Wide.Scale(edgeOffsetA, tA, out var startToClosestA);
+            Vector3Wide.Add(edgeStartA, startToClosestA, out var a);
+            Vector3Wide.Scale(edgeOffsetB, tB, out var startToClosestB);
+            Vector3Wide.Add(edgeStartB, startToClosestB, out var b);
+
+            //If the segments touch, then fall back to using the edge direction as the normal candidate.
+            Vector3Wide.Subtract(a, b, out var ba);
+            Vector3Wide.LengthSquared(ba, out var baLengthSquared);
+            var useFallback = Vector.LessThan(baLengthSquared, new Vector<float>(1e-14f));
+            Vector3Wide.CrossWithoutOverlap(edgeOffsetA, edgeOffsetB, out var fallbackNormal);
+            Vector3Wide.ConditionalSelect(useFallback, fallbackNormal, ba, out normal);
+            Vector3Wide.Length(normal, out var normalLength);
+            Vector3Wide.Scale(normal, Vector<float>.One / normalLength, out normal);
+            GetDepthForNormal(aA, bA, cA, aB, bB, cB, normal, out depth);
+            //Protect against bad normals.
+            depth = Vector.ConditionalSelect(Vector.LessThan(normalLength, new Vector<float>(1e-10f)), new Vector<float>(float.MaxValue), depth);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Select(
             ref Vector<float> depth, ref Vector3Wide normal,
@@ -259,27 +296,63 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(a.C, a.B, out var bcA);
             Vector3Wide.Subtract(a.A, a.C, out var caA);
 
+            ////A AB x *
+            //TestEdgeEdge(abA, abB, a.A, a.B, a.C, bA, bB, bC, out var depth, out var localNormal);
+            //TestEdgeEdge(abA, bcB, a.A, a.B, a.C, bA, bB, bC, out var depthCandidate, out var localNormalCandidate);
+            //Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
+            //TestEdgeEdge(abA, caB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            //Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
+
+            ////A BC x *
+            //TestEdgeEdge(bcA, abB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            //Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
+            //TestEdgeEdge(bcA, bcB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            //Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
+            //TestEdgeEdge(bcA, caB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            //Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
+
+            ////A CA x *
+            //TestEdgeEdge(caA, abB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            //Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
+            //TestEdgeEdge(caA, bcB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            //Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
+            //TestEdgeEdge(caA, caB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            //Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
+
+            Vector3Wide.LengthSquared(abA, out var abALengthSquared);
+            Vector3Wide.LengthSquared(bcA, out var bcALengthSquared);
+            Vector3Wide.LengthSquared(caA, out var caALengthSquared);
+            Vector3Wide.LengthSquared(abB, out var abBLengthSquared);
+            Vector3Wide.LengthSquared(bcB, out var bcBLengthSquared);
+            Vector3Wide.LengthSquared(caB, out var caBLengthSquared);
+            var inverseABALengthSquared = Vector<float>.One / abALengthSquared;
+            var inverseBCALengthSquared = Vector<float>.One / bcALengthSquared;
+            var inverseCAALengthSquared = Vector<float>.One / caALengthSquared;
+            var inverseABBLengthSquared = Vector<float>.One / abBLengthSquared;
+            var inverseBCBLengthSquared = Vector<float>.One / bcBLengthSquared;
+            var inverseCABLengthSquared = Vector<float>.One / caBLengthSquared;
+
             //A AB x *
-            TestEdgeEdge(abA, abB, a.A, a.B, a.C, bA, bB, bC, out var depth, out var localNormal);
-            TestEdgeEdge(abA, bcB, a.A, a.B, a.C, bA, bB, bC, out var depthCandidate, out var localNormalCandidate);
+            TestEdgeEdge2(a.A, abA, abALengthSquared, inverseABALengthSquared, bA, abB, abBLengthSquared, inverseABBLengthSquared, a.A, a.B, a.C, bA, bB, bC, out var depth, out var localNormal);
+            TestEdgeEdge2(a.A, abA, abALengthSquared, inverseABALengthSquared, bB, bcB, bcBLengthSquared, inverseBCBLengthSquared, a.A, a.B, a.C, bA, bB, bC, out var depthCandidate, out var localNormalCandidate);
             Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
-            TestEdgeEdge(abA, caB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            TestEdgeEdge2(a.A, abA, abALengthSquared, inverseABALengthSquared, bC, caB, caBLengthSquared, inverseCABLengthSquared, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
             Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
 
             //A BC x *
-            TestEdgeEdge(bcA, abB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            TestEdgeEdge2(a.B, bcA, bcALengthSquared, inverseBCALengthSquared, bA, abB, abBLengthSquared, inverseABBLengthSquared, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
             Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
-            TestEdgeEdge(bcA, bcB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            TestEdgeEdge2(a.B, bcA, bcALengthSquared, inverseBCALengthSquared, bB, bcB, bcBLengthSquared, inverseBCBLengthSquared, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
             Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
-            TestEdgeEdge(bcA, caB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            TestEdgeEdge2(a.B, bcA, bcALengthSquared, inverseBCALengthSquared, bC, caB, caBLengthSquared, inverseCABLengthSquared, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
             Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
 
             //A CA x *
-            TestEdgeEdge(caA, abB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            TestEdgeEdge2(a.C, caA, caALengthSquared, inverseCAALengthSquared, bA, abB, abBLengthSquared, inverseABBLengthSquared, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
             Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
-            TestEdgeEdge(caA, bcB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            TestEdgeEdge2(a.C, caA, caALengthSquared, inverseCAALengthSquared, bB, bcB, bcBLengthSquared, inverseBCBLengthSquared, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
             Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
-            TestEdgeEdge(caA, caB, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
+            TestEdgeEdge2(a.C, caA, caALengthSquared, inverseCAALengthSquared, bC, caB, caBLengthSquared, inverseCABLengthSquared, a.A, a.B, a.C, bA, bB, bC, out depthCandidate, out localNormalCandidate);
             Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
 
             //Face normals
@@ -357,7 +430,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //We will be working on the surface of triangleB, but we'd still like a 2d parameterization of the surface for contact reduction.
             //So, we'll create tangent axes from the edge and edge x normal.
-            Vector3Wide.LengthSquared(abB, out var abBLengthSquared);
+            //Vector3Wide.LengthSquared(abB, out var abBLengthSquared);
             Vector3Wide.Scale(abB, Vector<float>.One / Vector.SquareRoot(abBLengthSquared), out var tangentBX);
             Vector3Wide.CrossWithoutOverlap(tangentBX, faceNormalB, out var tangentBY);
 
@@ -408,9 +481,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             //Create a scale-sensitive epsilon for comparisons based on the size of the involved shapes. This helps avoid varying behavior based on how large involved objects are.
-            Vector3Wide.LengthSquared(abA, out var abALengthSquared);
-            Vector3Wide.LengthSquared(caA, out var caALengthSquared);
-            Vector3Wide.LengthSquared(caB, out var caBLengthSquared);
+            //Vector3Wide.LengthSquared(abA, out var abALengthSquared);
+            //Vector3Wide.LengthSquared(caA, out var caALengthSquared);
+            //Vector3Wide.LengthSquared(caB, out var caBLengthSquared);
             var epsilonScale = Vector.SquareRoot(Vector.Min(
                 Vector.Max(abALengthSquared, caALengthSquared),
                 Vector.Max(abBLengthSquared, caBLengthSquared)));
