@@ -193,7 +193,7 @@ namespace BepuPhysics.CollisionDetection
                     //Further, note that we require nonzero positive infringement; otherwise, we'd end up blocking the contacts of a flat neighbor.
                     //But we are a little more aggressive about blocking the *second* edge infringement- if it's merely parallel, we count it as infringing.
                     //Otherwise you could get into situations where a contact on the vertex of a bunch of different triangles isn't blocked by any of them because
-                    //the normal is alinged with an edge.
+                    //the normal is aligned with an edge.
                     if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
                     {
                         const float secondaryInfringementEpsilon = -1e-2f;
@@ -267,13 +267,14 @@ namespace BepuPhysics.CollisionDetection
                     //++activeChildCount;
                 }
             }
-            var debugOverlapMemory = stackalloc int[count];
-            var debugOverlapBuffer = new Buffer<int>(debugOverlapMemory, count);
-            var debugKeyMemory = stackalloc int[count];
-            var debugKeys = new Buffer<int>(debugKeyMemory, count);
-            var debugValueMemory = stackalloc TestTriangle[count];
-            var debugValues = new Buffer<TestTriangle>(debugValueMemory, count);
-            var debugTableSize = 1 << SpanHelper.GetContainingPowerOf2(count * 4);
+            var allocatedCount = count * 3;
+            var debugOverlapMemory = stackalloc int[allocatedCount];
+            var debugOverlapBuffer = new Buffer<int>(debugOverlapMemory, allocatedCount);
+            var debugKeyMemory = stackalloc int[allocatedCount];
+            var debugKeys = new Buffer<int>(debugKeyMemory, allocatedCount);
+            var debugValueMemory = stackalloc TestTriangle[allocatedCount];
+            var debugValues = new Buffer<TestTriangle>(debugValueMemory, allocatedCount);
+            var debugTableSize = 1 << SpanHelper.GetContainingPowerOf2(allocatedCount * 4);
             var debugTableMemory = stackalloc int[debugTableSize];
             var debugTable = new Buffer<int>(debugTableMemory, debugTableSize);
             QuickDictionary<int, TestTriangle, PrimitiveComparer<int>> testTriangles = new(ref debugKeys, ref debugValues, ref debugTable);
