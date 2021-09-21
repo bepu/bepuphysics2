@@ -49,11 +49,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             in Vector3Wide aA, in Vector3Wide bA, in Vector3Wide cA, in Vector3Wide aB, in Vector3Wide bB, in Vector3Wide cB,
             out Vector<float> depth, out Vector3Wide normal)
         {
-            Vector3Wide.Subtract(edgeStartB, edgeStartA, out var aStartToBStart);
-            Vector3Wide.Dot(edgeOffsetA, aStartToBStart, out var oADotAB);
-            Vector3Wide.Dot(edgeOffsetB, aStartToBStart, out var oBDotAB);
+            Vector3Wide.Subtract(edgeStartA, edgeStartB, out var bStartToAStart);
+            Vector3Wide.Dot(edgeOffsetA, bStartToAStart, out var oADotAB);
+            Vector3Wide.Dot(edgeOffsetB, bStartToAStart, out var oBDotAB);
             Vector3Wide.Dot(edgeOffsetA, edgeOffsetB, out var oADotOB);
-            var denominator = edgeOffsetALengthSquared * edgeOffsetBLengthSquared - oADotOB * oADotOB; //TODO: div 0 guard.
+            var denominator = edgeOffsetALengthSquared * edgeOffsetBLengthSquared - oADotOB * oADotOB; //TODO: div 0 guard if edge offsets are parallel.
             //Compute the first guess for tA and clamp it.
             var tA = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (oADotOB * oBDotAB - oADotAB * edgeOffsetBLengthSquared) / denominator));
             //Compute the closest point on B to the first guess.
@@ -69,7 +69,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //If the segments touch, then fall back to using the edge direction as the normal candidate.
             Vector3Wide.Subtract(a, b, out var ba);
             Vector3Wide.LengthSquared(ba, out var baLengthSquared);
-            var useFallback = Vector.LessThan(baLengthSquared, new Vector<float>(1e-14f));
+            var useFallback = Vector.LessThan(baLengthSquared, new Vector<float>(1e-10f));
             Vector3Wide.CrossWithoutOverlap(edgeOffsetA, edgeOffsetB, out var fallbackNormal);
             Vector3Wide.ConditionalSelect(useFallback, fallbackNormal, ba, out normal);
             Vector3Wide.Length(normal, out var normalLength);
