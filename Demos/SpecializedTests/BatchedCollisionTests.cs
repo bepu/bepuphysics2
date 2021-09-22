@@ -23,9 +23,16 @@ namespace Demos.SpecializedTests
 
             public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : unmanaged, IContactManifold<TManifold>
             {
-                manifold.GetContact(0, out var offset, out var normal, out var depth, out var featureId);
-                var extra = 1e-16 * (depth + offset.X + normal.X);
-                *Count += 1 + (int)extra;
+                if (manifold.Count > 0)
+                {
+                    manifold.GetContact(0, out var offset, out var normal, out var depth, out var featureId);
+                    var extra = 1e-16 * (depth + offset.X + normal.X);
+                    *Count += 1 + (int)extra;
+                }
+                else
+                {
+                    ++*Count;
+                }
             }
 
             public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ref ConvexContactManifold manifold)
@@ -160,7 +167,7 @@ namespace Demos.SpecializedTests
                 points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), 1 * (float)random.NextDouble(), (float)random.NextDouble());
                 //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
             }
-            
+
             var pointsBuffer = points.Span.Slice(points.Count);
             ConvexHullHelper.CreateShape(pointsBuffer, pool, out _, out var convexHull);
 
@@ -178,44 +185,44 @@ namespace Demos.SpecializedTests
             }
 
 
-            Test(ref sphere, ref sphere, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref sphere, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref sphere, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref sphere, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref sphere, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref sphere, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref capsule, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref capsule, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref capsule, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref capsule, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref capsule, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref box, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref box, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref box, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref box, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref sphere, ref sphere, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref sphere, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref sphere, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref sphere, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref sphere, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref sphere, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref capsule, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref capsule, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref capsule, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref capsule, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref capsule, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref box, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref box, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref box, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref box, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref triangle, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref triangle, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref triangle, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref cylinder, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref cylinder, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref convexHull, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref triangle, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref triangle, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref cylinder, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref cylinder, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref convexHull, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
 
 
-            Test<Sphere, SphereWide, Sphere, SphereWide, SpherePairDistanceTester>(sphere, sphere, ref posesA, ref posesB, iterationCount);
-            Test<Sphere, SphereWide, Capsule, CapsuleWide, SphereCapsuleDistanceTester>(sphere, capsule, ref posesA, ref posesB, iterationCount);
-            Test<Sphere, SphereWide, Box, BoxWide, SphereBoxDistanceTester>(sphere, box, ref posesA, ref posesB, iterationCount);
-            Test<Sphere, SphereWide, Triangle, TriangleWide, SphereTriangleDistanceTester>(sphere, triangle, ref posesA, ref posesB, iterationCount);
-            Test<Sphere, SphereWide, Cylinder, CylinderWide, SphereCylinderDistanceTester>(sphere, cylinder, ref posesA, ref posesB, iterationCount);
-            Test<Capsule, CapsuleWide, Capsule, CapsuleWide, CapsulePairDistanceTester>(capsule, capsule, ref posesA, ref posesB, iterationCount);
-            Test<Capsule, CapsuleWide, Box, BoxWide, CapsuleBoxDistanceTester>(capsule, box, ref posesA, ref posesB, iterationCount);
-            Test<Capsule, CapsuleWide, Triangle, TriangleWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(capsule, triangle, ref posesA, ref posesB, iterationCount);
-            Test<Capsule, CapsuleWide, Cylinder, CylinderWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>>(capsule, cylinder, ref posesA, ref posesB, iterationCount);
-            Test<Cylinder, CylinderWide, Box, BoxWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Box, BoxWide, BoxSupportFinder>>(cylinder, box, ref posesA, ref posesB, iterationCount);
-            Test<Cylinder, CylinderWide, Triangle, TriangleWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(cylinder, triangle, ref posesA, ref posesB, iterationCount);
-            Test<Cylinder, CylinderWide, Cylinder, CylinderWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>>(cylinder, cylinder, ref posesA, ref posesB, iterationCount);
-            Test<Box, BoxWide, Box, BoxWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>>(box, box, ref posesA, ref posesB, iterationCount);
-            Test<Box, BoxWide, Triangle, TriangleWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(box, triangle, ref posesA, ref posesB, iterationCount);
-            Test<Triangle, TriangleWide, Triangle, TriangleWide, GJKDistanceTester<Triangle, TriangleWide, TriangleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(triangle, triangle, ref posesA, ref posesB, iterationCount);
+            //Test<Sphere, SphereWide, Sphere, SphereWide, SpherePairDistanceTester>(sphere, sphere, ref posesA, ref posesB, iterationCount);
+            //Test<Sphere, SphereWide, Capsule, CapsuleWide, SphereCapsuleDistanceTester>(sphere, capsule, ref posesA, ref posesB, iterationCount);
+            //Test<Sphere, SphereWide, Box, BoxWide, SphereBoxDistanceTester>(sphere, box, ref posesA, ref posesB, iterationCount);
+            //Test<Sphere, SphereWide, Triangle, TriangleWide, SphereTriangleDistanceTester>(sphere, triangle, ref posesA, ref posesB, iterationCount);
+            //Test<Sphere, SphereWide, Cylinder, CylinderWide, SphereCylinderDistanceTester>(sphere, cylinder, ref posesA, ref posesB, iterationCount);
+            //Test<Capsule, CapsuleWide, Capsule, CapsuleWide, CapsulePairDistanceTester>(capsule, capsule, ref posesA, ref posesB, iterationCount);
+            //Test<Capsule, CapsuleWide, Box, BoxWide, CapsuleBoxDistanceTester>(capsule, box, ref posesA, ref posesB, iterationCount);
+            //Test<Capsule, CapsuleWide, Triangle, TriangleWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(capsule, triangle, ref posesA, ref posesB, iterationCount);
+            //Test<Capsule, CapsuleWide, Cylinder, CylinderWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>>(capsule, cylinder, ref posesA, ref posesB, iterationCount);
+            //Test<Cylinder, CylinderWide, Box, BoxWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Box, BoxWide, BoxSupportFinder>>(cylinder, box, ref posesA, ref posesB, iterationCount);
+            //Test<Cylinder, CylinderWide, Triangle, TriangleWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(cylinder, triangle, ref posesA, ref posesB, iterationCount);
+            //Test<Cylinder, CylinderWide, Cylinder, CylinderWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>>(cylinder, cylinder, ref posesA, ref posesB, iterationCount);
+            //Test<Box, BoxWide, Box, BoxWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>>(box, box, ref posesA, ref posesB, iterationCount);
+            //Test<Box, BoxWide, Triangle, TriangleWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(box, triangle, ref posesA, ref posesB, iterationCount);
+            //Test<Triangle, TriangleWide, Triangle, TriangleWide, GJKDistanceTester<Triangle, TriangleWide, TriangleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(triangle, triangle, ref posesA, ref posesB, iterationCount);
             Console.WriteLine($"Done. Hit enter to exit.");
             Console.ReadLine();
         }

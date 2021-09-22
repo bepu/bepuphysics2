@@ -92,45 +92,47 @@ namespace Demos.SpecializedTests
 
                 Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
-                var triangleDescription = new StaticDescription
-                {
-                    Pose = new RigidPose
-                    {
-                        Position = new Vector3(2, 0, 2),
-                        Orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 3.2345f)
-                    },
-                    Collidable = new CollidableDescription
-                    {
-                        Shape = Simulation.Shapes.Add(new Triangle(
-                            new Vector3(-3, -0.5f, -3),
-                            new Vector3(3, 0, -3),
-                            new Vector3(-3, 0, 3))),
-                        SpeculativeMargin = 10.1f
-                    }
-                };
-                Simulation.Statics.Add(triangleDescription);
+                //var triangleDescription = new StaticDescription
+                //{
+                //    Pose = new RigidPose
+                //    {
+                //        Position = new Vector3(2 - 10, 0, 2),
+                //        Orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 3.2345f)
+                //    },
+                //    Collidable = new CollidableDescription
+                //    {
+                //        Shape = Simulation.Shapes.Add(new Triangle(
+                //            new Vector3(-3, -0.5f, -3),
+                //            new Vector3(3, 0, -3),
+                //            new Vector3(-3, 0, 3))),
+                //        SpeculativeMargin = 10.1f
+                //    }
+                //};
+                //Simulation.Statics.Add(triangleDescription);
 
-                var shape = new Triangle(new Vector3(0, 0, 3), new Vector3(0, 0, 0), new Vector3(-3, 3, 0));
-                var bodyDescription = new BodyDescription
-                {
-                    Collidable = new CollidableDescription { Shape = Simulation.Shapes.Add(shape), SpeculativeMargin = 0.1f },
-                    Activity = new BodyActivityDescription { SleepThreshold = -1 },
-                    Pose = new RigidPose
-                    {
-                        Position = new Vector3(1, -0.01f, 1),
-                        Orientation = QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)
-                        //Orientation = BepuUtilities.Quaternion.Identity
-                    }
-                };
-                shape.ComputeInertia(1, out bodyDescription.LocalInertia);
-                //bodyDescription.LocalInertia.InverseInertiaTensor = new Triangular3x3();
-                Simulation.Bodies.Add(bodyDescription);
+                //var shape = new Triangle(new Vector3(0, 0, 3), new Vector3(0, 0, 0), new Vector3(-3, 3, 0));
+                //var bodyDescription = new BodyDescription
+                //{
+                //    Collidable = new CollidableDescription { Shape = Simulation.Shapes.Add(shape), SpeculativeMargin = 0.1f },
+                //    Activity = new BodyActivityDescription { SleepThreshold = -1 },
+                //    Pose = new RigidPose
+                //    {
+                //        Position = new Vector3(1 - 10, -0.01f, 1),
+                //        Orientation = QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)
+                //        //Orientation = BepuUtilities.Quaternion.Identity
+                //    }
+                //};
+                //shape.ComputeInertia(1, out bodyDescription.LocalInertia);
+                ////bodyDescription.LocalInertia.InverseInertiaTensor = new Triangular3x3();
+                //Simulation.Bodies.Add(bodyDescription);
 
                 Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
 
                 Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 0), new BodyInertia { InverseMass = 1 }, new CollidableDescription(Simulation.Shapes.Add(new Sphere(1.75f)), 0.1f), new BodyActivityDescription(-1)));
                 Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(20, 2, 3), Quaternion.CreateFromYawPitchRoll(0f, 1.745329E-05f, 0f)), new BodyInertia { InverseMass = 1 }, new CollidableDescription(Simulation.Shapes.Add(new Capsule(1, 2)), 0.1f), new BodyActivityDescription(-1)));
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 6), new BodyInertia { InverseMass = 1 }, new CollidableDescription(Simulation.Shapes.Add(new Box(2, 3, 2)), 0.1f), new BodyActivityDescription(-1)));
+                var testBox = new Box(2, 3, 2);
+                testBox.ComputeInertia(1, out var testBoxInertia);
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 6), testBoxInertia, new CollidableDescription(Simulation.Shapes.Add(testBox), 10.1f), new BodyActivityDescription(-1)));
 
                 var cylinder = new Cylinder(1.75f, 2);
                 cylinder.ComputeInertia(1, out var cylinderInertia);
@@ -160,7 +162,7 @@ namespace Demos.SpecializedTests
                 builder.BuildDynamicCompound(out var children, out var compoundInertia);
                 //compoundInertia.InverseInertiaTensor = default;
                 var compound = new Compound(children);
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 3, 14), compoundInertia, new CollidableDescription(Simulation.Shapes.Add(compound), 0.1f), new BodyActivityDescription(-1)));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 3, 14), compoundInertia, new CollidableDescription(Simulation.Shapes.Add(compound), 10.1f), new BodyActivityDescription(-1)));
 
                 var triangles = new QuickList<Triangle>(4, BufferPool);
                 var v0 = new Vector3(0, 1.75f, 0);
@@ -173,16 +175,17 @@ namespace Demos.SpecializedTests
                 //triangles.AllocateUnsafely() = new Triangle { A = v1, B = v2, C = v3 };
                 var testMesh = new Mesh(triangles, Vector3.One, BufferPool);
 
-                Simulation.Statics.Add(new StaticDescription(new Vector3(30, -2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(testMesh), 0.1f)));
+                Simulation.Statics.Add(new StaticDescription(new Vector3(30, -2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(testMesh), 10.1f)));
 
+                Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Triangle(v2, v0, v1)), 10.1f)));
 
-                DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(3), out var mesh);
-                var collidable = new CollidableDescription(Simulation.Shapes.Add(mesh), 0.2f);
-                mesh.ComputeClosedInertia(1, out var newtInertia);
-                for (int i = 0; i < 5; ++i)
-                {
-                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-20, 5 + i * 5, 0), newtInertia, collidable, new BodyActivityDescription(1e-2f)));
-                }
+                //DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(3), out var mesh);
+                //var collidable = new CollidableDescription(Simulation.Shapes.Add(mesh), 0.2f);
+                //mesh.ComputeClosedInertia(1, out var newtInertia);
+                //for (int i = 0; i < 5; ++i)
+                //{
+                //    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-20, 5 + i * 5, 0), newtInertia, collidable, new BodyActivityDescription(1e-2f)));
+                //}
             }
         }
 
