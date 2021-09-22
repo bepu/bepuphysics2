@@ -60,7 +60,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         internal static unsafe void GenerateInteriorPoints(in CylinderWide cylinder, in Vector3Wide cylinderLocalNormal, in Vector3Wide localClosestOnCylinder, out Vector2Wide interior0, out Vector2Wide interior1, out Vector2Wide interior2, out Vector2Wide interior3)
         {
             //Assume we can just use the 4 local extreme points of the cylinder at first.
-            //Then, if there is sufficient tilt, replace the closest extreme point to the extreme point with the extreme point.
+            //Then, if there is sufficient tilt, replace the closest extreme point to the deepest point with the deepest point.
             var interpolationMin = new Vector<float>(0.9999f);
             var inverseInterpolationSpan = new Vector<float>(1f / 0.00005f);
             var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(cylinderLocalNormal.Y) - interpolationMin) * inverseInterpolationSpan));

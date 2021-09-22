@@ -145,7 +145,6 @@ namespace Demos.Demos.Characters
                 movingPlatforms[i] = new MovingPlatform(platformCollidable, i * 3559, 1f / 60f, Simulation, poseCreator);
             }
             var box = new Box(4, 1, 4);
-            box.ComputeInertia(1, out var boxInertia);
             var boxCollidable = new CollidableDescription(Simulation.Shapes.Add(box), 0.1f);
             const int width = 8;
             for (int i = 0; i < width; ++i)

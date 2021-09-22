@@ -152,14 +152,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             if (numerator < earliestExit * denominator)
                                 earliestExit = numerator / denominator;
                         }
-                        else
+                        else if (numerator < 0)
                         {
-                            if (numerator < 0)
-                            {
-                                //The B edge is parallel and outside the edge A, so there can be no intersection.
-                                earliestExit = float.MinValue;
-                                latestEntry = float.MaxValue;
-                            }
+                            //The B edge is parallel and outside the edge A, so there can be no intersection.
+                            earliestExit = float.MinValue;
+                            latestEntry = float.MaxValue;
                         }
                     }
                     //We now have bounds on B's edge.
@@ -199,7 +196,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     previousVertexB = vertexB;
                 }
                 //We've now analyzed every edge of B. Check for vertices from A to add.
-                var inverseFaceNormalADotFaceNormalB = 1f / Vector3.Dot(slotLocalNormal, slotFaceNormalB);
+                var inverseLocalNormalADotFaceNormalB = 1f / Vector3.Dot(slotLocalNormal, slotFaceNormalB);
                 for (int i = 0; i < faceVertexIndicesA.Length && candidateCount < maximumCandidateCount; ++i)
                 {
                     ref var edge = ref cachedEdges[i];
@@ -209,7 +206,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         //Project it onto B's surface:
                         //vertexA - localNormal * dot(vertexA - faceOriginB, faceNormalB) / dot(localNormal, faceNormalB); 
                         var bFaceToVertexA = edge.Vertex - bFaceOrigin;
-                        var distance = Vector3.Dot(bFaceToVertexA, slotFaceNormalB) * inverseFaceNormalADotFaceNormalB;
+                        var distance = Vector3.Dot(bFaceToVertexA, slotFaceNormalB) * inverseLocalNormalADotFaceNormalB;
                         var bFaceToProjectedVertexA = bFaceToVertexA - slotLocalNormal * distance;
 
                         var newContactIndex = candidateCount++;
@@ -221,7 +218,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 }
                 Matrix3x3Wide.ReadSlot(ref rB, slotIndex, out var slotOrientationB);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
-                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, slotLocalNormal, cachedEdges[0].Vertex, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, 1f / Vector3.Dot(slotFaceNormalA, slotLocalNormal), cachedEdges[0].Vertex, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
             }
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out manifold.Normal);
         }

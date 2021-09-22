@@ -204,6 +204,24 @@ namespace BepuPhysics
             Vector3Wide.Add(max, localPositionA, out max);
         }
 
+        /// <summary>
+        /// Expands a bounding box by an extremely small amount heuristically.
+        /// </summary>
+        /// <param name="maximumRadius">Maximum radius of the shape to base the expansion on.</param>
+        /// <param name="min">Minimum bounds of the shape to expand.</param>
+        /// <param name="max">Maximum bounds of the shape to expand.</param>
+        /// <remarks>This exists as a byproduct of the MeshReduction's contact filtering policy. Any contacts generated outside the query bounds are ignored.
+        /// While this works okay for the most part, there are cases where a real contact is just *barely* outside the bounds for numerical reasons and gets removed.
+        /// In pathological cases that results in a contact with positive depth being removed. Incrementally expanding the bounding boxes avoids this.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void EpsilonExpandLocalBoundingBoxes(Vector<float> maximumRadius, ref Vector3Wide min, ref Vector3Wide max)
+        {
+            var expansion = maximumRadius * new Vector<float>(1e-4f);
+            Vector3Wide.Subtract(min, expansion, out min);
+            Vector3Wide.Add(max, expansion, out max);
+        }
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void ExpandBoundingBox(in Vector3 expansion, ref Vector3 min, ref Vector3 max)
         {
@@ -232,11 +250,11 @@ namespace BepuPhysics
             shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, poseARotatedIntoBLocalSpace.Orientation, out var maximumRadiusA, out var maximumAngularExpansionA, out min, out max);
             //Object A could rotate around its center.
             var worstCaseRadiusA = shapePoseLocalToA.Position.Length();
-            BoundingBoxHelpers.GetAngularBoundsExpansion(velocityA.Angular, dt, worstCaseRadiusA + maximumRadiusA, worstCaseRadiusA + maximumAngularExpansionA, out var angularExpansionA);
+            GetAngularBoundsExpansion(velocityA.Angular, dt, worstCaseRadiusA + maximumRadiusA, worstCaseRadiusA + maximumAngularExpansionA, out var angularExpansionA);
             //Rotation of object B could induce an arc in object A.
             //The furthest the convex can be from the compound local origin is no further than the sweep pushing it directly away from the compound, while rotation swings A's local pose away.
             var worstCaseRadiusB = sweep.Length() + localOffsetB.Length() + worstCaseRadiusA;
-            BoundingBoxHelpers.GetAngularBoundsExpansion(velocityB.Angular, dt, worstCaseRadiusB + maximumRadiusA, worstCaseRadiusB + maximumAngularExpansionA, out var angularExpansionB);
+            GetAngularBoundsExpansion(velocityB.Angular, dt, worstCaseRadiusB + maximumRadiusA, worstCaseRadiusB + maximumAngularExpansionA, out var angularExpansionB);
             var combinedAngularExpansion = angularExpansionA + angularExpansionB;
 
             min = localOriginToA + min - combinedAngularExpansion;

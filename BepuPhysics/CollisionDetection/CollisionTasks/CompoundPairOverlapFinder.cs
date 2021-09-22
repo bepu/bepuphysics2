@@ -20,7 +20,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TCompoundB : struct, IBoundsQueryableCompound
     {
 
-        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps)
+        public unsafe void FindLocalOverlaps<TOverlapTestingOptions>(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps) where TOverlapTestingOptions : unmanaged, IOverlapTestingOptions
         {
             var totalCompoundChildCount = 0;
             for (int i = 0; i < pairCount; ++i)
@@ -47,18 +47,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 }
             }
 
-            Vector3Wide offsetB = default;
-            QuaternionWide orientationA = default;
-            QuaternionWide orientationB = default;
-            Vector3Wide relativeLinearVelocityA = default;
-            Vector3Wide angularVelocityA = default;
-            Vector3Wide angularVelocityB = default;
-            Vector<float> maximumAllowedExpansion = default;
-            Vector<float> maximumRadius = default;
-            Vector<float> maximumAngularExpansion = default;
+            Unsafe.SkipInit(out Vector3Wide offsetB);
+            Unsafe.SkipInit(out QuaternionWide orientationA);
+            Unsafe.SkipInit(out QuaternionWide orientationB);
+            Unsafe.SkipInit(out Vector3Wide relativeLinearVelocityA);
+            Unsafe.SkipInit(out Vector3Wide angularVelocityA);
+            Unsafe.SkipInit(out Vector3Wide angularVelocityB);
+            Unsafe.SkipInit(out Vector<float> maximumAllowedExpansion);
+            Unsafe.SkipInit(out Vector<float> maximumRadius);
+            Unsafe.SkipInit(out Vector<float> maximumAngularExpansion);
             Unsafe.SkipInit(out RigidPoses localPosesA);
-            Vector3Wide mins = default;
-            Vector3Wide maxes = default;
+            Unsafe.SkipInit(out Vector3Wide mins);
+            Unsafe.SkipInit(out Vector3Wide maxes);
+            Unsafe.SkipInit(out TOverlapTestingOptions overlapTestingOptions);
             for (int i = 0; i < totalCompoundChildCount; i += Vector<float>.Count)
             {
                 var count = totalCompoundChildCount - i;
@@ -105,6 +106,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Length(localOffsetA, out var radiusA);
                 BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref mins, ref maxes, radiusA, localPositionsA, localRelativeLinearVelocityA, angularVelocityA, angularVelocityB, dt,
                     maximumRadius, maximumAngularExpansion, maximumAllowedExpansion);
+                if (overlapTestingOptions.EpsilonExpandBounds)
+                {
+                    BoundingBoxHelpers.EpsilonExpandLocalBoundingBoxes(maximumRadius, ref mins, ref maxes);
+                }
 
                 for (int j = 0; j < count; ++j)
                 {
@@ -113,7 +118,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.ReadSlot(ref maxes, j, out pairToTest.Max);
                 }
             }
-
             //Doesn't matter what mesh/compound instance is used for the function; just using it as a source of the function.
             Debug.Assert(totalCompoundChildCount > 0);
             Unsafe.AsRef<TCompoundB>(pairsToTest[0].Container).FindLocalOverlaps<CompoundPairOverlaps, ChildOverlapsCollection>(ref pairsToTest, pool, shapes, ref overlaps);

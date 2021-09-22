@@ -71,9 +71,29 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 {
                     var targetIndex = count[i];
                     ref var target = ref GetOffsetInstance(ref Unsafe.Add(ref candidates, targetIndex), i);
-                    //TODO: Check codegen. May be worth doing another offset instance for source data if the compiler inserts bounds checks.
+                    //TODO: Now that we're free of NS2.0, we could likely intrisify this to reduce some overhead. Still not very vectorization friendly.
                     GetFirst(ref target.X) = candidate.X[i];
                     GetFirst(ref target.Y) = candidate.Y[i];
+                    GetFirst(ref target.FeatureId) = candidate.FeatureId[i];
+                }
+            }
+            count = Vector.ConditionalSelect(newContactExists, count + Vector<int>.One, count);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void AddCandidateWithDepth(ref ManifoldCandidate candidates, ref Vector<int> count, in ManifoldCandidate candidate, in Vector<int> newContactExists, int pairCount)
+        {
+            //Similar to above, but also takes the candidate's depth. Any user of this codepath is not going to rely on the reduction postpass to calculate depths.
+            for (int i = 0; i < pairCount; ++i)
+            {
+                if (newContactExists[i] < 0)
+                {
+                    var targetIndex = count[i];
+                    ref var target = ref GetOffsetInstance(ref Unsafe.Add(ref candidates, targetIndex), i);
+                    //TODO: Now that we're free of NS2.0, we could likely intrisify this to reduce some overhead. Still not very vectorization friendly.
+                    GetFirst(ref target.X) = candidate.X[i];
+                    GetFirst(ref target.Y) = candidate.Y[i];
+                    GetFirst(ref target.Depth) = candidate.Depth[i];
                     GetFirst(ref target.FeatureId) = candidate.FeatureId[i];
                 }
             }
@@ -95,19 +115,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             exists = Vector.BitwiseAnd(Vector.GreaterThan(candidate.Depth, minimumDepth), Vector.LessThan(new Vector<int>(i), rawContactCount));
         }
 
-        public static void Reduce(ref ManifoldCandidate candidates, Vector<int> rawContactCount, int maxCandidateCount,
-            in Vector3Wide faceNormalA, Vector<float> inverseFaceNormalDotNormal, in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
-            Vector<float> epsilonScale, Vector<float> minimumDepth, int pairCount,
-            out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
-            out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SquishMaximumContactCount(Vector<int> rawContactCount, int pairCount, ref int maxCandidateCount, out Vector<int> maskedContactCount)
         {
-            Unsafe.SkipInit(out contact0);
-            Unsafe.SkipInit(out contact1);
-            Unsafe.SkipInit(out contact2);
-            Unsafe.SkipInit(out contact3);
             //See if we can avoid visiting some of the higher indices.
             //Mask out any contacts generated on the pairs which don't actually exist. They can waste time and cause problems.
-            Vector<int> maskedContactCount = rawContactCount;
+            maskedContactCount = rawContactCount;
             ref var maskedBase = ref Unsafe.As<Vector<int>, int>(ref maskedContactCount);
             for (int i = pairCount; i < Vector<int>.Count; ++i)
             {
@@ -121,15 +134,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     break;
                 }
             }
-            if (maxCandidateCount == 0)
-            {
-                contact0Exists = Vector<int>.Zero;
-                contact1Exists = Vector<int>.Zero;
-                contact2Exists = Vector<int>.Zero;
-                contact3Exists = Vector<int>.Zero;
-                return;
-            }
-            //That's too many; four is plenty. We should choose how to get rid of the extra ones.
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void ComputeDepthsForReduction(ref int maxCandidateCount, in Vector3Wide faceNormalA, Vector<float> inverseFaceNormalADotNormal,
+            in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY, Vector<float> minimumDepth, Vector<int> maskedContactCount, ref ManifoldCandidate candidates)
+        {
             //It's important to keep the deepest contact if there's any significant depth disparity, so we need to calculate depths before reduction.
             //Conceptually, we cast a ray from the point on face B toward the plane of face A along the contact normal:
             //depth = dot(pointOnFaceB - faceCenterA, faceNormalA) / dot(faceNormalA, normal)
@@ -137,7 +147,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //depth = dot(pointOnFaceB - faceCenterA, dotAxis)
             //depth = dot(faceCenterB + tangentBX * candidate.X + tangentBY * candidate.Y - faceCenterA, dotAxis)
             //depth = dot(faceCenterB - faceCenterA, dotAxis) + dot(tangentBX, dotAxis) * candidate.X + dot(tangentBY, dotAxis) * candidate.Y
-            Vector3Wide.Scale(faceNormalA, inverseFaceNormalDotNormal, out var dotAxis);
+            Vector3Wide.Scale(faceNormalA, inverseFaceNormalADotNormal, out var dotAxis);
             Vector3Wide.Dot(faceCenterBToFaceCenterA, dotAxis, out var negativeBaseDot);
             Vector3Wide.Dot(tangentBX, dotAxis, out var xDot);
             Vector3Wide.Dot(tangentBY, dotAxis, out var yDot);
@@ -147,6 +157,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref var candidate = ref Unsafe.Add(ref candidates, i);
                 candidate.Depth = candidate.X * xDot + candidate.Y * yDot - negativeBaseDot;
             }
+
             //See if we can compress the count any due to depth-rejected candidates.
             for (int i = maxCandidateCount - 1; i >= 0; --i)
             {
@@ -157,6 +168,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     maxCandidateCount = i + 1;
                     break;
                 }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void InternalReduce(ref ManifoldCandidate candidates, int maxCandidateCount,
+            Vector<float> epsilonScale, Vector<float> minimumDepth, Vector<int> maskedContactCount,
+            out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
+            out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
+        {
+            Unsafe.SkipInit(out contact0);
+            Unsafe.SkipInit(out contact1);
+            Unsafe.SkipInit(out contact2);
+            Unsafe.SkipInit(out contact3);
+            if (maxCandidateCount == 0)
+            {
+                contact0Exists = Vector<int>.Zero;
+                contact1Exists = Vector<int>.Zero;
+                contact2Exists = Vector<int>.Zero;
+                contact3Exists = Vector<int>.Zero;
+                return;
             }
 
             //This early out breaks determinism. Early out and non-early out produce different results, and the choice of early out depends on the entire bundle.
@@ -257,6 +288,25 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             contact3Exists = Vector.GreaterThan(maxSignedArea * maxSignedArea, epsilon);
         }
 
+        public static void Reduce(ref ManifoldCandidate candidates, Vector<int> rawContactCount, int maxCandidateCount,
+            in Vector3Wide faceNormalA, Vector<float> inverseFaceNormalDotNormal, in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
+            Vector<float> epsilonScale, Vector<float> minimumDepth, int pairCount,
+            out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
+            out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
+        {
+            SquishMaximumContactCount(rawContactCount, pairCount, ref maxCandidateCount, out var maskedContactCount);
+            ComputeDepthsForReduction(ref maxCandidateCount, faceNormalA, inverseFaceNormalDotNormal, faceCenterBToFaceCenterA, tangentBX, tangentBY, minimumDepth, maskedContactCount, ref candidates);
+            InternalReduce(ref candidates, maxCandidateCount, epsilonScale, minimumDepth, maskedContactCount, out contact0, out contact1, out contact2, out contact3, out contact0Exists, out contact1Exists, out contact2Exists, out contact3Exists);
+        }
+        public static void ReduceWithoutComputingDepths(ref ManifoldCandidate candidates, Vector<int> rawContactCount, int maxCandidateCount,
+            Vector<float> epsilonScale, Vector<float> minimumDepth, int pairCount,
+            out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
+            out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
+        {
+            SquishMaximumContactCount(rawContactCount, pairCount, ref maxCandidateCount, out var maskedContactCount);
+            InternalReduce(ref candidates, maxCandidateCount, epsilonScale, minimumDepth, maskedContactCount, out contact0, out contact1, out contact2, out contact3, out contact0Exists, out contact1Exists, out contact2Exists, out contact3Exists);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe static void PlaceCandidateInSlot(in ManifoldCandidateScalar candidate, int contactIndex,
             in Vector3 faceCenterB, in Vector3 faceBX, in Vector3 faceBY, float depth,
@@ -285,7 +335,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         public unsafe static void Reduce(ManifoldCandidateScalar* candidates, int candidateCount,
-            in Vector3 faceNormalA, in Vector3 localNormal, in Vector3 faceCenterA, in Vector3 faceCenterB, in Vector3 tangentBX, in Vector3 tangentBY,
+            in Vector3 faceNormalA, float inverseFaceNormalADotLocalNormal, in Vector3 faceCenterA, in Vector3 faceCenterB, in Vector3 tangentBX, in Vector3 tangentBY,
             float epsilonScale, float minimumDepth, in Matrix3x3 rotationToWorld, in Vector3 worldOffsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
         {
             if (candidateCount == 0)
@@ -304,7 +354,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //depth = dot(pointOnFaceB - faceCenterA, dotAxis)
             //depth = dot(faceCenterB + tangentBX * candidate.X + tangentBY * candidate.Y - faceCenterA, dotAxis)
             //depth = dot(faceCenterB - faceCenterA, dotAxis) + dot(tangentBX, dotAxis) * candidate.X + dot(tangentBY, dotAxis) * candidate.Y
-            var dotAxis = faceNormalA / Vector3.Dot(faceNormalA, localNormal);
+            var dotAxis = faceNormalA * inverseFaceNormalADotLocalNormal;
             var faceCenterAToFaceCenterB = faceCenterB - faceCenterA;
             var baseDot = Vector3.Dot(faceCenterAToFaceCenterB, dotAxis);
             var xDot = Vector3.Dot(tangentBX, dotAxis);

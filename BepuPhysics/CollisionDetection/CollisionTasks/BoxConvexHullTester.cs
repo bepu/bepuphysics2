@@ -157,9 +157,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var denominator = edgePlaneNormalX * hullEdgeOffsetX + edgePlaneNormalY * hullEdgeOffsetY + edgePlaneNormalZ * hullEdgeOffsetZ;
                     var edgeIntersections = numerator / denominator;
 
-
                     //A plane is being 'entered' if the ray direction opposes the face normal.
                     //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
+                    //TODO: Now that we're off NS2.0, this branchmess could be improved.
                     float latestEntry, earliestExit;
                     if (denominator.X < 0)
                     {
@@ -171,8 +171,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         latestEntry = float.MinValue;
                         earliestExit = edgeIntersections.X;
                     }
+                    else if (numerator.X < 0)
+                    {
+                        //The B edge is parallel and outside the edge A, so there can be no intersection.
+                        earliestExit = float.MinValue;
+                        latestEntry = float.MaxValue;
+                    }
                     else
                     {
+                        //Parallel, but inside.
                         latestEntry = float.MinValue;
                         earliestExit = float.MaxValue;
                     }
@@ -186,6 +193,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         if (edgeIntersections.Y < earliestExit)
                             earliestExit = edgeIntersections.Y;
                     }
+                    else if (numerator.Y < 0)
+                    {
+                        earliestExit = float.MinValue;
+                        latestEntry = float.MaxValue;
+                    }
                     if (denominator.Z < 0)
                     {
                         if (edgeIntersections.Z > latestEntry)
@@ -196,6 +208,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         if (edgeIntersections.Z < earliestExit)
                             earliestExit = edgeIntersections.Z;
                     }
+                    else if (numerator.Z < 0)
+                    {
+                        earliestExit = float.MinValue;
+                        latestEntry = float.MaxValue;
+                    }
                     if (denominator.W < 0)
                     {
                         if (edgeIntersections.W > latestEntry)
@@ -205,6 +222,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     {
                         if (edgeIntersections.W < earliestExit)
                             earliestExit = edgeIntersections.W;
+                    }
+                    else if (numerator.W < 0)
+                    {
+                        earliestExit = float.MinValue;
+                        latestEntry = float.MaxValue;
                     }
 
                     //We now have a convex hull edge interval. Add contacts for it.
@@ -309,7 +331,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ReadSlot(ref boxFaceNormal, slotIndex, out var slotBoxFaceNormal);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                 Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
-                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotBoxFaceNormal, slotLocalNormal, slotBoxFaceCenter, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotBoxFaceNormal, 1f / Vector3.Dot(slotBoxFaceNormal, slotLocalNormal), slotBoxFaceCenter, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                    slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
             }
             //The reduction does not assign the normal. Fill it in.
