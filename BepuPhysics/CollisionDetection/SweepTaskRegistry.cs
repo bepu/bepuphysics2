@@ -72,6 +72,20 @@ namespace BepuPhysics.CollisionDetection
             bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
             where TSweepFilter : ISweepFilter;
 
+        protected virtual unsafe bool PreorderedTypeCheck<TSweepFilter>(
+            void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
+            bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool)
+            where TSweepFilter : ISweepFilter
+        {
+            // Use the Sweep by default, so each sweep task doesn't have to do this in case it doesn't need to optimize the Check over Sweep
+            return PreorderedTypeSweep(shapeDataA, orientationA, velocityA,
+                shapeDataB, offsetB, orientationB, velocityB,
+                maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                flipRequired, ref filter, shapes, sweepTasks, pool, out _, out _, out _, out _);
+        }
+
         public unsafe bool Sweep<TSweepFilter>(
             void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
@@ -102,6 +116,34 @@ namespace BepuPhysics.CollisionDetection
                     maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                     flipRequired, ref filter, shapes, sweepTasks, pool,
                     out t0, out t1, out hitLocation, out hitNormal);
+            }
+        }
+
+        public unsafe bool Check<TSweepFilter>(
+            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
+            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
+            ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool)
+            where TSweepFilter : ISweepFilter
+        {
+            Debug.Assert((shapeTypeA == ShapeTypeIndexA && shapeTypeB == ShapeTypeIndexB) || (shapeTypeA == ShapeTypeIndexB && shapeTypeB == ShapeTypeIndexA),
+                "Types must match expected types.");
+            var flipRequired = shapeTypeB == ShapeTypeIndexA;
+            if (flipRequired)
+            {
+                return PreorderedTypeCheck(
+                    shapeDataB, orientationB, velocityB,
+                    shapeDataA, -offsetB, orientationA, velocityA,
+                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                    flipRequired, ref filter, shapes, sweepTasks, pool);
+            }
+            else
+            {
+                return PreorderedTypeCheck(
+                    shapeDataA, orientationA, velocityA,
+                    shapeDataB, offsetB, orientationB, velocityB,
+                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                    flipRequired, ref filter, shapes, sweepTasks, pool);
             }
         }
     }

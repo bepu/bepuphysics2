@@ -28,7 +28,7 @@ namespace BepuPhysics.Trees
                     var leafIndex = Encode(nodeIndex);
                     leafTester.TestLeaf(leafIndex, ref treeRay->MaximumT);
                     //Leaves have no children; have to pull from the stack to get a new target.
-                    if (stackEnd == 0)
+                    if (stackEnd == 0 || treeRay->MaximumT < 0)
                         return;
                     nodeIndex = stack[--stackEnd];
                 }

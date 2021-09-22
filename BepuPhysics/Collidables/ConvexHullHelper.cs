@@ -194,7 +194,7 @@ namespace BepuPhysics.Collidables
                 best = candidateY / candidateX;
                 bestIndex = 0;
                 bestDistanceSquared = candidateX * candidateX + candidateY * candidateY;
-                var inverseBestDistance = 1f / MathF.Sqrt(bestDistanceSquared);
+                var inverseBestDistance = 1f / (float)Math.Sqrt(bestDistanceSquared);
                 currentEdgeDirectionX = candidateX * inverseBestDistance;
                 currentEdgeDirectionY = candidateY * inverseBestDistance;
             }
@@ -216,7 +216,7 @@ namespace BepuPhysics.Collidables
                 //1) collinear with the previous best by the plane epsilon test BUT is more distant, or
                 //2) has a greater angle than the previous best.
                 var planeOffset = -candidateX * currentEdgeDirectionY + candidateY * currentEdgeDirectionX;
-                if (MathF.Abs(planeOffset) < planeEpsilon)
+                if (Math.Abs(planeOffset) < planeEpsilon)
                 {
                     //The candidate is collinear. Only accept it if it's further away.
                     if (candidateX * candidateX + candidateY * candidateY <= bestDistanceSquared)
@@ -231,7 +231,7 @@ namespace BepuPhysics.Collidables
                 }
                 best = candidateY / candidateX;
                 bestDistanceSquared = candidateX * candidateX + candidateY * candidateY;
-                var inverseBestDistance = 1f / MathF.Sqrt(bestDistanceSquared);
+                var inverseBestDistance = 1f / (float)Math.Sqrt(bestDistanceSquared);
                 currentEdgeDirectionX = candidateX * inverseBestDistance;
                 currentEdgeDirectionY = candidateY * inverseBestDistance;
                 bestIndex = i;
@@ -546,7 +546,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
-            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-6f;
+            var planeEpsilonNarrow = (float)Math.Sqrt(bestDistanceSquared) * 1e-6f;
             var planeEpsilon = new Vector<float>(planeEpsilonNarrow);
             var rawFaceVertexIndices = new QuickList<int>(pointBundles.Length * Vector<float>.Count, pool);
             var initialSourceEdge = new EdgeEndpoints { A = initialIndex, B = initialIndex };

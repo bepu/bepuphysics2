@@ -1,4 +1,5 @@
 ﻿using BepuPhysics.Collidables;
+using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Memory;
 using System.Numerics;
@@ -19,8 +20,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps;
 
-        unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
-            where TOverlaps : ICollisionTaskSubpairOverlaps;
+        unsafe void FindLocalOverlaps<TLeafTester>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, ref TLeafTester leafTester)
+            where TLeafTester : ISweepLeafTester;
     }
     public interface IOverlapTestingOptions
     {
