@@ -363,21 +363,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var offsetZ = Vector.ConditionalSelect(useA, boxToAZ, Vector.ConditionalSelect(useB, boxToBZ, boxToCZ));
 
                 //Now examine the 4 box vertices from the best box face.
-                //The box face is spanned by two edge directions which are aligned with the working space's axes.
-                //To check a box vertex for containment:
-                //dot(edgePlaneNormalAB, boxVertex - vA), which is proportional to barycentric weight, scaled up by the triangle normal length.
-                //That is, barycentricWeightC = dot(edgePlaneNormalAB, boxVertex - vA) / triangleNormalLength.
-                //To detect containment, we can compute two barycentric weights and derive the third. If all are positive, then the box vertex is contained and should not contribute.
-                //(It would be redundant with the triangle face depth result, so there's no reason to go through the effort to reconstruct the exact point on the triangle's surface.)
-                //Note that: boxVertex = faceOffset +- boxEdgeOffsetX +- boxEdgeOffsetY
-                //So we can split the above barycentric weight calculation into pieces. Leaving it scaled for succinctness:
-                //scaledBarycentricWeightC = dot(edgePlaneNormalAB, boxVertex) - dot(edgePlaneNormalAB, vA)
-                //scaledBarycentricWeightC = dot(edgePlaneNormalAB, faceOffset) +- dot(edgePlaneNormalAB, boxEdgeOffsetX) +- dot(edgePlaneNormalAB, boxEdgeOffsetY) - dot(edgePlaneNormalAB, vA)
-                //So we can share quite a few operations across the 4 box vertices.
-
-                //This gives us containment, but does not provide the closest point on the triangle directly. For simplicity, we'll just compute the closest point on each edge directly:
+                //For simplicity, we'll just compute the closest point on each edge directly:
                 //tClosestPointOnAB = clamp(dot(edgeOffsetAB, boxVertex - vA) / ||edgeOffsetAB||^2, 0, 1) 
-                //                  = clamp((dot(edgeOffsetAB, faceOffset) +- dot(edgeOffsetAB, boxEdgeOffsetX) +- dot(edgeOffsetAB, boxEdgeOffsetY) - dot(edgeOffsetAB, vA)) / ||edgeOffsetAB||^2, 0, 1)
+                //Note that: boxVertex = faceOffset +- boxEdgeOffsetX +- boxEdgeOffsetY    
+                //So we can split the above calculation into pieces. Leaving it scaled for succinctness:
+                //tClosestPointOnAB = clamp((dot(edgeOffsetAB, faceOffset) +- dot(edgeOffsetAB, boxEdgeOffsetX) +- dot(edgeOffsetAB, boxEdgeOffsetY) - dot(edgeOffsetAB, vA)) / ||edgeOffsetAB||^2, 0, 1)        
+                //So we can share quite a few operations across the 4 box vertices.
 
                 var absNormalX = Vector.Abs(localNormal.X);
                 var absNormalY = Vector.Abs(localNormal.Y);
@@ -551,25 +542,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Guard against division by zero.
                 depthCandidate = Vector.ConditionalSelect(Vector.GreaterThan(distanceSquared, new Vector<float>(1e-6f)), depthCandidate, new Vector<float>(float.MaxValue));
                 Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
-
-                //Vector3Wide.Cross(ab, triangleNormal, out var edgePlaneNormalAB);
-                //Vector3Wide.Cross(bc, triangleNormal, out var edgePlaneNormalBC);
-                //Vector3Wide.Cross(ca, triangleNormal, out var edgePlaneNormalCA);
-                //var edgePlaneNormalABDotFaceOffset = faceOffset * Vector.ConditionalSelect(useFaceX, edgePlaneNormalAB.X, Vector.ConditionalSelect(useFaceY, edgePlaneNormalAB.Y, edgePlaneNormalAB.Z));
-                //var edgePlaneNormalBCDotFaceOffset = faceOffset * Vector.ConditionalSelect(useFaceX, edgePlaneNormalBC.X, Vector.ConditionalSelect(useFaceY, edgePlaneNormalBC.Y, edgePlaneNormalBC.Z));
-                //var edgePlaneNormalCADotFaceOffset = faceOffset * Vector.ConditionalSelect(useFaceX, edgePlaneNormalCA.X, Vector.ConditionalSelect(useFaceY, edgePlaneNormalCA.Y, edgePlaneNormalCA.Z));
-                //var edgePlaneNormalABDotBoxEdgeX = xOffset * Vector.ConditionalSelect(useFaceX, edgePlaneNormalAB.Y, Vector.ConditionalSelect(useFaceY, edgePlaneNormalAB.Z, edgePlaneNormalAB.X));
-                //var edgePlaneNormalBCDotBoxEdgeX = xOffset * Vector.ConditionalSelect(useFaceX, edgePlaneNormalBC.Y, Vector.ConditionalSelect(useFaceY, edgePlaneNormalBC.Z, edgePlaneNormalBC.X));
-                //var edgePlaneNormalCADotBoxEdgeX = xOffset * Vector.ConditionalSelect(useFaceX, edgePlaneNormalCA.Y, Vector.ConditionalSelect(useFaceY, edgePlaneNormalCA.Z, edgePlaneNormalCA.X));
-                //var edgePlaneNormalABDotBoxEdgeY = yOffset * Vector.ConditionalSelect(useFaceX, edgePlaneNormalAB.Z, Vector.ConditionalSelect(useFaceY, edgePlaneNormalAB.X, edgePlaneNormalAB.Y));
-                //var edgePlaneNormalBCDotBoxEdgeY = yOffset * Vector.ConditionalSelect(useFaceX, edgePlaneNormalBC.Z, Vector.ConditionalSelect(useFaceY, edgePlaneNormalBC.X, edgePlaneNormalBC.Y));
-                //var edgePlaneNormalCADotBoxEdgeY = yOffset * Vector.ConditionalSelect(useFaceX, edgePlaneNormalCA.Z, Vector.ConditionalSelect(useFaceY, edgePlaneNormalCA.X, edgePlaneNormalCA.Y));
-
-
-
-
-
-
             }
 
 

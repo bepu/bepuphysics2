@@ -47,8 +47,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         static void TestVertexNormal(in Vector3Wide vertex,
             in Vector3Wide opposingA, in Vector3Wide opposingB, in Vector3Wide opposingC,
             in Vector3Wide opposingAB, in Vector3Wide opposingBC, in Vector3Wide opposingCA,
-            in Vector3Wide opposingEdgePlaneAB, in Vector3Wide opposingEdgePlaneBC,
-            in Vector<float> inverseLengthSquaredAB, in Vector<float> inverseLengthSquaredBC, in Vector<float> inverseLengthSquaredCA, in Vector<float> triangleNormalLength,
+            in Vector<float> inverseLengthSquaredAB, in Vector<float> inverseLengthSquaredBC, in Vector<float> inverseLengthSquaredCA,
             ref Vector<float> distanceSquared, ref Vector3Wide offset)
         {
             //Project the vertex onto all three edges. Take the closest approach as a normal candidate.
@@ -56,11 +55,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(vertex, opposingA, out var av);
             Vector3Wide.Subtract(vertex, opposingB, out var bv);
             Vector3Wide.Subtract(vertex, opposingC, out var cv);
-            Vector3Wide.Dot(av, opposingEdgePlaneAB, out var avDotEdgePlaneAB);
-            Vector3Wide.Dot(bv, opposingEdgePlaneBC, out var bvDotEdgePlaneBC);
-            //Because of the equivalence between the edge plane tests and barycentric coordinates, we can compute the last edge plane dot implicitly:
-            var cvDotEdgePlaneCA = triangleNormalLength - avDotEdgePlaneAB - bvDotEdgePlaneBC;
-            var outsideTriangle = Vector.BitwiseOr(Vector.GreaterThan(avDotEdgePlaneAB, Vector<float>.Zero), Vector.BitwiseOr(Vector.GreaterThan(bvDotEdgePlaneBC, Vector<float>.Zero), Vector.GreaterThan(cvDotEdgePlaneCA, Vector<float>.Zero)));
             Vector3Wide.Dot(av, opposingAB, out var avDotAB);
             Vector3Wide.Dot(bv, opposingBC, out var bvDotBC);
             Vector3Wide.Dot(cv, opposingCA, out var cvDotCA);
@@ -85,9 +79,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(Vector.Equals(distanceSquaredCandidate, abDistanceSquared), vToAB, vToCA, out var offsetCandidate);
             Vector3Wide.ConditionalSelect(Vector.Equals(distanceSquaredCandidate, bcDistanceSquared), vToBC, offsetCandidate, out offsetCandidate);
 
-            //Ignore this vertex if it's contained within the triangle. We'll detect distances that are too close to generate normals outside.
-            var useCandidate = Vector.BitwiseAnd(Vector.LessThan(distanceSquaredCandidate, distanceSquared), outsideTriangle);
-            distanceSquared = Vector.ConditionalSelect(useCandidate, distanceSquaredCandidate, distanceSquared);
+            var useCandidate = Vector.LessThan(distanceSquaredCandidate, distanceSquared);
+            distanceSquared = Vector.Min(distanceSquaredCandidate, distanceSquared);
             Vector3Wide.ConditionalSelect(useCandidate, offsetCandidate, offset, out offset);
         }
 
@@ -353,18 +346,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var inverseABBLengthSquared = Vector<float>.One / abBLengthSquared;
                 var inverseBCBLengthSquared = Vector<float>.One / bcBLengthSquared;
                 var inverseCABLengthSquared = Vector<float>.One / caBLengthSquared;
-                Vector3Wide.Cross(abA, faceNormalA, out var edgeNormalABOnA);
-                Vector3Wide.Cross(bcA, faceNormalA, out var edgeNormalBCOnA);
-                Vector3Wide.Cross(abB, faceNormalB, out var edgeNormalABOnB);
-                Vector3Wide.Cross(bcB, faceNormalB, out var edgeNormalBCOnB);
                 var distanceSquared = new Vector<float>(float.MaxValue);
                 Unsafe.SkipInit(out Vector3Wide offset);
-                TestVertexNormal(a.A, bA, bB, bC, abB, bcB, caB, edgeNormalABOnB, edgeNormalBCOnB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, faceNormalBLength, ref distanceSquared, ref offset);
-                TestVertexNormal(a.B, bA, bB, bC, abB, bcB, caB, edgeNormalABOnB, edgeNormalBCOnB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, faceNormalBLength, ref distanceSquared, ref offset);
-                TestVertexNormal(a.C, bA, bB, bC, abB, bcB, caB, edgeNormalABOnB, edgeNormalBCOnB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, faceNormalBLength, ref distanceSquared, ref offset);
-                TestVertexNormal(bA, a.A, a.B, a.C, abA, bcA, caA, edgeNormalABOnA, edgeNormalBCOnA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, faceNormalALength, ref distanceSquared, ref offset);
-                TestVertexNormal(bB, a.A, a.B, a.C, abA, bcA, caA, edgeNormalABOnA, edgeNormalBCOnA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, faceNormalALength, ref distanceSquared, ref offset);
-                TestVertexNormal(bC, a.A, a.B, a.C, abA, bcA, caA, edgeNormalABOnA, edgeNormalBCOnA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, faceNormalALength, ref distanceSquared, ref offset);
+                TestVertexNormal(a.A, bA, bB, bC, abB, bcB, caB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, ref distanceSquared, ref offset);
+                TestVertexNormal(a.B, bA, bB, bC, abB, bcB, caB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, ref distanceSquared, ref offset);
+                TestVertexNormal(a.C, bA, bB, bC, abB, bcB, caB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, ref distanceSquared, ref offset);
+                TestVertexNormal(bA, a.A, a.B, a.C, abA, bcA, caA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, ref distanceSquared, ref offset);
+                TestVertexNormal(bB, a.A, a.B, a.C, abA, bcA, caA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, ref distanceSquared, ref offset);
+                TestVertexNormal(bC, a.A, a.B, a.C, abA, bcA, caA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, ref distanceSquared, ref offset);
 
                 var distance = Vector.SquareRoot(distanceSquared);
                 Vector3Wide.Scale(offset, Vector<float>.One / distance, out localNormalCandidate);
