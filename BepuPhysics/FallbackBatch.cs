@@ -88,7 +88,7 @@ namespace BepuPhysics
                     ++bodyConstraintReferences.Count;
                 }
                 var fallbackReference = new FallbackReference { ConstraintHandle = constraintHandle, IndexInConstraint = i };
-                constraintReferences.AddRef(ref fallbackReference, pool);
+                constraintReferences.Add(ref fallbackReference, pool);
             }
         }
 
@@ -139,7 +139,7 @@ namespace BepuPhysics
             ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
             //TODO: Should really just be using a dictionary here.
             var dummy = new FallbackReference { ConstraintHandle = constraintHandle };
-            var removed = constraintReferences.FastRemoveRef(ref dummy);
+            var removed = constraintReferences.FastRemove(ref dummy);
             Debug.Assert(removed, "If a constraint removal was requested, it must exist within the referenced body's constraint set.");
             if (constraintReferences.Count == 0)
             {
@@ -241,7 +241,7 @@ namespace BepuPhysics
             ref var countsStart = ref Unsafe.As<Vector<int>, int>(ref counts);
             for (int i = 0; i < count; ++i)
             {
-                var index = bodyConstraintReferences.IndexOfRef(ref Unsafe.Add(ref start, i));
+                var index = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref start, i));
                 Debug.Assert(index >= 0, "If a prestep is looking up constraint counts associated with a body, it better be in the jacobi batch!");
                 Unsafe.Add(ref countsStart, i) = bodyConstraintReferences.Values[index].Count;
             }
@@ -259,8 +259,8 @@ namespace BepuPhysics
             ref var countsBStart = ref Unsafe.As<Vector<int>, int>(ref countsB);
             for (int i = 0; i < count; ++i)
             {
-                var indexA = bodyConstraintReferences.IndexOfRef(ref Unsafe.Add(ref startA, i));
-                var indexB = bodyConstraintReferences.IndexOfRef(ref Unsafe.Add(ref startB, i));
+                var indexA = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startA, i));
+                var indexB = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startB, i));
                 Debug.Assert(indexA >= 0 && indexB >= 0, "If a prestep is looking up constraint counts associated with a body, it better be in the jacobi batch!");
                 Unsafe.Add(ref countsAStart, i) = bodyConstraintReferences.Values[indexA].Count;
                 Unsafe.Add(ref countsBStart, i) = bodyConstraintReferences.Values[indexB].Count;
@@ -284,9 +284,9 @@ namespace BepuPhysics
             ref var countsCStart = ref Unsafe.As<Vector<int>, int>(ref countsC);
             for (int i = 0; i < count; ++i)
             {
-                var indexA = bodyConstraintReferences.IndexOfRef(ref Unsafe.Add(ref startA, i));
-                var indexB = bodyConstraintReferences.IndexOfRef(ref Unsafe.Add(ref startB, i));
-                var indexC = bodyConstraintReferences.IndexOfRef(ref Unsafe.Add(ref startC, i));
+                var indexA = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startA, i));
+                var indexB = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startB, i));
+                var indexC = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startC, i));
                 Debug.Assert(indexA >= 0 && indexB >= 0, "If a prestep is looking up constraint counts associated with a body, it better be in the jacobi batch!");
                 Unsafe.Add(ref countsAStart, i) = bodyConstraintReferences.Values[indexA].Count;
                 Unsafe.Add(ref countsBStart, i) = bodyConstraintReferences.Values[indexB].Count;
@@ -315,10 +315,10 @@ namespace BepuPhysics
             ref var countsDStart = ref Unsafe.As<Vector<int>, int>(ref countsD);
             for (int i = 0; i < count; ++i)
             {
-                var indexA = bodyConstraintReferences.IndexOfRef(ref Unsafe.Add(ref startA, i));
-                var indexB = bodyConstraintReferences.IndexOfRef(ref Unsafe.Add(ref startB, i));
-                var indexC = bodyConstraintReferences.IndexOfRef(ref Unsafe.Add(ref startC, i));
-                var indexD = bodyConstraintReferences.IndexOfRef(ref Unsafe.Add(ref startD, i));
+                var indexA = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startA, i));
+                var indexB = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startB, i));
+                var indexC = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startC, i));
+                var indexD = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startD, i));
                 Debug.Assert(indexA >= 0 && indexB >= 0, "If a prestep is looking up constraint counts associated with a body, it better be in the jacobi batch!");
                 Unsafe.Add(ref countsAStart, i) = bodyConstraintReferences.Values[indexA].Count;
                 Unsafe.Add(ref countsBStart, i) = bodyConstraintReferences.Values[indexB].Count;
@@ -453,7 +453,7 @@ namespace BepuPhysics
             bodyConstraintReferences.GetTableIndices(ref originalBodyIndex, out var tableIndex, out var elementIndex);
             var references = bodyConstraintReferences.Values[elementIndex];
             bodyConstraintReferences.FastRemove(tableIndex, elementIndex);
-            bodyConstraintReferences.AddUnsafelyRef(ref newBodyLocation, references);
+            bodyConstraintReferences.AddUnsafely(ref newBodyLocation, references);
         }
 
         internal void UpdateForBodyMemorySwap(int a, int b)

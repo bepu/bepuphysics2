@@ -239,7 +239,7 @@ namespace BepuUtilities.Collections
             {
                 //We assume that ref adds will get inlined reasonably here. That's not actually guaranteed, but we'll bite the bullet.
                 //(You could technically branch on the Unsafe.SizeOf<T>, which should result in a compile time specialized zero overhead implementation... but meh!)
-                AddUnsafelyRef(ref oldDictionary.Keys[i], oldDictionary.Values[i]);
+                AddUnsafely(ref oldDictionary.Keys[i], oldDictionary.Values[i]);
             }
             oldKeySpan = oldDictionary.Keys;
             oldValueSpan = oldDictionary.Values;
@@ -364,7 +364,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="key">Key to get the index of.</param>
         /// <returns>The index of the key if the key exists in the dictionary, -1 otherwise.</returns>
-        public int IndexOfRef(ref TKey key)
+        public int IndexOf(ref TKey key)
         {
             Validate();
             GetTableIndices(ref key, out int tableIndex, out int objectIndex);
@@ -387,7 +387,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="key">Key to test for.</param>
         /// <returns>True if the key already belongs to the dictionary, false otherwise.</returns>
-        public bool ContainsKeyRef(ref TKey key)
+        public bool ContainsKey(ref TKey key)
         {
             Validate();
             return GetTableIndices(ref key, out int tableIndex, out int objectIndex);
@@ -417,7 +417,7 @@ namespace BepuUtilities.Collections
         /// <param name="key">Key to look up.</param>
         /// <param name="value">Value associated with the specified key.</param>
         /// <returns>True if a value was found, false otherwise.</returns>
-        public bool TryGetValueRef(ref TKey key, out TValue value)
+        public bool TryGetValue(ref TKey key, out TValue value)
         {
             Validate();
             if (GetTableIndices(ref key, out int tableIndex, out int elementIndex))
@@ -430,6 +430,83 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
+        /// Attempts to find the index of the given key. If it is present, outputs the index and returns true. If it is not present, it allocates a slot for it, outputs the index of that new slot, and returns false.
+        /// If a new slot is allocated, the value stored in the slot is undefined.
+        /// </summary>
+        /// <param name="key">Key to find or allocate a slot for.</param>
+        /// <param name="slotIndex">Index of the found or allocated slot.</param>
+        /// <returns>True if the key was already present in the dictionary, false otherwise.</returns>
+        public bool FindOrAllocateSlotUnsafely(ref TKey key, out int slotIndex)
+        {
+            Validate();
+            ValidateUnsafeAdd();
+            if (GetTableIndices(ref key, out int tableIndex, out slotIndex))
+                return true;
+            //It wasn't in the dictionary. Allocate it!
+            slotIndex = Count++;
+            Keys[slotIndex] = key;
+            //Use the encoding- all indices are offset by 1 since 0 represents 'empty'.
+            Table[tableIndex] = Count;
+            return false;
+        }
+
+        /// <summary>
+        /// Attempts to find the index of the given key. If it is present, outputs the index and returns true. If it is not present, it allocates a slot for it, outputs the index of that new slot, and returns false.
+        /// If a new slot is allocated, the value stored in the slot is undefined.
+        /// </summary>
+        /// <param name="key">Key to find or allocate a slot for.</param>
+        /// <param name="slotIndex">Index of the found or allocated slot.</param>
+        /// <returns>True if the key was already present in the dictionary, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool FindOrAllocateSlotUnsafely(TKey key, out int slotIndex)
+        {
+            return FindOrAllocateSlotUnsafely(ref key, out slotIndex);
+        }
+
+        /// <summary>
+        /// Attempts to find the index of the given key. If it is present, outputs the index and returns true. If it is not present, it allocates a slot for it, outputs the index of that new slot, and returns false.
+        /// If a new slot is allocated, the value stored in the slot is undefined.
+        /// </summary>
+        /// <param name="key">Key to find or allocate a slot for.</param>
+        /// <param name="pool">Pool used to resize the container if necessary to allocate.</param>
+        /// <param name="slotIndex">Index of the found or allocated slot.</param>
+        /// <returns>True if the key was already present in the dictionary, false otherwise.</returns>
+        public bool FindOrAllocateSlot(ref TKey key, BufferPool pool, out int slotIndex)
+        {
+            Validate();
+            if (Count == Keys.Length)
+            {
+                //There's no room left; resize.
+                Resize(Count * 2, pool);
+                //Note that this is tested before any indices are found.
+                //If we resized only after determining that it was going to be added,
+                //the potential resize would invalidate the computed indices.
+            }
+            if (GetTableIndices(ref key, out int tableIndex, out slotIndex))
+                return true;
+            //It wasn't in the dictionary. Allocate it!
+            slotIndex = Count++;
+            Keys[slotIndex] = key;
+            //Use the encoding- all indices are offset by 1 since 0 represents 'empty'.
+            Table[tableIndex] = Count;
+            return false;
+        }
+
+        /// <summary>
+        /// Attempts to find the index of the given key. If it is present, outputs the index and returns true. If it is not present, it allocates a slot for it, outputs the index of that new slot, and returns false.
+        /// If a new slot is allocated, the value stored in the slot is undefined.
+        /// </summary>
+        /// <param name="key">Key to find or allocate a slot for.</param>
+        /// <param name="pool">Pool used to resize the container if necessary to allocate.</param>
+        /// <param name="slotIndex">Index of the found or allocated slot.</param>
+        /// <returns>True if the key was already present in the dictionary, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool FindOrAllocateSlot(TKey key, BufferPool pool, out int slotIndex)
+        {
+            return FindOrAllocateSlot(ref key, pool, out slotIndex);
+        }
+
+        /// <summary>
         /// Adds a pair to the dictionary. If a version of the key (same hash code, 'equal' by comparer) is already present,
         /// the existing pair is replaced by the given version.
         /// </summary>
@@ -437,7 +514,7 @@ namespace BepuUtilities.Collections
         /// <param name="value">Value of the pair to add.</param>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present and its pair was replaced.</returns>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)] //TODO: Test performance of full chain inline.
-        public bool AddAndReplaceUnsafelyRef(ref TKey key, in TValue value)
+        public bool AddAndReplaceUnsafely(ref TKey key, in TValue value)
         {
             Validate();
             ValidateUnsafeAdd();
@@ -468,7 +545,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AddAndReplaceUnsafely(TKey key, in TValue value)
         {
-            return AddAndReplaceUnsafelyRef(ref key, value);
+            return AddAndReplaceUnsafely(ref key, value);
         }
 
         /// <summary>
@@ -478,7 +555,7 @@ namespace BepuUtilities.Collections
         /// <param name="value">Value of the pair to add.</param>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present.</returns>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)] //TODO: Test performance of full chain inline.
-        public bool AddUnsafelyRef(ref TKey key, in TValue value)
+        public bool AddUnsafely(ref TKey key, in TValue value)
         {
             Validate();
             ValidateUnsafeAdd();
@@ -505,7 +582,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AddUnsafely(TKey key, in TValue value)
         {
-            return AddUnsafelyRef(ref key, value);
+            return AddUnsafely(ref key, value);
         }
 
         /// <summary>
@@ -517,7 +594,7 @@ namespace BepuUtilities.Collections
         /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the pair was added to the dictionary, false if the key was already present and its pair was replaced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddAndReplaceRef(ref TKey key, in TValue value, IUnmanagedMemoryPool pool)
+        public bool AddAndReplace(ref TKey key, in TValue value, IUnmanagedMemoryPool pool)
         {
             if (Count == Keys.Length)
             {
@@ -528,7 +605,7 @@ namespace BepuUtilities.Collections
                 //If we resized only after determining that it was going to be added,
                 //the potential resize would invalidate the computed indices.
             }
-            return AddAndReplaceUnsafelyRef(ref key, value);
+            return AddAndReplaceUnsafely(ref key, value);
         }
 
         /// <summary>
@@ -542,7 +619,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AddAndReplace(TKey key, in TValue value, IUnmanagedMemoryPool pool)
         {
-            return AddAndReplaceRef(ref key, value, pool);
+            return AddAndReplace(ref key, value, pool);
         }
 
         /// <summary>
@@ -554,7 +631,7 @@ namespace BepuUtilities.Collections
         /// <typeparam name="TPool">Type of the pool used for spans.</typeparam>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddRef(ref TKey key, in TValue value, IUnmanagedMemoryPool pool)
+        public bool Add(ref TKey key, in TValue value, IUnmanagedMemoryPool pool)
         {
             Validate();
 
@@ -567,7 +644,7 @@ namespace BepuUtilities.Collections
                 //If we resized only after determining that it was going to be added,
                 //the potential resize would invalidate the computed indices.
             }
-            return AddUnsafelyRef(ref key, value);
+            return AddUnsafely(ref key, value);
         }
 
         /// <summary>
@@ -581,7 +658,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Add(TKey key, in TValue value, IUnmanagedMemoryPool pool)
         {
-            return AddRef(ref key, value, pool);
+            return Add(ref key, value, pool);
         }
 
         //Note: the reason this is named "FastRemove" instead of just "Remove" despite it being the only remove present is that
@@ -646,7 +723,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="key">Key of the pair to remove.</param>
         /// <returns>True if the key was found and removed, false otherwise.</returns>
-        public bool FastRemoveRef(ref TKey key)
+        public bool FastRemove(ref TKey key)
         {
             Validate();
             //Find it.
@@ -668,7 +745,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool FastRemove(TKey key)
         {
-            return FastRemoveRef(ref key);
+            return FastRemove(ref key);
         }
 
         /// <summary>

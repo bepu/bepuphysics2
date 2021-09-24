@@ -420,15 +420,12 @@ namespace BepuPhysics.CollisionDetection
                         testTriangles.EnsureCapacity(testTriangles.Count + enumerator.List.Count, pool);
                         for (int j = 0; j < enumerator.List.Count; ++j)
                         {
-                            if (!testTriangles.GetTableIndices(ref enumerator.List[j], out var tableIndex, out var elementIndex))
+                            var triangleIndexInMesh = enumerator.List[j];
+                            if (!testTriangles.FindOrAllocateSlotUnsafely(triangleIndexInMesh, out var testTriangleIndex))
                             {
-                                testTriangles.Values[testTriangles.Count] = new TestTriangle(mesh->Triangles[enumerator.List[j]], testTriangles.Count);
-                                testTriangles.Keys[testTriangles.Count] = enumerator.List[j];
-                                testTriangles.Table[tableIndex] = 1 + testTriangles.Count;
-                                elementIndex = testTriangles.Count;
-                                ++testTriangles.Count;
+                                testTriangles.Values[testTriangleIndex] = new TestTriangle(mesh->Triangles[triangleIndexInMesh], testTriangleIndex);
                             }
-                            ref var targetTriangle = ref testTriangles.Values[elementIndex];
+                            ref var targetTriangle = ref testTriangles.Values[testTriangleIndex];
 
                             if (ShouldBlockNormal(targetTriangle, meshSpaceContact, meshSpaceNormal))
                             {
