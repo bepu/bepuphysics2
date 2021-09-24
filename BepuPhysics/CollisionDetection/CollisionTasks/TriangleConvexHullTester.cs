@@ -61,11 +61,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
-            a.EstimateEpsilonScale(out var triangleEpsilonScale);
+            TriangleWide.ComputeNondegenerateTriangleMask(triangleAB, triangleCA, triangleNormalLength, out var triangleEpsilonScale, out var nondegenerateMask);
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
             var epsilonScale = Vector.Min(triangleEpsilonScale, hullEpsilonScale);
             //Note that degenerate triangles will not contribute contacts. They don't have a well defined normal.
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(triangleNormalLength, epsilonScale * 1e-6f));
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.OnesComplement(nondegenerateMask));
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, hullInsideAndBelowTriangle);
             //Not every lane will generate contacts. Rather than requiring every lane to carefully clear all contactExists states, just clear them up front.
             manifold.Contact0Exists = default;
@@ -138,7 +138,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
             Vector3Wide.Dot(triangleNormal, localNormal, out var triangleNormalDotLocalNormal);
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThan(triangleNormalDotLocalNormal, new Vector<float>(-SphereTriangleTester.BackfaceNormalDotRejectionThreshold)), Vector.LessThan(depth, depthThreshold)));
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThan(triangleNormalDotLocalNormal, new Vector<float>(-TriangleWide.BackfaceNormalDotRejectionThreshold)), Vector.LessThan(depth, depthThreshold)));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //No contacts generated.

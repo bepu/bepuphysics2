@@ -11,11 +11,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         public int BatchSize => 32;
 
-        /// <summary>
-        /// Minimum dot product between the detected local normal and the face normal of a triangle necessary to create contacts.
-        /// </summary>
-        public const float BackfaceNormalDotRejectionThreshold = -1e-2f;
-
         public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             int pairCount, out Convex1ContactManifoldWide manifold)
         {
@@ -115,10 +110,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //In the event that the sphere's center point is touching the triangle, the normal is undefined. In that case, the 'correct' normal would be the triangle's normal.
             //However, given that this is a pretty rare degenerate case and that we already treat triangle backfaces as noncolliding, we'll treat zero distance as a backface non-collision.
             Vector3Wide.Dot(localTriangleNormal, manifold.Normal, out var faceNormalDotLocalNormal);
+            TriangleWide.ComputeNondegenerateTriangleMask(ab, ac, triangleNormalLength, out _, out var nondegenerateMask);
             manifold.ContactExists = Vector.BitwiseAnd(
-                Vector.GreaterThan(distance, Vector<float>.Zero),
                 Vector.BitwiseAnd(
-                    Vector.LessThanOrEqual(faceNormalDotLocalNormal, new Vector<float>(-BackfaceNormalDotRejectionThreshold)),
+                    Vector.GreaterThan(distance, Vector<float>.Zero),
+                    nondegenerateMask),
+                Vector.BitwiseAnd(
+                    Vector.LessThanOrEqual(faceNormalDotLocalNormal, new Vector<float>(-TriangleWide.BackfaceNormalDotRejectionThreshold)),
                     Vector.GreaterThanOrEqual(manifold.Depth, -speculativeMargin)));
         }
 

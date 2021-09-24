@@ -551,7 +551,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //If the local normal points against the triangle normal, then it's on the backside and should not collide.
             Vector3Wide.Dot(localNormal, triangleNormal, out var normalDot);
-            var allowContacts = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(normalDot, new Vector<float>(SphereTriangleTester.BackfaceNormalDotRejectionThreshold)), activeLanes);
+            var minimumDepth = -speculativeMargin;
+            Vector3Wide.LengthSquared(ab, out var abLengthSquared);
+            Vector3Wide.LengthSquared(ca, out var caLengthSquared);
+            TriangleWide.ComputeNondegenerateTriangleMask(abLengthSquared, caLengthSquared, triangleNormalLength, out var triangleEpsilonScale, out var nondegenerateMask);
+            var allowContacts = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(nondegenerateMask, Vector.GreaterThanOrEqual(normalDot, new Vector<float>(TriangleWide.BackfaceNormalDotRejectionThreshold))),
+                Vector.BitwiseAnd(Vector.GreaterThanOrEqual(depth, minimumDepth), activeLanes));
             if (Vector.EqualsAll(allowContacts, Vector<int>.Zero))
             {
                 //All lanes are inactive; early out.
@@ -622,12 +628,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Note that using a raw absolute epsilon would have a varying effect based on the scale of the involved shapes.
             //The minimum across the maxes is intended to avoid cases like a huge box being used as a plane, causing a massive size disparity.
             //Using its sizes as a threshold would tend to kill off perfectly valid contacts.
-            Vector3Wide.LengthSquared(ab, out var abLengthSquared);
-            Vector3Wide.LengthSquared(bc, out var bcLengthSquared);
-            Vector3Wide.LengthSquared(ca, out var caLengthSquared);
             var epsilonScale = Vector.Min(
                 Vector.Max(a.HalfWidth, Vector.Max(a.HalfHeight, a.HalfLength)),
-                Vector.SquareRoot(Vector.Max(abLengthSquared, Vector.Max(bcLengthSquared, caLengthSquared))));
+                triangleEpsilonScale);
 
             //We will be working on the surface of the triangle, but we'd still like a 2d parameterization of the surface for contact reduction.
             //So, we'll create tangent axes from the edge and edge x normal.
@@ -662,7 +665,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector3Wide.Subtract(boxFaceCenter, localTriangleCenter, out var faceCenterBToFaceCenterA);
             Vector3Wide.Dot(boxFaceNormal, localNormal, out var faceNormalDotNormal);
-            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, boxFaceNormal, Vector<float>.One / faceNormalDotNormal, faceCenterBToFaceCenterA, triangleTangentX, triangleTangentY, epsilonScale, -speculativeMargin, pairCount,
+            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, boxFaceNormal, Vector<float>.One / faceNormalDotNormal, faceCenterBToFaceCenterA, triangleTangentX, triangleTangentY, epsilonScale, minimumDepth, pairCount,
                 out var contact0, out var contact1, out var contact2, out var contact3,
                 out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 

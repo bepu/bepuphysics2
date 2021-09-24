@@ -161,8 +161,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var cylinderInsideAndBelowTriangle = Vector.BitwiseAnd(cylinderInsideTriangleEdgePlanes, cylinderBelowPlane);
 
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
-            var degenerate = Vector.LessThan(triangleNormalLength, new Vector<float>(1e-10f));
-            inactiveLanes = Vector.BitwiseOr(degenerate, inactiveLanes);
+            TriangleWide.ComputeNondegenerateTriangleMask(triangleAB, triangleCA, triangleNormalLength, out var triangleEpsilonScale, out var nondegenerateMask);
+            inactiveLanes = Vector.BitwiseOr(Vector.OnesComplement(nondegenerateMask), inactiveLanes);
             inactiveLanes = Vector.BitwiseOr(cylinderInsideAndBelowTriangle, inactiveLanes);
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
@@ -218,7 +218,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //If the cylinder is too far away or if it's on the backside of the triangle, don't generate any contacts.
             Vector3Wide.Dot(triangleNormal, localNormal, out var faceNormalADotNormal);
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThan(faceNormalADotNormal, new Vector<float>(-SphereTriangleTester.BackfaceNormalDotRejectionThreshold)), Vector.LessThan(depth, depthThreshold)));
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThan(faceNormalADotNormal, new Vector<float>(-TriangleWide.BackfaceNormalDotRejectionThreshold)), Vector.LessThan(depth, depthThreshold)));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //All lanes are either inactive or were found to have a depth lower than the speculative margin, so we can just quit early.

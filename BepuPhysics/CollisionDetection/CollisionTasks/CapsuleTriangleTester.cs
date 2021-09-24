@@ -151,8 +151,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(b.B, b.A, out var ab);
 
             Vector3Wide.CrossWithoutOverlap(ac, ab, out var acxab);
-            Vector3Wide.LengthSquared(acxab, out var faceNormalLengthSquared);
-            Vector3Wide.Scale(acxab, Vector<float>.One / Vector.SquareRoot(faceNormalLengthSquared), out var faceNormal);
+            Vector3Wide.Length(acxab, out var faceNormalLength);
+            Vector3Wide.Scale(acxab, Vector<float>.One / faceNormalLength, out var faceNormal);
 
             //The depth along the face normal is unaffected by the triangle's extent- the triangle has no extent along its own normal. But the capsule does.
             Vector3Wide.Dot(faceNormal, localCapsuleAxis, out var nDotAxis);
@@ -192,8 +192,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useEdge = Vector.LessThan(edgeDepth, faceDepth);
             Vector3Wide.ConditionalSelect(useEdge, edgeNormal, faceNormal, out var localNormal);
             Vector3Wide.Dot(localNormal, faceNormal, out var localNormalDotFaceNormal);
-            var collidingWithSolidSide = Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<float>(SphereTriangleTester.BackfaceNormalDotRejectionThreshold));
-            if (Vector.EqualsAll(Vector.BitwiseAnd(collidingWithSolidSide, Vector.GreaterThanOrEqual(depth + a.Radius, -speculativeMargin)), Vector<int>.Zero))
+            var collidingWithSolidSide = Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<float>(TriangleWide.BackfaceNormalDotRejectionThreshold));
+            ManifoldCandidateHelper.CreateActiveMask(pairCount, out var activeLanes);
+            TriangleWide.ComputeNondegenerateTriangleMask(ab, ac, faceNormalLength, out _, out var nondegenerateMask);
+            var negativeMargin = -speculativeMargin;
+            var allowContacts = Vector.BitwiseAnd(Vector.BitwiseAnd(Vector.GreaterThanOrEqual(depth + a.Radius, negativeMargin), activeLanes), Vector.BitwiseAnd(collidingWithSolidSide, nondegenerateMask));
+            if (Vector.EqualsAll(allowContacts, Vector<int>.Zero))
             {
                 //All contact normals are on the back of the triangle or the distance is too large for the margin, so we can immediately quit.
                 manifold.Contact0Exists = Vector<int>.Zero;
@@ -203,7 +207,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Unsafe.SkipInit(out Vector3Wide b0);
             Unsafe.SkipInit(out Vector3Wide b1);
             Vector<int> contactCount;
-            if (Vector.EqualsAny(useEdge, new Vector<int>(-1)))
+            useEdge = Vector.BitwiseAnd(useEdge, allowContacts);
+            if (Vector.LessThanAny(useEdge, Vector<int>.Zero))
             {
                 //At least one of the paths uses edges, so go ahead and create all edge contact related information.
                 //Borrowing from capsule-capsule again:
@@ -253,7 +258,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //The bounds check can share the clipping done for face contacts.
             //3) If an edge contact has generated two contacts, then no additional contacts are required.
 
-            if (Vector.LessThanOrEqualAny(contactCount, Vector<int>.One))
+            if (Vector.LessThanAny(Vector.BitwiseAnd(Vector.LessThanOrEqual(contactCount, Vector<int>.One), allowContacts), Vector<int>.Zero))
             {
                 ClipAgainstEdgePlane(triangle.A, ab, faceNormal, localOffsetA, localCapsuleAxis, out var abEntry, out var abExit);
                 ClipAgainstEdgePlane(triangle.B, bc, faceNormal, localOffsetA, localCapsuleAxis, out var bcEntry, out var bcExit);
@@ -338,11 +343,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //In this situation, using more than one contact is pretty pointless anyway, so collapse the manifold to only one point and use the previously computed depth.
             var collapse = Vector.LessThan(Vector.Abs(faceNormalADotLocalNormal), new Vector<float>(1e-7f));
             manifold.Depth0 = Vector.ConditionalSelect(collapse, a.Radius + depth, manifold.Depth0);
-            var negativeMargin = -speculativeMargin;
             //If the normal we found points away from the triangle normal, then it it's hitting the wrong side and should be ignored. (Note that we had an early out for this earlier.)
             contactCount = Vector.ConditionalSelect(collidingWithSolidSide, contactCount, Vector<int>.Zero);
-            manifold.Contact0Exists = Vector.BitwiseAnd(Vector.GreaterThan(contactCount, Vector<int>.Zero), Vector.GreaterThan(manifold.Depth0, negativeMargin));
-            manifold.Contact1Exists = Vector.BitwiseAnd(Vector.AndNot(Vector.Equals(contactCount, new Vector<int>(2)), collapse), Vector.GreaterThan(manifold.Depth1, negativeMargin));
+            manifold.Contact0Exists = Vector.BitwiseAnd(allowContacts, Vector.BitwiseAnd(Vector.GreaterThan(contactCount, Vector<int>.Zero), Vector.GreaterThan(manifold.Depth0, negativeMargin)));
+            manifold.Contact1Exists = Vector.BitwiseAnd(allowContacts, Vector.BitwiseAnd(Vector.AndNot(Vector.Equals(contactCount, new Vector<int>(2)), collapse), Vector.GreaterThan(manifold.Depth1, negativeMargin)));
 
             //For feature ids, note that we have a few different potential sources of contacts. While we could go through and force each potential source to output ids,
             //there is a useful single unifying factor: where the contacts occur on the capsule axis. Using this, it doesn't matter if contacts are generated from face or edge cases,

@@ -155,28 +155,47 @@ namespace BepuPhysics.Collidables
         public int InternalAllocationSize => 0;
         public void Initialize(in RawBuffer memory) { }
 
-        /// <summary>
-        /// Provides an estimate of the scale of a shape. 
-        /// </summary>
-        /// <param name="epsilonScale">Approximate scale of the shape for use in epsilons.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EstimateEpsilonScale(out Vector<float> epsilonScale)
-        {
-            var minX = Vector.Min(A.X, Vector.Min(B.X, C.X));
-            var maxX = Vector.Max(A.X, Vector.Max(B.X, C.X));
-            var minY = Vector.Min(A.Y, Vector.Min(B.Y, C.Y));
-            var maxY = Vector.Max(A.Y, Vector.Max(B.Y, C.Y));
-            var minZ = Vector.Min(A.Z, Vector.Min(B.Z, C.Z));
-            var maxZ = Vector.Max(A.Z, Vector.Max(B.Z, C.Z));
-            epsilonScale = Vector.Max(maxX - minX, Vector.Max(maxY - minY, maxZ - minZ));
-        }
-
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteSlot(int index, in Triangle source)
         {
             GatherScatter.GetOffsetInstance(ref this, index).WriteFirst(source);
         }
+
+
+        /// <summary>
+        /// Minimum dot product between the detected local normal and the face normal of a triangle necessary to create contacts.
+        /// </summary>
+        public const float BackfaceNormalDotRejectionThreshold = -1e-2f;
+        /// <summary>
+        /// Epsilon to apply to testing triangles for degeneracy (which will be scaled by a pair-determined epsilon scale). Degenerate triangles do not have well defined normals and should not contribute 
+        /// </summary>
+        public const float DegenerateTriangleEpsilon = 1e-6f;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ComputeTriangleEpsilonScale(in Vector<float> abLengthSquared, in Vector<float> caLengthSquared, out Vector<float> epsilonScale)
+        {
+            epsilonScale = Vector.SquareRoot(Vector.Max(abLengthSquared, caLengthSquared));
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ComputeDegenerateTriangleEpsilon(in Vector<float> abLengthSquared, in Vector<float> caLengthSquared, out Vector<float> epsilonScale, out Vector<float> epsilon)
+        {
+            ComputeTriangleEpsilonScale(abLengthSquared, caLengthSquared, out epsilonScale);
+            epsilon = new Vector<float>(DegenerateTriangleEpsilon) * epsilonScale;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ComputeNondegenerateTriangleMask(in Vector3Wide ab, in Vector3Wide ca, in Vector<float> triangleNormalLength, out Vector<float> epsilonScale, out Vector<int> nondegenerateMask)
+        {
+            Vector3Wide.LengthSquared(ab, out var abLengthSquared);
+            Vector3Wide.LengthSquared(ca, out var caLengthSquared);
+            ComputeDegenerateTriangleEpsilon(abLengthSquared, caLengthSquared, out epsilonScale, out var epsilon);
+            nondegenerateMask = Vector.GreaterThan(triangleNormalLength, epsilon);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ComputeNondegenerateTriangleMask(in Vector<float> abLengthSquared, in Vector<float> caLengthSquared, in Vector<float> triangleNormalLength, out Vector<float> epsilonScale, out Vector<int> nondegenerateMask)
+        {
+            ComputeDegenerateTriangleEpsilon(abLengthSquared, caLengthSquared, out epsilonScale, out var epsilon);
+            nondegenerateMask = Vector.GreaterThan(triangleNormalLength, epsilon);
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)

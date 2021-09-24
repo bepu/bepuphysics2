@@ -399,8 +399,7 @@ namespace BepuPhysics.CollisionDetection
                 //Note that this is also used to keep the indices lined up for the TryApplyBlockToTriangle loop.
                 for (int i = 0; i < count; ++i)
                 {
-                    var childIndex = children[i].ChildIndexB;
-                    testTriangles.AddUnsafely(childIndex, new TestTriangle(triangles[i], i));
+                    testTriangles.AddUnsafely(children[i].ChildIndexB, new TestTriangle(triangles[i], i));
                 }
                 for (int i = 0; i < count; ++i)
                 {

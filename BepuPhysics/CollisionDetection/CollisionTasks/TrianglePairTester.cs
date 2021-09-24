@@ -291,7 +291,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(a.C, a.B, out var bcA);
             Vector3Wide.Subtract(a.A, a.C, out var caA);
 
-            ManifoldCandidateHelper.CreateActiveMask(pairCount, out var allowContacts);
 
             //A AB x *
             TestEdgeEdge(abA, abB, a.A, a.B, a.C, bA, bB, bC, out var depth, out var localNormal);
@@ -332,6 +331,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.LengthSquared(abB, out var abBLengthSquared);
             Vector3Wide.LengthSquared(caA, out var caALengthSquared);
             Vector3Wide.LengthSquared(caB, out var caBLengthSquared);
+            ManifoldCandidateHelper.CreateActiveMask(pairCount, out var allowContacts);
             //The following was created for MeshReduction when it demanded all contact normals be correct during separation.
             //Other pairs don't have that requirement, and we ended modifying MeshReduction to be a little less picky.
             //This remains for posterity because, hey, it works, and if you need it, there it is.
@@ -373,11 +373,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             localNormal.Y = Vector.ConditionalSelect(shouldFlip, -localNormal.Y, localNormal.Y);
             localNormal.Z = Vector.ConditionalSelect(shouldFlip, -localNormal.Z, localNormal.Z);
 
+            var minimumDepth = -speculativeMargin;
             Vector3Wide.Dot(localNormal, faceNormalA, out var localNormalDotFaceNormalA);
             Vector3Wide.Dot(localNormal, faceNormalB, out var localNormalDotFaceNormalB);
-            allowContacts = Vector.BitwiseAnd(allowContacts, Vector.BitwiseAnd(
-                Vector.LessThan(localNormalDotFaceNormalA, new Vector<float>(-SphereTriangleTester.BackfaceNormalDotRejectionThreshold)),
-                Vector.GreaterThan(localNormalDotFaceNormalB, new Vector<float>(SphereTriangleTester.BackfaceNormalDotRejectionThreshold))));
+            TriangleWide.ComputeNondegenerateTriangleMask(abALengthSquared, caALengthSquared, faceNormalALength, out var epsilonScaleA, out var nondegenerateMaskA);
+            TriangleWide.ComputeNondegenerateTriangleMask(abBLengthSquared, caBLengthSquared, faceNormalBLength, out var epsilonScaleB, out var nondegenerateMaskB);
+            allowContacts = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(nondegenerateMaskA, nondegenerateMaskB),
+                Vector.BitwiseAnd(
+                    Vector.BitwiseAnd(Vector.GreaterThanOrEqual(depth, minimumDepth), allowContacts),
+                    Vector.BitwiseAnd(
+                        Vector.LessThan(localNormalDotFaceNormalA, new Vector<float>(-TriangleWide.BackfaceNormalDotRejectionThreshold)),
+                        Vector.GreaterThan(localNormalDotFaceNormalB, new Vector<float>(TriangleWide.BackfaceNormalDotRejectionThreshold)))));
             if (Vector.EqualsAll(allowContacts, Vector<int>.Zero))
             {
                 manifold.Contact0Exists = default;
@@ -436,7 +443,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var candidateCount = Vector<int>.Zero;
             ref var candidates = ref *buffer;
 
-            var minimumDepth = -speculativeMargin;
             if (Vector.LessThanAny(useFaceCaseForB, Vector<int>.Zero))
             {
                 //While the edge clipping will find any edge-edge or bVertex-aFace contacts, it will not find aVertex-bFace contacts.
@@ -477,9 +483,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             //Create a scale-sensitive epsilon for comparisons based on the size of the involved shapes. This helps avoid varying behavior based on how large involved objects are.
-            var epsilonScale = Vector.SquareRoot(Vector.Min(
-                Vector.Max(abALengthSquared, caALengthSquared),
-                Vector.Max(abBLengthSquared, caBLengthSquared)));
+            var epsilonScale = Vector.Min(epsilonScaleA, epsilonScaleB);
             var edgeEpsilon = new Vector<float>(1e-5f) * epsilonScale;
             ManifoldCandidateHelper.ReduceWithoutComputingDepths(ref candidates, candidateCount, 6, epsilonScale, minimumDepth, pairCount,
                 out var contact0, out var contact1, out var contact2, out var contact3,
