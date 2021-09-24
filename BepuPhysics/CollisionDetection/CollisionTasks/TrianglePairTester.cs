@@ -328,40 +328,42 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             GetDepthForNormal(a.A, a.B, a.C, bA, bB, bC, faceNormalB, out var faceDepthB);
             Select(ref depth, ref localNormal, faceDepthB, faceNormalB);
 
-
-            var tryVertexNormals = Vector.BitwiseAnd(Vector.LessThan(depth, Vector<float>.Zero), allowContacts);
             Vector3Wide.LengthSquared(abA, out var abALengthSquared);
             Vector3Wide.LengthSquared(abB, out var abBLengthSquared);
             Vector3Wide.LengthSquared(caA, out var caALengthSquared);
             Vector3Wide.LengthSquared(caB, out var caBLengthSquared);
-            if (Vector.LessThanAny(tryVertexNormals, Vector<int>.Zero))
-            {
-                //Vertex normals are not required to determine penetration versus separation. They are only used to ensure correct separated speculative normals.
-                //This isn't strictly required for behavior in the general case, but MeshReduction depends on it.
-                Vector3Wide.LengthSquared(bcA, out var bcALengthSquared);
-                Vector3Wide.LengthSquared(bcB, out var bcBLengthSquared);
-                var inverseABALengthSquared = Vector<float>.One / abALengthSquared;
-                var inverseBCALengthSquared = Vector<float>.One / bcALengthSquared;
-                var inverseCAALengthSquared = Vector<float>.One / caALengthSquared;
-                var inverseABBLengthSquared = Vector<float>.One / abBLengthSquared;
-                var inverseBCBLengthSquared = Vector<float>.One / bcBLengthSquared;
-                var inverseCABLengthSquared = Vector<float>.One / caBLengthSquared;
-                var distanceSquared = new Vector<float>(float.MaxValue);
-                Unsafe.SkipInit(out Vector3Wide offset);
-                TestVertexNormal(a.A, bA, bB, bC, abB, bcB, caB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, ref distanceSquared, ref offset);
-                TestVertexNormal(a.B, bA, bB, bC, abB, bcB, caB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, ref distanceSquared, ref offset);
-                TestVertexNormal(a.C, bA, bB, bC, abB, bcB, caB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, ref distanceSquared, ref offset);
-                TestVertexNormal(bA, a.A, a.B, a.C, abA, bcA, caA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, ref distanceSquared, ref offset);
-                TestVertexNormal(bB, a.A, a.B, a.C, abA, bcA, caA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, ref distanceSquared, ref offset);
-                TestVertexNormal(bC, a.A, a.B, a.C, abA, bcA, caA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, ref distanceSquared, ref offset);
+            //The following was created for MeshReduction when it demanded all contact normals be correct during separation.
+            //Other pairs don't have that requirement, and we ended modifying MeshReduction to be a little less picky.
+            //This remains for posterity because, hey, it works, and if you need it, there it is.
+            //var tryVertexNormals = Vector.BitwiseAnd(Vector.LessThan(depth, Vector<float>.Zero), allowContacts);
+            //if (Vector.LessThanAny(tryVertexNormals, Vector<int>.Zero))
+            //{
+            //    //Vertex normals are not required to determine penetration versus separation. They are only used to ensure correct separated speculative normals.
+            //    //This isn't strictly required for behavior in the general case, but MeshReduction depends on it.
+            //    Vector3Wide.LengthSquared(bcA, out var bcALengthSquared);
+            //    Vector3Wide.LengthSquared(bcB, out var bcBLengthSquared);
+            //    var inverseABALengthSquared = Vector<float>.One / abALengthSquared;
+            //    var inverseBCALengthSquared = Vector<float>.One / bcALengthSquared;
+            //    var inverseCAALengthSquared = Vector<float>.One / caALengthSquared;
+            //    var inverseABBLengthSquared = Vector<float>.One / abBLengthSquared;
+            //    var inverseBCBLengthSquared = Vector<float>.One / bcBLengthSquared;
+            //    var inverseCABLengthSquared = Vector<float>.One / caBLengthSquared;
+            //    var distanceSquared = new Vector<float>(float.MaxValue);
+            //    Unsafe.SkipInit(out Vector3Wide offset);
+            //    TestVertexNormal(a.A, bA, bB, bC, abB, bcB, caB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, ref distanceSquared, ref offset);
+            //    TestVertexNormal(a.B, bA, bB, bC, abB, bcB, caB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, ref distanceSquared, ref offset);
+            //    TestVertexNormal(a.C, bA, bB, bC, abB, bcB, caB, inverseABBLengthSquared, inverseBCBLengthSquared, inverseCABLengthSquared, ref distanceSquared, ref offset);
+            //    TestVertexNormal(bA, a.A, a.B, a.C, abA, bcA, caA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, ref distanceSquared, ref offset);
+            //    TestVertexNormal(bB, a.A, a.B, a.C, abA, bcA, caA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, ref distanceSquared, ref offset);
+            //    TestVertexNormal(bC, a.A, a.B, a.C, abA, bcA, caA, inverseABALengthSquared, inverseBCALengthSquared, inverseCAALengthSquared, ref distanceSquared, ref offset);
 
-                var distance = Vector.SquareRoot(distanceSquared);
-                Vector3Wide.Scale(offset, Vector<float>.One / distance, out localNormalCandidate);
-                //Don't try to use distances that are so small that the resulting normal will be numerically bad. That's close enough to intersecting that the previous normals will handle it.
-                GetDepthForNormal(a.A, a.B, a.C, bA, bB, bC, localNormalCandidate, out depthCandidate);
-                depthCandidate = Vector.ConditionalSelect(Vector.GreaterThan(distance, new Vector<float>(1e-7f)), depthCandidate, new Vector<float>(float.MaxValue));
-                Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
-            }
+            //    var distance = Vector.SquareRoot(distanceSquared);
+            //    Vector3Wide.Scale(offset, Vector<float>.One / distance, out localNormalCandidate);
+            //    //Don't try to use distances that are so small that the resulting normal will be numerically bad. That's close enough to intersecting that the previous normals will handle it.
+            //    GetDepthForNormal(a.A, a.B, a.C, bA, bB, bC, localNormalCandidate, out depthCandidate);
+            //    depthCandidate = Vector.ConditionalSelect(Vector.GreaterThan(distance, new Vector<float>(1e-7f)), depthCandidate, new Vector<float>(float.MaxValue));
+            //    Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
+            //}
 
             //Point the normal from B to A by convention.
             Vector3Wide.Subtract(localTriangleCenterB, localTriangleCenterA, out var centerAToCenterB);
@@ -425,7 +427,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //We will be working on the surface of triangleB, but we'd still like a 2d parameterization of the surface for contact reduction.
             //So, we'll create tangent axes from the edge and edge x normal.
-            //Vector3Wide.LengthSquared(abB, out var abBLengthSquared);
             Vector3Wide.Scale(abB, Vector<float>.One / Vector.SquareRoot(abBLengthSquared), out var tangentBX);
             Vector3Wide.CrossWithoutOverlap(tangentBX, faceNormalB, out var tangentBY);
 
@@ -476,9 +477,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             //Create a scale-sensitive epsilon for comparisons based on the size of the involved shapes. This helps avoid varying behavior based on how large involved objects are.
-            //Vector3Wide.LengthSquared(abA, out var abALengthSquared);
-            //Vector3Wide.LengthSquared(caA, out var caALengthSquared);
-            //Vector3Wide.LengthSquared(caB, out var caBLengthSquared);
             var epsilonScale = Vector.SquareRoot(Vector.Min(
                 Vector.Max(abALengthSquared, caALengthSquared),
                 Vector.Max(abBLengthSquared, caBLengthSquared)));

@@ -169,7 +169,7 @@ namespace BepuPhysics.CollisionDetection
                 //Note that we are stricter about being on the edge than we were about being nearby.
                 //That's because infringement checks require a normal infringement along every edge that the contact is on;
                 //being too aggressive about edge classification would cause infringements to sometimes be ignored.
-                var negativeThreshold = triangle.DistanceThreshold * -1e-1f;
+                var negativeThreshold = triangle.DistanceThreshold * -1e-2f;
                 var onAB = distanceAlongNormal.Y >= negativeThreshold;
                 var onBC = distanceAlongNormal.Z >= negativeThreshold;
                 var onCA = distanceAlongNormal.W >= negativeThreshold;
@@ -267,7 +267,7 @@ namespace BepuPhysics.CollisionDetection
                     //++activeChildCount;
                 }
             }
-            var allocatedCount = count * 3;
+            var allocatedCount = count * 10;
             var debugOverlapMemory = stackalloc int[allocatedCount];
             var debugOverlapBuffer = new Buffer<int>(debugOverlapMemory, allocatedCount);
             var debugKeyMemory = stackalloc int[allocatedCount];
@@ -360,7 +360,7 @@ namespace BepuPhysics.CollisionDetection
 
                         if (ShouldBlockNormal(targetTriangle, meshSpaceContact, meshSpaceNormal))
                         {
-                            if (targetTriangle.ChildIndex != sourceTriangle.ChildIndex)
+                            //if (targetTriangle.ChildIndex != sourceTriangle.ChildIndex)
                             {
                                 sourceTriangle.Blocked = true;
                                 sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
@@ -374,7 +374,7 @@ namespace BepuPhysics.CollisionDetection
                     for (int j = 0; j < count; ++j)
                     {
                         //No point in trying to check a normal against its own triangle.
-                        if (i != j)
+                        //if (i != j)
                         {
                             ref var targetTriangle = ref activeTriangles[j];
                             if (ShouldBlockNormal(targetTriangle, meshSpaceContact, meshSpaceNormal))
@@ -448,8 +448,9 @@ namespace BepuPhysics.CollisionDetection
                             //case- consider what happens when an objects wedges itself into an edge between two triangles.                            
                             Matrix3x3.Transform(requiresFlip ? triangle.CorrectedNormal : -triangle.CorrectedNormal, meshOrientation, out manifold.Normal);
                             //Note that we do not modify the depth.
-                            //The only time this situation should occur is when an object has somehow wedged between adjacent triangles such that the detected
-                            //depths are *less* than the triangle face depths. So, using those depths is guaranteed not to introduce excessive energy.
+                            //The only times this situation should occur is when either 1) an object has somehow wedged between adjacent triangles such that the detected
+                            //depths are *less* than the triangle face depths, or 2) a source triangle generated an internal contact, and the face depth is guaranteed to be less.
+                            //So, using those depths is guaranteed not to introduce excessive energy.
                         }
                         else
                         {
