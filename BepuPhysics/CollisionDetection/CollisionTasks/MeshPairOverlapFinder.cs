@@ -15,7 +15,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TMeshB : struct, IHomogeneousCompoundShape<Triangle, TriangleWide>
     {
 
-        public unsafe void FindLocalOverlaps<TOverlapTestingOptions>(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps) where TOverlapTestingOptions : unmanaged, IOverlapTestingOptions
+        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps)
         {
             var totalCompoundChildCount = 0;
             for (int i = 0; i < pairCount; ++i)
@@ -40,7 +40,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Unsafe.SkipInit(out TriangleWide triangles);
             nextSubpairIndex = 0;
-            Unsafe.SkipInit(out TOverlapTestingOptions overlapTestingOptions);
             for (int i = 0; i < pairCount; ++i)
             {
                 ref var pair = ref pairs[i];
@@ -73,10 +72,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.Length(localOffsetA, out var radiusA);
                     BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref min, ref max, radiusA, localOffsetA, localRelativeLinearVelocityA, angularVelocityA, angularVelocityB, dt,
                         maximumRadius, maximumAngularExpansion, maximumAllowedExpansion);
-                    if (overlapTestingOptions.EpsilonExpandBounds)
-                    {
-                        BoundingBoxHelpers.EpsilonExpandLocalBoundingBoxes(maximumRadius, ref min, ref max);
-                    }
 
                     for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                     {

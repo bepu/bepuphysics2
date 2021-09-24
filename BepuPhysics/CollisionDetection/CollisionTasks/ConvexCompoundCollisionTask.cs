@@ -45,11 +45,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Unsafe.SkipInit(out TContinuationHandler continuationHandler);
             //We perform all necessary bounding box computations and lookups up front. This helps avoid some instruction pipeline pressure at the cost of some extra data cache requirements.
             //Because of this, you need to be careful with the batch size on this collision task.
-            ConvexCompoundTaskOverlaps overlaps;
-            if (continuationHandler.CollisionContinuationType == CollisionContinuationType.MeshReduction || continuationHandler.CollisionContinuationType == CollisionContinuationType.CompoundMeshReduction)
-                overlapFinder.FindLocalOverlaps<UseEpsilonBoundsExpansion>(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out overlaps);
-            else
-                overlapFinder.FindLocalOverlaps<DontUseEpsilonBoundsExpansion>(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out overlaps);
+            overlapFinder.FindLocalOverlaps(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out var overlaps);
             for (int i = 0; i < batch.Count; ++i)
             {
                 ref var pairOverlaps = ref overlaps.GetOverlapsForPair(i);

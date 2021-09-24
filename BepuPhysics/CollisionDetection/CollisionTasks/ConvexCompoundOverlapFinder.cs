@@ -22,19 +22,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps;
     }
-    public interface IOverlapTestingOptions
-    {
-        /// <summary>
-        /// Returns true if pairs should epsilon-expand the query bounds for the sake of a later reduction process, like MeshReduction.
-        /// This helps avoid situations where contacts that are just barely contained within the bounding box can get filtered out incorrectly by the MeshReduction's heuristics.
-        /// </summary>
-        bool EpsilonExpandBounds { get; }
-    }
-    public struct UseEpsilonBoundsExpansion : IOverlapTestingOptions { public readonly bool EpsilonExpandBounds => true; }
-    public struct DontUseEpsilonBoundsExpansion : IOverlapTestingOptions { public readonly bool EpsilonExpandBounds => false; }
     public interface IConvexCompoundOverlapFinder
     {
-        void FindLocalOverlaps<TOverlapTestingOptions>(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps) where TOverlapTestingOptions : unmanaged, IOverlapTestingOptions;
+        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps);
     }
 
     public struct ConvexCompoundOverlapFinder<TConvex, TConvexWide, TCompound> : IConvexCompoundOverlapFinder
@@ -42,7 +32,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TConvexWide : struct, IShapeWide<TConvex>
         where TCompound : struct, IBoundsQueryableCompound
     {
-        public unsafe void FindLocalOverlaps<TOverlapTestingOptions>(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps) where TOverlapTestingOptions : unmanaged, IOverlapTestingOptions
+        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps)
         {
             overlaps = new ConvexCompoundTaskOverlaps(pool, pairCount);
             ref var pairsToTest = ref overlaps.subpairQueries;
@@ -54,7 +44,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Unsafe.SkipInit(out Vector3Wide angularVelocityB);
             Unsafe.SkipInit(out Vector<float> maximumAllowedExpansion);
             Unsafe.SkipInit(out TConvexWide convexWide);
-            Unsafe.SkipInit(out TOverlapTestingOptions overlapTestingOptions);
             if (convexWide.InternalAllocationSize > 0)
             {
                 var memory = stackalloc byte[convexWide.InternalAllocationSize];
@@ -95,10 +84,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Negate(localOffsetB, out var localPositionA);
                 BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref min, ref max, Vector<float>.Zero, localPositionA, localRelativeLinearVelocityA, angularVelocityA, angularVelocityB, dt,
                     maximumRadius, maximumAngularExpansion, maximumAllowedExpansion);
-                if (overlapTestingOptions.EpsilonExpandBounds)
-                {
-                    BoundingBoxHelpers.EpsilonExpandLocalBoundingBoxes(maximumRadius, ref min, ref max);
-                }
 
                 for (int j = 0; j < count; ++j)
                 {

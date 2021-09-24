@@ -204,24 +204,6 @@ namespace BepuPhysics
             Vector3Wide.Add(max, localPositionA, out max);
         }
 
-        /// <summary>
-        /// Expands a bounding box by an extremely small amount heuristically.
-        /// </summary>
-        /// <param name="maximumRadius">Maximum radius of the shape to base the expansion on.</param>
-        /// <param name="min">Minimum bounds of the shape to expand.</param>
-        /// <param name="max">Maximum bounds of the shape to expand.</param>
-        /// <remarks>This exists as a byproduct of the MeshReduction's contact filtering policy. Any contacts generated outside the query bounds are ignored.
-        /// While this works okay for the most part, there are cases where a real contact is just *barely* outside the bounds for numerical reasons and gets removed.
-        /// In pathological cases that results in a contact with positive depth being removed. Incrementally expanding the bounding boxes avoids this.</remarks>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void EpsilonExpandLocalBoundingBoxes(Vector<float> maximumRadius, ref Vector3Wide min, ref Vector3Wide max)
-        {
-            var expansion = maximumRadius * new Vector<float>(1e-4f);
-            Vector3Wide.Subtract(min, expansion, out min);
-            Vector3Wide.Add(max, expansion, out max);
-        }
-
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void ExpandBoundingBox(in Vector3 expansion, ref Vector3 min, ref Vector3 max)
         {
