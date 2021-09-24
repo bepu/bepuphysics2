@@ -113,9 +113,6 @@ namespace BepuPhysics
             //The maximum expansion passed into this function is the speculative margin for discrete mode collidables, and ~infinity for passive or continuous ones.
             Vector3Wide.Max(-maximumExpansion, minDisplacement, out minDisplacement);
             Vector3Wide.Min(maximumExpansion, maxDisplacement, out maxDisplacement);
-            Vector3Wide.Broadcast(new Vector3(5), out var debug);
-            Vector3Wide.Subtract(minDisplacement, debug, out minDisplacement);
-            Vector3Wide.Add(maxDisplacement, debug, out maxDisplacement);
 
             Vector3Wide.Add(min, minDisplacement, out min);
             Vector3Wide.Add(max, maxDisplacement, out max);
@@ -200,9 +197,6 @@ namespace BepuPhysics
             //Clamp the expansion to the pair imposed limit. Discrete pairs don't need to look beyond their speculative margin.
             Vector3Wide.Min(maximumAllowedExpansion, maxExpansion, out maxExpansion);
             Vector3Wide.Max(-maximumAllowedExpansion, minExpansion, out minExpansion);
-            Vector3Wide.Broadcast(new Vector3(5), out var debug);
-            Vector3Wide.Subtract(minExpansion, debug, out minExpansion);
-            Vector3Wide.Add(maxExpansion, debug, out maxExpansion);
 
             Vector3Wide.Add(minExpansion, min, out min);
             Vector3Wide.Add(maxExpansion, max, out max);

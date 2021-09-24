@@ -254,18 +254,13 @@ namespace BepuPhysics.CollisionDetection
             //Narrow the region of interest.
             continuationTriangles.Slice(start, count, out var triangles);
             continuationChildren.Slice(start, count, out var children);
-            //Allocate enough space for all potential triangles, even though we're only going to be enumerating over the subset which actually have contacts.
+            //Allocate enough space for all potential triangles.
             //Note that the count is limited by the above early-out; there are limits to how much this can allocate on the stack.
-            //int activeChildCount = 0;
             var memory = stackalloc TestTriangle[count];
             var activeTriangles = new Buffer<TestTriangle>(memory, count);
             for (int i = 0; i < count; ++i)
             {
-                //if (children[i].Manifold.Count > 0)
-                {
-                    activeTriangles[i] = new TestTriangle(triangles[i], i);
-                    //++activeChildCount;
-                }
+                activeTriangles[i] = new TestTriangle(triangles[i], i);
             }
             var allocatedCount = count * 10;
             var debugOverlapMemory = stackalloc int[allocatedCount];
@@ -309,82 +304,65 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                     ref var meshSpaceContact = ref meshSpaceContacts[deepestIndex];
+                    //var debugMin = meshSpaceContact - new Vector3(1e-3f);
+                    //var debugMax = meshSpaceContact + new Vector3(1e-3f);
+                    //var debugLeafEnumerator = new DebugLeafEnumerator();
+                    //debugLeafEnumerator.List = new QuickList<int>(debugOverlapBuffer);
+                    //debugMesh.Tree.GetOverlaps(debugMin, debugMax, ref debugLeafEnumerator);
+                    //for (int j = 0; j < debugLeafEnumerator.List.Count; ++j)
+                    //{
+                    //    TestTriangle targetTriangle;
+                    //    if (!testTriangles.TryGetValue(debugLeafEnumerator.List[j], out targetTriangle))
+                    //    {
+                    //        //Search for the child...
+                    //        int childIndexForTargetTriangle = -1;
+                    //        for (int k = 0; k < children.Length; ++k)
+                    //        {
+                    //            if (children[k].ChildIndexB == debugLeafEnumerator.List[j])
+                    //            {
+                    //                childIndexForTargetTriangle = k;
+                    //                break;
+                    //            }
+                    //        }
+                    //        if (childIndexForTargetTriangle == -1)
+                    //        {
+                    //            Console.WriteLine("Bad news bears: a child index that should have existed by query does not exist according to the mesh reduction child set.");
+                    //        }
+                    //        targetTriangle = new TestTriangle(debugMesh.Triangles[debugLeafEnumerator.List[j]], childIndexForTargetTriangle);
+                    //        testTriangles.AddUnsafely(debugLeafEnumerator.List[j], targetTriangle);
+                    //    }
 
-                    {
-                        ref var debugSourceTriangle = ref debugMesh.Triangles[sourceChild.ChildIndexB];
-                        var inverse = 1f / Vector3.Cross(debugSourceTriangle.B - debugSourceTriangle.A, debugSourceTriangle.C - debugSourceTriangle.A).Length();
-                        var wa = Vector3.Cross(debugSourceTriangle.B - debugSourceTriangle.A, meshSpaceContact - debugSourceTriangle.A).Length() * inverse;
-                        var wb = Vector3.Cross(debugSourceTriangle.C - debugSourceTriangle.B, meshSpaceContact - debugSourceTriangle.B).Length() * inverse;
-                        var wc = Vector3.Cross(debugSourceTriangle.A - debugSourceTriangle.C, meshSpaceContact - debugSourceTriangle.C).Length() * inverse;
-                        if (wa + wb + wc > 1 + 1e-3f)
-                            Console.WriteLine($"EXTERNAL source contact {wa}, {wb}, {wc}");
-                        else if (wa > 1e-3f && wb > 1e-3f && wc > 1e-3f)
-                            Console.WriteLine($"Internal source contact {wa}, {wb}, {wc}");
-                    }
+                    //    {
+                    //        ref var debugTriangle = ref debugMesh.Triangles[debugLeafEnumerator.List[j]];
+                    //        var inverse = 1f / Vector3.Cross(debugTriangle.B - debugTriangle.A, debugTriangle.C - debugTriangle.A).Length();
+                    //        var wa = Vector3.Cross(debugTriangle.B - debugTriangle.A, meshSpaceContact - debugTriangle.A).Length() * inverse;
+                    //        var wb = Vector3.Cross(debugTriangle.C - debugTriangle.B, meshSpaceContact - debugTriangle.B).Length() * inverse;
+                    //        var wc = Vector3.Cross(debugTriangle.A - debugTriangle.C, meshSpaceContact - debugTriangle.C).Length() * inverse;
+                    //    }
 
-                    var debugMin = meshSpaceContact - new Vector3(1e-3f);
-                    var debugMax = meshSpaceContact + new Vector3(1e-3f);
-                    var debugLeafEnumerator = new DebugLeafEnumerator();
-                    debugLeafEnumerator.List = new QuickList<int>(debugOverlapBuffer);
-                    debugMesh.Tree.GetOverlaps(debugMin, debugMax, ref debugLeafEnumerator);
-                    for (int j = 0; j < debugLeafEnumerator.List.Count; ++j)
-                    {
-                        TestTriangle targetTriangle;
-                        if (!testTriangles.TryGetValue(debugLeafEnumerator.List[j], out targetTriangle))
-                        {
-                            //Search for the child...
-                            int childIndexForTargetTriangle = -1;
-                            for (int k = 0; k < children.Length; ++k)
-                            {
-                                if (children[k].ChildIndexB == debugLeafEnumerator.List[j])
-                                {
-                                    childIndexForTargetTriangle = k;
-                                    break;
-                                }
-                            }
-                            if (childIndexForTargetTriangle == -1)
-                            {
-                                Console.WriteLine("Bad news bears: a child index that should have existed by query does not exist according to the mesh reduction child set.");
-                            }
-                            targetTriangle = new TestTriangle(debugMesh.Triangles[debugLeafEnumerator.List[j]], childIndexForTargetTriangle);
-                            testTriangles.AddUnsafely(debugLeafEnumerator.List[j], targetTriangle);
-                        }
-
-                        {
-                            ref var debugTriangle = ref debugMesh.Triangles[debugLeafEnumerator.List[j]];
-                            var inverse = 1f / Vector3.Cross(debugTriangle.B - debugTriangle.A, debugTriangle.C - debugTriangle.A).Length();
-                            var wa = Vector3.Cross(debugTriangle.B - debugTriangle.A, meshSpaceContact - debugTriangle.A).Length() * inverse;
-                            var wb = Vector3.Cross(debugTriangle.C - debugTriangle.B, meshSpaceContact - debugTriangle.B).Length() * inverse;
-                            var wc = Vector3.Cross(debugTriangle.A - debugTriangle.C, meshSpaceContact - debugTriangle.C).Length() * inverse;
-                        }
-
-                        if (ShouldBlockNormal(targetTriangle, meshSpaceContact, meshSpaceNormal))
-                        {
-                            //if (targetTriangle.ChildIndex != sourceTriangle.ChildIndex)
-                            {
-                                sourceTriangle.Blocked = true;
-                                sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
-                                //Even if the target manifold gets blocked, it should not necessarily be deleted. We made use of it as a blocker.
-                                targetTriangle.ForceDeletionOnBlock = false;
-                                break;
-                            }
-                        }
-                    }
+                    //    if (ShouldBlockNormal(targetTriangle, meshSpaceContact, meshSpaceNormal))
+                    //    {
+                    //        //if (targetTriangle.ChildIndex != sourceTriangle.ChildIndex)
+                    //        {
+                    //            sourceTriangle.Blocked = true;
+                    //            sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
+                    //            //Even if the target manifold gets blocked, it should not necessarily be deleted. We made use of it as a blocker.
+                    //            targetTriangle.ForceDeletionOnBlock = false;
+                    //            break;
+                    //        }
+                    //    }
+                    //}
 
                     for (int j = 0; j < count; ++j)
                     {
-                        //No point in trying to check a normal against its own triangle.
-                        //if (i != j)
+                        ref var targetTriangle = ref activeTriangles[j];
+                        if (ShouldBlockNormal(targetTriangle, meshSpaceContact, meshSpaceNormal))
                         {
-                            ref var targetTriangle = ref activeTriangles[j];
-                            if (ShouldBlockNormal(targetTriangle, meshSpaceContact, meshSpaceNormal))
-                            {
-                                sourceTriangle.Blocked = true;
-                                sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
-                                //Even if the target manifold gets blocked, it should not necessarily be deleted. We made use of it as a blocker.
-                                targetTriangle.ForceDeletionOnBlock = false;
-                                break;
-                            }
+                            sourceTriangle.Blocked = true;
+                            sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
+                            //Even if the target manifold gets blocked, it should not necessarily be deleted. We made use of it as a blocker.
+                            targetTriangle.ForceDeletionOnBlock = false;
+                            break;
                         }
                     }
                     //Note that the removal had to be deferred until after blocking analysis.
