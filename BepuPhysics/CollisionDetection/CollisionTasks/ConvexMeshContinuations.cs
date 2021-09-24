@@ -8,7 +8,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public CollisionContinuationType CollisionContinuationType => CollisionContinuationType.MeshReduction;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref MeshReduction CreateContinuation<TCallbacks>(
+        public unsafe ref MeshReduction CreateContinuation<TCallbacks>(
             ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, in OverlapQueryForPair pairQuery, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks
         {
@@ -20,7 +20,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             continuation.RequiresFlip = pair.FlipMask == 0;
             continuation.QueryBounds.Min = pairQuery.Min;
             continuation.QueryBounds.Max = pairQuery.Max;
-            unsafe { continuation.DebugMesh = Unsafe.AsRef<Mesh>(pairQuery.Container); }
+            //TODO: This is not flexible with respect to different mesh types. Not a problem right now, but it will be in the future.
+            continuation.Mesh = pairQuery.Container;
             return ref continuation;
         }
 

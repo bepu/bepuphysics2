@@ -23,6 +23,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             collisionBatcher.Pool.Take(pairOverlaps.Length, out continuation.QueryBounds);
             continuation.RegionCount = pairOverlaps.Length;
             continuation.MeshOrientation = pair.OrientationB;
+            //TODO: This is not flexible with respect to different mesh types. Not a problem right now, but it will be in the future.
+            continuation.Mesh = (Mesh*)pair.B;
             //A flip is required in mesh reduction whenever contacts are being generated as if the triangle is in slot B, which is whenever this pair has *not* been flipped.
             continuation.RequiresFlip = pair.FlipMask == 0;
 
