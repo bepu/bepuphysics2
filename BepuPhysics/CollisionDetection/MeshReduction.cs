@@ -323,8 +323,9 @@ namespace BepuPhysics.CollisionDetection
             //Narrow the region of interest.
             continuationTriangles.Slice(start, count, out var triangles);
             continuationChildren.Slice(start, count, out var children);
-            const int bruteForceThreshold = 32;
-            if (false)//count < bruteForceThreshold)
+            const int bruteForceThreshold = 16;
+            //Console.WriteLine($"count: {count}");
+            if (count < bruteForceThreshold)
             {
                 var memory = stackalloc TestTriangle[count];
                 var activeTriangles = new Buffer<TestTriangle>(memory, count);
@@ -358,11 +359,11 @@ namespace BepuPhysics.CollisionDetection
 
                         //RemoveContacts();
 
-                        var testDot = Vector3.Dot(meshSpaceNormal, new Vector3(sourceTriangle.NX.X, sourceTriangle.NY.X, sourceTriangle.NZ.X));
-                        if (MathF.Abs(testDot) < 0.3f && !sourceTriangle.Blocked && sourceChild.Manifold.Count > 0)
-                        {
-                            Console.WriteLine($"Iffy dot: {testDot} NOT BLOCKED");
-                        }
+                        //var testDot = Vector3.Dot(meshSpaceNormal, new Vector3(sourceTriangle.NX.X, sourceTriangle.NY.X, sourceTriangle.NZ.X));
+                        //if (MathF.Abs(testDot) < 0.3f && !sourceTriangle.Blocked && sourceChild.Manifold.Count > 0)
+                        //{
+                        //    Console.WriteLine($"Iffy dot: {testDot} NOT BLOCKED");
+                        //}
                     }
                     else if (!faceFlagUnset)
                     {
@@ -383,10 +384,16 @@ namespace BepuPhysics.CollisionDetection
             {
 
                 ChildEnumerator enumerator;
-                enumerator.List = new QuickList<int>(count, pool);
+                //Queries can sometimes find triangles that are just barely outside the original child set. It's rare, but there's no reason to force a resize if it does happen.
+                //Allocate a bit more to make resizes almost-but-not-quite impossible.
+                var allocationSize = count * 2;
                 enumerator.Pool = pool;
-                pool.Take(count, out var overlapBuffer);
-                QuickDictionary<int, TestTriangle, PrimitiveComparer<int>> testTriangles = new(count, pool);
+                enumerator.List = new QuickList<int>(allocationSize, pool);
+                QuickDictionary<int, TestTriangle, PrimitiveComparer<int>> testTriangles = new(allocationSize, pool);
+                //For numerical reasons, expand each contact by an epsilon to capture relevant triangles.
+                var span = queryBounds.Max - queryBounds.Min;
+                var maxSpan = MathF.Max(span.X, MathF.Max(span.Y, span.Z));
+                var contactExpansion = new Vector3(maxSpan * 1e-4f);
 
                 //We're likely to encounter all the triangles that we collected, so go ahead and create their entries.
                 //Note that this is also used to keep the indices lined up for the TryApplyBlockToTriangle loop.
@@ -404,15 +411,15 @@ namespace BepuPhysics.CollisionDetection
                     if (faceFlagUnset && sourceChild.Manifold.Count > 0)
                     {
                         ComputeMeshSpaceContact(ref sourceChild.Manifold, meshInverseOrientation, requiresFlip, out var meshSpaceContact, out var meshSpaceNormal);
-                        var contactQueryMin = meshSpaceContact - new Vector3(1e-3f);
-                        var contactQueryMax = meshSpaceContact + new Vector3(1e-3f);
+                        var contactQueryMin = meshSpaceContact - contactExpansion;
+                        var contactQueryMax = meshSpaceContact + contactExpansion;
                         enumerator.List.Count = 0;
                         mesh->Tree.GetOverlaps(contactQueryMin, contactQueryMax, ref enumerator);
+                        //Note that the test triangles detected by querying may exceed the count in extremely rare cases, so it's not safe to use AllocateUnsafely without some extra work.
+                        //Resizing invalidates table indices, so do any that ahead of time.
+                        testTriangles.EnsureCapacity(testTriangles.Count + enumerator.List.Count, pool);
                         for (int j = 0; j < enumerator.List.Count; ++j)
                         {
-                            //Note that the test triangles detected by querying may exceed the count in extremely rare cases, so it's not safe to use AllocateUnsafely.
-                            //Resizing invalidates table indices, so do any that ahead of time.
-                            testTriangles.EnsureCapacity(testTriangles.Count + 1, pool);
                             if (!testTriangles.GetTableIndices(ref enumerator.List[j], out var tableIndex, out var elementIndex))
                             {
                                 testTriangles.Values[testTriangles.Count] = new TestTriangle(mesh->Triangles[enumerator.List[j]], testTriangles.Count);
@@ -432,11 +439,11 @@ namespace BepuPhysics.CollisionDetection
                                 break;
                             }
                         }
-                        var testDot = Vector3.Dot(meshSpaceNormal, new Vector3(sourceTriangle.NX.X, sourceTriangle.NY.X, sourceTriangle.NZ.X));
-                        if (MathF.Abs(testDot) < 0.3f && !sourceTriangle.Blocked && sourceChild.Manifold.Count > 0)
-                        {
-                            Console.WriteLine($"Iffy dot: {testDot} NOT BLOCKED");
-                        }
+                        //var testDot = Vector3.Dot(meshSpaceNormal, new Vector3(sourceTriangle.NX.X, sourceTriangle.NY.X, sourceTriangle.NZ.X));
+                        //if (MathF.Abs(testDot) < 0.3f && !sourceTriangle.Blocked && sourceChild.Manifold.Count > 0)
+                        //{
+                        //    Console.WriteLine($"Iffy dot: {testDot} NOT BLOCKED");
+                        //}
                     }
                     else if (!faceFlagUnset)
                     {
