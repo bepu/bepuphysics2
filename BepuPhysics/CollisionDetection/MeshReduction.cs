@@ -400,7 +400,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int i = 0; i < count; ++i)
                 {
                     var childIndex = children[i].ChildIndexB;
-                    testTriangles.AddUnsafely(childIndex, new TestTriangle(mesh->Triangles[childIndex], i));
+                    testTriangles.AddUnsafely(childIndex, new TestTriangle(triangles[i], i));
                 }
                 for (int i = 0; i < count; ++i)
                 {
@@ -421,11 +421,17 @@ namespace BepuPhysics.CollisionDetection
                         for (int j = 0; j < enumerator.List.Count; ++j)
                         {
                             var triangleIndexInMesh = enumerator.List[j];
-                            if (!testTriangles.FindOrAllocateSlotUnsafely(triangleIndexInMesh, out var testTriangleIndex))
+                            if (!testTriangles.FindOrAllocateSlotUnsafely(triangleIndexInMesh, out var triangleIndex))
                             {
-                                testTriangles.Values[testTriangleIndex] = new TestTriangle(mesh->Triangles[triangleIndexInMesh], testTriangleIndex);
+                                //Note that this does not try to do a direct lookup of the triangle data in the Mesh's triangles buffer!
+                                //That's invalid for two reasons:
+                                //1) in the long term, the mesh type will be abstracted away, and we might be dealing with a type that doesn't have a Triangles buffer at all.
+                                //2) the Mesh applies a scale to the stored triangles! That's why we have the continuation triangles explicitly stored rather than just looking them all up in the mesh-
+                                //the convex-triangle tests that preceded this reduction had to have somewhere they could load the 'baked' triangle data from.
+                                mesh->GetLocalChild(triangleIndexInMesh, out var triangle);
+                                testTriangles.Values[triangleIndex] = new TestTriangle(triangle, triangleIndex);
                             }
-                            ref var targetTriangle = ref testTriangles.Values[testTriangleIndex];
+                            ref var targetTriangle = ref testTriangles.Values[triangleIndex];
 
                             if (ShouldBlockNormal(targetTriangle, meshSpaceContact, meshSpaceNormal))
                             {
