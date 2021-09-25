@@ -336,12 +336,12 @@ namespace BepuPhysics.CollisionDetection
 
                 for (int i = 0; i < count; ++i)
                 {
-                    ref var sourceTriangle = ref activeTriangles[i];
-                    ref var sourceChild = ref children[sourceTriangle.ChildIndex];
+                    ref var sourceChild = ref children[i];
                     //Can't correct contacts that were created by face collisions.
                     var faceFlagUnset = (sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) == 0;
                     if (faceFlagUnset && sourceChild.Manifold.Count > 0)
                     {
+                        ref var sourceTriangle = ref activeTriangles[i];
                         ComputeMeshSpaceContact(ref sourceChild.Manifold, meshInverseOrientation, requiresFlip, out var meshSpaceContact, out var meshSpaceNormal);
 
                         for (int j = 0; j < count; ++j)
@@ -394,29 +394,33 @@ namespace BepuPhysics.CollisionDetection
                 var maxSpan = MathF.Max(span.X, MathF.Max(span.Y, span.Z));
                 var contactExpansion = new Vector3(maxSpan * 1e-4f);
 
-                //We're likely to encounter all the triangles that we collected, so go ahead and create their entries.
-                //Note that this is also used to keep the indices lined up for the TryApplyBlockToTriangle loop.
+                //We're guaranteed to encounter all the triangles with contacts that we collected, so go ahead and create their entries.
                 if (requiresFlip)
                 {
                     for (int i = 0; i < count; ++i)
                     {
-                        testTriangles.AddUnsafely(children[i].ChildIndexB, new TestTriangle(triangles[i], i));
+                        ref var child = ref children[i];
+                        if (child.Manifold.Count > 0)
+                            testTriangles.AddUnsafely(child.ChildIndexB, new TestTriangle(triangles[i], i));
                     }
                 }
                 else
                 {
                     for (int i = 0; i < count; ++i)
                     {
-                        testTriangles.AddUnsafely(children[i].ChildIndexA, new TestTriangle(triangles[i], i));
+                        ref var child = ref children[i];
+                        if (child.Manifold.Count > 0)
+                            testTriangles.AddUnsafely(child.ChildIndexA, new TestTriangle(triangles[i], i));
                     }
                 }
-                for (int i = 0; i < count; ++i)
+                var activeChildCount = testTriangles.Count;
+                //Console.WriteLine($"active child count: {activeChildCount}");
+                for (int i = 0; i < activeChildCount; ++i)
                 {
                     ref var sourceTriangle = ref testTriangles.Values[i];
                     ref var sourceChild = ref children[sourceTriangle.ChildIndex];
                     //Can't correct contacts that were created by face collisions.
-                    var faceFlagUnset = (sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) == 0;
-                    if (faceFlagUnset && sourceChild.Manifold.Count > 0)
+                    if ((sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) == 0)
                     {
                         ComputeMeshSpaceContact(ref sourceChild.Manifold, meshInverseOrientation, requiresFlip, out var meshSpaceContact, out var meshSpaceNormal);
                         var contactQueryMin = meshSpaceContact - contactExpansion;
@@ -456,7 +460,7 @@ namespace BepuPhysics.CollisionDetection
                         //    Console.WriteLine($"Iffy dot: {testDot} NOT BLOCKED");
                         //}
                     }
-                    else if (!faceFlagUnset)
+                    else
                     {
                         //Clear the face flags. This isn't *required* since they're coherent enough anyway and the accumulated impulse redistributor is a decent fallback,
                         //but it costs basically nothing to do this.
@@ -467,7 +471,7 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
 
-                for (int i = 0; i < count; ++i)
+                for (int i = 0; i < activeChildCount; ++i)
                 {
                     TryApplyBlockToTriangle(ref testTriangles.Values[i], children, meshOrientation, requiresFlip);
                 }
