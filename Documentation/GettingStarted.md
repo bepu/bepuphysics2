@@ -118,4 +118,4 @@ As the above suggests, the engine uses a lot of idioms which are historically un
 
 In summary, it's a very low level API. The intent is to maximize performance, then expose as much as possible to let application-specific convenient abstractions be built on top.
 
-All of this puts a heavier burden on users. They must be familiar with value type semantics, new performance minded language features, pointers, and all sorts of other unusual-for-C# stuff. If you've got questions, feel free to post them on the [forum](https://forum.bepuentertainment.com/).
+All of this puts a heavier burden on users. They must be familiar with value type semantics, new performance minded language features, pointers, and all sorts of other unusual-for-C# stuff. If you've got questions, feel free to post them on the [forum](https://github.com/bepu/bepuphysics2/discussions).

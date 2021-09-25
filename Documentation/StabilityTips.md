@@ -13,7 +13,7 @@ An example of what it looks like when the solver needs more iterations:
 
 ![bounceybounce](images/lowiterationcount.gif)
 
-One notable pathological case for the solver is high mass ratios. Very heavy objects rigidly depending on very light objects can make it nearly impossible for the solver to converge in a reasonable number of velocity iterations. One common example of this is a wrecking ball at the end of a rope composed of a bunch linked bodies. With constraint stiffness configured high enough to hold the wrecking ball, it's unlikely that a 60hz solver update rate and 8 velocity iterations will be sufficient to keep things stable at a 100:1 mass ratio.
+One notable pathological case for the solver is high mass ratios. Very heavy objects rigidly depending on very light objects can make it nearly impossible for the solver to converge in a reasonable number of velocity iterations. One common example of this is a wrecking ball at the end of a rope composed of a bunch of linked bodies. With constraint stiffness configured high enough to hold the wrecking ball, it's unlikely that a 60hz solver update rate and 8 velocity iterations will be sufficient to keep things stable at a 100:1 mass ratio.
 
 There are ways around this issue, though. Reducing lever arms, adjusting inertias, and adding more paths for the solver to propagate impulses through are useful tricks that can stabilize even some fairly extreme cases. Check out the [RopeStabilityDemo](../Demos/Demos/RopeStabilityDemo.cs) for details.
 
