@@ -95,7 +95,9 @@ namespace Demos.Demos
             //Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1) }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(4), 1);
 
             //So, even though you can avoid the need for these kinds of hacks, it's good to know that they exist should you find yourself in a circumstance where substepping isn't viable.
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1) }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
+            Simulation = Simulation.Create(BufferPool,
+                new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f }, 
+                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             rolloverInfo = new RolloverInfo();
             var smallWreckingBall = new Sphere(1);

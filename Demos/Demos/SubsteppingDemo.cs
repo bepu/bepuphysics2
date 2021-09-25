@@ -24,7 +24,9 @@ namespace Demos.Demos
             camera.Yaw = 0;
             camera.Pitch = 0;
             timestepper = new SubsteppingTimestepper(8);
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 120) }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), timestepper, 8);
+            Simulation = Simulation.Create(BufferPool, 
+                new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 120), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f },
+                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), timestepper, 8);
 
             rolloverInfo = new RolloverInfo();
             {
