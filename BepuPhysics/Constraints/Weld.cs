@@ -261,14 +261,14 @@ namespace BepuPhysics.Constraints
 
         //[MethodImpl(MethodImplOptions.NoInlining)]
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            in WeldPrestepData prestep, in WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+            ref WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Transform(prestep.LocalOffset, orientationA, out var offset);
             ApplyImpulse(inertiaA, inertiaB, offset, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
-            in WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+            ref WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //The weld constraint handles 6 degrees of freedom simultaneously. The constraints are:
             //localOrientation * orientationA = orientationB

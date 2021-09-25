@@ -294,19 +294,45 @@ namespace BepuPhysics.Constraints.Contact
             }
         }
 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in TPrestep prestep, in TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new System.NotImplementedException();
+            ref var prestepMaterial = ref prestep.GetMaterialProperties(ref prestep);
+            ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
+            ref var accumulatedImpulsesStart = ref Unsafe.As<TAccumulatedImpulses, NonconvexAccumulatedImpulses>(ref accumulatedImpulses);
+            for (int i = 0; i < prestep.ContactCount; ++i)
+            {
+                ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
+                Helpers.BuildOrthonormalBasis(prestepContact.Normal, out var x, out var z);
+                ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
+                TangentFrictionOneBody.WarmStart2(x, z, prestepContact.Offset, inertiaA, contactImpulse.Tangent, ref wsvA);
+                PenetrationLimitOneBody.WarmStart2(inertiaA, prestepContact.Normal, prestepContact.Offset, contactImpulse.Penetration, ref wsvA);
+            }
         }
 
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
-        {
-            throw new System.NotImplementedException();
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        {            
+            //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
+            //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
+            ref var prestepMaterial = ref prestep.GetMaterialProperties(ref prestep);
+            ref var accumulatedImpulsesStart = ref Unsafe.As<TAccumulatedImpulses, NonconvexAccumulatedImpulses>(ref accumulatedImpulses);
+            ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
+            SpringSettingsWide.ComputeSpringiness(prestepMaterial.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+            var inverseDtWide = new Vector<float>(inverseDt);
+            for (int i = 0; i < prestep.ContactCount; ++i)
+            {
+                ref var contact = ref Unsafe.Add(ref prestepContactStart, i);
+                ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
+                Helpers.BuildOrthonormalBasis(contact.Normal, out var x, out var z);
+                var maximumTangentImpulse = prestepMaterial.FrictionCoefficient * contactImpulse.Penetration;
+                TangentFrictionOneBody.Solve2(x, z, contact.Offset, inertiaA, maximumTangentImpulse, ref contactImpulse.Tangent, ref wsvA);
+                PenetrationLimitOneBody.Solve2(inertiaA, contact.Normal, contact.Offset, contact.Depth,
+                    positionErrorToVelocity, effectiveMassCFMScale, prestepMaterial.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref contactImpulse.Penetration, ref wsvA);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
             in Vector<float> dt, in TAccumulatedImpulses accumulatedImpulses, ref TPrestep prestep)
         {
             throw new System.NotImplementedException();
@@ -345,7 +371,7 @@ namespace BepuPhysics.Constraints.Contact
                 Vector3Wide.Subtract(prestepContact.Offset, prestepOffsetB, out var contactOffsetB);
                 TangentFriction.Prestep(ref x, ref z, ref prestepContact.Offset, ref contactOffsetB, ref projectionCommon.InertiaA, ref projectionCommon.InertiaB, out projectionContact.Tangent);
                 PenetrationLimit.Prestep(projectionCommon.InertiaA, projectionCommon.InertiaB,
-                    prestepContact.Offset, contactOffsetB, prestepContact.Normal, prestepContact.Depth, 
+                    prestepContact.Offset, contactOffsetB, prestepContact.Normal, prestepContact.Depth,
                     positionErrorToVelocity, effectiveMassCFMScale, prestepMaterial.MaximumRecoveryVelocity, inverseDt,
                     out projectionContact.Penetration);
             }
@@ -400,20 +426,50 @@ namespace BepuPhysics.Constraints.Contact
             }
         }
 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in TPrestep prestep, in TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new System.NotImplementedException();
+            ref var prestepMaterial = ref prestep.GetMaterialProperties(ref prestep);
+            ref var prestepOffsetB = ref prestep.GetOffsetB(ref prestep);
+            ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
+            ref var accumulatedImpulsesStart = ref Unsafe.As<TAccumulatedImpulses, NonconvexAccumulatedImpulses>(ref accumulatedImpulses);
+            for (int i = 0; i < prestep.ContactCount; ++i)
+            {
+                ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
+                Helpers.BuildOrthonormalBasis(prestepContact.Normal, out var x, out var z);
+                Vector3Wide.Subtract(prestepContact.Offset, prestepOffsetB, out var contactOffsetB);
+                ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
+                TangentFriction.WarmStart2(x, z, prestepContact.Offset, contactOffsetB, inertiaA, inertiaB, contactImpulse.Tangent, ref wsvA, ref wsvB);
+                PenetrationLimit.WarmStart2(inertiaA, inertiaB, prestepContact.Normal, prestepContact.Offset, contactOffsetB, contactImpulse.Penetration, ref wsvA, ref wsvB);
+            }
         }
 
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, in TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new System.NotImplementedException();
+            //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
+            //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
+            ref var prestepOffsetB = ref prestep.GetOffsetB(ref prestep);
+            ref var prestepMaterial = ref prestep.GetMaterialProperties(ref prestep);
+            ref var accumulatedImpulsesStart = ref Unsafe.As<TAccumulatedImpulses, NonconvexAccumulatedImpulses>(ref accumulatedImpulses);
+            ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
+            SpringSettingsWide.ComputeSpringiness(prestepMaterial.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+            var inverseDtWide = new Vector<float>(inverseDt);
+            for (int i = 0; i < prestep.ContactCount; ++i)
+            {
+                ref var contact = ref Unsafe.Add(ref prestepContactStart, i);
+                ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
+                Vector3Wide.Subtract(contact.Offset, prestepOffsetB, out var contactOffsetB);
+                Helpers.BuildOrthonormalBasis(contact.Normal, out var x, out var z);
+                var maximumTangentImpulse = prestepMaterial.FrictionCoefficient * contactImpulse.Penetration;
+                TangentFriction.Solve2(x, z, contact.Offset, contactOffsetB, inertiaA, inertiaB, maximumTangentImpulse, ref contactImpulse.Tangent, ref wsvA, ref wsvB);
+                PenetrationLimit.Solve2(inertiaA, inertiaB, contact.Normal, contact.Offset, contactOffsetB, contact.Depth,
+                    positionErrorToVelocity, effectiveMassCFMScale, prestepMaterial.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref contactImpulse.Penetration, ref wsvA, ref wsvB);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, 
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
             in Vector<float> dt, in TAccumulatedImpulses accumulatedImpulses, ref TPrestep prestep)
         {
             throw new System.NotImplementedException();

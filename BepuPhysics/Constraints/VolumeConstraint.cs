@@ -206,12 +206,12 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref velocityA, ref velocityB, ref velocityC, ref velocityD, ref projection, ref negatedJacobianA, ref csi);
         }
 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, in VolumeConstraintPrestepData prestep, in Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, ref VolumeConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD)
         {
             throw new NotImplementedException();
         }
 
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, float dt, float inverseDt, in VolumeConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, float dt, float inverseDt, ref VolumeConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD)
         {
             throw new NotImplementedException();
         }

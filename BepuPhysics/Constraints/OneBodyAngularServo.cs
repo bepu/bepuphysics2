@@ -142,13 +142,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in OneBodyAngularServoPrestepData prestep, in Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref OneBodyAngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             ApplyImpulse(inertiaA.InverseInertiaTensor, accumulatedImpulses, ref wsvA.Angular);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in OneBodyAngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref OneBodyAngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             //Jacobians are just the identity matrix.
             QuaternionWide.Conjugate(orientationA, out var inverseOrientation);

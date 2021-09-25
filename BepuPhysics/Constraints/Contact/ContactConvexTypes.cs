@@ -352,7 +352,7 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact1OneBodyPrestepData prestep, in Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref Contact1OneBodyPrestepData prestep, ref Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.WarmStart2(x, z, prestep.Contact0.OffsetA, inertiaA, accumulatedImpulses.Tangent, ref wsvA);
@@ -361,7 +361,7 @@ namespace BepuPhysics.Constraints.Contact
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact1OneBodyPrestepData prestep, ref Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref Contact1OneBodyPrestepData prestep, ref Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {            
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             var maximumTangentImpulse = prestep.MaterialProperties.FrictionCoefficient * (accumulatedImpulses.Penetration0);
@@ -567,7 +567,7 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact2OneBodyPrestepData prestep, in Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref Contact2OneBodyPrestepData prestep, ref Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, out var offsetToManifoldCenterA);
@@ -578,7 +578,7 @@ namespace BepuPhysics.Constraints.Contact
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact2OneBodyPrestepData prestep, ref Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref Contact2OneBodyPrestepData prestep, ref Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {            
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             var premultipliedFrictionCoefficient = new Vector<float>(1f / 2f) * prestep.MaterialProperties.FrictionCoefficient;
@@ -802,7 +802,7 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact3OneBodyPrestepData prestep, in Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref Contact3OneBodyPrestepData prestep, ref Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, out var offsetToManifoldCenterA);
@@ -814,7 +814,7 @@ namespace BepuPhysics.Constraints.Contact
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact3OneBodyPrestepData prestep, ref Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref Contact3OneBodyPrestepData prestep, ref Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {            
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             var premultipliedFrictionCoefficient = new Vector<float>(1f / 3f) * prestep.MaterialProperties.FrictionCoefficient;
@@ -1055,7 +1055,7 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Contact4OneBodyPrestepData prestep, in Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref Contact4OneBodyPrestepData prestep, ref Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact3.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, prestep.Contact3.Depth, out var offsetToManifoldCenterA);
@@ -1068,7 +1068,7 @@ namespace BepuPhysics.Constraints.Contact
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, in Contact4OneBodyPrestepData prestep, ref Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref Contact4OneBodyPrestepData prestep, ref Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {            
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             var premultipliedFrictionCoefficient = new Vector<float>(1f / 4f) * prestep.MaterialProperties.FrictionCoefficient;
@@ -1287,7 +1287,7 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Contact1PrestepData prestep, in Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref Contact1PrestepData prestep, ref Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             Vector3Wide.Subtract(prestep.Contact0.OffsetA, prestep.OffsetB, out var offsetToManifoldCenterB);
@@ -1297,7 +1297,7 @@ namespace BepuPhysics.Constraints.Contact
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, in Contact1PrestepData prestep, ref Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref Contact1PrestepData prestep, ref Contact1AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {            
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             var maximumTangentImpulse = prestep.MaterialProperties.FrictionCoefficient * (accumulatedImpulses.Penetration0);
@@ -1523,7 +1523,7 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Contact2PrestepData prestep, in Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref Contact2PrestepData prestep, ref Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, out var offsetToManifoldCenterA);
@@ -1535,7 +1535,7 @@ namespace BepuPhysics.Constraints.Contact
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, in Contact2PrestepData prestep, ref Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref Contact2PrestepData prestep, ref Contact2AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {            
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             var premultipliedFrictionCoefficient = new Vector<float>(1f / 2f) * prestep.MaterialProperties.FrictionCoefficient;
@@ -1780,7 +1780,7 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Contact3PrestepData prestep, in Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref Contact3PrestepData prestep, ref Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, out var offsetToManifoldCenterA);
@@ -1793,7 +1793,7 @@ namespace BepuPhysics.Constraints.Contact
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, in Contact3PrestepData prestep, ref Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref Contact3PrestepData prestep, ref Contact3AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {            
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             var premultipliedFrictionCoefficient = new Vector<float>(1f / 3f) * prestep.MaterialProperties.FrictionCoefficient;
@@ -2056,7 +2056,7 @@ namespace BepuPhysics.Constraints.Contact
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Contact4PrestepData prestep, in Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref Contact4PrestepData prestep, ref Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact3.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, prestep.Contact3.Depth, out var offsetToManifoldCenterA);
@@ -2070,7 +2070,7 @@ namespace BepuPhysics.Constraints.Contact
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, in Contact4PrestepData prestep, ref Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref Contact4PrestepData prestep, ref Contact4AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {            
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
             var premultipliedFrictionCoefficient = new Vector<float>(1f / 4f) * prestep.MaterialProperties.FrictionCoefficient;

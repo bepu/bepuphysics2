@@ -110,7 +110,7 @@ namespace BepuPhysics.Constraints
         }
 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            in BallSocketPrestepData prestep, in Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+            ref BallSocketPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var offsetA);
@@ -119,7 +119,7 @@ namespace BepuPhysics.Constraints
         }
 
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, 
-            in BallSocketPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+            ref BallSocketPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {    
             //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var offsetA);

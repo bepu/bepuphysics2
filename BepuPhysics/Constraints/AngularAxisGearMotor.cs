@@ -139,14 +139,14 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in AngularAxisGearMotorPrestepData prestep, in Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref AngularAxisGearMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axis);
             ApplyImpulse(axis * prestep.VelocityScale, axis, accumulatedImpulses, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, ref wsvA.Angular, ref wsvB.Angular);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, in AngularAxisGearMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref AngularAxisGearMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axis);
             Vector3Wide.Scale(axis, prestep.VelocityScale, out var jA);
