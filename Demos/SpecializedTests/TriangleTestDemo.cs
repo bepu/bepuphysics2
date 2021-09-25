@@ -170,9 +170,9 @@ namespace Demos.SpecializedTests
                 var v2 = new Vector3(0, 1.75f, 50);
                 var v3 = new Vector3(8, 1.75f, 50);
                 triangles.AllocateUnsafely() = new Triangle { A = v2, B = v0, C = v1 };
-                //triangles.AllocateUnsafely() = new Triangle { A = v2, B = v1, C = v3 };
-                //triangles.AllocateUnsafely() = new Triangle { A = v0, B = v2, C = v1 };
-                //triangles.AllocateUnsafely() = new Triangle { A = v1, B = v2, C = v3 };
+                triangles.AllocateUnsafely() = new Triangle { A = v2, B = v1, C = v3 };
+                triangles.AllocateUnsafely() = new Triangle { A = v0, B = v2, C = v1 };
+                triangles.AllocateUnsafely() = new Triangle { A = v1, B = v2, C = v3 };
                 var testMesh = new Mesh(triangles, Vector3.One, BufferPool);
 
                 Simulation.Statics.Add(new StaticDescription(new Vector3(30, -2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(testMesh), 10.1f)));

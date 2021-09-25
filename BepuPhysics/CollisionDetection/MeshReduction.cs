@@ -317,13 +317,13 @@ namespace BepuPhysics.CollisionDetection
             //beyond that flag, so we can strip the flag now. (We effectively just hijacked the feature id to store some temporary metadata.)
 
             //If you don't want to run mesh reduction at all for sufficiently complex pairs, you could simply early out here like so:
-            //if (count > 1024)
-            //    return;
+            if (count > 1024)
+                return;
 
             //Narrow the region of interest.
             continuationTriangles.Slice(start, count, out var triangles);
             continuationChildren.Slice(start, count, out var children);
-            const int bruteForceThreshold = 16;
+            const int bruteForceThreshold = 128;
             //Console.WriteLine($"count: {count}");
             if (count < bruteForceThreshold)
             {
