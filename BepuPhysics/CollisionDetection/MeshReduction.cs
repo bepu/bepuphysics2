@@ -382,7 +382,6 @@ namespace BepuPhysics.CollisionDetection
             }
             else
             {
-
                 ChildEnumerator enumerator;
                 //Queries can sometimes find triangles that are just barely outside the original child set. It's rare, but there's no reason to force a resize if it does happen.
                 //Allocate a bit more to make resizes almost-but-not-quite impossible.
@@ -397,9 +396,19 @@ namespace BepuPhysics.CollisionDetection
 
                 //We're likely to encounter all the triangles that we collected, so go ahead and create their entries.
                 //Note that this is also used to keep the indices lined up for the TryApplyBlockToTriangle loop.
-                for (int i = 0; i < count; ++i)
+                if (requiresFlip)
                 {
-                    testTriangles.AddUnsafely(children[i].ChildIndexB, new TestTriangle(triangles[i], i));
+                    for (int i = 0; i < count; ++i)
+                    {
+                        testTriangles.AddUnsafely(children[i].ChildIndexB, new TestTriangle(triangles[i], i));
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < count; ++i)
+                    {
+                        testTriangles.AddUnsafely(children[i].ChildIndexA, new TestTriangle(triangles[i], i));
+                    }
                 }
                 for (int i = 0; i < count; ++i)
                 {
