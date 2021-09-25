@@ -83,12 +83,19 @@ namespace Demos
     }
     public unsafe struct DemoNarrowPhaseCallbacks : INarrowPhaseCallbacks
     {
-        public SpringSettings ContactSpringiness = new(30, 1);
-        public float MaximumRecoveryVelocity = 2f;
-        public float FrictionCoefficient = 1f;
+        public SpringSettings ContactSpringiness;
+        public float MaximumRecoveryVelocity;
+        public float FrictionCoefficient;
 
         public void Initialize(Simulation simulation)
         {
+            //Use a default if the springiness value wasn't initialized... at least until struct field initializers are supported outside of previews.
+            if (ContactSpringiness.AngularFrequency == 0 && ContactSpringiness.TwiceDampingRatio == 0)
+            {
+                ContactSpringiness = new(30, 1);
+                MaximumRecoveryVelocity = 2f;
+                FrictionCoefficient = 1f;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
