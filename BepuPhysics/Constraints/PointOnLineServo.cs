@@ -221,19 +221,96 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref velocityA, ref velocityB, projection.LinearJacobian, angularA, angularB, projection.InertiaA, projection.InertiaB, ref csi);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ComputeJacobians(in Vector3Wide ab, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector3Wide localDirection, in Vector3Wide localOffsetA, in Vector3Wide localOffsetB,
+            out Vector3Wide anchorOffset, out Matrix2x3Wide linearJacobian, out Matrix2x3Wide angularJA, out Matrix2x3Wide angularJB)
+        {
+            Helpers.BuildOrthonormalBasis(localDirection, out var localTangentX, out var localTangentY);
+            Matrix3x3Wide.CreateFromQuaternion(orientationA, out var orientationMatrixA);
+            Matrix3x3Wide.TransformWithoutOverlap(localOffsetA, orientationMatrixA, out var anchorA);
+            QuaternionWide.TransformWithoutOverlap(localOffsetB, orientationB, out var offsetB);
+
+            //Find offsetA by computing the closest point on the line to anchorB.
+            Matrix3x3Wide.TransformWithoutOverlap(localDirection, orientationMatrixA, out var direction);
+            Vector3Wide.Add(offsetB, ab, out var anchorB);
+            Vector3Wide.Subtract(anchorB, anchorA, out anchorOffset);
+            Vector3Wide.Dot(anchorOffset, direction, out var d);
+            Vector3Wide.Scale(direction, d, out var lineStartToClosestPointOnLine);
+            Vector3Wide.Add(lineStartToClosestPointOnLine, anchorA, out var offsetA);
+
+            Matrix3x3Wide.TransformWithoutOverlap(localTangentX, orientationMatrixA, out linearJacobian.X);
+            Matrix3x3Wide.TransformWithoutOverlap(localTangentY, orientationMatrixA, out linearJacobian.Y);
+
+            Vector3Wide.CrossWithoutOverlap(offsetA, linearJacobian.X, out angularJA.X);
+            Vector3Wide.CrossWithoutOverlap(offsetA, linearJacobian.Y, out angularJA.Y);
+            Vector3Wide.CrossWithoutOverlap(linearJacobian.X, offsetB, out angularJB.X);
+            Vector3Wide.CrossWithoutOverlap(linearJacobian.Y, offsetB, out angularJB.Y);
+        }
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref PointOnLineServoPrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalDirection, prestep.LocalOffsetA, prestep.LocalOffsetB, out _, out var linearJacobian, out var angularJA, out var angularJB);
+            ApplyImpulse(ref wsvA, ref wsvB, linearJacobian, angularJA, angularJB, inertiaA, inertiaB, ref accumulatedImpulses);
         }
 
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref PointOnLineServoPrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            //This constrains a point on B to a line attached to A. It works on two degrees of freedom at the same time; those are the tangent axes to the line direction.
+            //The error is measured as closest offset from the line. In other words:
+            //dot(closestPointOnLineToAnchorB - anchorB, t1) = 0
+            //dot(closestPointOnLineToAnchorB - anchorB, t2) = 0
+            //where closestPointOnLineToAnchorB = dot(anchorB - anchorA, lineDirection) * lineDirection + anchorA
+            //For the purposes of this derivation, we'll treat t1, t2, and lineDirection as constant with respect to time.
+            //In the following, offsetA from the center of A to the closestPointOnLineToAnchorB, and offsetB refers to the LocalOffsetB * orientationB.
+            //dot(positionA + offsetA - (positionB + offsetB), t1) = 0
+            //dot(positionA + offsetA - (positionB + offsetB), t2) = 0
+            //Velocity constraint for t1:
+            //dot(d/dt(positionA + offsetA - (positionB + offsetB), t1) + dot(positionA + offsetA - (positionB + offsetB), d/dt(t1)) = 0
+            //Treat d/dt(t1) as constant:
+            //dot(d/dt(positionA + offsetA - (positionB + offsetB), t1) = 0
+            //dot(linearA + angularA x offsetA - linearB - angularB x offsetB, t1) = 0
+            //dot(linearA, t1) + dot(angularA x offsetA, t1) + dot(linearB, -t1) + dot(offsetB x angularB, t1) = 0
+            //dot(linearA, t1) + dot(offsetA x t1, angularA) + dot(linearB, -t1) + dot(t1 x offsetB, angularB) = 0
+            //Following the same pattern for the second degree of freedom, the jacobians are:
+            //linearA: t1, t2
+            //angularA: offsetA x t1, offsetA x t2
+            //linearB: -t1, -t2
+            //angularB: t1 x offsetB, t2 x offsetB
+            ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalDirection, prestep.LocalOffsetA, prestep.LocalOffsetB, out var anchorOffset, out var linearJacobian, out var angularJA, out var angularJB);
+            Symmetric2x2Wide.SandwichScale(linearJacobian, inertiaA.InverseMass + inertiaB.InverseMass, out var linearContribution);
+            Symmetric3x3Wide.MatrixSandwich(angularJA, inertiaA.InverseInertiaTensor, out var angularContributionA);
+            Symmetric3x3Wide.MatrixSandwich(angularJB, inertiaB.InverseInertiaTensor, out var angularContributionB);
+            Symmetric2x2Wide.Add(angularContributionA, angularContributionB, out var inverseEffectiveMass);
+            Symmetric2x2Wide.Add(inverseEffectiveMass, linearContribution, out inverseEffectiveMass);
+
+            Symmetric2x2Wide.InvertWithoutOverlap(inverseEffectiveMass, out var effectiveMass);
+
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+            Symmetric2x2Wide.Scale(effectiveMass, effectiveMassCFMScale, out effectiveMass);
+
+            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvA.Linear, linearJacobian, out var linearCSVA);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvB.Linear, linearJacobian, out var negatedLinearCSVB);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvA.Angular, angularJA, out var angularCSVA);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvB.Angular, angularJB, out var angularCSVB);
+            Vector2Wide.Subtract(linearCSVA, negatedLinearCSVB, out var linearCSV);
+            Vector2Wide.Add(angularCSVA, angularCSVB, out var angularCSV);
+            Vector2Wide.Add(linearCSV, angularCSV, out var csv);
+            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
+            Vector2Wide error;
+            Vector3Wide.Dot(anchorOffset, linearJacobian.X, out error.X);
+            Vector3Wide.Dot(anchorOffset, linearJacobian.Y, out error.Y);
+            ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out var biasVelocity, out var maximumImpulse);
+            Vector2Wide.Subtract(biasVelocity, csv, out csv);
+            Symmetric2x2Wide.TransformWithoutOverlap(csv, effectiveMass, out var csi);
+            Vector2Wide.Scale(accumulatedImpulses, softnessImpulseScale, out var softnessContribution);
+            Vector2Wide.Subtract(csi, softnessContribution, out csi);
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
+            ApplyImpulse(ref wsvA, ref wsvB, linearJacobian, angularJA, angularJB, inertiaA, inertiaB, ref csi);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
             in Vector<float> dt, in Vector2Wide accumulatedImpulses, ref PointOnLineServoPrestepData prestep)
         {
