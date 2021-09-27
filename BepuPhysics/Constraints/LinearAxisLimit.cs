@@ -190,8 +190,8 @@ namespace BepuPhysics.Constraints
         {
             ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalPlaneNormal, prestep.LocalOffsetA, prestep.LocalOffsetB, prestep.MinimumOffset, prestep.MaximumOffset, out var error, out var normal, out var angularJA, out var angularJB);
 
-            LinearAxisServoFunctions.ComputeEffectiveMass(angularJA, angularJB, inertiaA, inertiaB, dt, prestep.SpringSettings,
-                out var positionErrorToVelocity, out var softnessImpulseScale,
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+            LinearAxisServoFunctions.ComputeEffectiveMass(angularJA, angularJB, inertiaA, inertiaB, effectiveMassCFMScale,
                 out var angularImpulseToVelocityA, out var angularImpulseToVelocityB, out var effectiveMass);
 
             InequalityHelpers.ComputeBiasVelocity(error, positionErrorToVelocity, inverseDt, out var biasVelocity);

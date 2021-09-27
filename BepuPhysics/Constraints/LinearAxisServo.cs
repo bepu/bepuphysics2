@@ -252,15 +252,13 @@ namespace BepuPhysics.Constraints
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeEffectiveMass(in Vector3Wide angularJA, in Vector3Wide angularJB,
-            in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB, float dt,
-            in SpringSettingsWide springSettings,
-            out Vector<float> positionErrorToVelocity, out Vector<float> softnessImpulseScale, out Vector3Wide angularImpulseToVelocityA, out Vector3Wide angularImpulseToVelocityB, out Vector<float> effectiveMass)
+            in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
+            in Vector<float> effectiveMassCFMScale, out Vector3Wide angularImpulseToVelocityA, out Vector3Wide angularImpulseToVelocityB, out Vector<float> effectiveMass)
         {
             Symmetric3x3Wide.TransformWithoutOverlap(angularJA, inertiaA.InverseInertiaTensor, out angularImpulseToVelocityA);
             Symmetric3x3Wide.TransformWithoutOverlap(angularJB, inertiaB.InverseInertiaTensor, out angularImpulseToVelocityB);
             Vector3Wide.Dot(angularJA, angularImpulseToVelocityA, out var angularContributionA);
             Vector3Wide.Dot(angularJB, angularImpulseToVelocityB, out var angularContributionB);
-            SpringSettingsWide.ComputeSpringiness(springSettings, dt, out positionErrorToVelocity, out var effectiveMassCFMScale, out softnessImpulseScale);
             effectiveMass = effectiveMassCFMScale / (inertiaA.InverseMass + inertiaB.InverseMass + angularContributionA + angularContributionB);
         }
 
@@ -275,9 +273,8 @@ namespace BepuPhysics.Constraints
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref LinearAxisServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalPlaneNormal, prestep.LocalOffsetB, out var anchorB, out var normal, out var angularJA, out var angularJB);
-            ComputeEffectiveMass(angularJA, angularJB, inertiaA, inertiaB, dt, prestep.SpringSettings,
-                out var positionErrorToVelocity, out var softnessImpulseScale,
-                out var angularImpulseToVelocityA, out var angularImpulseToVelocityB, out var effectiveMass);
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+            ComputeEffectiveMass(angularJA, angularJB, inertiaA, inertiaB, effectiveMassCFMScale, out var angularImpulseToVelocityA, out var angularImpulseToVelocityB, out var effectiveMass);
 
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var anchorA);
             Vector3Wide.Dot(anchorB - anchorA, normal, out var planeNormalDot);

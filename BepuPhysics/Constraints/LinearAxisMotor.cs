@@ -78,7 +78,7 @@ namespace BepuPhysics.Constraints
         public Vector<float> TargetVelocity;
         public MotorSettingsWide Settings;
     }
-    
+
     public struct LinearAxisMotorFunctions : ITwoBodyConstraintFunctions<LinearAxisMotorPrestepData, LinearAxisServoProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -91,10 +91,10 @@ namespace BepuPhysics.Constraints
                 out _, out _, out _, out var effectiveMass,
                 out projection.LinearVelocityToImpulseA, out projection.AngularVelocityToImpulseA, out projection.AngularVelocityToImpulseB,
                 out projection.LinearImpulseToVelocityA, out projection.AngularImpulseToVelocityA, out projection.NegatedLinearImpulseToVelocityB, out projection.AngularImpulseToVelocityB);
-                        
+
             projection.BiasImpulse = -prestep.TargetVelocity * effectiveMass;
         }
-                       
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
         {
@@ -102,7 +102,7 @@ namespace BepuPhysics.Constraints
                 projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.NegatedLinearImpulseToVelocityB, projection.AngularImpulseToVelocityB,
                 ref accumulatedImpulse);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
         {
@@ -116,17 +116,30 @@ namespace BepuPhysics.Constraints
 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref LinearAxisMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            LinearAxisServoFunctions.ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalPlaneNormal, prestep.LocalOffsetB, out _, out var normal, out var angularJA, out var angularJB);
+            Symmetric3x3Wide.TransformWithoutOverlap(angularJA, inertiaA.InverseInertiaTensor, out var angularImpulseToVelocityA);
+            Symmetric3x3Wide.TransformWithoutOverlap(angularJB, inertiaB.InverseInertiaTensor, out var angularImpulseToVelocityB);
+            LinearAxisServoFunctions.ApplyImpulse(normal, angularImpulseToVelocityA, angularImpulseToVelocityB, inertiaA, inertiaB, accumulatedImpulses, ref wsvA, ref wsvB);
         }
 
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref LinearAxisMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            LinearAxisServoFunctions.ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalPlaneNormal, prestep.LocalOffsetB, out _, out var normal, out var angularJA, out var angularJB);
+            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out var softnessImpulseScale, out var maximumImpulse);
+            LinearAxisServoFunctions.ComputeEffectiveMass(angularJA, angularJB, inertiaA, inertiaB, effectiveMassCFMScale, out var angularImpulseToVelocityA, out var angularImpulseToVelocityB, out var effectiveMass);
+
+            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
+            var csv = Vector3Wide.Dot(wsvA.Linear - wsvB.Linear, normal) + Vector3Wide.Dot(wsvA.Angular, angularJA) + Vector3Wide.Dot(wsvB.Angular, angularJB);
+
+            var csi = effectiveMass * (-prestep.TargetVelocity - csv) - accumulatedImpulses * softnessImpulseScale;
+
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
+            LinearAxisServoFunctions.ApplyImpulse(normal, angularImpulseToVelocityA, angularImpulseToVelocityB, inertiaA, inertiaB, csi, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
             in Vector<float> dt, in Vector<float> accumulatedImpulses, ref LinearAxisMotorPrestepData prestep)
         {
