@@ -74,7 +74,6 @@ namespace BepuPhysics.CollisionDetection
                     deepestIndex = j;
                 }
             }
-            //First, if the manifold considers the mesh and its triangles to be shape B, then we need to flip it.
             if (requiresFlip)
             {
                 //If the manifold considers the mesh and its triangles to be shape B, it needs to be flipped before being transformed.
@@ -170,7 +169,7 @@ namespace BepuPhysics.CollisionDetection
             var distanceAlongNormal = offsetX * triangle.NX + offsetY * triangle.NY + offsetZ * triangle.NZ;
             //Note that very very thin triangles can result in questionable acceptance due to not checking for true distance- 
             //a position might be way outside a vertex, but still within edge plane thresholds. We're assuming that the impact of this problem will be minimal.
-            if (distanceAlongNormal.X <= triangle.DistanceThreshold &&
+            if (MathF.Abs(distanceAlongNormal.X) <= triangle.DistanceThreshold &&
                 distanceAlongNormal.Y <= triangle.DistanceThreshold &&
                 distanceAlongNormal.Z <= triangle.DistanceThreshold &&
                 distanceAlongNormal.W <= triangle.DistanceThreshold)
@@ -186,10 +185,13 @@ namespace BepuPhysics.CollisionDetection
                 var onAB = distanceAlongNormal.Y >= negativeThreshold;
                 var onBC = distanceAlongNormal.Z >= negativeThreshold;
                 var onCA = distanceAlongNormal.W >= negativeThreshold;
+                var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
+                //If the normal points in any direction not on the triangle's solid side, then it can't be infringing.
+                if (normalDot.X > -TriangleWide.BackfaceNormalDotRejectionThreshold)
+                    return false;
                 if (!onAB && !onBC && !onCA)
                 {
-                    //The contact is within the triangle. 
-                    //If this contact resulted in a correction, we can skip the remaining contacts in this manifold.
+                    //The contact is within the triangle.
                     return true;
                 }
                 else
@@ -198,7 +200,6 @@ namespace BepuPhysics.CollisionDetection
                     //Remember, the contact has been pushed into mesh space. The position is on the surface of the triangle, and the normal points from convex to mesh.
                     //The edge plane normals point outward from the triangle, so if the contact normal is detected as pointing along the edge plane normal,
                     //then it is infringing.
-                    var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
                     const float infringementEpsilon = 1e-6f;
                     //In order to block a contact, it must be infringing on every edge that it is on top of.
                     //In other words, when a contact is on a vertex, it's not good enough to infringe only one of the edges; in that case, the contact normal isn't 
