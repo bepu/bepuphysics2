@@ -380,6 +380,8 @@ namespace BepuPhysics
                     {
                         for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
                         {
+                            //Note that this is using a 'different' stage by index than the worker thread if the iteration index > 1. 
+                            //That's totally fine- the warmstart/iteration stages share the same claims buffers per batch. They're redundant for the sake of easier indexing.
                             ExecuteMainStage(ref solveStage, workerIndex, batchStarts[batchIndex], ref substepContext.Stages[batchIndex + 1], synchronizedBatchCount, ref syncIndex);
                         }
                     }
@@ -444,7 +446,6 @@ namespace BepuPhysics
                     else
                     {
                         //Solve.
-                        stageIndex -= synchronizedBatchCount;
                         ref var stage = ref substepContext.Stages[stageIndex];
                         ExecuteWorkerStage(ref solveStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, synchronizedBatchCount, syncIndex, ref substepContext.CompletedWorkBlockCount);
                     }
@@ -482,7 +483,8 @@ namespace BepuPhysics
             //Not every batch will actually have work blocks associated with it; the batch compressor could be falling behind, which means older constraints could be at higher batches than they need to be, leaving gaps.
             //We don't want to include those empty batches as sync points in the solver.
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-            pool.Take(1 + synchronizedBatchCount, out substepContext.Stages);
+            var iterationCountPlusOne = 1 + IterationCount;
+            pool.Take(1 + synchronizedBatchCount * iterationCountPlusOne, out substepContext.Stages);
             substepContext.SyncIndex = 0;
 
             var totalConstraintBatchWorkBlockCount = substepContext.ConstraintBatchBoundaries[^1];
@@ -491,14 +493,20 @@ namespace BepuPhysics
             pool.Take<int>(totalClaimCount, out var claims);
             claims.Clear(0, claims.Length);
             substepContext.Stages[0] = new(claims.Slice(incrementalBlocks.Count), 0);
-            int claimStart = incrementalBlocks.Count;
-            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+            //Note that we create redundant stages that share the same workblock targets and claims buffers.
+            //This is just to make indexing a little simpler during the multithreaded work.
+            int targetStageIndex = 1;
+            for (int i = 0; i < iterationCountPlusOne; ++i)
             {
-                var stageIndex = batchIndex + 1;
-                var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
-                var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
-                substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, batchIndex);
-                claimStart += workBlocksInBatch;
+                int claimStart = incrementalBlocks.Count;
+                for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+                {
+                    var stageIndex = targetStageIndex++;
+                    var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+                    var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+                    substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, batchIndex);
+                    claimStart += workBlocksInBatch;
+                }
             }
 
             //var syncCount = substepCount * (1 + synchronizedBatchCount * (1 + IterationCount)) - 1;
