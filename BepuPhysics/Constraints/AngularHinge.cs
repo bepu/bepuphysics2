@@ -312,16 +312,17 @@ namespace BepuPhysics.Constraints
             Symmetric2x2Wide.InvertWithoutOverlap(inverseEffectiveMass, out var effectiveMass);
 
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
-            Symmetric2x2Wide.Scale(effectiveMass, effectiveMassCFMScale, out effectiveMass);
-            Symmetric2x2Wide.MultiplyTransposed(jacobianA, effectiveMass, out var velocityToImpulseA);
+            //Note the effective mass is not scaled directly. Instead, we scale the csi to save a multiply.
             GetErrorAngles(hingeAxisA, hingeAxisB, jacobianA, out var errorAngle);
             //Note the negation: we want to oppose the separation. TODO: arguably, should bake the negation into positionErrorToVelocity, given its name.
             Vector2Wide.Scale(errorAngle, -positionErrorToVelocity, out var biasVelocity);
             Symmetric2x2Wide.TransformWithoutOverlap(biasVelocity, effectiveMass, out var biasImpulse);
 
-            //JB = -JA. This is (angularVelocityA * JA + angularVelocityB * JB) * effectiveMass => (angularVelocityA - angularVelocityB) * (JA * effectiveMass)
+            //JB = -JA. This is (angularVelocityA * JA + angularVelocityB * JB) * effectiveMass
             Vector3Wide.Subtract(wsvA.Angular, wsvB.Angular, out var difference);
-            Matrix2x3Wide.TransformByTransposeWithoutOverlap(difference, velocityToImpulseA, out var csi);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(difference, jacobianA, out var csv);
+            Symmetric2x2Wide.TransformWithoutOverlap(csv, effectiveMass, out var csi);
+            Vector2Wide.Scale(csi, effectiveMassCFMScale, out csi);
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             Vector2Wide.Scale(accumulatedImpulses, softnessImpulseScale, out var softnessContribution);
             Vector2Wide.Add(softnessContribution, csi, out csi);
