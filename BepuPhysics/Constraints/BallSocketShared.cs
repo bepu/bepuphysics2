@@ -17,7 +17,7 @@ namespace BepuPhysics.Constraints
         //The only reason not to do that is codegen concerns. But we may want to stop holding back just because of some hopefully-not-permanent quirks in the JIT.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeEffectiveMass(in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
-            ref Vector3Wide offsetA, ref Vector3Wide offsetB, ref Vector<float> effectiveMassCFMScale, out Symmetric3x3Wide effectiveMass)
+            in Vector3Wide offsetA, in Vector3Wide offsetB, in Vector<float> effectiveMassCFMScale, out Symmetric3x3Wide effectiveMass)
         {
             //Anchor points attached to each body are constrained to stay in the same position, yielding a position constraint of:
             //C = positionA + anchorOffsetA - (positionB + anchorOffsetB) = 0
@@ -123,8 +123,8 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref Vector3Wide offsetA, ref Vector3Wide offsetB,
-            ref Vector3Wide biasVelocity, ref Symmetric3x3Wide effectiveMass, ref Vector<float> softnessImpulseScale, ref Vector<float> maximumImpulse, ref Vector3Wide accumulatedImpulse, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB)
+        public static void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, in Vector3Wide offsetA, in Vector3Wide offsetB,
+            in Vector3Wide biasVelocity, in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, in Vector<float> maximumImpulse, ref Vector3Wide accumulatedImpulse, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB)
         {
             ComputeCorrectiveImpulse(ref velocityA, ref velocityB, offsetA, offsetB, biasVelocity, effectiveMass, softnessImpulseScale, accumulatedImpulse, out var correctiveImpulse);
             //This function DOES have a maximum impulse limit.

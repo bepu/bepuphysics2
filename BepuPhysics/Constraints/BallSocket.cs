@@ -14,11 +14,11 @@ namespace BepuPhysics.Constraints
     public struct BallSocket : ITwoBodyConstraintDescription<BallSocket>
     {
         /// <summary>
-        /// Local offset from the center of body A to its attachment point.
+        /// Offset from the center of body A to its attachment in A's local space.
         /// </summary>
         public Vector3 LocalOffsetA;
         /// <summary>
-        /// Local offset from the center of body B to its attachment point.
+        /// Offset from the center of body B to its attachment in B's local space.
         /// </summary>
         public Vector3 LocalOffsetB;
         /// <summary>
@@ -88,7 +88,7 @@ namespace BepuPhysics.Constraints
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out projection.OffsetA);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out projection.OffsetB);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            BallSocketShared.ComputeEffectiveMass(inertiaA, inertiaB, ref projection.OffsetA, ref projection.OffsetB, ref effectiveMassCFMScale, out projection.EffectiveMass);
+            BallSocketShared.ComputeEffectiveMass(inertiaA, inertiaB, projection.OffsetA, projection.OffsetB, effectiveMassCFMScale, out projection.EffectiveMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             Vector3Wide.Add(ab, projection.OffsetB, out var anchorB);
@@ -112,20 +112,18 @@ namespace BepuPhysics.Constraints
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             ref BallSocketPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var offsetA);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out var offsetB);
             BallSocketShared.ApplyImpulse(ref wsvA, ref wsvB, offsetA, offsetB, inertiaA, inertiaB, accumulatedImpulses);
         }
 
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, 
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
             ref BallSocketPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
-        {    
-            //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
+        {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var offsetA);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out var offsetB);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
-            BallSocketShared.ComputeEffectiveMass(inertiaA, inertiaB, ref offsetA, ref offsetB, ref effectiveMassCFMScale, out var effectiveMass);
+            BallSocketShared.ComputeEffectiveMass(inertiaA, inertiaB, offsetA, offsetB, effectiveMassCFMScale, out var effectiveMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             var ab = positionB - positionA;
@@ -138,7 +136,7 @@ namespace BepuPhysics.Constraints
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
             in Vector<float> dt, in Vector3Wide accumulatedImpulses, ref BallSocketPrestepData prestep)
         {
@@ -149,7 +147,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket constraints.
     /// </summary>
-    public class BallSocketTypeProcessor : TwoBodyTypeProcessor<BallSocketPrestepData, BallSocketProjection, Vector3Wide, BallSocketFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
+    public class BallSocketTypeProcessor : TwoBodyTypeProcessor<BallSocketPrestepData, BallSocketProjection, Vector3Wide, BallSocketFunctions, AccessNoPosition, AccessNoPosition, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 22;
     }
