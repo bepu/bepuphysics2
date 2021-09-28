@@ -5,6 +5,7 @@ using BepuPhysics.Collidables;
 using System.Numerics;
 using DemoContentLoader;
 using BepuPhysics.Constraints;
+using Demos.Demos;
 
 namespace Demos.SpecializedTests
 {
@@ -39,7 +40,7 @@ namespace Demos.SpecializedTests
                 var x = GetNextPosition(ref nextX);
                 var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity));
                 var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(1, 1) });
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
                 var x = GetNextPosition(ref nextX);
@@ -69,63 +70,63 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new AngularSwivelHinge { LocalSwivelAxisA = new Vector3(1, 0, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new SwingLimit { AxisLocalA = new Vector3(0, 1, 0), AxisLocalB = new Vector3(0, 1, 0), MaximumSwingAngle = MathHelper.PiOver2, SpringSettings = new SpringSettings(30, 1) });
             }
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
-            //    var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-            //    Simulation.Solver.Add(a, b, new SwivelHinge
-            //    {
-            //        LocalOffsetA = new Vector3(0, 1, 0),
-            //        LocalSwivelAxisA = new Vector3(1, 0, 0),
-            //        LocalOffsetB = new Vector3(0, -1, 0),
-            //        LocalHingeAxisB = new Vector3(0, 1, 0),
-            //        SpringSettings = new SpringSettings(30, 1)
-            //    });
-            //    Simulation.Solver.Add(a, b, new SwingLimit { AxisLocalA = new Vector3(0, 1, 0), AxisLocalB = new Vector3(0, 1, 0), MaximumSwingAngle = MathHelper.PiOver2, SpringSettings = new SpringSettings(30, 1) });
-            //}
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
-            //    var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-            //    Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, b, new TwistServo
-            //    {
-            //        LocalBasisA = RagdollDemo.CreateBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0)),
-            //        LocalBasisB = RagdollDemo.CreateBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0)),
-            //        TargetAngle = MathHelper.PiOver4,
-            //        SpringSettings = new SpringSettings(30, 1),
-            //        ServoSettings = new ServoSettings(float.MaxValue, 0, float.MaxValue)
-            //    });
-            //}
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
-            //    var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-            //    Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, b, new TwistLimit
-            //    {
-            //        LocalBasisA = RagdollDemo.CreateBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0)),
-            //        LocalBasisB = RagdollDemo.CreateBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0)),
-            //        MinimumAngle = MathHelper.Pi * -0.5f,
-            //        MaximumAngle = MathHelper.Pi * 0.95f,
-            //        SpringSettings = new SpringSettings(30, 1),
-            //    });
-            //    Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
-            //}
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
-            //    var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-            //    Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, b, new TwistMotor
-            //    {
-            //        LocalAxisA = new Vector3(0, 1, 0),
-            //        LocalAxisB = new Vector3(0, 1, 0),
-            //        TargetVelocity = MathHelper.Pi * 2,
-            //        Settings = new MotorSettings(float.MaxValue, 0.1f)
-            //    });
-            //    Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
-            //}
+            {
+                var x = GetNextPosition(ref nextX);
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
+                Simulation.Solver.Add(a, b, new SwivelHinge
+                {
+                    LocalOffsetA = new Vector3(0, 1, 0),
+                    LocalSwivelAxisA = new Vector3(1, 0, 0),
+                    LocalOffsetB = new Vector3(0, -1, 0),
+                    LocalHingeAxisB = new Vector3(0, 1, 0),
+                    SpringSettings = new SpringSettings(30, 1)
+                });
+                Simulation.Solver.Add(a, b, new SwingLimit { AxisLocalA = new Vector3(0, 1, 0), AxisLocalB = new Vector3(0, 1, 0), MaximumSwingAngle = MathHelper.PiOver2, SpringSettings = new SpringSettings(30, 1) });
+            }
+            {
+                var x = GetNextPosition(ref nextX);
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new TwistServo
+                {
+                    LocalBasisA = RagdollDemo.CreateBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0)),
+                    LocalBasisB = RagdollDemo.CreateBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0)),
+                    TargetAngle = MathHelper.PiOver4,
+                    SpringSettings = new SpringSettings(30, 1),
+                    ServoSettings = new ServoSettings(float.MaxValue, 0, float.MaxValue)
+                });
+            }
+            {
+                var x = GetNextPosition(ref nextX);
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new TwistLimit
+                {
+                    LocalBasisA = RagdollDemo.CreateBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0)),
+                    LocalBasisB = RagdollDemo.CreateBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0)),
+                    MinimumAngle = MathHelper.Pi * -0.5f,
+                    MaximumAngle = MathHelper.Pi * 0.95f,
+                    SpringSettings = new SpringSettings(30, 1),
+                });
+                Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
+            }
+            {
+                var x = GetNextPosition(ref nextX);
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new TwistMotor
+                {
+                    LocalAxisA = new Vector3(0, 1, 0),
+                    LocalAxisB = new Vector3(0, 1, 0),
+                    TargetVelocity = MathHelper.Pi * 2,
+                    Settings = new MotorSettings(float.MaxValue, 0.1f)
+                });
+                Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
+            }
             //{
             //    var x = GetNextPosition(ref nextX);
             //    var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
@@ -367,20 +368,20 @@ namespace Demos.SpecializedTests
                     Settings = new MotorSettings(10, 1e-4f)
                 });
             }
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var aDescription = BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity);
-            //    var bDescription = BodyDescription.CreateDynamic(new Vector3(x, 6, 0), inertiaB, collidableB, activity);
-            //    var a = Simulation.Bodies.Add(aDescription);
-            //    var b = Simulation.Bodies.Add(bDescription);
-            //    Simulation.Solver.Add(a, b, new BallSocketServo
-            //    {
-            //        LocalOffsetA = new Vector3(0, 1, 0),
-            //        LocalOffsetB = new Vector3(0, -1, 0),
-            //        SpringSettings = new SpringSettings(30, 1),
-            //        ServoSettings = new ServoSettings(100, 1, 100)
-            //    });
-            //}
+            {
+                var x = GetNextPosition(ref nextX);
+                var aDescription = BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity);
+                var bDescription = BodyDescription.CreateDynamic(new Vector3(x, 6, 0), inertiaB, collidableB, activity);
+                var a = Simulation.Bodies.Add(aDescription);
+                var b = Simulation.Bodies.Add(bDescription);
+                Simulation.Solver.Add(a, b, new BallSocketServo
+                {
+                    LocalOffsetA = new Vector3(0, 1, 0),
+                    LocalOffsetB = new Vector3(0, -1, 0),
+                    SpringSettings = new SpringSettings(30, 1),
+                    ServoSettings = new ServoSettings(100, 1, 100)
+                });
+            }
             //{
             //    var x = GetNextPosition(ref nextX);
             //    var wheelShape = new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 0.1f)), 0.1f);
