@@ -92,6 +92,16 @@
         public bool AccessAngularVelocity => true;
     }
 
+    public struct AccessOnlyAngularWithoutPose : IBodyAccessFilter
+    {
+        public bool GatherPosition => false;
+        public bool GatherOrientation => false;
+        public bool GatherMass => false;
+        public bool GatherInertiaTensor => true;
+        public bool AccessLinearVelocity => false;
+        public bool AccessAngularVelocity => true;
+    }
+
     public struct AccessOnlyLinear : IBodyAccessFilter
     {
         public bool GatherPosition => true;
