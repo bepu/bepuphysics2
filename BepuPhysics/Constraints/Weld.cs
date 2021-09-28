@@ -263,9 +263,10 @@ namespace BepuPhysics.Constraints
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             ref WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            ApplyImpulse(inertiaA, inertiaB, positionB - positionA, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
+            Transform(prestep.LocalOffset, orientationA, out var offset);
+            ApplyImpulse(inertiaA, inertiaB, offset, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
         }
-        //[MethodImpl(MethodImplOptions.NoInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
             ref WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
@@ -282,14 +283,16 @@ namespace BepuPhysics.Constraints
             //    [ I, skewSymmetric(localOffset * orientationA), -I,  0 ]
             //where I is the 3x3 identity matrix.
 
+            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
+            Transform(prestep.LocalOffset, orientationA, out var offset);
+
             //Effective mass = (J * M^-1 * JT)^-1, which is going to be a little tricky because J * M^-1 * JT is a 6x6 matrix:
             //J * M^-1 * JT = [ Ia^-1 + Ib^-1,                                     Ia^-1 * transpose(skewSymmetric(localOffset * orientationA))                                                             ]
             //                [ skewSymmetric(localOffset * orientationA) * Ia^-1, Ma^-1 + Mb^-1 + skewSymmetric(localOffset * orientationA) * Ia^-1 * transpose(skewSymmetric(localOffset * orientationA)) ]
             //where Ia^-1 and Ib^-1 are the inverse inertia tensors for a and b and Ma^-1 and Mb^-1 are the inverse masses of A and B expanded to 3x3 diagonal matrices.
             //var jmjtA = inertiaA.InverseInertiaTensor + inertiaB.InverseInertiaTensor;
             Add(inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, out var jmjtA);
-            var ab = positionB - positionA;
-            CreateCrossProduct(ab, out var xAB);
+            CreateCrossProduct(offset, out var xAB);
             Multiply(inertiaA.InverseInertiaTensor, xAB, out var jmjtB);
             //var jmjtB = inertiaA.InverseInertiaTensor * xAB;
             CompleteMatrixSandwichTranspose(xAB, jmjtB, out var jmjtD);
@@ -298,9 +301,7 @@ namespace BepuPhysics.Constraints
             jmjtD.YY += diagonalAdd;
             jmjtD.ZZ += diagonalAdd;
 
-            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Transform(prestep.LocalOffset, orientationA, out var targetOffset);
-            var positionError = ab - targetOffset;
+            var positionError = positionB - positionA - offset;
             var targetOrientationB = prestep.LocalOrientation * orientationA;
             //ConcatenateWithoutOverlap(prestep.LocalOrientation, orientationA, out var targetOrientationB);
             ConcatenateWithoutOverlap(Conjugate(targetOrientationB), orientationB, out var rotationError);
@@ -322,9 +323,9 @@ namespace BepuPhysics.Constraints
             orientationCSV.Y = orientationBiasVelocity.Y - wsvA.Angular.Y + wsvB.Angular.Y;
             orientationCSV.Z = orientationBiasVelocity.Z - wsvA.Angular.Z + wsvB.Angular.Z;
 
-            offsetCSV.X = offsetBiasVelocity.X - wsvA.Linear.X + wsvB.Linear.X - (wsvA.Angular.Y * ab.Z - wsvA.Angular.Z * ab.Y);
-            offsetCSV.Y = offsetBiasVelocity.Y - wsvA.Linear.Y + wsvB.Linear.Y - (wsvA.Angular.Z * ab.X - wsvA.Angular.X * ab.Z);
-            offsetCSV.Z = offsetBiasVelocity.Z - wsvA.Linear.Z + wsvB.Linear.Z - (wsvA.Angular.X * ab.Y - wsvA.Angular.Y * ab.X);
+            offsetCSV.X = offsetBiasVelocity.X - wsvA.Linear.X + wsvB.Linear.X - (wsvA.Angular.Y * offset.Z - wsvA.Angular.Z * offset.Y);
+            offsetCSV.Y = offsetBiasVelocity.Y - wsvA.Linear.Y + wsvB.Linear.Y - (wsvA.Angular.Z * offset.X - wsvA.Angular.X * offset.Z);
+            offsetCSV.Z = offsetBiasVelocity.Z - wsvA.Linear.Z + wsvB.Linear.Z - (wsvA.Angular.X * offset.Y - wsvA.Angular.Y * offset.X);
 
             //Note that there is no need to invert the 6x6 inverse effective mass matrix chonk. We want to convert a constraint space velocity into a constraint space impulse, csi = csv * effectiveMass.
             //This is equivalent to solving csi * effectiveMass^-1 = csv for csi, and since effectiveMass^-1 is symmetric positive semidefinite, we can use an LDLT decomposition to quickly solve it.
@@ -352,12 +353,12 @@ namespace BepuPhysics.Constraints
             accumulatedImpulses.Offset.Y += offsetCSI.Y;
             accumulatedImpulses.Offset.Z += offsetCSI.Z;
 
-            ApplyImpulse(inertiaA, inertiaB, ab, orientationCSI, offsetCSI, ref wsvA, ref wsvB);
+            ApplyImpulse(inertiaA, inertiaB, offset, orientationCSI, offsetCSI, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
             in Vector<float> dt, in WeldAccumulatedImpulses accumulatedImpulses, ref WeldPrestepData prestep)
         {
@@ -365,30 +366,11 @@ namespace BepuPhysics.Constraints
 
     }
 
-    public struct WeldWarmStartAccessFilterA : IBodyAccessFilter
-    {
-        public bool GatherPosition => true;
-        public bool GatherOrientation => false;
-        public bool GatherMass => true;
-        public bool GatherInertiaTensor => true;
-        public bool AccessLinearVelocity => true;
-        public bool AccessAngularVelocity => true;
-    }
-    public struct WeldWarmStartAccessFilterB : IBodyAccessFilter
-    {
-        public bool GatherPosition => true;
-        public bool GatherOrientation => false;
-        public bool GatherMass => true;
-        public bool GatherInertiaTensor => true;
-        public bool AccessLinearVelocity => true;
-        public bool AccessAngularVelocity => true;
-    }
-
 
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket constraints.
     /// </summary>
-    public class WeldTypeProcessor : TwoBodyTypeProcessor<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses, WeldFunctions, WeldWarmStartAccessFilterA, WeldWarmStartAccessFilterB, AccessAll, AccessAll>
+    public class WeldTypeProcessor : TwoBodyTypeProcessor<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses, WeldFunctions, AccessNoPosition, AccessNoPose, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 31;
     }
