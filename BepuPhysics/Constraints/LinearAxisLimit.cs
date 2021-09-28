@@ -158,13 +158,13 @@ namespace BepuPhysics.Constraints
             //Linear jacobians are just normal and -normal. Angular jacobians are offsetA x normal and offsetB x normal.
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var orientationMatrixA);
             Matrix3x3Wide.TransformWithoutOverlap(localPlaneNormal, orientationMatrixA, out normal);
+            Matrix3x3Wide.TransformWithoutOverlap(localOffsetA, orientationMatrixA, out var anchorA);
             QuaternionWide.TransformWithoutOverlap(localOffsetB, orientationB, out var offsetB);
+            //Note that the angular jacobian for A uses the offset from A to the attachment point on B. 
+            var anchorB = ab + offsetB;
+            Vector3Wide.Dot(anchorB - anchorA, normal, out var planeNormalDot);
 
             //The limit chooses the normal's sign depending on which limit is closer.
-            Matrix3x3Wide.TransformWithoutOverlap(localOffsetA, orientationMatrixA, out var anchorA);
-            var anchorB = ab + offsetB;
-            Vector3Wide.Subtract(anchorB, anchorA, out var anchorOffset);
-            Vector3Wide.Dot(anchorOffset, normal, out var planeNormalDot);
             var minimumError = minimumOffset - planeNormalDot;
             var maximumError = planeNormalDot - maximumOffset;
             var useMin = Vector.LessThan(Vector.Abs(minimumError), Vector.Abs(maximumError));
@@ -174,7 +174,8 @@ namespace BepuPhysics.Constraints
             normal.Z = Vector.ConditionalSelect(useMin, -normal.Z, normal.Z);
 
             //Note that the angular jacobian for A uses the offset from A to the attachment point on B. 
-            Vector3Wide.CrossWithoutOverlap(anchorB, normal, out angularJA);
+            var offsetFromAToClosetPointOnPlaneToB = anchorB - planeNormalDot * normal;
+            Vector3Wide.CrossWithoutOverlap(offsetFromAToClosetPointOnPlaneToB, normal, out angularJA);
             Vector3Wide.CrossWithoutOverlap(normal, offsetB, out angularJB);
         }
 

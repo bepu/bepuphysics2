@@ -238,15 +238,19 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeJacobians(in Vector3Wide ab, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector3Wide localPlaneNormalA, in Vector3Wide localOffsetB,
-            out Vector3Wide anchorB, out Vector3Wide normal, out Vector3Wide angularJA, out Vector3Wide angularJB)
+        public static void ComputeJacobians(in Vector3Wide ab, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector3Wide localPlaneNormalA, in Vector3Wide localOffsetA, in Vector3Wide localOffsetB,
+            out Vector<float> planeNormalDot, out Vector3Wide normal, out Vector3Wide angularJA, out Vector3Wide angularJB)
         {
             //Linear jacobians are just normal and -normal. Angular jacobians are offsetA x normal and offsetB x normal.
-            QuaternionWide.TransformWithoutOverlap(localPlaneNormalA, orientationA, out normal);
+            Matrix3x3Wide.CreateFromQuaternion(orientationA, out var orientationMatrixA);
+            Matrix3x3Wide.TransformWithoutOverlap(localPlaneNormalA, orientationMatrixA, out normal);
+            Matrix3x3Wide.TransformWithoutOverlap(localOffsetA, orientationMatrixA, out var anchorA);
             QuaternionWide.TransformWithoutOverlap(localOffsetB, orientationB, out var offsetB);
             //Note that the angular jacobian for A uses the offset from A to the attachment point on B. 
-            anchorB = ab + offsetB;
-            Vector3Wide.CrossWithoutOverlap(anchorB, normal, out angularJA);
+            var anchorB = ab + offsetB;
+            Vector3Wide.Dot(anchorB - anchorA, normal, out planeNormalDot);
+            var offsetFromAToClosetPointOnPlaneToB = anchorB - planeNormalDot * normal;
+            Vector3Wide.CrossWithoutOverlap(offsetFromAToClosetPointOnPlaneToB, normal, out angularJA);
             Vector3Wide.CrossWithoutOverlap(normal, offsetB, out angularJB);
         }
 
@@ -264,7 +268,7 @@ namespace BepuPhysics.Constraints
 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref LinearAxisServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalPlaneNormal, prestep.LocalOffsetB, out _, out var normal, out var angularJA, out var angularJB);
+            ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalPlaneNormal, prestep.LocalOffsetA, prestep.LocalOffsetB, out _, out var normal, out var angularJA, out var angularJB);
             Symmetric3x3Wide.TransformWithoutOverlap(angularJA, inertiaA.InverseInertiaTensor, out var angularImpulseToVelocityA);
             Symmetric3x3Wide.TransformWithoutOverlap(angularJB, inertiaB.InverseInertiaTensor, out var angularImpulseToVelocityB);
             ApplyImpulse(normal, angularImpulseToVelocityA, angularImpulseToVelocityB, inertiaA, inertiaB, accumulatedImpulses, ref wsvA, ref wsvB);
@@ -272,12 +276,10 @@ namespace BepuPhysics.Constraints
 
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref LinearAxisServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalPlaneNormal, prestep.LocalOffsetB, out var anchorB, out var normal, out var angularJA, out var angularJB);
+            ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalPlaneNormal, prestep.LocalOffsetA, prestep.LocalOffsetB, out var planeNormalDot, out var normal, out var angularJA, out var angularJB);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
             ComputeEffectiveMass(angularJA, angularJB, inertiaA, inertiaB, effectiveMassCFMScale, out var angularImpulseToVelocityA, out var angularImpulseToVelocityB, out var effectiveMass);
 
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var anchorA);
-            Vector3Wide.Dot(anchorB - anchorA, normal, out var planeNormalDot);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             ServoSettingsWide.ComputeClampedBiasVelocity(planeNormalDot - prestep.TargetOffset, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out var biasVelocity, out var maximumImpulse);
