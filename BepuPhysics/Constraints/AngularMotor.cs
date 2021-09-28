@@ -103,12 +103,30 @@ namespace BepuPhysics.Constraints
 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref AngularMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            AngularServoFunctions.ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, accumulatedImpulses);
         }
 
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref AngularMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            //Jacobians are just the identity matrix.
+            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out var softnessImpulseScale, out var maximumImpulse);
+
+            Symmetric3x3Wide.Add(inertiaB.InverseInertiaTensor, inertiaB.InverseInertiaTensor, out var unsoftenedInverseEffectiveMass);
+            Symmetric3x3Wide.Invert(unsoftenedInverseEffectiveMass, out var unsoftenedEffectiveMass);
+            //Note that we don't scale the effective mass directly; instead scale CSI.
+
+            QuaternionWide.TransformWithoutOverlap(prestep.TargetVelocityLocalA, orientationA, out var biasVelocity);
+
+            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
+            Vector3Wide.Subtract(wsvA.Angular, wsvB.Angular, out var csv);
+            Vector3Wide.Subtract(biasVelocity, csv, out csv);
+            Symmetric3x3Wide.TransformWithoutOverlap(csv, unsoftenedEffectiveMass, out var csi);
+            csi *= effectiveMassCFMScale;
+            Vector3Wide.Scale(accumulatedImpulses, softnessImpulseScale, out var softnessComponent);
+            Vector3Wide.Subtract(csi, softnessComponent, out csi);
+
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
+            AngularServoFunctions.ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, csi);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -120,7 +138,7 @@ namespace BepuPhysics.Constraints
         }
     }
 
-    public class AngularMotorTypeProcessor : TwoBodyTypeProcessor<AngularMotorPrestepData, AngularMotorProjection, Vector3Wide, AngularMotorFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
+    public class AngularMotorTypeProcessor : TwoBodyTypeProcessor<AngularMotorPrestepData, AngularMotorProjection, Vector3Wide, AngularMotorFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngularWithoutPose>
     {
         public const int BatchTypeId = 30;
     }

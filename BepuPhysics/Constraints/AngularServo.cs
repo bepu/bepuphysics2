@@ -144,24 +144,48 @@ namespace BepuPhysics.Constraints
 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref AngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, accumulatedImpulses);
         }
 
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref AngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            throw new NotImplementedException();
+            //Jacobians are just I and -I.
+            QuaternionWide.ConcatenateWithoutOverlap(prestep.TargetRelativeRotationLocalA, orientationA, out var targetOrientationB);
+            QuaternionWide.Conjugate(targetOrientationB, out var inverseTarget);
+            QuaternionWide.ConcatenateWithoutOverlap(inverseTarget, orientationB, out var errorRotation);
+
+            QuaternionWide.GetApproximateAxisAngleFromQuaternion(errorRotation, out var errorAxis, out var errorLength);
+
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+            Symmetric3x3Wide.Add(inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, out var unsoftenedInverseEffectiveMass);
+            Symmetric3x3Wide.Invert(unsoftenedInverseEffectiveMass, out var unsoftenedEffectiveMass);
+            //Note effective mass is not directly scaled by CFM scale; instead scale the CSI.
+
+            ServoSettingsWide.ComputeClampedBiasVelocity(errorAxis, errorLength, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out var clampedBiasVelocity, out var maximumImpulse);
+
+            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
+            Vector3Wide.Subtract(wsvA.Angular, wsvB.Angular, out var csv);
+            Vector3Wide.Subtract(clampedBiasVelocity, csv, out csv);
+            Symmetric3x3Wide.TransformWithoutOverlap(csv, unsoftenedEffectiveMass, out var csi);
+            csi *= effectiveMassCFMScale;
+            Vector3Wide.Scale(accumulatedImpulses, softnessImpulseScale, out var softnessComponent);
+            Vector3Wide.Subtract(csi, softnessComponent, out csi);
+
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
+
+            ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, csi);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
             in Vector<float> dt, in Vector3Wide accumulatedImpulses, ref AngularServoPrestepData prestep)
         {
         }
     }
 
-    public class AngularServoTypeProcessor : TwoBodyTypeProcessor<AngularServoPrestepData, AngularServoProjection, Vector3Wide, AngularServoFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
+    public class AngularServoTypeProcessor : TwoBodyTypeProcessor<AngularServoPrestepData, AngularServoProjection, Vector3Wide, AngularServoFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 29;
     }

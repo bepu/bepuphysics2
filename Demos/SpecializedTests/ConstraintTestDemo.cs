@@ -127,25 +127,25 @@ namespace Demos.SpecializedTests
                 });
                 Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
-            //    var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-            //    Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, b, new AngularServo
-            //    {
-            //        TargetRelativeRotationLocalA = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2),
-            //        ServoSettings = new ServoSettings(float.MaxValue, 0, 12f),
-            //        SpringSettings = new SpringSettings(30, 1)
-            //    });
-            //}
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity));
-            //    var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-            //    Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, b, new AngularMotor { TargetVelocityLocalA = new Vector3(0, 1, 0), Settings = new MotorSettings(15, 0.0001f) });
-            //}
+            {
+                var x = GetNextPosition(ref nextX);
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new AngularServo
+                {
+                    TargetRelativeRotationLocalA = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2),
+                    ServoSettings = new ServoSettings(float.MaxValue, 0, 12f),
+                    SpringSettings = new SpringSettings(30, 1)
+                });
+            }
+            {
+                var x = GetNextPosition(ref nextX);
+                var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new AngularMotor { TargetVelocityLocalA = new Vector3(0, 1, 0), Settings = new MotorSettings(15, 0.0001f) });
+            }
             {
                 var x = GetNextPosition(ref nextX);
                 var aDescription = BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity);
