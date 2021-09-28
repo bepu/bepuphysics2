@@ -21,7 +21,7 @@ namespace BepuUtilities
         {
             result.X = a.X - b.X;
             result.Y = a.Y - b.Y;
-        }                  
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Dot(in Vector2Wide a, in Vector2Wide b, out Vector<float> result)
@@ -34,6 +34,23 @@ namespace BepuUtilities
         {
             result.X = vector.X * scalar;
             result.Y = vector.Y * scalar;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector2Wide operator *(Vector2Wide vector, Vector<float> scalar)
+        {
+            Vector2Wide result;
+            result.X = vector.X * scalar;
+            result.Y = vector.Y * scalar;
+            return result;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector2Wide operator *(Vector<float> scalar, Vector2Wide vector)
+        {
+            Vector2Wide result;
+            result.X = vector.X * scalar;
+            result.Y = vector.Y * scalar;
+            return result;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -142,6 +159,6 @@ namespace BepuUtilities
         {
             return $"<{X}, {Y}>";
         }
-  
+
     }
 }
