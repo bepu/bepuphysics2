@@ -308,6 +308,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Add(offDiagonalContributionAX, offDiagonalContributionBX, out inverseEffectiveMass.B.X);
             Vector3Wide.Add(offDiagonalContributionAY, offDiagonalContributionBY, out inverseEffectiveMass.B.Y);
 
+            //TODO: Could consider an LDLT solve here. Helped a little bit in Weld; probably would still be worth it for a 5x5.
             Symmetric5x5Wide.InvertWithoutOverlap(inverseEffectiveMass, out var effectiveMass);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
             //Note that the effective mass is *not* scaled by the effectiveMassCFMScale here; instead, we scale the impulse later.

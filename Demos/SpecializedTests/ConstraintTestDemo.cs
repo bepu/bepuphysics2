@@ -22,7 +22,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(25, 4, 40);
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool,
-            new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(4), 1);
+            new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(4), 2);
             //new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var shapeA = new Box(.75f, 1, .5f);
@@ -39,7 +39,7 @@ namespace Demos.SpecializedTests
                 var x = GetNextPosition(ref nextX);
                 var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity));
                 var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(1, 1) });
             }
             {
                 var x = GetNextPosition(ref nextX);
@@ -48,27 +48,27 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
-            //    var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-            //    Simulation.Solver.Add(a, b, new Hinge
-            //    {
-            //        LocalOffsetA = new Vector3(0, 1, 0),
-            //        LocalHingeAxisA = new Vector3(0, 1, 0),
-            //        LocalOffsetB = new Vector3(0, -1, 0),
-            //        LocalHingeAxisB = new Vector3(0, 1, 0),
-            //        SpringSettings = new SpringSettings(30, 1)
-            //    });
-            //}
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
-            //    var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-            //    Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, b, new AngularSwivelHinge { LocalSwivelAxisA = new Vector3(1, 0, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, b, new SwingLimit { AxisLocalA = new Vector3(0, 1, 0), AxisLocalB = new Vector3(0, 1, 0), MaximumSwingAngle = MathHelper.PiOver2, SpringSettings = new SpringSettings(30, 1) });
-            //}
+            {
+                var x = GetNextPosition(ref nextX);
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
+                Simulation.Solver.Add(a, b, new Hinge
+                {
+                    LocalOffsetA = new Vector3(0, 1, 0),
+                    LocalHingeAxisA = new Vector3(0, 1, 0),
+                    LocalOffsetB = new Vector3(0, -1, 0),
+                    LocalHingeAxisB = new Vector3(0, 1, 0),
+                    SpringSettings = new SpringSettings(30, 1)
+                });
+            }
+            {
+                var x = GetNextPosition(ref nextX);
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new AngularSwivelHinge { LocalSwivelAxisA = new Vector3(1, 0, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new SwingLimit { AxisLocalA = new Vector3(0, 1, 0), AxisLocalB = new Vector3(0, 1, 0), MaximumSwingAngle = MathHelper.PiOver2, SpringSettings = new SpringSettings(30, 1) });
+            }
             //{
             //    var x = GetNextPosition(ref nextX);
             //    var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
@@ -354,19 +354,19 @@ namespace Demos.SpecializedTests
             //        Settings = new MotorSettings(float.MaxValue, 0.001f),
             //    });
             //}
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var aDescription = BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity);
-            //    var bDescription = BodyDescription.CreateDynamic(new Vector3(x, 6, 0), inertiaB, collidableB, activity);
-            //    var a = Simulation.Bodies.Add(aDescription);
-            //    var b = Simulation.Bodies.Add(bDescription);
-            //    Simulation.Solver.Add(a, b, new BallSocketMotor
-            //    {
-            //        LocalOffsetB = new Vector3(0, -1, 0),
-            //        TargetVelocityLocalA = new Vector3(0, -0.25f, 0),
-            //        Settings = new MotorSettings(10, 1e-4f)
-            //    });
-            //}
+            {
+                var x = GetNextPosition(ref nextX);
+                var aDescription = BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity);
+                var bDescription = BodyDescription.CreateDynamic(new Vector3(x, 6, 0), inertiaB, collidableB, activity);
+                var a = Simulation.Bodies.Add(aDescription);
+                var b = Simulation.Bodies.Add(bDescription);
+                Simulation.Solver.Add(a, b, new BallSocketMotor
+                {
+                    LocalOffsetB = new Vector3(0, -1, 0),
+                    TargetVelocityLocalA = new Vector3(0, -0.25f, 0),
+                    Settings = new MotorSettings(10, 1e-4f)
+                });
+            }
             //{
             //    var x = GetNextPosition(ref nextX);
             //    var aDescription = BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity);
