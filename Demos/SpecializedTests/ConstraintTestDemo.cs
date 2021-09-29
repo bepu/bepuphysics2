@@ -198,27 +198,27 @@ namespace Demos.SpecializedTests
                 var b = Simulation.Bodies.Add(bDescription);
                 Simulation.Solver.Add(a, b, new DistanceLimit(new Vector3(0, 0.55f, 0), new Vector3(0, -0.55f, 0), 1f, 3, new SpringSettings(30, 1)));
             }
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var sphere = new Sphere(0.125f);
-            //    //Treat each vertex as a point mass that cannot rotate.
-            //    var sphereInertia = new BodyInertia { InverseMass = 1 };
-            //    var sphereCollidable = new CollidableDescription(Simulation.Shapes.Add(sphere), 0.1f);
-            //    var a = new Vector3(x, 3, 0);
-            //    var b = new Vector3(x, 4, 0);
-            //    var c = new Vector3(x + 1, 3, 0);
-            //    var aDescription = BodyDescription.CreateDynamic(a, sphereInertia, sphereCollidable, activity);
-            //    var bDescription = BodyDescription.CreateDynamic(b, sphereInertia, sphereCollidable, activity);
-            //    var cDescription = BodyDescription.CreateDynamic(c, sphereInertia, sphereCollidable, activity);
-            //    var aHandle = Simulation.Bodies.Add(aDescription);
-            //    var bHandle = Simulation.Bodies.Add(bDescription);
-            //    var cHandle = Simulation.Bodies.Add(cDescription);
-            //    var distanceSpringiness = new SpringSettings(3f, 1);
-            //    Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceConstraint(Vector3.Distance(a, b), distanceSpringiness));
-            //    Simulation.Solver.Add(aHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(a, c), distanceSpringiness));
-            //    Simulation.Solver.Add(bHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(b, c), distanceSpringiness));
-            //    Simulation.Solver.Add(aHandle, bHandle, cHandle, new AreaConstraint(a, b, c, new SpringSettings(30, 1)));
-            //}
+            {
+                var x = GetNextPosition(ref nextX);
+                var sphere = new Sphere(0.125f);
+                //Treat each vertex as a point mass that cannot rotate.
+                var sphereInertia = new BodyInertia { InverseMass = 1 };
+                var sphereCollidable = new CollidableDescription(Simulation.Shapes.Add(sphere), 0.1f);
+                var a = new Vector3(x, 3, 0);
+                var b = new Vector3(x, 4, 0);
+                var c = new Vector3(x + 1, 3, 0);
+                var aDescription = BodyDescription.CreateDynamic(a, sphereInertia, sphereCollidable, activity);
+                var bDescription = BodyDescription.CreateDynamic(b, sphereInertia, sphereCollidable, activity);
+                var cDescription = BodyDescription.CreateDynamic(c, sphereInertia, sphereCollidable, activity);
+                var aHandle = Simulation.Bodies.Add(aDescription);
+                var bHandle = Simulation.Bodies.Add(bDescription);
+                var cHandle = Simulation.Bodies.Add(cDescription);
+                var distanceSpringiness = new SpringSettings(3f, 1);
+                Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceConstraint(Vector3.Distance(a, b), distanceSpringiness));
+                Simulation.Solver.Add(aHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(a, c), distanceSpringiness));
+                Simulation.Solver.Add(bHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(b, c), distanceSpringiness));
+                Simulation.Solver.Add(aHandle, bHandle, cHandle, new AreaConstraint(a, b, c, new SpringSettings(30, 1)));
+            }
             {
                 var x = GetNextPosition(ref nextX);
                 var aDescription = BodyDescription.CreateDynamic(new Vector3(x, 3, 0), default, collidableA, activity);
