@@ -267,13 +267,59 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public override void JacobiWarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
+        public override void JacobiWarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
-            throw new NotImplementedException();
+            var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<Vector<int>>();
+            var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
+            Unsafe.SkipInit(out TConstraintFunctions function);
+            ref var states = ref bodies.ActiveSet.SolverStates;
+            ref var jacobiResultsBundlesA = ref jacobiResults.GetVelocitiesForBody(0);
+            for (int i = startBundle; i < exclusiveEndBundle; ++i)
+            {
+                ref var prestep = ref prestepBundles[i];
+                ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
+                ref var references = ref bodyReferencesBundles[i];
+                ref var wsvA = ref jacobiResultsBundlesA[i];
+                var count = GetCountInBundle(ref typeBatch, i);
+                //Prefetch(WarmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, i, exclusiveEndBundle);
+                //Note jacobi batches do not do access filtering at the moment. The fallback accumulation expects all velocities to be present.
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, AccessAll, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references, count,
+                    out var positionA, out var orientationA, out wsvA, out var inertiaA);
+                jacobiBatch.GetJacobiScaleForBodies(ref references, count, out var jacobiScaleA);
+                Symmetric3x3Wide.Scale(inertiaA.InverseInertiaTensor, jacobiScaleA, out inertiaA.InverseInertiaTensor);
+                inertiaA.InverseMass *= jacobiScaleA;
+                function.WarmStart2(positionA, orientationA, inertiaA, ref prestep, ref accumulatedImpulses, ref wsvA);
+                //Jacobi batches do not scatter velocities directly; they are handled in a postpass.
+            }
         }
+
         public override void JacobiSolveStep2(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
-            throw new NotImplementedException();
+            var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<Vector<int>>();
+            var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
+            Unsafe.SkipInit(out TConstraintFunctions function);
+            ref var motionStates = ref bodies.ActiveSet.SolverStates;
+            //EarlyPrefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, startBundle, exclusiveEndBundle);
+            ref var jacobiResultsBundlesA = ref jacobiResults.GetVelocitiesForBody(0);
+            for (int i = startBundle; i < exclusiveEndBundle; ++i)
+            {
+                ref var prestep = ref prestepBundles[i];
+                ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
+                ref var references = ref bodyReferencesBundles[i];
+                var count = GetCountInBundle(ref typeBatch, i);
+                ref var wsvA = ref jacobiResultsBundlesA[i];
+                //Prefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
+                //Note jacobi batches do not do access filtering at the moment. The fallback accumulation expects all velocities to be present.
+                bodies.GatherState<AccessAll>(ref references, count, true, out var positionA, out var orientationA, out wsvA, out var inertiaA);
+                jacobiBatch.GetJacobiScaleForBodies(ref references, count, out var jacobiScaleA);
+                Symmetric3x3Wide.Scale(inertiaA.InverseInertiaTensor, jacobiScaleA, out inertiaA.InverseInertiaTensor);
+                inertiaA.InverseMass *= jacobiScaleA;
+
+                function.Solve2(positionA, orientationA, inertiaA, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA);
+                //Jacobi batches do not scatter velocities directly; they are handled in a postpass.
+            }
         }
     }
 
