@@ -136,10 +136,6 @@ namespace BepuPhysics.Constraints
         public abstract void JacobiWarmStart(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
         public abstract void JacobiSolveIteration(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
 
-        public abstract void SolveStep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
-        public abstract void JacobiSolveStep(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
-
-
         public abstract void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
@@ -147,9 +143,14 @@ namespace BepuPhysics.Constraints
             where TAllowPoseIntegration : unmanaged, IBatchPoseIntegrationAllowed;
         public abstract void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
+        public abstract void JacobiWarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
+            ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults,
+            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
+            where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
+            where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode
+            where TAllowPoseIntegration : unmanaged, IBatchPoseIntegrationAllowed;
 
-        public abstract void Prestep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
-        public abstract void JacobiPrestep2(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
+        public abstract void JacobiSolveStep2(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
         public virtual void IncrementallyUpdateContactData(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int end)
         {
