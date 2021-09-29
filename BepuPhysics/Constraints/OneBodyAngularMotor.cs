@@ -112,12 +112,22 @@ namespace BepuPhysics.Constraints
 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref OneBodyAngularMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new NotImplementedException();
+            ApplyImpulse(ref wsvA.Angular, inertiaA.InverseInertiaTensor, accumulatedImpulses);
         }
 
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref OneBodyAngularMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new NotImplementedException();
+            //Jacobians are just the identity matrix.
+            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out var softnessImpulseScale, out var maximumImpulse);
+            Symmetric3x3Wide.Invert(inertiaA.InverseInertiaTensor, out var unsoftenedEffectiveMass);
+
+            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - csiaAngular;
+            Symmetric3x3Wide.TransformWithoutOverlap(prestep.TargetVelocity - wsvA.Angular, unsoftenedEffectiveMass, out var csi);
+            csi = csi * effectiveMassCFMScale - accumulatedImpulses * softnessImpulseScale;
+
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
+
+            ApplyImpulse(ref wsvA.Angular, inertiaA.InverseInertiaTensor, csi);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -128,7 +138,7 @@ namespace BepuPhysics.Constraints
         }
     }
 
-    public class OneBodyAngularMotorTypeProcessor : OneBodyTypeProcessor<OneBodyAngularMotorPrestepData, OneBodyAngularServoProjection, Vector3Wide, OneBodyAngularMotorFunctions, AccessOnlyAngular, AccessOnlyAngular>
+    public class OneBodyAngularMotorTypeProcessor : OneBodyTypeProcessor<OneBodyAngularMotorPrestepData, OneBodyAngularServoProjection, Vector3Wide, OneBodyAngularMotorFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngular>
     {
         public const int BatchTypeId = 43;
     }

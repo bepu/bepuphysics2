@@ -117,7 +117,6 @@ namespace BepuPhysics.Constraints
             Symmetric3x3Wide.TransformWithoutOverlap(csv, effectiveMass, out var csi);
             csi = csi * effectiveMassCFMScale - accumulatedImpulses * softnessImpulseScale;
 
-            //The motor has a limited maximum force, so clamp the accumulated impulse. Watch out for division by zero.
             ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
             OneBodyLinearServoFunctions.ApplyImpulse(offset, inertiaA, ref wsvA, csi);
         }
