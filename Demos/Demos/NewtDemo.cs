@@ -824,7 +824,7 @@ namespace Demos.Demos
             //will be integrated before collision detection or the solver has a chance to intervene. That's fine in this demo. Other built-in options include the PositionLastTimestepper and the SubsteppingTimestepper.
             //Note that the timestepper also has callbacks that you can use for executing logic between processing stages, like BeforeCollisionDetection.
             //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper(1));
-            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new EmbeddedSubsteppingTimestepper2(3), solverIterationCount: 1);
+            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new EmbeddedSubsteppingTimestepper2(9), solverIterationCount: 1);
             //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper2(), solverIterationCount: 60);
             //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)), new SubsteppingTimestepper2(3), solverIterationCount: 1);
 
@@ -832,7 +832,7 @@ namespace Demos.Demos
             float cellSize = 0.1f;
             DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool,
                 out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
-            var weldSpringiness = new SpringSettings(30f, 1f);
+            var weldSpringiness = new SpringSettings(100f, 1f);
             var volumeSpringiness = new SpringSettings(30f, 1);
             //int terboTotal = 0;
             //var terboShape = new Box(0.5f, 0.5f, 3);
@@ -852,6 +852,7 @@ namespace Demos.Demos
             }
             //Console.WriteLine($"body count: {Simulation.Bodies.ActiveSet.Count}");
             //Console.WriteLine($"constraint count: {Simulation.Solver.CountConstraints()}");
+            Simulation.Bodies.GetBodyReference(new BodyHandle(55)).Pose.Position += new Vector3(10, 5, 0);
 
             BufferPool.Return(ref vertices);
             vertexSpatialIndices.Dispose(BufferPool);
