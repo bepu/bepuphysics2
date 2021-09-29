@@ -6,6 +6,7 @@ using System.Numerics;
 using DemoContentLoader;
 using BepuPhysics.Constraints;
 using Demos.Demos;
+using System;
 
 namespace Demos.SpecializedTests
 {
@@ -382,39 +383,39 @@ namespace Demos.SpecializedTests
                     ServoSettings = new ServoSettings(100, 1, 100)
                 });
             }
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var wheelShape = new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 0.1f)), 0.1f);
-            //    var wheelOrientation = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI * 0.5f);
-            //    var aDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(x, 3, 0), wheelOrientation), inertiaA, wheelShape, activity);
-            //    var bDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(x, 6, 0), wheelOrientation), inertiaB, wheelShape, activity);
-            //    var cDescription = BodyDescription.CreateKinematic(new Vector3(x, 4.5f, -1), new CollidableDescription(Simulation.Shapes.Add(new Box(3, 6, 1)), 0.1f), activity);
-            //    var a = Simulation.Bodies.Add(aDescription);
-            //    var b = Simulation.Bodies.Add(bDescription);
-            //    var c = Simulation.Bodies.Add(cDescription);
-            //    Simulation.Solver.Add(a, b, new AngularAxisGearMotor
-            //    {
-            //        LocalAxisA = new Vector3(0, 1, 0),
-            //        VelocityScale = -4,
-            //        Settings = new MotorSettings(float.MaxValue, 0.0001f)
-            //    });
-            //    Simulation.Solver.Add(c, a, new Hinge
-            //    {
-            //        LocalOffsetA = new Vector3(0, -1.5f, 1),
-            //        LocalHingeAxisA = new Vector3(0, 0, 1),
-            //        LocalOffsetB = new Vector3(0, 0, 0),
-            //        LocalHingeAxisB = new Vector3(0, 1, 0),
-            //        SpringSettings = new SpringSettings(30, 1)
-            //    });
-            //    Simulation.Solver.Add(c, b, new Hinge
-            //    {
-            //        LocalOffsetA = new Vector3(0, 1.5f, 1),
-            //        LocalHingeAxisA = new Vector3(0, 0, 1),
-            //        LocalOffsetB = new Vector3(0, 0, 0),
-            //        LocalHingeAxisB = new Vector3(0, 1, 0),
-            //        SpringSettings = new SpringSettings(30, 1)
-            //    });
-            //}
+            {
+                var x = GetNextPosition(ref nextX);
+                var wheelShape = new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 0.1f)), 0.1f);
+                var wheelOrientation = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI * 0.5f);
+                var aDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(x, 3, 0), wheelOrientation), inertiaA, wheelShape, activity);
+                var bDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(x, 6, 0), wheelOrientation), inertiaB, wheelShape, activity);
+                var cDescription = BodyDescription.CreateKinematic(new Vector3(x, 4.5f, -1), new CollidableDescription(Simulation.Shapes.Add(new Box(3, 6, 1)), 0.1f), activity);
+                var a = Simulation.Bodies.Add(aDescription);
+                var b = Simulation.Bodies.Add(bDescription);
+                var c = Simulation.Bodies.Add(cDescription);
+                Simulation.Solver.Add(a, b, new AngularAxisGearMotor
+                {
+                    LocalAxisA = new Vector3(0, 1, 0),
+                    VelocityScale = -4,
+                    Settings = new MotorSettings(float.MaxValue, 0.0001f)
+                });
+                Simulation.Solver.Add(c, a, new Hinge
+                {
+                    LocalOffsetA = new Vector3(0, -1.5f, 1),
+                    LocalHingeAxisA = new Vector3(0, 0, 1),
+                    LocalOffsetB = new Vector3(0, 0, 0),
+                    LocalHingeAxisB = new Vector3(0, 1, 0),
+                    SpringSettings = new SpringSettings(30, 1)
+                });
+                Simulation.Solver.Add(c, b, new Hinge
+                {
+                    LocalOffsetA = new Vector3(0, 1.5f, 1),
+                    LocalHingeAxisA = new Vector3(0, 0, 1),
+                    LocalOffsetB = new Vector3(0, 0, 0),
+                    LocalHingeAxisB = new Vector3(0, 1, 0),
+                    SpringSettings = new SpringSettings(30, 1)
+                });
+            }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
         }
