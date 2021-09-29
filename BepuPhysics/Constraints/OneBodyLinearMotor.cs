@@ -94,12 +94,32 @@ namespace BepuPhysics.Constraints
 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref OneBodyLinearMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new NotImplementedException();
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
+            OneBodyLinearServoFunctions.ApplyImpulse(offset, inertiaA, ref wsvA, accumulatedImpulses);
         }
 
         public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref OneBodyLinearMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
-            throw new NotImplementedException();
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
+            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out var softnessImpulseScale, out var maximumImpulse);
+
+            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular);
+            var csv = prestep.TargetVelocity - Vector3Wide.Cross(wsvA.Angular, offset) - wsvA.Linear;
+
+            //The grabber is roughly equivalent to a ball socket joint with a nonzero goal (and only one body).
+            Symmetric3x3Wide.SkewSandwichWithoutOverlap(offset, inertiaA.InverseInertiaTensor, out var inverseEffectiveMass);
+
+            //Linear contributions are simply I * inverseMass * I, which is just boosting the diagonal.
+            inverseEffectiveMass.XX += inertiaA.InverseMass;
+            inverseEffectiveMass.YY += inertiaA.InverseMass;
+            inverseEffectiveMass.ZZ += inertiaA.InverseMass;
+            Symmetric3x3Wide.Invert(inverseEffectiveMass, out var effectiveMass);
+            Symmetric3x3Wide.TransformWithoutOverlap(csv, effectiveMass, out var csi);
+            csi = csi * effectiveMassCFMScale - accumulatedImpulses * softnessImpulseScale;
+
+            //The motor has a limited maximum force, so clamp the accumulated impulse. Watch out for division by zero.
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulses, ref csi);
+            OneBodyLinearServoFunctions.ApplyImpulse(offset, inertiaA, ref wsvA, csi);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -109,8 +129,7 @@ namespace BepuPhysics.Constraints
         {
         }
     }
-
-    public class OneBodyLinearMotorTypeProcessor : OneBodyTypeProcessor<OneBodyLinearMotorPrestepData, OneBodyLinearServoProjection, Vector3Wide, OneBodyLinearMotorFunctions, AccessAll, AccessAll>
+    public class OneBodyLinearMotorTypeProcessor : OneBodyTypeProcessor<OneBodyLinearMotorPrestepData, OneBodyLinearServoProjection, Vector3Wide, OneBodyLinearMotorFunctions, AccessNoPosition, AccessNoPosition>
     {
         public const int BatchTypeId = 45;
     }

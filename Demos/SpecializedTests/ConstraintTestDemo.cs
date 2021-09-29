@@ -320,18 +320,18 @@ namespace Demos.SpecializedTests
                     SpringSettings = new SpringSettings(5, 1)
                 });
             }
-            //{
-            //    var x = GetNextPosition(ref nextX);
-            //    var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity));
-            //    var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
-            //    Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, new OneBodyLinearMotor
-            //    {
-            //        LocalOffset = new Vector3(0, 1, 0),
-            //        TargetVelocity = new Vector3(0, -1, 0),
-            //        Settings = new MotorSettings(float.MaxValue, 0.01f),
-            //    });
-            //}
+            {
+                var x = GetNextPosition(ref nextX);
+                var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, new OneBodyLinearMotor
+                {
+                    LocalOffset = new Vector3(0, 1, 0),
+                    TargetVelocity = new Vector3(0, -1, 0),
+                    Settings = new MotorSettings(float.MaxValue, 1e-2f),
+                });
+            }
             {
                 var x = GetNextPosition(ref nextX);
                 var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity));
