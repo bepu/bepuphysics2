@@ -16,13 +16,15 @@ using static BepuPhysics.Solver;
 
 namespace BepuPhysics
 {
-    internal enum SolverJobType
+    internal enum SolverStageType
     {
         IncrementalUpdate,
         WarmStart,
-        WarmStartFallback,
+        JacobiWarmStart,
+        JacobiWarmStartScatter,
         Solve,
-        SolveFallback,
+        JacobiSolve,
+        JacobiSolveScatter,
     }
 
     internal struct SolverSyncStage
@@ -30,12 +32,14 @@ namespace BepuPhysics
         public Buffer<int> Claims;
         public int BatchIndex;
         public int WorkBlockStartIndex;
+        public SolverStageType StageType;
 
-        public SolverSyncStage(Buffer<int> claims, int workBlockStartIndex, int batchIndex = -1)
+        public SolverSyncStage(Buffer<int> claims, int workBlockStartIndex, SolverStageType type, int batchIndex = -1)
         {
             Claims = claims;
             BatchIndex = batchIndex;
             WorkBlockStartIndex = workBlockStartIndex;
+            StageType = type;
         }
     }
 
@@ -168,7 +172,6 @@ namespace BepuPhysics
         {
             public float Dt;
             public float InverseDt;
-            public int SubstepIndex;
             public Solver<TIntegrationCallbacks> solver;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -210,6 +213,20 @@ namespace BepuPhysics
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
                 typeProcessor.JacobiSolveStep2(ref typeBatch, solver.bodies, ref this.solver.ActiveSet.Fallback, ref this.solver.substepContext.FallbackResults[block.TypeBatchIndex], Dt, InverseDt, block.StartBundle, block.End);
+            }
+        }
+
+        struct JacobiScatterStageFunction : IStageFunction
+        {
+            public float Dt;
+            public float InverseDt;
+            public Solver<TIntegrationCallbacks> solver;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
+            {
+                ref var block = ref this.solver.substepContext.FallbackBlocks[blockIndex];
+                solver.ActiveSet.Fallback.ScatterVelocities(solver.bodies, solver, ref this.solver.substepContext.FallbackResults, block.Start, block.End);
             }
         }
 
@@ -340,7 +357,7 @@ namespace BepuPhysics
             //data will remain in some cache that's reasonably close to the core.
             int workerCount = substepContext.WorkerCount;
             var incrementalUpdateWorkerStart = GetUniformlyDistributedStart(workerIndex, substepContext.IncrementalUpdateBlocks.Length, workerCount, 0);
-            int fallbackStart = GetUniformlyDistributedStart(workerIndex, substepContext.FallbackBlocks.Length, workerCount, 0);
+            int jacobiScatterStart = GetUniformlyDistributedStart(workerIndex, substepContext.FallbackBlocks.Length, workerCount, 0);
             Buffer<int> batchStarts;
             ref var activeSet = ref ActiveSet;
             unsafe
@@ -389,13 +406,19 @@ namespace BepuPhysics
                 InverseDt = substepContext.InverseDt,
                 solver = this
             };
+            var jacobiScatterStage = new JacobiScatterStageFunction
+            {
+                Dt = substepContext.Dt,
+                InverseDt = substepContext.InverseDt,
+                solver = this
+            };
 
             //A thread is only allowed to claim a workblock if the claim index for that workblock matches the expected value- which is the claim index it would have from the last time it was executed.
             //Each thread calculates what that claim index would have been based on the current sync index by subtracting the expected number of sync indices elapsed since last execution.
             var syncStagesPerWarmStartOrSolve = synchronizedBatchCount;
             //If a fallback exists, then each warm start/solve will have a final fallback batch stage and then a scatter stage.
             if (fallbackExists) syncStagesPerWarmStartOrSolve += 2;
-            var baseStageCountInSubstep = syncStagesPerWarmStartOrSolve * (1 + IterationCount) + 1;
+            var baseStageCountInSubstep = syncStagesPerWarmStartOrSolve * (1 + IterationCount);
             //All warmstarts and solves, plus an incremental contact update. First substep doesn't do an incremental contact update, but that's fine, it'll end up expecting 0.
             var syncOffsetToPreviousSubstep = baseStageCountInSubstep + 1;
             //To find the previous execution sync index of a constraint batch, we have to scan through all the constraint batches, but ALSO skip over the incremental contact update stage, hence + 1.
@@ -412,15 +435,15 @@ namespace BepuPhysics
                     {
                         ExecuteMainStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, ref substepContext.Stages[0], syncOffsetToPreviousSubstep, ref syncIndex);
                     }
+                    warmstartStage.SubstepIndex = substepIndex;
                     for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
                     {
-                        warmstartStage.SubstepIndex = substepIndex;
                         ExecuteMainStage(ref warmstartStage, workerIndex, batchStarts[batchIndex], ref substepContext.Stages[batchIndex + 1], syncOffsetToPreviousClaimOnBatchForWarmStart, ref syncIndex);
                     }
                     if (fallbackExists)
                     {
                         ExecuteMainStage(ref jacobiWarmstartStage, workerIndex, batchStarts[FallbackBatchThreshold], ref substepContext.Stages[FallbackBatchThreshold + 1], syncOffsetToPreviousClaimOnBatchForWarmStart, ref syncIndex);
-                        //TODO: FALLBACK SCATTER
+                        ExecuteMainStage(ref jacobiScatterStage, workerIndex, jacobiScatterStart, ref substepContext.Stages[FallbackBatchThreshold + 2], syncOffsetToPreviousClaimOnBatchForWarmStart, ref syncIndex);
                     }
                     for (int iterationIndex = 0; iterationIndex < IterationCount; ++iterationIndex)
                     {
@@ -433,7 +456,7 @@ namespace BepuPhysics
                         if (fallbackExists)
                         {
                             ExecuteMainStage(ref jacobiSolveStage, workerIndex, batchStarts[FallbackBatchThreshold], ref substepContext.Stages[FallbackBatchThreshold + 1], syncOffsetToPreviousClaimOnBatchForSolve, ref syncIndex);
-                            //TODO: FALLBACK SCATTER
+                            ExecuteMainStage(ref jacobiScatterStage, workerIndex, jacobiScatterStart, ref substepContext.Stages[FallbackBatchThreshold + 2], syncOffsetToPreviousClaimOnBatchForSolve, ref syncIndex);
                         }
                     }
                 }
@@ -455,7 +478,7 @@ namespace BepuPhysics
                         //No work yet available.
                         spinWait.SpinOnce();
                     }
-                    //Stages were set up prior to execution. Note that we don't attempt to ping pong buffers or anything; there are unique entries for every single stage.
+                    //Stages were set up prior to execution. Note that we don't attempt to ping pong buffers or anything; workblock claim indices monotonically increase across the execution of the solver.
                     //This guarantees that a worker thread can go idle and miss an arbitrary number of stages without blocking any progress.
                     if (syncIndex == int.MinValue)
                     {
@@ -467,7 +490,7 @@ namespace BepuPhysics
                     syncIndexInSubstep += syncStepsSinceLast;
                     while (true)
                     {
-                        var stageCountInSubstep = substepIndex > 0 ? baseStageCountInSubstep + 1 : baseStageCountInSubstep;
+                        var stageCountInSubstep = substepIndex > 0 ? syncOffsetToPreviousSubstep : baseStageCountInSubstep;
                         if (syncIndexInSubstep >= stageCountInSubstep)
                         {
                             syncIndexInSubstep -= stageCountInSubstep;
@@ -478,27 +501,35 @@ namespace BepuPhysics
                             break;
                         }
                     }
+                    //If it's the first substep index, there's no incremental update, so we jump straight into it.
                     var stageIndex = substepIndex == 0 ? syncIndexInSubstep + 1 : syncIndexInSubstep;
                     //Note that we're going to do a compare exchange that prevents any claim on work blocks that *arent* of the previous sync index, which means we need the previous sync index.
                     //Storing that in a reliable way is annoying, so we derive it from syncIndex.
-                    if (stageIndex == 0)
+                    ref var stage = ref substepContext.Stages[stageIndex];
+                    switch (stage.StageType)
                     {
-                        //Incremental update.
-                        ref var stage = ref substepContext.Stages[stageIndex];
-                        ExecuteWorkerStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, 0, ref stage.Claims, 1 + baseStageCountInSubstep, syncIndex, ref substepContext.CompletedWorkBlockCount);
-                    }
-                    else if (stageIndex < 1 + synchronizedBatchCount)
-                    {
-                        //Warm start.
-                        ref var stage = ref substepContext.Stages[stageIndex];
-                        warmstartStage.SubstepIndex = substepIndex;
-                        ExecuteWorkerStage(ref warmstartStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, 1 + synchronizedBatchCount, syncIndex, ref substepContext.CompletedWorkBlockCount);
-                    }
-                    else
-                    {
-                        //Solve.
-                        ref var stage = ref substepContext.Stages[stageIndex];
-                        ExecuteWorkerStage(ref solveStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, synchronizedBatchCount, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                        case SolverStageType.IncrementalUpdate:
+                            ExecuteWorkerStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, 0, ref stage.Claims, syncOffsetToPreviousSubstep, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
+                        case SolverStageType.WarmStart:
+                            warmstartStage.SubstepIndex = substepIndex;
+                            ExecuteWorkerStage(ref warmstartStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, syncOffsetToPreviousClaimOnBatchForWarmStart, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
+                        case SolverStageType.JacobiWarmStart:
+                            ExecuteWorkerStage(ref jacobiWarmstartStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, syncOffsetToPreviousClaimOnBatchForWarmStart, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
+                        case SolverStageType.JacobiWarmStartScatter:
+                            ExecuteWorkerStage(ref jacobiScatterStage, workerIndex, jacobiScatterStart, stage.WorkBlockStartIndex, ref stage.Claims, syncOffsetToPreviousClaimOnBatchForWarmStart, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
+                        case SolverStageType.Solve:
+                            ExecuteWorkerStage(ref solveStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, syncOffsetToPreviousClaimOnBatchForSolve, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
+                        case SolverStageType.JacobiSolve:
+                            ExecuteWorkerStage(ref jacobiSolveStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, syncOffsetToPreviousClaimOnBatchForSolve, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
+                        case SolverStageType.JacobiSolveScatter:
+                            ExecuteWorkerStage(ref jacobiScatterStage, workerIndex, jacobiScatterStart, stage.WorkBlockStartIndex, ref stage.Claims, syncOffsetToPreviousClaimOnBatchForSolve, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
                     }
                     latestCompletedSyncIndex = syncIndex;
 
@@ -561,36 +592,87 @@ namespace BepuPhysics
             //Not every batch will actually have work blocks associated with it; the batch compressor could be falling behind, which means older constraints could be at higher batches than they need to be, leaving gaps.
             //We don't want to include those empty batches as sync points in the solver.
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-            var iterationCountPlusOne = 1 + IterationCount;
-            pool.Take(1 + synchronizedBatchCount * iterationCountPlusOne, out substepContext.Stages);
             substepContext.SyncIndex = 0;
-
             var totalConstraintBatchWorkBlockCount = substepContext.ConstraintBatchBoundaries[^1];
             var totalClaimCount = incrementalBlocks.Count + totalConstraintBatchWorkBlockCount;
-            if (ActiveSet.Batches.Count > FallbackBatchThreshold)
+            var stagesPerIteration = synchronizedBatchCount;
+            if (fallbackExists)
             {
                 Debug.Assert(substepContext.FallbackBlocks.Length > 0);
                 FallbackBatch.AllocateResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], out substepContext.FallbackResults);
+                totalClaimCount += substepContext.FallbackBlocks.Length;
+                stagesPerIteration += 2; //jacobi batch, plus scatter.
             }
+            pool.Take(1 + stagesPerIteration * (1 + IterationCount), out substepContext.Stages);
             //Claims will be monotonically increasing throughout execution. All should start at zero to match with the initial sync index.
             pool.Take<int>(totalClaimCount, out var claims);
             claims.Clear(0, claims.Length);
-            substepContext.Stages[0] = new(claims.Slice(incrementalBlocks.Count), 0);
+            substepContext.Stages[0] = new(claims.Slice(incrementalBlocks.Count), 0, SolverStageType.IncrementalUpdate);
             //Note that we create redundant stages that share the same workblock targets and claims buffers.
             //This is just to make indexing a little simpler during the multithreaded work.
             int targetStageIndex = 1;
-            for (int i = 0; i < iterationCountPlusOne; ++i)
+            //Warm start.
+            int claimStart = incrementalBlocks.Count;
+            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
             {
-                int claimStart = incrementalBlocks.Count;
+                var stageIndex = targetStageIndex++;
+                var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+                var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+                substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.WarmStart, batchIndex);
+                claimStart += workBlocksInBatch;
+            }
+            if (fallbackExists)
+            {
+                //Jacobi warm start.
+                var stageIndex = targetStageIndex++;
+                var batchStart = FallbackBatchThreshold == 0 ? 0 : substepContext.ConstraintBatchBoundaries[FallbackBatchThreshold];
+                var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[FallbackBatchThreshold] - batchStart;
+                substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.JacobiWarmStart);
+                claimStart += workBlocksInBatch;
+
+                //Jacobi warm start scatter.
+                stageIndex = targetStageIndex++;
+                substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, substepContext.FallbackBlocks.Length), 0, SolverStageType.JacobiWarmStartScatter);
+            }
+            for (int iterationIndex = 0; iterationIndex < IterationCount; ++iterationIndex)
+            {
+                //Solve. Note that we're reusing the same claims as were used in the warm start for these stages; the stages just tell the workers what kind of work to do.
+                claimStart = incrementalBlocks.Count;
                 for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
                 {
                     var stageIndex = targetStageIndex++;
                     var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
                     var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
-                    substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, batchIndex);
+                    substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.Solve, batchIndex);
                     claimStart += workBlocksInBatch;
                 }
+                if (fallbackExists)
+                {
+                    //Jacobi solve.
+                    var stageIndex = targetStageIndex++;
+                    var batchStart = FallbackBatchThreshold == 0 ? 0 : substepContext.ConstraintBatchBoundaries[FallbackBatchThreshold];
+                    var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[FallbackBatchThreshold] - batchStart;
+                    substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.JacobiSolve);
+                    claimStart += workBlocksInBatch;
+
+                    //Jacobi solve scatter.
+                    stageIndex = targetStageIndex++;
+                    substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, substepContext.FallbackBlocks.Length), 0, SolverStageType.JacobiSolveScatter);
+                }
             }
+
+            //for (int i = 0; i < iterationCountPlusOne; ++i)
+            //{
+            //    int claimStart = incrementalBlocks.Count;
+            //    for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+            //    {
+            //        var stageIndex = targetStageIndex++;
+            //        var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+            //        var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+            //        substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart,  batchIndex);
+            //        claimStart += workBlocksInBatch;
+            //    }
+            //}
 
             //var syncCount = substepCount * (1 + synchronizedBatchCount * (1 + IterationCount)) - 1;
             //pool.Take(syncCount, out debugStageWorkBlocksCompleted);
@@ -668,7 +750,7 @@ namespace BepuPhysics
             //pool.Return(ref debugStageWorkBlocksCompleted);
             //pool.Return(ref availableCountPerSync);
 
-            if (ActiveSet.Batches.Count > FallbackBatchThreshold)
+            if (fallbackExists)
             {
                 FallbackBatch.DisposeResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], ref substepContext.FallbackResults);
                 pool.Return(ref substepContext.FallbackBlocks);

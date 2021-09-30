@@ -422,12 +422,12 @@ namespace BepuPhysics
                     ref var offsetBundle = ref GatherScatter.GetOffsetInstance(ref bundle, innerIndex);
                     Vector3Wide.ReadFirst(offsetBundle.Linear, out var linear);
                     Vector3Wide.ReadFirst(offsetBundle.Angular, out var angular);
-                    //bodyVelocity.Linear.Validate();
-                    //bodyVelocity.Angular.Validate();
+                    bodyVelocity.Linear.Validate();
+                    bodyVelocity.Angular.Validate();
                     bodyVelocity.Linear += linear;
                     bodyVelocity.Angular += angular;
-                    //bodyVelocity.Linear.Validate();
-                    //bodyVelocity.Angular.Validate();
+                    bodyVelocity.Linear.Validate();
+                    bodyVelocity.Angular.Validate();
                 }
                 //This simply averages all velocity results from the iteration for the body. This is equivalent to PGS/SI in terms of convergence because it is mathematically equivalent
                 //to having a linear/angular 'weld' constraint between N separate bodies that happen to all be in the same spot, except each of them has 1/N as much mass as the original.
@@ -441,8 +441,12 @@ namespace BepuPhysics
                 //averageVelocity = oldVelocity + (impulse0 + impulse1 + ... ) / inertia
                 //Which is exactly what we want.
                 var inverseCount = 1f / constraintReferences.Count;
+                bodyVelocity.Linear.Validate();
+                bodyVelocity.Angular.Validate();
                 bodyVelocity.Linear *= inverseCount;
                 bodyVelocity.Angular *= inverseCount;
+                bodyVelocity.Linear.Validate();
+                bodyVelocity.Angular.Validate();
                 bodies.ActiveSet.SolverStates[bodyIndex].Motion.Velocity = bodyVelocity;
             }
         }

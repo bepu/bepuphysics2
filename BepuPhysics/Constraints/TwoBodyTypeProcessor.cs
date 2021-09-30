@@ -411,7 +411,17 @@ namespace BepuPhysics.Constraints
                 Symmetric3x3Wide.Scale(inertiaB.InverseInertiaTensor, jacobiScaleB, out inertiaB.InverseInertiaTensor);
                 inertiaB.InverseMass *= jacobiScaleB;
 
+
+                wsvA.Linear.Validate(count);
+                wsvA.Angular.Validate(count);
+                wsvB.Linear.Validate(count);
+                wsvB.Angular.Validate(count);
                 function.WarmStart2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, ref prestep, ref accumulatedImpulses, ref wsvA, ref wsvB);
+
+                wsvA.Linear.Validate(count);
+                wsvA.Angular.Validate(count);
+                wsvB.Linear.Validate(count);
+                wsvB.Angular.Validate(count);
                 //Jacobi batches do not scatter velocities directly; they are handled in a postpass.
             }
         }
@@ -444,7 +454,17 @@ namespace BepuPhysics.Constraints
                 Symmetric3x3Wide.Scale(inertiaB.InverseInertiaTensor, jacobiScaleB, out inertiaB.InverseInertiaTensor);
                 inertiaB.InverseMass *= jacobiScaleB;
 
+                wsvA.Linear.Validate(count);
+                wsvA.Angular.Validate(count);
+                wsvB.Linear.Validate(count);
+                wsvB.Angular.Validate(count);
+
                 function.Solve2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA, ref wsvB);
+
+                wsvA.Linear.Validate(count);
+                wsvA.Angular.Validate(count);
+                wsvB.Linear.Validate(count);
+                wsvB.Angular.Validate(count);
                 //Jacobi batches do not scatter velocities directly; they are handled in a postpass.
             }
         }
