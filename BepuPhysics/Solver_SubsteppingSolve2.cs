@@ -136,6 +136,35 @@ namespace BepuPhysics
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void JacobianWarmStartBlock<TBatchShouldIntegratePoses>(
+            int workerIndex, int batchIndex, int typeBatchIndex, int startBundle, int endBundle, ref TypeBatch typeBatch, TypeProcessor typeProcessor, float dt, float inverseDt, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults)
+            where TBatchShouldIntegratePoses : unmanaged, IBatchPoseIntegrationAllowed
+        {
+            if (batchIndex == 0) //technically not disallowed...
+            {
+                Buffer<IndexSet> noFlagsRequired = default;
+                typeProcessor.JacobiWarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate, TBatchShouldIntegratePoses>(
+                    ref typeBatch, ref noFlagsRequired, bodies, ref PoseIntegrator.Callbacks, ref jacobiBatch, ref jacobiResults,
+                    dt, inverseDt, startBundle, endBundle, workerIndex);
+            }
+            else
+            {
+                if (coarseBatchIntegrationResponsibilities[batchIndex][typeBatchIndex])
+                {
+                    typeProcessor.JacobiWarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate, TBatchShouldIntegratePoses>(
+                        ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks, ref jacobiBatch, ref jacobiResults,
+                        dt, inverseDt, startBundle, endBundle, workerIndex);
+                }
+                else
+                {
+                    typeProcessor.JacobiWarmStart2<TIntegrationCallbacks, BatchShouldNeverIntegrate, TBatchShouldIntegratePoses>(
+                        ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks, ref jacobiBatch, ref jacobiResults,
+                        dt, inverseDt, startBundle, endBundle, workerIndex);
+                }
+            }
+        }
+
 
         //Split the solve process into a warmstart and solve, where warmstart doesn't try to store out anything. It just computes jacobians and modifies velocities according to the accumulated impulse.
         //The solve step then *recomputes* jacobians from prestep data and pose information.
@@ -744,9 +773,10 @@ namespace BepuPhysics
                     //Note that we bypass the constructor to avoid zeroing unnecessarily. Every bundle will be fully assigned.
                     pool.Take(bundleCount, out bodiesFirstObservedInBatches[batchIndex].Flags);
                 }
+                GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
                 //Note that we are not multithreading the batch merging phase. This typically takes a handful of microseconds.
                 //You'd likely need millions of bodies before you'd see any substantial benefit from multithreading this.
-                for (int batchIndex = 1; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
+                for (int batchIndex = 1; batchIndex < synchronizedBatchCount; ++batchIndex)
                 {
                     ref var batchHandles = ref batchReferencedHandles[batchIndex];
                     ref var firstObservedInBatch = ref bodiesFirstObservedInBatches[batchIndex];
@@ -860,7 +890,7 @@ namespace BepuPhysics
                 }
                 if (useSingleThreadedPath)
                 {
-                    for (int i = 1; i < ActiveSet.Batches.Count; ++i)
+                    for (int i = 1; i < synchronizedBatchCount; ++i)
                     {
                         if (!batchHasAnyIntegrationResponsibilities[i])
                             continue;
@@ -954,7 +984,6 @@ namespace BepuPhysics
                 var inverseDt = 1f / substepDt;
                 ref var activeSet = ref ActiveSet;
                 GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-                Debug.Assert(!fallbackExists, "Not handling this yet.");
 
                 var incrementalUpdateFilter = default(IncrementalContactDataUpdateFilter);
                 for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
@@ -989,6 +1018,26 @@ namespace BepuPhysics
                             }
                         }
                     }
+                    Buffer<FallbackTypeBatchResults> fallbackResults = default;
+                    if (fallbackExists)
+                    {
+                        ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                        FallbackBatch.AllocateResults(this, pool, ref batch, out fallbackResults);
+                        
+                        for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[j];
+                            if (substepIndex == 0)
+                            {
+                                JacobianWarmStartBlock<DisallowPoseIntegration>(0, FallbackBatchThreshold, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepDt, inverseDt, ref ActiveSet.Fallback, ref fallbackResults[j]);
+                            }
+                            else
+                            {
+                                JacobianWarmStartBlock<AllowPoseIntegration>(0, FallbackBatchThreshold, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepDt, inverseDt, ref ActiveSet.Fallback, ref fallbackResults[j]);
+                            }
+                        }
+                        activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
+                    }
 
                     for (int iterationIndex = 0; iterationIndex < IterationCount; ++iterationIndex)
                     {
@@ -1001,6 +1050,20 @@ namespace BepuPhysics
                                 TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
                             }
                         }
+                        if (fallbackExists)
+                        {
+                            ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                            for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                            {
+                                ref var typeBatch = ref batch.TypeBatches[j];
+                                TypeProcessors[typeBatch.TypeId].JacobiSolveStep2(ref typeBatch, bodies, ref ActiveSet.Fallback, ref fallbackResults[j], substepDt, inverseDt, 0, typeBatch.BundleCount);
+                            }
+                            activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
+                        }
+                    }
+                    if (fallbackExists)
+                    {
+                        FallbackBatch.DisposeResults(this, pool, ref activeSet.Batches[FallbackBatchThreshold], ref fallbackResults);
                     }
                 }
             }
