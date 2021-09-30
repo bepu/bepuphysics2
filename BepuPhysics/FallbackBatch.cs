@@ -525,6 +525,5 @@ namespace BepuPhysics
                 bodyConstraintReferences.Dispose(pool);
             }
         }
-
     }
 }

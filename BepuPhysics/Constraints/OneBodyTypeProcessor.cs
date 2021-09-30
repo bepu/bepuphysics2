@@ -267,7 +267,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public override void JacobiWarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
+        public override void JacobiWarmStart2(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<Vector<int>>();
@@ -284,8 +284,8 @@ namespace BepuPhysics.Constraints
                 var count = GetCountInBundle(ref typeBatch, i);
                 //Prefetch(WarmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, i, exclusiveEndBundle);
                 //Note jacobi batches do not do access filtering at the moment. The fallback accumulation expects all velocities to be present.
-                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, AccessAll, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references, count,
-                    out var positionA, out var orientationA, out wsvA, out var inertiaA);
+                //Also, jacobi batches cannot integrate.
+                bodies.GatherState<AccessAll>(ref references, count, true, out var positionA, out var orientationA, out wsvA, out var inertiaA);
                 jacobiBatch.GetJacobiScaleForBodies(ref references, count, out var jacobiScaleA);
                 Symmetric3x3Wide.Scale(inertiaA.InverseInertiaTensor, jacobiScaleA, out inertiaA.InverseInertiaTensor);
                 inertiaA.InverseMass *= jacobiScaleA;
