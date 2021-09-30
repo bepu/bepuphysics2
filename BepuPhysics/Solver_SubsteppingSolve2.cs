@@ -336,6 +336,7 @@ namespace BepuPhysics
                 {
                     Thread.SpinWait(3);
                 }
+                //Console.WriteLine($"Completed blocks count: {substepContext.CompletedWorkBlockCount}.");
                 //All workers are done. We can safely reset the counter for the next time this stage is used.
                 substepContext.CompletedWorkBlockCount = 0;
             }
@@ -593,7 +594,7 @@ namespace BepuPhysics
             //We don't want to include those empty batches as sync points in the solver.
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
             substepContext.SyncIndex = 0;
-            var totalConstraintBatchWorkBlockCount = substepContext.ConstraintBatchBoundaries[^1];
+            var totalConstraintBatchWorkBlockCount = substepContext.ConstraintBatchBoundaries.Length == 0 ? 0 : substepContext.ConstraintBatchBoundaries[^1];
             var totalClaimCount = incrementalBlocks.Count + totalConstraintBatchWorkBlockCount;
             var stagesPerIteration = synchronizedBatchCount;
             if (fallbackExists)
@@ -625,9 +626,9 @@ namespace BepuPhysics
             {
                 //Jacobi warm start.
                 var stageIndex = targetStageIndex++;
-                var batchStart = FallbackBatchThreshold == 0 ? 0 : substepContext.ConstraintBatchBoundaries[FallbackBatchThreshold];
+                var batchStart = FallbackBatchThreshold == 0 ? 0 : substepContext.ConstraintBatchBoundaries[FallbackBatchThreshold - 1];
                 var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[FallbackBatchThreshold] - batchStart;
-                substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.JacobiWarmStart);
+                substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.JacobiWarmStart, FallbackBatchThreshold);
                 claimStart += workBlocksInBatch;
 
                 //Jacobi warm start scatter.
@@ -650,9 +651,9 @@ namespace BepuPhysics
                 {
                     //Jacobi solve.
                     var stageIndex = targetStageIndex++;
-                    var batchStart = FallbackBatchThreshold == 0 ? 0 : substepContext.ConstraintBatchBoundaries[FallbackBatchThreshold];
+                    var batchStart = FallbackBatchThreshold == 0 ? 0 : substepContext.ConstraintBatchBoundaries[FallbackBatchThreshold - 1];
                     var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[FallbackBatchThreshold] - batchStart;
-                    substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.JacobiSolve);
+                    substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.JacobiSolve, FallbackBatchThreshold);
                     claimStart += workBlocksInBatch;
 
                     //Jacobi solve scatter.
