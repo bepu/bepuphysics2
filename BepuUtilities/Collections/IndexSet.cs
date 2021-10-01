@@ -91,11 +91,32 @@ namespace BepuUtilities.Collections
         /// Sets an index in the set to contained without checking capacity or whether it is already set.
         /// </summary>
         /// <param name="index">Index to add.</param>
-        /// <remarks>This is functionally identical to the Add method, but it doesn't include the same debug assertions. Just a way to make intent clear so that the assert can catch errors.</remarks>
+        /// <remarks>This is functionally identical to the AddUnsafely method, but it doesn't include the same debug assertions. Just a way to make intent clear so that the assert can catch errors.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetUnsafely(int index)
         {
             SetUnsafely(index, index >> shift);
         }
+
+        /// <summary>
+        /// Sets an index in the set to contained without checking whether it is already set.
+        /// </summary>
+        /// <param name="index">Index to add.</param>
+        /// <param name="pool">Pool to reuse the set if necessary.</param>
+        /// <remarks>This is functionally identical to the Add method, but it doesn't include the same debug assertions. Just a way to make intent clear so that the assert can catch errors.</remarks>
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Set(int index, BufferPool pool)
+        {
+            var bundleIndex = index >> shift;
+            if (bundleIndex >= Flags.Length)
+            {
+                //Note that the bundle index may be larger than two times the current capacity, since indices are not guaranteed to be appended.
+                InternalResizeForBundleCount(pool, 1 << SpanHelper.GetContainingPowerOf2(bundleIndex + 1));
+            }
+            SetUnsafely(index, index >> shift);
+        }
+
 
         /// <summary>
         /// Adds an index to the set without checking capacity.
