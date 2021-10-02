@@ -77,20 +77,18 @@ namespace Demos.Demos.Cars
                     if (steeringAngle > 0)
                     {
                         rightSteeringAngle = MathF.Atan(WheelBaseLength / (turnRadius - wheelBaseHalfWidth));
-                        rightSteeringAngle = (rightSteeringAngle - steeringAngleAbs) * AckermanSteering + steeringAngleAbs;
+                        rightSteeringAngle = steeringAngle + (rightSteeringAngle - steeringAngleAbs) * AckermanSteering;
                         
                         leftSteeringAngle = MathF.Atan(WheelBaseLength / (turnRadius + wheelBaseHalfWidth));
-                        leftSteeringAngle = (leftSteeringAngle - steeringAngleAbs) * AckermanSteering + steeringAngleAbs;
+                        leftSteeringAngle = steeringAngle + (leftSteeringAngle - steeringAngleAbs) * AckermanSteering;
                     }
                     else
                     {
                         rightSteeringAngle = MathF.Atan(WheelBaseLength / (turnRadius + wheelBaseHalfWidth));
-                        rightSteeringAngle = (rightSteeringAngle - steeringAngleAbs) * AckermanSteering + steeringAngleAbs;
-                        rightSteeringAngle *= -1;
+                        rightSteeringAngle = steeringAngle - (rightSteeringAngle - steeringAngleAbs) * AckermanSteering;
 
                         leftSteeringAngle = MathF.Atan(WheelBaseLength / (turnRadius - wheelBaseHalfWidth));
-                        leftSteeringAngle = (leftSteeringAngle - steeringAngleAbs) * AckermanSteering + steeringAngleAbs;
-                        leftSteeringAngle *= -1;
+                        leftSteeringAngle = steeringAngle - (leftSteeringAngle - steeringAngleAbs) * AckermanSteering;
                     }
                 }
                 else
