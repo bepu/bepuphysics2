@@ -138,15 +138,13 @@ namespace BepuPhysics
         /// <param name="bodyReference">Body associated with a constraint in the fallback batch.</param>
         /// <param name="constraintHandle">Constraint associated with the body being removed.</param>
         /// <param name="allocationIdsToFree">Allocations that should be freed once execution is back in a safe context.</param>
-        /// <returns>True if the body no longer has any constraints associated with it, false otherwise.</returns>
+        /// <returns>True if the body no longer has any constraints associated with it in the fallback batch, false otherwise.</returns>
         internal unsafe bool Remove(int bodyReference, ConstraintHandle constraintHandle, ref QuickList<int> allocationIdsToFree)
         {
             var bodyPresent = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex);
             Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
             ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
-            //TODO: Should really just be using a dictionary here.
-            var dummy = new FallbackReference { ConstraintHandle = constraintHandle };
-            var removed = constraintReferences.FastRemove(ref dummy);
+            var removed = constraintReferences.FastRemove(new FallbackReference { ConstraintHandle = constraintHandle });
             Debug.Assert(removed, "If a constraint removal was requested, it must exist within the referenced body's constraint set.");
             if (constraintReferences.Count == 0)
             {
@@ -162,8 +160,8 @@ namespace BepuPhysics
                     allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Values.Id;
                     allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Table.Id;
                     bodyConstraintReferences = default;
-                    return true;
                 }
+                return true;
             }
             return false;
         }
