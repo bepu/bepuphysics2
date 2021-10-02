@@ -351,7 +351,7 @@ namespace BepuPhysics.Constraints
             var bodyHandleCollector = new ActiveConstraintBodyHandleCollector(bodies, bodyHandles);
             EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref bodyHandleCollector);
             Debug.Assert(targetBatchIndex <= solver.FallbackBatchThreshold,
-                "Constraint transfers should never target the fallback batch. It doesn't have any body handles so attempting to allocate in the same way wouldn't turn out well.");
+                "Constraint transfers should never target the fallback batch. Its registered body handles don't block new constraints so attempting to allocate in the same way wouldn't turn out well.");
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
             var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
             solver.AllocateInBatch(targetBatchIndex, constraintHandle, new Span<BodyHandle>(bodyHandles, bodiesPerConstraint), typeId, out var targetReference);
@@ -656,11 +656,10 @@ namespace BepuPhysics.Constraints
                 for (int j = 0; j < bodiesPerConstraint; ++j)
                 {
                     var bodyHandle = Unsafe.Add(ref sourceHandlesStart, offset);
-                    Debug.Assert(!targetBatchReferencedHandles.Contains(bodyHandle),
-                        "It should be impossible for a batch in the active set to already contain a reference to a body that is being woken up.");
                     //Given that we're only adding references to bodies that already exist, and therefore were at some point in the active set, it should never be necessary
                     //to resize the batch referenced handles structure.
-                    targetBatchReferencedHandles.AddUnsafely(bodyHandle);
+                    //Note that this will happily set an existing bit if the target batch is the fallback batch.
+                    targetBatchReferencedHandles.SetUnsafely(bodyHandle);
                     offset += Vector<int>.Count;
                 }
             }
@@ -686,7 +685,6 @@ namespace BepuPhysics.Constraints
                     {
                         if (Unsafe.Add(ref bodyVectorBase, innerIndex) == bodyToFind)
                             ++count;
-                        Debug.Assert(count <= 1);
                     }
                 }
             }

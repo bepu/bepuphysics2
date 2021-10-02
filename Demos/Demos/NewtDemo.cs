@@ -824,7 +824,7 @@ namespace Demos.Demos
             //will be integrated before collision detection or the solver has a chance to intervene. That's fine in this demo. Other built-in options include the PositionLastTimestepper and the SubsteppingTimestepper.
             //Note that the timestepper also has callbacks that you can use for executing logic between processing stages, like BeforeCollisionDetection.
             //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper(1));
-            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new EmbeddedSubsteppingTimestepper2(9), solverIterationCount: 1);
+            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new EmbeddedSubsteppingTimestepper2(3), solverIterationCount: 1, 512);
             //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper2(), solverIterationCount: 60);
             //Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)), new SubsteppingTimestepper2(3), solverIterationCount: 1);
 
@@ -832,7 +832,7 @@ namespace Demos.Demos
             float cellSize = 0.1f;
             DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool,
                 out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
-            var weldSpringiness = new SpringSettings(100f, 1f);
+            var weldSpringiness = new SpringSettings(30f, 1f);
             var volumeSpringiness = new SpringSettings(30f, 1);
             //int terboTotal = 0;
             //var terboShape = new Box(0.5f, 0.5f, 3);
@@ -842,7 +842,7 @@ namespace Demos.Demos
             for (int i = 0; i < 40; ++i)
             {
                 //CreateDeformable(Simulation, new Vector3(i * 3, 5 + i * 1.5f, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
-                CreateDeformable(Simulation, new Vector3(i * 3, cellSize * 2f + i * 0f, 0), Quaternion.Identity, 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
+                CreateDeformable(Simulation, new Vector3(i * 3, 5 + cellSize * 2f + i * 0f, 0), Quaternion.Identity, 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
 
                 //for (int terbo = 0; terbo < 17; ++terbo)
                 //{
@@ -859,10 +859,10 @@ namespace Demos.Demos
             BufferPool.Return(ref cellVertexIndices);
             BufferPool.Return(ref tetrahedraVertexIndices);
 
-            //Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
+            Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)), 0.1f)));
-            //Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(3)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(3)), 0.1f)));
 
         }
 

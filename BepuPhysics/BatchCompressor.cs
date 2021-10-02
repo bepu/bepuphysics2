@@ -146,7 +146,7 @@ namespace BepuPhysics
                 typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, i, ref handleAccumulator);
                 for (int batchIndex = 0; batchIndex < nextBatchIndex; ++batchIndex)
                 {
-                    //The batch index will never be the fallback batch, since the fallback batch is the very last batch (if it exists at all). So uses batch referenced handles is safe.
+                    //The batch index will never be the fallback batch, since the fallback batch is the very last batch (if it exists at all). So uses of batch referenced handles is safe.
                     if (Solver.batchReferencedHandles[batchIndex].CanFit(bodyHandlesSpan))
                     {
                         compressions.Add(new Compression { ConstraintHandle = typeBatch.IndexToHandle[i], TargetBatch = batchIndex }, pool);

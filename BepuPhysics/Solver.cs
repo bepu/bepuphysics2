@@ -195,7 +195,7 @@ namespace BepuPhysics
             ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
             batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
             ResizeHandleCapacity(initialCapacity);
-            solveWorker = SolveWorker;;
+            solveWorker = SolveWorker; ;
             incrementalContactUpdateWorker = IncrementalContactUpdateWorker;
         }
 
@@ -268,7 +268,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        internal unsafe void ValidateExistingHandles(bool activeOnly = false)
+        public unsafe void ValidateExistingHandles(bool activeOnly = false)
         {
             var maxBodySet = activeOnly ? 1 : bodies.Sets.Length;
             for (int i = 0; i < maxBodySet; ++i)
@@ -283,18 +283,35 @@ namespace BepuPhysics
                 }
             }
             //Validate the bodies referenced in the active batchReferencedHandles collections. 
-            //Note that this only applies to the active set synchronized batches; inactive sets and the fallback batch do not explicitly track referenced handles.
-            for (int batchIndex = 0; batchIndex < Math.Min(ActiveSet.Batches.Count, FallbackBatchThreshold); ++batchIndex)
+            //Note that this only applies to the active set batches; inactive sets do not explicitly track referenced handles.
+            for (int batchIndex = 0; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
             {
                 ref var handles = ref batchReferencedHandles[batchIndex];
                 ref var batch = ref ActiveSet.Batches[batchIndex];
                 for (int i = 0; i < bodies.ActiveSet.Count; ++i)
                 {
                     var handle = bodies.ActiveSet.IndexToHandle[i];
+                    int expectedCount;
                     if (handles.Contains(handle.Value))
-                        ValidateBodyReference(i, 1, ref batch);
+                    {
+                        if (batchIndex < FallbackBatchThreshold)
+                        {
+                            //A body can only appear in a non-fallback batch at most once.
+                            expectedCount = 1;
+                        }
+                        else
+                        {
+                            //If this is the fallback batch, then the expected count may be more than 1.
+                            var foundBody = ActiveSet.Fallback.bodyConstraintReferences.TryGetValue(i, out var referencesForBody);
+                            Debug.Assert(foundBody, "A body was in the fallback batch's referenced handles, so the fallback batch should have a reference for that body.");
+                            expectedCount = foundBody ? referencesForBody.Count : 0;
+                        }
+                    }
                     else
-                        ValidateBodyReference(i, 0, ref batch);
+                    {
+                        expectedCount = 0;
+                    }
+                    ValidateBodyReference(i, expectedCount, ref batch);
                 }
                 //No inactive bodies should be present in the active set solver batch referenced handles.
                 for (int inactiveBodySetIndex = 1; inactiveBodySetIndex < bodies.Sets.Length; ++inactiveBodySetIndex)
@@ -457,17 +474,14 @@ namespace BepuPhysics
         {
             ref var batch = ref ActiveSet.Batches[targetBatchIndex];
             batch.Allocate(constraintHandle, bodyHandles, bodies, typeId, TypeProcessors[typeId], GetMinimumCapacityForType(typeId), pool, out reference);
-            if (targetBatchIndex < FallbackBatchThreshold)
+            ref var handlesSet = ref batchReferencedHandles[targetBatchIndex];
+            for (int i = 0; i < bodyHandles.Length; ++i)
             {
-                ref var handlesSet = ref batchReferencedHandles[targetBatchIndex];
-                for (int j = 0; j < bodyHandles.Length; ++j)
-                {
-                    handlesSet.Add(bodyHandles[j].Value, pool);
-                }
+                Debug.Assert(targetBatchIndex == FallbackBatchThreshold || !handlesSet.Contains(bodyHandles[i].Value), "Non-fallback batches should not come to include references to the same body more than once.");
+                handlesSet.Set(bodyHandles[i].Value, pool);
             }
-            else
+            if (targetBatchIndex == FallbackBatchThreshold)
             {
-                Debug.Assert(targetBatchIndex == FallbackBatchThreshold);
                 ActiveSet.Fallback.AllocateForActive(constraintHandle, bodyHandles, bodies, typeId, pool);
             }
         }
@@ -480,17 +494,14 @@ namespace BepuPhysics
             if (targetBatchIndex == set.Batches.Count)
             {
                 //No batch available. Have to create a new one.
+                //Note that if there is no constraint batch for the given index, there is no way for the constraint add to be blocked. It's guaranteed success.
                 if (set.Batches.Count == set.Batches.Span.Length)
                     set.Batches.Resize(set.Batches.Count + 1, pool);
                 set.Batches.AllocateUnsafely() = new ConstraintBatch(pool, TypeProcessors.Length);
-                if (targetBatchIndex < FallbackBatchThreshold)
-                {
-                    //This batch is not the fallback batch, so create an index set for it.
-                    if (set.Batches.Count == batchReferencedHandles.Span.Length)
-                        batchReferencedHandles.Resize(set.Batches.Count + 1, pool);
-                    batchReferencedHandles.AllocateUnsafely() = new IndexSet(pool, bodies.ActiveSet.Count);
-                }
-                //Note that if there is no constraint batch for the given index, there is no way for the constraint add to be blocked. It's guaranteed success.
+                //Create an index set for the new batch.
+                if (set.Batches.Count == batchReferencedHandles.Span.Length)
+                    batchReferencedHandles.Resize(set.Batches.Count + 1, pool);
+                batchReferencedHandles.AllocateUnsafely() = new IndexSet(pool, bodies.ActiveSet.Count);
             }
             else
             {
@@ -802,16 +813,9 @@ namespace BepuPhysics
                         if (lastBatch.TypeBatches.Count == 0)
                         {
                             lastBatch.Dispose(pool);
-                            //The fallback batch has no batch referenced handles.
-                            if (lastBatchIndex < FallbackBatchThreshold)
-                            {
-                                batchReferencedHandles[lastBatchIndex].Dispose(pool);
-                                --batchReferencedHandles.Count;
-                            }
+                            batchReferencedHandles[lastBatchIndex].Dispose(pool);
+                            --batchReferencedHandles.Count;
                             --set.Batches.Count;
-                            Debug.Assert(set.Batches.Count == batchReferencedHandles.Count ||
-                                (set.Batches.Count == FallbackBatchThreshold + 1 && batchReferencedHandles.Count == FallbackBatchThreshold),
-                                "All synchronized batches should have a 1:1 mapping with batchReferencedHandles entries, but the fallback batch doesn't have one.");
                         }
                         else
                         {
@@ -834,15 +838,14 @@ namespace BepuPhysics
             ref var batch = ref ActiveSet.Batches[batchIndex];
             if (batchIndex == FallbackBatchThreshold)
             {
-                //If this is the fallback batch, it does not track any referenced handles.
                 //Note that we have to remove from fallback first because it accesses the batch's information.
-                ActiveSet.Fallback.Remove(this, pool, ref batch, constraintHandle, typeId, indexInTypeBatch);
-                batch.Remove(typeId, indexInTypeBatch, this);
+                ActiveSet.Fallback.Remove(this, pool, ref batch, constraintHandle, ref batchReferencedHandles[batchIndex], typeId, indexInTypeBatch);
             }
             else
             {
-                batch.RemoveWithHandles(typeId, indexInTypeBatch, batchReferencedHandles.GetPointer(batchIndex), this);
+                batch.RemoveBodyHandlesFromBatchForConstraint(typeId, indexInTypeBatch, batchIndex, this);
             }
+            batch.Remove(typeId, indexInTypeBatch, this);
             RemoveBatchIfEmpty(ref batch, batchIndex);
         }
 
@@ -1086,9 +1089,7 @@ namespace BepuPhysics
         public void Clear()
         {
             ref var activeSet = ref ActiveSet;
-            //Fallback batches don't have any batch referenced handles.
-            GetSynchronizedBatchCount(out var synchronizedBatchCount, out _);
-            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
                 batchReferencedHandles[batchIndex].Dispose(pool);
             }
@@ -1119,9 +1120,7 @@ namespace BepuPhysics
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
-            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-            //The fallback batch does not have any referenced handles.
-            for (int i = 0; i < synchronizedBatchCount; ++i)
+            for (int i = 0; i < ActiveSet.Batches.Count; ++i)
             {
                 batchReferencedHandles[i].EnsureCapacity(targetBatchReferencedHandleSize, pool);
             }
@@ -1152,9 +1151,7 @@ namespace BepuPhysics
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
-            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-            //The fallback batch does not have any referenced handles.
-            for (int i = 0; i < synchronizedBatchCount; ++i)
+            for (int i = 0; i < ActiveSet.Batches.Count; ++i)
             {
                 batchReferencedHandles[i].Resize(targetBatchReferencedHandleSize, pool);
             }
@@ -1207,9 +1204,7 @@ namespace BepuPhysics
         /// </remarks>
         public void Dispose()
         {
-            //Note that the fallback batch does not have a batch referenced handle.
-            GetSynchronizedBatchCount(out var synchronizedBatchCount, out _);
-            for (int i = 0; i < synchronizedBatchCount; ++i)
+            for (int i = 0; i < ActiveSet.Batches.Count; ++i)
             {
                 batchReferencedHandles[i].Dispose(pool);
             }

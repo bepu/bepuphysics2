@@ -146,7 +146,7 @@ namespace Demos.Demos
             //Also, the cost of registering different shapes isn't that high for tiny implicit shapes.
             var shapeIndex = simulation.Shapes.Add(shape);
             shape.ComputeInertia(mass, out var inertia);
-            var description = BodyDescription.CreateDynamic(pose, inertia, new CollidableDescription(shapeIndex, 0.1f), new BodyActivityDescription(0.01f));
+            var description = BodyDescription.CreateDynamic(pose, inertia, new CollidableDescription(shapeIndex, 0.1f), new BodyActivityDescription(-0.01f));
             return simulation.Bodies.Add(description);
         }
 

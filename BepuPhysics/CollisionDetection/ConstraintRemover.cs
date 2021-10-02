@@ -247,7 +247,7 @@ namespace BepuPhysics.CollisionDetection
         //in sequence at that point- sequential removes would cost around 5us in that case, so any kind of multithreaded overhead can overwhelm the work being done.
         //Doubling the cost of the best case, resulting in handfuls of wasted microseconds, isn't concerning (and we could special case it if we really wanted to).
         //Cutting the cost of the worst case when thousands of constraints get removed by a factor of ~ThreadCount is worth this complexity. Frame spikes are evil!
-        
+
         RemovalCache batches;
         /// <summary>
         /// Processes enqueued constraint removals and prepares removal jobs.
@@ -352,7 +352,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 if (batches.TypeBatches[i].Batch == solver.FallbackBatchThreshold)
                 {
-                    //Batch referenced handles do not exist for the fallback batch.
+                    //Batch referenced handles for the fallback are handled in RemoveConstraintsFromFallbackBatch. 
                     continue;
                 }
                 ref var removals = ref batches.RemovalsForTypeBatches[i].PerBodyRemovalTargets;
@@ -376,7 +376,11 @@ namespace BepuPhysics.CollisionDetection
                     for (int j = 0; j < removals.Count; ++j)
                     {
                         ref var target = ref removals[j];
-                        solver.ActiveSet.Fallback.Remove(target.BodyIndex, target.ConstraintHandle, ref allocationIdsToFree);
+                        if (solver.ActiveSet.Fallback.Remove(target.BodyIndex, target.ConstraintHandle, ref allocationIdsToFree))
+                        {
+                            //No more constraints for this body in the fallback set; it should not exist in the fallback batch's referenced handles anymore.
+                            solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle.Value);
+                        }
                     }
                 }
             }

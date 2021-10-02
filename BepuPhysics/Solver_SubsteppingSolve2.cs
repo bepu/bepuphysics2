@@ -766,8 +766,9 @@ namespace BepuPhysics
 
         }
 
-
-        unsafe bool ComputeIntegrationResponsibilitiesForConstraintRegion(int batchIndex, int typeBatchIndex, int constraintStart, int exclusiveConstraintEnd)
+        struct IsFallbackBatch { }
+        struct IsNotFallbackBatch { }
+        unsafe bool ComputeIntegrationResponsibilitiesForConstraintRegion<TFallbackness>(int batchIndex, int typeBatchIndex, int constraintStart, int exclusiveConstraintEnd) where TFallbackness : unmanaged
         {
             ref var firstObservedForBatch = ref bodiesFirstObservedInBatches[batchIndex];
             ref var integrationFlagsForTypeBatch = ref integrationFlags[batchIndex][typeBatchIndex];
@@ -778,6 +779,7 @@ namespace BepuPhysics
             var bundleStartIndex = constraintStart / Vector<float>.Count;
             var bundleEndIndex = (exclusiveConstraintEnd + Vector<float>.Count - 1) / Vector<float>.Count;
             Debug.Assert(bundleStartIndex >= 0 && bundleEndIndex <= typeBatch.BundleCount);
+            ref var activeSet = ref bodies.ActiveSet;
 
             for (int bundleIndex = bundleStartIndex; bundleIndex < bundleEndIndex; ++bundleIndex)
             {
@@ -792,10 +794,40 @@ namespace BepuPhysics
                     for (int bundleInnerIndex = 0; bundleInnerIndex < countInBundle; ++bundleInnerIndex)
                     {
                         //Constraints refer to bodies by index when they're in the active set, so we need to transform to handle to look up our merged batch results.
-                        var bodyHandle = bodies.ActiveSet.IndexToHandle[bundleStart[bundleInnerIndex]].Value;
+                        var bodyIndex = bundleStart[bundleInnerIndex];
+                        var bodyHandle = activeSet.IndexToHandle[bodyIndex].Value;
                         if (firstObservedForBatch.Contains(bodyHandle))
                         {
-                            integrationFlagsForBodyInConstraint.AddUnsafely(bundleStartIndexInConstraints + bundleInnerIndex);
+                            if (typeof(TFallbackness) == typeof(IsFallbackBatch))
+                            {
+                                //This is a fallback. Being contained is not sufficient to require integration; it must also be the *first* constraint that will be executed.
+                                //This is guaranteed by the index of the constraint in the type batch, and the type batch's index.
+                                //Note that, since the fallback batch was the first time this body was seen, we know that *all* constraints associated with this body must be in the fallback batch.
+                                //This could be significantly optimized by not recalculating the earliest candidate every single time a body is encountered in the fallback batch, but
+                                //the fallback batch should effectively *never* contain any integration responsibilities.
+                                ulong earliestIndex = ulong.MaxValue;
+                                ref var constraintsForBody = ref activeSet.Constraints[bodyIndex];
+                                for (int constraintIndexInBody = 0; constraintIndexInBody < constraintsForBody.Count; ++constraintIndexInBody)
+                                {
+                                    ref var fallbackBatch = ref ActiveSet.Batches[FallbackBatchThreshold];
+                                    ref var location = ref HandleToConstraint[constraintsForBody[constraintIndexInBody].ConnectingConstraintHandle.Value];
+                                    var typeBatchIndexForCandidate = fallbackBatch.TypeIndexToTypeBatchIndex[location.TypeId];
+                                    var candidate = ((ulong)typeBatchIndexForCandidate << 32) | (uint)location.IndexInTypeBatch;
+                                    if (candidate < earliestIndex)
+                                        earliestIndex = candidate;
+                                }
+                                var indexInTypeBatch = bundleStartIndexInConstraints + bundleInnerIndex;
+                                var currentSlot = ((ulong)typeBatchIndex << 32) | (uint)indexInTypeBatch;
+                                if (currentSlot == earliestIndex)
+                                {
+                                    integrationFlagsForBodyInConstraint.AddUnsafely(indexInTypeBatch);
+                                }
+                            }
+                            else
+                            {
+                                //Not a fallback; being contained in the observed set is sufficient.
+                                integrationFlagsForBodyInConstraint.AddUnsafely(bundleStartIndexInConstraints + bundleInnerIndex);
+                            }
                         }
                     }
                 }
@@ -822,7 +854,10 @@ namespace BepuPhysics
             while ((jobIndex = Interlocked.Increment(ref nextConstraintIntegrationResponsibilityJobIndex) - 1) < integrationResponsibilityPrepassJobs.Count)
             {
                 ref var job = ref integrationResponsibilityPrepassJobs[jobIndex];
-                jobAlignedIntegrationResponsibilities[jobIndex] = ComputeIntegrationResponsibilitiesForConstraintRegion(job.batch, job.typeBatch, job.start, job.end);
+                if (job.batch == FallbackBatchThreshold)
+                    jobAlignedIntegrationResponsibilities[jobIndex] = ComputeIntegrationResponsibilitiesForConstraintRegion<IsFallbackBatch>(job.batch, job.typeBatch, job.start, job.end);
+                else
+                    jobAlignedIntegrationResponsibilities[jobIndex] = ComputeIntegrationResponsibilitiesForConstraintRegion<IsNotFallbackBatch>(job.batch, job.typeBatch, job.start, job.end);
             }
         }
 
@@ -918,7 +953,8 @@ namespace BepuPhysics
                 GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
                 //Note that we are not multithreading the batch merging phase. This typically takes a handful of microseconds.
                 //You'd likely need millions of bodies before you'd see any substantial benefit from multithreading this.
-                for (int batchIndex = 1; batchIndex < synchronizedBatchCount; ++batchIndex)
+                var batchCount = ActiveSet.Batches.Count;
+                for (int batchIndex = 1; batchIndex < batchCount; ++batchIndex)
                 {
                     ref var batchHandles = ref batchReferencedHandles[batchIndex];
                     ref var firstObservedInBatch = ref bodiesFirstObservedInBatches[batchIndex];
@@ -969,6 +1005,7 @@ namespace BepuPhysics
                         batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
                     }
                 }
+
                 //var start = Stopwatch.GetTimestamp();
                 //We now have index sets representing the first time each body handle is observed in a batch.
                 //This process is significantly more expensive than the batch merging phase and can benefit from multithreading.
@@ -1040,7 +1077,16 @@ namespace BepuPhysics
                         for (int j = 0; j < batch.TypeBatches.Count; ++j)
                         {
                             ref var typeBatch = ref batch.TypeBatches[j];
-                            coarseBatchIntegrationResponsibilities[i][j] = ComputeIntegrationResponsibilitiesForConstraintRegion(i, j, 0, typeBatch.ConstraintCount);
+                            coarseBatchIntegrationResponsibilities[i][j] = ComputeIntegrationResponsibilitiesForConstraintRegion<IsNotFallbackBatch>(i, j, 0, typeBatch.ConstraintCount);
+                        }
+                    }
+                    if (fallbackExists && batchHasAnyIntegrationResponsibilities[FallbackBatchThreshold])
+                    {
+                        ref var batch = ref ActiveSet.Batches[FallbackBatchThreshold];
+                        for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[j];
+                            coarseBatchIntegrationResponsibilities[FallbackBatchThreshold][j] = ComputeIntegrationResponsibilitiesForConstraintRegion<IsFallbackBatch>(FallbackBatchThreshold, j, 0, typeBatch.ConstraintCount);
                         }
                     }
                 }

@@ -17,13 +17,13 @@ namespace Demos.Demos
     {
         RolloverInfo rolloverInfo;
 
-        SubsteppingTimestepper timestepper;
+        EmbeddedSubsteppingTimestepper2 timestepper;
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 25, 80);
             camera.Yaw = 0;
             camera.Pitch = 0;
-            timestepper = new SubsteppingTimestepper(8);
+            timestepper = new EmbeddedSubsteppingTimestepper2(8);
             Simulation = Simulation.Create(BufferPool, 
                 new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 120), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f },
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), timestepper, 8);

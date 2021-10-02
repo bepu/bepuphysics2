@@ -132,7 +132,14 @@ namespace BepuPhysics
         }
 
 
-        internal unsafe void Remove(int bodyReference, ConstraintHandle constraintHandle, ref QuickList<int> allocationIdsToFree)
+        /// <summary>
+        /// Removes a constraint from a body in the fallback batch.
+        /// </summary>
+        /// <param name="bodyReference">Body associated with a constraint in the fallback batch.</param>
+        /// <param name="constraintHandle">Constraint associated with the body being removed.</param>
+        /// <param name="allocationIdsToFree">Allocations that should be freed once execution is back in a safe context.</param>
+        /// <returns>True if the body no longer has any constraints associated with it, false otherwise.</returns>
+        internal unsafe bool Remove(int bodyReference, ConstraintHandle constraintHandle, ref QuickList<int> allocationIdsToFree)
         {
             var bodyPresent = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex);
             Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
@@ -155,12 +162,14 @@ namespace BepuPhysics
                     allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Values.Id;
                     allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Table.Id;
                     bodyConstraintReferences = default;
+                    return true;
                 }
             }
+            return false;
         }
 
 
-        internal unsafe void Remove(Solver solver, BufferPool bufferPool, ref ConstraintBatch batch, ConstraintHandle constraintHandle, int typeId, int indexInTypeBatch)
+        internal unsafe void Remove(Solver solver, BufferPool bufferPool, ref ConstraintBatch batch, ConstraintHandle constraintHandle, ref IndexSet fallbackBatchHandles, int typeId, int indexInTypeBatch)
         {
             var typeProcessor = solver.TypeProcessors[typeId];
             var bodyCount = typeProcessor.BodiesPerConstraint;
@@ -174,7 +183,10 @@ namespace BepuPhysics
             typeProcessor.EnumerateConnectedBodyIndices(ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[typeId]], indexInTypeBatch, ref enumerator);
             for (int i = 0; i < bodyCount; ++i)
             {
-                Remove(bodyIndices[i], constraintHandle, ref allocationIdsToFree);
+                if (Remove(bodyIndices[i], constraintHandle, ref allocationIdsToFree))
+                {
+                    fallbackBatchHandles.Remove(solver.bodies.ActiveSet.IndexToHandle[bodyIndices[i]].Value);
+                }
             }
             for (int i = 0; i < allocationIdsToFree.Count; ++i)
             {

@@ -206,33 +206,24 @@ namespace BepuPhysics
             }
             ValidateTypeBatchMappings();
         }
-
-        public unsafe void RemoveWithHandles(int constraintTypeId, int indexInTypeBatch, IndexSet* handles, Solver solver)
+        public unsafe void RemoveBodyHandlesFromBatchForConstraint(int constraintTypeId, int indexInTypeBatch, int batchIndex, Solver solver)
         {
-            Debug.Assert(TypeIndexToTypeBatchIndex[constraintTypeId] >= 0, "Type index must actually exist within this batch.");
-
+            Debug.Assert(batchIndex <= solver.FallbackBatchThreshold, "This should only be used for non-fallback batches. The body handles set for a fallback batch should be handled by the fallback batch's remove call.");
+            var indexSet = solver.batchReferencedHandles.GetPointer(batchIndex);
+            var handleRemover = new ActiveBodyHandleRemover(solver.bodies, indexSet); 
             var typeBatchIndex = TypeIndexToTypeBatchIndex[constraintTypeId];
-            var handleRemover = new ActiveBodyHandleRemover(solver.bodies, handles);
-            ref var typeBatch = ref TypeBatches[typeBatchIndex];
-            Debug.Assert(typeBatch.ConstraintCount > indexInTypeBatch);
-            solver.TypeProcessors[constraintTypeId].EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref handleRemover);
-            Remove(ref typeBatch, typeBatchIndex, indexInTypeBatch, solver.TypeProcessors[constraintTypeId], ref solver.HandleToConstraint, solver.pool);
-
+            solver.TypeProcessors[constraintTypeId].EnumerateConnectedBodyIndices(ref TypeBatches[typeBatchIndex], indexInTypeBatch, ref handleRemover);
         }
 
         public unsafe void Remove(int constraintTypeId, int indexInTypeBatch, Solver solver)
         {
-            Debug.Assert(TypeIndexToTypeBatchIndex[constraintTypeId] >= 0, "Type index must actually exist within this batch.");
-
             var typeBatchIndex = TypeIndexToTypeBatchIndex[constraintTypeId];
             ref var typeBatch = ref TypeBatches[typeBatchIndex];
-            Remove(ref TypeBatches[typeBatchIndex], typeBatchIndex, indexInTypeBatch, solver.TypeProcessors[constraintTypeId], ref solver.HandleToConstraint, solver.pool);
-        }
-
-        unsafe void Remove(ref TypeBatch typeBatch, int typeBatchIndex, int indexInTypeBatch, TypeProcessor typeProcessor, ref Buffer<ConstraintLocation> handleToConstraint, BufferPool pool)
-        {
-            typeProcessor.Remove(ref typeBatch, indexInTypeBatch, ref handleToConstraint);
-            RemoveTypeBatchIfEmpty(ref typeBatch, typeBatchIndex, pool);
+            Debug.Assert(TypeIndexToTypeBatchIndex[constraintTypeId] >= 0, "Type index must actually exist within this batch.");
+            Debug.Assert(typeBatch.ConstraintCount > indexInTypeBatch);
+            var typeProcessor = solver.TypeProcessors[constraintTypeId];
+            typeProcessor.Remove(ref typeBatch, indexInTypeBatch, ref solver.HandleToConstraint);
+            RemoveTypeBatchIfEmpty(ref typeBatch, typeBatchIndex, solver.pool);
         }
 
         public void Clear(BufferPool pool)
