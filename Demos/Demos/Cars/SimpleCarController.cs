@@ -8,6 +8,7 @@ namespace Demos.Demos.Cars
         public SimpleCar Car;
 
         private float steeringAngle;
+        private float wheelBaseHalfWidth;
 
         public readonly float SteeringAngle { get { return steeringAngle; } }
 
@@ -21,6 +22,9 @@ namespace Demos.Demos.Cars
         public float BackwardForce;
         public float IdleForce;
         public float BrakeForce;
+        public float WheelBaseLength;
+        public float WheelBaseWidth;
+        public float AckermanSteering;
 
         //Track the previous state to force wakeups if the constraint targets have changed.
         private float previousTargetSpeed;
@@ -28,7 +32,7 @@ namespace Demos.Demos.Cars
 
         public SimpleCarController(SimpleCar car,
             float forwardSpeed, float forwardForce, float zoomMultiplier, float backwardSpeed, float backwardForce, float idleForce, float brakeForce,
-            float steeringSpeed, float maximumSteeringAngle)
+            float steeringSpeed, float maximumSteeringAngle, float wheelBaseLength, float wheelBaseWidth, float ackermanSteering)
         {
             Car = car;
             ForwardSpeed = forwardSpeed;
@@ -40,24 +44,65 @@ namespace Demos.Demos.Cars
             BrakeForce = brakeForce;
             SteeringSpeed = steeringSpeed;
             MaximumSteeringAngle = maximumSteeringAngle;
+            WheelBaseLength = wheelBaseLength;
+            WheelBaseWidth = wheelBaseWidth;
+            AckermanSteering = ackermanSteering;
+
+            wheelBaseHalfWidth = WheelBaseWidth * 0.5f;
 
             steeringAngle = 0;
             previousTargetForce = 0;
             previousTargetSpeed = 0;
         }
+
         public void Update(Simulation simulation, float dt, float targetSteeringAngle, float targetSpeedFraction, bool zoom, bool brake)
         {
             var steeringAngleDifference = targetSteeringAngle - steeringAngle;
             var maximumChange = SteeringSpeed * dt;
             var steeringAngleChange = MathF.Min(maximumChange, MathF.Max(-maximumChange, steeringAngleDifference));
             var previousSteeringAngle = steeringAngle;
+            
             steeringAngle = MathF.Min(MaximumSteeringAngle, MathF.Max(-MaximumSteeringAngle, steeringAngle + steeringAngleChange));
             if (steeringAngle != previousSteeringAngle)
             {
+                float leftSteeringAngle;
+                float rightSteeringAngle;
+
+                if (AckermanSteering > 0 && Math.Abs(steeringAngle) > 1e-6)
+                {
+                    float turnRadius = MathF.Abs(WheelBaseLength * MathF.Tan(MathF.PI * 0.5f - MathF.Abs(steeringAngle)));
+
+                    if (steeringAngle > 0)
+                    {
+                        rightSteeringAngle = MathF.Atan(WheelBaseLength / (turnRadius - wheelBaseHalfWidth));
+                        rightSteeringAngle = (rightSteeringAngle - MathF.Abs(steeringAngle)) * AckermanSteering + MathF.Abs(steeringAngle);
+                        rightSteeringAngle = MathF.Sign(steeringAngle) * rightSteeringAngle;
+
+                        leftSteeringAngle = MathF.Atan(WheelBaseLength / (turnRadius + wheelBaseHalfWidth));
+                        leftSteeringAngle = (leftSteeringAngle - MathF.Abs(steeringAngle)) * AckermanSteering + MathF.Abs(steeringAngle);
+                        leftSteeringAngle = MathF.Sign(steeringAngle) * leftSteeringAngle;
+                    }
+                    else
+                    {
+                        rightSteeringAngle = MathF.Atan(WheelBaseLength / (turnRadius + wheelBaseHalfWidth));
+                        rightSteeringAngle = (rightSteeringAngle - MathF.Abs(steeringAngle)) * AckermanSteering + MathF.Abs(steeringAngle);
+                        rightSteeringAngle = MathF.Sign(steeringAngle) * rightSteeringAngle;
+
+                        leftSteeringAngle = MathF.Atan(WheelBaseLength / (turnRadius - wheelBaseHalfWidth));
+                        leftSteeringAngle = (leftSteeringAngle - MathF.Abs(steeringAngle)) * AckermanSteering + MathF.Abs(steeringAngle);
+                        leftSteeringAngle = MathF.Sign(steeringAngle) * leftSteeringAngle;
+                    }
+                }
+                else
+                {
+                    leftSteeringAngle = steeringAngle;
+                    rightSteeringAngle = steeringAngle;
+                }
+
                 //By guarding the constraint modifications behind a state test, we avoid waking up the car every single frame.
                 //(We could have also used the ApplyDescriptionWithoutWaking function and then explicitly woke the car up when changes occur.)
-                Car.Steer(simulation, Car.FrontLeftWheel, steeringAngle);
-                Car.Steer(simulation, Car.FrontRightWheel, steeringAngle);
+                Car.Steer(simulation, Car.FrontLeftWheel, leftSteeringAngle);
+                Car.Steer(simulation, Car.FrontRightWheel, rightSteeringAngle);
             }
             float newTargetSpeed, newTargetForce;
             bool allWheels;
