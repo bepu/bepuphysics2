@@ -166,6 +166,34 @@ namespace BepuPhysics
             return false;
         }
 
+        /// <summary>
+        /// Removes a body from the fallback batch if it is present.
+        /// </summary>
+        /// <param name="bodyReference">Reference to the body to remove from the fallback batch.</param>
+        /// <param name="allocationIdsToFree">Allocations that should be freed once execution is back in a safe context.</param>
+        /// <returns>True if the body was present in the fallback batch and was removed, false otherwise.</returns>
+        internal unsafe bool TryRemove(int bodyReference, ref QuickList<int> allocationIdsToFree)
+        {
+            if (bodyConstraintReferences.Keys.Allocated && bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
+            {
+                ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
+                //If there are no more constraints associated with this body, get rid of the body list.
+                allocationIdsToFree.AllocateUnsafely() = constraintReferences.Span.Id;
+                allocationIdsToFree.AllocateUnsafely() = constraintReferences.Table.Id;
+                bodyConstraintReferences.FastRemove(tableIndex, bodyReferencesIndex);
+                if (bodyConstraintReferences.Count == 0)
+                {
+                    //No constraints remain in the fallback batch. Drop the dictionary.
+                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Keys.Id;
+                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Values.Id;
+                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Table.Id;
+                    bodyConstraintReferences = default;
+                }
+                return true;
+            }
+            return false;
+        }
+
 
         internal unsafe void Remove(Solver solver, BufferPool bufferPool, ref ConstraintBatch batch, ConstraintHandle constraintHandle, ref IndexSet fallbackBatchHandles, int typeId, int indexInTypeBatch)
         {
@@ -192,25 +220,6 @@ namespace BepuPhysics
             }
         }
 
-        internal unsafe void TryRemove(int bodyReference, ref QuickList<int> allocationIdsToFree)
-        {
-            if (bodyConstraintReferences.Keys.Allocated && bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
-            {
-                ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
-                //If there are no more constraints associated with this body, get rid of the body list.
-                allocationIdsToFree.AllocateUnsafely() = constraintReferences.Span.Id;
-                allocationIdsToFree.AllocateUnsafely() = constraintReferences.Table.Id;
-                bodyConstraintReferences.FastRemove(tableIndex, bodyReferencesIndex);
-                if (bodyConstraintReferences.Count == 0)
-                {
-                    //No constraints remain in the fallback batch. Drop the dictionary.
-                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Keys.Id;
-                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Values.Id;
-                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Table.Id;
-                    bodyConstraintReferences = default;
-                }
-            }
-        }
 
         public static void AllocateResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, out Buffer<FallbackTypeBatchResults> results)
         {

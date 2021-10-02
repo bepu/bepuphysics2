@@ -446,15 +446,16 @@ namespace BepuPhysics
                             var setIndex = newInactiveSets[setReferenceIndex].Index;
                             ref var inactiveBodySet = ref bodies.Sets[setIndex];
                             ref var inactiveConstraintSet = ref solver.Sets[setIndex];
-                            for (int bodyIndex = 0; bodyIndex < inactiveBodySet.Count; ++bodyIndex)
+                            for (int bodyIndexInInactiveSet = 0; bodyIndexInInactiveSet < inactiveBodySet.Count; ++bodyIndexInInactiveSet)
                             {
-                                ref var location = ref bodies.HandleToLocation[inactiveBodySet.IndexToHandle[bodyIndex].Value];
+                                var bodyHandle = inactiveBodySet.IndexToHandle[bodyIndexInInactiveSet];
+                                ref var location = ref bodies.HandleToLocation[bodyHandle.Value];
                                 Debug.Assert(location.SetIndex == 0, "At this point, the sleep hasn't gone through so the set should still be 0.");
-                                constraintRemover.TryRemoveAllConstraintsForBodyFromFallbackBatch(location.Index);
+                                constraintRemover.TryRemoveAllConstraintsForBodyFromFallbackBatch(bodyHandle, location.Index);
                                 bodies.RemoveFromActiveSet(location.Index);
                                 //And now we can actually update the handle->body mapping.
                                 location.SetIndex = setIndex;
-                                location.Index = bodyIndex;
+                                location.Index = bodyIndexInInactiveSet;
                             }
                         }
                     }
