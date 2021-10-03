@@ -8,7 +8,6 @@ namespace Demos.Demos.Cars
         public SimpleCar Car;
 
         private float steeringAngle;
-        private float wheelBaseHalfWidth;
 
         public readonly float SteeringAngle { get { return steeringAngle; } }
 
@@ -24,6 +23,9 @@ namespace Demos.Demos.Cars
         public float BrakeForce;
         public float WheelBaseLength;
         public float WheelBaseWidth;
+        /// <summary>
+        /// Fraction of Ackerman steering angle to apply to wheels. Using 0 does not modify the the steering angle at all, leaving the wheels pointed exactly along the steering angle, while 1 uses the full Ackerman angle.
+        /// </summary>
         public float AckermanSteering;
 
         //Track the previous state to force wakeups if the constraint targets have changed.
@@ -48,8 +50,6 @@ namespace Demos.Demos.Cars
             WheelBaseWidth = wheelBaseWidth;
             AckermanSteering = ackermanSteering;
 
-            wheelBaseHalfWidth = WheelBaseWidth * 0.5f;
-
             steeringAngle = 0;
             previousTargetForce = 0;
             previousTargetSpeed = 0;
@@ -73,7 +73,7 @@ namespace Demos.Demos.Cars
                 if (AckermanSteering > 0 && steeringAngleAbs > 1e-6)
                 {
                     float turnRadius = MathF.Abs(WheelBaseLength * MathF.Tan(MathF.PI * 0.5f - steeringAngleAbs));
-
+                    var wheelBaseHalfWidth = WheelBaseWidth * 0.5f;
                     if (steeringAngle > 0)
                     {
                         rightSteeringAngle = MathF.Atan(WheelBaseLength / (turnRadius - wheelBaseHalfWidth));
