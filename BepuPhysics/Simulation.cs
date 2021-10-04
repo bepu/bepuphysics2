@@ -330,7 +330,7 @@ namespace BepuPhysics
             profiler.End(ConstraintLayoutOptimizer);
 
             profiler.Start(SolverBatchCompressor);
-            SolverBatchCompressor.Compress(BufferPool, threadDispatcher, threadDispatcher != null && Deterministic);
+            //SolverBatchCompressor.Compress(BufferPool, threadDispatcher, threadDispatcher != null && Deterministic);
             profiler.End(SolverBatchCompressor);
         }
 

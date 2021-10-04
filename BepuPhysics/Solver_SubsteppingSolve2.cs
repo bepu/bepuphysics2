@@ -1092,38 +1092,56 @@ namespace BepuPhysics
                 }
                 //var end = Stopwatch.GetTimestamp();
                 //Console.WriteLine($"time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
-                pool.Return(ref batchHasAnyIntegrationResponsibilities);
 
-                ////Validation:
-                //for (int i = 0; i < bodies.ActiveSet.Count; ++i)
-                //{
-                //    ref var constraints = ref bodies.ActiveSet.Constraints[i];
-                //    ConstraintHandle minimumConstraint;
-                //    minimumConstraint.Value = -1;
-                //    int minimumBatchIndex = int.MaxValue;
-                //    int minimumIndexInConstraint = -1;
-                //    for (int j = 0; j < constraints.Count; ++j)
-                //    {
-                //        ref var constraint = ref constraints[j];
-                //        var batchIndex = HandleToConstraint[constraint.ConnectingConstraintHandle.Value].BatchIndex;
-                //        if (batchIndex < minimumBatchIndex)
-                //        {
-                //            minimumBatchIndex = batchIndex;
-                //            minimumIndexInConstraint = constraint.BodyIndexInConstraint;
-                //            minimumConstraint = constraint.ConnectingConstraintHandle;
-                //        }
-                //    }
-                //    if (minimumConstraint.Value >= 0)
-                //    {
-                //        ref var location = ref HandleToConstraint[minimumConstraint.Value];
-                //        var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
-                //        if (location.BatchIndex > 0)
-                //        {
-                //            ref var indexSet = ref integrationFlags[location.BatchIndex][typeBatchIndex][minimumIndexInConstraint];
-                //            Debug.Assert(indexSet.Contains(location.IndexInTypeBatch));
-                //        }
-                //    }
-                //}
+                //Validation:
+                for (int i = 0; i < bodies.ActiveSet.Count; ++i)
+                {
+                    ref var constraints = ref bodies.ActiveSet.Constraints[i];
+                    ConstraintHandle minimumConstraint;
+                    minimumConstraint.Value = -1;
+                    int minimumBatchIndex = int.MaxValue;
+                    int minimumBodyIndexInConstraint = -1;
+                    ulong earliestSlotInFallback = ulong.MaxValue;
+                    for (int j = 0; j < constraints.Count; ++j)
+                    {
+                        ref var constraint = ref constraints[j];
+                        ref var location = ref HandleToConstraint[constraint.ConnectingConstraintHandle.Value];
+
+                        if (location.BatchIndex <= minimumBatchIndex) //Note that the only time it can be equal is if this is in the fallback batch.
+                        {
+                            if (location.BatchIndex == FallbackBatchThreshold)
+                            {
+                                var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
+                                var encodedSlotCandidate = ((ulong)typeBatchIndex << 32) | (uint)location.IndexInTypeBatch;
+                                if (encodedSlotCandidate < earliestSlotInFallback)
+                                {
+                                    earliestSlotInFallback = encodedSlotCandidate;
+                                    //We should only accept another fallback constraint as minimal if it has an earlier typebatch index/index in type batch.
+                                    minimumBatchIndex = location.BatchIndex;
+                                    minimumBodyIndexInConstraint = constraint.BodyIndexInConstraint;
+                                    minimumConstraint = constraint.ConnectingConstraintHandle;
+                                }
+                            }
+                            else
+                            {
+                                minimumBatchIndex = location.BatchIndex;
+                                minimumBodyIndexInConstraint = constraint.BodyIndexInConstraint;
+                                minimumConstraint = constraint.ConnectingConstraintHandle;
+                            }
+                        }
+                    }
+                    if (minimumConstraint.Value >= 0)
+                    {
+                        ref var location = ref HandleToConstraint[minimumConstraint.Value];
+                        var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
+                        if (location.BatchIndex > 0)
+                        {
+                            ref var indexSet = ref integrationFlags[location.BatchIndex][typeBatchIndex][minimumBodyIndexInConstraint];
+                            Debug.Assert(indexSet.Contains(location.IndexInTypeBatch));
+                        }
+                    }
+                }
+                pool.Return(ref batchHasAnyIntegrationResponsibilities);
 
                 Debug.Assert(!bodiesFirstObservedInBatches[0].Flags.Allocated, "Remember, we're assuming we're just leaving the first batch's slot empty to avoid indexing complexity.");
                 for (int batchIndex = 1; batchIndex < bodiesFirstObservedInBatches.Length; ++batchIndex)
