@@ -932,6 +932,7 @@ namespace BepuPhysics
                 //}
 
                 pool.Take(batchReferencedHandles.Count, out bodiesFirstObservedInBatches);
+                pool.Take(batchReferencedHandles.Count, out Buffer<IndexSet> debugBodiesFirstObservedInBatches);
                 //We don't have to consider the first batch, since we know ahead of time that the first batch will be the first time we see any bodies in it.
                 //Just copy directly from the first batch into the merged to initialize it.
                 //Note "+ 64" instead of "+ 63": the highest possibly claimed id is inclusive!
@@ -949,6 +950,7 @@ namespace BepuPhysics
                     var bundleCount = Math.Min(mergedConstrainedBodyHandles.Flags.Length, batchHandles.Flags.Length);
                     //Note that we bypass the constructor to avoid zeroing unnecessarily. Every bundle will be fully assigned.
                     pool.Take(bundleCount, out bodiesFirstObservedInBatches[batchIndex].Flags);
+                    pool.Take(bundleCount, out debugBodiesFirstObservedInBatches[batchIndex].Flags);
                 }
                 GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
                 //Note that we are not multithreading the batch merging phase. This typically takes a handful of microseconds.
@@ -959,22 +961,49 @@ namespace BepuPhysics
                     ref var batchHandles = ref batchReferencedHandles[batchIndex];
                     ref var firstObservedInBatch = ref bodiesFirstObservedInBatches[batchIndex];
                     var flagBundleCount = Math.Min(mergedConstrainedBodyHandles.Flags.Length, batchHandles.Flags.Length);
+                    ref var debugFirstObservedInBatch = ref debugBodiesFirstObservedInBatches[batchIndex];
+
+                    ulong horizontalMergeDebug = 0;
+                    for (int flagBundleIndex = 0; flagBundleIndex < flagBundleCount; ++flagBundleIndex)
+                    {
+                        var mergeBundle = mergedConstrainedBodyHandles.Flags[flagBundleIndex];
+                        var batchBundle = batchHandles.Flags[flagBundleIndex];
+                        //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
+                        var firstObservedBundle = ~mergeBundle & batchBundle;
+                        horizontalMergeDebug |= firstObservedBundle;
+                        debugFirstObservedInBatch.Flags[flagBundleIndex] = firstObservedBundle;
+                    }
+
                     if (Avx2.IsSupported)
                     {
                         var avxBundleCount = flagBundleCount / 4;
                         var horizontalAvxMerge = Vector256<ulong>.Zero;
                         for (int avxBundleIndex = 0; avxBundleIndex < avxBundleCount; ++avxBundleIndex)
                         {
-                            var mergeBundle = ((Vector256<ulong>*)mergedConstrainedBodyHandles.Flags.Memory)[avxBundleIndex];
-                            var batchBundle = ((Vector256<ulong>*)batchHandles.Flags.Memory)[avxBundleIndex];
-                            ((Vector256<ulong>*)mergedConstrainedBodyHandles.Flags.Memory)[avxBundleIndex] = Avx2.Or(mergeBundle, batchBundle);
+                            //These will *almost* always be aligned, but guaranteeing it is not worth the complexity.
+                            var mergeBundle = Avx2.LoadVector256((ulong*)((Vector256<ulong>*)mergedConstrainedBodyHandles.Flags.Memory + avxBundleIndex));
+                            var batchBundle = Avx2.LoadVector256((ulong*)((Vector256<ulong>*)batchHandles.Flags.Memory + avxBundleIndex));
+                            Avx.Store((ulong*)((Vector256<ulong>*)mergedConstrainedBodyHandles.Flags.Memory + avxBundleIndex), Avx2.Or(mergeBundle, batchBundle));
                             //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
                             var firstObservedBundle = Avx2.AndNot(mergeBundle, batchBundle);
+                            var expected0 = ~mergeBundle.GetElement(0) & batchBundle.GetElement(0);
+                            var expected1 = ~mergeBundle.GetElement(1) & batchBundle.GetElement(1);
+                            var expected2 = ~mergeBundle.GetElement(2) & batchBundle.GetElement(2);
+                            var expected3 = ~mergeBundle.GetElement(3) & batchBundle.GetElement(3);
+                            Debug.Assert(expected0 == firstObservedBundle.GetElement(0));
+                            Debug.Assert(expected1 == firstObservedBundle.GetElement(1));
+                            Debug.Assert(expected2 == firstObservedBundle.GetElement(2));
+                            Debug.Assert(expected3 == firstObservedBundle.GetElement(3));
                             horizontalAvxMerge = Avx2.Or(firstObservedBundle, horizontalAvxMerge);
-                            ((Vector256<ulong>*)firstObservedInBatch.Flags.Memory)[avxBundleIndex] = firstObservedBundle;
+                            Avx.Store((ulong*)((Vector256<ulong>*)firstObservedInBatch.Flags.Memory + avxBundleIndex), firstObservedBundle);
                         }
-                        var notEqual = Avx2.CompareNotEqual(horizontalAvxMerge.AsDouble(), Vector256<double>.Zero);
-                        ulong horizontalMerge = (ulong)Avx.MoveMask(notEqual);
+                        var notEqual = Avx2.Xor(Avx2.CompareEqual(horizontalAvxMerge, Vector256<ulong>.Zero), Vector256<ulong>.AllBitsSet);
+                        ulong horizontalMerge = (ulong)Avx2.MoveMask(notEqual.AsDouble());
+
+                        for (int flagBundleIndex = 0; flagBundleIndex < avxBundleCount * 4; ++flagBundleIndex)
+                        {
+                            Debug.Assert(debugFirstObservedInBatch.Flags[flagBundleIndex] == firstObservedInBatch.Flags[flagBundleIndex]);
+                        }
 
                         //Cleanup loop.
                         for (int flagBundleIndex = avxBundleCount * 4; flagBundleIndex < flagBundleCount; ++flagBundleIndex)
@@ -988,6 +1017,12 @@ namespace BepuPhysics
                             firstObservedInBatch.Flags[flagBundleIndex] = firstObservedBundle;
                         }
                         batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
+
+                        for (int flagBundleIndex = avxBundleCount * 4; flagBundleIndex < flagBundleCount; ++flagBundleIndex)
+                        {
+                            Debug.Assert(debugFirstObservedInBatch.Flags[flagBundleIndex] == firstObservedInBatch.Flags[flagBundleIndex]);
+                        }
+                        Debug.Assert((horizontalMerge != 0) == (horizontalMergeDebug != 0));
                     }
                     else
                     {
@@ -1102,16 +1137,18 @@ namespace BepuPhysics
                     int minimumBatchIndex = int.MaxValue;
                     int minimumBodyIndexInConstraint = -1;
                     ulong earliestSlotInFallback = ulong.MaxValue;
+                    ConstraintHandle detectedConstraint;
+                    detectedConstraint.Value = -1;
                     for (int j = 0; j < constraints.Count; ++j)
                     {
                         ref var constraint = ref constraints[j];
                         ref var location = ref HandleToConstraint[constraint.ConnectingConstraintHandle.Value];
+                        var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
 
                         if (location.BatchIndex <= minimumBatchIndex) //Note that the only time it can be equal is if this is in the fallback batch.
                         {
                             if (location.BatchIndex == FallbackBatchThreshold)
                             {
-                                var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
                                 var encodedSlotCandidate = ((ulong)typeBatchIndex << 32) | (uint)location.IndexInTypeBatch;
                                 if (encodedSlotCandidate < earliestSlotInFallback)
                                 {
@@ -1129,9 +1166,23 @@ namespace BepuPhysics
                                 minimumConstraint = constraint.ConnectingConstraintHandle;
                             }
                         }
+
+                        if (location.BatchIndex > 0)
+                        {
+                            ref var indexSet = ref integrationFlags[location.BatchIndex][typeBatchIndex][constraint.BodyIndexInConstraint];
+                            if (indexSet.Contains(location.IndexInTypeBatch))
+                            {
+                                //This constraint has integration responsibility for this body.
+                                Debug.Assert(detectedConstraint.Value == -1, "Only one constraint should have integration responsibility for a given body.");
+                                detectedConstraint = constraint.ConnectingConstraintHandle;
+                            }
+                        }
                     }
+                    if (constraints.Count > 0 && minimumBatchIndex > 0)
+                        Debug.Assert(detectedConstraint.Value >= 0, "At least one constraint must have integration responsibility for a body if it has a constraint.");
                     if (minimumConstraint.Value >= 0)
                     {
+                        Debug.Assert(minimumBatchIndex == 0 || detectedConstraint.Value == minimumConstraint.Value);
                         ref var location = ref HandleToConstraint[minimumConstraint.Value];
                         var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
                         if (location.BatchIndex > 0)
