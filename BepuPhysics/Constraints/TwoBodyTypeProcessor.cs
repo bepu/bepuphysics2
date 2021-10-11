@@ -315,8 +315,11 @@ namespace BepuPhysics.Constraints
         //    }
         //}
 
-        public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
-            ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
+
+
+        public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration, TBundleCountCalculator>(
+            ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, in TBundleCountCalculator bundleCountCalculator,
+            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
@@ -329,7 +332,7 @@ namespace BepuPhysics.Constraints
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
-                var count = GetCountInBundle(ref typeBatch, i);
+                var count = bundleCountCalculator.GetCountInBundle(ref typeBatch, i);
                 //Prefetch(WarmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, i, exclusiveEndBundle);
                 GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterA, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references.IndexA, count,
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
@@ -357,7 +360,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void SolveStep2<TBundleCountCalculator>(ref TypeBatch typeBatch, Bodies bodies, in TBundleCountCalculator bundleCountCalculator, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
@@ -370,7 +373,7 @@ namespace BepuPhysics.Constraints
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
-                var count = GetCountInBundle(ref typeBatch, i);
+                var count = bundleCountCalculator.GetCountInBundle(ref typeBatch, i);
                 //Prefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
                 bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, count, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
                 bodies.GatherState<TSolveAccessFilterB>(ref references.IndexB, count, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
@@ -410,7 +413,7 @@ namespace BepuPhysics.Constraints
                 inertiaA.InverseMass *= jacobiScaleA;
                 Symmetric3x3Wide.Scale(inertiaB.InverseInertiaTensor, jacobiScaleB, out inertiaB.InverseInertiaTensor);
                 inertiaB.InverseMass *= jacobiScaleB;
-                
+
                 function.WarmStart2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, ref prestep, ref accumulatedImpulses, ref wsvA, ref wsvB);
                 //Jacobi batches do not scatter velocities directly; they are handled in a postpass.
             }

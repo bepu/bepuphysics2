@@ -10,7 +10,28 @@ using System.Runtime.Intrinsics.X86;
 
 namespace BepuPhysics.Constraints
 {
+    public interface IConstraintBundleCountCalculator
+    {
+        int GetCountInBundle(ref TypeBatch typeBatch, int bundleIndex);
+    }
 
+    public struct DenseBundleCountCalculator : IConstraintBundleCountCalculator
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly int GetCountInBundle(ref TypeBatch typeBatch, int bundleIndex)
+        {
+            return TypeProcessor.GetCountInBundle(ref typeBatch, bundleIndex);
+        }
+    }
+
+    public struct SequentialFallbackBundleCountCalculator : IConstraintBundleCountCalculator
+    {
+        Buffer<int> countsInBundles;
+        public readonly int GetCountInBundle(ref TypeBatch typeBatch, int bundleIndex)
+        {
+            return countsInBundles[bundleIndex];
+        }
+    }
 
     /// <summary>
     /// Superclass of constraint type batch processors. Responsible for interpreting raw type batches for the purposes of bookkeeping and solving.
@@ -136,12 +157,15 @@ namespace BepuPhysics.Constraints
         public abstract void JacobiWarmStart(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
         public abstract void JacobiSolveIteration(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
 
-        public abstract void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks poseIntegratorCallbacks,
+        public abstract void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration, TCountInBundleCalculator>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies,
+            ref TIntegratorCallbacks poseIntegratorCallbacks, in TCountInBundleCalculator countInBundleCalculator,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
             where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode
-            where TAllowPoseIntegration : unmanaged, IBatchPoseIntegrationAllowed;
-        public abstract void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
+            where TAllowPoseIntegration : unmanaged, IBatchPoseIntegrationAllowed
+            where TCountInBundleCalculator : unmanaged, IConstraintBundleCountCalculator;
+        public abstract void SolveStep2<TCountInBundleCalculator>(ref TypeBatch typeBatch, Bodies bodies, in TCountInBundleCalculator countInBundleCalculator, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+            where TCountInBundleCalculator : unmanaged, IConstraintBundleCountCalculator;
 
         public abstract void JacobiWarmStart2(
             ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults,
@@ -153,6 +177,14 @@ namespace BepuPhysics.Constraints
         {
             Debug.Fail("A contact data update was scheduled for a type batch that does not have a contact data update implementation.");
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static int GetCountInBundle(ref TypeBatch typeBatch, int bundleStartIndex)
+        {
+            //TODO: May want to check codegen on this. Min vs explicit branch. Theoretically, it could do this branchlessly...
+            return Math.Min(Vector<float>.Count, typeBatch.ConstraintCount - (bundleStartIndex << BundleIndexing.VectorShift));
+        }
+
     }
 
     /// <summary>
@@ -210,13 +242,6 @@ namespace BepuPhysics.Constraints
             {
                 Unsafe.Add(ref targetLane, i * stride) = bodyIndices[i];
             }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected static int GetCountInBundle(ref TypeBatch typeBatch, int bundleStartIndex)
-        {
-            //TODO: May want to check codegen on this. Min vs explicit branch. Theoretically, it could do this branchlessly...
-            return Math.Min(Vector<float>.Count, typeBatch.ConstraintCount - (bundleStartIndex << BundleIndexing.VectorShift));
         }
 
 
