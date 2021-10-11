@@ -76,7 +76,7 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe bool TryAdd(ConstraintHandle constraintHandle, int batchIndex, Solver solver, BufferPool pool, ref FallbackBatch fallbackBatch)
+        public unsafe bool TryAdd(ConstraintHandle constraintHandle, int batchIndex, Solver solver, BufferPool pool, ref JacobiFallbackBatch fallbackBatch)
         {
             ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle.Value];
             var typeProcessor = solver.TypeProcessors[constraintLocation.TypeId];
@@ -137,7 +137,7 @@ namespace BepuPhysics
     {
         public QuickList<int> BodyIndices;
         public QuickList<IslandScaffoldConstraintBatch> Protobatches;
-        public FallbackBatch FallbackBatch;
+        public JacobiFallbackBatch FallbackBatch;
 
         public IslandScaffold(ref QuickList<int> bodyIndices, ref QuickList<ConstraintHandle> constraintHandles, Solver solver, BufferPool pool) : this()
         {

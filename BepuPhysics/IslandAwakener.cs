@@ -245,8 +245,8 @@ namespace BepuPhysics
                         for (int i = 0; i < uniqueSetIndices.Count; ++i)
                         {
                             Debug.Assert(uniqueSetIndices[i] > 0);
-                            ref var source = ref solver.Sets[uniqueSetIndices[i]].Fallback;
-                            ref var target = ref solver.ActiveSet.Fallback;
+                            ref var source = ref solver.Sets[uniqueSetIndices[i]].JacobiFallback;
+                            ref var target = ref solver.ActiveSet.JacobiFallback;
                             if (source.bodyConstraintReferences.Count > 0)
                             {
                                 for (int j = 0; j < source.bodyConstraintReferences.Count; ++j)
@@ -493,7 +493,7 @@ namespace BepuPhysics
                 if (highestNewBatchCount < setBatchCount)
                     highestNewBatchCount = setBatchCount;
                 ref var constraintSet = ref solver.Sets[setIndex];
-                additionalRequiredFallbackCapacity += constraintSet.Fallback.BodyCount;
+                additionalRequiredFallbackCapacity += constraintSet.JacobiFallback.BodyCount;
                 for (int batchIndex = 0; batchIndex < constraintSet.Batches.Count; ++batchIndex)
                 {
                     ref var batch = ref constraintSet.Batches[batchIndex];
@@ -558,7 +558,7 @@ namespace BepuPhysics
             //constraints,
             solver.ActiveSet.Batches.EnsureCapacity(highestNewBatchCount, pool);
             if (additionalRequiredFallbackCapacity > 0)
-                solver.ActiveSet.Fallback.EnsureCapacity(solver.ActiveSet.Fallback.BodyCount + additionalRequiredFallbackCapacity, pool);
+                solver.ActiveSet.JacobiFallback.EnsureCapacity(solver.ActiveSet.JacobiFallback.BodyCount + additionalRequiredFallbackCapacity, pool);
             Debug.Assert(highestNewBatchCount <= solver.FallbackBatchThreshold + 1, "Shouldn't have any batches beyond the fallback batch.");
             solver.batchReferencedHandles.EnsureCapacity(highestNewBatchCount, pool);
             for (int batchIndex = solver.ActiveSet.Batches.Count; batchIndex < highestNewBatchCount; ++batchIndex)

@@ -212,7 +212,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 //Ensure that the fallback deallocation list is also large enough. The fallback batch may result in 3 returned buffers for the primary dictionary, plus another two for each potentially
                 //removed body constraint references subset.
-                allocationIdsToFree = new QuickList<int>(3 + solver.ActiveSet.Fallback.BodyCount * 2, pool);
+                allocationIdsToFree = new QuickList<int>(3 + solver.ActiveSet.JacobiFallback.BodyCount * 2, pool);
             }
         }
 
@@ -376,7 +376,7 @@ namespace BepuPhysics.CollisionDetection
                     for (int j = 0; j < removals.Count; ++j)
                     {
                         ref var target = ref removals[j];
-                        if (solver.ActiveSet.Fallback.Remove(target.BodyIndex, target.ConstraintHandle, ref allocationIdsToFree))
+                        if (solver.ActiveSet.JacobiFallback.Remove(target.BodyIndex, target.ConstraintHandle, ref allocationIdsToFree))
                         {
                             //No more constraints for this body in the fallback set; it should not exist in the fallback batch's referenced handles anymore.
                             solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle.Value);
@@ -387,7 +387,7 @@ namespace BepuPhysics.CollisionDetection
         }
         public void TryRemoveAllConstraintsForBodyFromFallbackBatch(BodyHandle bodyHandle, int bodyIndex)
         {
-            if (solver.ActiveSet.Fallback.TryRemove(bodyIndex, ref allocationIdsToFree))
+            if (solver.ActiveSet.JacobiFallback.TryRemove(bodyIndex, ref allocationIdsToFree))
             {
                 solver.batchReferencedHandles[solver.FallbackBatchThreshold].Remove(bodyHandle.Value);
             }

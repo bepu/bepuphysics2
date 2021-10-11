@@ -779,7 +779,7 @@ namespace BepuPhysics
                             //Pull the fallback batch data into the new fallback batch. Note that this isn't just a shallow copy; we're pushing all the allocations into the main pool.
                             //They were previously on a thread-specific pool. (This isn't technically required right now, but it's cheap and convenient if we change the per thread pools
                             //to make use of the usually-ephemeral nature of their allocations.)
-                            FallbackBatch.CreateFrom(ref island.FallbackBatch, pool, out constraintSet.Fallback);
+                            JacobiFallbackBatch.CreateFrom(ref island.FallbackBatch, pool, out constraintSet.JacobiFallback);
                         }
                     }
                 }

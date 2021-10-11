@@ -11,7 +11,7 @@ using System.Text;
 
 namespace BepuPhysics
 {
-    public struct FallbackTypeBatchResults
+    public struct JacobiFallbackTypeBatchResults
     {
         public Buffer<Buffer<BodyVelocityWide>> BodyVelocities;
 
@@ -26,7 +26,7 @@ namespace BepuPhysics
     /// Contains constraints that could not belong to any lower constraint batch due to their involved bodies. All of the contained constraints will be solved using a fallback solver that
     /// trades rigidity for parallelism.
     /// </summary>
-    public struct FallbackBatch
+    public struct JacobiFallbackBatch
     {
         public struct FallbackReference
         {
@@ -89,30 +89,6 @@ namespace BepuPhysics
                 }
                 var fallbackReference = new FallbackReference { ConstraintHandle = constraintHandle, IndexInConstraint = i };
                 constraintReferences.Add(ref fallbackReference, pool);
-            }
-        }
-
-        interface IBodyReferenceGetter
-        {
-            int GetBodyReference(Bodies bodies, BodyHandle handle);
-        }
-
-        struct ActiveSetGetter : IBodyReferenceGetter
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int GetBodyReference(Bodies bodies, BodyHandle bodyHandle)
-            {
-                ref var bodyLocation = ref bodies.HandleToLocation[bodyHandle.Value];
-                Debug.Assert(bodyLocation.SetIndex == 0, "When creating a fallback batch for the active set, all bodies associated with it must be active.");
-                return bodyLocation.Index;
-            }
-        }
-        struct InactiveSetGetter : IBodyReferenceGetter
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int GetBodyReference(Bodies bodies, BodyHandle bodyHandle)
-            {
-                return bodyHandle.Value;
             }
         }
 
@@ -221,7 +197,7 @@ namespace BepuPhysics
         }
 
 
-        public static void AllocateResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, out Buffer<FallbackTypeBatchResults> results)
+        public static void AllocateResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, out Buffer<JacobiFallbackTypeBatchResults> results)
         {
             pool.TakeAtLeast(batch.TypeBatches.Count, out results);
             for (int i = 0; i < batch.TypeBatches.Count; ++i)
@@ -237,7 +213,7 @@ namespace BepuPhysics
             }
         }
 
-        public static void DisposeResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, ref Buffer<FallbackTypeBatchResults> results)
+        public static void DisposeResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, ref Buffer<JacobiFallbackTypeBatchResults> results)
         {
             for (int i = 0; i < batch.TypeBatches.Count; ++i)
             {
@@ -368,8 +344,8 @@ namespace BepuPhysics
             Debug.Assert(set.Allocated);
             if (set.Batches.Count > solver.FallbackBatchThreshold)
             {
-                Debug.Assert(set.Fallback.bodyConstraintReferences.Keys.Allocated);
-                ref var bodyConstraintReferences = ref set.Fallback.bodyConstraintReferences;
+                Debug.Assert(set.JacobiFallback.bodyConstraintReferences.Keys.Allocated);
+                ref var bodyConstraintReferences = ref set.JacobiFallback.bodyConstraintReferences;
                 for (int i = 0; i < bodyConstraintReferences.Count; ++i)
                 {
                     //This is a handle on inactive sets, and an index for active sets.
@@ -417,7 +393,7 @@ namespace BepuPhysics
             }
         }
 
-        public void ScatterVelocities(Bodies bodies, Solver solver, ref Buffer<FallbackTypeBatchResults> velocities, int start, int exclusiveEnd)
+        public void ScatterVelocities(Bodies bodies, Solver solver, ref Buffer<JacobiFallbackTypeBatchResults> velocities, int start, int exclusiveEnd)
         {
             ref var fallbackBatch = ref solver.ActiveSet.Batches[solver.FallbackBatchThreshold];
             for (int i = start; i < exclusiveEnd; ++i)
@@ -487,7 +463,7 @@ namespace BepuPhysics
             Helpers.Swap(ref bodyConstraintReferences.Values[indexA], ref bodyConstraintReferences.Values[indexB]);
         }
 
-        internal static void CreateFrom(ref FallbackBatch sourceBatch, BufferPool pool, out FallbackBatch targetBatch)
+        internal static void CreateFrom(ref JacobiFallbackBatch sourceBatch, BufferPool pool, out JacobiFallbackBatch targetBatch)
         {
             //Copy over non-buffer state. This copies buffer references pointlessly, but that doesn't matter.
             targetBatch.bodyConstraintReferences = sourceBatch.bodyConstraintReferences;

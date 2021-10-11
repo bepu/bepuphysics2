@@ -200,7 +200,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe override void JacobiPrestep(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void JacobiPrestep(ref TypeBatch typeBatch, Bodies bodies, ref JacobiFallbackBatch jacobiBatch, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
@@ -222,7 +222,7 @@ namespace BepuPhysics.Constraints
                 function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out projection);
             }
         }
-        public unsafe override void JacobiWarmStart(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
+        public unsafe override void JacobiWarmStart(ref TypeBatch typeBatch, Bodies bodies, ref JacobiFallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -242,7 +242,7 @@ namespace BepuPhysics.Constraints
                 function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
             }
         }
-        public unsafe override void JacobiSolveIteration(ref TypeBatch typeBatch, Bodies bodies, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
+        public unsafe override void JacobiSolveIteration(ref TypeBatch typeBatch, Bodies bodies, ref JacobiFallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -385,7 +385,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public override void JacobiWarmStart2(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
+        public override void JacobiWarmStart2(ref TypeBatch typeBatch, Bodies bodies, ref JacobiFallbackBatch jacobiBatch, ref JacobiFallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
@@ -419,7 +419,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public override void JacobiSolveStep2(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, ref FallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public override void JacobiSolveStep2(ref TypeBatch typeBatch, Bodies bodies, ref JacobiFallbackBatch jacobiBatch, ref JacobiFallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();

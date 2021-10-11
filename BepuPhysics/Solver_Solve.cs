@@ -124,10 +124,10 @@ namespace BepuPhysics
             if (activeSet.Batches.Count > FallbackBatchThreshold)
             {
                 //There is a fallback batch, so we need to create fallback work blocks for it.
-                var blockCount = Math.Min(targetBlocksPerBatch, ActiveSet.Fallback.BodyCount);
+                var blockCount = Math.Min(targetBlocksPerBatch, ActiveSet.JacobiFallback.BodyCount);
                 context.FallbackBlocks.Blocks = new QuickList<FallbackScatterWorkBlock>(blockCount, pool);
-                var baseBodiesPerBlock = activeSet.Fallback.BodyCount / blockCount;
-                var remainder = activeSet.Fallback.BodyCount - baseBodiesPerBlock * blockCount;
+                var baseBodiesPerBlock = activeSet.JacobiFallback.BodyCount / blockCount;
+                var remainder = activeSet.JacobiFallback.BodyCount - baseBodiesPerBlock * blockCount;
                 int previousEnd = 0;
                 for (int i = 0; i < blockCount; ++i)
                 {
@@ -249,7 +249,7 @@ namespace BepuPhysics
             public WorkBlocks<FallbackScatterWorkBlock> FallbackBlocks;
             public int WorkerCompletedCount;
             public int WorkerCount;
-            public Buffer<FallbackTypeBatchResults> FallbackResults;
+            public Buffer<JacobiFallbackTypeBatchResults> FallbackResults;
 
             public WorkBlocks<WorkBlock> IncrementalUpdateBlocks;
             public Buffer<int> IncrementalUpdateBatchBoundaries;
@@ -358,7 +358,7 @@ namespace BepuPhysics
                 if (block.BatchIndex < solver.FallbackBatchThreshold)
                     typeProcessor.Prestep(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
                 else
-                    typeProcessor.JacobiPrestep(ref typeBatch, solver.bodies, ref solver.ActiveSet.Fallback, Dt, InverseDt, block.StartBundle, block.End);
+                    typeProcessor.JacobiPrestep(ref typeBatch, solver.bodies, ref solver.ActiveSet.JacobiFallback, Dt, InverseDt, block.StartBundle, block.End);
             }
         }
         struct WarmStartStageFunction : IStageFunction
@@ -415,7 +415,7 @@ namespace BepuPhysics
             public void Execute(Solver solver, int blockIndex, int workerIndex)
             {
                 ref var block = ref solver.context.FallbackBlocks.Blocks[blockIndex];
-                solver.ActiveSet.Fallback.ScatterVelocities(solver.bodies, solver, ref solver.context.FallbackResults, block.Start, block.End);
+                solver.ActiveSet.JacobiFallback.ScatterVelocities(solver.bodies, solver, ref solver.context.FallbackResults, block.Start, block.End);
             }
         }
 
@@ -758,7 +758,7 @@ namespace BepuPhysics
             if (filter.AllowFallback && ActiveSet.Batches.Count > FallbackBatchThreshold)
             {
                 Debug.Assert(context.FallbackBlocks.Blocks.Count > 0);
-                FallbackBatch.AllocateResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], out context.FallbackResults);
+                JacobiFallbackBatch.AllocateResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], out context.FallbackResults);
                 context.FallbackBlocks.CreateClaims(pool);
             }
             pool.Take(workerCount, out context.WorkerBoundsA);
@@ -783,7 +783,7 @@ namespace BepuPhysics
                 context.IncrementalUpdateBlocks.Dispose(pool);
             if (filter.AllowFallback && ActiveSet.Batches.Count > FallbackBatchThreshold)
             {
-                FallbackBatch.DisposeResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], ref context.FallbackResults);
+                JacobiFallbackBatch.DisposeResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], ref context.FallbackResults);
                 context.FallbackBlocks.Dispose(pool);
             }
             pool.Return(ref context.BatchBoundaries);
@@ -815,7 +815,7 @@ namespace BepuPhysics
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].JacobiPrestep(ref typeBatch, bodies, ref activeSet.Fallback, dt, inverseDt, 0, typeBatch.BundleCount);
+                        TypeProcessors[typeBatch.TypeId].JacobiPrestep(ref typeBatch, bodies, ref activeSet.JacobiFallback, dt, inverseDt, 0, typeBatch.BundleCount);
                     }
                 }
                 //TODO: May want to consider executing warmstart immediately following the prestep. Multithreading can't do that, so there could be some bitwise differences introduced.
@@ -829,17 +829,17 @@ namespace BepuPhysics
                         TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, bodies, 0, typeBatch.BundleCount);
                     }
                 }
-                Buffer<FallbackTypeBatchResults> fallbackResults = default;
+                Buffer<JacobiFallbackTypeBatchResults> fallbackResults = default;
                 if (fallbackExists)
                 {
                     ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
-                    FallbackBatch.AllocateResults(this, pool, ref batch, out fallbackResults);
+                    JacobiFallbackBatch.AllocateResults(this, pool, ref batch, out fallbackResults);
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
                         TypeProcessors[typeBatch.TypeId].JacobiWarmStart(ref typeBatch, bodies, ref fallbackResults[j], 0, typeBatch.BundleCount);
                     }
-                    activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
+                    activeSet.JacobiFallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.JacobiFallback.BodyCount);
                 }
                 for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
                 {
@@ -860,12 +860,12 @@ namespace BepuPhysics
                             ref var typeBatch = ref batch.TypeBatches[j];
                             TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, bodies, ref fallbackResults[j], 0, typeBatch.BundleCount);
                         }
-                        activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
+                        activeSet.JacobiFallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.JacobiFallback.BodyCount);
                     }
                 }
                 if (fallbackExists)
                 {
-                    FallbackBatch.DisposeResults(this, pool, ref activeSet.Batches[FallbackBatchThreshold], ref fallbackResults);
+                    JacobiFallbackBatch.DisposeResults(this, pool, ref activeSet.Batches[FallbackBatchThreshold], ref fallbackResults);
                 }
             }
             else

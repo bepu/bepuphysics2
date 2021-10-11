@@ -302,7 +302,7 @@ namespace BepuPhysics
                         else
                         {
                             //If this is the fallback batch, then the expected count may be more than 1.
-                            var foundBody = ActiveSet.Fallback.bodyConstraintReferences.TryGetValue(i, out var referencesForBody);
+                            var foundBody = ActiveSet.JacobiFallback.bodyConstraintReferences.TryGetValue(i, out var referencesForBody);
                             Debug.Assert(foundBody, "A body was in the fallback batch's referenced handles, so the fallback batch should have a reference for that body.");
                             expectedCount = foundBody ? referencesForBody.Count : 0;
                         }
@@ -482,7 +482,7 @@ namespace BepuPhysics
             }
             if (targetBatchIndex == FallbackBatchThreshold)
             {
-                ActiveSet.Fallback.AllocateForActive(constraintHandle, bodyHandles, bodies, typeId, pool);
+                ActiveSet.JacobiFallback.AllocateForActive(constraintHandle, bodyHandles, bodies, typeId, pool);
             }
         }
 
@@ -839,7 +839,7 @@ namespace BepuPhysics
             if (batchIndex == FallbackBatchThreshold)
             {
                 //Note that we have to remove from fallback first because it accesses the batch's information.
-                ActiveSet.Fallback.Remove(this, pool, ref batch, constraintHandle, ref batchReferencedHandles[batchIndex], typeId, indexInTypeBatch);
+                ActiveSet.JacobiFallback.Remove(this, pool, ref batch, constraintHandle, ref batchReferencedHandles[batchIndex], typeId, indexInTypeBatch);
             }
             else
             {
@@ -936,7 +936,7 @@ namespace BepuPhysics
             if (UpdateConstraintsForBodyMemoryMove(originalBodyIndex, newBodyLocation))
             {
                 //One of the moved constraints involved the fallback batch, so we need to update the fallback batch's body indices.
-                ActiveSet.Fallback.UpdateForBodyMemoryMove(originalBodyIndex, newBodyLocation);
+                ActiveSet.JacobiFallback.UpdateForBodyMemoryMove(originalBodyIndex, newBodyLocation);
             }
         }
 
@@ -951,15 +951,15 @@ namespace BepuPhysics
             var bInFallback = UpdateConstraintsForBodyMemoryMove(b, a);
             if (aInFallback && bInFallback)
             {
-                ActiveSet.Fallback.UpdateForBodyMemorySwap(a, b);
+                ActiveSet.JacobiFallback.UpdateForBodyMemorySwap(a, b);
             }
             else if (aInFallback)
             {
-                ActiveSet.Fallback.UpdateForBodyMemoryMove(a, b);
+                ActiveSet.JacobiFallback.UpdateForBodyMemoryMove(a, b);
             }
             else if (bInFallback)
             {
-                ActiveSet.Fallback.UpdateForBodyMemoryMove(b, a);
+                ActiveSet.JacobiFallback.UpdateForBodyMemoryMove(b, a);
             }
         }
 
