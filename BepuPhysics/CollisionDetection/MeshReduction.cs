@@ -328,6 +328,18 @@ namespace BepuPhysics.CollisionDetection
             //Console.WriteLine($"count: {count}");
             if (count < bruteForceThreshold)
             {
+                //Console.WriteLine($"Mesh reduction child count: {count}");
+                //for (int i = 0; i < count; ++i)
+                //{
+                //    var maxDepth = float.MinValue;
+                //    for (int j = 0; j < children[i].Manifold.Count; ++j)
+                //    {
+                //        var depth = children[i].Manifold.GetDepth(ref children[i].Manifold, j);
+                //        if (depth > maxDepth)
+                //            maxDepth = depth;
+                //    }
+                //    Console.WriteLine($"Contact count in child {i}: {children[i].Manifold.Count}, maximum depth: {maxDepth}");
+                //}
                 var memory = stackalloc TestTriangle[count];
                 var activeTriangles = new Buffer<TestTriangle>(memory, count);
                 for (int i = 0; i < count; ++i)
@@ -352,8 +364,13 @@ namespace BepuPhysics.CollisionDetection
                             {
                                 sourceTriangle.Blocked = true;
                                 sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
+                                //If the blocker had no contacts, it's possible that a collision could exist that has all its contacts deleted. That's not ideal.
+                                //Don't force deletion in that case. The contact normal will be corrected instead.
+                                var correctInsteadOfDeleteIfBlocked = !sourceTriangle.ForceDeletionOnBlock || children[targetTriangle.ChildIndex].Manifold.Count == 0;
+                                sourceTriangle.ForceDeletionOnBlock = !correctInsteadOfDeleteIfBlocked;
                                 //Even if the target manifold gets blocked, it should not necessarily be deleted. We made use of it as a blocker.
                                 targetTriangle.ForceDeletionOnBlock = false;
+                                //Console.WriteLine($"Child {i} blocked by {j}");
                                 break;
                             }
                         }
@@ -376,6 +393,10 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                 }
+                //for (int i = 0; i < count; ++i)
+                //{
+                //    Console.WriteLine($"Child {i} blocked: {activeTriangles[i].Blocked}, force delete: {activeTriangles[i].ForceDeletionOnBlock}");
+                //}
                 for (int i = 0; i < count; ++i)
                 {
                     TryApplyBlockToTriangle(ref activeTriangles[i], children, meshOrientation, requiresFlip);
@@ -450,6 +471,10 @@ namespace BepuPhysics.CollisionDetection
                             {
                                 sourceTriangle.Blocked = true;
                                 sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
+                                //If the blocker had no contacts, it's possible that a collision could exist that has all its contacts deleted. That's not ideal.
+                                //Don't force deletion in that case. The contact normal will be corrected instead.
+                                var correctInsteadOfDeleteIfBlocked = !sourceTriangle.ForceDeletionOnBlock || (targetTriangle.ChildIndex < activeChildCount && children[targetTriangle.ChildIndex].Manifold.Count == 0);
+                                sourceTriangle.ForceDeletionOnBlock = !correctInsteadOfDeleteIfBlocked;
                                 //Even if the target manifold gets blocked, it should not necessarily be deleted. We made use of it as a blocker.
                                 targetTriangle.ForceDeletionOnBlock = false;
                                 break;
