@@ -88,12 +88,6 @@ namespace BepuPhysics
             public int End;
         }
 
-        protected internal struct FallbackScatterWorkBlock
-        {
-            public int Start;
-            public int End;
-        }
-
         protected interface ITypeBatchSolveFilter
         {
             bool AllowFallback { get; }
@@ -115,25 +109,6 @@ namespace BepuPhysics
             public bool AllowType(int typeId)
             {
                 return true;
-            }
-        }
-
-        void BuildFallbackScatterWorkBlocks(int targetBlocksPerBatch)
-        {
-            ref var activeSet = ref ActiveSet;
-            if (activeSet.Batches.Count > FallbackBatchThreshold)
-            {
-                //There is a fallback batch, so we need to create fallback work blocks for it.
-                var blockCount = Math.Min(targetBlocksPerBatch, ActiveSet.JacobiFallback.BodyCount);
-                context.FallbackBlocks.Blocks = new QuickList<FallbackScatterWorkBlock>(blockCount, pool);
-                var baseBodiesPerBlock = activeSet.JacobiFallback.BodyCount / blockCount;
-                var remainder = activeSet.JacobiFallback.BodyCount - baseBodiesPerBlock * blockCount;
-                int previousEnd = 0;
-                for (int i = 0; i < blockCount; ++i)
-                {
-                    var bodiesInBlock = i < remainder ? baseBodiesPerBlock + 1 : baseBodiesPerBlock;
-                    context.FallbackBlocks.Blocks.AllocateUnsafely() = new FallbackScatterWorkBlock { Start = previousEnd, End = previousEnd += bodiesInBlock };
-                }
             }
         }
 
@@ -246,10 +221,8 @@ namespace BepuPhysics
             public float Dt;
             public WorkBlocks<WorkBlock> ConstraintBlocks;
             public Buffer<int> BatchBoundaries;
-            public WorkBlocks<FallbackScatterWorkBlock> FallbackBlocks;
             public int WorkerCompletedCount;
             public int WorkerCount;
-            public Buffer<JacobiFallbackTypeBatchResults> FallbackResults;
 
             public WorkBlocks<WorkBlock> IncrementalUpdateBlocks;
             public Buffer<int> IncrementalUpdateBatchBoundaries;
@@ -353,12 +326,7 @@ namespace BepuPhysics
                 ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                //Prestep dynamically picks the path since it executes in parallel across all batches.
-                //WarmStart /Solve, in contrast, have to dispatch once per batch, so we can choose the codepath at the entrypoint.
-                if (block.BatchIndex < solver.FallbackBatchThreshold)
-                    typeProcessor.Prestep(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
-                else
-                    typeProcessor.JacobiPrestep(ref typeBatch, solver.bodies, ref solver.ActiveSet.JacobiFallback, Dt, InverseDt, block.StartBundle, block.End);
+                typeProcessor.Prestep(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
             }
         }
         struct WarmStartStageFunction : IStageFunction
@@ -385,39 +353,6 @@ namespace BepuPhysics
             }
         }
 
-        struct WarmStartFallbackStageFunction : IStageFunction
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex, int workerIndex)
-            {
-                ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
-                ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-                var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.JacobiWarmStart(ref typeBatch, solver.bodies, ref solver.context.FallbackResults[block.TypeBatchIndex], block.StartBundle, block.End);
-
-            }
-        }
-        struct SolveFallbackStageFunction : IStageFunction
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex, int workerIndex)
-            {
-                ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
-                ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-                var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.JacobiSolveIteration(ref typeBatch, solver.bodies, ref solver.context.FallbackResults[block.TypeBatchIndex], block.StartBundle, block.End);
-            }
-        }
-
-        struct FallbackScatterStageFunction : IStageFunction
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex, int workerIndex)
-            {
-                ref var block = ref solver.context.FallbackBlocks.Blocks[blockIndex];
-                solver.ActiveSet.JacobiFallback.ScatterVelocities(solver.bodies, solver, ref solver.context.FallbackResults, block.Start, block.End);
-            }
-        }
 
 
         /// <summary>
@@ -597,7 +532,6 @@ namespace BepuPhysics
         void SolveWorker(int workerIndex)
         {
             int prestepStart = GetUniformlyDistributedStart(workerIndex, context.ConstraintBlocks.Blocks.Count, context.WorkerCount, 0);
-            int fallbackStart = GetUniformlyDistributedStart(workerIndex, context.FallbackBlocks.Blocks.Count, context.WorkerCount, 0);
             Buffer<int> batchStarts;
             ref var activeSet = ref ActiveSet;
             unsafe
@@ -643,23 +577,10 @@ namespace BepuPhysics
                 ExecuteStage(ref warmStartStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
                     ref workerBatchStartCopy, ref syncStage, claimedState, unclaimedState);
             }
-            var fallbackScatterStage = new FallbackScatterStageFunction();
-            if (fallbackExists)
-            {
-                var warmStartFallbackStage = new WarmStartFallbackStageFunction();
-                var batchStart = FallbackBatchThreshold > 0 ? context.BatchBoundaries[FallbackBatchThreshold - 1] : 0;
-                //Don't use the warm start to guess at the solve iteration work distribution.
-                var workerBatchStartCopy = batchStarts[FallbackBatchThreshold];
-                ExecuteStage(ref warmStartFallbackStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchStart, context.BatchBoundaries[FallbackBatchThreshold],
-                    ref workerBatchStartCopy, ref syncStage, claimedState, unclaimedState);
-                ExecuteStage(ref fallbackScatterStage, ref context.FallbackBlocks, ref bounds, ref boundsBackBuffer,
-                    workerIndex, 0, context.FallbackBlocks.Blocks.Count, ref fallbackStart, ref syncStage, unclaimedState, claimedState); //note claim state swap: fallback scatter claims have no prestep, so it's off by one cycle
-            }
             claimedState ^= 1;
             unclaimedState ^= 1;
 
             var solveStage = new SolveStageFunction();
-            var solveFallbackStage = new SolveFallbackStageFunction();
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
             {
                 for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
@@ -667,14 +588,6 @@ namespace BepuPhysics
                     var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
                     ExecuteStage(ref solveStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
                         ref batchStarts[batchIndex], ref syncStage, claimedState, unclaimedState);
-                }
-                if (fallbackExists)
-                {
-                    var batchOffset = FallbackBatchThreshold > 0 ? context.BatchBoundaries[FallbackBatchThreshold - 1] : 0;
-                    ExecuteStage(ref solveFallbackStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[FallbackBatchThreshold],
-                        ref batchStarts[FallbackBatchThreshold], ref syncStage, claimedState, unclaimedState);
-                    ExecuteStage(ref fallbackScatterStage, ref context.FallbackBlocks, ref bounds, ref boundsBackBuffer,
-                        workerIndex, 0, context.FallbackBlocks.Blocks.Count, ref fallbackStart, ref syncStage, unclaimedState, claimedState); //note claim state swap: fallback scatter claims have no prestep, so it's off by one cycle
                 }
                 claimedState ^= 1;
                 unclaimedState ^= 1;
@@ -747,20 +660,12 @@ namespace BepuPhysics
                 var incrementalFilter = new IncrementalContactDataUpdateFilter();
                 BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref incrementalFilter, out context.IncrementalUpdateBlocks.Blocks, out context.IncrementalUpdateBatchBoundaries);
             }
-            if (filter.AllowFallback)
-                BuildFallbackScatterWorkBlocks(targetBlocksPerBatch);
             ValidateWorkBlocks(ref filter);
 
             //Note the clear; the block claims must be initialized to 0 so that the first worker stage knows that the data is available to claim.
             context.ConstraintBlocks.CreateClaims(pool);
             if (includeIncrementalUpdate)
                 context.IncrementalUpdateBlocks.CreateClaims(pool);
-            if (filter.AllowFallback && ActiveSet.Batches.Count > FallbackBatchThreshold)
-            {
-                Debug.Assert(context.FallbackBlocks.Blocks.Count > 0);
-                JacobiFallbackBatch.AllocateResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], out context.FallbackResults);
-                context.FallbackBlocks.CreateClaims(pool);
-            }
             pool.Take(workerCount, out context.WorkerBoundsA);
             pool.Take(workerCount, out context.WorkerBoundsB);
             //The worker bounds front buffer should be initialized to avoid trash interval data from messing up the workstealing.
@@ -781,11 +686,6 @@ namespace BepuPhysics
             context.ConstraintBlocks.Dispose(pool);
             if (includeIncrementalUpdate)
                 context.IncrementalUpdateBlocks.Dispose(pool);
-            if (filter.AllowFallback && ActiveSet.Batches.Count > FallbackBatchThreshold)
-            {
-                JacobiFallbackBatch.DisposeResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], ref context.FallbackResults);
-                context.FallbackBlocks.Dispose(pool);
-            }
             pool.Return(ref context.BatchBoundaries);
             pool.Return(ref context.WorkerBoundsA);
             pool.Return(ref context.WorkerBoundsB);
@@ -799,8 +699,8 @@ namespace BepuPhysics
             {
                 var inverseDt = 1f / dt;
                 ref var activeSet = ref ActiveSet;
-                GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-                for (int i = 0; i < synchronizedBatchCount; ++i)
+                var batchCount = activeSet.Batches.Count;
+                for (int i = 0; i < batchCount; ++i)
                 {
                     ref var batch = ref activeSet.Batches[i];
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
@@ -809,18 +709,7 @@ namespace BepuPhysics
                         TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, dt, inverseDt, 0, typeBatch.BundleCount);
                     }
                 }
-                if (fallbackExists)
-                {
-                    ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
-                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                    {
-                        ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].JacobiPrestep(ref typeBatch, bodies, ref activeSet.JacobiFallback, dt, inverseDt, 0, typeBatch.BundleCount);
-                    }
-                }
-                //TODO: May want to consider executing warmstart immediately following the prestep. Multithreading can't do that, so there could be some bitwise differences introduced.
-                //On the upside, it would make use of cached data.
-                for (int i = 0; i < synchronizedBatchCount; ++i)
+                for (int i = 0; i < batchCount; ++i)
                 {
                     ref var batch = ref activeSet.Batches[i];
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
@@ -829,21 +718,9 @@ namespace BepuPhysics
                         TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, bodies, 0, typeBatch.BundleCount);
                     }
                 }
-                Buffer<JacobiFallbackTypeBatchResults> fallbackResults = default;
-                if (fallbackExists)
-                {
-                    ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
-                    JacobiFallbackBatch.AllocateResults(this, pool, ref batch, out fallbackResults);
-                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                    {
-                        ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].JacobiWarmStart(ref typeBatch, bodies, ref fallbackResults[j], 0, typeBatch.BundleCount);
-                    }
-                    activeSet.JacobiFallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.JacobiFallback.BodyCount);
-                }
                 for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
                 {
-                    for (int i = 0; i < synchronizedBatchCount; ++i)
+                    for (int i = 0; i < batchCount; ++i)
                     {
                         ref var batch = ref activeSet.Batches[i];
                         for (int j = 0; j < batch.TypeBatches.Count; ++j)
@@ -852,20 +729,6 @@ namespace BepuPhysics
                             TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, bodies, 0, typeBatch.BundleCount);
                         }
                     }
-                    if (fallbackExists)
-                    {
-                        ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
-                        for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                        {
-                            ref var typeBatch = ref batch.TypeBatches[j];
-                            TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, bodies, ref fallbackResults[j], 0, typeBatch.BundleCount);
-                        }
-                        activeSet.JacobiFallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.JacobiFallback.BodyCount);
-                    }
-                }
-                if (fallbackExists)
-                {
-                    JacobiFallbackBatch.DisposeResults(this, pool, ref activeSet.Batches[FallbackBatchThreshold], ref fallbackResults);
                 }
             }
             else

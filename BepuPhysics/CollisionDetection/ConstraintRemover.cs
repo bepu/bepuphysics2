@@ -210,9 +210,9 @@ namespace BepuPhysics.CollisionDetection
             //The island sleeper job order requires this allocation to be done in the Prepare instead of CreateFlushJobs.
             if (solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold)
             {
-                //Ensure that the fallback deallocation list is also large enough. The fallback batch may result in 3 returned buffers for the primary dictionary, plus another two for each potentially
-                //removed body constraint references subset.
-                allocationIdsToFree = new QuickList<int>(3 + solver.ActiveSet.JacobiFallback.BodyCount * 2, pool);
+                //Ensure that the fallback deallocation list is also large enough. The fallback batch may result in 3 returned buffers for the primary dictionary.
+                //TODO: Since this is no longer a variable count, there's no reason to allocate a list like this.
+                allocationIdsToFree = new QuickList<int>(3, pool);
             }
         }
 
@@ -376,7 +376,7 @@ namespace BepuPhysics.CollisionDetection
                     for (int j = 0; j < removals.Count; ++j)
                     {
                         ref var target = ref removals[j];
-                        if (solver.ActiveSet.JacobiFallback.Remove(target.BodyIndex, target.ConstraintHandle, ref allocationIdsToFree))
+                        if (solver.ActiveSet.SequentialFallback.Remove(target.BodyIndex, ref allocationIdsToFree))
                         {
                             //No more constraints for this body in the fallback set; it should not exist in the fallback batch's referenced handles anymore.
                             solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle.Value);
@@ -387,7 +387,7 @@ namespace BepuPhysics.CollisionDetection
         }
         public void TryRemoveAllConstraintsForBodyFromFallbackBatch(BodyHandle bodyHandle, int bodyIndex)
         {
-            if (solver.ActiveSet.JacobiFallback.TryRemove(bodyIndex, ref allocationIdsToFree))
+            if (solver.ActiveSet.SequentialFallback.TryRemove(bodyIndex, ref allocationIdsToFree))
             {
                 solver.batchReferencedHandles[solver.FallbackBatchThreshold].Remove(bodyHandle.Value);
             }

@@ -172,23 +172,6 @@ namespace BepuPhysics
             }
         }
 
-
-        public static void AllocateResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, out Buffer<JacobiFallbackTypeBatchResults> results)
-        {
-            pool.TakeAtLeast(batch.TypeBatches.Count, out results);
-            for (int i = 0; i < batch.TypeBatches.Count; ++i)
-            {
-                ref var typeBatch = ref batch.TypeBatches[i];
-                var bodiesPerConstraint = solver.TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
-                ref var typeBatchResults = ref results[i];
-                pool.TakeAtLeast(bodiesPerConstraint, out typeBatchResults.BodyVelocities);
-                for (int j = 0; j < bodiesPerConstraint; ++j)
-                {
-                    pool.TakeAtLeast(typeBatch.BundleCount, out typeBatchResults.GetVelocitiesForBody(j));
-                }
-            }
-        }
-
         [Conditional("DEBUG")]
         unsafe static void ValidateBodyConstraintReference(Solver solver, int setIndex, int bodyReference, ConstraintHandle constraintHandle, int expectedIndexInConstraint)
         {
@@ -263,27 +246,16 @@ namespace BepuPhysics
             Helpers.Swap(ref bodyConstraintCounts.Values[indexA], ref bodyConstraintCounts.Values[indexB]);
         }
 
-        internal static void CreateFrom(ref JacobiFallbackBatch sourceBatch, BufferPool pool, out JacobiFallbackBatch targetBatch)
+        internal static void CreateFrom(ref SequentialFallbackBatch sourceBatch, BufferPool pool, out SequentialFallbackBatch targetBatch)
         {
             //Copy over non-buffer state. This copies buffer references pointlessly, but that doesn't matter.
-            targetBatch.bodyConstraintReferences = sourceBatch.bodyConstraintReferences;
-            pool.TakeAtLeast(sourceBatch.bodyConstraintReferences.Count, out targetBatch.bodyConstraintReferences.Keys);
-            pool.TakeAtLeast(targetBatch.bodyConstraintReferences.Keys.Length, out targetBatch.bodyConstraintReferences.Values);
-            pool.TakeAtLeast(sourceBatch.bodyConstraintReferences.TableMask + 1, out targetBatch.bodyConstraintReferences.Table);
-            sourceBatch.bodyConstraintReferences.Keys.CopyTo(0, targetBatch.bodyConstraintReferences.Keys, 0, sourceBatch.bodyConstraintReferences.Count);
-            sourceBatch.bodyConstraintReferences.Values.CopyTo(0, targetBatch.bodyConstraintReferences.Values, 0, sourceBatch.bodyConstraintReferences.Count);
-            sourceBatch.bodyConstraintReferences.Table.CopyTo(0, targetBatch.bodyConstraintReferences.Table, 0, sourceBatch.bodyConstraintReferences.TableMask + 1);
-
-            for (int i = 0; i < sourceBatch.bodyConstraintReferences.Count; ++i)
-            {
-                ref var source = ref sourceBatch.bodyConstraintReferences.Values[i];
-                ref var target = ref targetBatch.bodyConstraintReferences.Values[i];
-                target = source;
-                pool.TakeAtLeast(source.Count, out target.Span);
-                pool.TakeAtLeast(source.TableMask + 1, out target.Table);
-                source.Span.CopyTo(0, target.Span, 0, source.Count);
-                source.Table.CopyTo(0, target.Table, 0, source.TableMask + 1);
-            }
+            targetBatch.bodyConstraintCounts = sourceBatch.bodyConstraintCounts;
+            pool.TakeAtLeast(sourceBatch.bodyConstraintCounts.Count, out targetBatch.bodyConstraintCounts.Keys);
+            pool.TakeAtLeast(targetBatch.bodyConstraintCounts.Keys.Length, out targetBatch.bodyConstraintCounts.Values);
+            pool.TakeAtLeast(sourceBatch.bodyConstraintCounts.TableMask + 1, out targetBatch.bodyConstraintCounts.Table);
+            sourceBatch.bodyConstraintCounts.Keys.CopyTo(0, targetBatch.bodyConstraintCounts.Keys, 0, sourceBatch.bodyConstraintCounts.Count);
+            sourceBatch.bodyConstraintCounts.Values.CopyTo(0, targetBatch.bodyConstraintCounts.Values, 0, sourceBatch.bodyConstraintCounts.Count);
+            sourceBatch.bodyConstraintCounts.Table.CopyTo(0, targetBatch.bodyConstraintCounts.Table, 0, sourceBatch.bodyConstraintCounts.TableMask + 1);
         }
 
         internal void EnsureCapacity(int bodyCapacity, BufferPool pool)

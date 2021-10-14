@@ -245,21 +245,19 @@ namespace BepuPhysics
                         for (int i = 0; i < uniqueSetIndices.Count; ++i)
                         {
                             Debug.Assert(uniqueSetIndices[i] > 0);
-                            ref var source = ref solver.Sets[uniqueSetIndices[i]].JacobiFallback;
-                            ref var target = ref solver.ActiveSet.JacobiFallback;
-                            if (source.bodyConstraintReferences.Count > 0)
+                            ref var source = ref solver.Sets[uniqueSetIndices[i]].SequentialFallback;
+                            ref var target = ref solver.ActiveSet.SequentialFallback;
+                            if (source.bodyConstraintCounts.Count > 0)
                             {
-                                for (int j = 0; j < source.bodyConstraintReferences.Count; ++j)
+                                for (int j = 0; j < source.bodyConstraintCounts.Count; ++j)
                                 {
                                     //Inactive sets refer to body handles. Active set refers to body indices. Make the transition.
                                     //The HandleToLocation was updated during job setup, so we can use it.
-                                    ref var bodyLocation = ref bodies.HandleToLocation[source.bodyConstraintReferences.Keys[j]];
+                                    ref var bodyLocation = ref bodies.HandleToLocation[source.bodyConstraintCounts.Keys[j]];
                                     Debug.Assert(bodyLocation.SetIndex == 0, "Any batch moved into the active set should be dealing with bodies which have already been moved into the active set.");
-                                    var added = target.bodyConstraintReferences.AddUnsafely(ref bodyLocation.Index, source.bodyConstraintReferences.Values[j]);
+                                    var added = target.bodyConstraintCounts.AddUnsafely(bodyLocation.Index, source.bodyConstraintCounts.Values[j]);
                                     Debug.Assert(added, "Any body moving from an inactive set to the active set should not already be present in the active set's fallback batch.");
                                 }
-                                //We've reused the lists. Set the count to zero so they don't get disposed later.
-                                source.bodyConstraintReferences.Count = 0;
                             }
                         }
                     }
@@ -493,7 +491,7 @@ namespace BepuPhysics
                 if (highestNewBatchCount < setBatchCount)
                     highestNewBatchCount = setBatchCount;
                 ref var constraintSet = ref solver.Sets[setIndex];
-                additionalRequiredFallbackCapacity += constraintSet.JacobiFallback.BodyCount;
+                additionalRequiredFallbackCapacity += constraintSet.SequentialFallback.BodyCount;
                 for (int batchIndex = 0; batchIndex < constraintSet.Batches.Count; ++batchIndex)
                 {
                     ref var batch = ref constraintSet.Batches[batchIndex];
@@ -558,7 +556,7 @@ namespace BepuPhysics
             //constraints,
             solver.ActiveSet.Batches.EnsureCapacity(highestNewBatchCount, pool);
             if (additionalRequiredFallbackCapacity > 0)
-                solver.ActiveSet.JacobiFallback.EnsureCapacity(solver.ActiveSet.JacobiFallback.BodyCount + additionalRequiredFallbackCapacity, pool);
+                solver.ActiveSet.SequentialFallback.EnsureCapacity(solver.ActiveSet.SequentialFallback.BodyCount + additionalRequiredFallbackCapacity, pool);
             Debug.Assert(highestNewBatchCount <= solver.FallbackBatchThreshold + 1, "Shouldn't have any batches beyond the fallback batch.");
             solver.batchReferencedHandles.EnsureCapacity(highestNewBatchCount, pool);
             for (int batchIndex = solver.ActiveSet.Batches.Count; batchIndex < highestNewBatchCount; ++batchIndex)

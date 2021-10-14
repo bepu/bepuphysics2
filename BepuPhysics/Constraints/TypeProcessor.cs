@@ -153,10 +153,6 @@ namespace BepuPhysics.Constraints
         public abstract void WarmStart(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle);
         public abstract void SolveIteration(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle);
 
-        public abstract void JacobiPrestep(ref TypeBatch typeBatch, Bodies bodies, ref JacobiFallbackBatch jacobiBatch, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
-        public abstract void JacobiWarmStart(ref TypeBatch typeBatch, Bodies bodies, ref JacobiFallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
-        public abstract void JacobiSolveIteration(ref TypeBatch typeBatch, Bodies bodies, ref JacobiFallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
-
         public abstract void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration, TCountInBundleCalculator>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies,
             ref TIntegratorCallbacks poseIntegratorCallbacks, in TCountInBundleCalculator countInBundleCalculator,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
@@ -166,12 +162,6 @@ namespace BepuPhysics.Constraints
             where TCountInBundleCalculator : unmanaged, IConstraintBundleCountCalculator;
         public abstract void SolveStep2<TCountInBundleCalculator>(ref TypeBatch typeBatch, Bodies bodies, in TCountInBundleCalculator countInBundleCalculator, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
             where TCountInBundleCalculator : unmanaged, IConstraintBundleCountCalculator;
-
-        public abstract void JacobiWarmStart2(
-            ref TypeBatch typeBatch, Bodies bodies, ref JacobiFallbackBatch jacobiBatch, ref JacobiFallbackTypeBatchResults jacobiResults,
-            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex);
-
-        public abstract void JacobiSolveStep2(ref TypeBatch typeBatch, Bodies bodies, ref JacobiFallbackBatch jacobiBatch, ref JacobiFallbackTypeBatchResults jacobiResults, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
         public virtual void IncrementallyUpdateContactData(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int end)
         {
