@@ -220,17 +220,27 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void AddBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, int* bodyIndices)
         {
+            var strideInInts = Vector<int>.Count;
+            //We assume that the body references struct is organized in memory like Bundle0, Inner0, ... BundleN, InnerN, Count
+            //Assuming contiguous storage, Count is then located at start + stride * BodyCount.
+            var bodyCount = Unsafe.SizeOf<TBodyReferences>() / (strideInInts * sizeof(int));
+            if (innerIndex == 0)
+            {
+                //This constraint is the first one in a new bundle; set all body references in the constraint to -1 to mean 'no constraint allocated'.
+                var negativeOne = new Vector<int>(-1);
+                ref var bodyReferenceBundle = ref Unsafe.As<TBodyReferences, Vector<int>>(ref bundle);
+                for (int i = 0; i < bodyCount; ++i)
+                {
+                    Unsafe.Add(ref bodyReferenceBundle, i) = negativeOne;
+                }
+            }
             //The jit should be able to fold almost all of the size-related calculations and address fiddling.
             ref var start = ref Unsafe.As<TBodyReferences, int>(ref bundle);
             ref var targetLane = ref Unsafe.Add(ref start, innerIndex);
-            var stride = Vector<int>.Count;
-            //We assume that the body references struct is organized in memory like Bundle0, Inner0, ... BundleN, InnerN, Count
-            //Assuming contiguous storage, Count is then located at start + stride * BodyCount.
-            var bodyCount = Unsafe.SizeOf<TBodyReferences>() / (stride * sizeof(int));
             targetLane = *bodyIndices;
             for (int i = 1; i < bodyCount; ++i)
             {
-                Unsafe.Add(ref targetLane, i * stride) = bodyIndices[i];
+                Unsafe.Add(ref targetLane, i * strideInInts) = bodyIndices[i];
             }
         }
 
