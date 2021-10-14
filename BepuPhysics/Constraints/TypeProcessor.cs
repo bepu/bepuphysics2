@@ -220,10 +220,8 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void AddBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, int* bodyIndices)
         {
-            var strideInInts = Vector<int>.Count;
-            //We assume that the body references struct is organized in memory like Bundle0, Inner0, ... BundleN, InnerN, Count
-            //Assuming contiguous storage, Count is then located at start + stride * BodyCount.
-            var bodyCount = Unsafe.SizeOf<TBodyReferences>() / (strideInInts * sizeof(int));
+            //The jit should be able to fold almost all of the size-related calculations and address fiddling.
+            var bodyCount = Unsafe.SizeOf<TBodyReferences>() / (Vector<int>.Count * sizeof(int));
             if (innerIndex == 0)
             {
                 //This constraint is the first one in a new bundle; set all body references in the constraint to -1 to mean 'no constraint allocated'.
@@ -234,13 +232,27 @@ namespace BepuPhysics.Constraints
                     Unsafe.Add(ref bodyReferenceBundle, i) = negativeOne;
                 }
             }
-            //The jit should be able to fold almost all of the size-related calculations and address fiddling.
+            //We assume that the body references struct is organized in memory like Bundle0, Inner0, ... BundleN, InnerN, Count
+            //Assuming contiguous storage, Count is then located at start + stride * BodyCount.
             ref var start = ref Unsafe.As<TBodyReferences, int>(ref bundle);
             ref var targetLane = ref Unsafe.Add(ref start, innerIndex);
             targetLane = *bodyIndices;
             for (int i = 1; i < bodyCount; ++i)
             {
-                Unsafe.Add(ref targetLane, i * strideInInts) = bodyIndices[i];
+                Unsafe.Add(ref targetLane, i * Vector<int>.Count) = bodyIndices[i];
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static void RemoveBodyReferencesLane(ref TBodyReferences bundle, int innerIndex)
+        {
+            var bodyCount = Unsafe.SizeOf<TBodyReferences>() / (Vector<int>.Count * sizeof(int));
+            ref var start = ref Unsafe.As<TBodyReferences, int>(ref bundle);
+            ref var targetLane = ref Unsafe.Add(ref start, innerIndex);
+            targetLane = -1;
+            for (int i = 1; i < bodyCount; ++i)
+            {
+                Unsafe.Add(ref targetLane, i * Vector<int>.Count) = -1;
             }
         }
 
@@ -356,6 +368,8 @@ namespace BepuPhysics.Constraints
                     ref typeBatch.IndexToHandle[index], targetInnerIndex, index,
                     ref handlesToConstraints);
             }
+            //Clear the now-empty last slot of the body references bundle.
+            RemoveBodyReferencesLane(ref Unsafe.Add(ref bodyReferences, sourceBundleIndex), sourceInnerIndex);
         }
 
         /// <summary>
