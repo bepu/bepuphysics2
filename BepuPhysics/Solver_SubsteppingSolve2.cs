@@ -112,22 +112,22 @@ namespace BepuPhysics
             if (batchIndex == 0)
             {
                 Buffer<IndexSet> noFlagsRequired = default;
-                typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate, TBatchShouldIntegratePoses, DenseBundleCountCalculator>(
-                    ref typeBatch, ref noFlagsRequired, bodies, ref PoseIntegrator.Callbacks, new DenseBundleCountCalculator(),
+                typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate, TBatchShouldIntegratePoses>(
+                    ref typeBatch, ref noFlagsRequired, bodies, ref PoseIntegrator.Callbacks,
                     dt, inverseDt, startBundle, endBundle, workerIndex);
             }
             else
             {
                 if (coarseBatchIntegrationResponsibilities[batchIndex][typeBatchIndex])
                 {
-                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate, TBatchShouldIntegratePoses, DenseBundleCountCalculator>(
-                        ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks, new DenseBundleCountCalculator(),
+                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate, TBatchShouldIntegratePoses>(
+                        ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks,
                         dt, inverseDt, startBundle, endBundle, workerIndex);
                 }
                 else
                 {
-                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldNeverIntegrate, TBatchShouldIntegratePoses, DenseBundleCountCalculator>(
-                        ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks, new DenseBundleCountCalculator(),
+                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldNeverIntegrate, TBatchShouldIntegratePoses>(
+                        ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks,
                         dt, inverseDt, startBundle, endBundle, workerIndex);
                 }
             }
@@ -173,7 +173,7 @@ namespace BepuPhysics
                 ref var block = ref this.solver.substepContext.ConstraintBlocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.SolveStep2(ref typeBatch, solver.bodies, new DenseBundleCountCalculator(), Dt, InverseDt, block.StartBundle, block.End);
+                typeProcessor.SolveStep2(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
             }
         }
 
@@ -1090,7 +1090,7 @@ namespace BepuPhysics
                             for (int j = 0; j < batch.TypeBatches.Count; ++j)
                             {
                                 ref var typeBatch = ref batch.TypeBatches[j];
-                                TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, new DenseBundleCountCalculator(), substepDt, inverseDt, 0, typeBatch.BundleCount);
+                                TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
                             }
                         }
                     }

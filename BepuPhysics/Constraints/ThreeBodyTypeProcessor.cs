@@ -177,8 +177,8 @@ namespace BepuPhysics.Constraints
                 bodies.ScatterVelocities<AccessAll>(ref wsvC, ref bodyReferences.IndexC);
             }
         }
-        public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration, TBundleCountCalculator>(
-            ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, in TBundleCountCalculator bundleCountCalculator,
+        public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
+            ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
@@ -221,7 +221,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe override void SolveStep2<TBundleCountCalculator>(ref TypeBatch typeBatch, Bodies bodies, in TBundleCountCalculator bundleCountCalculator, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<ThreeBodyReferences>();

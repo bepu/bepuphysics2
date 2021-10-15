@@ -10,29 +10,6 @@ using System.Runtime.Intrinsics.X86;
 
 namespace BepuPhysics.Constraints
 {
-    public interface IConstraintBundleCountCalculator
-    {
-        int GetCountInBundle(ref TypeBatch typeBatch, int bundleIndex);
-    }
-
-    public struct DenseBundleCountCalculator : IConstraintBundleCountCalculator
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly int GetCountInBundle(ref TypeBatch typeBatch, int bundleIndex)
-        {
-            return TypeProcessor.GetCountInBundle(ref typeBatch, bundleIndex);
-        }
-    }
-
-    public struct SequentialFallbackBundleCountCalculator : IConstraintBundleCountCalculator
-    {
-        Buffer<int> countsInBundles;
-        public readonly int GetCountInBundle(ref TypeBatch typeBatch, int bundleIndex)
-        {
-            return countsInBundles[bundleIndex];
-        }
-    }
-
     /// <summary>
     /// Superclass of constraint type batch processors. Responsible for interpreting raw type batches for the purposes of bookkeeping and solving.
     /// </summary>
@@ -153,15 +130,13 @@ namespace BepuPhysics.Constraints
         public abstract void WarmStart(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle);
         public abstract void SolveIteration(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle);
 
-        public abstract void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration, TCountInBundleCalculator>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies,
-            ref TIntegratorCallbacks poseIntegratorCallbacks, in TCountInBundleCalculator countInBundleCalculator,
+        public abstract void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies,
+            ref TIntegratorCallbacks poseIntegratorCallbacks,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
             where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode
-            where TAllowPoseIntegration : unmanaged, IBatchPoseIntegrationAllowed
-            where TCountInBundleCalculator : unmanaged, IConstraintBundleCountCalculator;
-        public abstract void SolveStep2<TCountInBundleCalculator>(ref TypeBatch typeBatch, Bodies bodies, in TCountInBundleCalculator countInBundleCalculator, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
-            where TCountInBundleCalculator : unmanaged, IConstraintBundleCountCalculator;
+            where TAllowPoseIntegration : unmanaged, IBatchPoseIntegrationAllowed;
+        public abstract void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
         public virtual void IncrementallyUpdateContactData(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int end)
         {
