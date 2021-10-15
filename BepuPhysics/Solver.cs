@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using System.Runtime.InteropServices;
+using System.Numerics;
 
 namespace BepuPhysics
 {
@@ -265,6 +266,33 @@ namespace BepuPhysics
                 referencesToBody += instancesInTypeBatch;
             }
             Debug.Assert(referencesToBody == expectedCount);
+        }
+
+        [Conditional("DEBUG")]
+        public unsafe void ValidateTrailingTypeBatchBodyReferences()
+        {
+            ref var set = ref ActiveSet;
+            for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
+            {
+                ref var batch = ref set.Batches[batchIndex];
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    var bodiesPerConstraint = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
+                    var expectedEmptyLanesInLastBundle = typeBatch.BundleCount * Vector<int>.Count - typeBatch.ConstraintCount;
+                    var firstEmptySlotIndex = Vector<int>.Count - expectedEmptyLanesInLastBundle;
+                    ref var lastBodyReferencesBundle = ref typeBatch.BodyReferences[(typeBatch.BundleCount - 1) * bodiesPerConstraint * Unsafe.SizeOf<Vector<int>>()];
+                    for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraint; ++bodyIndexInConstraint)
+                    {
+                        ref var bodyBundleInConstraint = ref Unsafe.Add(ref Unsafe.As<byte, Vector<int>>(ref lastBodyReferencesBundle), bodyIndexInConstraint);
+                        ref var bodiesInBundle = ref Unsafe.As<Vector<int>, int>(ref bodyBundleInConstraint);
+                        for (int i = firstEmptySlotIndex; i < Vector<int>.Count; ++i)
+                        {
+                            Debug.Assert(Unsafe.Add(ref bodiesInBundle, i) == -1, "Any awake incomplete bundle should have its trailing values initialized to -1.");
+                        }
+                    }
+                }
+            }
         }
 
         [Conditional("DEBUG")]

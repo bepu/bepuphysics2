@@ -57,6 +57,7 @@ namespace BepuPhysics
 
             Debug.Assert(SubstepCount >= 0, "Substep count should be positive.");
 
+            simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
             var constrainedBodySet = simulation.Solver.PrepareConstraintIntegrationResponsibilities(SubstepCount, threadDispatcher);
             simulation.Profiler.Start(simulation.Solver);
             simulation.Solver.SolveStep2(dt, threadDispatcher);
