@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -83,5 +84,56 @@ namespace BepuUtilities
             }
             //TODO: ARM
         }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetFirstSetLaneIndex(Vector<int> v)
+        {
+            if (Avx.IsSupported && Vector<int>.Count == 8)
+            {
+                var scalarMask = Avx.MoveMask(v.AsVector256().As<int, float>());
+                return BitOperations.TrailingZeroCount(scalarMask);
+            }
+            else if (Sse.IsSupported && Vector<int>.Count == 4)
+            {
+                var scalarMask = Sse.MoveMask(v.AsVector128().As<int, float>());
+                return BitOperations.TrailingZeroCount(scalarMask);
+            }
+            else
+            {
+                Debug.Assert(Vector<int>.Count <= 8, "We made an assumption that AVX512 and similar widths aren't available, this should be updated if vectors get wider!");
+                for (int i = 0; i < Vector<int>.Count; ++i)
+                {
+                    if (v[i] == -1)
+                        return i;
+                }
+            }
+            return -1;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetLastSetLaneIndex(Vector<int> v)
+        {
+            if (Avx.IsSupported && Vector<int>.Count == 8)
+            {
+                var scalarMask = Avx.MoveMask(v.AsVector256().As<int, float>());
+                return BitOperations.LeadingZeroCount((uint)scalarMask);
+            }
+            else if (Sse.IsSupported && Vector<int>.Count == 4)
+            {
+                var scalarMask = Sse.MoveMask(v.AsVector128().As<int, float>());
+                return BitOperations.LeadingZeroCount((uint)scalarMask);
+            }
+            else
+            {
+                Debug.Assert(Vector<int>.Count <= 8, "We made an assumption that AVX512 and similar widths aren't available, this should be updated if vectors get wider!");
+                for (int i = Vector<int>.Count - 1; i >= 0; --i)
+                {
+                    if (v[i] == -1)
+                        return i;
+                }
+            }
+            return -1;
+        }
+
     }
 }
