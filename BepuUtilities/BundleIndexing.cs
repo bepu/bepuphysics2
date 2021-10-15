@@ -110,18 +110,23 @@ namespace BepuUtilities
             }
             return -1;
         }
+        /// <summary>
+        /// Gets the number of lanes that occur at or before the last set lane. In other words, if the lanes in the vector are (-1, 0, -1, 0), then this will return 3.
+        /// </summary>
+        /// <param name="v">Vector to examine.</param>
+        /// <returns>Number of lanes that occur at or before the last set lane.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetLastSetLaneIndex(Vector<int> v)
+        public static int GetLastSetLaneCount(Vector<int> v)
         {
             if (Avx.IsSupported && Vector<int>.Count == 8)
             {
                 var scalarMask = Avx.MoveMask(v.AsVector256().As<int, float>());
-                return BitOperations.LeadingZeroCount((uint)scalarMask);
+                return 32 - BitOperations.LeadingZeroCount((uint)scalarMask);
             }
             else if (Sse.IsSupported && Vector<int>.Count == 4)
             {
                 var scalarMask = Sse.MoveMask(v.AsVector128().As<int, float>());
-                return BitOperations.LeadingZeroCount((uint)scalarMask);
+                return 32 - BitOperations.LeadingZeroCount((uint)scalarMask);
             }
             else
             {
@@ -129,10 +134,10 @@ namespace BepuUtilities
                 for (int i = Vector<int>.Count - 1; i >= 0; --i)
                 {
                     if (v[i] == -1)
-                        return i;
+                        return i + 1;
                 }
             }
-            return -1;
+            return 0;
         }
 
     }

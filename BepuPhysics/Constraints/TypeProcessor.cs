@@ -67,7 +67,7 @@ namespace BepuPhysics.Constraints
         /// <param name="pool">Allocation provider to use if the type batch has to be resized.</param>
         /// <returns>Index of the slot in the batch.</returns>
         public unsafe abstract int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool);
-        public abstract void Remove(ref TypeBatch typeBatch, int index, ref Buffer<ConstraintLocation> handlesToConstraints);
+        public abstract void Remove(ref TypeBatch typeBatch, int index, ref Buffer<ConstraintLocation> handlesToConstraints, bool isFallback);
 
         /// <summary>
         /// Moves a constraint from one ConstraintBatch's TypeBatch to another ConstraintBatch's TypeBatch of the same type.
@@ -469,96 +469,96 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// Removes a constraint from the batch.
         /// </summary>
+        /// <param name="typeBatch">Type batch to remove a constraint from.</param>
         /// <param name="index">Index of the constraint to remove.</param>
         /// <param name="handlesToConstraints">The handle to constraint mapping used by the solver that could be modified by a swap on removal.</param>
-        public override unsafe void Remove(ref TypeBatch typeBatch, int index, ref Buffer<ConstraintLocation> handlesToConstraints)
+        /// <param name="isFallback">True if the type batch being removed from belongs to the fallback batch, false otherwise.</param>
+        public override unsafe void Remove(ref TypeBatch typeBatch, int index, ref Buffer<ConstraintLocation> handlesToConstraints, bool isFallback)
         {
             Debug.Assert(index >= 0 && index < typeBatch.ConstraintCount, "Can only remove elements that are actually in the batch!");
-            var lastIndex = typeBatch.ConstraintCount - 1;
-            typeBatch.ConstraintCount = lastIndex;
-            BundleIndexing.GetBundleIndices(lastIndex, out var sourceBundleIndex, out var sourceInnerIndex);
-
-            ref var bodyReferences = ref Unsafe.As<byte, TBodyReferences>(ref *typeBatch.BodyReferences.Memory);
-            if (index < lastIndex)
+            if (isFallback)
             {
-                //Need to swap.
-                ref var prestepData = ref Unsafe.As<byte, TPrestepData>(ref *typeBatch.PrestepData.Memory);
-                ref var accumulatedImpulses = ref Unsafe.As<byte, TAccumulatedImpulse>(ref *typeBatch.AccumulatedImpulses.Memory);
-                BundleIndexing.GetBundleIndices(index, out var targetBundleIndex, out var targetInnerIndex);
-                Move(
-                    ref Unsafe.Add(ref bodyReferences, sourceBundleIndex), ref Unsafe.Add(ref prestepData, sourceBundleIndex), ref Unsafe.Add(ref accumulatedImpulses, sourceBundleIndex),
-                    typeBatch.IndexToHandle[lastIndex], sourceInnerIndex,
-                    ref Unsafe.Add(ref bodyReferences, targetBundleIndex), ref Unsafe.Add(ref prestepData, targetBundleIndex), ref Unsafe.Add(ref accumulatedImpulses, targetBundleIndex),
-                    ref typeBatch.IndexToHandle[index], targetInnerIndex, index,
-                    ref handlesToConstraints);
-            }
-            //Clear the now-empty last slot of the body references bundle.
-            RemoveBodyReferencesLane(ref Unsafe.Add(ref bodyReferences, sourceBundleIndex), sourceInnerIndex);
-        }
-
-        /// <summary>
-        /// Removes a constraint from the batch, assuming it belongs to a fallback batch.
-        /// </summary>
-        /// <param name="index">Index of the constraint to remove.</param>
-        /// <param name="handlesToConstraints">The handle to constraint mapping used by the solver that could be modified by a swap on removal.</param>
-        public unsafe void RemoveForFallback(ref TypeBatch typeBatch, int index, ref Buffer<ConstraintLocation> handlesToConstraints)
-        {
-            Debug.Assert(index >= 0 && index < typeBatch.ConstraintCount, "Can only remove elements that are actually in the batch!");
-            //The fallback batch does not guarantee contiguity of constraints, only contiguity of *bundles*.
-            //Bundles may be incomplete.
-            //We must guarantee that a bundle never contains references to the same body more than once.
-            //So, it's not safe to simply pull the last constraint into the removed slot.
-            //Instead, remove the constraint from whatever bundle it's in, and if it is empty afterwards, pull the whole last bundle into its position.
-            BundleIndexing.GetBundleIndices(index, out var removedBundleIndex, out var removedInnerIndex);
-            var bodyReferences = typeBatch.BodyReferences.As<TBodyReferences>();
-            ref var removedBundleSlot = ref bodyReferences[removedBundleIndex];
-            RemoveBodyReferencesLane(ref removedBundleSlot, removedInnerIndex);
-            var firstBodyReferences = Unsafe.As<TBodyReferences, Vector<int>>(ref removedBundleSlot);
-            if (Vector.LessThanAll(firstBodyReferences, Vector<int>.Zero))
-            {
-                //All slots in the bundle are now empty; this bundle should be removed.
-                var lastBundleIndex = typeBatch.BundleCount - 1;
-                if (removedBundleIndex != lastBundleIndex)
+                //The fallback batch does not guarantee contiguity of constraints, only contiguity of *bundles*.
+                //Bundles may be incomplete.
+                //We must guarantee that a bundle never contains references to the same body more than once.
+                //So, it's not safe to simply pull the last constraint into the removed slot.
+                //Instead, remove the constraint from whatever bundle it's in, and if it is empty afterwards, pull the whole last bundle into its position.
+                BundleIndexing.GetBundleIndices(index, out var removedBundleIndex, out var removedInnerIndex);
+                var bodyReferences = typeBatch.BodyReferences.As<TBodyReferences>();
+                ref var removedBundleSlot = ref bodyReferences[removedBundleIndex];
+                RemoveBodyReferencesLane(ref removedBundleSlot, removedInnerIndex);
+                var firstBodyReferences = Unsafe.As<TBodyReferences, Vector<int>>(ref removedBundleSlot);
+                if (Vector.LessThanAll(firstBodyReferences, Vector<int>.Zero))
                 {
-                    //There is a bundle to move into the now-dead bundle slot.
-                    var prestepData = typeBatch.PrestepData.As<TPrestepData>();
-                    var accumulatedImpulses = typeBatch.PrestepData.As<TPrestepData>();
-                    prestepData[removedBundleIndex] = prestepData[lastBundleIndex];
-                    accumulatedImpulses[removedBundleIndex] = accumulatedImpulses[lastBundleIndex];
-                    bodyReferences[removedBundleIndex] = bodyReferences[lastBundleIndex];
-                    var firstBodyLaneForMovedBundle = (int*)Unsafe.AsPointer(ref bodyReferences[lastBundleIndex]);
-                    //Update all constraint locations for the move.
-                    var constraintIndexShift = (lastBundleIndex - removedBundleIndex) * Vector<int>.Count;
-                    var bundleStartIndexInConstraints = lastBundleIndex * Vector<int>.Count;
-                    for (int i = 0; i < Vector<int>.Count; ++i)
+                    //All slots in the bundle are now empty; this bundle should be removed.
+                    var lastBundleIndex = typeBatch.BundleCount - 1;
+                    if (removedBundleIndex != lastBundleIndex)
                     {
-                        if (firstBodyLaneForMovedBundle[i] >= 0)
+                        //There is a bundle to move into the now-dead bundle slot.
+                        var prestepData = typeBatch.PrestepData.As<TPrestepData>();
+                        var accumulatedImpulses = typeBatch.PrestepData.As<TPrestepData>();
+                        prestepData[removedBundleIndex] = prestepData[lastBundleIndex];
+                        accumulatedImpulses[removedBundleIndex] = accumulatedImpulses[lastBundleIndex];
+                        bodyReferences[removedBundleIndex] = bodyReferences[lastBundleIndex];
+                        var firstBodyLaneForMovedBundle = (int*)Unsafe.AsPointer(ref bodyReferences[lastBundleIndex]);
+                        //Update all constraint locations for the move.
+                        var constraintIndexShift = (lastBundleIndex - removedBundleIndex) * Vector<int>.Count;
+                        var bundleStartIndexInConstraints = lastBundleIndex * Vector<int>.Count;
+                        for (int i = 0; i < Vector<int>.Count; ++i)
                         {
-                            //This constraint actually exists.
-                            var constraintIndex = bundleStartIndexInConstraints + i;
-                            var newConstraintIndex = constraintIndex - constraintIndexShift;
-                            var handle = typeBatch.IndexToHandle[constraintIndex];
-                            typeBatch.IndexToHandle[newConstraintIndex] = handle;
-                            handlesToConstraints[handle.Value].IndexInTypeBatch = newConstraintIndex;
+                            if (firstBodyLaneForMovedBundle[i] >= 0)
+                            {
+                                //This constraint actually exists.
+                                var constraintIndex = bundleStartIndexInConstraints + i;
+                                var newConstraintIndex = constraintIndex - constraintIndexShift;
+                                var handle = typeBatch.IndexToHandle[constraintIndex];
+                                typeBatch.IndexToHandle[newConstraintIndex] = handle;
+                                handlesToConstraints[handle.Value].IndexInTypeBatch = newConstraintIndex;
+                            }
                         }
+                        //Removed the last bundle index, so drop back by one.
+                        --lastBundleIndex;
                     }
-                    //Removed the last bundle index, so drop back by one.
-                    --lastBundleIndex;
-                }
-                if (lastBundleIndex >= 0)
-                {
-                    //Calculate the new constraint count by getting the highest index in the new last bundle.
-                    var lastInnerIndex = BundleIndexing.GetLastSetLaneIndex(Vector.LessThan(Unsafe.As<TBodyReferences, Vector<int>>(ref bodyReferences[lastBundleIndex]), Vector<int>.Zero));
-                    typeBatch.ConstraintCount = lastBundleIndex * Vector<int>.Count + lastInnerIndex;
+                    if (lastBundleIndex >= 0)
+                    {
+                        //Calculate the new constraint count by getting the highest index in the new last bundle.
+                        var innerLaneCount = BundleIndexing.GetLastSetLaneCount(Vector.LessThan(Unsafe.As<TBodyReferences, Vector<int>>(ref bodyReferences[lastBundleIndex]), Vector<int>.Zero));
+                        typeBatch.ConstraintCount = lastBundleIndex * Vector<int>.Count + innerLaneCount;
 
-                }
-                else
-                {
-                    //The last bundle was removed; there are no more constraints.
-                    typeBatch.ConstraintCount = 0;
+                    }
+                    else
+                    {
+                        //The last bundle was removed; there are no more constraints.
+                        typeBatch.ConstraintCount = 0;
+                    }
                 }
             }
+            else
+            {
+                var lastIndex = typeBatch.ConstraintCount - 1;
+                typeBatch.ConstraintCount = lastIndex;
+                BundleIndexing.GetBundleIndices(lastIndex, out var sourceBundleIndex, out var sourceInnerIndex);
+
+                ref var bodyReferences = ref Unsafe.As<byte, TBodyReferences>(ref *typeBatch.BodyReferences.Memory);
+                if (index < lastIndex)
+                {
+                    //Need to swap.
+                    ref var prestepData = ref Unsafe.As<byte, TPrestepData>(ref *typeBatch.PrestepData.Memory);
+                    ref var accumulatedImpulses = ref Unsafe.As<byte, TAccumulatedImpulse>(ref *typeBatch.AccumulatedImpulses.Memory);
+                    BundleIndexing.GetBundleIndices(index, out var targetBundleIndex, out var targetInnerIndex);
+                    Move(
+                        ref Unsafe.Add(ref bodyReferences, sourceBundleIndex), ref Unsafe.Add(ref prestepData, sourceBundleIndex), ref Unsafe.Add(ref accumulatedImpulses, sourceBundleIndex),
+                        typeBatch.IndexToHandle[lastIndex], sourceInnerIndex,
+                        ref Unsafe.Add(ref bodyReferences, targetBundleIndex), ref Unsafe.Add(ref prestepData, targetBundleIndex), ref Unsafe.Add(ref accumulatedImpulses, targetBundleIndex),
+                        ref typeBatch.IndexToHandle[index], targetInnerIndex, index,
+                        ref handlesToConstraints);
+                }
+                //Clear the now-empty last slot of the body references bundle.
+                RemoveBodyReferencesLane(ref Unsafe.Add(ref bodyReferences, sourceBundleIndex), sourceInnerIndex);
+            }
+
         }
+
 
         /// <summary>
         /// Moves a constraint from one ConstraintBatch's TypeBatch to another ConstraintBatch's TypeBatch of the same type.

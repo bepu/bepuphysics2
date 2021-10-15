@@ -899,7 +899,7 @@ namespace BepuPhysics
             {
                 batch.RemoveBodyHandlesFromBatchForConstraint(typeId, indexInTypeBatch, batchIndex, this);
             }
-            batch.Remove(typeId, indexInTypeBatch, this);
+            batch.Remove(typeId, indexInTypeBatch, batchIndex == FallbackBatchThreshold, this);
             RemoveBatchIfEmpty(ref batch, batchIndex);
         }
 

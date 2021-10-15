@@ -189,14 +189,14 @@ namespace BepuPhysics
             solver.TypeProcessors[constraintTypeId].EnumerateConnectedBodyIndices(ref TypeBatches[typeBatchIndex], indexInTypeBatch, ref handleRemover);
         }
 
-        public unsafe void Remove(int constraintTypeId, int indexInTypeBatch, Solver solver)
+        public unsafe void Remove(int constraintTypeId, int indexInTypeBatch, bool isFallback, Solver solver)
         {
             var typeBatchIndex = TypeIndexToTypeBatchIndex[constraintTypeId];
             ref var typeBatch = ref TypeBatches[typeBatchIndex];
             Debug.Assert(TypeIndexToTypeBatchIndex[constraintTypeId] >= 0, "Type index must actually exist within this batch.");
             Debug.Assert(typeBatch.ConstraintCount > indexInTypeBatch);
             var typeProcessor = solver.TypeProcessors[constraintTypeId];
-            typeProcessor.Remove(ref typeBatch, indexInTypeBatch, ref solver.HandleToConstraint);
+            typeProcessor.Remove(ref typeBatch, indexInTypeBatch, ref solver.HandleToConstraint, isFallback);
             RemoveTypeBatchIfEmpty(ref typeBatch, typeBatchIndex, solver.pool);
         }
 

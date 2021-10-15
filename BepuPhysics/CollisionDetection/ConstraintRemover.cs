@@ -410,7 +410,8 @@ namespace BepuPhysics.CollisionDetection
                 //That's because removals can change the index, so caching indices would require sorting the indices for each type batch before removing.
                 //That's very much doable, but not doing it is simpler, and the performance difference is likely trivial.
                 //TODO: Likely worth testing.
-                typeProcessor.Remove(ref typeBatch, solver.HandleToConstraint[handle.Value].IndexInTypeBatch, ref solver.HandleToConstraint);
+                ref var location = ref solver.HandleToConstraint[handle.Value];
+                typeProcessor.Remove(ref typeBatch, location.IndexInTypeBatch, ref solver.HandleToConstraint, location.BatchIndex == solver.FallbackBatchThreshold);
                 if (typeBatch.ConstraintCount == 0)
                 {
                     //This batch-typebatch needs to be removed.
