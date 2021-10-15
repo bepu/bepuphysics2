@@ -1,4 +1,5 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics.Constraints;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
@@ -124,6 +125,26 @@ namespace BepuPhysics
         //It'll just require some testing.
         //(The broad phase is a pretty likely candidate for this overlay- it both causes no changes in constraints and is very stally compared to most other phases.)
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private unsafe void TryToFindBetterBatchForConstraint(
+            BufferPool pool, ref QuickList<Compression> compressions, ref TypeBatch typeBatch, Span<int> bodyHandlesSpan, ref ActiveConstraintBodyHandleCollector handleAccumulator, TypeProcessor typeProcessor, int constraintIndex)
+        {
+            handleAccumulator.Index = 0;
+            typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, constraintIndex, ref handleAccumulator);
+            for (int batchIndex = nextBatchIndex - 1; batchIndex >= 0; --batchIndex)
+            {
+                //The batch index will never be the fallback batch, since the fallback batch is the very last batch (if it exists at all). So uses of batch referenced handles is safe.
+                if (Solver.batchReferencedHandles[batchIndex].CanFit(bodyHandlesSpan))
+                {
+                    compressions.Add(new Compression { ConstraintHandle = typeBatch.IndexToHandle[constraintIndex], TargetBatch = batchIndex }, pool);
+                    return;
+                }
+            }
+
+        }
+
+
         unsafe void DoJob(ref AnalysisRegion region, int workerIndex, BufferPool pool)
         {
             ref var compressions = ref this.workerCompressions[workerIndex];
@@ -135,26 +156,31 @@ namespace BepuPhysics
             //Each job only works on a subset of a single type batch.
             var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
             var bodyHandles = stackalloc int[bodiesPerConstraint];
+            var bodyHandlesSpan = new Span<int>(bodyHandles, bodiesPerConstraint);
             ActiveConstraintBodyHandleCollector handleAccumulator;
             handleAccumulator.Bodies = Bodies;
             handleAccumulator.Handles = bodyHandles;
-            var bodyHandlesSpan = new Span<int>(bodyHandles, bodiesPerConstraint);
-            for (int i = region.StartIndexInTypeBatch; i < region.EndIndexInTypeBatch; ++i)
+            handleAccumulator.Index = 0;
+            if (nextBatchIndex == Solver.FallbackBatchThreshold)
             {
-                //Check if this constraint can be removed.
-                handleAccumulator.Index = 0;
-                typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, i, ref handleAccumulator);
-                for (int batchIndex = 0; batchIndex < nextBatchIndex; ++batchIndex)
+                for (int i = region.StartIndexInTypeBatch; i < region.EndIndexInTypeBatch; ++i)
                 {
-                    //The batch index will never be the fallback batch, since the fallback batch is the very last batch (if it exists at all). So uses of batch referenced handles is safe.
-                    if (Solver.batchReferencedHandles[batchIndex].CanFit(bodyHandlesSpan))
-                    {
-                        compressions.Add(new Compression { ConstraintHandle = typeBatch.IndexToHandle[i], TargetBatch = batchIndex }, pool);
-                        break;
-                    }
+                    //This is a fallback batch; the rules are a little different.
+                    //Not all constraint slots up to the typeBatch.ConstraintCount are guaranteed to actually exist. It's potentially sparse.
+                    //Just skip them.
+                    if (typeBatch.IndexToHandle[i].Value >= 0)
+                        TryToFindBetterBatchForConstraint(pool, ref compressions, ref typeBatch, bodyHandlesSpan, ref handleAccumulator, typeProcessor, i);
+                }
+            }
+            else
+            {
+                for (int i = region.StartIndexInTypeBatch; i < region.EndIndexInTypeBatch; ++i)
+                {
+                    TryToFindBetterBatchForConstraint(pool, ref compressions, ref typeBatch, bodyHandlesSpan, ref handleAccumulator, typeProcessor, i);
                 }
             }
         }
+
 
         struct CompressionTarget
         {

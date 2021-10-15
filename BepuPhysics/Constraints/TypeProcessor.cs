@@ -319,6 +319,17 @@ namespace BepuPhysics.Constraints
             return false;
         }
 
+        [Conditional("DEBUG")]
+        void ValidateEmptyFallbackSlots(ref TypeBatch typeBatch)
+        {
+            for (int i = 0; i < typeBatch.ConstraintCount; ++i)
+            {
+                BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
+                var laneIsEmpty = Unsafe.As<TBodyReferences, Vector<int>>(ref typeBatch.BodyReferences.As<TBodyReferences>()[bundleIndex])[innerIndex] == -1;
+                Debug.Assert((typeBatch.IndexToHandle[i].Value == -1) == laneIsEmpty);
+            }
+        }
+
         public unsafe sealed override int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool)
         {
             Debug.Assert(typeBatch.BodyReferences.Allocated, "Should initialize the batch before allocating anything from it.");
@@ -383,7 +394,17 @@ namespace BepuPhysics.Constraints
             {
                 //None of the existing bundles can hold the constraint; we need a new one.
                 //Since a new bundle is guaranteed to not contain any other constraints, we can reuse the non-fallback logic.
-                return AllocateInTypeBatch(ref typeBatch, handle, bodyIndices, pool);
+                var oldCount = typeBatch.ConstraintCount;
+                var indexInTypeBatch = AllocateInTypeBatch(ref typeBatch, handle, bodyIndices, pool);
+                //Batch compression relies on all unoccupied slots having a IndexToHandle of -1.
+                //We've created a new bundle, which means we're responsible for setting all the slots from the previous count to the new count (excluding our just-added constraint!) to -1.
+                Debug.Assert(indexInTypeBatch == typeBatch.ConstraintCount - 1);
+                for (int i = oldCount; i < indexInTypeBatch; ++i)
+                {
+                    typeBatch.IndexToHandle[i].Value = -1;
+                }
+                //ValidateEmptyFallbackSlots(ref typeBatch);
+                return indexInTypeBatch;
             }
             else
             {
@@ -399,6 +420,7 @@ namespace BepuPhysics.Constraints
                 Debug.Assert(typeBatch.Projection.Length >= bundleCount * Unsafe.SizeOf<TProjection>());
                 Debug.Assert(typeBatch.BodyReferences.Length >= bundleCount * Unsafe.SizeOf<TBodyReferences>());
                 Debug.Assert(typeBatch.AccumulatedImpulses.Length >= bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
+                //ValidateEmptyFallbackSlots(ref typeBatch);
                 return indexInTypeBatch;
             }
 
@@ -486,6 +508,8 @@ namespace BepuPhysics.Constraints
                 BundleIndexing.GetBundleIndices(index, out var removedBundleIndex, out var removedInnerIndex);
                 var bodyReferences = typeBatch.BodyReferences.As<TBodyReferences>();
                 ref var removedBundleSlot = ref bodyReferences[removedBundleIndex];
+                //Batch compression relies on unused constraints in the [0, ConstraintCount) interval having their handles pointing to -1.
+                typeBatch.IndexToHandle[index].Value = -1;
                 RemoveBodyReferencesLane(ref removedBundleSlot, removedInnerIndex);
                 var firstBodyReferences = Unsafe.As<TBodyReferences, Vector<int>>(ref removedBundleSlot);
                 if (Vector.LessThanAll(firstBodyReferences, Vector<int>.Zero))
@@ -512,6 +536,7 @@ namespace BepuPhysics.Constraints
                                 var constraintIndex = bundleStartIndexInConstraints + i;
                                 var newConstraintIndex = constraintIndex - constraintIndexShift;
                                 var handle = typeBatch.IndexToHandle[constraintIndex];
+                                typeBatch.IndexToHandle[constraintIndex].Value = -1; //Removed handles should be set to -1.
                                 typeBatch.IndexToHandle[newConstraintIndex] = handle;
                                 handlesToConstraints[handle.Value].IndexInTypeBatch = newConstraintIndex;
                             }
@@ -519,18 +544,11 @@ namespace BepuPhysics.Constraints
                         //Removed the last bundle index, so drop back by one.
                         --lastBundleIndex;
                     }
-                    if (lastBundleIndex >= 0)
-                    {
-                        //Calculate the new constraint count by getting the highest index in the new last bundle.
-                        var innerLaneCount = BundleIndexing.GetLastSetLaneCount(Vector.LessThan(Unsafe.As<TBodyReferences, Vector<int>>(ref bodyReferences[lastBundleIndex]), Vector<int>.Zero));
-                        typeBatch.ConstraintCount = lastBundleIndex * Vector<int>.Count + innerLaneCount;
+                    //Calculate the new constraint count by getting the highest index in the new last bundle.
+                    var innerLaneCount = BundleIndexing.GetLastSetLaneCount(Vector.GreaterThanOrEqual(Unsafe.As<TBodyReferences, Vector<int>>(ref bodyReferences[lastBundleIndex]), Vector<int>.Zero));
+                    typeBatch.ConstraintCount = lastBundleIndex * Vector<int>.Count + innerLaneCount;
 
-                    }
-                    else
-                    {
-                        //The last bundle was removed; there are no more constraints.
-                        typeBatch.ConstraintCount = 0;
-                    }
+                    //ValidateEmptyFallbackSlots(ref typeBatch);
                 }
             }
             else
