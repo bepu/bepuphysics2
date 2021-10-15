@@ -143,32 +143,6 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe void Allocate(ConstraintHandle handle, Span<BodyHandle> constraintBodyHandles, Bodies bodies,
-            int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool, out ConstraintReference reference)
-        {
-            //Add all the constraint's body handles to the batch we found (or created) to block future references to the same bodies.
-            //Also, convert the handle into a memory index. Constraints store a direct memory reference for performance reasons.
-            var bodyIndices = stackalloc int[constraintBodyHandles.Length];
-            for (int j = 0; j < constraintBodyHandles.Length; ++j)
-            {
-                var bodyHandle = constraintBodyHandles[j];
-                ref var location = ref bodies.HandleToLocation[bodyHandle.Value];
-                Debug.Assert(location.SetIndex == 0, "Creating a new constraint should have forced the connected bodies awake.");
-                bodyIndices[j] = location.Index;
-            }
-            var typeBatch = GetOrCreateTypeBatch(typeId, typeProcessor, initialCapacity, pool);
-            reference = new ConstraintReference(typeBatch, typeProcessor.Allocate(ref *typeBatch, handle, bodyIndices, pool));
-            //TODO: We could adjust the typeBatchAllocation capacities in response to the allocated index.
-            //If it exceeds the current capacity, we could ensure the new size is still included.
-            //The idea here would be to avoid resizes later by ensuring that the historically encountered size is always used to initialize.
-            //This isn't necessarily beneficial, though- often, higher indexed batches will contain smaller numbers of constraints, so allocating a huge number
-            //of constraints into them is very low value. You may want to be a little more clever about the heuristic. Either way, only bother with this once there is 
-            //evidence that typebatch resizes are ever a concern. This will require frame spike analysis, not merely average timings.
-            //(While resizes will definitely occur, remember that it only really matters for *new* type batches- 
-            //and it is rare that a new type batch will be created that actually needs to be enormous.)
-        }
-
-
         unsafe struct ActiveBodyHandleRemover : IForEach<int>
         {
             public Bodies Bodies;

@@ -501,7 +501,33 @@ namespace BepuPhysics
         internal unsafe void AllocateInBatch(int targetBatchIndex, ConstraintHandle constraintHandle, Span<BodyHandle> bodyHandles, int typeId, out ConstraintReference reference)
         {
             ref var batch = ref ActiveSet.Batches[targetBatchIndex];
-            batch.Allocate(constraintHandle, bodyHandles, bodies, typeId, TypeProcessors[typeId], GetMinimumCapacityForType(typeId), pool, out reference);
+            //Add all the constraint's body handles to the batch we found (or created) to block future references to the same bodies.
+            //Also, convert the handle into a memory index. Constraints store a direct memory reference for performance reasons.
+            var bodyIndices = stackalloc int[bodyHandles.Length];
+            for (int j = 0; j < bodyHandles.Length; ++j)
+            {
+                var bodyHandle = bodyHandles[j];
+                ref var location = ref bodies.HandleToLocation[bodyHandle.Value];
+                Debug.Assert(location.SetIndex == 0, "Creating a new constraint should have forced the connected bodies awake.");
+                bodyIndices[j] = location.Index;
+            }
+            var typeProcessor = TypeProcessors[typeId];
+            var typeBatch = batch.GetOrCreateTypeBatch(typeId, typeProcessor, GetMinimumCapacityForType(typeId), pool);
+            int indexInTypeBatch;
+            if (targetBatchIndex == FallbackBatchThreshold)
+                indexInTypeBatch = typeProcessor.AllocateInTypeBatchForFallback(ref *typeBatch, constraintHandle, bodyIndices, pool);
+            else
+                indexInTypeBatch = typeProcessor.AllocateInTypeBatch(ref *typeBatch, constraintHandle, bodyIndices, pool);
+            reference = new ConstraintReference(typeBatch, indexInTypeBatch);
+            //TODO: We could adjust the typeBatchAllocation capacities in response to the allocated index.
+            //If it exceeds the current capacity, we could ensure the new size is still included.
+            //The idea here would be to avoid resizes later by ensuring that the historically encountered size is always used to initialize.
+            //This isn't necessarily beneficial, though- often, higher indexed batches will contain smaller numbers of constraints, so allocating a huge number
+            //of constraints into them is very low value. You may want to be a little more clever about the heuristic. Either way, only bother with this once there is 
+            //evidence that typebatch resizes are ever a concern. This will require frame spike analysis, not merely average timings.
+            //(While resizes will definitely occur, remember that it only really matters for *new* type batches- 
+            //and it is rare that a new type batch will be created that actually needs to be enormous.)
+
             ref var handlesSet = ref batchReferencedHandles[targetBatchIndex];
             for (int i = 0; i < bodyHandles.Length; ++i)
             {
