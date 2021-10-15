@@ -17,9 +17,9 @@ namespace BepuPhysics
     {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteGatherInertia(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<SolverState> states, ref BodyInertiaWide gatheredInertias)
+        private static void WriteGatherInertia(int index, int bodyIndexInBundle, ref Buffer<SolverState> states, ref BodyInertiaWide gatheredInertias)
         {
-            ref var source = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)].Inertia.World;
+            ref var source = ref states[index].Inertia.World;
             ref var targetSlot = ref GetOffsetInstance(ref gatheredInertias, bodyIndexInBundle);
             GetFirst(ref targetSlot.InverseInertiaTensor.XX) = source.InverseInertiaTensor.XX;
             GetFirst(ref targetSlot.InverseInertiaTensor.YX) = source.InverseInertiaTensor.YX;
@@ -31,10 +31,10 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteGatherMotionState(ref int bundleBaseBodyIndexInSet, int bodyIndexInBundle, ref Buffer<SolverState> states,
+        private static void WriteGatherMotionState(int index, int bodyIndexInBundle, ref Buffer<SolverState> states,
             ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
         {
-            ref var state = ref states[Unsafe.Add(ref bundleBaseBodyIndexInSet, bodyIndexInBundle)].Motion;
+            ref var state = ref states[index].Motion;
             Vector3Wide.WriteFirst(state.Pose.Position, ref GetOffsetInstance(ref position, bodyIndexInBundle));
             QuaternionWide.WriteFirst(state.Pose.Orientation, ref GetOffsetInstance(ref orientation, bodyIndexInBundle));
             Vector3Wide.WriteFirst(state.Velocity.Linear, ref GetOffsetInstance(ref velocity.Linear, bodyIndexInBundle));
@@ -45,13 +45,12 @@ namespace BepuPhysics
         /// Gathers motion state information for a body bundle into an AOSOA bundle.
         /// </summary>
         /// <param name="references">Active body indices being gathered.</param>
-        /// <param name="count">Number of body pairs in the bundle.</param>
         /// <param name="position">Gathered absolute position of the body.</param>
         /// <param name="orientation">Gathered orientation of the body.</param>
         /// <param name="velocity">Gathered velocity of the body.</param>
         /// <param name="inertia">Gathered inertia of the body.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherState(ref Vector<int> references, int count,
+        public void GatherState(ref Vector<int> references,
             out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
         {
             Unsafe.SkipInit(out position);
@@ -62,19 +61,21 @@ namespace BepuPhysics
             //It directly reports the position, thereby infecting vectorized logic with the high precision representation.
             //You might be able to redesign the users of this function to not need it, but that comes with its own difficulties
             //(for example, making the grab motor rely on having its goal offset updated every frame by the user).
-            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndex = ref Unsafe.As<Vector<int>, int>(ref references);
 
-            for (int i = 0; i < count; ++i)
+            for (int i = 0; i < Vector<int>.Count; ++i)
             {
-                WriteGatherMotionState(ref baseIndex, i, ref ActiveSet.SolverStates, ref position, ref orientation, ref velocity);
-                WriteGatherInertia(ref baseIndex, i, ref ActiveSet.SolverStates, ref inertia);
+                var index = Unsafe.Add(ref baseIndex, i);
+                if (index < 0)
+                    continue;
+                WriteGatherMotionState(index, i, ref ActiveSet.SolverStates, ref position, ref orientation, ref velocity);
+                WriteGatherInertia(index, i, ref ActiveSet.SolverStates, ref inertia);
             }
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void FallbackGatherMotionState(int count, SolverState* states, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
+        unsafe static void FallbackGatherMotionState(SolverState* states, ref Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
         {
             var indices = (int*)Unsafe.AsPointer(ref baseIndex);
             var pPositionX = (float*)Unsafe.AsPointer(ref position.X);
@@ -91,9 +92,11 @@ namespace BepuPhysics
             var pAngularY = (float*)Unsafe.AsPointer(ref velocity.Angular.Y);
             var pAngularZ = (float*)Unsafe.AsPointer(ref velocity.Angular.Z);
 
-            for (int i = 0; i < count; ++i)
+            for (int i = 0; i < Vector<int>.Count; ++i)
             {
                 var index = indices[i];
+                if (index < 0)
+                    continue;
                 var stateValues = (float*)(states + index);
                 pPositionX[i] = stateValues[MotionState.OffsetToPositionX];
                 pPositionY[i] = stateValues[MotionState.OffsetToPositionY];
@@ -110,7 +113,7 @@ namespace BepuPhysics
                 pAngularZ[i] = stateValues[MotionState.OffsetToAngularZ];
             }
         }
-        unsafe static void FallbackGatherInertia(int count, SolverState* states, ref Vector<int> baseIndex, ref BodyInertiaWide inertia, int offsetInFloats)
+        unsafe static void FallbackGatherInertia(SolverState* states, ref Vector<int> baseIndex, ref BodyInertiaWide inertia, int offsetInFloats)
         {
             var indices = (int*)Unsafe.AsPointer(ref baseIndex);
             var pMass = (float*)Unsafe.AsPointer(ref inertia.InverseMass);
@@ -121,9 +124,11 @@ namespace BepuPhysics
             var pInertiaZY = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.ZY);
             var pInertiaZZ = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.ZZ);
 
-            for (int i = 0; i < count; ++i)
+            for (int i = 0; i < Vector<int>.Count; ++i)
             {
                 var index = indices[i];
+                if (index < 0)
+                    continue;
                 var inertiaValues = (float*)(states + index) + offsetInFloats;
                 pInertiaXX[i] = inertiaValues[0];
                 pInertiaYX[i] = inertiaValues[1];
@@ -136,7 +141,7 @@ namespace BepuPhysics
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GatherState<TAccessFilter>(ref Vector<int> bodyIndices, int count, bool worldInertia, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
+        public unsafe void GatherState<TAccessFilter>(ref Vector<int> bodyIndices, bool worldInertia, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
             where TAccessFilter : unmanaged, IBodyAccessFilter
         {
             var solverStates = ActiveSet.SolverStates.Memory;
@@ -169,14 +174,14 @@ namespace BepuPhysics
                 {
                     //Load every body for the first half of the motion state.
                     //Note that buffers are allocated on cache line boundaries, so we can use aligned loads for all that matters.
-                    var m0 = Avx.LoadAlignedVector256(s0);
-                    var m1 = count > 1 ? Avx.LoadAlignedVector256(s1) : Vector256<float>.Zero;
-                    var m2 = count > 2 ? Avx.LoadAlignedVector256(s2) : Vector256<float>.Zero;
-                    var m3 = count > 3 ? Avx.LoadAlignedVector256(s3) : Vector256<float>.Zero;
-                    var m4 = count > 4 ? Avx.LoadAlignedVector256(s4) : Vector256<float>.Zero;
-                    var m5 = count > 5 ? Avx.LoadAlignedVector256(s5) : Vector256<float>.Zero;
-                    var m6 = count > 6 ? Avx.LoadAlignedVector256(s6) : Vector256<float>.Zero;
-                    var m7 = count > 7 ? Avx.LoadAlignedVector256(s7) : Vector256<float>.Zero;
+                    var m0 = indices[0] >= 0 ? Avx.LoadAlignedVector256(s0) : Vector256<float>.Zero;
+                    var m1 = indices[1] >= 0 ? Avx.LoadAlignedVector256(s1) : Vector256<float>.Zero;
+                    var m2 = indices[2] >= 0 ? Avx.LoadAlignedVector256(s2) : Vector256<float>.Zero;
+                    var m3 = indices[3] >= 0 ? Avx.LoadAlignedVector256(s3) : Vector256<float>.Zero;
+                    var m4 = indices[4] >= 0 ? Avx.LoadAlignedVector256(s4) : Vector256<float>.Zero;
+                    var m5 = indices[5] >= 0 ? Avx.LoadAlignedVector256(s5) : Vector256<float>.Zero;
+                    var m6 = indices[6] >= 0 ? Avx.LoadAlignedVector256(s6) : Vector256<float>.Zero;
+                    var m7 = indices[7] >= 0 ? Avx.LoadAlignedVector256(s7) : Vector256<float>.Zero;
 
                     var n0 = Avx.UnpackLow(m0, m1);
                     var n1 = Avx.UnpackLow(m2, m3);
@@ -221,14 +226,14 @@ namespace BepuPhysics
 
                 {
                     //Second half.
-                    var m0 = Avx.LoadAlignedVector256(s0 + 8);
-                    var m1 = count > 1 ? Avx.LoadAlignedVector256(s1 + 8) : Vector256<float>.Zero;
-                    var m2 = count > 2 ? Avx.LoadAlignedVector256(s2 + 8) : Vector256<float>.Zero;
-                    var m3 = count > 3 ? Avx.LoadAlignedVector256(s3 + 8) : Vector256<float>.Zero;
-                    var m4 = count > 4 ? Avx.LoadAlignedVector256(s4 + 8) : Vector256<float>.Zero;
-                    var m5 = count > 5 ? Avx.LoadAlignedVector256(s5 + 8) : Vector256<float>.Zero;
-                    var m6 = count > 6 ? Avx.LoadAlignedVector256(s6 + 8) : Vector256<float>.Zero;
-                    var m7 = count > 7 ? Avx.LoadAlignedVector256(s7 + 8) : Vector256<float>.Zero;
+                    var m0 = indices[0] >= 0 ? Avx.LoadAlignedVector256(s0 + 8) : Vector256<float>.Zero;
+                    var m1 = indices[1] >= 0 ? Avx.LoadAlignedVector256(s1 + 8) : Vector256<float>.Zero;
+                    var m2 = indices[2] >= 0 ? Avx.LoadAlignedVector256(s2 + 8) : Vector256<float>.Zero;
+                    var m3 = indices[3] >= 0 ? Avx.LoadAlignedVector256(s3 + 8) : Vector256<float>.Zero;
+                    var m4 = indices[4] >= 0 ? Avx.LoadAlignedVector256(s4 + 8) : Vector256<float>.Zero;
+                    var m5 = indices[5] >= 0 ? Avx.LoadAlignedVector256(s5 + 8) : Vector256<float>.Zero;
+                    var m6 = indices[6] >= 0 ? Avx.LoadAlignedVector256(s6 + 8) : Vector256<float>.Zero;
+                    var m7 = indices[7] >= 0 ? Avx.LoadAlignedVector256(s7 + 8) : Vector256<float>.Zero;
 
                     var n0 = Avx.UnpackLow(m0, m1);
                     var n1 = Avx.UnpackLow(m2, m3);
@@ -274,14 +279,14 @@ namespace BepuPhysics
                     var offsetInFloats = worldInertia ? 24 : 16;
 
                     //Load every inertia vector.
-                    var m0 = Avx.LoadAlignedVector256(s0 + offsetInFloats);
-                    var m1 = count > 1 ? Avx.LoadAlignedVector256(s1 + offsetInFloats) : Vector256<float>.Zero;
-                    var m2 = count > 2 ? Avx.LoadAlignedVector256(s2 + offsetInFloats) : Vector256<float>.Zero;
-                    var m3 = count > 3 ? Avx.LoadAlignedVector256(s3 + offsetInFloats) : Vector256<float>.Zero;
-                    var m4 = count > 4 ? Avx.LoadAlignedVector256(s4 + offsetInFloats) : Vector256<float>.Zero;
-                    var m5 = count > 5 ? Avx.LoadAlignedVector256(s5 + offsetInFloats) : Vector256<float>.Zero;
-                    var m6 = count > 6 ? Avx.LoadAlignedVector256(s6 + offsetInFloats) : Vector256<float>.Zero;
-                    var m7 = count > 7 ? Avx.LoadAlignedVector256(s7 + offsetInFloats) : Vector256<float>.Zero;
+                    var m0 = indices[0] >= 0 ? Avx.LoadAlignedVector256(s0 + offsetInFloats) : Vector256<float>.Zero;
+                    var m1 = indices[1] >= 0 ? Avx.LoadAlignedVector256(s1 + offsetInFloats) : Vector256<float>.Zero;
+                    var m2 = indices[2] >= 0 ? Avx.LoadAlignedVector256(s2 + offsetInFloats) : Vector256<float>.Zero;
+                    var m3 = indices[3] >= 0 ? Avx.LoadAlignedVector256(s3 + offsetInFloats) : Vector256<float>.Zero;
+                    var m4 = indices[4] >= 0 ? Avx.LoadAlignedVector256(s4 + offsetInFloats) : Vector256<float>.Zero;
+                    var m5 = indices[5] >= 0 ? Avx.LoadAlignedVector256(s5 + offsetInFloats) : Vector256<float>.Zero;
+                    var m6 = indices[6] >= 0 ? Avx.LoadAlignedVector256(s6 + offsetInFloats) : Vector256<float>.Zero;
+                    var m7 = indices[7] >= 0 ? Avx.LoadAlignedVector256(s7 + offsetInFloats) : Vector256<float>.Zero;
 
                     var n0 = Avx.UnpackLow(m0, m1);
                     var n1 = Avx.UnpackLow(m2, m3);
@@ -331,8 +336,8 @@ namespace BepuPhysics
                 Unsafe.SkipInit(out orientation);
                 Unsafe.SkipInit(out velocity);
                 Unsafe.SkipInit(out inertia);
-                FallbackGatherMotionState(count, solverStates, ref bodyIndices, ref position, ref orientation, ref velocity);
-                FallbackGatherInertia(count, solverStates, ref bodyIndices, ref inertia, worldInertia ? 24 : 16);
+                FallbackGatherMotionState(solverStates, ref bodyIndices, ref position, ref orientation, ref velocity);
+                FallbackGatherInertia(solverStates, ref bodyIndices, ref inertia, worldInertia ? 24 : 16);
             }
         }
 
@@ -437,21 +442,19 @@ namespace BepuPhysics
         /// <param name="inertiaA">Gathered inertia of body A.</param>
         /// <param name="inertiaB">Gathered inertia of body B.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GatherState(ref TwoBodyReferences references, int count,
+        public unsafe void GatherState(ref TwoBodyReferences references,
         out QuaternionWide orientationA, out BodyVelocityWide velocityA, out BodyInertiaWide inertiaA,
         out Vector3Wide ab,
         out QuaternionWide orientationB, out BodyVelocityWide velocityB, out BodyInertiaWide inertiaB)
         {
-            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
-            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
-            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
-            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
-
             ref var states = ref ActiveSet.SolverStates;
 
-            GatherState<AccessAll>(ref references.IndexA, count, true, out var positionA, out orientationA, out velocityA, out inertiaA);
-            GatherState<AccessAll>(ref references.IndexB, count, true, out var positionB, out orientationB, out velocityB, out inertiaB);
+            GatherState<AccessAll>(ref references.IndexA, true, out var positionA, out orientationA, out velocityA, out inertiaA);
+            GatherState<AccessAll>(ref references.IndexB, true, out var positionB, out orientationB, out velocityB, out inertiaB);
 
+            ////Grab the base references for the body indices. Note that we make use of the references memory layout again.
+            //ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            //ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
             //for (int i = 0; i < count; ++i)
             //{
             //    //WriteGatherState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
@@ -491,41 +494,18 @@ namespace BepuPhysics
         /// <param name="inertiaB">Gathered inertia of body B.</param>
         /// <param name="inertiaC">Gathered inertia of body C.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherState(ref ThreeBodyReferences references, int count,
+        public void GatherState(ref ThreeBodyReferences references,
             out QuaternionWide orientationA, out BodyVelocityWide velocityA, out BodyInertiaWide inertiaA,
             out Vector3Wide ab,
             out QuaternionWide orientationB, out BodyVelocityWide velocityB, out BodyInertiaWide inertiaB,
             out Vector3Wide ac,
             out QuaternionWide orientationC, out BodyVelocityWide velocityC, out BodyInertiaWide inertiaC)
         {
-            Unsafe.SkipInit(out Vector3Wide positionA);
-            Unsafe.SkipInit(out Vector3Wide positionB);
-            Unsafe.SkipInit(out Vector3Wide positionC);
-            Unsafe.SkipInit(out orientationA);
-            Unsafe.SkipInit(out orientationB);
-            Unsafe.SkipInit(out orientationC);
-            Unsafe.SkipInit(out velocityA);
-            Unsafe.SkipInit(out velocityB);
-            Unsafe.SkipInit(out velocityC);
-            Unsafe.SkipInit(out inertiaA);
-            Unsafe.SkipInit(out inertiaB);
-            Unsafe.SkipInit(out inertiaC);
-            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
-            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
-            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
-            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
-            ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
 
-            ref var states = ref ActiveSet.SolverStates;
-            for (int i = 0; i < count; ++i)
-            {
-                WriteGatherMotionState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
-                WriteGatherInertia(ref baseIndexA, i, ref states, ref inertiaA);
-                WriteGatherMotionState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
-                WriteGatherInertia(ref baseIndexB, i, ref states, ref inertiaB);
-                WriteGatherMotionState(ref baseIndexC, i, ref states, ref positionC, ref orientationC, ref velocityC);
-                WriteGatherInertia(ref baseIndexC, i, ref states, ref inertiaC);
-            }
+            GatherState<AccessAll>(ref references.IndexA, true, out var positionA, out orientationA, out velocityA, out inertiaA);
+            GatherState<AccessAll>(ref references.IndexB, true, out var positionB, out orientationB, out velocityB, out inertiaB);
+            GatherState<AccessAll>(ref references.IndexC, true, out var positionC, out orientationC, out velocityC, out inertiaC);
+
             //TODO: In future versions, we will likely store the body position in different forms to allow for extremely large worlds.
             //That will be an opt-in feature. The default implementation will use the FP32 representation, but the user could choose to swap it out for a fp64 or fixed64 representation.
             //This affects other systems- AABB calculation, pose integration, solving, and in extreme (64 bit) cases, the broadphase.
@@ -559,7 +539,7 @@ namespace BepuPhysics
         /// <param name="inertiaC">Gathered inertia of body C.</param>
         /// <param name="inertiaD">Gathered inertia of body C.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherState(ref FourBodyReferences references, int count,
+        public void GatherState(ref FourBodyReferences references,
             out QuaternionWide orientationA, out BodyVelocityWide velocityA, out BodyInertiaWide inertiaA,
             out Vector3Wide ab,
             out QuaternionWide orientationB, out BodyVelocityWide velocityB, out BodyInertiaWide inertiaB,
@@ -568,41 +548,11 @@ namespace BepuPhysics
             out Vector3Wide ad,
             out QuaternionWide orientationD, out BodyVelocityWide velocityD, out BodyInertiaWide inertiaD)
         {
-            Unsafe.SkipInit(out Vector3Wide positionA);
-            Unsafe.SkipInit(out Vector3Wide positionB);
-            Unsafe.SkipInit(out Vector3Wide positionC);
-            Unsafe.SkipInit(out Vector3Wide positionD);
-            Unsafe.SkipInit(out orientationA);
-            Unsafe.SkipInit(out orientationB);
-            Unsafe.SkipInit(out orientationC);
-            Unsafe.SkipInit(out orientationD);
-            Unsafe.SkipInit(out velocityA);
-            Unsafe.SkipInit(out velocityB);
-            Unsafe.SkipInit(out velocityC);
-            Unsafe.SkipInit(out velocityD);
-            Unsafe.SkipInit(out inertiaA);
-            Unsafe.SkipInit(out inertiaB);
-            Unsafe.SkipInit(out inertiaC);
-            Unsafe.SkipInit(out inertiaD);
-            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
-            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
-            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
-            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
-            ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
-            ref var baseIndexD = ref Unsafe.As<Vector<int>, int>(ref references.IndexD);
 
-            ref var states = ref ActiveSet.SolverStates;
-            for (int i = 0; i < count; ++i)
-            {
-                WriteGatherMotionState(ref baseIndexA, i, ref states, ref positionA, ref orientationA, ref velocityA);
-                WriteGatherInertia(ref baseIndexA, i, ref states, ref inertiaA);
-                WriteGatherMotionState(ref baseIndexB, i, ref states, ref positionB, ref orientationB, ref velocityB);
-                WriteGatherInertia(ref baseIndexB, i, ref states, ref inertiaB);
-                WriteGatherMotionState(ref baseIndexC, i, ref states, ref positionC, ref orientationC, ref velocityC);
-                WriteGatherInertia(ref baseIndexC, i, ref states, ref inertiaC);
-                WriteGatherMotionState(ref baseIndexD, i, ref states, ref positionD, ref orientationD, ref velocityD);
-                WriteGatherInertia(ref baseIndexD, i, ref states, ref inertiaD);
-            }
+            GatherState<AccessAll>(ref references.IndexA, true, out var positionA, out orientationA, out velocityA, out inertiaA);
+            GatherState<AccessAll>(ref references.IndexB, true, out var positionB, out orientationB, out velocityB, out inertiaB);
+            GatherState<AccessAll>(ref references.IndexC, true, out var positionC, out orientationC, out velocityC, out inertiaC);
+            GatherState<AccessAll>(ref references.IndexD, true, out var positionD, out orientationD, out velocityD, out inertiaD);
             //TODO: In future versions, we will likely store the body position in different forms to allow for extremely large worlds.
             //That will be an opt-in feature. The default implementation will use the FP32 representation, but the user could choose to swap it out for a fp64 or fixed64 representation.
             //This affects other systems- AABB calculation, pose integration, solving, and in extreme (64 bit) cases, the broadphase.
@@ -723,7 +673,7 @@ namespace BepuPhysics
 
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ScatterVelocities<TAccessFilter>(ref BodyVelocityWide sourceVelocities, ref Vector<int> references, int count) where TAccessFilter : unmanaged, IBodyAccessFilter
+        public unsafe void ScatterVelocities<TAccessFilter>(ref BodyVelocityWide sourceVelocities, ref Vector<int> references) where TAccessFilter : unmanaged, IBodyAccessFilter
         {
             if (Avx.IsSupported && Vector<float>.Count == 8)
             {
@@ -772,14 +722,14 @@ namespace BepuPhysics
 
                     var indices = (int*)Unsafe.AsPointer(ref references);
                     var states = ActiveSet.SolverStates.Memory;
-                    Sse.StoreAligned((float*)(states + indices[0]) + targetOffset, o0.GetLower());
-                    if (count > 1) Sse.StoreAligned((float*)(states + indices[1]) + targetOffset, o4.GetLower());
-                    if (count > 2) Sse.StoreAligned((float*)(states + indices[2]) + targetOffset, o2.GetLower());
-                    if (count > 3) Sse.StoreAligned((float*)(states + indices[3]) + targetOffset, o6.GetLower());
-                    if (count > 4) Sse.StoreAligned((float*)(states + indices[4]) + targetOffset, o0.GetUpper());
-                    if (count > 5) Sse.StoreAligned((float*)(states + indices[5]) + targetOffset, o4.GetUpper());
-                    if (count > 6) Sse.StoreAligned((float*)(states + indices[6]) + targetOffset, o2.GetUpper());
-                    if (count > 7) Sse.StoreAligned((float*)(states + indices[7]) + targetOffset, o6.GetUpper());
+                    if (indices[0] >= 0) Sse.StoreAligned((float*)(states + indices[0]) + targetOffset, o0.GetLower());
+                    if (indices[1] >= 0) Sse.StoreAligned((float*)(states + indices[1]) + targetOffset, o4.GetLower());
+                    if (indices[2] >= 0) Sse.StoreAligned((float*)(states + indices[2]) + targetOffset, o2.GetLower());
+                    if (indices[3] >= 0) Sse.StoreAligned((float*)(states + indices[3]) + targetOffset, o6.GetLower());
+                    if (indices[4] >= 0) Sse.StoreAligned((float*)(states + indices[4]) + targetOffset, o0.GetUpper());
+                    if (indices[5] >= 0) Sse.StoreAligned((float*)(states + indices[5]) + targetOffset, o4.GetUpper());
+                    if (indices[6] >= 0) Sse.StoreAligned((float*)(states + indices[6]) + targetOffset, o2.GetUpper());
+                    if (indices[7] >= 0) Sse.StoreAligned((float*)(states + indices[7]) + targetOffset, o6.GetUpper());
 
                 }
                 else
@@ -814,22 +764,24 @@ namespace BepuPhysics
 
                     var indices = (int*)Unsafe.AsPointer(ref references);
                     var states = ActiveSet.SolverStates.Memory;
-                    Avx.StoreAligned((float*)(states + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
-                    if (count > 1) Avx.StoreAligned((float*)(states + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
-                    if (count > 2) Avx.StoreAligned((float*)(states + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
-                    if (count > 3) Avx.StoreAligned((float*)(states + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
-                    if (count > 4) Avx.StoreAligned((float*)(states + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
-                    if (count > 5) Avx.StoreAligned((float*)(states + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
-                    if (count > 6) Avx.StoreAligned((float*)(states + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
-                    if (count > 7) Avx.StoreAligned((float*)(states + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+                    if (indices[0] >= 0) Avx.StoreAligned((float*)(states + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
+                    if (indices[1] >= 0) Avx.StoreAligned((float*)(states + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
+                    if (indices[2] >= 0) Avx.StoreAligned((float*)(states + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
+                    if (indices[3] >= 0) Avx.StoreAligned((float*)(states + indices[3]) + 8, Avx.Permute2x128(o6, o7, 0 | (2 << 4)));
+                    if (indices[4] >= 0) Avx.StoreAligned((float*)(states + indices[4]) + 8, Avx.Permute2x128(o0, o1, 1 | (3 << 4)));
+                    if (indices[5] >= 0) Avx.StoreAligned((float*)(states + indices[5]) + 8, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
+                    if (indices[6] >= 0) Avx.StoreAligned((float*)(states + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
+                    if (indices[7] >= 0) Avx.StoreAligned((float*)(states + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
                 }
             }
             else
             {
-                for (int innerIndex = 0; innerIndex < count; ++innerIndex)
+                var indices = (int*)Unsafe.AsPointer(ref references);
+                for (int innerIndex = 0; innerIndex < Vector<int>.Count; ++innerIndex)
                 {
+                    if (indices[innerIndex] < 0)
+                        continue;
                     ref var sourceSlot = ref GetOffsetInstance(ref sourceVelocities, innerIndex);
-                    var indices = (int*)Unsafe.AsPointer(ref references);
                     ref var target = ref ActiveSet.SolverStates[indices[innerIndex]].Motion.Velocity;
                     target.Linear = new Vector3(sourceSlot.Linear.X[0], sourceSlot.Linear.Y[0], sourceSlot.Linear.Z[0]);
                     target.Angular = new Vector3(sourceSlot.Angular.X[0], sourceSlot.Angular.Y[0], sourceSlot.Angular.Z[0]);

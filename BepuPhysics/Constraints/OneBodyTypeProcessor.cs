@@ -112,8 +112,7 @@ namespace BepuPhysics.Constraints
                 ref var prestep = ref Unsafe.Add(ref prestepBase, i);
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
-                var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState(ref references, count, out var position, out var orientation, out _, out var inertia);
+                bodies.GatherState(ref references, out var position, out var orientation, out _, out var inertia);
                 function.Prestep(position, orientation, inertia, dt, inverseDt, ref prestep, out projection);
             }
         }
@@ -129,10 +128,9 @@ namespace BepuPhysics.Constraints
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
-                int count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState(ref bodyReferences, count, out _, out _, out var wsvA, out _);
+                bodies.GatherState(ref bodyReferences, out _, out _, out var wsvA, out _);
                 function.WarmStart(ref wsvA, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences);
             }
         }
 
@@ -147,10 +145,9 @@ namespace BepuPhysics.Constraints
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
-                int count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState(ref bodyReferences, count, out _, out _, out var wsvA, out _);
+                bodies.GatherState(ref bodyReferences, out _, out _, out var wsvA, out _);
                 function.Solve(ref wsvA, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences, count);
+                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences);
             }
         }
 
@@ -168,8 +165,7 @@ namespace BepuPhysics.Constraints
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
-                var count = bundleCountCalculator.GetCountInBundle(ref typeBatch, i);
-                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterA, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references, count,
+                GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TWarmStartAccessFilterA, TAllowPoseIntegration>(bodies, ref integratorCallbacks, ref integrationFlags, 0, dt, workerIndex, i, ref references,
                     out var positionA, out var orientationA, out var wsvA, out var inertiaA);
 
                 //if (typeof(TAllowPoseIntegration) == typeof(AllowPoseIntegration))
@@ -179,13 +175,13 @@ namespace BepuPhysics.Constraints
 
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
-                    bodies.ScatterVelocities<TWarmStartAccessFilterA>(ref wsvA, ref references, count);
+                    bodies.ScatterVelocities<TWarmStartAccessFilterA>(ref wsvA, ref references);
                 }
                 else
                 {
                     //This batch has some integrators, which means that every bundle is going to gather all velocities.
                     //(We don't make per-bundle determinations about this to avoid an extra branch and instruction complexity, and the difference is very small.)
-                    bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references, count);
+                    bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references);
                 }
             }
         }
@@ -202,12 +198,11 @@ namespace BepuPhysics.Constraints
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
-                var count = bundleCountCalculator.GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState<TSolveAccessFilterA>(ref references, count, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+                bodies.GatherState<TSolveAccessFilterA>(ref references, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
 
                 function.Solve2(positionA, orientationA, inertiaA, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA);
 
-                bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references, count);
+                bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references);
             }
         }
     }
@@ -227,8 +222,7 @@ namespace BepuPhysics.Constraints
             {
                 ref var prestep = ref Unsafe.Add(ref prestepBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
-                var count = GetCountInBundle(ref typeBatch, i);
-                bodies.GatherState<AccessOnlyVelocity>(ref references, count, true, out _, out _, out var wsvA, out _);
+                bodies.GatherState<AccessOnlyVelocity>(ref references, true, out _, out _, out var wsvA, out _);
                 function.IncrementallyUpdateContactData(dtWide, wsvA, ref prestep);
             }
         }

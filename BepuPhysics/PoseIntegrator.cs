@@ -93,7 +93,7 @@ namespace BepuPhysics
         /// <param name="dt">Durations to integrate the velocity over. Can vary over lanes.</param>
         /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
         void IntegrateVelocity(
-            ReadOnlySpan<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia,
+            in Vector<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia,
             in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity);
     }
 
@@ -756,6 +756,7 @@ namespace BepuPhysics
             Vector<int> bodyIndices;
             int* unconstrainedMaskPointer = (int*)&unconstrainedMask;
             int* bodyIndicesPointer = (int*)&bodyIndices;
+            var negativeOne = new Vector<int>(-1);
             ref var callbacks = ref Callbacks;
             ref var indexToHandle = ref bodies.ActiveSet.IndexToHandle;
 
@@ -770,6 +771,7 @@ namespace BepuPhysics
                 //Unconstrained bodies can optionally perform a single step for the whole timestep, or do multiple steps to match the integration behavior of constrained bodies.
                 //Bodies that are constrained should only undergo one substep of pose integration.
                 bool anyBodyInBundleIsUnconstrained = false;
+                bodyIndices = negativeOne; //Initialize bundles to -1 so that inactive lanes are consistent with the active set's storage of body references (empty lanes are -1)
                 for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
                 {
                     var bodyIndex = bundleBaseIndex + innerIndex;
@@ -799,7 +801,7 @@ namespace BepuPhysics
                     bundleEffectiveDt = Vector.ConditionalSelect(unconstrainedMask, bundleDt, bundleSubstepDt);
                 }
                 var halfDt = bundleEffectiveDt * new Vector<float>(0.5f);
-                bodies.GatherState<AccessAll>(ref bodyIndices, countInBundle, false, out var position, out var orientation, out var velocity, out var localInertia);
+                bodies.GatherState<AccessAll>(ref bodyIndices, false, out var position, out var orientation, out var velocity, out var localInertia);
                 if (anyBodyInBundleIsUnconstrained)
                 {
                     int integrationStepCount;
@@ -815,7 +817,7 @@ namespace BepuPhysics
                     {
                         //Note that the following integrates velocities, then poses.
                         var previousVelocity = velocity;
-                        callbacks.IntegrateVelocity(new ReadOnlySpan<int>(Unsafe.AsPointer(ref bodyIndices), countInBundle), position, orientation, localInertia, unconstrainedMask, workerIndex, bundleEffectiveDt, ref velocity);
+                        callbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, unconstrainedMask, workerIndex, bundleEffectiveDt, ref velocity);
                         //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
                         Vector3Wide.ConditionalSelect(unconstrainedMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
                         Vector3Wide.ConditionalSelect(unconstrainedMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);
@@ -854,7 +856,7 @@ namespace BepuPhysics
                         }
                         bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integratePoseMask);
                         //We already masked the velocities above, so scattering them doesn't need its own mask.
-                        bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndices, countInBundle);
+                        bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndices);
                     }
                 }
                 else
