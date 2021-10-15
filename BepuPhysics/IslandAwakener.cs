@@ -5,6 +5,7 @@ using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -611,10 +612,8 @@ namespace BepuPhysics
             phaseTwoJobs = new QuickList<PhaseTwoJob>(32, pool);
             //Finally, create actual jobs. Note that this involves actually allocating space in the bodies set and in type batches for the workers to fill in.
             //(Pair caches are currently handled in a locally sequential way and do not require preallocation.)
-
             phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.PairCache };
             phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.MoveFallbackBatchBodies };
-            //Don't create batch referenced handles update jobs for the fallback batch; it has no referenced handles!
             for (int batchIndex = 0; batchIndex < highestNewBatchCount; ++batchIndex)
             {
                 phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.UpdateBatchReferencedHandles, BatchIndex = batchIndex };
@@ -693,7 +692,20 @@ namespace BepuPhysics
                                 job.SourceStart = previousSourceEnd;
                                 job.TargetStart = targetTypeBatch.ConstraintCount;
                                 previousSourceEnd += job.Count;
+                                var oldBundleCount = targetTypeBatch.BundleCount;
                                 targetTypeBatch.ConstraintCount += job.Count;
+                                if (targetTypeBatch.BundleCount != oldBundleCount)
+                                {
+                                    //A new bundle was created; guarantee any trailing slots are set to -1.
+                                    //Since it's a whole new bundle that has not yet had any data set to it, we can safely just initialize the whole bundle's body references to -1.
+                                    var vectorCount = solver.TypeProcessors[job.TypeId].BodiesPerConstraint;
+                                    var bundleStart = (Vector<int>*)(targetTypeBatch.BodyReferences.Memory + (targetTypeBatch.BundleCount - 1) * vectorCount * Unsafe.SizeOf<Vector<int>>());
+                                    var negativeOne = new Vector<int>(-1);
+                                    for (int vectorIndex = 0; vectorIndex < vectorCount; ++vectorIndex)
+                                    {
+                                        bundleStart[vectorIndex] = negativeOne;
+                                    }
+                                }
                             }
                             Debug.Assert(previousSourceEnd == sourceTypeBatch.ConstraintCount);
                             Debug.Assert(targetTypeBatch.ConstraintCount <= targetTypeBatch.IndexToHandle.Length);
