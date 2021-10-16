@@ -635,6 +635,15 @@ namespace BepuPhysics
                     {
                         //Constraints refer to bodies by index when they're in the active set, so we need to transform to handle to look up our merged batch results.
                         var bodyIndex = bundleStart[bundleInnerIndex];
+                        if (typeof(TFallbackness) == typeof(IsFallbackBatch))
+                        {
+                            //Fallback batches can contain empty lanes; there's no guarantee of constraint contiguity. Such lanes are marked with -1 in the body references.
+                            //Just skip over them.
+                            if (bodyIndex == -1)
+                            {
+                                continue;
+                            }
+                        }
                         var bodyHandle = activeSet.IndexToHandle[bodyIndex].Value;
                         if (firstObservedForBatch.Contains(bodyHandle))
                         {

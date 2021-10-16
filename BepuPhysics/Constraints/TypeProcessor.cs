@@ -427,11 +427,12 @@ namespace BepuPhysics.Constraints
                 var oldCount = typeBatch.ConstraintCount;
 
                 var indexInTypeBatch = bundleCount * Vector<int>.Count;
-                typeBatch.ConstraintCount = indexInTypeBatch + 1;
-                if (typeBatch.ConstraintCount >= typeBatch.IndexToHandle.Length)
+                var newConstraintCount = indexInTypeBatch + 1;
+                if (newConstraintCount >= typeBatch.IndexToHandle.Length)
                 {
-                    InternalResize(ref typeBatch, pool, typeBatch.ConstraintCount * 2);
+                    InternalResize(ref typeBatch, pool, newConstraintCount * 2);
                 }
+                typeBatch.ConstraintCount = newConstraintCount;
                 typeBatch.IndexToHandle[indexInTypeBatch] = handle;
                 ref var bundle = ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, bundleCount);
                 AddBodyReferencesLane(ref bundle, 0, bodyIndices);
