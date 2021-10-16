@@ -354,7 +354,7 @@ namespace BepuPhysics.Constraints
                 broadcastedBodyIndices[bodyIndexInConstraint] = new Vector<int>(bodyIndices[bodyIndexInConstraint]);
             }
             var bundleCount = typeBatch.BundleCount;
-            if (bundleCount <= probeLocationCount)
+            if (bundleCount <= probeLocationCount + 1) //(we always probe the last bundle)
             {
                 //The fallback batch is small; there's no need to do a stochastic insertion. Just enumerate all bundles.
                 for (int bundleIndexInTypeBatch = 0; bundleIndexInTypeBatch < bundleCount; ++bundleIndexInTypeBatch)
