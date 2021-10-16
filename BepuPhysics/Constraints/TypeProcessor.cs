@@ -279,7 +279,7 @@ namespace BepuPhysics.Constraints
             //TODO: depending on codegen, there's a chance that doing special cases for the 1, 2, 3, and 4 body cases would be worth it. No need for loop jumps and such.
             //The type batches are always held in pinned memory, this is not a GC hole.
             var bundleBodyIndices = (Vector<int>*)Unsafe.AsPointer(ref bundle);
-            var bodiesPerConstraint = Unsafe.SizeOf<TBodyReferences>() / Vector<int>.Count; //redundant, but folds.
+            var bodiesPerConstraint = Unsafe.SizeOf<TBodyReferences>() / Unsafe.SizeOf<Vector<int>>(); //redundant, but folds.
             for (int broadcastedBundleBodyInConstraint = 0; broadcastedBundleBodyInConstraint < bodiesPerConstraint; ++broadcastedBundleBodyInConstraint)
             {
                 var broadcastedBodies = broadcastedBodyIndices[broadcastedBundleBodyInConstraint];
@@ -330,11 +330,42 @@ namespace BepuPhysics.Constraints
             }
         }
 
+        [Conditional("DEBUG")]
+        void ValidateFallbackAccessSafety(ref TypeBatch typeBatch, int bodiesPerConstraint)
+        {
+            var bodyReferencesBundleSize = Unsafe.SizeOf<Vector<int>>() * bodiesPerConstraint;
+            for (int bundleIndex = 0; bundleIndex < typeBatch.BundleCount; ++bundleIndex)
+            {
+                ref var bodyReferenceForFirstBody = ref Unsafe.As<byte, Vector<int>>(ref typeBatch.BodyReferences[bundleIndex * bodyReferencesBundleSize]);
+                for (int sourceBodyIndexInConstraint = 0; sourceBodyIndexInConstraint < bodiesPerConstraint; ++sourceBodyIndexInConstraint)
+                {
+                    var bodyReferencesForSource = Unsafe.Add(ref bodyReferenceForFirstBody, sourceBodyIndexInConstraint);
+                    for (int innerIndex = 0; innerIndex < Vector<int>.Count; ++innerIndex)
+                    {
+                        var index = bodyReferencesForSource[innerIndex];
+                        if (index >= 0)
+                        {
+                            var broadcasted = new Vector<int>(bodyReferencesForSource[innerIndex]);
+                            int matchesTotal = 0;
+                            for (int targetBodyIndexInConstraint = 0; targetBodyIndexInConstraint < bodiesPerConstraint; ++targetBodyIndexInConstraint)
+                            {
+                                var bodyReferencesForTarget = Unsafe.Add(ref bodyReferenceForFirstBody, targetBodyIndexInConstraint);
+                                var matchesInLane = -Vector.Dot(Vector.Equals(broadcasted, bodyReferencesForTarget), Vector<int>.One);
+                                matchesTotal += matchesInLane;
+                            }
+                            Debug.Assert(matchesTotal == 1, "A body reference should occur no more than once in any constraint bundle.");
+                        }
+                    }
+                }
+            }
+        }
+
         public unsafe sealed override int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool)
         {
             Debug.Assert(typeBatch.BodyReferences.Allocated, "Should initialize the batch before allocating anything from it.");
             if (typeBatch.ConstraintCount == typeBatch.IndexToHandle.Length)
             {
+                //This isn't technically required (since probing might find an earlier slot), but it makes things simpler and rarely allocates more than necessary.
                 InternalResize(ref typeBatch, pool, typeBatch.ConstraintCount * 2);
             }
             //The sequential fallback batch has different allocation rules.
@@ -347,7 +378,7 @@ namespace BepuPhysics.Constraints
             int targetBundleIndex = -1;
             int targetInnerIndex = -1;
             //This folds.
-            var bodiesPerConstraint = Unsafe.SizeOf<TBodyReferences>() / Vector<int>.Count;
+            var bodiesPerConstraint = Unsafe.SizeOf<TBodyReferences>() / Unsafe.SizeOf<Vector<int>>();
             var broadcastedBodyIndices = stackalloc Vector<int>[bodiesPerConstraint];
             for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraint; ++bodyIndexInConstraint)
             {
@@ -393,9 +424,25 @@ namespace BepuPhysics.Constraints
             if (targetBundleIndex == -1)
             {
                 //None of the existing bundles can hold the constraint; we need a new one.
-                //Since a new bundle is guaranteed to not contain any other constraints, we can reuse the non-fallback logic.
                 var oldCount = typeBatch.ConstraintCount;
-                var indexInTypeBatch = AllocateInTypeBatch(ref typeBatch, handle, bodyIndices, pool);
+
+                var indexInTypeBatch = bundleCount * Vector<int>.Count;
+                typeBatch.ConstraintCount = indexInTypeBatch + 1;
+                if (typeBatch.ConstraintCount >= typeBatch.IndexToHandle.Length)
+                {
+                    InternalResize(ref typeBatch, pool, typeBatch.ConstraintCount * 2);
+                }
+                typeBatch.IndexToHandle[indexInTypeBatch] = handle;
+                ref var bundle = ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, bundleCount);
+                AddBodyReferencesLane(ref bundle, 0, bodyIndices);
+                //Clear the slot's accumulated impulse. The backing memory could be initialized to any value.
+                GatherScatter.ClearLane<TAccumulatedImpulse, float>(ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, bundleCount), 0);
+                Debug.Assert(typeBatch.PrestepData.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TPrestepData>());
+                Debug.Assert(typeBatch.Projection.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TProjection>());
+                Debug.Assert(typeBatch.BodyReferences.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TBodyReferences>());
+                Debug.Assert(typeBatch.AccumulatedImpulses.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
+                Debug.Assert(typeBatch.IndexToHandle.Length >= typeBatch.ConstraintCount);
+
                 //Batch compression relies on all unoccupied slots having a IndexToHandle of -1.
                 //We've created a new bundle, which means we're responsible for setting all the slots from the previous count to the new count (excluding our just-added constraint!) to -1.
                 Debug.Assert(indexInTypeBatch == typeBatch.ConstraintCount - 1);
@@ -404,6 +451,7 @@ namespace BepuPhysics.Constraints
                     typeBatch.IndexToHandle[i].Value = -1;
                 }
                 //ValidateEmptyFallbackSlots(ref typeBatch);
+                ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
                 return indexInTypeBatch;
             }
             else
@@ -421,6 +469,7 @@ namespace BepuPhysics.Constraints
                 Debug.Assert(typeBatch.BodyReferences.Length >= bundleCount * Unsafe.SizeOf<TBodyReferences>());
                 Debug.Assert(typeBatch.AccumulatedImpulses.Length >= bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
                 //ValidateEmptyFallbackSlots(ref typeBatch);
+                ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
                 return indexInTypeBatch;
             }
 
@@ -549,6 +598,7 @@ namespace BepuPhysics.Constraints
                     typeBatch.ConstraintCount = lastBundleIndex * Vector<int>.Count + innerLaneCount;
 
                     //ValidateEmptyFallbackSlots(ref typeBatch);
+                    ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
                 }
             }
             else

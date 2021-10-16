@@ -311,7 +311,47 @@ namespace BepuPhysics
                         var expectDeadSlot = typeBatch.IndexToHandle[i].Value == -1;
                         BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
                         var bodyReferenceForFirstBody = Unsafe.As<byte, int>(ref typeBatch.BodyReferences[bundleIndex * bodyReferencesBundleSize + 4 * innerIndex]);
-                        Debug.Assert(expectDeadSlot == (bodyReferenceForFirstBody == -1), "For fallback batches, the IndexToHandle should be -1 when the body lanes are -1, corresponding to empty lanes in the sparse batch.");                        
+                        Debug.Assert(expectDeadSlot == (bodyReferenceForFirstBody == -1), "For fallback batches, the IndexToHandle should be -1 when the body lanes are -1, corresponding to empty lanes in the sparse batch.");
+                    }
+                }
+            }
+        }
+
+        [Conditional("DEBUG")]
+        public unsafe void ValidateFallbackBatchAccessSafety()
+        {
+            ref var set = ref ActiveSet;
+            if (set.Batches.Count > FallbackBatchThreshold)
+            {
+                ref var batch = ref set.Batches[FallbackBatchThreshold];
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    var bodiesPerConstraint = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
+                    var bodyReferencesBundleSize = Unsafe.SizeOf<Vector<int>>() * bodiesPerConstraint;
+                    for (int bundleIndex = 0; bundleIndex < typeBatch.BundleCount; ++bundleIndex)
+                    {
+                        ref var bodyReferenceForFirstBody = ref Unsafe.As<byte, Vector<int>>(ref typeBatch.BodyReferences[bundleIndex * bodyReferencesBundleSize]);
+                        for (int sourceBodyIndexInConstraint = 0; sourceBodyIndexInConstraint < bodiesPerConstraint; ++sourceBodyIndexInConstraint)
+                        {
+                            var bodyReferencesForSource = Unsafe.Add(ref bodyReferenceForFirstBody, sourceBodyIndexInConstraint);
+                            for (int innerIndex = 0; innerIndex < Vector<int>.Count; ++innerIndex)
+                            {
+                                var index = bodyReferencesForSource[innerIndex];
+                                if (index >= 0)
+                                {
+                                    var broadcasted = new Vector<int>(bodyReferencesForSource[innerIndex]);
+                                    int matchesTotal = 0;
+                                    for (int targetBodyIndexInConstraint = 0; targetBodyIndexInConstraint < bodiesPerConstraint; ++targetBodyIndexInConstraint)
+                                    {
+                                        var bodyReferencesForTarget = Unsafe.Add(ref bodyReferenceForFirstBody, targetBodyIndexInConstraint);
+                                        var matchesInLane = -Vector.Dot(Vector.Equals(broadcasted, bodyReferencesForTarget), Vector<int>.One);
+                                        matchesTotal += matchesInLane;
+                                    }
+                                    Debug.Assert(matchesTotal == 1, "A body reference should occur no more than once in any constraint bundle.");
+                                }
+                            }
+                        }
                     }
                 }
             }
