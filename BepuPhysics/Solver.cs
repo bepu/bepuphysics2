@@ -324,14 +324,26 @@ namespace BepuPhysics
             if (set.Batches.Count > FallbackBatchThreshold)
             {
                 ref var batch = ref set.Batches[FallbackBatchThreshold];
+                int occupiedLaneCountAcrossBatch = 0;
+                int totalBundleCount = 0;
                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {
                     ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    totalBundleCount += typeBatch.BundleCount;
                     var bodiesPerConstraint = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
                     var bodyReferencesBundleSize = Unsafe.SizeOf<Vector<int>>() * bodiesPerConstraint;
                     for (int bundleIndex = 0; bundleIndex < typeBatch.BundleCount; ++bundleIndex)
                     {
                         ref var bodyReferenceForFirstBody = ref Unsafe.As<byte, Vector<int>>(ref typeBatch.BodyReferences[bundleIndex * bodyReferencesBundleSize]);
+                        var occupiedLaneMask = Vector.GreaterThanOrEqual(bodyReferenceForFirstBody, Vector<int>.Zero);
+                        var occupiedLaneCountInBundle = 0;
+                        for (int i = 0; i < Vector<int>.Count; ++i)
+                        {
+                            if (occupiedLaneMask[i] < 0)
+                                ++occupiedLaneCountInBundle;
+                        }
+                        occupiedLaneCountAcrossBatch += occupiedLaneCountInBundle;
+                        Debug.Assert(occupiedLaneCountInBundle > 0, "For any bundle in the [0, BundleCount) interval, there must be at least one occupied lane.");
                         for (int sourceBodyIndexInConstraint = 0; sourceBodyIndexInConstraint < bodiesPerConstraint; ++sourceBodyIndexInConstraint)
                         {
                             var bodyReferencesForSource = Unsafe.Add(ref bodyReferenceForFirstBody, sourceBodyIndexInConstraint);
@@ -354,6 +366,7 @@ namespace BepuPhysics
                         }
                     }
                 }
+                Console.WriteLine($"Average fallback occupancy: {Vector<int>.Count * occupiedLaneCountAcrossBatch / (double)(totalBundleCount * Vector<int>.Count):G3} / {Vector<int>.Count}, total bundle count: {totalBundleCount}");
             }
         }
 
@@ -374,7 +387,7 @@ namespace BepuPhysics
             if (set.Batches.Count > FallbackBatchThreshold)
             {
                 ref var batch = ref set.Batches[FallbackBatchThreshold];
-                var impulseMemory = stackalloc float[8];
+                var impulseMemory = stackalloc float[16];
                 var impulsesEnumerator = new ValidateAccumulatedImpulsesEnumerator { AccumulatedImpulses = impulseMemory };
                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {

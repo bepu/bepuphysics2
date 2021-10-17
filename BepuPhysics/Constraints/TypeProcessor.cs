@@ -389,7 +389,7 @@ namespace BepuPhysics.Constraints
             //Allocation must guarantee that a constraint does not fall into a bundle which shares any of the same body references.
             //(That responsibility usually falls on batch referenced handles blocking new constraints,
             //but the fallback exists precisely because the simulation is asking for pathological numbers of constraints affecting the same body.)
-            const int probeLocationCount = 8;
+            const int probeLocationCount = 16;
             //Note that this only ever executes for the active set, so body references are indices.
             var typeBatchBodyIndices = typeBatch.BodyReferences.As<TBodyReferences>();
             int targetBundleIndex = -1;

@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using System.Numerics;
 using System;
+using BepuUtilities;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -210,10 +211,10 @@ namespace BepuPhysics.CollisionDetection
             AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, pairContinuation);
         }
 
-       
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, 
-            in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, 
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB,
+            in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB,
             float speculativeMargin, float maximumExpansion,
             in PairContinuation continuation)
         {
@@ -223,7 +224,7 @@ namespace BepuPhysics.CollisionDetection
             Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
             AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, velocityA, velocityB, speculativeMargin, maximumExpansion, continuation);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB,
             float speculativeMargin, in PairContinuation continuation)
@@ -314,6 +315,12 @@ namespace BepuPhysics.CollisionDetection
 
         public unsafe void ProcessConvexResult(ref ConvexContactManifold manifold, ref PairContinuation continuation)
         {
+#if DEBUG
+            if (manifold.Count > 0)
+            {
+                manifold.Normal.Validate();
+            }
+#endif
             if (continuation.Type == CollisionContinuationType.Direct)
             {
                 //This result concerns a pair which had no higher level owner. Directly report the manifold result.
