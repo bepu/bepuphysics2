@@ -312,7 +312,8 @@ namespace BepuPhysics
                 var batchStartsData = stackalloc int[activeSet.Batches.Count];
                 batchStarts = new Buffer<int>(batchStartsData, activeSet.Batches.Count);
             }
-            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
+            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
+            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
             {
                 var batchOffset = batchIndex > 0 ? substepContext.ConstraintBatchBoundaries[batchIndex - 1] : 0;
                 var batchCount = substepContext.ConstraintBatchBoundaries[batchIndex] - batchOffset;
@@ -320,7 +321,6 @@ namespace BepuPhysics
             }
 
             Debug.Assert(activeSet.Batches.Count > 0, "Don't dispatch if there are no constraints.");
-            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
 
             //TODO: Every single one of these offers up the same parameters. Could avoid the need to initialize any of them.
             var incrementalUpdateStage = new IncrementalUpdateStageFunction
@@ -513,7 +513,7 @@ namespace BepuPhysics
             int targetStageIndex = 1;
             //Warm start.
             int claimStart = incrementalBlocks.Count;
-            for (int batchIndex = 0; batchIndex < batchCount; ++batchIndex)
+            for (int batchIndex = 0; batchIndex < stagesPerIteration; ++batchIndex)
             {
                 var stageIndex = targetStageIndex++;
                 var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
@@ -525,7 +525,7 @@ namespace BepuPhysics
             {
                 //Solve. Note that we're reusing the same claims as were used in the warm start for these stages; the stages just tell the workers what kind of work to do.
                 claimStart = incrementalBlocks.Count;
-                for (int batchIndex = 0; batchIndex < batchCount; ++batchIndex)
+                for (int batchIndex = 0; batchIndex < stagesPerIteration; ++batchIndex)
                 {
                     var stageIndex = targetStageIndex++;
                     var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
