@@ -90,18 +90,18 @@ namespace BepuPhysics
 
         protected interface ITypeBatchSolveFilter
         {
-            bool AllowFallback { get; }
+            bool IncludeFallbackBatchForWorkBlocks { get; }
             bool AllowType(int typeId);
         }
 
         protected struct MainSolveFilter : ITypeBatchSolveFilter
         {
-            public bool AllowFallback
+            public bool IncludeFallbackBatchForWorkBlocks
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get
                 {
-                    return true;
+                    return false;
                 }
             }
 
@@ -117,11 +117,20 @@ namespace BepuPhysics
             out QuickList<WorkBlock> workBlocks, out Buffer<int> batchBoundaries) where TTypeBatchFilter : ITypeBatchSolveFilter
         {
             ref var activeSet = ref ActiveSet;
-            workBlocks = new QuickList<WorkBlock>(targetBlocksPerBatch * activeSet.Batches.Count, pool);
-            pool.Take(activeSet.Batches.Count, out batchBoundaries);
+            int batchCount;
+            if (typeBatchFilter.IncludeFallbackBatchForWorkBlocks)
+            {
+                batchCount = activeSet.Batches.Count;
+            }
+            else
+            {
+                GetSynchronizedBatchCount(out batchCount, out _);
+            }
+            workBlocks = new QuickList<WorkBlock>(targetBlocksPerBatch * batchCount, pool);
+            pool.Take(batchCount, out batchBoundaries);
             var inverseMinimumBlockSizeInBundles = 1f / minimumBlockSizeInBundles;
             var inverseMaximumBlockSizeInBundles = 1f / maximumBlockSizeInBundles;
-            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
+            for (int batchIndex = 0; batchIndex < batchCount; ++batchIndex)
             {
                 ref var typeBatches = ref activeSet.Batches[batchIndex].TypeBatches;
                 var bundleCount = 0;

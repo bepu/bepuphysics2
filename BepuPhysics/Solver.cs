@@ -357,6 +357,46 @@ namespace BepuPhysics
             }
         }
 
+        unsafe struct ValidateAccumulatedImpulsesEnumerator : IForEach<float>
+        {
+            public int Index = 0;
+            public float* AccumulatedImpulses;
+            public void LoopBody(float impulse)
+            {
+                AccumulatedImpulses[Index] = impulse;
+            }
+        }
+
+        [Conditional("DEBUG")]
+        public unsafe void ValidateFallbackBatchAccumulatedImpulses()
+        {
+            ref var set = ref ActiveSet;
+            if (set.Batches.Count > FallbackBatchThreshold)
+            {
+                ref var batch = ref set.Batches[FallbackBatchThreshold];
+                var impulseMemory = stackalloc float[8];
+                var impulsesEnumerator = new ValidateAccumulatedImpulsesEnumerator { AccumulatedImpulses = impulseMemory };
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    var dofCount = TypeProcessors[typeBatch.TypeId].ConstrainedDegreesOfFreedom;
+                    for (int constraintIndex = 0; constraintIndex < typeBatch.ConstraintCount; ++constraintIndex)
+                    {
+                        if (typeBatch.IndexToHandle[constraintIndex].Value >= 0)
+                        {
+                            impulsesEnumerator.Index = 0;
+                            TypeProcessors[typeBatch.TypeId].EnumerateAccumulatedImpulses(ref typeBatch, constraintIndex, ref impulsesEnumerator);
+                            for (int dofIndex = 0; dofIndex < dofCount; ++dofIndex)
+                            {
+                                impulseMemory[dofIndex].Validate();
+                            }
+                        }
+                    }
+
+                }
+            }
+        }
+
         [Conditional("DEBUG")]
         public unsafe void ValidateExistingHandles(bool activeOnly = false)
         {

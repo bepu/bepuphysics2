@@ -360,6 +360,23 @@ namespace BepuPhysics.Constraints
             }
         }
 
+        [Conditional("DEBUG")]
+        void ValidateAccumulatedImpulses(ref TypeBatch typeBatch)
+        {
+            var dofCount = Unsafe.SizeOf<TAccumulatedImpulse>() / Unsafe.SizeOf<Vector<float>>();
+            for (int i = 0; i < typeBatch.BundleCount; ++i)
+            {
+                var impulseBundle = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>()[i];
+                ref var impulses = ref Unsafe.As<TAccumulatedImpulse, Vector<float>>(ref impulseBundle);
+                var mask = Vector.GreaterThanOrEqual(Unsafe.As<TBodyReferences, Vector<int>>(ref typeBatch.BodyReferences.As<TBodyReferences>()[i]), Vector<int>.Zero);
+                for (int dofIndex = 0; dofIndex < dofCount; ++dofIndex)
+                {
+                    var impulsesForDOF = Unsafe.Add(ref impulses, dofIndex);
+                    impulsesForDOF.Validate(mask);
+                }
+            }
+        }
+
         public unsafe sealed override int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool)
         {
             Debug.Assert(typeBatch.BodyReferences.Allocated, "Should initialize the batch before allocating anything from it.");
@@ -408,7 +425,7 @@ namespace BepuPhysics.Constraints
                     //No room in the final bundle; keep looking with stochastic probes.
                     var nextProbeIndex = (HashHelper.Rehash(handle.Value) & 0x7FFF_FFFF) % lastBundleIndex;
                     var bundleJump = bundleCount / probeLocationCount;
-                    var remainder = bundleCount - bundleJump * probeLocationCount;
+                    var remainder = lastBundleIndex - bundleJump * probeLocationCount;
                     for (int probeIndex = 0; probeIndex < probeLocationCount; ++probeIndex)
                     {
                         if (ProbeBundleForFallback(typeBatchBodyIndices, broadcastedBodyIndices, bodyIndices, nextProbeIndex, ref targetBundleIndex, ref targetInnerIndex))
@@ -452,7 +469,8 @@ namespace BepuPhysics.Constraints
                     typeBatch.IndexToHandle[i].Value = -1;
                 }
                 //ValidateEmptyFallbackSlots(ref typeBatch);
-                ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                //ValidateAccumulatedImpulses(ref typeBatch);
                 return indexInTypeBatch;
             }
             else
@@ -470,7 +488,8 @@ namespace BepuPhysics.Constraints
                 Debug.Assert(typeBatch.BodyReferences.Length >= bundleCount * Unsafe.SizeOf<TBodyReferences>());
                 Debug.Assert(typeBatch.AccumulatedImpulses.Length >= bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
                 //ValidateEmptyFallbackSlots(ref typeBatch);
-                ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                //ValidateAccumulatedImpulses(ref typeBatch);
                 return indexInTypeBatch;
             }
 
@@ -570,7 +589,7 @@ namespace BepuPhysics.Constraints
                     {
                         //There is a bundle to move into the now-dead bundle slot.
                         var prestepData = typeBatch.PrestepData.As<TPrestepData>();
-                        var accumulatedImpulses = typeBatch.PrestepData.As<TPrestepData>();
+                        var accumulatedImpulses = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
                         prestepData[removedBundleIndex] = prestepData[lastBundleIndex];
                         accumulatedImpulses[removedBundleIndex] = accumulatedImpulses[lastBundleIndex];
                         bodyReferences[removedBundleIndex] = bodyReferences[lastBundleIndex];
@@ -599,7 +618,8 @@ namespace BepuPhysics.Constraints
                     typeBatch.ConstraintCount = lastBundleIndex * Vector<int>.Count + innerLaneCount;
 
                     //ValidateEmptyFallbackSlots(ref typeBatch);
-                    ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                    //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                    //ValidateAccumulatedImpulses(ref typeBatch);
                 }
             }
             else
@@ -625,7 +645,6 @@ namespace BepuPhysics.Constraints
                 //Clear the now-empty last slot of the body references bundle.
                 RemoveBodyReferencesLane(ref Unsafe.Add(ref bodyReferences, sourceBundleIndex), sourceInnerIndex);
             }
-
         }
 
 
@@ -1246,6 +1265,12 @@ namespace BepuPhysics.Constraints
                     }
                 }
             }
+
+            var validationMask = Vector.GreaterThanOrEqual(bodyIndices, Vector<int>.Zero);
+            orientation.Validate(validationMask);
+            position.Validate(validationMask);
+            velocity.Linear.Validate(validationMask);
+            velocity.Angular.Validate(validationMask);
         }
 
     }

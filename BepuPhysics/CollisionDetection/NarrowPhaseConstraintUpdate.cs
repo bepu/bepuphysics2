@@ -7,6 +7,7 @@ using System.Numerics;
 using BepuPhysics.Collidables;
 using System;
 using BepuPhysics.Constraints.Contact;
+using BepuUtilities;
 
 namespace BepuPhysics.CollisionDetection
 {

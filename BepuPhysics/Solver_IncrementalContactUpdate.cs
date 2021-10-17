@@ -13,7 +13,7 @@ namespace BepuPhysics
     {
         protected struct IncrementalContactDataUpdateFilter : ITypeBatchSolveFilter
         {
-            public bool AllowFallback { get { return false; } }
+            public bool IncludeFallbackBatchForWorkBlocks { get { return true; } }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool AllowType(int typeId)

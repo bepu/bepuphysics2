@@ -344,7 +344,7 @@ namespace BepuPhysics
 
             //A thread is only allowed to claim a workblock if the claim index for that workblock matches the expected value- which is the claim index it would have from the last time it was executed.
             //Each thread calculates what that claim index would have been based on the current sync index by subtracting the expected number of sync indices elapsed since last execution.
-            var syncStagesPerWarmStartOrSolve = ActiveSet.Batches.Count;
+            var syncStagesPerWarmStartOrSolve = synchronizedBatchCount;
             var baseStageCountInSubstep = syncStagesPerWarmStartOrSolve * (1 + IterationCount);
             //All warmstarts and solves, plus an incremental contact update. First substep doesn't do an incremental contact update, but that's fine, it'll end up expecting 0.
             var syncOffsetToPreviousSubstep = baseStageCountInSubstep + 1;
@@ -367,6 +367,24 @@ namespace BepuPhysics
                     {
                         ExecuteMainStage(ref warmstartStage, workerIndex, batchStarts[batchIndex], ref substepContext.Stages[batchIndex + 1], syncOffsetToPreviousClaimOnBatchForWarmStart, ref syncIndex);
                     }
+                    if (fallbackExists)
+                    {
+                        //The fallback runs only on the main thread.
+                        ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                        ref var integrationFlagsForBatch = ref integrationFlags[FallbackBatchThreshold];
+                        for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[j];
+                            if (substepIndex == 0)
+                            {
+                                WarmStartBlock<DisallowPoseIntegration>(0, FallbackBatchThreshold, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepContext.Dt, substepContext.InverseDt);
+                            }
+                            else
+                            {
+                                WarmStartBlock<AllowPoseIntegration>(0, FallbackBatchThreshold, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepContext.Dt, substepContext.InverseDt);
+                            }
+                        }
+                    }
                     for (int iterationIndex = 0; iterationIndex < IterationCount; ++iterationIndex)
                     {
                         for (int batchIndex = 0; batchIndex < syncStagesPerWarmStartOrSolve; ++batchIndex)
@@ -374,6 +392,16 @@ namespace BepuPhysics
                             //Note that this is using a 'different' stage by index than the worker thread if the iteration index > 1. 
                             //That's totally fine- the warmstart/iteration stages share the same claims buffers per batch. They're redundant for the sake of easier indexing.
                             ExecuteMainStage(ref solveStage, workerIndex, batchStarts[batchIndex], ref substepContext.Stages[batchIndex + 1], syncOffsetToPreviousClaimOnBatchForSolve, ref syncIndex);
+                        }
+                        if (fallbackExists)
+                        {
+                            //The fallback runs only on the main thread.
+                            ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                            for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                            {
+                                ref var typeBatch = ref batch.TypeBatches[j];
+                                TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, substepContext.Dt, substepContext.InverseDt, 0, typeBatch.BundleCount);
+                            }
                         }
                     }
                 }
@@ -474,7 +502,7 @@ namespace BepuPhysics
             substepContext.SyncIndex = 0;
             var totalConstraintBatchWorkBlockCount = substepContext.ConstraintBatchBoundaries.Length == 0 ? 0 : substepContext.ConstraintBatchBoundaries[^1];
             var totalClaimCount = incrementalBlocks.Count + totalConstraintBatchWorkBlockCount;
-            var stagesPerIteration = batchCount;
+            GetSynchronizedBatchCount(out var stagesPerIteration, out var fallbackExists);
             pool.Take(1 + stagesPerIteration * (1 + IterationCount), out substepContext.Stages);
             //Claims will be monotonically increasing throughout execution. All should start at zero to match with the initial sync index.
             pool.Take<int>(totalClaimCount, out var claims);

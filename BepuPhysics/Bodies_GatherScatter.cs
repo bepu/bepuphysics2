@@ -611,11 +611,21 @@ namespace BepuPhysics
                     if (maskPointer[5] != 0) Avx.StoreAligned((float*)(states + indices[5]), Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
                     if (maskPointer[6] != 0) Avx.StoreAligned((float*)(states + indices[6]), Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
                     if (maskPointer[7] != 0) Avx.StoreAligned((float*)(states + indices[7]), Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+
+                    //if (maskPointer[0] != 0) { states[indices[0]].Motion.Pose.Position.Validate(); states[indices[0]].Motion.Pose.Orientation.Validate(); }
+                    //if (maskPointer[1] != 0) { states[indices[1]].Motion.Pose.Position.Validate(); states[indices[1]].Motion.Pose.Orientation.Validate(); }
+                    //if (maskPointer[2] != 0) { states[indices[2]].Motion.Pose.Position.Validate(); states[indices[2]].Motion.Pose.Orientation.Validate(); }
+                    //if (maskPointer[3] != 0) { states[indices[3]].Motion.Pose.Position.Validate(); states[indices[3]].Motion.Pose.Orientation.Validate(); }
+                    //if (maskPointer[4] != 0) { states[indices[4]].Motion.Pose.Position.Validate(); states[indices[4]].Motion.Pose.Orientation.Validate(); }
+                    //if (maskPointer[5] != 0) { states[indices[5]].Motion.Pose.Position.Validate(); states[indices[5]].Motion.Pose.Orientation.Validate(); }
+                    //if (maskPointer[6] != 0) { states[indices[6]].Motion.Pose.Position.Validate(); states[indices[6]].Motion.Pose.Orientation.Validate(); }
+                    //if (maskPointer[7] != 0) { states[indices[7]].Motion.Pose.Position.Validate(); states[indices[7]].Motion.Pose.Orientation.Validate(); }
                 }
             }
             else
             {
             }
+
         }
 
 
@@ -664,6 +674,15 @@ namespace BepuPhysics
                     if (maskPointer[5] != 0) Avx.StoreAligned((float*)(states + indices[5]) + 24, Avx.Permute2x128(o4, o5, 1 | (3 << 4)));
                     if (maskPointer[6] != 0) Avx.StoreAligned((float*)(states + indices[6]) + 24, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
                     if (maskPointer[7] != 0) Avx.StoreAligned((float*)(states + indices[7]) + 24, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
+
+                    //if (maskPointer[0] != 0) { states[indices[0]].Inertia.Local.InverseInertiaTensor.Validate(); states[indices[0]].Inertia.Local.InverseMass.Validate(); }
+                    //if (maskPointer[1] != 0) { states[indices[1]].Inertia.Local.InverseInertiaTensor.Validate(); states[indices[1]].Inertia.Local.InverseMass.Validate(); }
+                    //if (maskPointer[2] != 0) { states[indices[2]].Inertia.Local.InverseInertiaTensor.Validate(); states[indices[2]].Inertia.Local.InverseMass.Validate(); }
+                    //if (maskPointer[3] != 0) { states[indices[3]].Inertia.Local.InverseInertiaTensor.Validate(); states[indices[3]].Inertia.Local.InverseMass.Validate(); }
+                    //if (maskPointer[4] != 0) { states[indices[4]].Inertia.Local.InverseInertiaTensor.Validate(); states[indices[4]].Inertia.Local.InverseMass.Validate(); }
+                    //if (maskPointer[5] != 0) { states[indices[5]].Inertia.Local.InverseInertiaTensor.Validate(); states[indices[5]].Inertia.Local.InverseMass.Validate(); }
+                    //if (maskPointer[6] != 0) { states[indices[6]].Inertia.Local.InverseInertiaTensor.Validate(); states[indices[6]].Inertia.Local.InverseMass.Validate(); }
+                    //if (maskPointer[7] != 0) { states[indices[7]].Inertia.Local.InverseInertiaTensor.Validate(); states[indices[7]].Inertia.Local.InverseMass.Validate(); }
                 }
             }
             else
@@ -773,6 +792,19 @@ namespace BepuPhysics
                     if (indices[6] >= 0) Avx.StoreAligned((float*)(states + indices[6]) + 8, Avx.Permute2x128(o2, o3, 1 | (3 << 4)));
                     if (indices[7] >= 0) Avx.StoreAligned((float*)(states + indices[7]) + 8, Avx.Permute2x128(o6, o7, 1 | (3 << 4)));
                 }
+
+                //{
+                //    var indices = (int*)Unsafe.AsPointer(ref references);
+                //    var states = ActiveSet.SolverStates.Memory;
+                //    if (indices[0] >= 0) { states[indices[0]].Motion.Velocity.Linear.Validate(); states[indices[0]].Motion.Velocity.Angular.Validate(); }
+                //    if (indices[1] >= 0) { states[indices[1]].Motion.Velocity.Linear.Validate(); states[indices[1]].Motion.Velocity.Angular.Validate(); }
+                //    if (indices[2] >= 0) { states[indices[2]].Motion.Velocity.Linear.Validate(); states[indices[2]].Motion.Velocity.Angular.Validate(); }
+                //    if (indices[3] >= 0) { states[indices[3]].Motion.Velocity.Linear.Validate(); states[indices[3]].Motion.Velocity.Angular.Validate(); }
+                //    if (indices[4] >= 0) { states[indices[4]].Motion.Velocity.Linear.Validate(); states[indices[4]].Motion.Velocity.Angular.Validate(); }
+                //    if (indices[5] >= 0) { states[indices[5]].Motion.Velocity.Linear.Validate(); states[indices[5]].Motion.Velocity.Angular.Validate(); }
+                //    if (indices[6] >= 0) { states[indices[6]].Motion.Velocity.Linear.Validate(); states[indices[6]].Motion.Velocity.Angular.Validate(); }
+                //    if (indices[7] >= 0) { states[indices[7]].Motion.Velocity.Linear.Validate(); states[indices[7]].Motion.Velocity.Angular.Validate(); }
+                //}
             }
             else
             {

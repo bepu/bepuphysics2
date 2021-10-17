@@ -60,6 +60,7 @@ namespace BepuPhysics
             simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
             simulation.Solver.ValidateFallbackBatchEmptySlotReferences();
             simulation.Solver.ValidateFallbackBatchAccessSafety();
+            simulation.Solver.ValidateFallbackBatchAccumulatedImpulses();
             var constrainedBodySet = simulation.Solver.PrepareConstraintIntegrationResponsibilities(SubstepCount, threadDispatcher);
             simulation.Profiler.Start(simulation.Solver);
             simulation.Solver.SolveStep2(dt, threadDispatcher);

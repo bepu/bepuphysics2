@@ -417,7 +417,6 @@ namespace BepuPhysics.CollisionDetection
                 Simulation.Awakener.DisposeForCompletedAwakenings(ref setsToAwaken);
             }
             setsToAwaken.Dispose(Pool);
-
         }
     }
 }
