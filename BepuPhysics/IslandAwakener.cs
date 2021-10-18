@@ -690,10 +690,6 @@ namespace BepuPhysics
                             var baseConstraintsPerJob = sourceTypeBatch.ConstraintCount / jobCount;
                             var remainder = sourceTypeBatch.ConstraintCount - baseConstraintsPerJob * jobCount;
                             phaseTwoJobs.EnsureCapacity(phaseTwoJobs.Count + jobCount, pool);
-                            if(batchIndex == fallbackIndex)
-                            {
-                                Console.WriteLine("Asdf");
-                            }
                             var previousSourceEnd = 0;
                             for (int jobIndex = 0; jobIndex < jobCount; ++jobIndex)
                             {

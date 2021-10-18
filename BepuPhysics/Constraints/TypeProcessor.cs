@@ -483,9 +483,9 @@ namespace BepuPhysics.Constraints
                 {
                     typeBatch.IndexToHandle[i].Value = -1;
                 }
-                ValidateEmptyFallbackSlots(ref typeBatch);
-                ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
-                ValidateAccumulatedImpulses(ref typeBatch);
+                //ValidateEmptyFallbackSlots(ref typeBatch);
+                //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                //ValidateAccumulatedImpulses(ref typeBatch);
                 return indexInTypeBatch;
             }
             else
@@ -502,9 +502,9 @@ namespace BepuPhysics.Constraints
                 Debug.Assert(typeBatch.Projection.Length >= bundleCount * Unsafe.SizeOf<TProjection>());
                 Debug.Assert(typeBatch.BodyReferences.Length >= bundleCount * Unsafe.SizeOf<TBodyReferences>());
                 Debug.Assert(typeBatch.AccumulatedImpulses.Length >= bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
-                ValidateEmptyFallbackSlots(ref typeBatch);
-                ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
-                ValidateAccumulatedImpulses(ref typeBatch);
+                //ValidateEmptyFallbackSlots(ref typeBatch);
+                //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                //ValidateAccumulatedImpulses(ref typeBatch);
                 return indexInTypeBatch;
             }
 
@@ -635,9 +635,9 @@ namespace BepuPhysics.Constraints
                     var innerLaneCount = BundleIndexing.GetLastSetLaneCount(Vector.GreaterThanOrEqual(Unsafe.As<TBodyReferences, Vector<int>>(ref bodyReferences[lastBundleIndex]), Vector<int>.Zero));
                     typeBatch.ConstraintCount = lastBundleIndex * Vector<int>.Count + innerLaneCount;
 
-                    ValidateEmptyFallbackSlots(ref typeBatch);
-                    ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
-                    ValidateAccumulatedImpulses(ref typeBatch);
+                    //ValidateEmptyFallbackSlots(ref typeBatch);
+                    //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                    //ValidateAccumulatedImpulses(ref typeBatch);
                 }
             }
             else
@@ -903,15 +903,15 @@ namespace BepuPhysics.Constraints
             //This arises because sleeping constraint sets do not maintain the 'no constraints refer to the same bodies in a given bundle' rule; everything just got packed together.
             var batchIndex = solver.FallbackBatchThreshold;
             ref var sourceTypeBatch = ref solver.Sets[sourceSet].Batches[batchIndex].TypeBatches[sourceTypeBatchIndex];
-            solver.ValidateSetOwnership(ref sourceTypeBatch, sourceSet);
+            //solver.ValidateSetOwnership(ref sourceTypeBatch, sourceSet);
             ref var targetTypeBatch = ref solver.ActiveSet.Batches[batchIndex].TypeBatches[targetTypeBatchIndex];
             Debug.Assert(sourceTypeBatch.TypeId == targetTypeBatch.TypeId);
             var bodyCount = Unsafe.SizeOf<TBodyReferences>() / Unsafe.SizeOf<Vector<int>>();
             //ValidateAccumulatedImpulses(ref targetTypeBatch);
             //ValidateEmptyFallbackSlots(ref targetTypeBatch);
             //ValidateFallbackAccessSafety(ref targetTypeBatch, bodyCount);
-            solver.ValidateConstraintMaps(0, batchIndex, targetTypeBatchIndex);
-            solver.ValidateConstraintMaps(sourceSet, batchIndex, sourceTypeBatchIndex);
+            //solver.ValidateConstraintMaps(0, batchIndex, targetTypeBatchIndex);
+            //solver.ValidateConstraintMaps(sourceSet, batchIndex, sourceTypeBatchIndex);
             int* bodyIndices = stackalloc int[bodyCount];
             var sourceBundleCount = sourceTypeBatch.BundleCount;
             var sourceBodyReferences = sourceTypeBatch.BodyReferences.As<TBodyReferences>();
@@ -927,6 +927,8 @@ namespace BepuPhysics.Constraints
                 //It's unclear if that's the best option- consider that it would always add a new bundle, but the members of the bundle might be able to be inserted in previous bundles.
                 var bundleStartConstraintIndex = bundleIndexInSource * Vector<int>.Count;
                 var countInBundle = sourceTypeBatch.ConstraintCount - bundleStartConstraintIndex;
+                if (countInBundle > Vector<int>.Count)
+                    countInBundle = Vector<int>.Count;
                 ref var sourceBodyReferencesBundle = ref sourceBodyReferences[bundleIndexInSource];
                 ref var sourceAccumulatedImpulsesBundle = ref sourceAccumulatedImpulses[bundleIndexInSource];
                 ref var sourcePrestepBundle = ref sourcePrestepData[bundleIndexInSource];
@@ -961,10 +963,10 @@ namespace BepuPhysics.Constraints
                     location.IndexInTypeBatch = targetIndex;
                 }
             }
-            ValidateAccumulatedImpulses(ref targetTypeBatch);
-            ValidateEmptyFallbackSlots(ref targetTypeBatch);
-            ValidateFallbackAccessSafety(ref targetTypeBatch, bodyCount);
-            solver.ValidateConstraintMaps(0, batchIndex, targetTypeBatchIndex);
+            //ValidateAccumulatedImpulses(ref targetTypeBatch);
+            //ValidateEmptyFallbackSlots(ref targetTypeBatch);
+            //ValidateFallbackAccessSafety(ref targetTypeBatch, bodyCount);
+            //solver.ValidateConstraintMaps(0, batchIndex, targetTypeBatchIndex);
         }
 
         internal unsafe sealed override void CopySleepingToActive(
@@ -1348,11 +1350,11 @@ namespace BepuPhysics.Constraints
                 }
             }
 
-            var validationMask = Vector.GreaterThanOrEqual(bodyIndices, Vector<int>.Zero);
-            orientation.Validate(validationMask);
-            position.Validate(validationMask);
-            velocity.Linear.Validate(validationMask);
-            velocity.Angular.Validate(validationMask);
+            //var validationMask = Vector.GreaterThanOrEqual(bodyIndices, Vector<int>.Zero);
+            //orientation.Validate(validationMask);
+            //position.Validate(validationMask);
+            //velocity.Linear.Validate(validationMask);
+            //velocity.Angular.Validate(validationMask);
         }
 
     }
