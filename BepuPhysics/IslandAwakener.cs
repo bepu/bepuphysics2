@@ -179,6 +179,7 @@ namespace BepuPhysics
         {
             BroadPhase,
             CopyConstraintRegion,
+            AddFallbackTypeBatchConstraints
         }
         struct PhaseTwoJob
         {
@@ -363,12 +364,17 @@ namespace BepuPhysics
                         //2) Sleeping constraints store their body references as body *handles* rather than body indices.
                         //Pulling the type batches back into the active set requires translating those body handles to body indices.  
                         //3) The translation from body handle to body index requires that the bodies already have an active set identity, which is why the constraints wait until the second phase.
-                        ref var sourceTypeBatch = ref solver.Sets[job.SourceSet].Batches[job.Batch].TypeBatches[job.SourceTypeBatch];
-                        ref var targetTypeBatch = ref solver.ActiveSet.Batches[job.Batch].TypeBatches[job.TargetTypeBatch];
-                        Debug.Assert(targetTypeBatch.TypeId == sourceTypeBatch.TypeId);
+                        Debug.Assert(solver.ActiveSet.Batches[job.Batch].TypeBatches[job.TargetTypeBatch].TypeId == solver.Sets[job.SourceSet].Batches[job.Batch].TypeBatches[job.SourceTypeBatch].TypeId);
+                        Debug.Assert(job.Batch != solver.FallbackBatchThreshold, "Fallback batches must only be handled by the fallback-specific job.");
                         solver.TypeProcessors[job.TypeId].CopySleepingToActive(
-                            job.SourceSet, job.Batch, job.SourceTypeBatch, job.Batch, job.TargetTypeBatch,
+                            job.SourceSet, job.Batch, job.SourceTypeBatch, job.TargetTypeBatch,
                             job.SourceStart, job.TargetStart, job.Count, bodies, solver);
+                    }
+                    break;
+                case PhaseTwoJobType.AddFallbackTypeBatchConstraints:
+                    {
+                        Debug.Assert(solver.ActiveSet.Batches[job.Batch].TypeBatches[job.TargetTypeBatch].TypeId == solver.Sets[job.SourceSet].Batches[job.Batch].TypeBatches[job.SourceTypeBatch].TypeId);
+                        solver.TypeProcessors[job.TypeId].AddSleepingToActiveForFallback(job.SourceSet, job.SourceTypeBatch, job.TargetTypeBatch, bodies, solver);
                     }
                     break;
             }
@@ -574,6 +580,11 @@ namespace BepuPhysics
                 for (int typeId = 0; typeId <= constraintCountPerType.HighestOccupiedTypeIndex; ++typeId)
                 {
                     var countForType = constraintCountPerType.TypeCounts[typeId].Count;
+                    //The fallback batch must allocate a worst case scenario assuming that every new constraint needs its own bundle.
+                    //It's difficult to be more conservative ahead of time; we don't know which existing partial bundles will be able to accept the new constraints.
+                    //Fallback batches should tend to be rarely used and relatively small, and the extra memory won't be touched, so this isn't a major concern.
+                    if (batchIndex == solver.FallbackBatchThreshold)
+                        countForType *= Vector<float>.Count;
                     if (countForType > 0)
                     {
                         var typeProcessor = solver.TypeProcessors[typeId];
@@ -663,8 +674,10 @@ namespace BepuPhysics
                 {
                     const int constraintJobSize = 32;
                     ref var sourceSet = ref solver.Sets[sourceSetIndex];
+                    var fallbackIndex = solver.FallbackBatchThreshold;
                     for (int batchIndex = 0; batchIndex < sourceSet.Batches.Count; ++batchIndex)
                     {
+                        var jobType = batchIndex == fallbackIndex ? PhaseTwoJobType.AddFallbackTypeBatchConstraints : PhaseTwoJobType.CopyConstraintRegion;
                         ref var sourceBatch = ref sourceSet.Batches[batchIndex];
                         ref var targetBatch = ref activeSolverSet.Batches[batchIndex];
                         for (int sourceTypeBatchIndex = 0; sourceTypeBatchIndex < sourceBatch.TypeBatches.Count; ++sourceTypeBatchIndex)
@@ -673,16 +686,19 @@ namespace BepuPhysics
                             var targetTypeBatchIndex = targetBatch.TypeIndexToTypeBatchIndex[sourceTypeBatch.TypeId];
                             ref var targetTypeBatch = ref targetBatch.TypeBatches[targetTypeBatchIndex];
                             //TODO: It would be nice to be a little more clever about scheduling start and end points for the sake of avoiding partial bundles.
-                            var jobCount = Math.Max(1, sourceTypeBatch.ConstraintCount / constraintJobSize);
+                            var jobCount = batchIndex == fallbackIndex ? 1 : Math.Max(1, sourceTypeBatch.ConstraintCount / constraintJobSize);
                             var baseConstraintsPerJob = sourceTypeBatch.ConstraintCount / jobCount;
                             var remainder = sourceTypeBatch.ConstraintCount - baseConstraintsPerJob * jobCount;
                             phaseTwoJobs.EnsureCapacity(phaseTwoJobs.Count + jobCount, pool);
-
+                            if(batchIndex == fallbackIndex)
+                            {
+                                Console.WriteLine("Asdf");
+                            }
                             var previousSourceEnd = 0;
                             for (int jobIndex = 0; jobIndex < jobCount; ++jobIndex)
                             {
                                 ref var job = ref phaseTwoJobs.AllocateUnsafely();
-                                job.Type = PhaseTwoJobType.CopyConstraintRegion;
+                                job.Type = jobType;
                                 job.TypeId = sourceTypeBatch.TypeId;
                                 job.Batch = batchIndex;
                                 job.SourceSet = sourceSetIndex;
@@ -692,18 +708,21 @@ namespace BepuPhysics
                                 job.SourceStart = previousSourceEnd;
                                 job.TargetStart = targetTypeBatch.ConstraintCount;
                                 previousSourceEnd += job.Count;
-                                var oldBundleCount = targetTypeBatch.BundleCount;
-                                targetTypeBatch.ConstraintCount += job.Count;
-                                if (targetTypeBatch.BundleCount != oldBundleCount)
+                                if (batchIndex < fallbackIndex) //The fallback batch add isn't a bulk copy; it'll handle incrementing count as necessary.
                                 {
-                                    //A new bundle was created; guarantee any trailing slots are set to -1.
-                                    //Since it's a whole new bundle that has not yet had any data set to it, we can safely just initialize the whole bundle's body references to -1.
-                                    var vectorCount = solver.TypeProcessors[job.TypeId].BodiesPerConstraint;
-                                    var bundleStart = (Vector<int>*)(targetTypeBatch.BodyReferences.Memory + (targetTypeBatch.BundleCount - 1) * vectorCount * Unsafe.SizeOf<Vector<int>>());
-                                    var negativeOne = new Vector<int>(-1);
-                                    for (int vectorIndex = 0; vectorIndex < vectorCount; ++vectorIndex)
+                                    var oldBundleCount = targetTypeBatch.BundleCount;
+                                    targetTypeBatch.ConstraintCount += job.Count;
+                                    if (targetTypeBatch.BundleCount != oldBundleCount)
                                     {
-                                        bundleStart[vectorIndex] = negativeOne;
+                                        //A new bundle was created; guarantee any trailing slots are set to -1.
+                                        //Since it's a whole new bundle that has not yet had any data set to it, we can safely just initialize the whole bundle's body references to -1.
+                                        var vectorCount = solver.TypeProcessors[job.TypeId].BodiesPerConstraint;
+                                        var bundleStart = (Vector<int>*)(targetTypeBatch.BodyReferences.Memory + (targetTypeBatch.BundleCount - 1) * vectorCount * Unsafe.SizeOf<Vector<int>>());
+                                        var negativeOne = new Vector<int>(-1);
+                                        for (int vectorIndex = 0; vectorIndex < vectorCount; ++vectorIndex)
+                                        {
+                                            bundleStart[vectorIndex] = negativeOne;
+                                        }
                                     }
                                 }
                             }

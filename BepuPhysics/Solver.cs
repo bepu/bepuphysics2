@@ -366,7 +366,38 @@ namespace BepuPhysics
                         }
                     }
                 }
-                Console.WriteLine($"Average fallback occupancy: {Vector<int>.Count * occupiedLaneCountAcrossBatch / (double)(totalBundleCount * Vector<int>.Count):G3} / {Vector<int>.Count}, total bundle count: {totalBundleCount}");
+                //Console.WriteLine($"Average fallback occupancy: {Vector<int>.Count * occupiedLaneCountAcrossBatch / (double)(totalBundleCount * Vector<int>.Count):G3} / {Vector<int>.Count}, total bundle count: {totalBundleCount}");
+            }
+        }
+        [Conditional("DEBUG")]
+        internal void ValidateSetOwnership(ref TypeBatch typeBatch, int expectedSetIndex)
+        {
+            for (int i = 0; i < typeBatch.ConstraintCount; ++i)
+            {
+                var handle = typeBatch.IndexToHandle[i];
+                if (handle.Value >= 0)
+                {
+                    Debug.Assert(HandleToConstraint[handle.Value].SetIndex == expectedSetIndex);
+                }
+            }
+        }
+        [Conditional("DEBUG")]
+        internal void ValidateSetOwnership()
+        {
+            for (int setIndex = 0; setIndex < Sets.Length; ++setIndex)
+            {
+                ref var set = ref Sets[setIndex];
+                if (!set.Allocated)
+                    continue;
+                for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
+                {
+                    ref var batch = ref set.Batches[batchIndex];
+                    for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                    {
+                        ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                        ValidateSetOwnership(ref typeBatch, setIndex);
+                    }
+                }
             }
         }
 
@@ -547,7 +578,45 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        internal void ValidateConstraintMaps(bool activeOnly = false)
+        internal void ValidateConstraintMaps(int setIndex, int batchIndex, int typeBatchIndex)
+        {
+            ref var set = ref Sets[setIndex];
+            ref var batch = ref set.Batches[batchIndex];
+            ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+            if (batchIndex == FallbackBatchThreshold)
+            {
+                for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
+                {
+                    //Fallback batches can have empty slots, marked with a -1 in the handle slot.
+                    var handle = typeBatch.IndexToHandle[indexInTypeBatch];
+                    if (handle.Value >= 0)
+                    {
+                        ref var constraintLocation = ref HandleToConstraint[handle.Value];
+                        Debug.Assert(constraintLocation.SetIndex == setIndex);
+                        Debug.Assert(constraintLocation.BatchIndex == batchIndex);
+                        Debug.Assert(constraintLocation.IndexInTypeBatch == indexInTypeBatch);
+                        Debug.Assert(constraintLocation.TypeId == typeBatch.TypeId);
+                        Debug.Assert(batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId] == typeBatchIndex);
+                    }
+                }
+            }
+            else
+            {
+                for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
+                {
+                    var handle = typeBatch.IndexToHandle[indexInTypeBatch];
+                    ref var constraintLocation = ref HandleToConstraint[handle.Value];
+                    Debug.Assert(constraintLocation.SetIndex == setIndex);
+                    Debug.Assert(constraintLocation.BatchIndex == batchIndex);
+                    Debug.Assert(constraintLocation.IndexInTypeBatch == indexInTypeBatch);
+                    Debug.Assert(constraintLocation.TypeId == typeBatch.TypeId);
+                    Debug.Assert(batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId] == typeBatchIndex);
+                }
+            }
+        }
+
+        [Conditional("DEBUG")]
+        public void ValidateConstraintMaps(bool activeOnly = false)
         {
             var setCount = activeOnly ? 1 : Sets.Length;
             for (int setIndex = 0; setIndex < setCount; ++setIndex)
@@ -560,16 +629,7 @@ namespace BepuPhysics
                         ref var batch = ref set.Batches[batchIndex];
                         for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                         {
-                            ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-                            for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
-                            {
-                                var handle = typeBatch.IndexToHandle[indexInTypeBatch];
-                                ref var constraintLocation = ref HandleToConstraint[handle.Value];
-                                Debug.Assert(constraintLocation.BatchIndex == batchIndex);
-                                Debug.Assert(constraintLocation.IndexInTypeBatch == indexInTypeBatch);
-                                Debug.Assert(constraintLocation.TypeId == typeBatch.TypeId);
-                                Debug.Assert(batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId] == typeBatchIndex);
-                            }
+                            ValidateConstraintMaps(setIndex, batchIndex, typeBatchIndex);
                         }
                     }
                 }

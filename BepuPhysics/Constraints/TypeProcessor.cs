@@ -122,8 +122,11 @@ namespace BepuPhysics.Constraints
 
         internal unsafe abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<ConstraintHandle> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
 
+        internal unsafe abstract void AddSleepingToActiveForFallback(
+            int sourceSet, int sourceTypeBatchIndex, int targetTypeBatchIndex, Bodies bodies, Solver solver);
+
         internal unsafe abstract void CopySleepingToActive(
-            int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
+            int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetTypeBatchIndex,
             int sourceStart, int targetStart, int count, Bodies bodies, Solver solver);
 
 
@@ -339,6 +342,14 @@ namespace BepuPhysics.Constraints
                 ref var bodyReferenceForFirstBody = ref Unsafe.As<byte, Vector<int>>(ref typeBatch.BodyReferences[bundleIndex * bodyReferencesBundleSize]);
                 for (int sourceBodyIndexInConstraint = 0; sourceBodyIndexInConstraint < bodiesPerConstraint; ++sourceBodyIndexInConstraint)
                 {
+                    var occupiedLaneMask = Vector.GreaterThanOrEqual(bodyReferenceForFirstBody, Vector<int>.Zero);
+                    var occupiedLaneCountInBundle = 0;
+                    for (int i = 0; i < Vector<int>.Count; ++i)
+                    {
+                        if (occupiedLaneMask[i] < 0)
+                            ++occupiedLaneCountInBundle;
+                    }
+                    Debug.Assert(occupiedLaneCountInBundle > 0, "For any bundle in the [0, BundleCount) interval, there must be at least one occupied lane.");
                     var bodyReferencesForSource = Unsafe.Add(ref bodyReferenceForFirstBody, sourceBodyIndexInConstraint);
                     for (int innerIndex = 0; innerIndex < Vector<int>.Count; ++innerIndex)
                     {
@@ -379,9 +390,15 @@ namespace BepuPhysics.Constraints
 
         public unsafe sealed override int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool)
         {
+            //This folds.
+            var bodiesPerConstraint = Unsafe.SizeOf<TBodyReferences>() / Unsafe.SizeOf<Vector<int>>();
+            //ValidateEmptyFallbackSlots(ref typeBatch);
+            //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+            //ValidateAccumulatedImpulses(ref typeBatch);
             Debug.Assert(typeBatch.BodyReferences.Allocated, "Should initialize the batch before allocating anything from it.");
             if (typeBatch.ConstraintCount == typeBatch.IndexToHandle.Length)
             {
+                Debug.Assert(pool != null, "Looks like a user that doesn't have access to a pool (the awakener, probably?) tried to add a constraint without preallocating enough room.");
                 //This isn't technically required (since probing might find an earlier slot), but it makes things simpler and rarely allocates more than necessary.
                 InternalResize(ref typeBatch, pool, typeBatch.ConstraintCount * 2);
             }
@@ -394,8 +411,6 @@ namespace BepuPhysics.Constraints
             var typeBatchBodyIndices = typeBatch.BodyReferences.As<TBodyReferences>();
             int targetBundleIndex = -1;
             int targetInnerIndex = -1;
-            //This folds.
-            var bodiesPerConstraint = Unsafe.SizeOf<TBodyReferences>() / Unsafe.SizeOf<Vector<int>>();
             var broadcastedBodyIndices = stackalloc Vector<int>[bodiesPerConstraint];
             for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraint; ++bodyIndexInConstraint)
             {
@@ -468,9 +483,9 @@ namespace BepuPhysics.Constraints
                 {
                     typeBatch.IndexToHandle[i].Value = -1;
                 }
-                //ValidateEmptyFallbackSlots(ref typeBatch);
-                //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
-                //ValidateAccumulatedImpulses(ref typeBatch);
+                ValidateEmptyFallbackSlots(ref typeBatch);
+                ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                ValidateAccumulatedImpulses(ref typeBatch);
                 return indexInTypeBatch;
             }
             else
@@ -487,9 +502,9 @@ namespace BepuPhysics.Constraints
                 Debug.Assert(typeBatch.Projection.Length >= bundleCount * Unsafe.SizeOf<TProjection>());
                 Debug.Assert(typeBatch.BodyReferences.Length >= bundleCount * Unsafe.SizeOf<TBodyReferences>());
                 Debug.Assert(typeBatch.AccumulatedImpulses.Length >= bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
-                //ValidateEmptyFallbackSlots(ref typeBatch);
-                //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
-                //ValidateAccumulatedImpulses(ref typeBatch);
+                ValidateEmptyFallbackSlots(ref typeBatch);
+                ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                ValidateAccumulatedImpulses(ref typeBatch);
                 return indexInTypeBatch;
             }
 
@@ -569,6 +584,9 @@ namespace BepuPhysics.Constraints
             Debug.Assert(index >= 0 && index < typeBatch.ConstraintCount, "Can only remove elements that are actually in the batch!");
             if (isFallback)
             {
+                //ValidateEmptyFallbackSlots(ref typeBatch);
+                //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                //ValidateAccumulatedImpulses(ref typeBatch);
                 //The fallback batch does not guarantee contiguity of constraints, only contiguity of *bundles*.
                 //Bundles may be incomplete.
                 //We must guarantee that a bundle never contains references to the same body more than once.
@@ -617,9 +635,9 @@ namespace BepuPhysics.Constraints
                     var innerLaneCount = BundleIndexing.GetLastSetLaneCount(Vector.GreaterThanOrEqual(Unsafe.As<TBodyReferences, Vector<int>>(ref bodyReferences[lastBundleIndex]), Vector<int>.Zero));
                     typeBatch.ConstraintCount = lastBundleIndex * Vector<int>.Count + innerLaneCount;
 
-                    //ValidateEmptyFallbackSlots(ref typeBatch);
-                    //ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
-                    //ValidateAccumulatedImpulses(ref typeBatch);
+                    ValidateEmptyFallbackSlots(ref typeBatch);
+                    ValidateFallbackAccessSafety(ref typeBatch, bodiesPerConstraint);
+                    ValidateAccumulatedImpulses(ref typeBatch);
                 }
             }
             else
@@ -878,33 +896,83 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void CopyIncompleteBundle(int sourceStart, int targetStart, int count, ref TypeBatch sourceTypeBatch, ref TypeBatch targetTypeBatch)
+
+        internal unsafe sealed override void AddSleepingToActiveForFallback(int sourceSet, int sourceTypeBatchIndex, int targetTypeBatchIndex, Bodies bodies, Solver solver)
         {
-            for (int i = 0; i < count; ++i)
+            //Unlike the bulk copies that the awakener can do for non-fallback batches, we have to do the heavyweight allocations for fallbacks.
+            //This arises because sleeping constraint sets do not maintain the 'no constraints refer to the same bodies in a given bundle' rule; everything just got packed together.
+            var batchIndex = solver.FallbackBatchThreshold;
+            ref var sourceTypeBatch = ref solver.Sets[sourceSet].Batches[batchIndex].TypeBatches[sourceTypeBatchIndex];
+            solver.ValidateSetOwnership(ref sourceTypeBatch, sourceSet);
+            ref var targetTypeBatch = ref solver.ActiveSet.Batches[batchIndex].TypeBatches[targetTypeBatchIndex];
+            Debug.Assert(sourceTypeBatch.TypeId == targetTypeBatch.TypeId);
+            var bodyCount = Unsafe.SizeOf<TBodyReferences>() / Unsafe.SizeOf<Vector<int>>();
+            //ValidateAccumulatedImpulses(ref targetTypeBatch);
+            //ValidateEmptyFallbackSlots(ref targetTypeBatch);
+            //ValidateFallbackAccessSafety(ref targetTypeBatch, bodyCount);
+            solver.ValidateConstraintMaps(0, batchIndex, targetTypeBatchIndex);
+            solver.ValidateConstraintMaps(sourceSet, batchIndex, sourceTypeBatchIndex);
+            int* bodyIndices = stackalloc int[bodyCount];
+            var sourceBundleCount = sourceTypeBatch.BundleCount;
+            var sourceBodyReferences = sourceTypeBatch.BodyReferences.As<TBodyReferences>();
+            var sourcePrestepData = sourceTypeBatch.PrestepData.As<TPrestepData>();
+            var sourceAccumulatedImpulses = sourceTypeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
+            var targetPrestepData = targetTypeBatch.PrestepData.As<TPrestepData>();
+            var targetAccumulatedImpulses = targetTypeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
+            var bodyHandleToLocation = bodies.HandleToLocation;
+            var constraintHandleToLocation = solver.HandleToConstraint;
+            for (int bundleIndexInSource = 0; bundleIndexInSource < sourceBundleCount; ++bundleIndexInSource)
             {
-                //Note that this implementation allows two threads to access a single bundle. That would be a pretty bad case of false sharing if it happens, but
-                //it won't cause correctness problems.
-                var sourceIndex = sourceStart + i;
-                var targetIndex = targetStart + i;
-                BundleIndexing.GetBundleIndices(sourceIndex, out var sourceBundle, out var sourceInner);
-                BundleIndexing.GetBundleIndices(targetIndex, out var targetBundle, out var targetInner);
-                GatherScatter.CopyLane(
-                    ref Buffer<TPrestepData>.Get(ref sourceTypeBatch.PrestepData, sourceBundle), sourceInner,
-                    ref Buffer<TPrestepData>.Get(ref targetTypeBatch.PrestepData, targetBundle), targetInner);
-                GatherScatter.CopyLane(
-                    ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle), sourceInner,
-                    ref Buffer<TAccumulatedImpulse>.Get(ref targetTypeBatch.AccumulatedImpulses, targetBundle), targetInner);
+                //It's possible that the sleeping fallback entries do not have any repeat entries. In that case, we could bulk copy the bundle into the active set.
+                //It's unclear if that's the best option- consider that it would always add a new bundle, but the members of the bundle might be able to be inserted in previous bundles.
+                var bundleStartConstraintIndex = bundleIndexInSource * Vector<int>.Count;
+                var countInBundle = sourceTypeBatch.ConstraintCount - bundleStartConstraintIndex;
+                ref var sourceBodyReferencesBundle = ref sourceBodyReferences[bundleIndexInSource];
+                ref var sourceAccumulatedImpulsesBundle = ref sourceAccumulatedImpulses[bundleIndexInSource];
+                ref var sourcePrestepBundle = ref sourcePrestepData[bundleIndexInSource];
+                for (int sourceInnerIndex = 0; sourceInnerIndex < countInBundle; ++sourceInnerIndex)
+                {
+                    var sourceIndex = bundleStartConstraintIndex + sourceInnerIndex;
+                    ref var bodyReferencesLane = ref Unsafe.As<TBodyReferences, int>(ref GatherScatter.GetOffsetInstance(ref sourceBodyReferencesBundle, sourceInnerIndex));
+                    //Note that the sleeping set stores body references as handles, while the active set uses indices. We have to translate here.
+                    for (int i = 0; i < bodyCount; ++i)
+                    {
+                        //Bodies have already been moved into the active set, so we can use the mapping.
+                        var bodyHandleValue = Unsafe.Add(ref bodyReferencesLane, Vector<int>.Count * i);
+                        Debug.Assert(bodyHandleToLocation[bodyHandleValue].SetIndex == 0);
+                        bodyIndices[i] = bodyHandleToLocation[bodyHandleValue].Index;
+                    }
+                    var handle = sourceTypeBatch.IndexToHandle[sourceIndex];
+                    Debug.Assert(constraintHandleToLocation[handle.Value].SetIndex == sourceSet);
+                    Debug.Assert(constraintHandleToLocation[handle.Value].IndexInTypeBatch == sourceIndex);
+                    Debug.Assert(constraintHandleToLocation[handle.Value].TypeId == sourceTypeBatch.TypeId);
+                    Debug.Assert(constraintHandleToLocation[handle.Value].BatchIndex == batchIndex);
+                    //Note that we pass null for the buffer pool. The user (awakener) must preallocate worst case room in the type batches ahead of time so that multiple threads can proceed at the same time.
+                    var targetIndex = AllocateInTypeBatchForFallback(ref targetTypeBatch, handle, bodyIndices, null);
+                    BundleIndexing.GetBundleIndices(targetIndex, out var targetBundle, out var targetInner);
+
+                    GatherScatter.CopyLane(ref sourceAccumulatedImpulsesBundle, sourceInnerIndex, ref targetAccumulatedImpulses[targetBundle], targetInner);
+                    GatherScatter.CopyLane(ref sourcePrestepBundle, sourceInnerIndex, ref targetPrestepData[targetBundle], targetInner);
+                    ref var location = ref constraintHandleToLocation[handle.Value];
+                    Debug.Assert(location.SetIndex == sourceSet);
+                    location.SetIndex = 0;
+                    location.BatchIndex = batchIndex;
+                    Debug.Assert(sourceTypeBatch.TypeId == location.TypeId);
+                    location.IndexInTypeBatch = targetIndex;
+                }
             }
+            ValidateAccumulatedImpulses(ref targetTypeBatch);
+            ValidateEmptyFallbackSlots(ref targetTypeBatch);
+            ValidateFallbackAccessSafety(ref targetTypeBatch, bodyCount);
+            solver.ValidateConstraintMaps(0, batchIndex, targetTypeBatchIndex);
         }
 
-
         internal unsafe sealed override void CopySleepingToActive(
-            int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
+            int sourceSet, int batchIndex, int sourceTypeBatchIndex, int targetTypeBatchIndex,
             int sourceStart, int targetStart, int count, Bodies bodies, Solver solver)
         {
-            ref var sourceTypeBatch = ref solver.Sets[sourceSet].Batches[sourceBatchIndex].TypeBatches[sourceTypeBatchIndex];
-            ref var targetTypeBatch = ref solver.ActiveSet.Batches[targetBatchIndex].TypeBatches[targetTypeBatchIndex];
+            ref var sourceTypeBatch = ref solver.Sets[sourceSet].Batches[batchIndex].TypeBatches[sourceTypeBatchIndex];
+            ref var targetTypeBatch = ref solver.ActiveSet.Batches[batchIndex].TypeBatches[targetTypeBatchIndex];
             Debug.Assert(sourceStart >= 0 && sourceStart + count <= sourceTypeBatch.ConstraintCount);
             Debug.Assert(targetStart >= 0 && targetStart + count <= targetTypeBatch.ConstraintCount,
                 "This function should only be used when a region has been preallocated within the type batch.");
@@ -930,7 +998,21 @@ namespace BepuPhysics.Constraints
             }
             else
             {
-                CopyIncompleteBundle(sourceStart, targetStart, count, ref sourceTypeBatch, ref targetTypeBatch);
+                for (int i = 0; i < count; ++i)
+                {
+                    //Note that this implementation allows two threads to access a single bundle. That would be a pretty bad case of false sharing if it happens, but
+                    //it won't cause correctness problems.
+                    var sourceIndex = sourceStart + i;
+                    var targetIndex = targetStart + i;
+                    BundleIndexing.GetBundleIndices(sourceIndex, out var sourceBundle, out var sourceInner);
+                    BundleIndexing.GetBundleIndices(targetIndex, out var targetBundle, out var targetInner);
+                    GatherScatter.CopyLane(
+                        ref Buffer<TPrestepData>.Get(ref sourceTypeBatch.PrestepData, sourceBundle), sourceInner,
+                        ref Buffer<TPrestepData>.Get(ref targetTypeBatch.PrestepData, targetBundle), targetInner);
+                    GatherScatter.CopyLane(
+                        ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle), sourceInner,
+                        ref Buffer<TAccumulatedImpulse>.Get(ref targetTypeBatch.AccumulatedImpulses, targetBundle), targetInner);
+                }
             }
             //Note that body reference copies cannot be done in bulk because inactive constraints refer to body handles while active constraints refer to body indices.
             for (int i = 0; i < count; ++i)
@@ -952,7 +1034,7 @@ namespace BepuPhysics.Constraints
                 ref var location = ref solver.HandleToConstraint[constraintHandle.Value];
                 Debug.Assert(location.SetIndex == sourceSet);
                 location.SetIndex = 0;
-                location.BatchIndex = targetBatchIndex;
+                location.BatchIndex = batchIndex;
                 Debug.Assert(sourceTypeBatch.TypeId == location.TypeId);
                 location.IndexInTypeBatch = targetIndex;
                 //This could be done with a bulk copy, but eh! We already touched the memory.
