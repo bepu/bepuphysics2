@@ -269,7 +269,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public unsafe void ValidateTrailingTypeBatchBodyReferences()
+        internal unsafe void ValidateTrailingTypeBatchBodyReferences()
         {
             ref var set = ref ActiveSet;
             for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
@@ -295,7 +295,7 @@ namespace BepuPhysics
             }
         }
         [Conditional("DEBUG")]
-        public unsafe void ValidateFallbackBatchEmptySlotReferences()
+        internal unsafe void ValidateFallbackBatchEmptySlotReferences()
         {
             ref var set = ref ActiveSet;
             if (set.Batches.Count > FallbackBatchThreshold)
@@ -318,7 +318,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public unsafe void ValidateFallbackBatchAccessSafety()
+        internal unsafe void ValidateFallbackBatchAccessSafety()
         {
             ref var set = ref ActiveSet;
             if (set.Batches.Count > FallbackBatchThreshold)
@@ -366,7 +366,7 @@ namespace BepuPhysics
                         }
                     }
                 }
-                //Console.WriteLine($"Average fallback occupancy: {Vector<int>.Count * occupiedLaneCountAcrossBatch / (double)(totalBundleCount * Vector<int>.Count):G3} / {Vector<int>.Count}, total bundle count: {totalBundleCount}");
+                Console.WriteLine($"Average fallback occupancy: {Vector<int>.Count * occupiedLaneCountAcrossBatch / (double)(totalBundleCount * Vector<int>.Count):G3} / {Vector<int>.Count}, total bundle count: {totalBundleCount}");
             }
         }
         [Conditional("DEBUG")]
@@ -412,7 +412,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public unsafe void ValidateFallbackBatchAccumulatedImpulses()
+        internal unsafe void ValidateFallbackBatchAccumulatedImpulses()
         {
             ref var set = ref ActiveSet;
             if (set.Batches.Count > FallbackBatchThreshold)
@@ -442,7 +442,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public unsafe void ValidateExistingHandles(bool activeOnly = false)
+        internal unsafe void ValidateExistingHandles(bool activeOnly = false)
         {
             var maxBodySet = activeOnly ? 1 : bodies.Sets.Length;
             for (int i = 0; i < maxBodySet; ++i)
@@ -624,7 +624,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public void ValidateActiveFallbackConstraintMaps()
+        internal void ValidateActiveFallbackConstraintMaps()
         {
             ref var set = ref Sets[0];
             if (set.Allocated)
@@ -641,7 +641,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public void ValidateConstraintMaps(bool activeOnly = false)
+        internal void ValidateConstraintMaps(bool activeOnly = false)
         {
             for (int i = 0; i < HandleToConstraint.Length; ++i)
             {

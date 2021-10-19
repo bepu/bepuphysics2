@@ -49,16 +49,19 @@ namespace DemoRenderer.Constraints
                 var tint = new Vector3(1, 1, 1);
                 for (int i = constraintStart; i < constraintEnd; ++i)
                 {
-                    BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
-                    ref var prestepBundle = ref Unsafe.Add(ref prestepStart, bundleIndex);
-                    ref var referencesBundle = ref Unsafe.Add(ref referencesStart, bundleIndex);
-                    ref var firstReference = ref Unsafe.As<TBodyReferences, Vector<int>>(ref referencesBundle);
-                    for (int j = 0; j < bodyCount; ++j)
+                    if (typeBatch.IndexToHandle[i].Value >= 0)
                     {
-                        //Active set constraint body references refer directly to the body index.
-                        bodyIndices[j] = GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex);
+                        BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
+                        ref var prestepBundle = ref Unsafe.Add(ref prestepStart, bundleIndex);
+                        ref var referencesBundle = ref Unsafe.Add(ref referencesStart, bundleIndex);
+                        ref var firstReference = ref Unsafe.As<TBodyReferences, Vector<int>>(ref referencesBundle);
+                        for (int j = 0; j < bodyCount; ++j)
+                        {
+                            //Active set constraint body references refer directly to the body index.
+                            bodyIndices[j] = GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex);
+                        }
+                        extractor.ExtractLines(ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex), setIndex, bodyIndices, bodies, ref tint, ref lines);
                     }
-                    extractor.ExtractLines(ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex), setIndex, bodyIndices, bodies, ref tint, ref lines);
                 }
             }
             else
@@ -66,18 +69,21 @@ namespace DemoRenderer.Constraints
                 var tint = new Vector3(0.4f, 0.4f, 0.8f);
                 for (int i = constraintStart; i < constraintEnd; ++i)
                 {
-                    BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
-                    ref var prestepBundle = ref Unsafe.Add(ref prestepStart, bundleIndex);
-                    ref var referencesBundle = ref Unsafe.Add(ref referencesStart, bundleIndex);
-                    ref var firstReference = ref Unsafe.As<TBodyReferences, Vector<int>>(ref referencesBundle);
-                    for (int j = 0; j < bodyCount; ++j)
+                    if (typeBatch.IndexToHandle[i].Value >= 0)
                     {
-                        //Inactive constraints store body references in the form of handles, so we have to follow the indirection.
-                        var bodyHandle = GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex);
-                        Debug.Assert(bodies.HandleToLocation[bodyHandle].SetIndex == setIndex);
-                        bodyIndices[j] = bodies.HandleToLocation[bodyHandle].Index;
+                        BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
+                        ref var prestepBundle = ref Unsafe.Add(ref prestepStart, bundleIndex);
+                        ref var referencesBundle = ref Unsafe.Add(ref referencesStart, bundleIndex);
+                        ref var firstReference = ref Unsafe.As<TBodyReferences, Vector<int>>(ref referencesBundle);
+                        for (int j = 0; j < bodyCount; ++j)
+                        {
+                            //Inactive constraints store body references in the form of handles, so we have to follow the indirection.
+                            var bodyHandle = GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex);
+                            Debug.Assert(bodies.HandleToLocation[bodyHandle].SetIndex == setIndex);
+                            bodyIndices[j] = bodies.HandleToLocation[bodyHandle].Index;
+                        }
+                        extractor.ExtractLines(ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex), setIndex, bodyIndices, bodies, ref tint, ref lines);
                     }
-                    extractor.ExtractLines(ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex), setIndex, bodyIndices, bodies, ref tint, ref lines);
                 }
             }
         }
