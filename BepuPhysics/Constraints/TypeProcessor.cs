@@ -903,10 +903,10 @@ namespace BepuPhysics.Constraints
             //This arises because sleeping constraint sets do not maintain the 'no constraints refer to the same bodies in a given bundle' rule; everything just got packed together.
             var batchIndex = solver.FallbackBatchThreshold;
             ref var sourceTypeBatch = ref solver.Sets[sourceSet].Batches[batchIndex].TypeBatches[sourceTypeBatchIndex];
-            //solver.ValidateSetOwnership(ref sourceTypeBatch, sourceSet);
             ref var targetTypeBatch = ref solver.ActiveSet.Batches[batchIndex].TypeBatches[targetTypeBatchIndex];
             Debug.Assert(sourceTypeBatch.TypeId == targetTypeBatch.TypeId);
             var bodyCount = Unsafe.SizeOf<TBodyReferences>() / Unsafe.SizeOf<Vector<int>>();
+            //solver.ValidateSetOwnership(ref sourceTypeBatch, sourceSet);
             //ValidateAccumulatedImpulses(ref targetTypeBatch);
             //ValidateEmptyFallbackSlots(ref targetTypeBatch);
             //ValidateFallbackAccessSafety(ref targetTypeBatch, bodyCount);
@@ -956,7 +956,6 @@ namespace BepuPhysics.Constraints
                     GatherScatter.CopyLane(ref sourceAccumulatedImpulsesBundle, sourceInnerIndex, ref targetAccumulatedImpulses[targetBundle], targetInner);
                     GatherScatter.CopyLane(ref sourcePrestepBundle, sourceInnerIndex, ref targetPrestepData[targetBundle], targetInner);
                     ref var location = ref constraintHandleToLocation[handle.Value];
-                    Debug.Assert(location.SetIndex == sourceSet);
                     location.SetIndex = 0;
                     location.BatchIndex = batchIndex;
                     Debug.Assert(sourceTypeBatch.TypeId == location.TypeId);

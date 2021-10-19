@@ -54,7 +54,6 @@ namespace BepuPhysics
 
             simulation.CollisionDetection(dt, threadDispatcher);
             CollisionsDetected?.Invoke(dt, threadDispatcher);
-
             Debug.Assert(SubstepCount >= 0, "Substep count should be positive.");
 
             simulation.Solver.ValidateTrailingTypeBatchBodyReferences();

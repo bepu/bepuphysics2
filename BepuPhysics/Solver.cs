@@ -235,7 +235,7 @@ namespace BepuPhysics
         public bool ConstraintExists(ConstraintHandle constraintHandle)
         {
             //A constraint location with a negative set index marks a mapping slot as unused.
-            return constraintHandle.Value >= 0 && constraintHandle.Value < HandleToConstraint.Length && HandleToConstraint[constraintHandle.Value].SetIndex >= 0;
+            return constraintHandle.Value >= 0 && constraintHandle.Value <= HandlePool.HighestPossiblyClaimedId && HandleToConstraint[constraintHandle.Value].SetIndex >= 0;
         }
 
         /// <summary>
@@ -578,14 +578,15 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        internal void ValidateConstraintMaps(int setIndex, int batchIndex, int typeBatchIndex)
+        internal void ValidateConstraintMaps(int setIndex, int batchIndex, int typeBatchIndex, int constraintStart, int constraintCount)
         {
             ref var set = ref Sets[setIndex];
             ref var batch = ref set.Batches[batchIndex];
             ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+            var end = constraintStart + constraintCount;
             if (batchIndex == FallbackBatchThreshold)
             {
-                for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
+                for (int indexInTypeBatch = constraintStart; indexInTypeBatch < end; ++indexInTypeBatch)
                 {
                     //Fallback batches can have empty slots, marked with a -1 in the handle slot.
                     var handle = typeBatch.IndexToHandle[indexInTypeBatch];
@@ -603,7 +604,7 @@ namespace BepuPhysics
             }
             else
             {
-                for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
+                for (int indexInTypeBatch = constraintStart; indexInTypeBatch < end; ++indexInTypeBatch)
                 {
                     var handle = typeBatch.IndexToHandle[indexInTypeBatch];
                     AssertConstraintHandleExists(handle);
@@ -615,6 +616,11 @@ namespace BepuPhysics
                     Debug.Assert(batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId] == typeBatchIndex);
                 }
             }
+        }
+        [Conditional("DEBUG")]
+        internal void ValidateConstraintMaps(int setIndex, int batchIndex, int typeBatchIndex)
+        {
+            ValidateConstraintMaps(setIndex, batchIndex, typeBatchIndex, 0, Sets[setIndex].Batches[batchIndex].TypeBatches[typeBatchIndex].ConstraintCount);
         }
 
         [Conditional("DEBUG")]
@@ -637,6 +643,14 @@ namespace BepuPhysics
         [Conditional("DEBUG")]
         public void ValidateConstraintMaps(bool activeOnly = false)
         {
+            for (int i = 0; i < HandleToConstraint.Length; ++i)
+            {
+                var handle = new ConstraintHandle { Value = i };
+                if (ConstraintExists(handle))
+                {
+                    AssertConstraintHandleExists(handle);
+                }
+            }
             var setCount = activeOnly ? 1 : Sets.Length;
             for (int setIndex = 0; setIndex < setCount; ++setIndex)
             {

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
@@ -181,9 +182,8 @@ namespace BepuPhysics
             CopyConstraintRegion,
             AddFallbackTypeBatchConstraints
         }
-        struct PhaseTwoJob
+        struct CopyConstraintRegionJob
         {
-            public PhaseTwoJobType Type;
             public int SourceStart;
             public int TargetStart;
             public int Count;
@@ -192,6 +192,29 @@ namespace BepuPhysics
             public int Batch;
             public int SourceTypeBatch;
             public int TargetTypeBatch;
+        }
+
+        struct FallbackAddSource
+        {
+            public int SourceSet;
+            public int SourceTypeBatchIndex;
+        }
+        struct AddFallbackTypeBatchConstraintsJob
+        {
+            public Buffer<FallbackAddSource> Sources;
+            public int TypeId;
+            public int TargetTypeBatch;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        struct PhaseTwoJob
+        {
+            [FieldOffset(0)]
+            public PhaseTwoJobType Type;
+            [FieldOffset(4)]
+            public CopyConstraintRegionJob CopyConstraintRegion;
+            [FieldOffset(8)]
+            public AddFallbackTypeBatchConstraintsJob AddFallbackTypeBatchConstraints;
         }
 
         bool resetActivityStates;
@@ -307,8 +330,8 @@ namespace BepuPhysics
 
         internal unsafe void ExecutePhaseTwoJob(int index)
         {
-            ref var job = ref phaseTwoJobs[index];
-            switch (job.Type)
+            ref var phaseTwoJob = ref phaseTwoJobs[index];
+            switch (phaseTwoJob.Type)
             {
                 case PhaseTwoJobType.BroadPhase:
                     {
@@ -364,17 +387,23 @@ namespace BepuPhysics
                         //2) Sleeping constraints store their body references as body *handles* rather than body indices.
                         //Pulling the type batches back into the active set requires translating those body handles to body indices.  
                         //3) The translation from body handle to body index requires that the bodies already have an active set identity, which is why the constraints wait until the second phase.
+                        ref var job = ref phaseTwoJob.CopyConstraintRegion;
                         Debug.Assert(solver.ActiveSet.Batches[job.Batch].TypeBatches[job.TargetTypeBatch].TypeId == solver.Sets[job.SourceSet].Batches[job.Batch].TypeBatches[job.SourceTypeBatch].TypeId);
                         Debug.Assert(job.Batch != solver.FallbackBatchThreshold, "Fallback batches must only be handled by the fallback-specific job.");
                         solver.TypeProcessors[job.TypeId].CopySleepingToActive(
                             job.SourceSet, job.Batch, job.SourceTypeBatch, job.TargetTypeBatch,
                             job.SourceStart, job.TargetStart, job.Count, bodies, solver);
+                        solver.ValidateConstraintMaps(0, job.Batch, job.TargetTypeBatch, job.TargetStart, job.Count);
                     }
                     break;
                 case PhaseTwoJobType.AddFallbackTypeBatchConstraints:
                     {
-                        Debug.Assert(solver.ActiveSet.Batches[job.Batch].TypeBatches[job.TargetTypeBatch].TypeId == solver.Sets[job.SourceSet].Batches[job.Batch].TypeBatches[job.SourceTypeBatch].TypeId);
-                        solver.TypeProcessors[job.TypeId].AddSleepingToActiveForFallback(job.SourceSet, job.SourceTypeBatch, job.TargetTypeBatch, bodies, solver);
+                        ref var job = ref phaseTwoJob.AddFallbackTypeBatchConstraints;
+                        for (int i = 0; i < job.Sources.Length; ++i)
+                        {
+                            var source = job.Sources[i];
+                            solver.TypeProcessors[job.TypeId].AddSleepingToActiveForFallback(source.SourceSet, source.SourceTypeBatchIndex, job.TargetTypeBatch, bodies, solver);
+                        }
                     }
                     break;
             }
@@ -634,6 +663,9 @@ namespace BepuPhysics
             ref var activeBodySet = ref bodies.ActiveSet;
             ref var activeSolverSet = ref solver.ActiveSet;
             //TODO: The job sizes are a little goofy for single threaded execution. Easy enough to resolve with special case or dynamic size.
+
+            //Multiple source sets can contribute to the same target type batch. Track those as we enumerate sets so we can create a single job for each target after the loop.
+            QuickDictionary<int, QuickList<FallbackAddSource>, PrimitiveComparer<int>> targetFallbackTypeBatchesToSources = highestNewBatchCount > solver.FallbackBatchThreshold ? targetFallbackTypeBatchesToSources = new(8, pool) : default;
             for (int i = 0; i < uniqueSetIndices.Count; ++i)
             {
                 var sourceSetIndex = uniqueSetIndices[i];
@@ -675,9 +707,10 @@ namespace BepuPhysics
                     const int constraintJobSize = 32;
                     ref var sourceSet = ref solver.Sets[sourceSetIndex];
                     var fallbackIndex = solver.FallbackBatchThreshold;
-                    for (int batchIndex = 0; batchIndex < sourceSet.Batches.Count; ++batchIndex)
+
+                    int synchronizedBatchCountInSource = sourceSet.Batches.Count > solver.FallbackBatchThreshold ? solver.FallbackBatchThreshold : sourceSet.Batches.Count;
+                    for (int batchIndex = 0; batchIndex < synchronizedBatchCountInSource; ++batchIndex)
                     {
-                        var jobType = batchIndex == fallbackIndex ? PhaseTwoJobType.AddFallbackTypeBatchConstraints : PhaseTwoJobType.CopyConstraintRegion;
                         ref var sourceBatch = ref sourceSet.Batches[batchIndex];
                         ref var targetBatch = ref activeSolverSet.Batches[batchIndex];
                         for (int sourceTypeBatchIndex = 0; sourceTypeBatchIndex < sourceBatch.TypeBatches.Count; ++sourceTypeBatchIndex)
@@ -686,7 +719,7 @@ namespace BepuPhysics
                             var targetTypeBatchIndex = targetBatch.TypeIndexToTypeBatchIndex[sourceTypeBatch.TypeId];
                             ref var targetTypeBatch = ref targetBatch.TypeBatches[targetTypeBatchIndex];
                             //TODO: It would be nice to be a little more clever about scheduling start and end points for the sake of avoiding partial bundles.
-                            var jobCount = batchIndex == fallbackIndex ? 1 : Math.Max(1, sourceTypeBatch.ConstraintCount / constraintJobSize);
+                            var jobCount = Math.Max(1, sourceTypeBatch.ConstraintCount / constraintJobSize);
                             var baseConstraintsPerJob = sourceTypeBatch.ConstraintCount / jobCount;
                             var remainder = sourceTypeBatch.ConstraintCount - baseConstraintsPerJob * jobCount;
                             phaseTwoJobs.EnsureCapacity(phaseTwoJobs.Count + jobCount, pool);
@@ -694,31 +727,31 @@ namespace BepuPhysics
                             for (int jobIndex = 0; jobIndex < jobCount; ++jobIndex)
                             {
                                 ref var job = ref phaseTwoJobs.AllocateUnsafely();
-                                job.Type = jobType;
-                                job.TypeId = sourceTypeBatch.TypeId;
-                                job.Batch = batchIndex;
-                                job.SourceSet = sourceSetIndex;
-                                job.SourceTypeBatch = sourceTypeBatchIndex;
-                                job.TargetTypeBatch = targetTypeBatchIndex;
-                                job.Count = jobIndex >= remainder ? baseConstraintsPerJob : baseConstraintsPerJob + 1;
-                                job.SourceStart = previousSourceEnd;
-                                job.TargetStart = targetTypeBatch.ConstraintCount;
-                                previousSourceEnd += job.Count;
-                                if (batchIndex < fallbackIndex) //The fallback batch add isn't a bulk copy; it'll handle incrementing count as necessary.
+                                job.Type = PhaseTwoJobType.CopyConstraintRegion;
+                                job.CopyConstraintRegion = new CopyConstraintRegionJob
                                 {
-                                    var oldBundleCount = targetTypeBatch.BundleCount;
-                                    targetTypeBatch.ConstraintCount += job.Count;
-                                    if (targetTypeBatch.BundleCount != oldBundleCount)
+                                    TypeId = sourceTypeBatch.TypeId,
+                                    Batch = batchIndex,
+                                    SourceSet = sourceSetIndex,
+                                    SourceTypeBatch = sourceTypeBatchIndex,
+                                    TargetTypeBatch = targetTypeBatchIndex,
+                                    Count = jobIndex >= remainder ? baseConstraintsPerJob : baseConstraintsPerJob + 1,
+                                    SourceStart = previousSourceEnd,
+                                    TargetStart = targetTypeBatch.ConstraintCount
+                                };
+                                previousSourceEnd += job.CopyConstraintRegion.Count;
+                                var oldBundleCount = targetTypeBatch.BundleCount;
+                                targetTypeBatch.ConstraintCount += job.CopyConstraintRegion.Count;
+                                if (targetTypeBatch.BundleCount != oldBundleCount)
+                                {
+                                    //A new bundle was created; guarantee any trailing slots are set to -1.
+                                    //Since it's a whole new bundle that has not yet had any data set to it, we can safely just initialize the whole bundle's body references to -1.
+                                    var vectorCount = solver.TypeProcessors[job.CopyConstraintRegion.TypeId].BodiesPerConstraint;
+                                    var bundleStart = (Vector<int>*)(targetTypeBatch.BodyReferences.Memory + (targetTypeBatch.BundleCount - 1) * vectorCount * Unsafe.SizeOf<Vector<int>>());
+                                    var negativeOne = new Vector<int>(-1);
+                                    for (int vectorIndex = 0; vectorIndex < vectorCount; ++vectorIndex)
                                     {
-                                        //A new bundle was created; guarantee any trailing slots are set to -1.
-                                        //Since it's a whole new bundle that has not yet had any data set to it, we can safely just initialize the whole bundle's body references to -1.
-                                        var vectorCount = solver.TypeProcessors[job.TypeId].BodiesPerConstraint;
-                                        var bundleStart = (Vector<int>*)(targetTypeBatch.BodyReferences.Memory + (targetTypeBatch.BundleCount - 1) * vectorCount * Unsafe.SizeOf<Vector<int>>());
-                                        var negativeOne = new Vector<int>(-1);
-                                        for (int vectorIndex = 0; vectorIndex < vectorCount; ++vectorIndex)
-                                        {
-                                            bundleStart[vectorIndex] = negativeOne;
-                                        }
+                                        bundleStart[vectorIndex] = negativeOne;
                                     }
                                 }
                             }
@@ -726,7 +759,37 @@ namespace BepuPhysics
                             Debug.Assert(targetTypeBatch.ConstraintCount <= targetTypeBatch.IndexToHandle.Length);
                         }
                     }
+                    if (sourceSet.Batches.Count > fallbackIndex)
+                    {
+                        ref var sourceBatch = ref sourceSet.Batches[fallbackIndex];
+                        ref var targetBatch = ref activeSolverSet.Batches[fallbackIndex];
+                        for (int sourceTypeBatchIndex = 0; sourceTypeBatchIndex < sourceBatch.TypeBatches.Count; ++sourceTypeBatchIndex)
+                        {
+                            ref var sourceTypeBatch = ref sourceBatch.TypeBatches[sourceTypeBatchIndex];
+                            var targetTypeBatchIndex = targetBatch.TypeIndexToTypeBatchIndex[sourceTypeBatch.TypeId];
+                            if (!targetFallbackTypeBatchesToSources.FindOrAllocateSlot(targetTypeBatchIndex, pool, out var slotIndex))
+                            {
+                                targetFallbackTypeBatchesToSources.Values[slotIndex] = new QuickList<FallbackAddSource>(8, pool);
+                            }
+                            targetFallbackTypeBatchesToSources.Values[slotIndex].Allocate(pool) = new FallbackAddSource { SourceSet = sourceSetIndex, SourceTypeBatchIndex = sourceTypeBatchIndex };
+                        }
+                    }
                 }
+            }
+            if (targetFallbackTypeBatchesToSources.Keys.Allocated)
+            {
+                phaseTwoJobs.EnsureCapacity(phaseTwoJobs.Count + targetFallbackTypeBatchesToSources.Count, pool);
+                for (int i = 0; i < targetFallbackTypeBatchesToSources.Count; ++i)
+                {
+                    ref var job = ref phaseTwoJobs.AllocateUnsafely();
+                    job.Type = PhaseTwoJobType.AddFallbackTypeBatchConstraints;
+                    ref var list = ref targetFallbackTypeBatchesToSources.Values[i];
+                    job.AddFallbackTypeBatchConstraints.Sources = list.Span.Slice(list.Count);
+                    job.AddFallbackTypeBatchConstraints.TargetTypeBatch = targetFallbackTypeBatchesToSources.Keys[i];
+                    job.AddFallbackTypeBatchConstraints.TypeId = solver.ActiveSet.Batches[solver.FallbackBatchThreshold].TypeBatches[job.AddFallbackTypeBatchConstraints.TargetTypeBatch].TypeId;
+                }
+                //Note that the per target lists will be disposed in the DisposeForCompletedAwakenings, since the spans created for the per-target lists are used in the PhaseTwoJobs.
+                targetFallbackTypeBatchesToSources.Dispose(pool);
             }
             return (phaseOneJobs.Count, phaseTwoJobs.Count);
         }
@@ -754,6 +817,14 @@ namespace BepuPhysics
 
             }
             phaseOneJobs.Dispose(pool);
+            for (int i = 0; i < phaseTwoJobs.Count; ++i)
+            {
+                ref var job = ref phaseTwoJobs[i];
+                if (job.Type == PhaseTwoJobType.AddFallbackTypeBatchConstraints)
+                {
+                    pool.Return(ref job.AddFallbackTypeBatchConstraints.Sources);
+                }
+            }
             phaseTwoJobs.Dispose(pool);
         }
     }
