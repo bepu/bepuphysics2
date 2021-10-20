@@ -531,17 +531,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     exitBC = Vector.ConditionalSelect(bcIsDominant, exitBC * restrictWeight + unrestrictWeight, exitBC);
                     exitCA = Vector.ConditionalSelect(caIsDominant, exitCA * restrictWeight + unrestrictWeight, exitCA);
 
-                    cylinderTMin = Vector.Max(entryAB, Vector.Max(entryBC, entryCA));
-                    cylinderTMax = Vector.Min(exitAB, Vector.Min(exitBC, exitCA));
+                    var sideTriangleCylinderTMin = Vector.Max(entryAB, Vector.Max(entryBC, entryCA));
+                    var sideTriangleCylinderTMax = Vector.Min(exitAB, Vector.Min(exitBC, exitCA));
 
                     //Note that the local normal should have been created such that projecting the cylinder edge down along it *should * result in an intersection with the triangle.
                     //That would mean exitT >= entryT.However, due to numerical error, that is not strictly guaranteed.
                     //This will typically happen in a vertex case.
                     //We can choose the vertex in these cases by examining which edges contributed the intersections forming the bounds of the interval.
-                    var useVertexFallback = Vector.BitwiseAnd(Vector.LessThan(cylinderTMax, cylinderTMin), useSideTriangleFace);
-                    var abContributedBound = Vector.BitwiseOr(Vector.Equals(edgeTAB, cylinderTMin), Vector.Equals(edgeTAB, cylinderTMax));
-                    var bcContributedBound = Vector.BitwiseOr(Vector.Equals(edgeTBC, cylinderTMin), Vector.Equals(edgeTBC, cylinderTMax));
-                    var caContributedBound = Vector.BitwiseOr(Vector.Equals(edgeTCA, cylinderTMin), Vector.Equals(edgeTCA, cylinderTMax));
+                    var useVertexFallback = Vector.BitwiseAnd(Vector.LessThan(sideTriangleCylinderTMax, sideTriangleCylinderTMin), useSideTriangleFace);
+                    var abContributedBound = Vector.BitwiseOr(Vector.Equals(edgeTAB, sideTriangleCylinderTMin), Vector.Equals(edgeTAB, sideTriangleCylinderTMax));
+                    var bcContributedBound = Vector.BitwiseOr(Vector.Equals(edgeTBC, sideTriangleCylinderTMin), Vector.Equals(edgeTBC, sideTriangleCylinderTMax));
+                    var caContributedBound = Vector.BitwiseOr(Vector.Equals(edgeTCA, sideTriangleCylinderTMin), Vector.Equals(edgeTCA, sideTriangleCylinderTMax));
                     var useA = Vector.BitwiseAnd(caContributedBound, abContributedBound);
                     var useB = Vector.BitwiseAnd(abContributedBound, bcContributedBound);
                     //var useC = Vector.BitwiseAnd(bcContributedBound, caContributedBound);
@@ -549,22 +549,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.ConditionalSelect(useB, triangleB, vertexFallback, out vertexFallback);
 
                     //Bound the interval to the cylinder's extent.
-                    cylinderTMin = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, cylinderTMin));
-                    cylinderTMax = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, cylinderTMax));
-                    localOffsetB0.X = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.X + minToMax.X * cylinderTMin, localOffsetB0.X);
-                    localOffsetB0.Y = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Y + minToMax.Y * cylinderTMin, localOffsetB0.Y);
-                    localOffsetB0.Z = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Z + minToMax.Z * cylinderTMin, localOffsetB0.Z);
-                    localOffsetB1.X = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.X + minToMax.X * cylinderTMax, localOffsetB1.X);
-                    localOffsetB1.Y = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Y + minToMax.Y * cylinderTMax, localOffsetB1.Y);
-                    localOffsetB1.Z = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Z + minToMax.Z * cylinderTMax, localOffsetB1.Z);
+                    cylinderTMin = Vector.ConditionalSelect(useSideTriangleFace, Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, sideTriangleCylinderTMin)), cylinderTMin);
+                    cylinderTMax = Vector.ConditionalSelect(useSideTriangleFace, Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, sideTriangleCylinderTMax)), cylinderTMax);
+                    localOffsetB0.X = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.X + minToMax.X * sideTriangleCylinderTMin, localOffsetB0.X);
+                    localOffsetB0.Y = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Y + minToMax.Y * sideTriangleCylinderTMin, localOffsetB0.Y);
+                    localOffsetB0.Z = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Z + minToMax.Z * sideTriangleCylinderTMin, localOffsetB0.Z);
+                    localOffsetB1.X = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.X + minToMax.X * sideTriangleCylinderTMax, localOffsetB1.X);
+                    localOffsetB1.Y = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Y + minToMax.Y * sideTriangleCylinderTMax, localOffsetB1.Y);
+                    localOffsetB1.Z = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Z + minToMax.Z * sideTriangleCylinderTMax, localOffsetB1.Z);
 
                     Vector3Wide.ConditionalSelect(useVertexFallback, vertexFallback, localOffsetB0, out localOffsetB0);
 
                     //Ray cast back to the cylinder's side to compute the depth for the contact.
                     //t = dot(localNormal.X0Z, cylinderSideEdgeCenter - {entry, exit}) / dot(localNormal.X0Z, localNormal)
                     var inverseDepthDenominator = Vector<float>.One / (localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
-                    depthTMin = (localNormal.X * (closestOnB.X - localOffsetB0.X) + localNormal.Z * (closestOnB.Z - localOffsetB0.Z)) * inverseDepthDenominator;
-                    depthTMax = (localNormal.X * (closestOnB.X - localOffsetB1.X) + localNormal.Z * (closestOnB.Z - localOffsetB1.Z)) * inverseDepthDenominator;
+                    depthTMin = Vector.ConditionalSelect(useSideTriangleFace, (localNormal.X * (closestOnB.X - localOffsetB0.X) + localNormal.Z * (closestOnB.Z - localOffsetB0.Z)) * inverseDepthDenominator, depthTMin);
+                    depthTMax = Vector.ConditionalSelect(useSideTriangleFace, (localNormal.X * (closestOnB.X - localOffsetB1.X) + localNormal.Z * (closestOnB.Z - localOffsetB1.Z)) * inverseDepthDenominator, depthTMax);
                 }
                 manifold.FeatureId0 = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.FeatureId0);
                 manifold.FeatureId1 = Vector.ConditionalSelect(useSide, Vector<int>.One, manifold.FeatureId1);
