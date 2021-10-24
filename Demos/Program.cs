@@ -1,4 +1,5 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics;
+using BepuUtilities;
 using DemoContentLoader;
 using Demos.Demos;
 using Demos.SpecializedTests;
@@ -23,6 +24,7 @@ namespace Demos
             //HeadlessTest.Test<ColosseumDemo>(content, 4, 32, 512);
             //HeadlessTest.Test<RopeTwistDemo>(content, 4, 32, 512);
             //HeadlessTest.Test<RagdollTubeDemo>(content, 4, 128, 512);
+            //DeterminismTest<FountainStressTestDemo>.Test(content, 1, 16384);
             var demo = new DemoHarness(loop, content);
             loop.Run(demo);
             loop.Dispose();

@@ -20,6 +20,7 @@ namespace Demos.SpecializedTests
             for (int i = 0; i < frameCount; ++i)
             {
                 demo.Update(null, null, null, 1 / 60f);
+                //InvasiveHashDiagnostics.Instance.MoveToNextHashFrame();
                 if ((i + 1) % 32 == 0)
                     Console.Write($"{i + 1}, ");
             }
@@ -42,11 +43,15 @@ namespace Demos.SpecializedTests
 
         public static void Test(ContentArchive archive, int runCount, int frameCount)
         {
+            //InvasiveHashDiagnostics.Initialize(1 + runCount, frameCount);
+            //var hashInstance = InvasiveHashDiagnostics.Instance;
             var initialStates = ExecuteSimulation(archive, frameCount);
+            //hashInstance.MoveToNextRun();
             Console.WriteLine($"Completed initial run.");
             for (int i = 0; i < runCount; ++i)
             {
                 var states = ExecuteSimulation(archive, frameCount);
+                //hashInstance.MoveToNextRun();
                 Console.Write($"Completed iteration {i}; checking... ");
                 if (states.Count != initialStates.Count)
                     Console.WriteLine("DETERMINISM FAILURE: Differing body count.");

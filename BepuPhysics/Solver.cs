@@ -165,7 +165,9 @@ namespace BepuPhysics
                 ref var set = ref Sets[setIndex];
                 if (set.Allocated)
                 {
-                    for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
+                    var setIsActiveAndFallbackExists = setIndex == 0 && set.Batches.Count > FallbackBatchThreshold;
+                    var contiguousBatchCount = setIsActiveAndFallbackExists ? FallbackBatchThreshold : set.Batches.Count;
+                    for (int batchIndex = 0; batchIndex < contiguousBatchCount; ++batchIndex)
                     {
                         ref var batch = ref set.Batches[batchIndex];
                         for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
@@ -173,6 +175,24 @@ namespace BepuPhysics
                             count += batch.TypeBatches[typeBatchIndex].ConstraintCount;
                         }
                     }
+                    if (setIsActiveAndFallbackExists)
+                    {
+                        //Sequential fallback batches in the active set currently store constraints noncontiguously to guarantee that each bundle does not share any body references.
+                        //Counting constraints requires skipping over any empty slots.
+                        ref var batch = ref set.Batches[FallbackBatchThreshold];
+                        for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                        {
+                            var constraintCount = batch.TypeBatches[typeBatchIndex].ConstraintCount;
+                            var indexToHandle = batch.TypeBatches[typeBatchIndex].IndexToHandle;
+                            for (int i = 0; i < constraintCount; ++i)
+                            {
+                                //Empty slots are marked with a -1 in the index to handles mapping (and in body references).
+                                if (indexToHandle[i].Value >= 0)
+                                    ++count;
+                            }
+                        }
+                    }
+
                 }
             }
             return count;
