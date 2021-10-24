@@ -462,6 +462,7 @@ namespace BepuPhysics.Constraints
                 var newConstraintCount = indexInTypeBatch + 1;
                 if (newConstraintCount >= typeBatch.IndexToHandle.Length)
                 {
+                    Debug.Assert(pool != null, "Looks like a user that doesn't have access to a pool (the awakener, probably?) tried to add a constraint without preallocating enough room.");
                     InternalResize(ref typeBatch, pool, newConstraintCount * 2);
                 }
                 typeBatch.ConstraintCount = newConstraintCount;

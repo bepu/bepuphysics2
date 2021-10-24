@@ -365,7 +365,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         QuickList<int> allocationIdsToFree;
-        public void RemoveConstraintsFromFallbackBatch()
+        public void RemoveConstraintsFromFallbackBatchReferencedHandles()
         {
             Debug.Assert(solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold);
             for (int i = 0; i < batches.BatchCount; ++i)

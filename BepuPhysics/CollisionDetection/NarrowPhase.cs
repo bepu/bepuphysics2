@@ -222,7 +222,7 @@ namespace BepuPhysics.CollisionDetection
                     ConstraintRemover.RemoveConstraintsFromBatchReferencedHandles();
                     break;
                 case NarrowPhaseFlushJobType.RemoveConstraintsFromFallbackBatch:
-                    ConstraintRemover.RemoveConstraintsFromFallbackBatch();
+                    ConstraintRemover.RemoveConstraintsFromFallbackBatchReferencedHandles();
                     break;
                 case NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch:
                     ConstraintRemover.RemoveConstraintsFromTypeBatch(job.Index);
@@ -271,6 +271,7 @@ namespace BepuPhysics.CollisionDetection
                 flushJobIndex = -1;
                 this.threadDispatcher = threadDispatcher;
                 threadDispatcher.DispatchWorkers(flushWorkerLoop);
+                //flushWorkerLoop(0);
                 this.threadDispatcher = null;
             }
             //var end = Stopwatch.GetTimestamp();

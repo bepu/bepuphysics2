@@ -128,6 +128,7 @@ namespace BepuPhysics.CollisionDetection
                 intertreeTestContext.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, intertreeHandlers, threadDispatcher.ThreadCount);
                 nextJobIndex = -1;
                 threadDispatcher.DispatchWorkers(workerAction);
+                //workerAction(0);
                 selfTestContext.CompleteSelfTest();
                 intertreeTestContext.CompleteTest();
             }

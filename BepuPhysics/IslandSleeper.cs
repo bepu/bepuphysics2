@@ -842,6 +842,7 @@ namespace BepuPhysics
             if (threadCount > 1)
             {
                 threadDispatcher.DispatchWorkers(typeBatchConstraintRemovalDelegate);
+                //typeBatchConstraintRemovalDelegate(0);
             }
             else
             {

@@ -145,6 +145,7 @@ namespace BepuPhysics.CollisionDetection
 
     //Note that the vast majority of the 'work' done by these accessor implementations is just type definitions used to call back into some other functions that need that type knowledge.
     public abstract class ContactConstraintAccessor<TConstraintDescription, TBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> : ContactConstraintAccessor
+        where TBodyHandles : unmanaged
         where TConstraintDescription : unmanaged, IConstraintDescription<TConstraintDescription>
         where TContactImpulses : unmanaged
         where TConstraintCache : unmanaged, IPairCacheEntry

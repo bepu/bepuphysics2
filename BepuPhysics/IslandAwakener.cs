@@ -421,6 +421,10 @@ namespace BepuPhysics
                     uniqueSetIndices.AllocateUnsafely() = candidateSetIndex;
                 }
             }
+            //The number of unique set indices being awakened is typically very small (<4), so sorting even when the simulation is running nondeterministically really isn't a concern.
+            //Determinism requires source sets are awakened in order when the fallback batch may be involved, since constraint order and typebatch order within the sequential fallback matter.
+            var comparer = new PrimitiveComparer<int>();
+            QuickSort.Sort(ref uniqueSetIndices[0], 0, uniqueSetIndices.Count - 1, ref comparer);
         }
         [Conditional("DEBUG")]
         void ValidateSleepingSetIndex(int setIndex)

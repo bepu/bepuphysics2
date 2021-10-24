@@ -366,7 +366,7 @@ namespace BepuPhysics
                         }
                     }
                 }
-                Console.WriteLine($"Average fallback occupancy: {Vector<int>.Count * occupiedLaneCountAcrossBatch / (double)(totalBundleCount * Vector<int>.Count):G3} / {Vector<int>.Count}, total bundle count: {totalBundleCount}");
+                //Console.WriteLine($"Average fallback occupancy: {Vector<int>.Count * occupiedLaneCountAcrossBatch / (double)(totalBundleCount * Vector<int>.Count):G3} / {Vector<int>.Count}, total bundle count: {totalBundleCount}");
             }
         }
         [Conditional("DEBUG")]
@@ -408,6 +408,48 @@ namespace BepuPhysics
             public void LoopBody(float impulse)
             {
                 AccumulatedImpulses[Index] = impulse;
+            }
+        }
+
+
+        internal unsafe void ValidateFallbackBodyReferencesByHash(HashDiagnosticType hashDiagnosticType)
+        {
+            var hashes = InvasiveHashDiagnostics.Instance;
+            ref var hash = ref hashes.GetHashForType(hashDiagnosticType);
+            if (ActiveSet.Batches.Count > FallbackBatchThreshold)
+            {
+                ref var batch = ref ActiveSet.Batches[FallbackBatchThreshold];
+                for (int i = 0; i < batch.TypeBatches.Count; ++i)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[i];
+                    hashes.ContributeToHash(ref hash, typeBatch.TypeId);
+                    hashes.ContributeToHash(ref hash, typeBatch.ConstraintCount);
+                    var bodiesPerConstraint = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
+                    var bytesPerBodyReferencesBundle = bodiesPerConstraint * Unsafe.SizeOf<Vector<int>>();
+                    for (int bundleIndex = 0; bundleIndex < typeBatch.BundleCount; ++bundleIndex)
+                    {
+                        var countInBundle = typeBatch.ConstraintCount - bundleIndex * Vector<int>.Count;
+                        if (countInBundle > Vector<int>.Count)
+                            countInBundle = Vector<int>.Count;
+                        ref var bundleStart = ref Unsafe.As<byte, Vector<int>>(ref typeBatch.BodyReferences[bytesPerBodyReferencesBundle * bundleIndex]);
+                        for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraint; ++bodyIndexInConstraint)
+                        {
+                            var bodyVector = Unsafe.Add(ref bundleStart, bodyIndexInConstraint);
+                            for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
+                            {
+                                var bodyIndex = bodyVector[innerIndex];
+                                if (bodyIndex >= 0)
+                                    hashes.ContributeToHash(ref hash, bodies.ActiveSet.IndexToHandle[bodyIndex]);
+                                else
+                                    hashes.ContributeToHash(ref hash, bodyIndex);
+                            }
+                        }
+                    }
+                    for (int constraintIndex = 0; constraintIndex < typeBatch.ConstraintCount; ++constraintIndex)
+                    {
+                        hashes.ContributeToHash(ref hash, typeBatch.IndexToHandle[constraintIndex].Value);
+                    }
+                }
             }
         }
 

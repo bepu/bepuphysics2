@@ -205,7 +205,7 @@ namespace BepuPhysics.CollisionDetection
                     break;
             }
         }
-        
+
         protected override void OnPreflush(IThreadDispatcher threadDispatcher, bool deterministic)
         {
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
@@ -323,10 +323,7 @@ namespace BepuPhysics.CollisionDetection
                 //var start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
                 threadDispatcher.DispatchWorkers(preflushWorkerLoop);
-                //for (int i = 0; i < preflushJobs.Count; ++i)
-                //{
-                //    ExecutePreflushJob(0, ref preflushJobs[i]);
-                //}
+                //preflushWorkerLoop(0);
                 //var end = Stopwatch.GetTimestamp();
                 //Console.WriteLine($"Preflush phase 1 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
 
@@ -338,14 +335,10 @@ namespace BepuPhysics.CollisionDetection
                 {
                     preflushJobs.Add(new PreflushJob { Type = PreflushJobType.AwakenerPhaseTwo, JobIndex = i }, Pool);
                 }
-                
                 //start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
                 threadDispatcher.DispatchWorkers(preflushWorkerLoop);
-                //for (int i = 0; i < preflushJobs.Count; ++i)
-                //{
-                //    ExecutePreflushJob(0, ref preflushJobs[i]);
-                //}
+                //preflushWorkerLoop(0);
                 //end = Stopwatch.GetTimestamp();
                 //Console.WriteLine($"Preflush phase 2 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
 
@@ -366,14 +359,10 @@ namespace BepuPhysics.CollisionDetection
                     //ExecutePreflushJob(0, ref job);
                 }
                 FreshnessChecker.CreateJobs(threadCount, ref preflushJobs, Pool, originalPairCacheMappingCount);
-
                 //start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
                 threadDispatcher.DispatchWorkers(preflushWorkerLoop);
-                //for (int i = 0; i < preflushJobs.Count; ++i)
-                //{
-                //    ExecutePreflushJob(0, ref preflushJobs[i]);
-                //}
+                //preflushWorkerLoop(0);
                 //end = Stopwatch.GetTimestamp();
                 //Console.WriteLine($"Preflush phase 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
 
