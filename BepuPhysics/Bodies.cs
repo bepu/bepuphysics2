@@ -8,6 +8,8 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using static BepuUtilities.GatherScatter;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace BepuPhysics
 {
@@ -270,9 +272,29 @@ namespace BepuPhysics
         /// <param name="inertia">Body inertia to analyze.</param>
         /// <returns>True if all components of inverse mass and inertia are zero, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsKinematic(in BodyInertia inertia)
+        public unsafe static bool IsKinematic(BodyInertia inertia)
         {
-            return inertia.InverseMass == 0 && HasLockedInertia(inertia.InverseInertiaTensor);
+            return IsKinematic(&inertia);
+        }
+
+        /// <summary>
+        /// Gets whether the inertia matches that of a kinematic body (that is, all inverse mass and inertia components are zero).
+        /// </summary>
+        /// <param name="inertia">Body inertia to analyze.</param>
+        /// <returns>True if all components of inverse mass and inertia are zero, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static bool IsKinematic(BodyInertia* inertia)
+        {
+            if (Avx.IsSupported)
+            {
+                var inertiaVector = Avx.LoadVector256((float*)inertia);
+                var masked = Avx.CompareEqual(inertiaVector, Vector256<float>.Zero);
+                return (Avx.MoveMask(masked) & 0x7F) == 0x7F;
+            }
+            else
+            {
+                return inertia->InverseMass == 0 && HasLockedInertia(&inertia->InverseInertiaTensor);
+            }
         }
 
         /// <summary>
@@ -281,14 +303,34 @@ namespace BepuPhysics
         /// <param name="inertia">Body inertia to analyze.</param>
         /// <returns>True if all components of inverse mass and inertia are zero, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool HasLockedInertia(in Symmetric3x3 inertia)
+        public unsafe static bool HasLockedInertia(Symmetric3x3 inertia)
         {
-            return inertia.XX == 0 &&
-                   inertia.YX == 0 &&
-                   inertia.YY == 0 &&
-                   inertia.ZX == 0 &&
-                   inertia.ZY == 0 &&
-                   inertia.ZZ == 0;
+            return HasLockedInertia(&inertia);
+        }
+
+        /// <summary>
+        /// Gets whether the angular inertia matches that of a kinematic body (that is, all inverse inertia tensor components are zero).
+        /// </summary>
+        /// <param name="inertia">Body inertia to analyze.</param>
+        /// <returns>True if all components of inverse mass and inertia are zero, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static bool HasLockedInertia(Symmetric3x3* inertia)
+        {
+            if (Avx.IsSupported)
+            {
+                var inertiaVector = Avx.LoadVector256((float*)inertia);
+                var masked = Avx.CompareEqual(inertiaVector, Vector256<float>.Zero);
+                return (Avx.MoveMask(masked) & 0x3F) == 0x3F;
+            }
+            else
+            {
+                return inertia->XX == 0 &&
+                       inertia->YX == 0 &&
+                       inertia->YY == 0 &&
+                       inertia->ZX == 0 &&
+                       inertia->ZY == 0 &&
+                       inertia->ZZ == 0;
+            }
         }
 
         private struct ConnectedDynamicCounter : IForEach<int>

@@ -208,12 +208,12 @@ namespace BepuPhysics
         /// <summary>
         /// Gets whether the body is kinematic, meaning its inverse inertia and mass are all zero.
         /// </summary>
-        public bool Kinematic { get { return Bodies.IsKinematic(LocalInertia); } }
+        public unsafe bool Kinematic { get { return Bodies.IsKinematic((BodyInertia*)Unsafe.AsPointer(ref LocalInertia)); } }
 
         /// <summary>
         /// Gets whether the body has locked inertia, meaning its inverse inertia tensor is zero.
         /// </summary>
-        public bool HasLockedInertia { get { return Bodies.HasLockedInertia(LocalInertia.InverseInertiaTensor); } }
+        public unsafe bool HasLockedInertia { get { return Bodies.HasLockedInertia((Symmetric3x3*)Unsafe.AsPointer(ref LocalInertia.InverseInertiaTensor)); } }
 
         /// <summary>
         /// If the body is dynamic, turns the body kinematic by setting all inverse inertia and mass values to zero and activates it.

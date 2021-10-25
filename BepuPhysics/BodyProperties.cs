@@ -160,7 +160,7 @@ namespace BepuPhysics
         }
     }
 
-    [StructLayout(LayoutKind.Sequential, Size = 32)]
+    [StructLayout(LayoutKind.Sequential, Size = 32, Pack = 4)]
     public struct BodyInertia
     {
         public Symmetric3x3 InverseInertiaTensor;

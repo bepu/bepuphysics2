@@ -45,8 +45,8 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<FountainStressTestDemo>();
             AddOption<RagdollTubeDemo>();
+            AddOption<FountainStressTestDemo>();
             AddOption<ConstraintTestDemo>();
             AddOption<RopeTwistDemo>();
             AddOption<NewtDemo>();
