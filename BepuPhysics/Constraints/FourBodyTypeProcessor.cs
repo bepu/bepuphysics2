@@ -253,10 +253,10 @@ namespace BepuPhysics.Constraints
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
-                bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
-                bodies.GatherState<TSolveAccessFilterB>(ref references.IndexB, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
-                bodies.GatherState<TSolveAccessFilterC>(ref references.IndexC, true, out var positionC, out var orientationC, out var wsvC, out var inertiaC);
-                bodies.GatherState<TSolveAccessFilterD>(ref references.IndexD, true, out var positionD, out var orientationD, out var wsvD, out var inertiaD);
+                bodies.GatherState<TSolveAccessFilterA>(references.IndexA, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+                bodies.GatherState<TSolveAccessFilterB>(references.IndexB, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
+                bodies.GatherState<TSolveAccessFilterC>(references.IndexC, true, out var positionC, out var orientationC, out var wsvC, out var inertiaC);
+                bodies.GatherState<TSolveAccessFilterD>(references.IndexD, true, out var positionD, out var orientationD, out var wsvD, out var inertiaD);
 
                 function.Solve2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, positionD, orientationD, inertiaD, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
 

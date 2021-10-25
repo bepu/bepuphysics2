@@ -801,7 +801,7 @@ namespace BepuPhysics
                     bundleEffectiveDt = Vector.ConditionalSelect(unconstrainedMask, bundleDt, bundleSubstepDt);
                 }
                 var halfDt = bundleEffectiveDt * new Vector<float>(0.5f);
-                bodies.GatherState<AccessAll>(ref bodyIndices, false, out var position, out var orientation, out var velocity, out var localInertia);
+                bodies.GatherState<AccessAll>(bodyIndices, false, out var position, out var orientation, out var velocity, out var localInertia);
                 if (anyBodyInBundleIsUnconstrained)
                 {
                     int integrationStepCount;
@@ -854,7 +854,7 @@ namespace BepuPhysics
                                 integratePoseMask = Vector.BitwiseAnd(integratePoseMask, unconstrainedMask);
                             }
                         }
-                        bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integratePoseMask);
+                        bodies.ScatterPose(ref position, ref orientation, bodyIndices, integratePoseMask);
                         //We already masked the velocities above, so scattering them doesn't need its own mask.
                         bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndices);
                     }
@@ -872,7 +872,7 @@ namespace BepuPhysics
                     PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
                     position += velocity.Linear * bundleEffectiveDt;
                     var integratePoseMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
-                    bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integratePoseMask);
+                    bodies.ScatterPose(ref position, ref orientation, bodyIndices, integratePoseMask);
                 }
             }
         }

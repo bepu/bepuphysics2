@@ -233,9 +233,9 @@ namespace BepuPhysics.Constraints
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
-                bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
-                bodies.GatherState<TSolveAccessFilterB>(ref references.IndexB, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
-                bodies.GatherState<TSolveAccessFilterC>(ref references.IndexC, true, out var positionC, out var orientationC, out var wsvC, out var inertiaC);
+                bodies.GatherState<TSolveAccessFilterA>(references.IndexA, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+                bodies.GatherState<TSolveAccessFilterB>(references.IndexB, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
+                bodies.GatherState<TSolveAccessFilterC>(references.IndexC, true, out var positionC, out var orientationC, out var wsvC, out var inertiaC);
 
                 function.Solve2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC);
 

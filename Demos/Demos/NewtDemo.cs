@@ -852,17 +852,17 @@ namespace Demos.Demos
             }
             //Console.WriteLine($"body count: {Simulation.Bodies.ActiveSet.Count}");
             //Console.WriteLine($"constraint count: {Simulation.Solver.CountConstraints()}");
-            Simulation.Bodies.GetBodyReference(new BodyHandle(55)).Pose.Position += new Vector3(10, 5, 0);
+            //Simulation.Bodies.GetBodyReference(new BodyHandle(55)).Pose.Position += new Vector3(10, 5, 0);
 
             BufferPool.Return(ref vertices);
             vertexSpatialIndices.Dispose(BufferPool);
             BufferPool.Return(ref cellVertexIndices);
             BufferPool.Return(ref tetrahedraVertexIndices);
 
-            Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
+            //Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(3)), 0.1f)));
+            //Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(3)), 0.1f)));
 
         }
 

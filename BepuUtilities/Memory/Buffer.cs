@@ -63,12 +63,39 @@ namespace BepuUtilities.Memory
         }
 
         /// <summary>
+        /// Gets a reference to the element at the given index.
+        /// </summary>
+        /// <param name="index">Index of the element to grab a reference of.</param>
+        /// <returns>Reference to the element at the given index.</returns>
+        public ref T this[uint index]
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                Debug.Assert(index >= 0 && index < length, "Index out of range.");
+                return ref Memory[index];
+            }
+        }
+
+        /// <summary>
         /// Gets a pointer to the element at the given index.
         /// </summary>
         /// <param name="index">Index of the element to retrieve a pointer for.</param>
         /// <returns>Pointer to the element at the given index.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T* GetPointer(int index)
+        {
+            Debug.Assert(index >= 0 && index < Length, "Index out of range.");
+            return Memory + index;
+        }
+
+        /// <summary>
+        /// Gets a pointer to the element at the given index.
+        /// </summary>
+        /// <param name="index">Index of the element to retrieve a pointer for.</param>
+        /// <returns>Pointer to the element at the given index.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T* GetPointer(uint index)
         {
             Debug.Assert(index >= 0 && index < Length, "Index out of range.");
             return Memory + index;

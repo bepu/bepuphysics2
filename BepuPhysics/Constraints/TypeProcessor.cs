@@ -1277,14 +1277,14 @@ namespace BepuPhysics.Constraints
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                 {
                     var integrationMask = Vector.GreaterThanOrEqual(bodyIndices, Vector<int>.Zero);
-                    bodies.GatherState<AccessAll>(ref bodyIndices, false, out position, out orientation, out velocity, out var localInertia);
+                    bodies.GatherState<AccessAll>(bodyIndices, false, out position, out orientation, out velocity, out var localInertia);
                     IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-                    bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integrationMask);
-                    bodies.ScatterInertia(ref inertia, ref bodyIndices, ref integrationMask);
+                    bodies.ScatterPose(ref position, ref orientation, bodyIndices, integrationMask);
+                    bodies.ScatterInertia(ref inertia, bodyIndices, integrationMask);
                 }
                 else if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
-                    bodies.GatherState<TAccessFilter>(ref bodyIndices, true, out position, out orientation, out velocity, out inertia);
+                    bodies.GatherState<TAccessFilter>(bodyIndices, true, out position, out orientation, out velocity, out inertia);
                 }
                 else
                 {
@@ -1296,15 +1296,15 @@ namespace BepuPhysics.Constraints
                     //This avoids complexity around later velocity scattering- we don't have to condition on whether the bundle is integrating.
                     //In practice, since the access filters are only reducing instruction counts and not memory bandwidth,
                     //the slightly increased unnecessary gathering is no worse than the more complex scatter condition in performance, and remains simpler.
-                    bodies.GatherState<AccessAll>(ref bodyIndices, bundleIntegrationMode == BundleIntegrationMode.None, out position, out orientation, out velocity, out var gatheredInertia);
+                    bodies.GatherState<AccessAll>(bodyIndices, bundleIntegrationMode == BundleIntegrationMode.None, out position, out orientation, out velocity, out var gatheredInertia);
                     if (bundleIntegrationMode != BundleIntegrationMode.None)
                     {
                         //Note that if we take this codepath, the integration routine will reconstruct the world inertias from local inertia given the current pose.
                         //The changes to pose and velocity for integration inactive lanes will be masked out, so it'll just be identical to the world inertia if we had gathered it.
                         //Given that we're running the instructions in a bundle to build it, there's no reason to go out of our way to gather the world inertia.
                         IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, gatheredInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-                        bodies.ScatterPose(ref position, ref orientation, ref bodyIndices, ref integrationMask);
-                        bodies.ScatterInertia(ref inertia, ref bodyIndices, ref integrationMask);
+                        bodies.ScatterPose(ref position, ref orientation, bodyIndices, integrationMask);
+                        bodies.ScatterInertia(ref inertia, bodyIndices, integrationMask);
                     }
                     else
                     {
@@ -1325,23 +1325,23 @@ namespace BepuPhysics.Constraints
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                 {
                     var integrationMask = Vector.GreaterThanOrEqual(bodyIndices, Vector<int>.Zero);
-                    bodies.GatherState<AccessAll>(ref bodyIndices, false, out position, out orientation, out velocity, out var localInertia);
+                    bodies.GatherState<AccessAll>(bodyIndices, false, out position, out orientation, out velocity, out var localInertia);
                     IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(ref integratorCallbacks, ref bodyIndices, localInertia, dt, integrationMask, position, orientation, ref velocity, workerIndex, out inertia);
-                    bodies.ScatterInertia(ref inertia, ref bodyIndices, ref integrationMask);
+                    bodies.ScatterInertia(ref inertia, bodyIndices, integrationMask);
                 }
                 else if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
-                    bodies.GatherState<TAccessFilter>(ref bodyIndices, true, out position, out orientation, out velocity, out inertia);
+                    bodies.GatherState<TAccessFilter>(bodyIndices, true, out position, out orientation, out velocity, out inertia);
                 }
                 else
                 {
                     Debug.Assert(typeof(TBatchIntegrationMode) == typeof(BatchShouldConditionallyIntegrate));
                     var bundleIntegrationMode = BundleShouldIntegrate(bundleIndex, integrationFlags[bodyIndexInConstraint], out var integrationMask);
-                    bodies.GatherState<AccessAll>(ref bodyIndices, bundleIntegrationMode == BundleIntegrationMode.None, out position, out orientation, out velocity, out var gatheredInertia);
+                    bodies.GatherState<AccessAll>(bodyIndices, bundleIntegrationMode == BundleIntegrationMode.None, out position, out orientation, out velocity, out var gatheredInertia);
                     if (bundleIntegrationMode != BundleIntegrationMode.None)
                     {
                         IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(ref integratorCallbacks, ref bodyIndices, gatheredInertia, dt, integrationMask, position, orientation, ref velocity, workerIndex, out inertia);
-                        bodies.ScatterInertia(ref inertia, ref bodyIndices, ref integrationMask);
+                        bodies.ScatterInertia(ref inertia, bodyIndices, integrationMask);
                     }
                     else
                     {

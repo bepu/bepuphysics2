@@ -307,8 +307,8 @@ namespace BepuPhysics.Constraints
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
                 //Prefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, i, exclusiveEndBundle);
-                bodies.GatherState<TSolveAccessFilterA>(ref references.IndexA, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
-                bodies.GatherState<TSolveAccessFilterB>(ref references.IndexB, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
+                bodies.GatherState<TSolveAccessFilterA>(references.IndexA, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+                bodies.GatherState<TSolveAccessFilterB>(references.IndexB, true, out var positionB, out var orientationB, out var wsvB, out var inertiaB);
 
                 function.Solve2(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA, ref wsvB);
 
@@ -333,8 +333,8 @@ namespace BepuPhysics.Constraints
             {
                 ref var prestep = ref Unsafe.Add(ref prestepBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
-                bodies.GatherState<AccessOnlyVelocity>(ref references.IndexA, true, out _, out _, out var wsvA, out _);
-                bodies.GatherState<AccessOnlyVelocity>(ref references.IndexB, true, out _, out _, out var wsvB, out _);
+                bodies.GatherState<AccessOnlyVelocity>(references.IndexA, true, out _, out _, out var wsvA, out _);
+                bodies.GatherState<AccessOnlyVelocity>(references.IndexB, true, out _, out _, out var wsvB, out _);
                 function.IncrementallyUpdateContactData(dtWide, wsvA, wsvB, ref prestep);
             }
         }

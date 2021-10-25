@@ -198,7 +198,7 @@ namespace BepuPhysics.Constraints
                 ref var prestep = ref prestepBundles[i];
                 ref var accumulatedImpulses = ref accumulatedImpulsesBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
-                bodies.GatherState<TSolveAccessFilterA>(ref references, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
+                bodies.GatherState<TSolveAccessFilterA>(references, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
 
                 function.Solve2(positionA, orientationA, inertiaA, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA);
 
@@ -222,7 +222,7 @@ namespace BepuPhysics.Constraints
             {
                 ref var prestep = ref Unsafe.Add(ref prestepBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
-                bodies.GatherState<AccessOnlyVelocity>(ref references, true, out _, out _, out var wsvA, out _);
+                bodies.GatherState<AccessOnlyVelocity>(references, true, out _, out _, out var wsvA, out _);
                 function.IncrementallyUpdateContactData(dtWide, wsvA, ref prestep);
             }
         }
