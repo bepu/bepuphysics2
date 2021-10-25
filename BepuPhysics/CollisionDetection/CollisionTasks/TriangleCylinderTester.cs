@@ -551,12 +551,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //Bound the interval to the cylinder's extent.
                     cylinderTMin = Vector.ConditionalSelect(useSideTriangleFace, Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, sideTriangleCylinderTMin)), cylinderTMin);
                     cylinderTMax = Vector.ConditionalSelect(useSideTriangleFace, Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, sideTriangleCylinderTMax)), cylinderTMax);
-                    localOffsetB0.X = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.X + minToMax.X * sideTriangleCylinderTMin, localOffsetB0.X);
-                    localOffsetB0.Y = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Y + minToMax.Y * sideTriangleCylinderTMin, localOffsetB0.Y);
-                    localOffsetB0.Z = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Z + minToMax.Z * sideTriangleCylinderTMin, localOffsetB0.Z);
-                    localOffsetB1.X = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.X + minToMax.X * sideTriangleCylinderTMax, localOffsetB1.X);
-                    localOffsetB1.Y = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Y + minToMax.Y * sideTriangleCylinderTMax, localOffsetB1.Y);
-                    localOffsetB1.Z = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Z + minToMax.Z * sideTriangleCylinderTMax, localOffsetB1.Z);
+                    localOffsetB0.X = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.X + minToMax.X * cylinderTMin, localOffsetB0.X);
+                    localOffsetB0.Y = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Y + minToMax.Y * cylinderTMin, localOffsetB0.Y);
+                    localOffsetB0.Z = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Z + minToMax.Z * cylinderTMin, localOffsetB0.Z);
+                    localOffsetB1.X = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.X + minToMax.X * cylinderTMax, localOffsetB1.X);
+                    localOffsetB1.Y = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Y + minToMax.Y * cylinderTMax, localOffsetB1.Y);
+                    localOffsetB1.Z = Vector.ConditionalSelect(useSideTriangleFace, minOnTriangle.Z + minToMax.Z * cylinderTMax, localOffsetB1.Z);
 
                     Vector3Wide.ConditionalSelect(useVertexFallback, vertexFallback, localOffsetB0, out localOffsetB0);
 
