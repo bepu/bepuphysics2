@@ -275,6 +275,38 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
+        unsafe internal void ValidateConstraintReferenceKinematicity()
+        {
+            //Only the active set's body indices are flagged for kinematicity; the inactive sets store body handles.
+            ref var activeSet = ref ActiveSet;
+            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
+            {
+                ref var batch = ref activeSet.Batches[batchIndex];
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    var bodiesPerConstraint = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
+                    for (int i = 0; i < typeBatch.ConstraintCount; ++i)
+                    {
+                        BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
+                        ref var bodyReferencesBundle = ref typeBatch.BodyReferences[bundleIndex * bodiesPerConstraint * Unsafe.SizeOf<Vector<int>>()];
+                        for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraint; ++bodyIndexInConstraint)
+                        {
+                            var referencesForBodyIndexInConstraint = Unsafe.Add(ref Unsafe.As<byte, Vector<int>>(ref bodyReferencesBundle), bodyIndexInConstraint);
+                            var encodedBodyIndex = referencesForBodyIndexInConstraint[innerIndex];
+                            if (encodedBodyIndex > 0)
+                            {
+                                var kinematicByEncodedIndex = (encodedBodyIndex & Bodies.KinematicMask) != 0;
+                                var kinematicByInertia = Bodies.IsKinematicUnsafe(ref bodies.ActiveSet.SolverStates[encodedBodyIndex & Bodies.BodyIndexMask].Inertia.Local);
+                                Debug.Assert(kinematicByEncodedIndex == kinematicByInertia, "Constraint reference encoded kinematicity must match actual kinematicity by inertia.");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        [Conditional("DEBUG")]
         private void ValidateBodyReference(int body, int expectedCount, ref ConstraintBatch batch)
         {
             int referencesToBody = 0;
@@ -817,7 +849,7 @@ namespace BepuPhysics
             }
         }
 
-        internal Span<BodyHandle> GetBlockingBodyHandles(Span<BodyHandle> bodyHandles, Span<BodyHandle> allocation)
+        unsafe internal Span<BodyHandle> GetBlockingBodyHandles(Span<BodyHandle> bodyHandles, Span<BodyHandle> allocation)
         {
             //Kinematics do not block allocation in a batch; they are treated as read only by the solver.
             int blockingCount = 0;
@@ -826,7 +858,7 @@ namespace BepuPhysics
             {
                 var location = bodies.HandleToLocation[bodyHandles[i].Value];
                 Debug.Assert(location.SetIndex == 0);
-                if (Bodies.IsKinematic(solverStates[location.Index].Inertia.Local))
+                if (Bodies.IsKinematicUnsafe(ref solverStates[location.Index].Inertia.Local))
                 {
                     allocation[blockingCount++] = bodyHandles[i];
                 }

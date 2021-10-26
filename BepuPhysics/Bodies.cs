@@ -280,6 +280,19 @@ namespace BepuPhysics
         /// <summary>
         /// Gets whether the inertia matches that of a kinematic body (that is, all inverse mass and inertia components are zero).
         /// </summary>
+        /// <param name="inertia">Body inertia to analyze. Must be a reference to fixed data; a pointer will be taken.</param>
+        /// <returns>True if all components of inverse mass and inertia are zero, false otherwise.</returns>
+        /// <remarks>This is not exposed by default because of the risk of a non-obvious GC hole.
+        /// It exists because it's a mildly more convenient form than the pointer overload, and every use within the engine references only pinned data.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal unsafe static bool IsKinematicUnsafe(ref BodyInertia inertia)
+        {
+            return IsKinematic((BodyInertia*)Unsafe.AsPointer(ref inertia));
+        }
+
+        /// <summary>
+        /// Gets whether the inertia matches that of a kinematic body (that is, all inverse mass and inertia components are zero).
+        /// </summary>
         /// <param name="inertia">Body inertia to analyze.</param>
         /// <returns>True if all components of inverse mass and inertia are zero, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -338,11 +351,11 @@ namespace BepuPhysics
             public Bodies Bodies;
             public int DynamicCount;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void LoopBody(int bodyIndex)
+            public unsafe void LoopBody(int bodyIndex)
             {
                 //The solver's connected bodies enumeration directly provides the constraint-stored reference, which is an index in the active set for active constraints and a handle for inactive constraints.
                 //We forced the dynamic active at the beginning of BecomeKinematic, so we don't have to worry about the inactive side of things.
-                if (!IsKinematic(Bodies.ActiveSet.SolverStates[bodyIndex].Inertia.Local))
+                if (!IsKinematicUnsafe(ref Bodies.ActiveSet.SolverStates[bodyIndex].Inertia.Local))
                     ++DynamicCount;
             }
         }

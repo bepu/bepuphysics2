@@ -143,10 +143,11 @@ namespace BepuPhysics
 
         public const int DoesntExistFlagIndex = 31;
         public const int KinematicFlagIndex = 30;
+        public const uint KinematicMask = 1u << KinematicFlagIndex;
         /// <summary>
         /// Constraint body index references greater than a given unsigned value are either kinematic (1<<30 set) or correspond to an empty lane (1<<31 set).
         /// </summary>
-        public const uint DynamicLimit = 1 << KinematicFlagIndex;
+        public const uint DynamicLimit = KinematicMask;
         public const uint BodyIndexMetadataMask = (1u << DoesntExistFlagIndex) | (1u << KinematicFlagIndex);
         public const int BodyIndexMask = (int)~BodyIndexMetadataMask;
 
