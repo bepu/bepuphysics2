@@ -73,7 +73,7 @@ namespace BepuPhysics.CollisionDetection
                     {
                         ref var add = ref Unsafe.Add(ref start, i);
                         //Unsafe.AsPointer is not a GC hole here; it's coming from unmanaged memory.
-                        var handle = simulation.Solver.Add(new Span<BodyHandle>(Unsafe.AsPointer(ref add.BodyHandles), typeof(TBodyHandles) == typeof(TwoBodyHandles) ? 2 : 1), ref add.ConstraintDescription);
+                        var handle = simulation.Solver.Add(new Span<BodyHandle>(Unsafe.AsPointer(ref add.BodyHandles), typeof(TBodyHandles) == typeof(TwoBodyHandles) ? 2 : 1), add.ConstraintDescription);
                         pairCache.CompleteConstraintAdd(simulation.NarrowPhase, simulation.Solver, ref add.Impulses, add.ConstraintCacheIndex, handle, ref add.Pair);
                     }
                 }
@@ -129,7 +129,7 @@ namespace BepuPhysics.CollisionDetection
                     //If a batch index failed, just try the next one. This is guaranteed to eventually work.
                     ++batchIndex;
                 }
-                simulation.Solver.ApplyDescriptionWithoutWaking(ref reference, ref constraint.ConstraintDescription);
+                simulation.Solver.ApplyDescriptionWithoutWaking(reference, constraint.ConstraintDescription);
                 ref var aLocation = ref simulation.Bodies.HandleToLocation[handles[0].Value];
                 Debug.Assert(aLocation.SetIndex == 0, "By the time we flush new constraints into the solver, all associated islands should be awake.");
                 simulation.Bodies.AddConstraint(aLocation.Index, constraintHandle, 0);

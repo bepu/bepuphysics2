@@ -97,7 +97,7 @@ namespace Demos.Demos.Tanks
             };
             for (int i = 0; i < motors.Length; ++i)
             {
-                simulation.Solver.ApplyDescription(motors[i], ref motorDescription);
+                simulation.Solver.ApplyDescription(motors[i], motorDescription);
             }
         }
 
@@ -136,10 +136,10 @@ namespace Demos.Demos.Tanks
         {
             var turretDescription = TurretServoDescription;
             turretDescription.TargetAngle = targetSwivelAngle;
-            simulation.Solver.ApplyDescription(TurretServo, ref turretDescription);
+            simulation.Solver.ApplyDescription(TurretServo, turretDescription);
             var barrelDescription = BarrelServoDescription;
             barrelDescription.TargetAngle = targetPitchAngle;
-            simulation.Solver.ApplyDescription(BarrelServo, ref barrelDescription);
+            simulation.Solver.ApplyDescription(BarrelServo, barrelDescription);
 
         }
 
@@ -370,8 +370,8 @@ namespace Demos.Demos.Tanks
                     //The motor will always just target 0 velocity. The wheel orientations will be allowed to drift from each other.
                     //(If you didn't want to allow drift, you could use an AngularServo or TwistServo. AngularServo constrains all 3 degrees of freedom, but for these purposes, that'd be fine.)
                     var motorDescription = new AngularAxisMotor { LocalAxisA = new Vector3(0, 1, 0), Settings = new MotorSettings(float.MaxValue, 1e-4f) };
-                    constraints.AllocateUnsafely() = simulation.Solver.Add(previousLeftWheelHandle, leftWheelHandle, ref motorDescription);
-                    constraints.AllocateUnsafely() = simulation.Solver.Add(previousRightWheelHandle, rightWheelHandle, ref motorDescription);
+                    constraints.AllocateUnsafely() = simulation.Solver.Add(previousLeftWheelHandle, leftWheelHandle, motorDescription);
+                    constraints.AllocateUnsafely() = simulation.Solver.Add(previousRightWheelHandle, rightWheelHandle, motorDescription);
                 }
                 previousLeftWheelHandle = leftWheelHandle;
                 previousRightWheelHandle = rightWheelHandle;

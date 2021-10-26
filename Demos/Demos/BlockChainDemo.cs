@@ -58,7 +58,7 @@ namespace Demos.Demos
                         LocalOffsetB = new Vector3(0, -1f, 0),
                         SpringSettings = new SpringSettings(30, 5)
                     };
-                    Simulation.Solver.Add(blockHandles[i - 1], blockHandles[i], ref ballSocket);
+                    Simulation.Solver.Add(blockHandles[i - 1], blockHandles[i], ballSocket);
                 }
             }
 

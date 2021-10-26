@@ -89,13 +89,13 @@ namespace Demos.SpecializedTests
                 for (int j = 0; j < length; ++j)
                 {
                     if (i >= 1)
-                        Simulation.Solver.Add(nodeHandles[i][j], nodeHandles[i - 1][j], ref left);
+                        Simulation.Solver.Add(nodeHandles[i][j], nodeHandles[i - 1][j], left);
                     if (j >= 1)
-                        Simulation.Solver.Add(nodeHandles[i][j], nodeHandles[i][j - 1], ref up);
+                        Simulation.Solver.Add(nodeHandles[i][j], nodeHandles[i][j - 1], up);
                     if (i >= 1 && j >= 1)
-                        Simulation.Solver.Add(nodeHandles[i][j], nodeHandles[i - 1][j - 1], ref leftUp);
+                        Simulation.Solver.Add(nodeHandles[i][j], nodeHandles[i - 1][j - 1], leftUp);
                     if (i < width - 1 && j >= 1)
-                        Simulation.Solver.Add(nodeHandles[i][j], nodeHandles[i + 1][j - 1], ref rightUp);
+                        Simulation.Solver.Add(nodeHandles[i][j], nodeHandles[i + 1][j - 1], rightUp);
                 }
             }
             var bigBallShape = new Sphere(25);

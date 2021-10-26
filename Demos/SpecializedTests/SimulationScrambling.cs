@@ -243,7 +243,7 @@ namespace Demos.SpecializedTests
                 if (handleA.Value >= 0 && handleB.Value >= 0)
                 {
                     //The constraint is addable.
-                    var constraintHandle = simulation.Solver.Add(handleA, handleB, ref constraint.Description);
+                    var constraintHandle = simulation.Solver.Add(handleA, handleB, constraint.Description);
                     constraintHandles[constraintIdentity] = constraintHandle;
                     constraintHandlesToIdentity[constraintHandle.Value] = constraintIdentity;
                     WriteLine($"Added constraint, handle: {constraintHandle}");

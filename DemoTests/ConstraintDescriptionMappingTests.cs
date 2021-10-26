@@ -57,7 +57,7 @@ namespace DemoTests
 
                 ref var source = ref sources[constraintTestIndex];
                 FillWithRandomBytes(ref source, random);
-                constraintHandles[constraintTestIndex] = simulation.Solver.Add(constraintBodyHandles, ref source);
+                constraintHandles[constraintTestIndex] = simulation.Solver.Add(constraintBodyHandles, source);
 
             }
             for (int constraintTestIndex = 0; constraintTestIndex < constraintTestCount; ++constraintTestIndex)

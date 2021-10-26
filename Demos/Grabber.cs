@@ -99,9 +99,9 @@ namespace Demos
                     targetOrientation = body.Pose.Orientation;
                     active = true;
                     CreateMotorDescription(hitLocation, body.LocalInertia.InverseMass, out var linearDescription, out var angularDescription);
-                    linearMotorHandle = simulation.Solver.Add(body.Handle, ref linearDescription);
+                    linearMotorHandle = simulation.Solver.Add(body.Handle, linearDescription);
                     if (!Bodies.HasLockedInertia(body.LocalInertia.InverseInertiaTensor))
-                        angularMotorHandle = simulation.Solver.Add(body.Handle, ref angularDescription);
+                        angularMotorHandle = simulation.Solver.Add(body.Handle, angularDescription);
                 }
             }
             else if (active)
@@ -111,9 +111,9 @@ namespace Demos
                 targetOrientation = QuaternionEx.Normalize(QuaternionEx.Concatenate(targetOrientation, rotation));
 
                 CreateMotorDescription(targetPoint, body.LocalInertia.InverseMass, out var linearDescription, out var angularDescription);
-                simulation.Solver.ApplyDescription(linearMotorHandle, ref linearDescription);
+                simulation.Solver.ApplyDescription(linearMotorHandle, linearDescription);
                 if (!Bodies.HasLockedInertia(body.LocalInertia.InverseInertiaTensor))
-                    simulation.Solver.ApplyDescription(angularMotorHandle, ref angularDescription);
+                    simulation.Solver.ApplyDescription(angularMotorHandle, angularDescription);
                 body.Activity.TimestepsUnderThresholdCount = 0;
             }
         }

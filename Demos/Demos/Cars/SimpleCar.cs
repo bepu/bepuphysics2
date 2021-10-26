@@ -22,7 +22,7 @@ namespace Demos.Demos.Cars
             var steeredHinge = hingeDescription;
             Matrix3x3.CreateFromAxisAngle(suspensionDirection, -angle, out var rotation);
             Matrix3x3.Transform(hingeDescription.LocalHingeAxisA, rotation, out steeredHinge.LocalHingeAxisA);
-            simulation.Solver.ApplyDescription(wheel.Hinge, ref steeredHinge);
+            simulation.Solver.ApplyDescription(wheel.Hinge, steeredHinge);
         }
 
         public void SetSpeed(Simulation simulation, in WheelHandles wheel, float speed, float maximumForce)

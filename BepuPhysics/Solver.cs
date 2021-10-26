@@ -895,20 +895,11 @@ namespace BepuPhysics
         /// <typeparam name="TDescription">Type of the description to apply.</typeparam>
         /// <param name="constraintReference">Reference of the constraint being updated.</param>
         /// <param name="description">Description to apply to the slot.</param>
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public void ApplyDescriptionWithoutWaking<TDescription>(ref ConstraintReference constraintReference, ref TDescription description)
+        public unsafe void ApplyDescriptionWithoutWaking<TDescription>(in ConstraintReference constraintReference, in TDescription description)
             where TDescription : unmanaged, IConstraintDescription<TDescription>
         {
             BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
-            //TODO: Note that it would be pretty nice to allow in parameters to avoid the need for the inefficient value type convenience overloads.
-            //The reason why we use ref is that the JIT does not recognize that this instance call is not mutating the instance.
-            //It emits a localsinit AND a copy.
-            //An ideal solution here (other than raw optimizer improvements) would be some language feature that permits the expression of functions-that-work-on-data
-            //in a generic fashion without indirection, and without introducing syntax pain.
-            //(If you accept syntax pain, it is possible already- pass a struct type that exposes interface implementations that process descriptions, but contains no data of its own.
-            //That 'executor' type has trivial clearing cost which should go away entirely with inlining even with the current optimizer. Compare that level of added complexity
-            //with IConstraintDescription simply carrying a requirement to implement a static function. Future versions of C# should make this sort of construct easier to deal with.)
-            description.ApplyDescription(ref constraintReference.TypeBatch, bundleIndex, innerIndex);
+            description.ApplyDescription(ref *constraintReference.typeBatchPointer, bundleIndex, innerIndex);
         }
 
         /// <summary>
@@ -917,22 +908,11 @@ namespace BepuPhysics
         /// <typeparam name="TDescription">Type of the description to apply.</typeparam>
         /// <param name="constraintHandle">Handle of the constraint being updated.</param>
         /// <param name="description">Description to apply to the slot.</param>
-        public void ApplyDescriptionWithoutWaking<TDescription>(ConstraintHandle constraintHandle, ref TDescription description)
+        public void ApplyDescriptionWithoutWaking<TDescription>(ConstraintHandle constraintHandle, in TDescription description)
             where TDescription : unmanaged, IConstraintDescription<TDescription>
         {
             GetConstraintReference(constraintHandle, out var constraintReference);
-            ApplyDescriptionWithoutWaking(ref constraintReference, ref description);
-        }
-        /// <summary>
-        /// Applies a description to a constraint slot without waking up the associated island.
-        /// </summary>
-        /// <typeparam name="TDescription">Type of the description to apply.</typeparam>
-        /// <param name="constraintHandle">Handle of the constraint being updated.</param>
-        /// <param name="description">Description to apply to the slot.</param>
-        public void ApplyDescriptionWithoutWaking<TDescription>(ConstraintHandle constraintHandle, TDescription description)
-            where TDescription : unmanaged, IConstraintDescription<TDescription>
-        {
-            ApplyDescriptionWithoutWaking(constraintHandle, ref description);
+            ApplyDescriptionWithoutWaking(constraintReference, description);
         }
 
         /// <summary>
@@ -941,25 +921,14 @@ namespace BepuPhysics
         /// <typeparam name="TDescription">Type of the description to apply.</typeparam>
         /// <param name="constraintHandle">Handle of the constraint being updated.</param>
         /// <param name="description">Description to apply to the slot.</param>
-        public void ApplyDescription<TDescription>(ConstraintHandle constraintHandle, ref TDescription description)
+        public void ApplyDescription<TDescription>(ConstraintHandle constraintHandle, in TDescription description)
             where TDescription : unmanaged, IConstraintDescription<TDescription>
         {
             awakener.AwakenConstraint(constraintHandle);
-            ApplyDescriptionWithoutWaking(constraintHandle, ref description);
-        }
-        /// <summary>
-        /// Applies a description to a constraint slot, waking up the connected bodies if necessary.
-        /// </summary>
-        /// <typeparam name="TDescription">Type of the description to apply.</typeparam>
-        /// <param name="constraintHandle">Handle of the constraint being updated.</param>
-        /// <param name="description">Description to apply to the slot.</param>
-        public void ApplyDescription<TDescription>(ConstraintHandle constraintHandle, TDescription description)
-            where TDescription : unmanaged, IConstraintDescription<TDescription>
-        {
-            ApplyDescription(constraintHandle, ref description);
+            ApplyDescriptionWithoutWaking(constraintHandle, description);
         }
 
-        void Add<TDescription>(Span<BodyHandle> bodyHandles, ref TDescription description, out ConstraintHandle handle)
+        void Add<TDescription>(Span<BodyHandle> bodyHandles, in TDescription description, out ConstraintHandle handle)
             where TDescription : unmanaged, IConstraintDescription<TDescription>
         {
             ref var set = ref ActiveSet;
@@ -969,7 +938,7 @@ namespace BepuPhysics
             {
                 if (TryAllocateInBatch(description.ConstraintTypeId, i, blockingBodyHandles, bodyHandles, out handle, out var reference))
                 {
-                    ApplyDescriptionWithoutWaking(ref reference, ref description);
+                    ApplyDescriptionWithoutWaking(reference, description);
                     return;
                 }
             }
@@ -983,7 +952,7 @@ namespace BepuPhysics
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
         /// <param name="bodyHandles">Body handles used by the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public ConstraintHandle Add<TDescription>(Span<BodyHandle> bodyHandles, ref TDescription description)
+        public ConstraintHandle Add<TDescription>(Span<BodyHandle> bodyHandles, in TDescription description)
             where TDescription : unmanaged, IConstraintDescription<TDescription>
         {
             Debug.Assert(description.ConstraintTypeId >= 0 && description.ConstraintTypeId < TypeProcessors.Length &&
@@ -996,7 +965,7 @@ namespace BepuPhysics
             {
                 awakener.AwakenBody(bodyHandles[i]);
             }
-            Add(bodyHandles, ref description, out var constraintHandle);
+            Add(bodyHandles, description, out var constraintHandle);
             for (int i = 0; i < bodyHandles.Length; ++i)
             {
                 var bodyHandle = bodyHandles[i];
@@ -1007,41 +976,16 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Allocates a constraint slot and sets up a constraint with the specified description.
-        /// </summary>
-        /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandles">Body handles referenced by the constraint.</param>
-        /// <returns>Allocated constraint handle.</returns>
-        public ConstraintHandle Add<TDescription>(Span<BodyHandle> bodyHandles, TDescription description)
-            where TDescription : unmanaged, IConstraintDescription<TDescription>
-        {
-            return Add(bodyHandles, ref description);
-        }
-
-        /// <summary>
         /// Allocates a one-body constraint slot and sets up a constraint with the specified description.
         /// </summary>
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
         /// <param name="bodyHandle">Body connected to the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandle, ref TDescription description)
+        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandle, in TDescription description)
             where TDescription : unmanaged, IOneBodyConstraintDescription<TDescription>
         {
             Span<BodyHandle> bodyHandles = stackalloc BodyHandle[] { bodyHandle };
-            return Add(bodyHandles, ref description);
-        }
-
-        /// <summary>
-        /// Allocates a one-body constraint slot and sets up a constraint with the specified description.
-        /// </summary>
-        /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandle">First body of the constraint.</param>
-        /// <returns>Allocated constraint handle.</returns>
-        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandle, TDescription description)
-            where TDescription : unmanaged, IOneBodyConstraintDescription<TDescription>
-        {
-            Span<BodyHandle> bodyHandles = stackalloc BodyHandle[] { bodyHandle };
-            return Add(bodyHandles, ref description);
+            return Add(bodyHandles, description);
         }
 
         /// <summary>
@@ -1051,24 +995,11 @@ namespace BepuPhysics
         /// <param name="bodyHandleA">First body of the constraint.</param>
         /// <param name="bodyHandleB">Second body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, ref TDescription description)
+        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, in TDescription description)
             where TDescription : unmanaged, ITwoBodyConstraintDescription<TDescription>
         {
             Span<BodyHandle> bodyHandles = stackalloc BodyHandle[] { bodyHandleA, bodyHandleB };
-            return Add(bodyHandles, ref description);
-        }
-
-        /// <summary>
-        /// Allocates a two-body constraint slot and sets up a constraint with the specified description.
-        /// </summary>
-        /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandleA">First body of the constraint.</param>
-        /// <param name="bodyHandleB">Second body of the constraint.</param>
-        /// <returns>Allocated constraint handle.</returns>
-        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, TDescription description)
-            where TDescription : unmanaged, ITwoBodyConstraintDescription<TDescription>
-        {
-            return Add(bodyHandleA, bodyHandleB, ref description);
+            return Add(bodyHandles, description);
         }
 
         /// <summary>
@@ -1079,25 +1010,11 @@ namespace BepuPhysics
         /// <param name="bodyHandleB">Second body of the constraint.</param>
         /// <param name="bodyHandleC">Third body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, ref TDescription description)
+        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, in TDescription description)
             where TDescription : unmanaged, IThreeBodyConstraintDescription<TDescription>
         {
             Span<BodyHandle> bodyHandles = stackalloc BodyHandle[] { bodyHandleA, bodyHandleB, bodyHandleC };
-            return Add(bodyHandles, ref description);
-        }
-
-        /// <summary>
-        /// Allocates a three-body constraint slot and sets up a constraint with the specified description.
-        /// </summary>
-        /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandleA">First body of the constraint.</param>
-        /// <param name="bodyHandleB">Second body of the constraint.</param>
-        /// <param name="bodyHandleC">Third body of the constraint.</param>
-        /// <returns>Allocated constraint handle.</returns>
-        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, TDescription description)
-            where TDescription : unmanaged, IThreeBodyConstraintDescription<TDescription>
-        {
-            return Add(bodyHandleA, bodyHandleB, bodyHandleC, ref description);
+            return Add(bodyHandles, description);
         }
 
         /// <summary>
@@ -1109,26 +1026,11 @@ namespace BepuPhysics
         /// <param name="bodyHandleC">Third body of the constraint.</param>
         /// <param name="bodyHandleD">Fourth body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
-        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, BodyHandle bodyHandleD, ref TDescription description)
+        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, BodyHandle bodyHandleD, in TDescription description)
             where TDescription : unmanaged, IFourBodyConstraintDescription<TDescription>
         {
             Span<BodyHandle> bodyHandles = stackalloc BodyHandle[] { bodyHandleA, bodyHandleB, bodyHandleC, bodyHandleD };
-            return Add(bodyHandles, ref description);
-        }
-
-        /// <summary>
-        /// Allocates a four-body constraint slot and sets up a constraint with the specified description.
-        /// </summary>
-        /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandleA">First body of the constraint.</param>
-        /// <param name="bodyHandleB">Second body of the constraint.</param>
-        /// <param name="bodyHandleC">Third body of the constraint.</param>
-        /// <param name="bodyHandleD">Fourth body of the constraint.</param>
-        /// <returns>Allocated constraint handle.</returns>
-        public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, BodyHandle bodyHandleD, TDescription description)
-            where TDescription : unmanaged, IFourBodyConstraintDescription<TDescription>
-        {
-            return Add(bodyHandleA, bodyHandleB, bodyHandleC, bodyHandleD, ref description);
+            return Add(bodyHandles, description);
         }
 
         //This is split out for use by the multithreaded constraint remover.
