@@ -141,14 +141,14 @@ namespace BepuPhysics
             }
         }
 
-        const int DoesntExistFlagIndex = 31;
-        const int KinematicFlagIndex = 30;
+        public const int DoesntExistFlagIndex = 31;
+        public const int KinematicFlagIndex = 30;
         /// <summary>
         /// Constraint body index references greater than a given unsigned value are either kinematic (1<<30 set) or correspond to an empty lane (1<<31 set).
         /// </summary>
-        const uint DynamicLimit = 1 << KinematicFlagIndex;
-        const uint BodyIndexMetadataMask = (1u << DoesntExistFlagIndex) | (1u << KinematicFlagIndex);
-        const int BodyIndexMask = (int)~BodyIndexMetadataMask;
+        public const uint DynamicLimit = 1 << KinematicFlagIndex;
+        public const uint BodyIndexMetadataMask = (1u << DoesntExistFlagIndex) | (1u << KinematicFlagIndex);
+        public const int BodyIndexMask = (int)~BodyIndexMetadataMask;
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherState<TAccessFilter>(Vector<int> encodedBodyIndices, bool worldInertia, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)

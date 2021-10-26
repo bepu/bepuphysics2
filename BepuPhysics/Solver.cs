@@ -758,10 +758,11 @@ namespace BepuPhysics
         {
             ref var set = ref ActiveSet;
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-            var bodyHandlesAsIntegers = MemoryMarshal.Cast<BodyHandle, int>(bodyHandles);
+            Span<BodyHandle> blockingBodyHandlesAllocation = stackalloc BodyHandle[bodyHandles.Length];
+            var blockingBodyHandles = MemoryMarshal.Cast<BodyHandle, int>(GetBlockingBodyHandles(bodyHandles, blockingBodyHandlesAllocation));
             for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
             {
-                if (batchReferencedHandles[batchIndex].CanFit(bodyHandlesAsIntegers))
+                if (batchReferencedHandles[batchIndex].CanFit(blockingBodyHandles))
                     return batchIndex;
             }
             //No synchronized batch worked. Either there's a fallback batch or there aren't yet enough batches to warrant a fallback batch and none of the existing batches could fit the handles.
@@ -779,7 +780,13 @@ namespace BepuPhysics
                 var bodyHandle = bodyHandles[j];
                 ref var location = ref bodies.HandleToLocation[bodyHandle.Value];
                 Debug.Assert(location.SetIndex == 0, "Creating a new constraint should have forced the connected bodies awake.");
-                bodyIndices[j] = location.Index;
+                var index = location.Index;
+                //Include the flag in the body index if it's kinematic.
+                if (Bodies.IsKinematic(bodies.ActiveSet.SolverStates[index].Inertia.Local))
+                {
+                    index |= 1 << Bodies.KinematicFlagIndex;
+                }
+                bodyIndices[j] = index;
             }
             var typeProcessor = TypeProcessors[typeId];
             var typeBatch = batch.GetOrCreateTypeBatch(typeId, typeProcessor, GetMinimumCapacityForType(typeId), pool);
@@ -810,7 +817,24 @@ namespace BepuPhysics
             }
         }
 
-        internal unsafe bool TryAllocateInBatch(int typeId, int targetBatchIndex, Span<BodyHandle> bodyHandles, out ConstraintHandle constraintHandle, out ConstraintReference reference)
+        internal Span<BodyHandle> GetBlockingBodyHandles(Span<BodyHandle> bodyHandles, Span<BodyHandle> allocation)
+        {
+            //Kinematics do not block allocation in a batch; they are treated as read only by the solver.
+            int blockingCount = 0;
+            var solverStates = bodies.ActiveSet.SolverStates;
+            for (int i = 0; i < bodyHandles.Length; ++i)
+            {
+                var location = bodies.HandleToLocation[bodyHandles[i].Value];
+                Debug.Assert(location.SetIndex == 0);
+                if (Bodies.IsKinematic(solverStates[location.Index].Inertia.Local))
+                {
+                    allocation[blockingCount++] = bodyHandles[i];
+                }
+            }
+            return allocation.Slice(0, blockingCount);
+        }
+
+        internal unsafe bool TryAllocateInBatch(int typeId, int targetBatchIndex, Span<BodyHandle> blockingBodyHandles, Span<BodyHandle> bodyHandles, out ConstraintHandle constraintHandle, out ConstraintReference reference)
         {
             ref var set = ref ActiveSet;
             Debug.Assert(targetBatchIndex <= set.Batches.Count,
@@ -833,7 +857,7 @@ namespace BepuPhysics
                 if (targetBatchIndex < FallbackBatchThreshold)
                 {
                     //A non-fallback constraint batch already exists here. This may fail.
-                    if (!batchReferencedHandles[targetBatchIndex].CanFit(MemoryMarshal.Cast<BodyHandle, int>(bodyHandles)))
+                    if (!batchReferencedHandles[targetBatchIndex].CanFit(MemoryMarshal.Cast<BodyHandle, int>(blockingBodyHandles)))
                     {
                         //This batch cannot hold the constraint.
                         constraintHandle = new ConstraintHandle(-1);
@@ -939,9 +963,11 @@ namespace BepuPhysics
             where TDescription : unmanaged, IConstraintDescription<TDescription>
         {
             ref var set = ref ActiveSet;
+            Span<BodyHandle> blockingBodyHandles = stackalloc BodyHandle[bodyHandles.Length];
+            blockingBodyHandles = GetBlockingBodyHandles(bodyHandles, blockingBodyHandles);
             for (int i = 0; i <= set.Batches.Count; ++i)
             {
-                if (TryAllocateInBatch(description.ConstraintTypeId, i, bodyHandles, out handle, out var reference))
+                if (TryAllocateInBatch(description.ConstraintTypeId, i, blockingBodyHandles, bodyHandles, out handle, out var reference))
                 {
                     ApplyDescriptionWithoutWaking(ref reference, ref description);
                     return;

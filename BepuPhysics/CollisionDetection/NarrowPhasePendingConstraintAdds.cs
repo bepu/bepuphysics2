@@ -120,9 +120,11 @@ namespace BepuPhysics.CollisionDetection
                 ConstraintHandle constraintHandle;
                 ConstraintReference reference;
                 var handles = new Span<BodyHandle>(Unsafe.AsPointer(ref constraint.BodyHandles), typeof(TBodyHandles) == typeof(TwoBodyHandles) ? 2 : 1);
+                Span<BodyHandle> blockingBodyHandles = stackalloc BodyHandle[handles.Length];
+                blockingBodyHandles = simulation.Solver.GetBlockingBodyHandles(handles, blockingBodyHandles);
                 while (!simulation.Solver.TryAllocateInBatch(
                     default(TDescription).ConstraintTypeId, batchIndex,
-                    handles, out constraintHandle, out reference))
+                    blockingBodyHandles, handles, out constraintHandle, out reference))
                 {
                     //If a batch index failed, just try the next one. This is guaranteed to eventually work.
                     ++batchIndex;
