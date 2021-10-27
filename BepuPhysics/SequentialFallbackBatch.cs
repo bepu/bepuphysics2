@@ -95,11 +95,11 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bodyReference">Body associated with a constraint in the fallback batch.</param>
         /// <param name="allocationIdsToFree">Allocations that should be freed once execution is back in a safe context.</param>
-        /// <returns>True if the body no longer has any constraints associated with it in the fallback batch, false otherwise.</returns>
+        /// <returns>True if the body was dynamic and no longer has any constraints associated with it in the fallback batch, false otherwise.</returns>
         internal unsafe bool Remove(int bodyReference, ref QuickList<int> allocationIdsToFree)
         {
-            var bodyPresent = dynamicBodyConstraintCounts.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex);
-            Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
+            if (!dynamicBodyConstraintCounts.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
+                return false;
             ref var constraintCount = ref dynamicBodyConstraintCounts.Values[bodyReferencesIndex];
             --constraintCount;
             if (constraintCount == 0)
