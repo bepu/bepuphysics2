@@ -41,6 +41,14 @@ namespace Demos
         /// </summary>
         public readonly bool AllowSubstepsForUnconstrainedBodies => false;
 
+        /// <summary>
+        /// Gets whether the velocity integration callback should be called for kinematic bodies.
+        /// If true, IntegrateVelocity will be called for bundles including kinematic bodies.
+        /// If false, kinematic bodies will just continue using whatever velocity they have set.
+        /// Most use cases should set this to false.
+        /// </summary>
+        public readonly bool IntegrateVelocityForKinematics => false;
+
         public void Initialize(Simulation simulation)
         {
             //In this demo, we don't need to initialize anything.
@@ -95,7 +103,8 @@ namespace Demos
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IntegrateVelocity(in Vector<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
         {
-            velocity.Linear = Vector3Wide.ConditionalSelect(Vector.Equals(localInertia.InverseMass, Vector<float>.Zero), velocity.Linear, velocity.Linear + gravityWide * dt);
+            //Note that we don't have to check for kinematics; IntegrateVelocityForKinematics returns false, so we'll never see them in this callback.
+            velocity.Linear += gravityWide * dt;
         }
     }
     public unsafe struct DemoNarrowPhaseCallbacks : INarrowPhaseCallbacks

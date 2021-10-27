@@ -59,6 +59,15 @@ namespace BepuPhysics
         bool AllowSubstepsForUnconstrainedBodies { get; }
 
         /// <summary>
+        /// Gets whether the velocity integration callback should be called for kinematic bodies.
+        /// If true, IntegrateVelocity will be called for bundles including kinematic bodies.
+        /// If false, kinematic bodies will just continue using whatever velocity they have set.
+        /// Most use cases should set this to false.
+        /// </summary>
+        bool IntegrateVelocityForKinematics { get; }
+
+
+        /// <summary>
         /// Performs any required initialization logic after the Simulation instance has been constructed.
         /// </summary>
         /// <param name="simulation">Simulation that owns these callbacks.</param>
@@ -742,6 +751,92 @@ namespace BepuPhysics
             else
             {
                 IntegratePoses(0, bodies.ActiveSet.Count, dt, 0);
+            }
+        }
+
+
+        /// <summary>
+        /// Integrates the velocities of kinematic bodies as a prepass to the first substep during solving.
+        /// Kinematics have to be integrated ahead of time since they don't block constraint batch membership; the same kinematic could appear in the batch multiple times.
+        /// </summary>
+        internal unsafe void IntegrateKinematicVelocities(Buffer<int> bodyHandles, int bundleStartIndex, int bundleEndIndex, float substepDt, int workerIndex)
+        {
+            var bodyCount = bodyHandles.Length;
+            var bundleCount = BundleIndexing.GetBundleCount(bodyCount);
+            var bundleDt = new Vector<float>(substepDt);
+            var halfDt = bundleDt * new Vector<float>(0.5f);
+
+            int* bodyIndices = stackalloc int[Vector<int>.Count];
+            ref var callbacks = ref Callbacks;
+            var handleToLocation = bodies.HandleToLocation;
+            BodyInertiaWide zeroInertia = default;
+
+            for (int bundleIndex = bundleStartIndex; bundleIndex < bundleEndIndex; ++bundleIndex)
+            {
+                var bundleBaseIndex = bundleIndex * Vector<float>.Count;
+                var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<float>.Count);
+                for (int i = 0; i < countInBundle; ++i)
+                {
+                    bodyIndices[i] = handleToLocation[bodyHandles[i]].Index;
+                }
+
+                var existingMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
+                var trailingMask = Vector.OnesComplement(existingMask);
+                var bodyIndicesVector = new Vector<int>(new Span<int>(bodyIndices, Vector<int>.Count));
+                bodyIndicesVector = Vector.BitwiseOr(trailingMask, bodyIndicesVector);
+                //Slightly unfortunate sacrifice to API simplicity: 
+                //We're doing a full gather so we can use the vectorized IntegrateVelocity callback even though the amount of work we're doing is absolutely trivial.
+                //With luck, the user sets the appropriate flag on the callbacks so this is never called in the first place. (Kinematics are generally not subject to user velocity integration!)
+                bodies.GatherState<AccessNoInertia>(bodyIndicesVector, false, out var position, out var orientation, out var velocity, out _);
+                callbacks.IntegrateVelocity(bodyIndicesVector, position, orientation, zeroInertia, existingMask, workerIndex, bundleDt, ref velocity);
+                //Writes to the empty lanes won't matter (scatter is masked), so we don't need to clean them up.
+                //Kinematic bodies have infinite inertia, so using the momentum conserving codepaths would hit a singularity.
+                bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndicesVector);
+
+            }
+        }
+
+        /// <summary>
+        /// Integrates the poses *then* velocities of kinematic bodies as a prepass to the second or later substeps during solving.
+        /// Kinematics have to be integrated ahead of time since they don't block constraint batch membership; the same kinematic could appear in the batch multiple times.
+        /// </summary>
+        internal unsafe void IntegrateKinematicPosesAndVelocities(Buffer<int> bodyHandles, int bundleStartIndex, int bundleEndIndex, float substepDt, int workerIndex)
+        {
+            var bodyCount = bodyHandles.Length;
+            var bundleCount = BundleIndexing.GetBundleCount(bodyCount);
+            var bundleDt = new Vector<float>(substepDt);
+            var halfDt = bundleDt * new Vector<float>(0.5f);
+
+            int* bodyIndices = stackalloc int[Vector<int>.Count];
+            ref var callbacks = ref Callbacks;
+            var handleToLocation = bodies.HandleToLocation;
+            BodyInertiaWide zeroInertia = default;
+
+            for (int bundleIndex = bundleStartIndex; bundleIndex < bundleEndIndex; ++bundleIndex)
+            {
+                var bundleBaseIndex = bundleIndex * Vector<float>.Count;
+                var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<float>.Count);
+                for (int i = 0; i < countInBundle; ++i)
+                {
+                    bodyIndices[i] = handleToLocation[bodyHandles[i]].Index;
+                }
+
+                var existingMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
+                var trailingMask = Vector.OnesComplement(existingMask);
+                var bodyIndicesVector = new Vector<int>(new Span<int>(bodyIndices, Vector<int>.Count));
+                bodyIndicesVector = Vector.BitwiseOr(trailingMask, bodyIndicesVector);
+                bodies.GatherState<AccessNoInertia>(bodyIndicesVector, false, out var position, out var orientation, out var velocity, out _);
+                //Note that we integrate pose, THEN velocity. This is executing in the context of the second (or beyond) substep, which are effectively completing the previous substep's frame.
+                //In other words, the pose integration completes the last substep, and then velocity integration prepares for the current substep.
+                //The last substep's pose integration is handled in the IntegrateBundlesAfterSubstepping.
+                position += velocity.Linear * bundleDt;
+                //Kinematic bodies have infinite inertia, so using the angular momentum conserving codepaths would hit a singularity.
+                PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
+                if (callbacks.IntegrateVelocityForKinematics)
+                    callbacks.IntegrateVelocity(bodyIndicesVector, position, orientation, zeroInertia, existingMask, workerIndex, bundleDt, ref velocity);
+                //Writes to the empty lanes won't matter (scatter is masked), so we don't need to clean them up.
+                bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndicesVector);
+
             }
         }
 

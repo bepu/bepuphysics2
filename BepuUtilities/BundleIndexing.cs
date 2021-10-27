@@ -62,6 +62,31 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe Vector<int> CreateTrailingMaskForCountInBundle(int countInBundle)
+        {
+            if (Avx.IsSupported && Vector<int>.Count == 8)
+            {
+                return Avx.CompareLessThanOrEqual(Vector256.Create((float)countInBundle), Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)).AsInt32().AsVector();
+            }
+            else if (Sse.IsSupported && Vector<int>.Count == 4)
+            {
+                return Sse.CompareLessThanOrEqual(Vector128.Create((float)countInBundle), Vector128.Create(0f, 1f, 2f, 3f)).AsInt32().AsVector();
+            }
+            else
+            {
+                Vector<int> mask;
+                var toReturnPointer = (int*)&mask;
+                for (int i = 0; i < Vector<int>.Count; ++i)
+                {
+                    toReturnPointer[i] = countInBundle <= i ? -1 : 0;
+                }
+                return mask;
+            }
+            //TODO: ARM
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe Vector<int> CreateMaskForCountInBundle(int countInBundle)
         {
             if (Avx.IsSupported && Vector<int>.Count == 8)
@@ -78,7 +103,7 @@ namespace BepuUtilities
                 var toReturnPointer = (int*)&mask;
                 for (int i = 0; i < Vector<int>.Count; ++i)
                 {
-                    toReturnPointer[i] = i < countInBundle ? -1 : 0;
+                    toReturnPointer[i] = countInBundle > i ? -1 : 0;
                 }
                 return mask;
             }

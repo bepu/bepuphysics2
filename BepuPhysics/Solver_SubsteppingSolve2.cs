@@ -215,11 +215,11 @@ namespace BepuPhysics
                 ref var block = ref this.solver.substepContext.KinematicIntegrationBlocks[blockIndex];
                 if (SubstepIndex == 0)
                 {
-                    this.solver.PoseIntegrator.IntegrateVelocities(solver.ConstrainedKinematicHandles.Span.Slice(solver.ConstrainedKinematicHandles.Count), block.StartBundleIndex, block.EndBundleIndex, Dt, workerIndex);
+                    this.solver.PoseIntegrator.IntegrateKinematicVelocities(solver.ConstrainedKinematicHandles.Span.Slice(solver.ConstrainedKinematicHandles.Count), block.StartBundleIndex, block.EndBundleIndex, Dt, workerIndex);
                 }
                 else
                 {
-                    this.solver.PoseIntegrator.IntegratePosesAndVelocities(solver.ConstrainedKinematicHandles.Span.Slice(solver.ConstrainedKinematicHandles.Count), block.StartBundleIndex, block.EndBundleIndex, Dt, workerIndex);
+                    this.solver.PoseIntegrator.IntegrateKinematicPosesAndVelocities(solver.ConstrainedKinematicHandles.Span.Slice(solver.ConstrainedKinematicHandles.Count), block.StartBundleIndex, block.EndBundleIndex, Dt, workerIndex);
                 }
             }
         }
@@ -402,7 +402,11 @@ namespace BepuPhysics
                         ExecuteMainStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, ref substepContext.Stages[0], syncOffsetToPreviousSubstep, ref syncIndex);
                     }
                     integrateConstrainedKinematicsStage.SubstepIndex = substepIndex;
-                    ExecuteMainStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, ref substepContext.Stages[1], syncOffsetToPreviousSubstep, ref syncIndex);
+                    //Note that we do not invoke velocity integration on the first substep if kinematics do not need velocity integration.
+                    if (substepIndex > 1 || PoseIntegrator.Callbacks.IntegrateVelocityForKinematics)
+                        ExecuteMainStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, ref substepContext.Stages[1], syncOffsetToPreviousSubstep, ref syncIndex);
+                    else
+                        ++syncIndex;
                     warmstartStage.SubstepIndex = substepIndex;
                     for (int batchIndex = 0; batchIndex < syncStagesPerWarmStartOrSolve; ++batchIndex)
                     {
@@ -1177,11 +1181,11 @@ namespace BepuPhysics
                                     TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
                             }
                         }
-                        PoseIntegrator.IntegratePosesAndVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, ConstrainedKinematicHandles.Count, substepDt, 0);
+                        PoseIntegrator.IntegrateKinematicPosesAndVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, ConstrainedKinematicHandles.Count, substepDt, 0);
                     }
                     else
                     {
-                        PoseIntegrator.IntegrateVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, ConstrainedKinematicHandles, substepDt, 0);
+                        PoseIntegrator.IntegrateKinematicVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, ConstrainedKinematicHandles, substepDt, 0);
                     }
                     for (int i = 0; i < batchCount; ++i)
                     {

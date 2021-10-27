@@ -22,6 +22,8 @@ namespace Demos.Demos
         //For this demo, we'll allow substepping for unconstrained bodies.
         public readonly bool AllowSubstepsForUnconstrainedBodies => true;
 
+        public readonly bool IntegrateVelocityForKinematics => false;
+
         public void Initialize(Simulation simulation)
         {
             innerCallbacks.Initialize(simulation);

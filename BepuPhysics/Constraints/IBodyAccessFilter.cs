@@ -45,6 +45,19 @@
         public bool AccessAngularVelocity => true;
     }
 
+    /// <summary>
+    /// Used for kinematic integration; the inertias are known ahead of time and there's no reason to gather them.
+    /// </summary>
+    public struct AccessNoInertia : IBodyAccessFilter
+    {
+        public bool GatherPosition => true;
+        public bool GatherOrientation => true;
+        public bool GatherMass => false;
+        public bool GatherInertiaTensor => false;
+        public bool AccessLinearVelocity => true;
+        public bool AccessAngularVelocity => true;
+    }
+
     public struct AccessNoPose : IBodyAccessFilter
     {
         public bool GatherPosition => false;

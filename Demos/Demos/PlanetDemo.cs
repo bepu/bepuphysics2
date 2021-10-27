@@ -31,6 +31,8 @@ namespace Demos.Demos
 
             public readonly bool AllowSubstepsForUnconstrainedBodies => false;
 
+            public readonly bool IntegrateVelocityForKinematics => false;
+
             public void Initialize(Simulation simulation)
             {
             }

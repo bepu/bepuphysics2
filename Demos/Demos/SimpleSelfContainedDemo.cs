@@ -149,6 +149,14 @@ namespace Demos.Demos
             /// </summary>
             public readonly bool AllowSubstepsForUnconstrainedBodies => false;
 
+            /// <summary>
+            /// Gets whether the velocity integration callback should be called for kinematic bodies.
+            /// If true, IntegrateVelocity will be called for bundles including kinematic bodies.
+            /// If false, kinematic bodies will just continue using whatever velocity they have set.
+            /// Most use cases should set this to false.
+            /// </summary>
+            public readonly bool IntegrateVelocityForKinematics => false;
+
             public PoseIntegratorCallbacks(Vector3 gravity) : this()
             {
                 Gravity = gravity;

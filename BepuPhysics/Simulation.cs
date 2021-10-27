@@ -415,7 +415,7 @@ namespace BepuPhysics
         /// <param name="allocationTarget">Allocation sizes to guarantee sufficient size for.</param>
         public void Resize(SimulationAllocationSizes allocationTarget)
         {
-            Solver.ResizeSolverCapacities(allocationTarget.Bodies, allocationTarget.Constraints);
+            Solver.ResizeSolverCapacities(allocationTarget.Bodies, allocationTarget.Constraints, allocationTarget.ConstrainedKinematics);
             Solver.MinimumCapacityPerTypeBatch = allocationTarget.ConstraintsPerTypeBatch;
             Solver.ResizeTypeBatchCapacities();
             NarrowPhase.PairCache.ResizeConstraintToPairMappingCapacity(Solver, allocationTarget.Constraints);
