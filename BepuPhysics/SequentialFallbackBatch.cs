@@ -44,31 +44,31 @@ namespace BepuPhysics
         /// <summary>
         /// Gets the number of bodies in the fallback batch.
         /// </summary>
-        public readonly int BodyCount { get { return bodyConstraintCounts.Count; } }
+        public readonly int BodyCount { get { return dynamicBodyConstraintCounts.Count; } }
 
         //In order to maintain the batch referenced handles for the fallback batch (which can have the same body appear more than once),
         //every body must maintain a count of fallback constraints associated with it.
         //Note that this dictionary uses active set body *indices* while active, but body *handles* when associated with an inactive set.
         //This is consistent with the body references stored by active/inactive constraints.
-        internal QuickDictionary<int, int, PrimitiveComparer<int>> bodyConstraintCounts;
+        internal QuickDictionary<int, int, PrimitiveComparer<int>> dynamicBodyConstraintCounts;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void Allocate<TBodyReferenceGetter>(Span<BodyHandle> constraintBodyHandles, Bodies bodies,
+        unsafe void Allocate<TBodyReferenceGetter>(Span<BodyHandle> dynamicBodyHandles, Bodies bodies,
             BufferPool pool, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity)
             where TBodyReferenceGetter : struct, IBodyReferenceGetter
         {
-            EnsureCapacity(Math.Max(bodyConstraintCounts.Count + constraintBodyHandles.Length, minimumBodyCapacity), pool);
-            for (int i = 0; i < constraintBodyHandles.Length; ++i)
+            EnsureCapacity(Math.Max(dynamicBodyConstraintCounts.Count + dynamicBodyHandles.Length, minimumBodyCapacity), pool);
+            for (int i = 0; i < dynamicBodyHandles.Length; ++i)
             {
-                var bodyReference = bodyReferenceGetter.GetBodyReference(bodies, constraintBodyHandles[i]);
+                var bodyReference = bodyReferenceGetter.GetBodyReference(bodies, dynamicBodyHandles[i]);
 
-                if (bodyConstraintCounts.FindOrAllocateSlotUnsafely(bodyReference, out var slotIndex))
+                if (dynamicBodyConstraintCounts.FindOrAllocateSlotUnsafely(bodyReference, out var slotIndex))
                 {
-                    ++bodyConstraintCounts.Values[slotIndex];
+                    ++dynamicBodyConstraintCounts.Values[slotIndex];
                 }
                 else
                 {
-                    bodyConstraintCounts.Values[slotIndex] = 1;
+                    dynamicBodyConstraintCounts.Values[slotIndex] = 1;
                 }
             }
         }
@@ -76,17 +76,17 @@ namespace BepuPhysics
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe void AllocateForActive(Span<BodyHandle> constraintBodyHandles, Bodies bodies,
+        internal unsafe void AllocateForActive(Span<BodyHandle> dynamicBodyHandles, Bodies bodies,
            BufferPool pool, int minimumBodyCapacity = 8)
         {
-            Allocate(constraintBodyHandles, bodies, pool, new ActiveSetGetter(), minimumBodyCapacity);
+            Allocate(dynamicBodyHandles, bodies, pool, new ActiveSetGetter(), minimumBodyCapacity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void AllocateForInactive(Span<BodyHandle> constraintBodyHandles, Bodies bodies,
+        internal void AllocateForInactive(Span<BodyHandle> dynamicBodyHandles, Bodies bodies,
           BufferPool pool, int minimumBodyCapacity = 8)
         {
-            Allocate(constraintBodyHandles, bodies, pool, new InactiveSetGetter(), minimumBodyCapacity);
+            Allocate(dynamicBodyHandles, bodies, pool, new InactiveSetGetter(), minimumBodyCapacity);
         }
 
 
@@ -98,22 +98,22 @@ namespace BepuPhysics
         /// <returns>True if the body no longer has any constraints associated with it in the fallback batch, false otherwise.</returns>
         internal unsafe bool Remove(int bodyReference, ref QuickList<int> allocationIdsToFree)
         {
-            var bodyPresent = bodyConstraintCounts.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex);
+            var bodyPresent = dynamicBodyConstraintCounts.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex);
             Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
-            ref var constraintCount = ref bodyConstraintCounts.Values[bodyReferencesIndex];
+            ref var constraintCount = ref dynamicBodyConstraintCounts.Values[bodyReferencesIndex];
             --constraintCount;
             if (constraintCount == 0)
             {
                 //If there are no more constraints associated with this body, get rid of the body list.
                 constraintCount = default;
-                bodyConstraintCounts.FastRemove(tableIndex, bodyReferencesIndex);
-                if (bodyConstraintCounts.Count == 0)
+                dynamicBodyConstraintCounts.FastRemove(tableIndex, bodyReferencesIndex);
+                if (dynamicBodyConstraintCounts.Count == 0)
                 {
                     //No constraints remain in the fallback batch. Drop the dictionary.
-                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintCounts.Keys.Id;
-                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintCounts.Values.Id;
-                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintCounts.Table.Id;
-                    bodyConstraintCounts = default;
+                    allocationIdsToFree.AllocateUnsafely() = dynamicBodyConstraintCounts.Keys.Id;
+                    allocationIdsToFree.AllocateUnsafely() = dynamicBodyConstraintCounts.Values.Id;
+                    allocationIdsToFree.AllocateUnsafely() = dynamicBodyConstraintCounts.Table.Id;
+                    dynamicBodyConstraintCounts = default;
                 }
                 return true;
             }
@@ -128,18 +128,18 @@ namespace BepuPhysics
         /// <returns>True if the body was present in the fallback batch and was removed, false otherwise.</returns>
         internal unsafe bool TryRemove(int bodyReference, ref QuickList<int> allocationIdsToFree)
         {
-            if (bodyConstraintCounts.Keys.Allocated && bodyConstraintCounts.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
+            if (dynamicBodyConstraintCounts.Keys.Allocated && dynamicBodyConstraintCounts.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
             {
-                ref var constraintReferences = ref bodyConstraintCounts.Values[bodyReferencesIndex];
+                ref var constraintReferences = ref dynamicBodyConstraintCounts.Values[bodyReferencesIndex];
                 //If there are no more constraints associated with this body, get rid of the body list.
-                bodyConstraintCounts.FastRemove(tableIndex, bodyReferencesIndex);
-                if (bodyConstraintCounts.Count == 0)
+                dynamicBodyConstraintCounts.FastRemove(tableIndex, bodyReferencesIndex);
+                if (dynamicBodyConstraintCounts.Count == 0)
                 {
                     //No constraints remain in the fallback batch. Drop the dictionary.
-                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintCounts.Keys.Id;
-                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintCounts.Values.Id;
-                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintCounts.Table.Id;
-                    bodyConstraintCounts = default;
+                    allocationIdsToFree.AllocateUnsafely() = dynamicBodyConstraintCounts.Keys.Id;
+                    allocationIdsToFree.AllocateUnsafely() = dynamicBodyConstraintCounts.Values.Id;
+                    allocationIdsToFree.AllocateUnsafely() = dynamicBodyConstraintCounts.Table.Id;
+                    dynamicBodyConstraintCounts = default;
                 }
                 return true;
             }
@@ -190,8 +190,8 @@ namespace BepuPhysics
             Debug.Assert(set.Allocated);
             if (set.Batches.Count > solver.FallbackBatchThreshold)
             {
-                Debug.Assert(set.SequentialFallback.bodyConstraintCounts.Keys.Allocated);
-                ref var bodyConstraintCounts = ref set.SequentialFallback.bodyConstraintCounts;
+                Debug.Assert(set.SequentialFallback.dynamicBodyConstraintCounts.Keys.Allocated);
+                ref var bodyConstraintCounts = ref set.SequentialFallback.dynamicBodyConstraintCounts;
                 for (int i = 0; i < bodyConstraintCounts.Count; ++i)
                 {
                     //This is a handle on inactive sets, and an index for active sets.
@@ -231,61 +231,61 @@ namespace BepuPhysics
         }
         internal void UpdateForBodyMemoryMove(int originalBodyIndex, int newBodyLocation)
         {
-            Debug.Assert(bodyConstraintCounts.Keys.Allocated && !bodyConstraintCounts.ContainsKey(newBodyLocation), "If a body is being moved, as opposed to swapped, then the target index should not be present.");
-            bodyConstraintCounts.GetTableIndices(ref originalBodyIndex, out var tableIndex, out var elementIndex);
-            var references = bodyConstraintCounts.Values[elementIndex];
-            bodyConstraintCounts.FastRemove(tableIndex, elementIndex);
-            bodyConstraintCounts.AddUnsafely(ref newBodyLocation, references);
+            Debug.Assert(dynamicBodyConstraintCounts.Keys.Allocated && !dynamicBodyConstraintCounts.ContainsKey(newBodyLocation), "If a body is being moved, as opposed to swapped, then the target index should not be present.");
+            dynamicBodyConstraintCounts.GetTableIndices(ref originalBodyIndex, out var tableIndex, out var elementIndex);
+            var references = dynamicBodyConstraintCounts.Values[elementIndex];
+            dynamicBodyConstraintCounts.FastRemove(tableIndex, elementIndex);
+            dynamicBodyConstraintCounts.AddUnsafely(ref newBodyLocation, references);
         }
 
         internal void UpdateForBodyMemorySwap(int a, int b)
         {
-            var indexA = bodyConstraintCounts.IndexOf(a);
-            var indexB = bodyConstraintCounts.IndexOf(b);
+            var indexA = dynamicBodyConstraintCounts.IndexOf(a);
+            var indexB = dynamicBodyConstraintCounts.IndexOf(b);
             Debug.Assert(indexA >= 0 && indexB >= 0, "A swap requires that both indices are already present.");
-            Helpers.Swap(ref bodyConstraintCounts.Values[indexA], ref bodyConstraintCounts.Values[indexB]);
+            Helpers.Swap(ref dynamicBodyConstraintCounts.Values[indexA], ref dynamicBodyConstraintCounts.Values[indexB]);
         }
 
         internal static void CreateFrom(ref SequentialFallbackBatch sourceBatch, BufferPool pool, out SequentialFallbackBatch targetBatch)
         {
             //Copy over non-buffer state. This copies buffer references pointlessly, but that doesn't matter.
-            targetBatch.bodyConstraintCounts = sourceBatch.bodyConstraintCounts;
-            pool.TakeAtLeast(sourceBatch.bodyConstraintCounts.Count, out targetBatch.bodyConstraintCounts.Keys);
-            pool.TakeAtLeast(targetBatch.bodyConstraintCounts.Keys.Length, out targetBatch.bodyConstraintCounts.Values);
-            pool.TakeAtLeast(sourceBatch.bodyConstraintCounts.TableMask + 1, out targetBatch.bodyConstraintCounts.Table);
-            sourceBatch.bodyConstraintCounts.Keys.CopyTo(0, targetBatch.bodyConstraintCounts.Keys, 0, sourceBatch.bodyConstraintCounts.Count);
-            sourceBatch.bodyConstraintCounts.Values.CopyTo(0, targetBatch.bodyConstraintCounts.Values, 0, sourceBatch.bodyConstraintCounts.Count);
-            sourceBatch.bodyConstraintCounts.Table.CopyTo(0, targetBatch.bodyConstraintCounts.Table, 0, sourceBatch.bodyConstraintCounts.TableMask + 1);
+            targetBatch.dynamicBodyConstraintCounts = sourceBatch.dynamicBodyConstraintCounts;
+            pool.TakeAtLeast(sourceBatch.dynamicBodyConstraintCounts.Count, out targetBatch.dynamicBodyConstraintCounts.Keys);
+            pool.TakeAtLeast(targetBatch.dynamicBodyConstraintCounts.Keys.Length, out targetBatch.dynamicBodyConstraintCounts.Values);
+            pool.TakeAtLeast(sourceBatch.dynamicBodyConstraintCounts.TableMask + 1, out targetBatch.dynamicBodyConstraintCounts.Table);
+            sourceBatch.dynamicBodyConstraintCounts.Keys.CopyTo(0, targetBatch.dynamicBodyConstraintCounts.Keys, 0, sourceBatch.dynamicBodyConstraintCounts.Count);
+            sourceBatch.dynamicBodyConstraintCounts.Values.CopyTo(0, targetBatch.dynamicBodyConstraintCounts.Values, 0, sourceBatch.dynamicBodyConstraintCounts.Count);
+            sourceBatch.dynamicBodyConstraintCounts.Table.CopyTo(0, targetBatch.dynamicBodyConstraintCounts.Table, 0, sourceBatch.dynamicBodyConstraintCounts.TableMask + 1);
         }
 
         internal void EnsureCapacity(int bodyCapacity, BufferPool pool)
         {
-            if (bodyConstraintCounts.Keys.Allocated)
+            if (dynamicBodyConstraintCounts.Keys.Allocated)
             {
                 //This is conservative since there's no guarantee that we'll actually need to resize at all if these bodies are already present, but that's fine. 
-                bodyConstraintCounts.EnsureCapacity(bodyCapacity, pool);
+                dynamicBodyConstraintCounts.EnsureCapacity(bodyCapacity, pool);
             }
             else
             {
-                bodyConstraintCounts = new QuickDictionary<int, int, PrimitiveComparer<int>>(bodyCapacity, pool);
+                dynamicBodyConstraintCounts = new QuickDictionary<int, int, PrimitiveComparer<int>>(bodyCapacity, pool);
             }
 
         }
 
         public void Compact(BufferPool pool)
         {
-            if (bodyConstraintCounts.Keys.Allocated)
+            if (dynamicBodyConstraintCounts.Keys.Allocated)
             {
-                bodyConstraintCounts.Compact(pool);
+                dynamicBodyConstraintCounts.Compact(pool);
             }
         }
 
 
         public void Dispose(BufferPool pool)
         {
-            if (bodyConstraintCounts.Keys.Allocated)
+            if (dynamicBodyConstraintCounts.Keys.Allocated)
             {
-                bodyConstraintCounts.Dispose(pool);
+                dynamicBodyConstraintCounts.Dispose(pool);
             }
         }
     }

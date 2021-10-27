@@ -272,15 +272,15 @@ namespace BepuPhysics
                             Debug.Assert(uniqueSetIndices[i] > 0);
                             ref var source = ref solver.Sets[uniqueSetIndices[i]].SequentialFallback;
                             ref var target = ref solver.ActiveSet.SequentialFallback;
-                            if (source.bodyConstraintCounts.Count > 0)
+                            if (source.dynamicBodyConstraintCounts.Count > 0)
                             {
-                                for (int j = 0; j < source.bodyConstraintCounts.Count; ++j)
+                                for (int j = 0; j < source.dynamicBodyConstraintCounts.Count; ++j)
                                 {
                                     //Inactive sets refer to body handles. Active set refers to body indices. Make the transition.
                                     //The HandleToLocation was updated during job setup, so we can use it.
-                                    ref var bodyLocation = ref bodies.HandleToLocation[source.bodyConstraintCounts.Keys[j]];
+                                    ref var bodyLocation = ref bodies.HandleToLocation[source.dynamicBodyConstraintCounts.Keys[j]];
                                     Debug.Assert(bodyLocation.SetIndex == 0, "Any batch moved into the active set should be dealing with bodies which have already been moved into the active set.");
-                                    var added = target.bodyConstraintCounts.AddUnsafely(bodyLocation.Index, source.bodyConstraintCounts.Values[j]);
+                                    var added = target.dynamicBodyConstraintCounts.AddUnsafely(bodyLocation.Index, source.dynamicBodyConstraintCounts.Values[j]);
                                     Debug.Assert(added, "Any body moving from an inactive set to the active set should not already be present in the active set's fallback batch.");
                                 }
                             }

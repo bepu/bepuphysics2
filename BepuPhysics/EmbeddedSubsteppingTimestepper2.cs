@@ -56,11 +56,11 @@ namespace BepuPhysics
             CollisionsDetected?.Invoke(dt, threadDispatcher);
             Debug.Assert(SubstepCount >= 0, "Substep count should be positive.");
 
-            //simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
-            //simulation.Solver.ValidateFallbackBatchEmptySlotReferences();
-            //simulation.Solver.ValidateFallbackBatchAccessSafety();
-            //simulation.Solver.ValidateFallbackBatchAccumulatedImpulses();
-            //simulation.Solver.ValidateConstraintMaps();
+            simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
+            simulation.Solver.ValidateFallbackBatchEmptySlotReferences();
+            simulation.Solver.ValidateFallbackBatchAccessSafety();
+            simulation.Solver.ValidateFallbackBatchAccumulatedImpulses();
+            simulation.Solver.ValidateConstraintMaps();
             simulation.Solver.ValidateConstraintReferenceKinematicity();
             simulation.Solver.ValidateConstrainedKinematicsSet();
             var constrainedBodySet = simulation.Solver.PrepareConstraintIntegrationResponsibilities(SubstepCount, threadDispatcher);

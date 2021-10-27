@@ -594,7 +594,7 @@ namespace BepuPhysics
                         else
                         {
                             //If this is the fallback batch, then the expected count may be more than 1.
-                            var foundBody = ActiveSet.SequentialFallback.bodyConstraintCounts.TryGetValue(i, out var constraintCountInFallbackBatchForBody);
+                            var foundBody = ActiveSet.SequentialFallback.dynamicBodyConstraintCounts.TryGetValue(i, out var constraintCountInFallbackBatchForBody);
                             Debug.Assert(foundBody, "A body was in the fallback batch's referenced handles, so the fallback batch should have a reference for that body.");
                             expectedCount = foundBody ? constraintCountInFallbackBatchForBody : 0;
                         }
@@ -831,6 +831,8 @@ namespace BepuPhysics
             //Add all the constraint's body handles to the batch we found (or created) to block future references to the same bodies.
             //Also, convert the handle into a memory index. Constraints store a direct memory reference for performance reasons.
             var bodyIndices = stackalloc int[bodyHandles.Length];
+            Span<BodyHandle> dynamicBodyHandles = stackalloc BodyHandle[bodyHandles.Length];
+            int dynamicBodyCount = 0;
             for (int j = 0; j < bodyHandles.Length; ++j)
             {
                 var bodyHandle = bodyHandles[j];
@@ -841,9 +843,15 @@ namespace BepuPhysics
                 if (Bodies.IsKinematic(bodies.ActiveSet.SolverStates[index].Inertia.Local))
                 {
                     index |= 1 << Bodies.KinematicFlagIndex;
+                    ConstrainedKinematicHandles.Add(bodyHandle.Value, pool);
+                }
+                else
+                {
+                    dynamicBodyHandles[dynamicBodyCount++] = bodyHandles[j];
                 }
                 bodyIndices[j] = index;
             }
+            dynamicBodyHandles = dynamicBodyHandles.Slice(0, dynamicBodyCount);
             var typeProcessor = TypeProcessors[typeId];
             var typeBatch = batch.GetOrCreateTypeBatch(typeId, typeProcessor, GetMinimumCapacityForType(typeId), pool);
             int indexInTypeBatch;
@@ -862,14 +870,14 @@ namespace BepuPhysics
             //and it is rare that a new type batch will be created that actually needs to be enormous.)
 
             ref var handlesSet = ref batchReferencedHandles[targetBatchIndex];
-            for (int i = 0; i < bodyHandles.Length; ++i)
+            for (int i = 0; i < dynamicBodyHandles.Length; ++i)
             {
-                Debug.Assert(targetBatchIndex == FallbackBatchThreshold || !handlesSet.Contains(bodyHandles[i].Value), "Non-fallback batches should not come to include references to the same body more than once.");
-                handlesSet.Set(bodyHandles[i].Value, pool);
+                Debug.Assert(targetBatchIndex == FallbackBatchThreshold || !handlesSet.Contains(dynamicBodyHandles[i].Value), "Non-fallback batches should not come to include references to the same body more than once.");
+                handlesSet.Set(dynamicBodyHandles[i].Value, pool);
             }
             if (targetBatchIndex == FallbackBatchThreshold)
             {
-                ActiveSet.SequentialFallback.AllocateForActive(bodyHandles, bodies, pool);
+                ActiveSet.SequentialFallback.AllocateForActive(dynamicBodyHandles, bodies, pool);
             }
         }
 
