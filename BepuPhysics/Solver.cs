@@ -313,6 +313,24 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
+        unsafe internal void ValidateConstrainedKinematicsSet()
+        {
+            ref var set = ref bodies.ActiveSet;
+            for (int i = 0; i < set.Count; ++i)
+            {
+                if (Bodies.IsKinematicUnsafe(ref set.SolverStates[i].Inertia.Local) && set.Constraints[i].Count > 0)
+                {
+                    Debug.Assert(ConstrainedKinematicHandles.Contains(set.IndexToHandle[i].Value), "Any active kinematic with constraints must appear in the constrained kinematic set.");
+                }
+            }
+            for (int i = 0; i < ConstrainedKinematicHandles.Count; ++i)
+            {
+                var bodyReference = bodies.GetBodyReference(new BodyHandle(ConstrainedKinematicHandles[i]));
+                Debug.Assert(bodyReference.Kinematic && bodyReference.Constraints.Count > 0, "Any body listed in the constrained kinematics set must be kinematic and constrained.");
+            }
+        }
+
+        [Conditional("DEBUG")]
         private void ValidateBodyReference(int body, int expectedCount, ref ConstraintBatch batch)
         {
             int referencesToBody = 0;
