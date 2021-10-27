@@ -82,6 +82,10 @@ namespace BepuPhysics
         /// </summary>
         public int FallbackBatchThreshold { get; private set; }
 
+        /// <summary>
+        /// Set of body handles associated with constrained kinematic bodies. These will be integrated during substepping.
+        /// </summary>
+        public QuickSet<int, PrimitiveComparer<int>> ConstrainedKinematicHandles;
 
         int iterationCount;
         /// <summary>
@@ -204,6 +208,7 @@ namespace BepuPhysics
         public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
             int initialCapacity,
             int initialIslandCapacity,
+            int initialConstrainedKinematicCapacity,
             int minimumCapacityPerTypeBatch)
         {
             this.iterationCount = iterationCount;
@@ -216,8 +221,9 @@ namespace BepuPhysics
             ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
             batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
             ResizeHandleCapacity(initialCapacity);
-            solveWorker = SolveWorker; ;
+            solveWorker = SolveWorker;
             incrementalContactUpdateWorker = IncrementalContactUpdateWorker;
+            ConstrainedKinematicHandles = new QuickSet<int, PrimitiveComparer<int>>(initialConstrainedKinematicCapacity, pool);
         }
 
         public void Register<TDescription>() where TDescription : unmanaged, IConstraintDescription<TDescription>
@@ -1377,6 +1383,7 @@ namespace BepuPhysics
             {
                 batchReferencedHandles[batchIndex].Dispose(pool);
             }
+            ConstrainedKinematicHandles.Clear();
             batchReferencedHandles.Clear();
             ActiveSet.Clear(pool);
             //All inactive sets are returned to the pool.
@@ -1396,7 +1403,8 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bodyHandleCapacity">Size of the span of body handles to allocate space for. Applies to batch referenced handle sets.</param>
         /// <param name="constraintHandleCapacity">Number of constraint handles to allocate space for. Applies to the handle->constraint mapping table.</param>
-        public void EnsureSolverCapacities(int bodyHandleCapacity, int constraintHandleCapacity)
+        /// <param name="constrainedKinematicCapacity">Number of constrained kinematic body handles to allocate space for.</param>
+        public void EnsureSolverCapacities(int bodyHandleCapacity, int constraintHandleCapacity, int constrainedKinematicCapacity)
         {
             if (HandleToConstraint.Length < constraintHandleCapacity)
             {
@@ -1408,6 +1416,8 @@ namespace BepuPhysics
             {
                 batchReferencedHandles[i].EnsureCapacity(targetBatchReferencedHandleSize, pool);
             }
+
+            ConstrainedKinematicHandles.EnsureCapacity(constrainedKinematicCapacity, pool);
         }
 
         void ResizeHandleCapacity(int constraintHandleCapacity)
@@ -1426,7 +1436,8 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bodyHandleCapacity">Size of the span of body handles to allocate space for. Applies to batch referenced handle sets.</param>
         /// <param name="constraintHandleCapacity">Number of constraint handles to allocate space for. Applies to the handle->constraint mapping table.</param>
-        public void ResizeSolverCapacities(int bodyHandleCapacity, int constraintHandleCapacity)
+        /// <param name="constrainedKinematicCapacity">Number of constrained kinematic body handles to allocate space for.</param>
+        public void ResizeSolverCapacities(int bodyHandleCapacity, int constraintHandleCapacity, int constrainedKinematicCapacity)
         {
             var targetConstraintCount = BufferPool.GetCapacityForCount<ConstraintLocation>(Math.Max(constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1));
             if (HandleToConstraint.Length != targetConstraintCount)
@@ -1439,6 +1450,9 @@ namespace BepuPhysics
             {
                 batchReferencedHandles[i].Resize(targetBatchReferencedHandleSize, pool);
             }
+
+            var targetConstrainedKinematicsCapacity = Math.Max(ConstrainedKinematicHandles.Count, constrainedKinematicCapacity);
+            ConstrainedKinematicHandles.Resize(targetConstrainedKinematicsCapacity, pool);
         }
 
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
@@ -1493,6 +1507,7 @@ namespace BepuPhysics
                 batchReferencedHandles[i].Dispose(pool);
             }
             batchReferencedHandles.Dispose(pool);
+            ConstrainedKinematicHandles.Dispose(pool);
             for (int i = 0; i < Sets.Length; ++i)
             {
                 if (Sets[i].Allocated)

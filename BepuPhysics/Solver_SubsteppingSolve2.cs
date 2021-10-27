@@ -19,6 +19,7 @@ namespace BepuPhysics
     internal enum SolverStageType
     {
         IncrementalUpdate,
+        IntegrateConstrainedKinematics,
         WarmStart,
         Solve,
     }
@@ -39,6 +40,12 @@ namespace BepuPhysics
         }
     }
 
+    internal struct IntegrationWorkBlock
+    {
+        public int StartBundleIndex;
+        public int EndBundleIndex;
+    }
+
     [StructLayout(LayoutKind.Explicit)]
     internal struct SubstepMultithreadingContext
     {
@@ -47,14 +54,16 @@ namespace BepuPhysics
         [FieldOffset(16)]
         public Buffer<WorkBlock> IncrementalUpdateBlocks;
         [FieldOffset(32)]
-        public Buffer<WorkBlock> ConstraintBlocks;
+        public Buffer<IntegrationWorkBlock> KinematicIntegrationBlocks;
         [FieldOffset(48)]
-        public Buffer<int> ConstraintBatchBoundaries;
+        public Buffer<WorkBlock> ConstraintBlocks;
         [FieldOffset(64)]
+        public Buffer<int> ConstraintBatchBoundaries;
+        [FieldOffset(80)]
         public float Dt;
-        [FieldOffset(68)]
+        [FieldOffset(84)]
         public float InverseDt;
-        [FieldOffset(72)]
+        [FieldOffset(88)]
         public int WorkerCount;
 
 
@@ -94,8 +103,9 @@ namespace BepuPhysics
         public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
             int initialCapacity,
             int initialIslandCapacity,
+            int initialConstrainedKinematicCapacity,
             int minimumCapacityPerTypeBatch, PoseIntegrator<TIntegrationCallbacks> poseIntegrator)
-            : base(bodies, pool, iterationCount, fallbackBatchThreshold, initialCapacity, initialIslandCapacity, minimumCapacityPerTypeBatch)
+            : base(bodies, pool, iterationCount, fallbackBatchThreshold, initialCapacity, initialIslandCapacity, initialConstrainedKinematicCapacity, minimumCapacityPerTypeBatch)
         {
             PoseIntegrator = poseIntegrator;
             solveStep2Worker2 = SolveStep2Worker2;
@@ -189,6 +199,28 @@ namespace BepuPhysics
                 ref var block = ref this.solver.substepContext.IncrementalUpdateBlocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 solver.TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
+            }
+        }
+
+        struct IntegrateConstrainedKinematicsStageFunction : IStageFunction
+        {
+            public float Dt;
+            public float InverseDt;
+            public int SubstepIndex;
+            public Solver<TIntegrationCallbacks> solver;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
+            {
+                ref var block = ref this.solver.substepContext.KinematicIntegrationBlocks[blockIndex];
+                if (SubstepIndex == 0)
+                {
+                    this.solver.PoseIntegrator.IntegrateVelocities(solver.ConstrainedKinematicHandles.Span.Slice(solver.ConstrainedKinematicHandles.Count), block.StartBundleIndex, block.EndBundleIndex, Dt, workerIndex);
+                }
+                else
+                {
+                    this.solver.PoseIntegrator.IntegratePosesAndVelocities(solver.ConstrainedKinematicHandles.Span.Slice(solver.ConstrainedKinematicHandles.Count), block.StartBundleIndex, block.EndBundleIndex, Dt, workerIndex);
+                }
             }
         }
 
@@ -305,6 +337,7 @@ namespace BepuPhysics
             //data will remain in some cache that's reasonably close to the core.
             int workerCount = substepContext.WorkerCount;
             var incrementalUpdateWorkerStart = GetUniformlyDistributedStart(workerIndex, substepContext.IncrementalUpdateBlocks.Length, workerCount, 0);
+            var kinematicIntegrationWorkerStart = GetUniformlyDistributedStart(workerIndex, substepContext.KinematicIntegrationBlocks.Length, workerCount, 0);
             Buffer<int> batchStarts;
             ref var activeSet = ref ActiveSet;
             unsafe
@@ -329,6 +362,12 @@ namespace BepuPhysics
                 InverseDt = substepContext.InverseDt,
                 solver = this
             };
+            var integrateConstrainedKinematicsStage = new IntegrateConstrainedKinematicsStageFunction
+            {
+                Dt = substepContext.Dt,
+                InverseDt = substepContext.InverseDt,
+                solver = this
+            };
             var warmstartStage = new WarmStartStep2StageFunction
             {
                 Dt = substepContext.Dt,
@@ -347,9 +386,9 @@ namespace BepuPhysics
             var syncStagesPerWarmStartOrSolve = synchronizedBatchCount;
             var baseStageCountInSubstep = syncStagesPerWarmStartOrSolve * (1 + IterationCount);
             //All warmstarts and solves, plus an incremental contact update. First substep doesn't do an incremental contact update, but that's fine, it'll end up expecting 0.
-            var syncOffsetToPreviousSubstep = baseStageCountInSubstep + 1;
-            //To find the previous execution sync index of a constraint batch, we have to scan through all the constraint batches, but ALSO skip over the incremental contact update stage, hence + 1.
-            var syncOffsetToPreviousClaimOnBatchForWarmStart = syncStagesPerWarmStartOrSolve + 1;
+            var syncOffsetToPreviousSubstep = baseStageCountInSubstep + 2;
+            //To find the previous execution sync index of a constraint batch, we have to scan through all the constraint batches, but ALSO skip over the incremental contact update stage and kinematic integration, hence + 2.
+            var syncOffsetToPreviousClaimOnBatchForWarmStart = syncStagesPerWarmStartOrSolve + 2;
             //For solves, there is no incremental update in the way.
             var syncOffsetToPreviousClaimOnBatchForSolve = syncStagesPerWarmStartOrSolve;
             if (workerIndex == 0)
@@ -362,10 +401,12 @@ namespace BepuPhysics
                     {
                         ExecuteMainStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, ref substepContext.Stages[0], syncOffsetToPreviousSubstep, ref syncIndex);
                     }
+                    integrateConstrainedKinematicsStage.SubstepIndex = substepIndex;
+                    ExecuteMainStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, ref substepContext.Stages[1], syncOffsetToPreviousSubstep, ref syncIndex);
                     warmstartStage.SubstepIndex = substepIndex;
                     for (int batchIndex = 0; batchIndex < syncStagesPerWarmStartOrSolve; ++batchIndex)
                     {
-                        ExecuteMainStage(ref warmstartStage, workerIndex, batchStarts[batchIndex], ref substepContext.Stages[batchIndex + 1], syncOffsetToPreviousClaimOnBatchForWarmStart, ref syncIndex);
+                        ExecuteMainStage(ref warmstartStage, workerIndex, batchStarts[batchIndex], ref substepContext.Stages[batchIndex + 2], syncOffsetToPreviousClaimOnBatchForWarmStart, ref syncIndex);
                     }
                     if (fallbackExists)
                     {
@@ -391,7 +432,7 @@ namespace BepuPhysics
                         {
                             //Note that this is using a 'different' stage by index than the worker thread if the iteration index > 1. 
                             //That's totally fine- the warmstart/iteration stages share the same claims buffers per batch. They're redundant for the sake of easier indexing.
-                            ExecuteMainStage(ref solveStage, workerIndex, batchStarts[batchIndex], ref substepContext.Stages[batchIndex + 1], syncOffsetToPreviousClaimOnBatchForSolve, ref syncIndex);
+                            ExecuteMainStage(ref solveStage, workerIndex, batchStarts[batchIndex], ref substepContext.Stages[batchIndex + 2], syncOffsetToPreviousClaimOnBatchForSolve, ref syncIndex);
                         }
                         if (fallbackExists)
                         {
@@ -456,6 +497,10 @@ namespace BepuPhysics
                         case SolverStageType.IncrementalUpdate:
                             ExecuteWorkerStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, 0, ref stage.Claims, syncOffsetToPreviousSubstep, syncIndex, ref substepContext.CompletedWorkBlockCount);
                             break;
+                        case SolverStageType.IntegrateConstrainedKinematics:
+                            integrateConstrainedKinematicsStage.SubstepIndex = substepIndex;
+                            ExecuteWorkerStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, 0, ref stage.Claims, syncOffsetToPreviousSubstep, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
                         case SolverStageType.WarmStart:
                             warmstartStage.SubstepIndex = substepIndex;
                             ExecuteWorkerStage(ref warmstartStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, syncOffsetToPreviousClaimOnBatchForWarmStart, syncIndex, ref substepContext.CompletedWorkBlockCount);
@@ -471,6 +516,33 @@ namespace BepuPhysics
 
         }
 
+        Buffer<IntegrationWorkBlock> BuildIntegrationWorkBlocks(int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlockCount)
+        {
+            var bundleCount = BundleIndexing.GetBundleCount(ConstrainedKinematicHandles.Count);
+            var targetBundlesPerBlock = bundleCount / targetBlockCount;
+            if (targetBundlesPerBlock < minimumBlockSizeInBundles)
+                targetBundlesPerBlock = minimumBlockSizeInBundles;
+            if (targetBundlesPerBlock > maximumBlockSizeInBundles)
+                targetBundlesPerBlock = maximumBlockSizeInBundles;
+            var blockCount = (bundleCount + targetBundlesPerBlock - 1) / targetBundlesPerBlock;
+            var bundlesPerBlock = bundleCount / blockCount;
+            var remainder = bundleCount - bundlesPerBlock * blockCount;
+            var previousEnd = 0;
+            if (blockCount > 0)
+            {
+                pool.Take(blockCount, out Buffer<IntegrationWorkBlock> workBlocks);
+                for (int i = 0; i < blockCount; ++i)
+                {
+                    var bundleCountForBlock = bundlesPerBlock;
+                    if (i < remainder)
+                        ++bundleCountForBlock;
+                    workBlocks[i] = new IntegrationWorkBlock { StartBundleIndex = previousEnd, EndBundleIndex = previousEnd += bundleCountForBlock };
+                }
+                return workBlocks;
+
+            }
+            return default;
+        }
 
         //Buffer<Buffer<int>> debugStageWorkBlocksCompleted;
         protected void ExecuteMultithreaded2(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate)
@@ -495,22 +567,24 @@ namespace BepuPhysics
             pool.Return(ref incrementalUpdateBatchBoundaries); //TODO: No need to create this in the first place. Doesn't really cost anything, but...
             substepContext.ConstraintBlocks = constraintBlocks.Span.Slice(constraintBlocks.Count);
             substepContext.IncrementalUpdateBlocks = incrementalBlocks.Span.Slice(incrementalBlocks.Count);
+            substepContext.KinematicIntegrationBlocks = BuildIntegrationWorkBlocks(minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch);
 
             //Not every batch will actually have work blocks associated with it; the batch compressor could be falling behind, which means older constraints could be at higher batches than they need to be, leaving gaps.
             //We don't want to include those empty batches as sync points in the solver.
             var batchCount = ActiveSet.Batches.Count;
             substepContext.SyncIndex = 0;
             var totalConstraintBatchWorkBlockCount = substepContext.ConstraintBatchBoundaries.Length == 0 ? 0 : substepContext.ConstraintBatchBoundaries[^1];
-            var totalClaimCount = incrementalBlocks.Count + totalConstraintBatchWorkBlockCount;
+            var totalClaimCount = incrementalBlocks.Count + substepContext.KinematicIntegrationBlocks.Length + totalConstraintBatchWorkBlockCount;
             GetSynchronizedBatchCount(out var stagesPerIteration, out var fallbackExists);
-            pool.Take(1 + stagesPerIteration * (1 + IterationCount), out substepContext.Stages);
+            pool.Take(2 + stagesPerIteration * (1 + IterationCount), out substepContext.Stages);
             //Claims will be monotonically increasing throughout execution. All should start at zero to match with the initial sync index.
             pool.Take<int>(totalClaimCount, out var claims);
             claims.Clear(0, claims.Length);
             substepContext.Stages[0] = new(claims.Slice(incrementalBlocks.Count), 0, SolverStageType.IncrementalUpdate);
+            substepContext.Stages[1] = new(claims.Slice(substepContext.KinematicIntegrationBlocks.Length), 0, SolverStageType.IntegrateConstrainedKinematics);
             //Note that we create redundant stages that share the same workblock targets and claims buffers.
             //This is just to make indexing a little simpler during the multithreaded work.
-            int targetStageIndex = 1;
+            int targetStageIndex = 2;
             //Warm start.
             int claimStart = incrementalBlocks.Count;
             for (int batchIndex = 0; batchIndex < stagesPerIteration; ++batchIndex)
@@ -628,6 +702,8 @@ namespace BepuPhysics
             pool.Return(ref substepContext.Stages);
             pool.Return(ref substepContext.ConstraintBatchBoundaries);
             pool.Return(ref substepContext.IncrementalUpdateBlocks);
+            if (substepContext.KinematicIntegrationBlocks.Allocated)
+                pool.Return(ref substepContext.KinematicIntegrationBlocks);
             pool.Return(ref substepContext.ConstraintBlocks);
 
 
@@ -1101,6 +1177,11 @@ namespace BepuPhysics
                                     TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
                             }
                         }
+                        PoseIntegrator.IntegratePosesAndVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, ConstrainedKinematicHandles.Count, substepDt, 0);
+                    }
+                    else
+                    {
+                        PoseIntegrator.IntegrateVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, ConstrainedKinematicHandles, substepDt, 0);
                     }
                     for (int i = 0; i < batchCount; ++i)
                     {
@@ -1135,7 +1216,6 @@ namespace BepuPhysics
             }
             else
             {
-                //ExecuteMultithreaded<MainSolveFilter>(substepDt, threadDispatcher, solveStep2Worker, includeIncrementalUpdate: true);
                 ExecuteMultithreaded2(substepDt, threadDispatcher, solveStep2Worker2);
             }
         }
