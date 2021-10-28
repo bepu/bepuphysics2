@@ -520,7 +520,7 @@ namespace BepuPhysics
 
         }
 
-        Buffer<IntegrationWorkBlock> BuildIntegrationWorkBlocks(int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlockCount)
+        Buffer<IntegrationWorkBlock> BuildKinematicIntegrationWorkBlocks(int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlockCount)
         {
             var bundleCount = BundleIndexing.GetBundleCount(ConstrainedKinematicHandles.Count);
             var targetBundlesPerBlock = bundleCount / targetBlockCount;
@@ -571,7 +571,7 @@ namespace BepuPhysics
             pool.Return(ref incrementalUpdateBatchBoundaries); //TODO: No need to create this in the first place. Doesn't really cost anything, but...
             substepContext.ConstraintBlocks = constraintBlocks.Span.Slice(constraintBlocks.Count);
             substepContext.IncrementalUpdateBlocks = incrementalBlocks.Span.Slice(incrementalBlocks.Count);
-            substepContext.KinematicIntegrationBlocks = BuildIntegrationWorkBlocks(minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch);
+            substepContext.KinematicIntegrationBlocks = BuildKinematicIntegrationWorkBlocks(minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch);
 
             //Not every batch will actually have work blocks associated with it; the batch compressor could be falling behind, which means older constraints could be at higher batches than they need to be, leaving gaps.
             //We don't want to include those empty batches as sync points in the solver.
@@ -1192,11 +1192,12 @@ namespace BepuPhysics
                                     TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
                             }
                         }
-                        PoseIntegrator.IntegrateKinematicPosesAndVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, ConstrainedKinematicHandles.Count, substepDt, 0);
+                        PoseIntegrator.IntegrateKinematicPosesAndVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, BundleIndexing.GetBundleCount(ConstrainedKinematicHandles.Count), substepDt, 0);
                     }
                     else
                     {
-                        PoseIntegrator.IntegrateKinematicVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, ConstrainedKinematicHandles, substepDt, 0);
+                        if (PoseIntegrator.Callbacks.IntegrateVelocityForKinematics)
+                            PoseIntegrator.IntegrateKinematicVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, BundleIndexing.GetBundleCount(ConstrainedKinematicHandles.Count), substepDt, 0);
                     }
                     for (int i = 0; i < batchCount; ++i)
                     {
