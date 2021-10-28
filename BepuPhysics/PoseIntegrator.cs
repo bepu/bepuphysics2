@@ -187,6 +187,18 @@ namespace BepuPhysics
             Symmetric3x3Wide.RotationSandwich(orientationMatrix, localInverseInertiaTensor, out rotatedInverseInertiaTensor);
         }
 
+        /// <summary>
+        /// Uses the previous angular velocity if attempting to conserve angular momentum introduced infinities or NaNs. Happens when attempting to conserve momentum with a kinematic or partially inertia locked body.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void FallbackIfInertiaIncompatible(in Vector3Wide previousAngularVelocity, ref Vector3Wide angularVelocity)
+        {
+            var infinity = new Vector<float>(float.PositiveInfinity);
+            angularVelocity.X = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(angularVelocity.X), infinity), angularVelocity.X, previousAngularVelocity.X);
+            angularVelocity.Y = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(angularVelocity.Y), infinity), angularVelocity.Y, previousAngularVelocity.Y);
+            angularVelocity.Z = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(angularVelocity.Z), infinity), angularVelocity.Z, previousAngularVelocity.Z);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void IntegrateAngularVelocityConserveMomentum(in QuaternionWide previousOrientation, in Symmetric3x3Wide localInverseInertia, in Symmetric3x3Wide worldInverseInertia, ref Vector3Wide angularVelocity)
         {
@@ -198,7 +210,9 @@ namespace BepuPhysics
             Symmetric3x3Wide.Invert(localInverseInertia, out var localInertiaTensor);
             Symmetric3x3Wide.TransformWithoutOverlap(localPreviousAngularVelocity, localInertiaTensor, out var localAngularMomentum);
             Matrix3x3Wide.Transform(localAngularMomentum, previousOrientationMatrix, out var angularMomentum);
+            var previousVelocity = angularVelocity;
             Symmetric3x3Wide.TransformWithoutOverlap(angularMomentum, worldInverseInertia, out angularVelocity);
+            FallbackIfInertiaIncompatible(previousVelocity, ref angularVelocity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -243,7 +257,9 @@ namespace BepuPhysics
             Matrix3x3Wide.Transform(residual, inverseJacobian, out var newtonStep);
             localAngularVelocity -= newtonStep;
 
+            var previousVelocity = angularVelocity;
             Matrix3x3Wide.Transform(localAngularVelocity, orientationMatrix, out angularVelocity);
+            FallbackIfInertiaIncompatible(previousVelocity, ref angularVelocity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
