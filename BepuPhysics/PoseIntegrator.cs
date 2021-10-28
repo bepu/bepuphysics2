@@ -897,6 +897,25 @@ namespace BepuPhysics
                 }
                 var halfDt = bundleEffectiveDt * new Vector<float>(0.5f);
                 bodies.GatherState<AccessAll>(bodyIndices, false, out var position, out var orientation, out var velocity, out var localInertia);
+
+
+                Vector<int> unconstrainedVelocityIntegrationMask;
+                bool anyBodyInBundleNeedsVelocityIntegration;
+                if (callbacks.IntegrateVelocityForKinematics)
+                {
+                    unconstrainedVelocityIntegrationMask = unconstrainedMask;
+                    anyBodyInBundleNeedsVelocityIntegration = anyBodyInBundleIsUnconstrained;
+                }
+                else
+                {
+                    var isKinematic =
+                        Vector.Equals(Vector.BitwiseOr(
+                            Vector.BitwiseOr(Vector.BitwiseOr(localInertia.InverseMass, localInertia.InverseInertiaTensor.XX), Vector.BitwiseOr(localInertia.InverseInertiaTensor.YX, localInertia.InverseInertiaTensor.YY)),
+                            Vector.BitwiseOr(Vector.BitwiseOr(localInertia.InverseInertiaTensor.ZX, localInertia.InverseInertiaTensor.ZY), localInertia.InverseInertiaTensor.ZZ)), Vector<float>.Zero);
+                    unconstrainedVelocityIntegrationMask = Vector.AndNot(unconstrainedMask, isKinematic);
+                    anyBodyInBundleNeedsVelocityIntegration = Vector.LessThanAny(unconstrainedVelocityIntegrationMask, Vector<int>.Zero);
+                }
+
                 if (anyBodyInBundleIsUnconstrained)
                 {
                     int integrationStepCount;
@@ -912,10 +931,14 @@ namespace BepuPhysics
                     {
                         //Note that the following integrates velocities, then poses.
                         var previousVelocity = velocity;
-                        callbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, unconstrainedMask, workerIndex, bundleEffectiveDt, ref velocity);
-                        //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
-                        Vector3Wide.ConditionalSelect(unconstrainedMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
-                        Vector3Wide.ConditionalSelect(unconstrainedMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);
+
+                        if (anyBodyInBundleNeedsVelocityIntegration)
+                        {
+                            callbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, unconstrainedVelocityIntegrationMask, workerIndex, bundleEffectiveDt, ref velocity);
+                            //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
+                            Vector3Wide.ConditionalSelect(unconstrainedVelocityIntegrationMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
+                            Vector3Wide.ConditionalSelect(unconstrainedVelocityIntegrationMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);
+                        }
 
                         position += velocity.Linear * bundleEffectiveDt;
 

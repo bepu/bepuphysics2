@@ -406,7 +406,7 @@ namespace BepuPhysics
                     if (substepIndex > 1 || PoseIntegrator.Callbacks.IntegrateVelocityForKinematics)
                         ExecuteMainStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, ref substepContext.Stages[1], syncOffsetToPreviousSubstep, ref syncIndex);
                     else
-                        ++syncIndex;
+                        ++syncIndex; //Don't want to desync sync indices just because we aren't running a stage.
                     warmstartStage.SubstepIndex = substepIndex;
                     for (int batchIndex = 0; batchIndex < syncStagesPerWarmStartOrSolve; ++batchIndex)
                     {
@@ -1125,6 +1125,17 @@ namespace BepuPhysics
                     bodiesFirstObservedInBatches[batchIndex].Dispose(pool);
                 }
                 pool.Return(ref bodiesFirstObservedInBatches);
+
+                //Add the constrained kinematics to the constrained body handles. The kinematics were absent from batch referenced handles.
+                //TODO: This assumes the number of kinematics is low relative to the number of bodies and does not need to be multithreaded.
+                //This assumption is *usually* fine, but we should probably have a fallback that is more efficient if this assumption is wrong.
+                //Could maintain an indexset parallel to the ConstrainedKinematicHandles- same set, just different format.
+                //If we detect a lot of constrained kinematics, just do an indexset merge.
+                //That would be fast enough even if all bodies were kinematic.
+                for (int i = 0; i < ConstrainedKinematicHandles.Count; ++i)
+                {
+                    mergedConstrainedBodyHandles.AddUnsafely(ConstrainedKinematicHandles[i]);
+                }
                 return mergedConstrainedBodyHandles;
             }
             else
