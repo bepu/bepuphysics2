@@ -1276,7 +1276,8 @@ namespace BepuPhysics.Constraints
             {
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                 {
-                    var integrationMask = Vector.GreaterThanOrEqual(bodyIndices, Vector<int>.Zero);
+                    //Avoid slots that are empty (-1) or slots that are kinematic. Both can be tested by checking the unsigned magnitude against the flag lower limit.
+                    var integrationMask = Vector.AsVectorInt32(Vector.LessThan(Vector.AsVectorUInt32(bodyIndices), new Vector<uint>(Bodies.DynamicLimit)));
                     bodies.GatherState<AccessAll>(bodyIndices, false, out position, out orientation, out velocity, out var localInertia);
                     IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
                     bodies.ScatterPose(ref position, ref orientation, bodyIndices, integrationMask);
@@ -1324,7 +1325,8 @@ namespace BepuPhysics.Constraints
                 //Note that world inertia is still scattered as a part of velocity integration; we need the updated value since we can't trust the cached value across frames.
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                 {
-                    var integrationMask = Vector.GreaterThanOrEqual(bodyIndices, Vector<int>.Zero);
+                    //Avoid slots that are empty (-1) or slots that are kinematic. Both can be tested by checking the unsigned magnitude against the flag lower limit.
+                    var integrationMask = Vector.AsVectorInt32(Vector.LessThan(Vector.AsVectorUInt32(bodyIndices), new Vector<uint>(Bodies.DynamicLimit)));
                     bodies.GatherState<AccessAll>(bodyIndices, false, out position, out orientation, out velocity, out var localInertia);
                     IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(ref integratorCallbacks, ref bodyIndices, localInertia, dt, integrationMask, position, orientation, ref velocity, workerIndex, out inertia);
                     bodies.ScatterInertia(ref inertia, bodyIndices, integrationMask);

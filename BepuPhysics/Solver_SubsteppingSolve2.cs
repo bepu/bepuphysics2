@@ -741,7 +741,7 @@ namespace BepuPhysics
                     for (int bundleInnerIndex = 0; bundleInnerIndex < countInBundle; ++bundleInnerIndex)
                     {
                         //Constraints refer to bodies by index when they're in the active set, so we need to transform to handle to look up our merged batch results.
-                        var bodyIndex = bundleStart[bundleInnerIndex];
+                        var bodyIndex = bundleStart[bundleInnerIndex] & Bodies.BodyIndexMask;
                         if (typeof(TFallbackness) == typeof(IsFallbackBatch))
                         {
                             //Fallback batches can contain empty lanes; there's no guarantee of constraint contiguity. Such lanes are marked with -1 in the body references.

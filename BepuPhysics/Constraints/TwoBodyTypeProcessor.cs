@@ -79,8 +79,8 @@ namespace BepuPhysics.Constraints
             ref var indexB = ref Unsafe.Add(ref indexA, Vector<int>.Count);
             //Note that the variables are ref locals! This is important for correctness, because every execution of LoopBody could result in a swap.
             //Ref locals aren't the only solution, but if you ever change this, make sure you account for the potential mutation in the enumerator.
-            enumerator.LoopBody(indexA);
-            enumerator.LoopBody(indexB);
+            enumerator.LoopBody(indexA & Bodies.BodyIndexMask);
+            enumerator.LoopBody(indexB & Bodies.BodyIndexMask);
         }
         struct TwoBodySortKeyGenerator : ISortKeyGenerator<TwoBodyReferences>
         {

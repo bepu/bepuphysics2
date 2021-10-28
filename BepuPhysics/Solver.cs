@@ -926,7 +926,7 @@ namespace BepuPhysics
             {
                 var location = bodies.HandleToLocation[bodyHandles[i].Value];
                 Debug.Assert(location.SetIndex == 0);
-                if (Bodies.IsKinematicUnsafe(ref solverStates[location.Index].Inertia.Local))
+                if (!Bodies.IsKinematicUnsafe(ref solverStates[location.Index].Inertia.Local))
                 {
                     allocation[blockingCount++] = bodyHandles[i];
                 }

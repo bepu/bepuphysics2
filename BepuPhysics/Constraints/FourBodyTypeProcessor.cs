@@ -80,10 +80,10 @@ namespace BepuPhysics.Constraints
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var constraintBundleIndex, out var constraintInnerIndex);
             ref var indices = ref GatherScatter.GetOffsetInstance(ref Buffer<FourBodyReferences>.Get(typeBatch.BodyReferences.Memory, constraintBundleIndex), constraintInnerIndex);
             //Note that we hold a reference to the indices. That's important if the loop body mutates indices.
-            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexA));
-            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexB));
-            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexC));
-            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexD));
+            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexA) & Bodies.BodyIndexMask);
+            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexB) & Bodies.BodyIndexMask);
+            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexC) & Bodies.BodyIndexMask);
+            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexD) & Bodies.BodyIndexMask);
         }
         struct FourBodySortKeyGenerator : ISortKeyGenerator<FourBodyReferences>
         {

@@ -59,7 +59,7 @@ namespace BepuPhysics.Constraints
         public sealed override void EnumerateConnectedBodyIndices<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator)
         {
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var constraintBundleIndex, out var constraintInnerIndex);
-            enumerator.LoopBody(GatherScatter.Get(ref Buffer<Vector<int>>.Get(ref typeBatch.BodyReferences, constraintBundleIndex), constraintInnerIndex));
+            enumerator.LoopBody(GatherScatter.Get(ref Buffer<Vector<int>>.Get(ref typeBatch.BodyReferences, constraintBundleIndex), constraintInnerIndex) & Bodies.BodyIndexMask);
         }
 
 
