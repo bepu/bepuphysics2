@@ -835,6 +835,7 @@ namespace BepuPhysics
                 if (callbacks.IntegrateVelocityForKinematics)
                     callbacks.IntegrateVelocity(bodyIndicesVector, position, orientation, zeroInertia, existingMask, workerIndex, bundleDt, ref velocity);
                 //Writes to the empty lanes won't matter (scatter is masked), so we don't need to clean them up.
+                bodies.ScatterPose(ref position, ref orientation, bodyIndicesVector, existingMask);
                 bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndicesVector);
 
             }
