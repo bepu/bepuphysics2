@@ -392,6 +392,43 @@ namespace BepuPhysics
             }
         }
 
+
+        [Conditional("DEBUG")]
+        internal unsafe void ValidateFallbackBodiesAreDynamic()
+        {
+            ref var set = ref ActiveSet;
+            if (set.Batches.Count > FallbackBatchThreshold)
+            {
+                for (int i = 0; i < set.SequentialFallback.dynamicBodyConstraintCounts.Count; ++i)
+                {
+                    Debug.Assert(!Bodies.IsKinematicUnsafe(ref bodies.ActiveSet.SolverStates[set.SequentialFallback.dynamicBodyConstraintCounts.Keys[i]].Inertia.Local),
+                        "All ostensibly dynamic bodies tracked by the fallback batch must actually be dynamic.");
+                }
+                for (int i = 0; i < bodies.ActiveSet.Count; ++i)
+                {
+                    var constraints = bodies.ActiveSet.Constraints[i];
+                    var fallbackConstraintsForDynamicBody = 0;
+                    for (int j = 0; j < constraints.Count; ++j)
+                    {
+                        if (HandleToConstraint[constraints[j].ConnectingConstraintHandle.Value].BatchIndex == FallbackBatchThreshold)
+                        {
+                            ++fallbackConstraintsForDynamicBody;
+                        }
+                    }
+                    if (Bodies.IsKinematicUnsafe(ref bodies.ActiveSet.SolverStates[i].Inertia.Local))
+                    {
+                        Debug.Assert(fallbackConstraintsForDynamicBody == 0, "Kinematics should not be present in the dynamic bodies referenced by the fallback batch.");
+                    }
+                    else
+                    {
+                        var succeeded = ActiveSet.SequentialFallback.dynamicBodyConstraintCounts.TryGetValue(i, out var countForBody);
+                        Debug.Assert(succeeded == (fallbackConstraintsForDynamicBody > 0), "The fallback batch should contain a reference to the dynamic body if there are constraints associated with it in the fallback batch.");
+                        Debug.Assert(fallbackConstraintsForDynamicBody == countForBody, "If the dynamic body is referenced in the fallback batch, the brute force count should match the cached count.");
+                    }
+                }
+            }
+        }
+
         [Conditional("DEBUG")]
         internal unsafe void ValidateFallbackBatchAccessSafety()
         {
