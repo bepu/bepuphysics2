@@ -105,7 +105,7 @@ namespace BepuPhysics
 
             simulation.Solver = new Solver<TPoseIntegratorCallbacks>(simulation.Bodies, simulation.BufferPool, solverIterationCount, solverFallbackBatchThreshold,
                 initialCapacity: initialAllocationSizes.Value.Constraints,
-                initialIslandCapacity: initialAllocationSizes.Value.Islands,
+                initialIslandCapacity: initialAllocationSizes.Value.Islands, 
                 minimumCapacityPerTypeBatch: initialAllocationSizes.Value.ConstraintsPerTypeBatch, poseIntegrator);
             simulation.constraintRemover = new ConstraintRemover(simulation.BufferPool, simulation.Bodies, simulation.Solver);
             simulation.Sleeper = new IslandSleeper(simulation.Bodies, simulation.Solver, simulation.BroadPhase, simulation.constraintRemover, simulation.BufferPool);
@@ -415,7 +415,7 @@ namespace BepuPhysics
         /// <param name="allocationTarget">Allocation sizes to guarantee sufficient size for.</param>
         public void Resize(SimulationAllocationSizes allocationTarget)
         {
-            Solver.ResizeSolverCapacities(allocationTarget.Bodies, allocationTarget.Constraints, allocationTarget.ConstrainedKinematics);
+            Solver.ResizeSolverCapacities(allocationTarget.Bodies, allocationTarget.Constraints);
             Solver.MinimumCapacityPerTypeBatch = allocationTarget.ConstraintsPerTypeBatch;
             Solver.ResizeTypeBatchCapacities();
             NarrowPhase.PairCache.ResizeConstraintToPairMappingCapacity(Solver, allocationTarget.Constraints);

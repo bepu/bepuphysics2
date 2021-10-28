@@ -594,6 +594,7 @@ namespace BepuPhysics
             //Ensure capacities on all systems:
             //bodies,
             bodies.EnsureCapacity(bodies.ActiveSet.Count + newBodyCount);
+            solver.ConstrainedKinematicHandles.EnsureCapacity(solver.ConstrainedKinematicHandles.Count + newBodyCount, pool); //TODO: This could be FAR more conservative. Few bodies are typically kinematic.
             //broad phase, (technically overestimating, not every body has a collidable, but vast majority do and shrug)
             broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount + newBodyCount, broadPhase.StaticTree.LeafCount);
             //constraints,

@@ -103,9 +103,8 @@ namespace BepuPhysics
         public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
             int initialCapacity,
             int initialIslandCapacity,
-            int initialConstrainedKinematicCapacity,
             int minimumCapacityPerTypeBatch, PoseIntegrator<TIntegrationCallbacks> poseIntegrator)
-            : base(bodies, pool, iterationCount, fallbackBatchThreshold, initialCapacity, initialIslandCapacity, initialConstrainedKinematicCapacity, minimumCapacityPerTypeBatch)
+            : base(bodies, pool, iterationCount, fallbackBatchThreshold, initialCapacity, initialIslandCapacity, minimumCapacityPerTypeBatch)
         {
             PoseIntegrator = poseIntegrator;
             solveStep2Worker2 = SolveStep2Worker2;
