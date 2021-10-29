@@ -117,6 +117,18 @@ namespace BepuUtilities.Collections
             SetUnsafely(index, index >> shift);
         }
 
+        /// <summary>
+        /// Marks an index in the set as uncontained without checking whether it is already set.
+        /// </summary>
+        /// <param name="index">Index to add.</param>
+        /// <remarks>This is functionally identical to the Remove method, but it doesn't include the same debug assertions. Just a way to make intent clear so that the assert can catch errors.</remarks>
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Unset(int index)
+        {
+            Flags[index >> shift] &= ~(1ul << (index & mask));
+        }
+
 
         /// <summary>
         /// Adds an index to the set without checking capacity.
@@ -152,7 +164,7 @@ namespace BepuUtilities.Collections
         public void Remove(int index)
         {
             Debug.Assert((Flags[index >> shift] & (1ul << (index & mask))) > 0, "If you try to remove a index, it should be present.");
-            Flags[index >> shift] &= ~(1ul << (index & mask));
+            Unset(index);
         }
 
         public void Clear()

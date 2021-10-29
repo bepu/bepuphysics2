@@ -359,7 +359,9 @@ namespace BepuPhysics.CollisionDetection
                 for (int j = 0; j < removals.Count; ++j)
                 {
                     ref var target = ref removals[j];
-                    solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle.Value);
+                    Debug.Assert(solver.batchReferencedHandles[target.BatchIndex].Contains(target.BodyHandle.Value) || bodies.GetBodyReference(target.BodyHandle).Kinematic,
+                        "The batch referenced handles must include all constraint-involved dynamics, but will not include kinematics.");
+                    solver.batchReferencedHandles[target.BatchIndex].Unset(target.BodyHandle.Value);
                 }
             }
         }
@@ -379,7 +381,9 @@ namespace BepuPhysics.CollisionDetection
                         if (solver.ActiveSet.SequentialFallback.Remove(target.BodyIndex, ref allocationIdsToFree))
                         {
                             //No more constraints for this body in the fallback set; it should not exist in the fallback batch's referenced handles anymore.
-                            solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle.Value);
+                            Debug.Assert(solver.batchReferencedHandles[target.BatchIndex].Contains(target.BodyHandle.Value) || bodies.GetBodyReference(target.BodyHandle).Kinematic,
+                                "The batch referenced handles must include all constraint-involved dynamics, but will not include kinematics.");
+                            solver.batchReferencedHandles[target.BatchIndex].Unset(target.BodyHandle.Value);
                         }
                     }
                 }
@@ -389,7 +393,9 @@ namespace BepuPhysics.CollisionDetection
         {
             if (solver.ActiveSet.SequentialFallback.TryRemove(bodyIndex, ref allocationIdsToFree))
             {
-                solver.batchReferencedHandles[solver.FallbackBatchThreshold].Remove(bodyHandle.Value);
+                Debug.Assert(solver.batchReferencedHandles[solver.FallbackBatchThreshold].Contains(bodyHandle.Value) || bodies.GetBodyReference(bodyHandle).Kinematic,
+                    "The batch referenced handles must include all constraint-involved dynamics, but will not include kinematics.");
+                solver.batchReferencedHandles[solver.FallbackBatchThreshold].Unset(bodyHandle.Value);
             }
         }
 
