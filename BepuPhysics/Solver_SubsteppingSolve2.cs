@@ -522,17 +522,17 @@ namespace BepuPhysics
         Buffer<IntegrationWorkBlock> BuildKinematicIntegrationWorkBlocks(int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlockCount)
         {
             var bundleCount = BundleIndexing.GetBundleCount(ConstrainedKinematicHandles.Count);
-            var targetBundlesPerBlock = bundleCount / targetBlockCount;
-            if (targetBundlesPerBlock < minimumBlockSizeInBundles)
-                targetBundlesPerBlock = minimumBlockSizeInBundles;
-            if (targetBundlesPerBlock > maximumBlockSizeInBundles)
-                targetBundlesPerBlock = maximumBlockSizeInBundles;
-            var blockCount = (bundleCount + targetBundlesPerBlock - 1) / targetBundlesPerBlock;
-            var bundlesPerBlock = bundleCount / blockCount;
-            var remainder = bundleCount - bundlesPerBlock * blockCount;
-            var previousEnd = 0;
-            if (blockCount > 0)
+            if (bundleCount > 0)
             {
+                var targetBundlesPerBlock = bundleCount / targetBlockCount;
+                if (targetBundlesPerBlock < minimumBlockSizeInBundles)
+                    targetBundlesPerBlock = minimumBlockSizeInBundles;
+                if (targetBundlesPerBlock > maximumBlockSizeInBundles)
+                    targetBundlesPerBlock = maximumBlockSizeInBundles;
+                var blockCount = (bundleCount + targetBundlesPerBlock - 1) / targetBundlesPerBlock;
+                var bundlesPerBlock = bundleCount / blockCount;
+                var remainder = bundleCount - bundlesPerBlock * blockCount;
+                var previousEnd = 0;
                 pool.Take(blockCount, out Buffer<IntegrationWorkBlock> workBlocks);
                 for (int i = 0; i < blockCount; ++i)
                 {
