@@ -846,16 +846,33 @@ namespace BepuPhysics
         /// <returns>Index of the batch that the constraint would fit in.</returns>
         /// <remarks>This is used by the narrowphase's multithreaded constraint adders to locate a spot for a new constraint without requiring a lock. Only after a candidate is located
         /// do those systems attempt an actual claim, limiting the duration of locks and increasing potential parallelism.</remarks>
-        internal unsafe int FindCandidateBatch(Span<BodyHandle> bodyHandles)
+        internal unsafe int FindCandidateBatch(CollidablePair collidablePair)
         {
             ref var set = ref ActiveSet;
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-            Span<BodyHandle> blockingBodyHandlesAllocation = stackalloc BodyHandle[bodyHandles.Length];
-            var blockingBodyHandles = MemoryMarshal.Cast<BodyHandle, int>(GetBlockingBodyHandles(bodyHandles, blockingBodyHandlesAllocation));
-            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+            var aIsDynamic = collidablePair.A.Mobility == Collidables.CollidableMobility.Dynamic;
+            if (aIsDynamic && collidablePair.B.Mobility == Collidables.CollidableMobility.Dynamic)
             {
-                if (batchReferencedHandles[batchIndex].CanFit(blockingBodyHandles))
-                    return batchIndex;
+                //Both collidables are dynamic.
+                var a = collidablePair.A.BodyHandle.Value;
+                var b = collidablePair.B.BodyHandle.Value;
+                for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+                {
+                    if (!batchReferencedHandles[batchIndex].Contains(a) && !batchReferencedHandles[batchIndex].Contains(b))
+                        return batchIndex;
+                }
+            }
+            else
+            {
+                //Only one collidable is dynamic. Statics and kinematics will not block batch containment.
+                Debug.Assert(aIsDynamic || collidablePair.B.Mobility == Collidables.CollidableMobility.Dynamic, 
+                    "Constraints can only be created when at least one body in the pair is dynamic.");
+                var dynamicHandle = (aIsDynamic ? collidablePair.A.BodyHandle : collidablePair.B.BodyHandle).Value;
+                for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+                {
+                    if (!batchReferencedHandles[batchIndex].Contains(dynamicHandle))
+                        return batchIndex;
+                }
             }
             //No synchronized batch worked. Either there's a fallback batch or there aren't yet enough batches to warrant a fallback batch and none of the existing batches could fit the handles.
             return synchronizedBatchCount;

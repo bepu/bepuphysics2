@@ -402,10 +402,10 @@ namespace BepuPhysics
                     }
                     integrateConstrainedKinematicsStage.SubstepIndex = substepIndex;
                     //Note that we do not invoke velocity integration on the first substep if kinematics do not need velocity integration.
-                    if (substepIndex > 1 || PoseIntegrator.Callbacks.IntegrateVelocityForKinematics)
+                    if (substepIndex > 0 || PoseIntegrator.Callbacks.IntegrateVelocityForKinematics)
+                    {
                         ExecuteMainStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, ref substepContext.Stages[1], syncOffsetToPreviousSubstep, ref syncIndex);
-                    else
-                        ++syncIndex; //Don't want to desync sync indices just because we aren't running a stage.
+                    }
                     warmstartStage.SubstepIndex = substepIndex;
                     for (int batchIndex = 0; batchIndex < syncStagesPerWarmStartOrSolve; ++batchIndex)
                     {

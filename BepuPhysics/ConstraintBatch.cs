@@ -158,7 +158,9 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void LoopBody(int bodyIndex)
             {
-                Handles->Remove(Bodies.ActiveSet.IndexToHandle[bodyIndex].Value);
+                Debug.Assert(Bodies.IsKinematicUnsafe(ref Bodies.ActiveSet.SolverStates[bodyIndex].Inertia.Local) || Handles->Contains(Bodies.ActiveSet.IndexToHandle[bodyIndex].Value),
+                    "Batch referenced handles will not include kinematics, but all referenced dynamics must be present.");
+                Handles->Unset(Bodies.ActiveSet.IndexToHandle[bodyIndex].Value);
             }
         }
 

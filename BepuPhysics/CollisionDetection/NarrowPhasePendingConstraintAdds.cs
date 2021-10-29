@@ -199,11 +199,10 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(list.Buffer.Allocated, "The target region should be allocated, or else the job scheduler is broken.");
                 Debug.Assert(list.Count > 0);
                 int byteIndex = start * list.ElementSizeInBytes;
-                int bodyCount = ExtractContactConstraintBodyCount(typeIndex);
                 ref var speculativeBatchIndicesForType = ref speculativeBatchIndices[typeIndex];
                 for (int i = start; i < end; ++i)
                 {
-                    speculativeBatchIndicesForType[i] = (ushort)solver.FindCandidateBatch(new Span<BodyHandle>(list.Buffer.Memory + byteIndex, bodyCount));
+                    speculativeBatchIndicesForType[i] = (ushort)solver.FindCandidateBatch(*(CollidablePair*)(list.Buffer.Memory + byteIndex));
                     byteIndex += list.ElementSizeInBytes;
                 }
             }
