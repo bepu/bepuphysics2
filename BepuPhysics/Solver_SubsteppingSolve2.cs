@@ -271,7 +271,7 @@ namespace BepuPhysics
             //debugStageWorkBlocksCompleted[syncIndex - 1][workerIndex] = locallyCompletedCount;
             //if (workerIndex == 3)
             //{
-            //    Console.WriteLine($"Worker {workerIndex} completed {locallyCompletedCount / (double)claims.Length:G2} ({locallyCompletedCount} of {claims.Length}).");
+            //Console.WriteLine($"Worker {workerIndex}, sync index {syncIndex} completed {locallyCompletedCount / (double)claims.Length:G2} ({locallyCompletedCount} of {claims.Length}).");
             //}
 
         }
@@ -292,11 +292,13 @@ namespace BepuPhysics
 
             if (availableBlocksCount == 1)
             {
+                //Console.WriteLine($"Main thread is executing {syncIndex} by itself; stage function: {stageFunction.GetType().Name}");
                 //There is only one work block available. There's no reason to notify other threads about it or do any claims management; just execute it sequentially.
                 stageFunction.Execute(this, stage.WorkBlockStartIndex, workerIndex);
             }
             else
             {
+                //Console.WriteLine($"Main thread is requesting workers begin for sync index {syncIndex}; stage function: {stageFunction.GetType().Name}");
                 //Write the new stage index so other spinning threads will begin work on it.
                 Volatile.Write(ref substepContext.SyncIndex, syncIndex);
                 ExecuteWorkerStage(ref stageFunction, workerIndex, workerStart, stage.WorkBlockStartIndex, ref stage.Claims, previousSyncIndexOffset, syncIndex, ref substepContext.CompletedWorkBlockCount);
@@ -400,11 +402,19 @@ namespace BepuPhysics
                     {
                         ExecuteMainStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, ref substepContext.Stages[0], syncOffsetToPreviousSubstep, ref syncIndex);
                     }
-                    integrateConstrainedKinematicsStage.SubstepIndex = substepIndex;
+                    else
+                    {
+                        syncIndex++;
+                    }
                     //Note that we do not invoke velocity integration on the first substep if kinematics do not need velocity integration.
                     if (substepIndex > 0 || PoseIntegrator.Callbacks.IntegrateVelocityForKinematics)
                     {
+                        integrateConstrainedKinematicsStage.SubstepIndex = substepIndex;
                         ExecuteMainStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, ref substepContext.Stages[1], syncOffsetToPreviousSubstep, ref syncIndex);
+                    }
+                    else
+                    {
+                        syncIndex++;
                     }
                     warmstartStage.SubstepIndex = substepIndex;
                     for (int batchIndex = 0; batchIndex < syncStagesPerWarmStartOrSolve; ++batchIndex)
@@ -458,6 +468,11 @@ namespace BepuPhysics
                 int latestCompletedSyncIndex = 0;
                 int syncIndexInSubstep = -1;
                 int substepIndex = 0;
+
+                //Inactive stages in the first substep (incremental contact updates and kinematic velocity integration) will have 0 in their claims buffer.
+                //Using a longer offset puts them at 0 like they're supposed to be.
+                var syncOffsetToPreviousSubstepForSecondSubstep = syncOffsetToPreviousSubstep + (PoseIntegrator.Callbacks.IntegrateVelocityForKinematics ? 1 : 2);
+
                 while (true)
                 {
                     var spinWait = new LocalSpinWait();
@@ -479,10 +494,9 @@ namespace BepuPhysics
                     syncIndexInSubstep += syncStepsSinceLast;
                     while (true)
                     {
-                        var stageCountInSubstep = substepIndex > 0 ? syncOffsetToPreviousSubstep : baseStageCountInSubstep;
-                        if (syncIndexInSubstep >= stageCountInSubstep)
+                        if (syncIndexInSubstep >= syncOffsetToPreviousSubstep)
                         {
-                            syncIndexInSubstep -= stageCountInSubstep;
+                            syncIndexInSubstep -= syncOffsetToPreviousSubstep;
                             ++substepIndex;
                         }
                         else
@@ -490,19 +504,18 @@ namespace BepuPhysics
                             break;
                         }
                     }
-                    //If it's the first substep index, there's no incremental update, so we jump straight into it.
-                    var stageIndex = substepIndex == 0 ? syncIndexInSubstep + 1 : syncIndexInSubstep;
+                    //Console.WriteLine($"Worker working on sync index {syncIndex}, sync index in substep: {syncIndexInSubstep}");
                     //Note that we're going to do a compare exchange that prevents any claim on work blocks that *arent* of the previous sync index, which means we need the previous sync index.
                     //Storing that in a reliable way is annoying, so we derive it from syncIndex.
-                    ref var stage = ref substepContext.Stages[stageIndex];
+                    ref var stage = ref substepContext.Stages[syncIndexInSubstep];
                     switch (stage.StageType)
                     {
                         case SolverStageType.IncrementalUpdate:
-                            ExecuteWorkerStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, 0, ref stage.Claims, syncOffsetToPreviousSubstep, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            ExecuteWorkerStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, 0, ref stage.Claims, substepIndex == 1 ? syncOffsetToPreviousSubstepForSecondSubstep : syncOffsetToPreviousSubstep, syncIndex, ref substepContext.CompletedWorkBlockCount);
                             break;
                         case SolverStageType.IntegrateConstrainedKinematics:
                             integrateConstrainedKinematicsStage.SubstepIndex = substepIndex;
-                            ExecuteWorkerStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, 0, ref stage.Claims, syncOffsetToPreviousSubstep, syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            ExecuteWorkerStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, 0, ref stage.Claims, substepIndex == 1 ? syncOffsetToPreviousSubstepForSecondSubstep : syncOffsetToPreviousSubstep, syncIndex, ref substepContext.CompletedWorkBlockCount);
                             break;
                         case SolverStageType.WarmStart:
                             warmstartStage.SubstepIndex = substepIndex;
