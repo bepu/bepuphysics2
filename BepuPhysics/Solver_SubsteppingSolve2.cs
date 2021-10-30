@@ -597,12 +597,12 @@ namespace BepuPhysics
             pool.Take<int>(totalClaimCount, out var claims);
             claims.Clear(0, claims.Length);
             substepContext.Stages[0] = new(claims.Slice(incrementalBlocks.Count), 0, SolverStageType.IncrementalUpdate);
-            substepContext.Stages[1] = new(claims.Slice(substepContext.KinematicIntegrationBlocks.Length), 0, SolverStageType.IntegrateConstrainedKinematics);
+            substepContext.Stages[1] = new(claims.Slice(incrementalBlocks.Count, substepContext.KinematicIntegrationBlocks.Length), 0, SolverStageType.IntegrateConstrainedKinematics);
             //Note that we create redundant stages that share the same workblock targets and claims buffers.
             //This is just to make indexing a little simpler during the multithreaded work.
             int targetStageIndex = 2;
             //Warm start.
-            int claimStart = incrementalBlocks.Count;
+            int claimStart = incrementalBlocks.Count + substepContext.KinematicIntegrationBlocks.Length;
             for (int batchIndex = 0; batchIndex < stagesPerIteration; ++batchIndex)
             {
                 var stageIndex = targetStageIndex++;
