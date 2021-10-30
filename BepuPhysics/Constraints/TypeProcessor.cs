@@ -891,7 +891,7 @@ namespace BepuPhysics.Constraints
                 var offset = 0;
                 for (int j = 0; j < bodiesPerConstraint; ++j)
                 {
-                    Unsafe.Add(ref targetReferencesLaneStart, offset) = activeBodySet.IndexToHandle[Unsafe.Add(ref sourceReferencesLaneStart, offset)].Value;
+                    Unsafe.Add(ref targetReferencesLaneStart, offset) = activeBodySet.IndexToHandle[Unsafe.Add(ref sourceReferencesLaneStart, offset) & Bodies.BodyIndexMask].Value;
                     offset += Vector<int>.Count;
                 }
             }
