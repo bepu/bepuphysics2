@@ -392,6 +392,11 @@ namespace BepuPhysics
             var syncOffsetToPreviousClaimOnBatchForWarmStart = syncStagesPerWarmStartOrSolve + 2;
             //For solves, there is no incremental update in the way.
             var syncOffsetToPreviousClaimOnBatchForSolve = syncStagesPerWarmStartOrSolve;
+
+            //Inactive stages in the first substep (incremental contact updates and kinematic velocity integration) will have 0 in their claims buffer.
+            //Using a longer offset puts them at 0 like they're supposed to be.
+            var syncOffsetToPreviousSubstepForSecondSubstep = syncOffsetToPreviousSubstep + (PoseIntegrator.Callbacks.IntegrateVelocityForKinematics ? 1 : 2);
+
             if (workerIndex == 0)
             {
                 //This is the main 'orchestrator' thread. It tracks execution progress and notifies other threads that's it's time to work.
@@ -400,7 +405,7 @@ namespace BepuPhysics
                 {
                     if (substepIndex > 0)
                     {
-                        ExecuteMainStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, ref substepContext.Stages[0], syncOffsetToPreviousSubstep, ref syncIndex);
+                        ExecuteMainStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, ref substepContext.Stages[0], substepIndex == 1 ? syncOffsetToPreviousSubstepForSecondSubstep : syncOffsetToPreviousSubstep, ref syncIndex);
                     }
                     else
                     {
@@ -410,7 +415,7 @@ namespace BepuPhysics
                     if (substepIndex > 0 || PoseIntegrator.Callbacks.IntegrateVelocityForKinematics)
                     {
                         integrateConstrainedKinematicsStage.SubstepIndex = substepIndex;
-                        ExecuteMainStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, ref substepContext.Stages[1], syncOffsetToPreviousSubstep, ref syncIndex);
+                        ExecuteMainStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, ref substepContext.Stages[1], substepIndex == 1 ? syncOffsetToPreviousSubstepForSecondSubstep : syncOffsetToPreviousSubstep, ref syncIndex);
                     }
                     else
                     {
@@ -468,10 +473,6 @@ namespace BepuPhysics
                 int latestCompletedSyncIndex = 0;
                 int syncIndexInSubstep = -1;
                 int substepIndex = 0;
-
-                //Inactive stages in the first substep (incremental contact updates and kinematic velocity integration) will have 0 in their claims buffer.
-                //Using a longer offset puts them at 0 like they're supposed to be.
-                var syncOffsetToPreviousSubstepForSecondSubstep = syncOffsetToPreviousSubstep + (PoseIntegrator.Callbacks.IntegrateVelocityForKinematics ? 1 : 2);
 
                 while (true)
                 {
@@ -649,7 +650,10 @@ namespace BepuPhysics
 
             //While we could be a little more aggressive about culling work with this condition, it doesn't matter much. Have to do it for correctness; worker relies on it.
             if (ActiveSet.Batches.Count > 0)
+            {
+                //workDelegate(0);
                 threadDispatcher.DispatchWorkers(workDelegate);
+            }
 
             //pool.Take<int>(syncCount, out var availableCountPerSync);
             //var syncIndex = 0;
