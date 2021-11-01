@@ -79,7 +79,17 @@ namespace BepuPhysics.Constraints
         /// <param name="targetBatchIndex">Index of the ConstraintBatch in the solver to copy the constraint into.</param>
         public unsafe abstract void TransferConstraint(ref TypeBatch typeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex);
 
-        public abstract void EnumerateConnectedBodyIndices<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<int>;
+        /// <summary>
+        /// Enumerates body references in the constraint.
+        /// For waking constraints, this enumerates body indices including any encoded metadata like whether the body is kinematic.
+        /// For sleeping constraints, this enumerates body handles.
+        /// In other words, this reports whatever is stored in the constraint.
+        /// </summary>
+        /// <typeparam name="TEnumerator">Type of the enumerator called for each body index in the constraint.</typeparam>
+        /// <param name="typeBatch">Type batch containing the constraint to enumerate.</param>
+        /// <param name="indexInTypeBatch">Index of the constraint to enumerate in the type batch.</param>
+        /// <param name="enumerator">Enumerator called for each body index in the constraint.</param>
+        public abstract void EnumerateConnectedRawBodyReferences<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<int>;
         [Conditional("DEBUG")]
         protected abstract void ValidateAccumulatedImpulsesSizeInBytes(int sizeInBytes);
         public unsafe void EnumerateAccumulatedImpulses<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<float>
@@ -683,7 +693,7 @@ namespace BepuPhysics.Constraints
             int bodiesPerConstraint = InternalBodiesPerConstraint;
             var bodyHandles = stackalloc int[bodiesPerConstraint];
             var bodyHandleCollector = new ActiveConstraintBodyHandleCollector(bodies, bodyHandles);
-            EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref bodyHandleCollector);
+            EnumerateConnectedRawBodyReferences(ref typeBatch, indexInTypeBatch, ref bodyHandleCollector);
             Debug.Assert(targetBatchIndex <= solver.FallbackBatchThreshold,
                 "Constraint transfers should never target the fallback batch. Its registered body handles don't block new constraints so attempting to allocate in the same way wouldn't turn out well.");
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.

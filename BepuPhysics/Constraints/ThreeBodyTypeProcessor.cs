@@ -66,14 +66,14 @@ namespace BepuPhysics.Constraints
     {
         protected sealed override int InternalBodiesPerConstraint => 3;
 
-        public sealed unsafe override void EnumerateConnectedBodyIndices<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator)
+        public sealed unsafe override void EnumerateConnectedRawBodyReferences<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator)
         {
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var constraintBundleIndex, out var constraintInnerIndex);
             ref var indices = ref GatherScatter.GetOffsetInstance(ref Buffer<ThreeBodyReferences>.Get(typeBatch.BodyReferences.Memory, constraintBundleIndex), constraintInnerIndex);
             //Note that we hold a reference to the indices. That's important if the loop body mutates indices.
-            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexA) & Bodies.BodyIndexMask);
-            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexB) & Bodies.BodyIndexMask);
-            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexC) & Bodies.BodyIndexMask);
+            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexA));
+            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexB));
+            enumerator.LoopBody(GatherScatter.GetFirst(ref indices.IndexC));
         }
         struct ThreeBodySortKeyGenerator : ISortKeyGenerator<ThreeBodyReferences>
         {

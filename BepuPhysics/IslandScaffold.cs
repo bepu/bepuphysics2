@@ -10,10 +10,10 @@ namespace BepuPhysics
     unsafe struct ConstraintHandleEnumerator : IForEach<int>
     {
         public int* BodyIndices;
-        public int IndexInConstraint;
+        public int Count;
         public void LoopBody(int i)
         {
-            BodyIndices[IndexInConstraint++] = i;
+            BodyIndices[Count++] = i;
         }
     }
 
@@ -84,32 +84,30 @@ namespace BepuPhysics
             var bodyIndices = stackalloc int[bodiesPerConstraint];
             ConstraintHandleEnumerator enumerator;
             enumerator.BodyIndices = bodyIndices;
-            enumerator.IndexInConstraint = 0;
-            typeProcessor.EnumerateConnectedBodyIndices(
-                ref solver.ActiveSet.Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId),
-                constraintLocation.IndexInTypeBatch,
-                ref enumerator);
-            if (batchIndex == solver.FallbackBatchThreshold || ReferencedBodyIndices.CanFit(new Span<int>(enumerator.BodyIndices, bodiesPerConstraint)))
+            enumerator.Count = 0;
+            solver.EnumerateActiveDynamicConnectedBodyIndices(constraintHandle, ref enumerator);
+            var dynamicBodyIndices = new Span<int>(enumerator.BodyIndices, enumerator.Count);
+            if (batchIndex == solver.FallbackBatchThreshold || ReferencedBodyIndices.CanFit(dynamicBodyIndices))
             {
                 ref var typeBatch = ref GetOrCreateTypeBatch(constraintLocation.TypeId, solver, pool);
                 Debug.Assert(typeBatch.TypeId == constraintLocation.TypeId);
                 typeBatch.Handles.Add(constraintHandle.Value, pool);
                 if (batchIndex < solver.FallbackBatchThreshold)
                 {
-                    for (int i = 0; i < bodiesPerConstraint; ++i)
+                    for (int i = 0; i < dynamicBodyIndices.Length; ++i)
                     {
-                        ReferencedBodyIndices.AddUnsafely(enumerator.BodyIndices[i]);
+                        ReferencedBodyIndices.AddUnsafely(dynamicBodyIndices[i]);
                     }
                 }
                 else
                 {
                     //This is the fallback batch, so we need to fill the fallback batch with relevant information.
-                    Span<BodyHandle> bodyHandles = stackalloc BodyHandle[bodiesPerConstraint];
-                    for (int i = 0; i < bodyHandles.Length; ++i)
+                    Span<BodyHandle> dynamicBodyHandles = stackalloc BodyHandle[dynamicBodyIndices.Length];
+                    for (int i = 0; i < dynamicBodyIndices.Length; ++i)
                     {
-                        bodyHandles[i] = solver.bodies.ActiveSet.IndexToHandle[bodyIndices[i]];
+                        dynamicBodyHandles[i] = solver.bodies.ActiveSet.IndexToHandle[dynamicBodyIndices[i]];
                     }
-                    fallbackBatch.AllocateForInactive(bodyHandles, solver.bodies, pool);
+                    fallbackBatch.AllocateForInactive(dynamicBodyHandles, solver.bodies, pool);
                 }
                 return true;
             }

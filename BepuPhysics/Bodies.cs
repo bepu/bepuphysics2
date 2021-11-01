@@ -285,7 +285,7 @@ namespace BepuPhysics
         /// <remarks>This is not exposed by default because of the risk of a non-obvious GC hole.
         /// It exists because it's a mildly more convenient form than the pointer overload, and every use within the engine references only pinned data.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe static bool IsKinematicUnsafe(ref BodyInertia inertia)
+        internal unsafe static bool IsKinematicUnsafeGCHole(ref BodyInertia inertia)
         {
             return IsKinematic((BodyInertia*)Unsafe.AsPointer(ref inertia));
         }
@@ -348,15 +348,12 @@ namespace BepuPhysics
 
         private struct ConnectedDynamicCounter : IForEach<int>
         {
-            public Bodies Bodies;
             public int DynamicCount;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void LoopBody(int bodyIndex)
             {
-                //The solver's connected bodies enumeration directly provides the constraint-stored reference, which is an index in the active set for active constraints and a handle for inactive constraints.
-                //We forced the dynamic active at the beginning of BecomeKinematic, so we don't have to worry about the inactive side of things.
-                if (!IsKinematicUnsafe(ref Bodies.ActiveSet.SolverStates[bodyIndex].Inertia.Local))
-                    ++DynamicCount;
+                //The enumerator is only called if the body is dynamic, so just increment.
+                ++DynamicCount;
             }
         }
 
@@ -381,12 +378,11 @@ namespace BepuPhysics
             {
                 ref var constraints = ref set.Constraints[location.Index];
                 ConnectedDynamicCounter enumerator;
-                enumerator.Bodies = this;
                 for (int i = 0; i < constraints.Count; ++i)
                 {
                     ref var constraint = ref constraints[i];
                     enumerator.DynamicCount = 0;
-                    solver.EnumerateConnectedBodies(constraint.ConnectingConstraintHandle, ref enumerator);
+                    solver.EnumerateActiveDynamicConnectedBodyIndices(constraint.ConnectingConstraintHandle, ref enumerator);
                     if (enumerator.DynamicCount == 0)
                     {
                         //This constraint connects only kinematic bodies; keeping it in the solver would cause a singularity.
@@ -610,13 +606,14 @@ namespace BepuPhysics
             public int SourceBodyIndex;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void LoopBody(int connectedBodyIndex)
+            public void LoopBody(int encodedBodyIndex)
             {
-                if (SourceBodyIndex != connectedBodyIndex)
+                var bodyIndex = encodedBodyIndex & Bodies.BodyIndexMask;
+                if (SourceBodyIndex != bodyIndex)
                 {
                     //This enumerator is associated with the public connected bodies enumerator function. The user supplies a handle and expects handles in return, so we 
                     //must convert the solver-provided indices to handles.
-                    InnerEnumerator.LoopBody(bodies.ActiveSet.IndexToHandle[connectedBodyIndex]);
+                    InnerEnumerator.LoopBody(bodies.ActiveSet.IndexToHandle[bodyIndex]);
                 }
             }
 
@@ -661,7 +658,7 @@ namespace BepuPhysics
             //Non-reversed iteration would result in skipped elements if the loop body removed anything. This relies on convention; any remover should be aware of this order.
             for (int i = list.Count - 1; i >= 0; --i)
             {
-                solver.EnumerateConnectedBodies(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
+                solver.EnumerateActiveConnectedBodyIndices(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
             }
             //Note that we have to assume the enumerator contains state mutated by the internal loop bodies.
             //If it's a value type, those mutations won't be reflected in the original reference. 
@@ -694,7 +691,7 @@ namespace BepuPhysics
 
                 for (int i = list.Count - 1; i >= 0; --i)
                 {
-                    solver.EnumerateConnectedBodies(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
+                    solver.EnumerateConnectedRawBodyReferences(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
                 }
                 enumerator = constraintBodiesEnumerator.InnerEnumerator;
             }
@@ -707,7 +704,7 @@ namespace BepuPhysics
 
                 for (int i = list.Count - 1; i >= 0; --i)
                 {
-                    solver.EnumerateConnectedBodies(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
+                    solver.EnumerateConnectedRawBodyReferences(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
                 }
                 enumerator = constraintBodiesEnumerator.InnerEnumerator;
             }

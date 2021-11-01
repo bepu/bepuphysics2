@@ -156,11 +156,12 @@ namespace BepuPhysics
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void LoopBody(int bodyIndex)
+            public void LoopBody(int encodedBodyIndex)
             {
-                Debug.Assert(Bodies.IsKinematicUnsafe(ref Bodies.ActiveSet.SolverStates[bodyIndex].Inertia.Local) || Handles->Contains(Bodies.ActiveSet.IndexToHandle[bodyIndex].Value),
-                    "Batch referenced handles will not include kinematics, but all referenced dynamics must be present.");
-                Handles->Unset(Bodies.ActiveSet.IndexToHandle[bodyIndex].Value);
+                if (encodedBodyIndex < Bodies.DynamicLimit)
+                {
+                    Handles->Remove(Bodies.ActiveSet.IndexToHandle[encodedBodyIndex & Bodies.BodyIndexMask].Value);
+                }
             }
         }
 
@@ -186,9 +187,9 @@ namespace BepuPhysics
         {
             Debug.Assert(batchIndex <= solver.FallbackBatchThreshold, "This should only be used for non-fallback batches. The body handles set for a fallback batch should be handled by the fallback batch's remove call.");
             var indexSet = solver.batchReferencedHandles.GetPointer(batchIndex);
-            var handleRemover = new ActiveBodyHandleRemover(solver.bodies, indexSet); 
+            var handleRemover = new ActiveBodyHandleRemover(solver.bodies, indexSet);
             var typeBatchIndex = TypeIndexToTypeBatchIndex[constraintTypeId];
-            solver.TypeProcessors[constraintTypeId].EnumerateConnectedBodyIndices(ref TypeBatches[typeBatchIndex], indexInTypeBatch, ref handleRemover);
+            solver.TypeProcessors[constraintTypeId].EnumerateConnectedRawBodyReferences(ref TypeBatches[typeBatchIndex], indexInTypeBatch, ref handleRemover);
         }
 
         public unsafe void Remove(int constraintTypeId, int indexInTypeBatch, bool isFallback, Solver solver)

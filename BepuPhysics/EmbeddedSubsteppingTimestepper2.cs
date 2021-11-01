@@ -64,6 +64,7 @@ namespace BepuPhysics
             simulation.Solver.ValidateConstraintReferenceKinematicity();
             simulation.Solver.ValidateConstrainedKinematicsSet();
             simulation.Solver.ValidateFallbackBodiesAreDynamic();
+            //simulation.Solver.ValidateExistingHandles();
             var constrainedBodySet = simulation.Solver.PrepareConstraintIntegrationResponsibilities(SubstepCount, threadDispatcher);
             simulation.Profiler.Start(simulation.Solver);
             simulation.Solver.SolveStep2(dt, threadDispatcher);
@@ -74,7 +75,7 @@ namespace BepuPhysics
             simulation.Profiler.End(simulation.PoseIntegrator);
             simulation.Solver.DisposeConstraintIntegrationResponsibilities();
             SubstepsComplete?.Invoke(dt, threadDispatcher);
-            
+
             simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
         }
     }

@@ -146,8 +146,8 @@ namespace BepuPhysics.CollisionDetection
                 //We have to perform the enumeration here rather than in the later flush. Removals from type batches make enumerating connected body indices a race condition there.
                 ref var typeBatch = ref constraintBatch.TypeBatches[typeBatchIndex.TypeBatch];
                 var bodyIndices = stackalloc int[bodiesPerConstraint];
-                var enumerator = new ReferenceCollector(bodyIndices);
-                typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, constraint.IndexInTypeBatch, ref enumerator);
+                var enumerator = new ActiveConstraintBodyIndexCollector(bodyIndices);
+                typeProcessor.EnumerateConnectedRawBodyReferences(ref typeBatch, constraint.IndexInTypeBatch, ref enumerator);
 
                 for (int i = 0; i < bodiesPerConstraint; ++i)
                 {
@@ -359,8 +359,8 @@ namespace BepuPhysics.CollisionDetection
                 for (int j = 0; j < removals.Count; ++j)
                 {
                     ref var target = ref removals[j];
-                    Debug.Assert(solver.batchReferencedHandles[target.BatchIndex].Contains(target.BodyHandle.Value) || bodies.GetBodyReference(target.BodyHandle).Kinematic,
-                        "The batch referenced handles must include all constraint-involved dynamics, but will not include kinematics.");
+                    //Debug.Assert(solver.batchReferencedHandles[target.BatchIndex].Contains(target.BodyHandle.Value) || bodies.GetBodyReference(target.BodyHandle).Kinematic,
+                    //    "The batch referenced handles must include all constraint-involved dynamics, but will not include kinematics.");
                     solver.batchReferencedHandles[target.BatchIndex].Unset(target.BodyHandle.Value);
                 }
             }
@@ -381,8 +381,8 @@ namespace BepuPhysics.CollisionDetection
                         if (solver.ActiveSet.SequentialFallback.Remove(target.BodyIndex, ref allocationIdsToFree))
                         {
                             //No more constraints for this body in the fallback set; it should not exist in the fallback batch's referenced handles anymore.
-                            Debug.Assert(solver.batchReferencedHandles[target.BatchIndex].Contains(target.BodyHandle.Value) || bodies.GetBodyReference(target.BodyHandle).Kinematic,
-                                "The batch referenced handles must include all constraint-involved dynamics, but will not include kinematics.");
+                            //Debug.Assert(solver.batchReferencedHandles[target.BatchIndex].Contains(target.BodyHandle.Value) || bodies.GetBodyReference(target.BodyHandle).Kinematic,
+                            //    "The batch referenced handles must include all constraint-involved dynamics, but will not include kinematics.");
                             solver.batchReferencedHandles[target.BatchIndex].Unset(target.BodyHandle.Value);
                         }
                     }

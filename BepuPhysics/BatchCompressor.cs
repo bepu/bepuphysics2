@@ -128,14 +128,14 @@ namespace BepuPhysics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void TryToFindBetterBatchForConstraint(
-            BufferPool pool, ref QuickList<Compression> compressions, ref TypeBatch typeBatch, Span<int> bodyHandlesSpan, ref ActiveConstraintBodyHandleCollector handleAccumulator, TypeProcessor typeProcessor, int constraintIndex)
+            BufferPool pool, ref QuickList<Compression> compressions, ref TypeBatch typeBatch, int* bodyHandles, ref ActiveConstraintDynamicBodyHandleCollector handleAccumulator, TypeProcessor typeProcessor, int constraintIndex)
         {
-            handleAccumulator.Index = 0;
-            typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, constraintIndex, ref handleAccumulator);
+            handleAccumulator.Count = 0;
+            typeProcessor.EnumerateConnectedRawBodyReferences(ref typeBatch, constraintIndex, ref handleAccumulator);
+            var dynamicBodyHandles = new Span<int>(bodyHandles, handleAccumulator.Count);
             for (int batchIndex = nextBatchIndex - 1; batchIndex >= 0; --batchIndex)
             {
-                //The batch index will never be the fallback batch, since the fallback batch is the very last batch (if it exists at all). So uses of batch referenced handles is safe.
-                if (Solver.batchReferencedHandles[batchIndex].CanFit(bodyHandlesSpan))
+                if (Solver.batchReferencedHandles[batchIndex].CanFit(dynamicBodyHandles))
                 {
                     compressions.Add(new Compression { ConstraintHandle = typeBatch.IndexToHandle[constraintIndex], TargetBatch = batchIndex }, pool);
                     return;
@@ -156,11 +156,10 @@ namespace BepuPhysics
             //Each job only works on a subset of a single type batch.
             var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
             var bodyHandles = stackalloc int[bodiesPerConstraint];
-            var bodyHandlesSpan = new Span<int>(bodyHandles, bodiesPerConstraint);
-            ActiveConstraintBodyHandleCollector handleAccumulator;
+            ActiveConstraintDynamicBodyHandleCollector handleAccumulator;
             handleAccumulator.Bodies = Bodies;
             handleAccumulator.Handles = bodyHandles;
-            handleAccumulator.Index = 0;
+            handleAccumulator.Count = 0;
             if (nextBatchIndex == Solver.FallbackBatchThreshold)
             {
                 for (int i = region.StartIndexInTypeBatch; i < region.EndIndexInTypeBatch; ++i)
@@ -169,14 +168,14 @@ namespace BepuPhysics
                     //Not all constraint slots up to the typeBatch.ConstraintCount are guaranteed to actually exist. It's potentially sparse.
                     //Just skip them.
                     if (typeBatch.IndexToHandle[i].Value >= 0)
-                        TryToFindBetterBatchForConstraint(pool, ref compressions, ref typeBatch, bodyHandlesSpan, ref handleAccumulator, typeProcessor, i);
+                        TryToFindBetterBatchForConstraint(pool, ref compressions, ref typeBatch, bodyHandles, ref handleAccumulator, typeProcessor, i);
                 }
             }
             else
             {
                 for (int i = region.StartIndexInTypeBatch; i < region.EndIndexInTypeBatch; ++i)
                 {
-                    TryToFindBetterBatchForConstraint(pool, ref compressions, ref typeBatch, bodyHandlesSpan, ref handleAccumulator, typeProcessor, i);
+                    TryToFindBetterBatchForConstraint(pool, ref compressions, ref typeBatch, bodyHandles, ref handleAccumulator, typeProcessor, i);
                 }
             }
         }
@@ -211,8 +210,8 @@ namespace BepuPhysics
                 ActiveConstraintBodyHandleCollector handleAccumulator;
                 handleAccumulator.Bodies = Bodies;
                 handleAccumulator.Handles = bodyHandles;
-                handleAccumulator.Index = 0;
-                Solver.EnumerateConnectedBodies(compression.ConstraintHandle, ref handleAccumulator);
+                handleAccumulator.Count = 0;
+                Solver.EnumerateActiveDynamicConnectedBodyIndices(compression.ConstraintHandle, ref handleAccumulator);
                 if (!Solver.batchReferencedHandles[compression.TargetBatch].CanFit(new Span<int>(bodyHandles, typeProcessor.BodiesPerConstraint)))
                 {
                     //Another compression from the fallback batch has blocked this compression.

@@ -152,18 +152,23 @@ namespace BepuPhysics
             var typeProcessor = solver.TypeProcessors[typeId];
             var bodyCount = typeProcessor.BodiesPerConstraint;
             var bodyIndices = stackalloc int[bodyCount];
-            var enumerator = new ReferenceCollector(bodyIndices);
-            solver.EnumerateConnectedBodies(constraintHandle, ref enumerator);
+            var enumerator = new PassthroughReferenceCollector(bodyIndices);
             var maximumAllocationIdsToFree = 3 + bodyCount * 2;
             var allocationIdsToRemoveMemory = stackalloc int[maximumAllocationIdsToFree];
             var initialSpan = new Buffer<int>(allocationIdsToRemoveMemory, maximumAllocationIdsToFree);
             var allocationIdsToFree = new QuickList<int>(initialSpan);
-            typeProcessor.EnumerateConnectedBodyIndices(ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[typeId]], indexInTypeBatch, ref enumerator);
+            typeProcessor.EnumerateConnectedRawBodyReferences(ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[typeId]], indexInTypeBatch, ref enumerator);
             for (int i = 0; i < bodyCount; ++i)
             {
-                if (Remove(bodyIndices[i], ref allocationIdsToFree))
+                var rawBodyIndex = bodyIndices[i];
+                var isDynamic = (rawBodyIndex & Bodies.KinematicMask) == 0;
+                if (isDynamic)
                 {
-                    fallbackBatchHandles.Remove(solver.bodies.ActiveSet.IndexToHandle[bodyIndices[i]].Value);
+                    var bodyIndex = rawBodyIndex & Bodies.BodyIndexMask;
+                    if (Remove(bodyIndex, ref allocationIdsToFree))
+                    {
+                        fallbackBatchHandles.Remove(solver.bodies.ActiveSet.IndexToHandle[bodyIndex].Value);
+                    }
                 }
             }
             for (int i = 0; i < allocationIdsToFree.Count; ++i)
@@ -172,17 +177,6 @@ namespace BepuPhysics
             }
         }
 
-        [Conditional("DEBUG")]
-        unsafe static void ValidateBodyConstraintReference(Solver solver, int setIndex, int bodyReference, ConstraintHandle constraintHandle, int expectedIndexInConstraint)
-        {
-            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle.Value];
-            Debug.Assert(constraintLocation.SetIndex == setIndex);
-            Debug.Assert(constraintLocation.BatchIndex == solver.FallbackBatchThreshold, "Should only be working on constraints which are members of the active fallback batch.");
-            var debugReferences = stackalloc int[solver.TypeProcessors[constraintLocation.TypeId].BodiesPerConstraint];
-            var debugBodyReferenceCollector = new ReferenceCollector(debugReferences);
-            solver.EnumerateConnectedBodies(constraintHandle, ref debugBodyReferenceCollector);
-            Debug.Assert(debugReferences[expectedIndexInConstraint] == bodyReference, "The constraint's true body references must agree with the fallback batch.");
-        }
         [Conditional("DEBUG")]
         public static unsafe void ValidateSetReferences(Solver solver, int setIndex)
         {
@@ -208,12 +202,19 @@ namespace BepuPhysics
                     for (int constraintIndex = 0; constraintIndex < typeBatch.ConstraintCount; ++constraintIndex)
                     {
                         var constraintHandle = typeBatch.IndexToHandle[constraintIndex];
-                        var collector = new ReferenceCollector(connectedBodies);
-                        solver.EnumerateConnectedBodies(constraintHandle, ref collector);
+                        var collector = new PassthroughReferenceCollector(connectedBodies);
+                        if (setIndex == 0)
+                        {
+                            solver.EnumerateActiveDynamicConnectedBodyIndices(constraintHandle, ref collector);
+                        }
+                        else
+                        {
+                            solver.EnumerateConnectedRawBodyReferences(constraintHandle, ref collector);
+                        }
                         for (int i = 0; i < bodiesPerConstraint; ++i)
                         {
                             var localBodyIndex = bodyConstraintCounts.IndexOf(connectedBodies[i]);
-                            Debug.Assert(localBodyIndex >= 0, "Any body referenced by a constraint in the fallback batch should exist within the fallback batch's body listing.");
+                            Debug.Assert(localBodyIndex >= 0, "Any dynamic body referenced by a constraint in the fallback batch should exist within the fallback batch's dynamic body listing.");
                             var count = bodyConstraintCounts.Values[localBodyIndex];
                         }
                     }

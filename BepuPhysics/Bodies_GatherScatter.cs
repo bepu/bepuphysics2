@@ -148,7 +148,7 @@ namespace BepuPhysics
         /// Constraint body index references greater than a given unsigned value are either kinematic (1<<30 set) or correspond to an empty lane (1<<31 set).
         /// </summary>
         public const uint DynamicLimit = KinematicMask;
-        public const uint BodyIndexMetadataMask = (1u << DoesntExistFlagIndex) | (1u << KinematicFlagIndex);
+        public const uint BodyIndexMetadataMask = (1u << DoesntExistFlagIndex) | KinematicMask;
         public const int BodyIndexMask = (int)~BodyIndexMetadataMask;
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]

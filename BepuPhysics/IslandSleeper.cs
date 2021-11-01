@@ -150,7 +150,7 @@ namespace BepuPhysics
                     constraintHandles.Add(entry.ConnectingConstraintHandle, pool);
                     consideredConstraints.AddUnsafely(entry.ConnectingConstraintHandle.Value);
                     bodyEnumerator.ConstraintBodyIndices.Count = 0;
-                    solver.EnumerateConnectedBodies(entry.ConnectingConstraintHandle, ref bodyEnumerator);
+                    solver.EnumerateActiveConnectedBodyIndices(entry.ConnectingConstraintHandle, ref bodyEnumerator);
                     for (int j = 0; j < bodyEnumerator.ConstraintBodyIndices.Count; ++j)
                     {
                         var connectedBodyIndex = bodyEnumerator.ConstraintBodyIndices[j];
@@ -549,7 +549,8 @@ namespace BepuPhysics
                 }
             }
             Console.Write($"{constraintCount} constraint handles: ");
-            ReferenceCollector bodyIndexEnumerator;
+            PassthroughReferenceCollector bodyIndexEnumerator;
+            var rawBodyIndices = stackalloc int[4];
             var constraintReferencedBodyHandles = new QuickSet<int, PrimitiveComparer<int>>(8, pool);
             for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)
             {
@@ -558,21 +559,23 @@ namespace BepuPhysics
                 {
                     ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
                     var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                    var references = stackalloc int[typeProcessor.BodiesPerConstraint];
-                    bodyIndexEnumerator.References = references;
+                    bodyIndexEnumerator.References = rawBodyIndices;
                     for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.Handles.Count; ++indexInTypeBatch)
                     {
+                        Debug.Assert(typeProcessor.BodiesPerConstraint <= 4,
+                            "We assumed a maximum of 4 bodies per constraint when allocating the body indices buffer earlier. " +
+                            "This validation must be updated if that assumption is no longer valid.");
                         var handle = typeBatch.Handles[indexInTypeBatch];
                         ref var location = ref solver.HandleToConstraint[handle];
                         Debug.Assert(location.SetIndex == 0);
                         Debug.Assert(location.TypeId == typeBatch.TypeId);
                         ref var solverBatch = ref solver.Sets[0].Batches[location.BatchIndex];
                         bodyIndexEnumerator.Index = 0;
-                        typeProcessor.EnumerateConnectedBodyIndices(
+                        typeProcessor.EnumerateConnectedRawBodyReferences(
                             ref solverBatch.TypeBatches[solverBatch.TypeIndexToTypeBatchIndex[location.TypeId]], location.IndexInTypeBatch, ref bodyIndexEnumerator);
                         for (int i = 0; i < typeProcessor.BodiesPerConstraint; ++i)
                         {
-                            constraintReferencedBodyHandles.Add(ref bodies.ActiveSet.IndexToHandle[references[i]].Value, pool);
+                            constraintReferencedBodyHandles.Add(ref bodies.ActiveSet.IndexToHandle[rawBodyIndices[i] & Bodies.BodyIndexMask].Value, pool);
                         }
                         Console.Write($"{handle}, ");
                     }

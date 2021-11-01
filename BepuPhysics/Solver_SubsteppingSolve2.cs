@@ -271,7 +271,14 @@ namespace BepuPhysics
             //debugStageWorkBlocksCompleted[syncIndex - 1][workerIndex] = locallyCompletedCount;
             //if (workerIndex == 3)
             //{
-            //Console.WriteLine($"Worker {workerIndex}, sync index {syncIndex} completed {locallyCompletedCount / (double)claims.Length:G2} ({locallyCompletedCount} of {claims.Length}).");
+            //Console.WriteLine($"Worker {workerIndex}, stage {typeof(TStageFunction).Name}, sync index {syncIndex} completed {locallyCompletedCount / (double)claims.Length:G2} ({locallyCompletedCount} of {claims.Length}).");
+            //}
+            //for (int i = 0; i < claims.Length; ++i)
+            //{
+            //    if (claims[i] != syncIndex)
+            //    {
+            //        Console.WriteLine($"Failed to claim index {i}, claim value is {claims[i]} instead of {syncIndex}, previous claim should have been {previousSyncIndex}, worker start {workerStart}");
+            //    }
             //}
 
         }
@@ -289,7 +296,7 @@ namespace BepuPhysics
             //    stageFunction.Execute(this, stage.WorkBlockStartIndex + i, workerIndex);
             //}
             //return;
-
+            //Console.WriteLine($"Main executing {typeof(TStageFunction).Name} for sync index {syncIndex}, expected claim {syncIndex - previousSyncIndexOffset}");
             if (availableBlocksCount == 1)
             {
                 //Console.WriteLine($"Main thread is executing {syncIndex} by itself; stage function: {stageFunction.GetType().Name}");
@@ -385,9 +392,8 @@ namespace BepuPhysics
             //A thread is only allowed to claim a workblock if the claim index for that workblock matches the expected value- which is the claim index it would have from the last time it was executed.
             //Each thread calculates what that claim index would have been based on the current sync index by subtracting the expected number of sync indices elapsed since last execution.
             var syncStagesPerWarmStartOrSolve = synchronizedBatchCount;
-            var baseStageCountInSubstep = syncStagesPerWarmStartOrSolve * (1 + IterationCount);
             //All warmstarts and solves, plus an incremental contact update. First substep doesn't do an incremental contact update, but that's fine, it'll end up expecting 0.
-            var syncOffsetToPreviousSubstep = baseStageCountInSubstep + 2;
+            var syncOffsetToPreviousSubstep = 2 + syncStagesPerWarmStartOrSolve * (1 + IterationCount);
             //To find the previous execution sync index of a constraint batch, we have to scan through all the constraint batches, but ALSO skip over the incremental contact update stage and kinematic integration, hence + 2.
             var syncOffsetToPreviousClaimOnBatchForWarmStart = syncStagesPerWarmStartOrSolve + 2;
             //For solves, there is no incremental update in the way.
@@ -509,6 +515,7 @@ namespace BepuPhysics
                     //Note that we're going to do a compare exchange that prevents any claim on work blocks that *arent* of the previous sync index, which means we need the previous sync index.
                     //Storing that in a reliable way is annoying, so we derive it from syncIndex.
                     ref var stage = ref substepContext.Stages[syncIndexInSubstep];
+                    //Console.WriteLine($"Worker {workerIndex} executing {stage.StageType} for sync index {syncIndex}, stage index {syncIndexInSubstep}");
                     switch (stage.StageType)
                     {
                         case SolverStageType.IncrementalUpdate:
@@ -603,7 +610,8 @@ namespace BepuPhysics
             //This is just to make indexing a little simpler during the multithreaded work.
             int targetStageIndex = 2;
             //Warm start.
-            int claimStart = incrementalBlocks.Count + substepContext.KinematicIntegrationBlocks.Length;
+            var preambleClaimCount = incrementalBlocks.Count + substepContext.KinematicIntegrationBlocks.Length;
+            int claimStart = preambleClaimCount;
             for (int batchIndex = 0; batchIndex < stagesPerIteration; ++batchIndex)
             {
                 var stageIndex = targetStageIndex++;
@@ -615,7 +623,7 @@ namespace BepuPhysics
             for (int iterationIndex = 0; iterationIndex < IterationCount; ++iterationIndex)
             {
                 //Solve. Note that we're reusing the same claims as were used in the warm start for these stages; the stages just tell the workers what kind of work to do.
-                claimStart = incrementalBlocks.Count;
+                claimStart = preambleClaimCount;
                 for (int batchIndex = 0; batchIndex < stagesPerIteration; ++batchIndex)
                 {
                     var stageIndex = targetStageIndex++;

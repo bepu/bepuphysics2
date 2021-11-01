@@ -87,9 +87,10 @@ namespace Demos.SpecializedTests
 
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void LoopBody(int connectedBodyIndex)
+            public void LoopBody(int encodedBodyIndex)
             {
-                var entryIndex = HandlesToIdentity[Bodies.ActiveSet.IndexToHandle[connectedBodyIndex].Value];
+                var bodyIndex = encodedBodyIndex & Bodies.BodyIndexMask;
+                var entryIndex = HandlesToIdentity[Bodies.ActiveSet.IndexToHandle[bodyIndex].Value];
                 if (IndexInConstraint == 0)
                     IdentityA = entryIndex;
                 else
@@ -112,11 +113,12 @@ namespace Demos.SpecializedTests
         {
             public Simulation Simulation;
             public ConstraintHandle ConstraintHandle;
-            public void LoopBody(int bodyIndex)
+            public void LoopBody(int encodedBodyIndex)
             {
                 //The body in this constraint should both:
                 //1) have a handle associated with it, and 
                 //2) the constraint graph list for the body should include the constraint handle.
+                var bodyIndex = encodedBodyIndex & Bodies.BodyIndexMask;
                 Debug.Assert(Simulation.Bodies.ActiveSet.IndexToHandle[bodyIndex].Value >= 0);
                 Debug.Assert(Simulation.Bodies.ActiveSet.BodyIsConstrainedBy(bodyIndex, ConstraintHandle));
             }
@@ -157,7 +159,7 @@ namespace Demos.SpecializedTests
                         ConstraintBodyValidationEnumerator enumerator;
                         enumerator.ConstraintHandle = constraintHandle;
                         enumerator.Simulation = simulation;
-                        typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref enumerator);
+                        typeProcessor.EnumerateConnectedRawBodyReferences(ref typeBatch, indexInTypeBatch, ref enumerator);
                     }
                 }
             }
@@ -318,7 +320,7 @@ namespace Demos.SpecializedTests
                 simulation.Solver.GetConstraintReference(constraintHandle, out var reference);
 
                 var bodyIdentityEnumerator = new BodyEnumerator(simulation.Bodies, bodyHandlesToIdentity);
-                simulation.Solver.TypeProcessors[reference.TypeBatch.TypeId].EnumerateConnectedBodyIndices(ref reference.TypeBatch, reference.IndexInTypeBatch, ref bodyIdentityEnumerator);
+                simulation.Solver.TypeProcessors[reference.TypeBatch.TypeId].EnumerateConnectedRawBodyReferences(ref reference.TypeBatch, reference.IndexInTypeBatch, ref bodyIdentityEnumerator);
                 constraintDescriptions[i].BodyA = bodyIdentityEnumerator.IdentityA;
                 constraintDescriptions[i].BodyB = bodyIdentityEnumerator.IdentityB;
             }

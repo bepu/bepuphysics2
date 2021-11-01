@@ -302,7 +302,7 @@ namespace BepuPhysics
                             if (encodedBodyIndex > 0)
                             {
                                 var kinematicByEncodedIndex = (encodedBodyIndex & Bodies.KinematicMask) != 0;
-                                var kinematicByInertia = Bodies.IsKinematicUnsafe(ref bodies.ActiveSet.SolverStates[encodedBodyIndex & Bodies.BodyIndexMask].Inertia.Local);
+                                var kinematicByInertia = Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[encodedBodyIndex & Bodies.BodyIndexMask].Inertia.Local);
                                 Debug.Assert(kinematicByEncodedIndex == kinematicByInertia, "Constraint reference encoded kinematicity must match actual kinematicity by inertia.");
                             }
                         }
@@ -317,7 +317,7 @@ namespace BepuPhysics
             ref var set = ref bodies.ActiveSet;
             for (int i = 0; i < set.Count; ++i)
             {
-                if (Bodies.IsKinematicUnsafe(ref set.SolverStates[i].Inertia.Local) && set.Constraints[i].Count > 0)
+                if (Bodies.IsKinematicUnsafeGCHole(ref set.SolverStates[i].Inertia.Local) && set.Constraints[i].Count > 0)
                 {
                     Debug.Assert(ConstrainedKinematicHandles.Contains(set.IndexToHandle[i].Value), "Any active kinematic with constraints must appear in the constrained kinematic set.");
                 }
@@ -401,7 +401,7 @@ namespace BepuPhysics
             {
                 for (int i = 0; i < set.SequentialFallback.dynamicBodyConstraintCounts.Count; ++i)
                 {
-                    Debug.Assert(!Bodies.IsKinematicUnsafe(ref bodies.ActiveSet.SolverStates[set.SequentialFallback.dynamicBodyConstraintCounts.Keys[i]].Inertia.Local),
+                    Debug.Assert(!Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[set.SequentialFallback.dynamicBodyConstraintCounts.Keys[i]].Inertia.Local),
                         "All ostensibly dynamic bodies tracked by the fallback batch must actually be dynamic.");
                 }
                 for (int i = 0; i < bodies.ActiveSet.Count; ++i)
@@ -415,7 +415,7 @@ namespace BepuPhysics
                             ++fallbackConstraintsForDynamicBody;
                         }
                     }
-                    if (Bodies.IsKinematicUnsafe(ref bodies.ActiveSet.SolverStates[i].Inertia.Local))
+                    if (Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[i].Inertia.Local))
                     {
                         Debug.Assert(fallbackConstraintsForDynamicBody == 0, "Kinematics should not be present in the dynamic bodies referenced by the fallback batch.");
                     }
@@ -619,27 +619,42 @@ namespace BepuPhysics
                 for (int i = 0; i < bodies.ActiveSet.Count; ++i)
                 {
                     var handle = bodies.ActiveSet.IndexToHandle[i];
-                    int expectedCount;
-                    if (handles.Contains(handle.Value))
+                    int expectedCount = 0;
+                    int bodyReference = i;
+                    if (Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[i].Inertia.Local))
                     {
-                        if (batchIndex < FallbackBatchThreshold)
+                        //Kinematic bodies may appear more than once in non-fallback batches, so we have to count how many references to expect.
+                        var constraints = bodies.ActiveSet.Constraints[i];
+                        for (int constraintForBodyIndex = 0; constraintForBodyIndex < constraints.Count; ++constraintForBodyIndex)
                         {
-                            //A body can only appear in a non-fallback batch at most once.
-                            expectedCount = 1;
+                            if (HandleToConstraint[constraints[constraintForBodyIndex].ConnectingConstraintHandle.Value].BatchIndex == batchIndex)
+                                ++expectedCount;
                         }
-                        else
-                        {
-                            //If this is the fallback batch, then the expected count may be more than 1.
-                            var foundBody = ActiveSet.SequentialFallback.dynamicBodyConstraintCounts.TryGetValue(i, out var constraintCountInFallbackBatchForBody);
-                            Debug.Assert(foundBody, "A body was in the fallback batch's referenced handles, so the fallback batch should have a reference for that body.");
-                            expectedCount = foundBody ? constraintCountInFallbackBatchForBody : 0;
-                        }
+                        bodyReference |= (int)Bodies.KinematicMask;
                     }
                     else
                     {
-                        expectedCount = 0;
+                        if (handles.Contains(handle.Value))
+                        {
+                            if (batchIndex < FallbackBatchThreshold)
+                            {
+                                //A dynamic body can only appear in a non-fallback batch at most once.
+                                expectedCount = 1;
+                            }
+                            else
+                            {
+                                //If this is the fallback batch, then the expected count may be more than 1.
+                                var foundBody = ActiveSet.SequentialFallback.dynamicBodyConstraintCounts.TryGetValue(i, out var constraintCountInFallbackBatchForBody);
+                                Debug.Assert(foundBody, "A body was in the fallback batch's referenced handles, so the fallback batch should have a reference for that body.");
+                                expectedCount = foundBody ? constraintCountInFallbackBatchForBody : 0;
+                            }
+                        }
+                        else
+                        {
+                            expectedCount = 0;
+                        }
                     }
-                    ValidateBodyReference(i, expectedCount, ref batch);
+                    ValidateBodyReference(bodyReference, expectedCount, ref batch);
                 }
                 //No inactive bodies should be present in the active set solver batch referenced handles.
                 for (int inactiveBodySetIndex = 1; inactiveBodySetIndex < bodies.Sets.Length; ++inactiveBodySetIndex)
@@ -655,7 +670,7 @@ namespace BepuPhysics
                 }
             }
             //Now, for all sets, validate that constraint and body references to each other are consistent and complete.
-            ReferenceCollector enumerator;
+            PassthroughReferenceCollector enumerator;
             int maximumBodiesPerConstraint = 0;
             for (int i = 0; i < TypeProcessors.Length; ++i)
             {
@@ -686,7 +701,7 @@ namespace BepuPhysics
                             for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
                             {
                                 enumerator.Index = 0;
-                                processor.EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref enumerator);
+                                processor.EnumerateConnectedRawBodyReferences(ref typeBatch, indexInTypeBatch, ref enumerator);
 
                                 for (int i = 0; i < processor.BodiesPerConstraint; ++i)
                                 {
@@ -694,7 +709,7 @@ namespace BepuPhysics
                                     int bodyIndex;
                                     if (setIndex == 0)
                                     {
-                                        bodyIndex = constraintBodyReferences[i];
+                                        bodyIndex = constraintBodyReferences[i] & Bodies.BodyIndexMask;
                                     }
                                     else
                                     {
@@ -720,10 +735,13 @@ namespace BepuPhysics
                             ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
                             var processor = TypeProcessors[typeBatch.TypeId];
                             enumerator.Index = 0;
-                            processor.EnumerateConnectedBodyIndices(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
+                            processor.EnumerateConnectedRawBodyReferences(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
                             //Active constraints refer to bodies by index; inactive constraints use handles.
                             int bodyReference = setIndex == 0 ? bodyIndex : bodySet.IndexToHandle[bodyIndex].Value;
-                            Debug.Assert(constraintBodyReferences[constraintList[constraintIndex].BodyIndexInConstraint] == bodyReference,
+                            var bodyReferenceInConstraint = constraintBodyReferences[constraintList[constraintIndex].BodyIndexInConstraint];
+                            if (setIndex == 0)
+                                bodyReferenceInConstraint &= Bodies.BodyIndexMask;
+                            Debug.Assert(bodyReferenceInConstraint == bodyReference,
                                 "If a body refers to a constraint, the constraint should refer to the body.");
                         }
                     }
@@ -865,7 +883,7 @@ namespace BepuPhysics
             else
             {
                 //Only one collidable is dynamic. Statics and kinematics will not block batch containment.
-                Debug.Assert(aIsDynamic || collidablePair.B.Mobility == Collidables.CollidableMobility.Dynamic, 
+                Debug.Assert(aIsDynamic || collidablePair.B.Mobility == Collidables.CollidableMobility.Dynamic,
                     "Constraints can only be created when at least one body in the pair is dynamic.");
                 var dynamicHandle = (aIsDynamic ? collidablePair.A.BodyHandle : collidablePair.B.BodyHandle).Value;
                 for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
@@ -895,7 +913,7 @@ namespace BepuPhysics
                 //Include the flag in the body index if it's kinematic.
                 if (Bodies.IsKinematic(bodies.ActiveSet.SolverStates[index].Inertia.Local))
                 {
-                    index |= 1 << Bodies.KinematicFlagIndex;
+                    index |= (int)Bodies.KinematicMask;
                     ConstrainedKinematicHandles.Add(bodyHandle.Value, pool);
                 }
                 else
@@ -943,7 +961,7 @@ namespace BepuPhysics
             {
                 var location = bodies.HandleToLocation[bodyHandles[i].Value];
                 Debug.Assert(location.SetIndex == 0);
-                if (!Bodies.IsKinematicUnsafe(ref solverStates[location.Index].Inertia.Local))
+                if (!Bodies.IsKinematicUnsafeGCHole(ref solverStates[location.Index].Inertia.Local))
                 {
                     allocation[blockingCount++] = bodyHandles[i];
                 }
@@ -1236,7 +1254,7 @@ namespace BepuPhysics
             ConstraintGraphRemovalEnumerator enumerator;
             enumerator.bodies = bodies;
             enumerator.constraintHandle = handle;
-            EnumerateConnectedBodies(handle, ref enumerator);
+            EnumerateActiveConnectedBodyIndices(handle, ref enumerator);
 
             pairCache.RemoveReferenceIfContactConstraint(handle, constraintLocation.TypeId);
             RemoveFromBatch(handle, constraintLocation.BatchIndex, constraintLocation.TypeId, constraintLocation.IndexInTypeBatch);
@@ -1425,16 +1443,78 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Enumerates the set of bodies associated with a constraint in order of their references within the constraint.
+        /// Enumerates the set of body references associated with a constraint in order of their references within the constraint.
+        /// If the constraint is awake, this will report the raw body index and any encoded metadata, like whether the body is kinematic.
+        /// If the constraint is asleep, this will report the body handle.
         /// </summary>
         /// <param name="constraintHandle">Constraint to enumerate.</param>
         /// <param name="enumerator">Enumerator to use.</param>
-        internal void EnumerateConnectedBodies<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        internal void EnumerateConnectedRawBodyReferences<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
             ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
+            Debug.Assert(constraintLocation.SetIndex > 0, "This function is intended to be used only with sleeping constraints.");
             ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
             Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
-            TypeProcessors[constraintLocation.TypeId].EnumerateConnectedBodyIndices(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
+            TypeProcessors[constraintLocation.TypeId].EnumerateConnectedRawBodyReferences(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
+        }
+        struct ActiveBodyIndexEnumerator<TWrapped> : IForEach<int> where TWrapped : IForEach<int>
+        {
+            public TWrapped Wrapped;
+            public void LoopBody(int encodedBodyIndex)
+            {
+                //This is only used on the active set, so we know we're getting body indices. They include encoded metadata that we can check to see whether the body is kinematic.
+                Wrapped.LoopBody(encodedBodyIndex & Bodies.BodyIndexMask);
+
+            }
+        }
+
+        /// <summary>
+        /// Enumerates the set of body indices associated with an active constraint in order of their references within the constraint.
+        /// </summary>
+        /// <param name="constraintHandle">Constraint to enumerate.</param>
+        /// <param name="enumerator">Enumerator to use.</param>
+        internal void EnumerateActiveConnectedBodyIndices<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        {
+            ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
+            Debug.Assert(constraintLocation.SetIndex == 0, "This function is intended to be used only with waking constraints.");
+            ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
+            Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
+            ActiveBodyIndexEnumerator<TEnumerator> wrapper;
+            wrapper.Wrapped = enumerator;
+            TypeProcessors[constraintLocation.TypeId].EnumerateConnectedRawBodyReferences(ref typeBatch, constraintLocation.IndexInTypeBatch, ref wrapper);
+            //Enumeration might have mutated the enumerator; if it's a value type, we need to copy those mutations back into it.
+            enumerator = wrapper.Wrapped;
+        }
+
+        struct ActiveDynamicEnumerator<TWrapped> : IForEach<int> where TWrapped : IForEach<int>
+        {
+            public TWrapped Wrapped;
+            public void LoopBody(int encodedBodyIndex)
+            {
+                //This is only used on the active set, so we know we're getting body indices. They include encoded metadata that we can check to see whether the body is kinematic.
+                if (encodedBodyIndex < Bodies.DynamicLimit)
+                {
+                    Wrapped.LoopBody(encodedBodyIndex & Bodies.BodyIndexMask);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Enumerates the set of dynamic body indices associated with an active constraint in order of their references within the constraint.
+        /// </summary>
+        /// <param name="constraintHandle">Constraint to enumerate.</param>
+        /// <param name="enumerator">Enumerator to use.</param>
+        internal void EnumerateActiveDynamicConnectedBodyIndices<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        {
+            ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
+            Debug.Assert(constraintLocation.SetIndex == 0, "This function is intended to be used only with the active set.");
+            ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
+            Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
+            ActiveDynamicEnumerator<TEnumerator> wrapper;
+            wrapper.Wrapped = enumerator;
+            TypeProcessors[constraintLocation.TypeId].EnumerateConnectedRawBodyReferences(ref typeBatch, constraintLocation.IndexInTypeBatch, ref wrapper);
+            //Enumeration might have mutated the enumerator; if it's a value type, we need to copy those mutations back into it.
+            enumerator = wrapper.Wrapped;
         }
 
         internal void GetSynchronizedBatchCount(out int synchronizedBatchCount, out bool fallbackExists)
