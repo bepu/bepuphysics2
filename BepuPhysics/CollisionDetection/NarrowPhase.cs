@@ -297,9 +297,33 @@ namespace BepuPhysics.CollisionDetection
         protected abstract void OnDispose();
 
 
-
-        //TODO: Configurable memory usage. It automatically adapts based on last frame state, but it's nice to be able to specify minimums when more information is known.
-
+        /// <summary>
+        /// Sorts references to guarantee that two collidables in the same pair will always be in the same order.
+        /// </summary>
+        /// <param name="a">First collidable reference to sort.</param>
+        /// <param name="b">First collidable reference to sort.</param>
+        /// <param name="aMobility">Mobility extracted from collidable A.</param>
+        /// <param name="bMobility">Mobility extracted from collidable B.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SortCollidableReferencesForPair(CollidableReference a, CollidableReference b, out CollidableMobility aMobility, out CollidableMobility bMobility, out CollidableReference sortedA, out CollidableReference sortedB)
+        {
+            //In order to guarantee contact manifold and constraint consistency across multiple frames, the order of collidables submitted to collision testing must be
+            //the same every time. Since the provided handles do not move for the lifespan of the collidable in the simulation, they can be used as an ordering.
+            //Between two bodies, simply put the lower handle in slot A always.
+            //If one of the two objects is static, stick it in the second slot.      
+            aMobility = a.Mobility;
+            bMobility = b.Mobility;
+            if ((aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static && a.BodyHandle.Value > b.BodyHandle.Value) || aMobility == CollidableMobility.Static)
+            {
+                sortedA = b;
+                sortedB = a;
+            }
+            else
+            {
+                sortedA = a;
+                sortedB = b;
+            }
+        }
     }
 
     /// <summary>
@@ -378,19 +402,7 @@ namespace BepuPhysics.CollisionDetection
         public unsafe void HandleOverlap(int workerIndex, CollidableReference a, CollidableReference b)
         {
             Debug.Assert(a.Packed != b.Packed, "Excuse me, broad phase, but an object cannot collide with itself!");
-            //In order to guarantee contact manifold and constraint consistency across multiple frames, we must guarantee that the order of collidables submitted 
-            //is the same every time. Since the provided handles do not move for the lifespan of the collidable in the simulation, they can be used as an ordering.
-            //Between two bodies, simply put the lower handle in slot A always.
-            //If one of the two objects is static, stick it in the second slot.       
-            var aMobility = a.Mobility;
-            var bMobility = b.Mobility;
-            if ((aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static && a.BodyHandle.Value > b.BodyHandle.Value) ||
-                aMobility == CollidableMobility.Static)
-            {
-                var temp = b;
-                b = a;
-                a = temp;
-            }
+            SortCollidableReferencesForPair(a, b, out var aMobility, out var bMobility, out a, out b);
             Debug.Assert(aMobility != CollidableMobility.Static || bMobility != CollidableMobility.Static, "Broad phase should not be able to generate static-static pairs.");
             if (!Callbacks.AllowContactGeneration(workerIndex, a, b))
                 return;

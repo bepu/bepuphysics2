@@ -188,7 +188,6 @@ namespace Demos.Demos
         struct Listener
         {
             public CollidableReference Source;
-            public bool WasAwake;
             public IContactEventHandler Handler;
             public QuickList<PreviousCollision> PreviousCollisions;
         }
@@ -227,6 +226,7 @@ namespace Demos.Demos
             this.simulation = simulation;
             if (pool == null)
                 pool = simulation.BufferPool;
+            simulation.Timestepper.BeforeCollisionDetection += SetFreshnessForCurrentActivityStatus;
             listenerIndices = new CollidableProperty<int>(simulation, pool);
             pendingWorkerAdds = new QuickList<PendingWorkerAdd>[threadDispatcher == null ? 1 : threadDispatcher.ThreadCount];
         }
@@ -337,6 +337,47 @@ namespace Demos.Demos
             }
         }
 
+        /// <summary>
+        /// Callback attached to the simulation's ITimestepper which executes just prior to collision detection to take a snapshot of activity states to determine which pairs we should expect updates in.
+        /// </summary>
+        void SetFreshnessForCurrentActivityStatus(float dt, IThreadDispatcher threadDispatcher)
+        {
+            //Every single pair tracked by the contact events has a 'freshness' flag. If the final flush sees a pair that is stale, it'll remove it
+            //and any necessary events to represent the end of that pair are reported.
+            //HandleManifoldForCollidable sets 'Fresh' to true for any processed pair, but pairs between sleeping or static bodies will not show up in HandleManifoldForCollidable since they're not active.
+            //We don't want Flush to report that sleeping pairs have stopped colliding, so we pre-initialize any such sleeping/static pair as 'fresh'.
+
+            //This could be multithreaded reasonably easily if there are a ton of listeners or collisions, but that would be a pretty high bar.
+            //For simplicity, the demo will keep it single threaded.
+            var bodyHandleToLocation = simulation.Bodies.HandleToLocation;
+            for (int listenerIndex = 0; listenerIndex < listenerCount; ++listenerIndex)
+            {
+                ref var listener = ref listeners[listenerIndex];
+                var source = listener.Source;
+                //If it's a body, and it's in the active set (index 0), then every pair associated with the listener should expect updates.
+                var sourceExpectsUpdates = source.Mobility != CollidableMobility.Static && bodyHandleToLocation[source.BodyHandle.Value].SetIndex == 0;
+                if (sourceExpectsUpdates)
+                {
+                    var previousCollisions = listeners[listenerIndex].PreviousCollisions;
+                    for (int j = 0; j < previousCollisions.Count; ++j)
+                    {
+                        //Pair updates will set the 'freshness' to true when they happen, so that they won't be considered 'stale' in the flush and removed.
+                        previousCollisions[j].Fresh = false;
+                    }
+                }
+                else
+                {
+                    //The listener is either static or sleeping. We should only expect updates if the other collidable is awake.
+                    var previousCollisions = listeners[listenerIndex].PreviousCollisions;
+                    for (int j = 0; j < previousCollisions.Count; ++j)
+                    {
+                        ref var previousCollision = ref previousCollisions[j];
+                        previousCollision.Fresh = previousCollision.Collidable.Mobility == CollidableMobility.Static || bodyHandleToLocation[previousCollision.Collidable.BodyHandle.Value].SetIndex > 0;
+                    }
+                }
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void UpdatePreviousCollision<TManifold>(ref PreviousCollision collision, ref TManifold manifold, bool isTouching) where TManifold : unmanaged, IContactManifold<TManifold>
         {
@@ -361,17 +402,6 @@ namespace Demos.Demos
                 var listenerIndex = listenerIndices[source];
                 //This collidable is registered. Is the opposing collidable present?
                 ref var listener = ref listeners[listenerIndex];
-
-                //If this listener is sleeping or static and is getting HandleManifoldForCollidable called on it, it means that there's an active body interacting with it.
-                //That doesn't mean the listener is active *yet*- all other pairs that are only between sleeping bodies and/or statics will not receive any updates.
-                //We don't want those to be considered 'stale' by the postpass for a lack of updating, so we store a note that this listener was sleeping.
-                //That's necessary because if contacts constraints are allowed, the listener's going to be woken up.
-
-                //(There's a risk of thread access contention here. Not wonderfully ideal, but for the purposes of the demo, it's simpler to do this than 
-                //to introduce another phase which checks sleeping status as a prepass.)
-                var awake = listener.Source.Mobility != CollidableMobility.Static && simulation.Bodies.GetBodyReference(listener.Source.BodyHandle).Awake;
-                if (awake != listener.WasAwake)
-                    listener.WasAwake = awake;
 
                 int previousCollisionIndex = -1;
                 bool isTouching = false;
@@ -494,23 +524,15 @@ namespace Demos.Demos
             for (int i = 0; i < listenerCount; ++i)
             {
                 ref var listener = ref listeners[i];
-                //If the listener fell asleep at the start of the frame and didn't get woken up, then it wouldn't have been informed that is now asleep, so we'll check for that here.
-                if (listener.WasAwake)
-                    listener.WasAwake = listener.Source.Mobility == CollidableMobility.Static || simulation.Bodies.HandleToLocation[listener.Source.BodyHandle.Value].SetIndex == 0;
                 //Note reverse order. We remove during iteration.
                 for (int j = listener.PreviousCollisions.Count - 1; j >= 0; --j)
                 {
                     ref var collision = ref listener.PreviousCollisions[j];
-                    //At least one of the two bodies in a pair must have been awake to warrant examination.
-                    //Pairs involved with only inactive bodies or statics do not need to be checked for freshness. If we did, it would result in inactive manifolds being considered a removal, and 
-                    //more contact added events would fire when the bodies woke up.
-                    if (!listener.WasAwake && (collision.Collidable.Mobility == CollidableMobility.Static || simulation.Bodies.HandleToLocation[collision.Collidable.BodyHandle.Value].SetIndex > 0))
-                    {
-                        continue;
-                    }
                     if (!collision.Fresh)
                     {
-                        var pair = new CollidablePair(listener.Source, collision.Collidable);
+                        //Sort the references to be consistent with the direct narrow phase results.
+                        CollidablePair pair;
+                        NarrowPhase.SortCollidableReferencesForPair(listener.Source, collision.Collidable, out _, out _, out pair.A, out pair.B);
                         if (collision.ContactCount > 0)
                         {
                             var emptyManifold = new EmptyManifold();
@@ -557,9 +579,12 @@ namespace Demos.Demos
 
         public void Dispose()
         {
-            bodyListenerFlags.Dispose(pool);
-            staticListenerFlags.Dispose(pool);
+            if (bodyListenerFlags.Flags.Allocated)
+                bodyListenerFlags.Dispose(pool);
+            if (staticListenerFlags.Flags.Allocated)
+                staticListenerFlags.Dispose(pool);
             listenerIndices.Dispose();
+            simulation.Timestepper.BeforeCollisionDetection -= SetFreshnessForCurrentActivityStatus;
             for (int i = 0; i < pendingWorkerAdds.Length; ++i)
             {
                 Debug.Assert(!pendingWorkerAdds[i].Span.Allocated, "The pending worker adds should have been disposed by the previous flush.");
@@ -692,7 +717,6 @@ namespace Demos.Demos
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 1, 30)), 0.04f)));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 3, 15), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 5, 1)), 0.04f)));
-
         }
 
         public override void Update(Window window, Camera camera, Input input, float dt)
