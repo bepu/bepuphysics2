@@ -76,21 +76,12 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe bool TryAdd(ConstraintHandle constraintHandle, int batchIndex, Solver solver, BufferPool pool, ref SequentialFallbackBatch fallbackBatch)
+        public unsafe bool TryAdd(ConstraintHandle constraintHandle, Span<int> dynamicBodyIndices, int typeId, int batchIndex, Solver solver, BufferPool pool, ref SequentialFallbackBatch fallbackBatch)
         {
-            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle.Value];
-            var typeProcessor = solver.TypeProcessors[constraintLocation.TypeId];
-            var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
-            var bodyIndices = stackalloc int[bodiesPerConstraint];
-            ConstraintHandleEnumerator enumerator;
-            enumerator.BodyIndices = bodyIndices;
-            enumerator.Count = 0;
-            solver.EnumerateActiveDynamicConnectedBodyIndices(constraintHandle, ref enumerator);
-            var dynamicBodyIndices = new Span<int>(enumerator.BodyIndices, enumerator.Count);
             if (batchIndex == solver.FallbackBatchThreshold || ReferencedBodyIndices.CanFit(dynamicBodyIndices))
             {
-                ref var typeBatch = ref GetOrCreateTypeBatch(constraintLocation.TypeId, solver, pool);
-                Debug.Assert(typeBatch.TypeId == constraintLocation.TypeId);
+                ref var typeBatch = ref GetOrCreateTypeBatch(typeId, solver, pool);
+                Debug.Assert(typeBatch.TypeId == typeId);
                 typeBatch.Handles.Add(constraintHandle.Value, pool);
                 if (batchIndex < solver.FallbackBatchThreshold)
                 {
@@ -160,11 +151,20 @@ namespace BepuPhysics
             }
         }
 
-        void AddConstraint(ConstraintHandle constraintHandle, Solver solver, BufferPool pool)
+        unsafe void AddConstraint(ConstraintHandle constraintHandle, Solver solver, BufferPool pool)
         {
+            var typeId = solver.HandleToConstraint[constraintHandle.Value].TypeId;
+            var typeProcessor = solver.TypeProcessors[typeId];
+            var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
+            var bodyIndices = stackalloc int[bodiesPerConstraint];
+            ConstraintHandleEnumerator enumerator;
+            enumerator.BodyIndices = bodyIndices;
+            enumerator.Count = 0;
+            solver.EnumerateActiveDynamicConnectedBodyIndices(constraintHandle, ref enumerator);
+            var dynamicBodyIndices = new Span<int>(enumerator.BodyIndices, enumerator.Count);
             for (int batchIndex = 0; batchIndex < Protobatches.Count; ++batchIndex)
             {
-                if (Protobatches[batchIndex].TryAdd(constraintHandle, batchIndex, solver, pool, ref FallbackBatch))
+                if (Protobatches[batchIndex].TryAdd(constraintHandle, dynamicBodyIndices, typeId, batchIndex, solver, pool, ref FallbackBatch))
                 {
                     return;
                 }
@@ -174,7 +174,8 @@ namespace BepuPhysics
             var newBatchIndex = Protobatches.Count;
             ref var newBatch = ref Protobatches.AllocateUnsafely();
             newBatch = new IslandScaffoldConstraintBatch(solver, pool, newBatchIndex);
-            newBatch.TryAdd(constraintHandle, newBatchIndex, solver, pool, ref FallbackBatch);
+            var addedSuccessfully = newBatch.TryAdd(constraintHandle, dynamicBodyIndices, typeId, newBatchIndex, solver, pool, ref FallbackBatch);
+            Debug.Assert(addedSuccessfully, "If we created a new batch for a constraint, then it must successfully add.");
         }
 
         internal void Dispose(BufferPool pool)
