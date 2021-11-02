@@ -3,7 +3,7 @@
     <AssemblyName>BepuUtilities</AssemblyName>
     <RootNamespace>BepuUtilities</RootNamespace>
     <TargetFramework>net5.0</TargetFramework>
-    <Version>2.4.0-beta7</Version>
+    <Version>2.4.0-beta8</Version>
     <Company>Bepu Entertainment LLC</Company>
     <Authors>Ross Nordby</Authors>
     <Description>Supporting utilities library for BEPUphysics v2.</Description>
@@ -14,11 +14,11 @@
     <PackageIcon>bepuphysicslogo256.png</PackageIcon>
     <Configurations>Debug;Release</Configurations>
     <LangVersion>latest</LangVersion>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>    
     <SignAssembly>true</SignAssembly>
     <DelaySign>false</DelaySign>
     <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
