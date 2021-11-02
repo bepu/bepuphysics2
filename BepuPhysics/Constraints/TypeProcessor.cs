@@ -80,10 +80,7 @@ namespace BepuPhysics.Constraints
         public unsafe abstract void TransferConstraint(ref TypeBatch typeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex);
 
         /// <summary>
-        /// Enumerates body references in the constraint.
-        /// For waking constraints, this enumerates body indices including any encoded metadata like whether the body is kinematic.
-        /// For sleeping constraints, this enumerates body handles.
-        /// In other words, this reports whatever is stored in the constraint.
+        /// Enumerates body references in the constraint. Reported body references (body index for an awake constraint, body handle for a sleeping constraint) include encoded metadata like whether the body is kinematic.
         /// </summary>
         /// <typeparam name="TEnumerator">Type of the enumerator called for each body index in the constraint.</typeparam>
         /// <param name="typeBatch">Type batch containing the constraint to enumerate.</param>
