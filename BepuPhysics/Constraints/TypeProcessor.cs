@@ -985,9 +985,11 @@ namespace BepuPhysics.Constraints
                     for (int i = 0; i < bodyIndices.Length; ++i)
                     {
                         //Bodies have already been moved into the active set, so we can use the mapping.
-                        var bodyHandleValue = Unsafe.Add(ref bodyReferencesLane, Vector<int>.Count * i);
+                        var encodedBodyHandleValue = Unsafe.Add(ref bodyReferencesLane, Vector<int>.Count * i);
+                        var bodyHandleValue = encodedBodyHandleValue & Bodies.BodyReferenceMask;
                         Debug.Assert(bodyHandleToLocation[bodyHandleValue].SetIndex == 0);
-                        bodyIndices[i] = bodyHandleToLocation[bodyHandleValue].Index;
+                        //Preserve the kinematic flag when converting from handle to index.
+                        bodyIndices[i] = bodyHandleToLocation[bodyHandleValue].Index | (encodedBodyHandleValue & Bodies.KinematicMask);
                     }
                     var handle = sourceTypeBatch.IndexToHandle[sourceIndex];
                     Debug.Assert(constraintHandleToLocation[handle.Value].SetIndex == sourceSet);

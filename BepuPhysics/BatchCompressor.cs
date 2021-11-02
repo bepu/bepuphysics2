@@ -206,13 +206,13 @@ namespace BepuPhysics
                 //We're optimizing the fallback batch, so we need to be careful about compressions interfering with each other. The parallel analysis assumed each batch
                 //contained at most one instance of each body, which doesn't hold for the fallback batch.
                 //Easy enough to address: check to see if the target batch can still hold the constraint.
-                var bodyHandles = stackalloc int[typeProcessor.BodiesPerConstraint];
-                ActiveConstraintBodyHandleCollector handleAccumulator;
+                var dynamicBodyHandles = stackalloc int[typeProcessor.BodiesPerConstraint];
+                ActiveConstraintDynamicBodyHandleCollector handleAccumulator;
                 handleAccumulator.Bodies = Bodies;
-                handleAccumulator.Handles = bodyHandles;
+                handleAccumulator.Handles = dynamicBodyHandles;
                 handleAccumulator.Count = 0;
-                Solver.EnumerateActiveDynamicConnectedBodyIndices(compression.ConstraintHandle, ref handleAccumulator);
-                if (!Solver.batchReferencedHandles[compression.TargetBatch].CanFit(new Span<int>(bodyHandles, typeProcessor.BodiesPerConstraint)))
+                Solver.EnumerateConnectedRawBodyReferences(compression.ConstraintHandle, ref handleAccumulator);
+                if (!Solver.batchReferencedHandles[compression.TargetBatch].CanFit(new Span<int>(dynamicBodyHandles, handleAccumulator.Count)))
                 {
                     //Another compression from the fallback batch has blocked this compression.
                     //Note that this isn't really a problem- batch compression is an incremental process. If some other compression was possible, a future frame will find it pretty quickly.

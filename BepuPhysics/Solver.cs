@@ -267,7 +267,6 @@ namespace BepuPhysics
         /// Gets a direct reference to the constraint associated with a handle.
         /// The reference is temporary; any constraint removals that affect the referenced type batch may invalidate the index.
         /// </summary>
-        /// <typeparam name="T">Type of the type batch being referred to.</typeparam>
         /// <param name="handle">Handle index of the constraint.</param>
         /// <param name="reference">Temporary direct reference to the type batch and index in the type batch associated with the constraint handle.
         /// May be invalidated by constraint removals.</param>
@@ -283,27 +282,43 @@ namespace BepuPhysics
         unsafe internal void ValidateConstraintReferenceKinematicity()
         {
             //Only the active set's body indices are flagged for kinematicity; the inactive sets store body handles.
-            ref var activeSet = ref ActiveSet;
-            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
+            for (int setIndex = 0; setIndex < Sets.Length; ++setIndex)
             {
-                ref var batch = ref activeSet.Batches[batchIndex];
-                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                ref var set = ref Sets[setIndex];
+                if (set.Allocated)
                 {
-                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-                    var bodiesPerConstraint = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
-                    for (int i = 0; i < typeBatch.ConstraintCount; ++i)
+                    for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
                     {
-                        BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
-                        ref var bodyReferencesBundle = ref typeBatch.BodyReferences[bundleIndex * bodiesPerConstraint * Unsafe.SizeOf<Vector<int>>()];
-                        for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraint; ++bodyIndexInConstraint)
+                        ref var batch = ref set.Batches[batchIndex];
+                        for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                         {
-                            var referencesForBodyIndexInConstraint = Unsafe.Add(ref Unsafe.As<byte, Vector<int>>(ref bodyReferencesBundle), bodyIndexInConstraint);
-                            var encodedBodyIndex = referencesForBodyIndexInConstraint[innerIndex];
-                            if (encodedBodyIndex > 0)
+                            ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                            var bodiesPerConstraint = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
+                            for (int i = 0; i < typeBatch.ConstraintCount; ++i)
                             {
-                                var kinematicByEncodedIndex = (encodedBodyIndex & Bodies.KinematicMask) != 0;
-                                var kinematicByInertia = Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[encodedBodyIndex & Bodies.BodyReferenceMask].Inertia.Local);
-                                Debug.Assert(kinematicByEncodedIndex == kinematicByInertia, "Constraint reference encoded kinematicity must match actual kinematicity by inertia.");
+                                BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
+                                ref var bodyReferencesBundle = ref typeBatch.BodyReferences[bundleIndex * bodiesPerConstraint * Unsafe.SizeOf<Vector<int>>()];
+                                for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraint; ++bodyIndexInConstraint)
+                                {
+                                    var referencesForBodyIndexInConstraint = Unsafe.Add(ref Unsafe.As<byte, Vector<int>>(ref bodyReferencesBundle), bodyIndexInConstraint);
+                                    var encodedBodyReference = referencesForBodyIndexInConstraint[innerIndex];
+                                    if (encodedBodyReference > 0)
+                                    {
+                                        var kinematicByEncodedReference = (encodedBodyReference & Bodies.KinematicMask) != 0;
+                                        bool kinematicByInertia;
+                                        if (setIndex == 0)
+                                        {
+                                            //Active set references are indices.
+                                            kinematicByInertia = Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[encodedBodyReference & Bodies.BodyReferenceMask].Inertia.Local);
+                                        }
+                                        else
+                                        {
+                                            //Sleeping set references are handles.
+                                            kinematicByInertia = bodies.GetBodyReference(new BodyHandle { Value = encodedBodyReference & Bodies.BodyReferenceMask }).Kinematic;
+                                        }
+                                        Debug.Assert(kinematicByEncodedReference == kinematicByInertia, "Constraint reference encoded kinematicity must match actual kinematicity by inertia.");
+                                    }
+                                }
                             }
                         }
                     }
