@@ -89,7 +89,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void LoopBody(int encodedBodyIndex)
             {
-                var bodyIndex = encodedBodyIndex & Bodies.BodyIndexMask;
+                var bodyIndex = encodedBodyIndex & Bodies.BodyReferenceMask;
                 var entryIndex = HandlesToIdentity[Bodies.ActiveSet.IndexToHandle[bodyIndex].Value];
                 if (IndexInConstraint == 0)
                     IdentityA = entryIndex;
@@ -118,7 +118,7 @@ namespace Demos.SpecializedTests
                 //The body in this constraint should both:
                 //1) have a handle associated with it, and 
                 //2) the constraint graph list for the body should include the constraint handle.
-                var bodyIndex = encodedBodyIndex & Bodies.BodyIndexMask;
+                var bodyIndex = encodedBodyIndex & Bodies.BodyReferenceMask;
                 Debug.Assert(Simulation.Bodies.ActiveSet.IndexToHandle[bodyIndex].Value >= 0);
                 Debug.Assert(Simulation.Bodies.ActiveSet.BodyIsConstrainedBy(bodyIndex, ConstraintHandle));
             }

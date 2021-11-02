@@ -164,7 +164,7 @@ namespace BepuPhysics
                 var isDynamic = (rawBodyIndex & Bodies.KinematicMask) == 0;
                 if (isDynamic)
                 {
-                    var bodyIndex = rawBodyIndex & Bodies.BodyIndexMask;
+                    var bodyIndex = rawBodyIndex & Bodies.BodyReferenceMask;
                     if (Remove(bodyIndex, ref allocationIdsToFree))
                     {
                         fallbackBatchHandles.Remove(solver.bodies.ActiveSet.IndexToHandle[bodyIndex].Value);

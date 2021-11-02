@@ -608,7 +608,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void LoopBody(int encodedBodyIndex)
             {
-                var bodyIndex = encodedBodyIndex & Bodies.BodyIndexMask;
+                var bodyIndex = encodedBodyIndex & BodyReferenceMask;
                 if (SourceBodyIndex != bodyIndex)
                 {
                     //This enumerator is associated with the public connected bodies enumerator function. The user supplies a handle and expects handles in return, so we 

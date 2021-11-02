@@ -53,20 +53,20 @@ namespace BepuPhysics.Constraints
         /// </summary>
         /// <param name="typeBatch">Type batch to allocate in.</param>
         /// <param name="handle">Handle of the constraint to allocate. Establishes a link from the allocated constraint to its handle.</param>
-        /// <param name="bodyIndices">Pointer to a list of body indices (not handles!) with count equal to the type batch's expected number of involved bodies.</param>
+        /// <param name="encodedBodyIndices">List of body indices (not handles!) with count equal to the type batch's expected number of involved bodies.</param>
         /// <param name="pool">Allocation provider to use if the type batch has to be resized.</param>
         /// <returns>Index of the slot in the batch.</returns>
-        public unsafe abstract int AllocateInTypeBatch(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool);
+        public unsafe abstract int AllocateInTypeBatch(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> encodedBodyIndices, BufferPool pool);
 
         /// <summary>
         /// Allocates a slot in the batch, assuming the batch is a fallback batch.
         /// </summary>
         /// <param name="typeBatch">Type batch to allocate in.</param>
         /// <param name="handle">Handle of the constraint to allocate. Establishes a link from the allocated constraint to its handle.</param>
-        /// <param name="bodyIndices">Pointer to a list of body indices (not handles!) with count equal to the type batch's expected number of involved bodies.</param>
+        /// <param name="encodedBodyIndices">List of body indices (not handles!) with count equal to the type batch's expected number of involved bodies.</param>
         /// <param name="pool">Allocation provider to use if the type batch has to be resized.</param>
         /// <returns>Index of the slot in the batch.</returns>
-        public unsafe abstract int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool);
+        public unsafe abstract int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> encodedBodyIndices, BufferPool pool);
         public abstract void Remove(ref TypeBatch typeBatch, int index, ref Buffer<ConstraintLocation> handlesToConstraints, bool isFallback);
 
         /// <summary>
@@ -215,23 +215,21 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void SetBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, int* bodyIndices)
+        public unsafe static void SetBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, Span<int> bodyIndices)
         {
-            //The jit should be able to fold almost all of the size-related calculations and address fiddling.
-            var bodyCount = Unsafe.SizeOf<TBodyReferences>() / (Vector<int>.Count * sizeof(int));
             //We assume that the body references struct is organized in memory like Bundle0, Inner0, ... BundleN, InnerN, Count
             //Assuming contiguous storage, Count is then located at start + stride * BodyCount.
             ref var start = ref Unsafe.As<TBodyReferences, int>(ref bundle);
             ref var targetLane = ref Unsafe.Add(ref start, innerIndex);
-            targetLane = *bodyIndices;
-            for (int i = 1; i < bodyCount; ++i)
+            targetLane = bodyIndices[0];
+            for (int i = 0; i < bodyIndices.Length; ++i)
             {
                 Unsafe.Add(ref targetLane, i * Vector<int>.Count) = bodyIndices[i];
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void AddBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, int* bodyIndices)
+        public unsafe static void AddBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, Span<int> bodyIndices)
         {
             //The jit should be able to fold almost all of the size-related calculations and address fiddling.
             var bodyCount = Unsafe.SizeOf<TBodyReferences>() / (Vector<int>.Count * sizeof(int));
@@ -262,7 +260,7 @@ namespace BepuPhysics.Constraints
         }
 
 
-        public unsafe sealed override int AllocateInTypeBatch(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool)
+        public unsafe sealed override int AllocateInTypeBatch(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> bodyIndices, BufferPool pool)
         {
             Debug.Assert(typeBatch.BodyReferences.Allocated, "Should initialize the batch before allocating anything from it.");
             if (typeBatch.ConstraintCount == typeBatch.IndexToHandle.Length)
@@ -298,6 +296,8 @@ namespace BepuPhysics.Constraints
                 var broadcastedBodies = broadcastedBodyIndices[broadcastedBundleBodyInConstraint];
                 for (int bundleBodyIndexInConstraint = 0; bundleBodyIndexInConstraint < bodiesPerConstraint; ++bundleBodyIndexInConstraint)
                 {
+                    //Note that the broadcastedBodies were created with the kinematic flag stripped, so when comparing against the constraint-held references, they will never return true.
+                    //This means that kinematics can appear more than once in a single bundle, which is what we want. Kinematics can appear multiple times in batches, too.
                     if (Vector.EqualsAny(bundleBodyIndices[bundleBodyIndexInConstraint], broadcastedBodies))
                     {
                         return false;
@@ -318,7 +318,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe static bool ProbeBundleForFallback(Buffer<TBodyReferences> typeBatchBodyIndices, Vector<int>* broadcastedBodyIndices, int* bodyIndices, int bundleIndex, ref int targetBundleIndex, ref int targetInnerIndex)
+        private unsafe static bool ProbeBundleForFallback(Buffer<TBodyReferences> typeBatchBodyIndices, Vector<int>* broadcastedBodyIndices, Span<int> encodedBodyIndices, int bundleIndex, ref int targetBundleIndex, ref int targetInnerIndex)
         {
             ref var bundle = ref typeBatchBodyIndices[bundleIndex];
             if (AllowFallbackBundleAllocation(ref bundle, broadcastedBodyIndices))
@@ -326,7 +326,7 @@ namespace BepuPhysics.Constraints
                 //We've found a place to put the allocation.
                 targetBundleIndex = bundleIndex;
                 targetInnerIndex = GetInnerIndexForFallbackAllocation(ref bundle);
-                SetBodyReferencesLane(ref bundle, targetInnerIndex, bodyIndices);
+                SetBodyReferencesLane(ref bundle, targetInnerIndex, encodedBodyIndices);
                 return true;
             }
             return false;
@@ -398,7 +398,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe sealed override int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, int* bodyIndices, BufferPool pool)
+        public unsafe sealed override int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> encodedBodyIndices, BufferPool pool)
         {
             //This folds.
             var bodiesPerConstraint = Unsafe.SizeOf<TBodyReferences>() / Unsafe.SizeOf<Vector<int>>();
@@ -422,9 +422,11 @@ namespace BepuPhysics.Constraints
             int targetBundleIndex = -1;
             int targetInnerIndex = -1;
             var broadcastedBodyIndices = stackalloc Vector<int>[bodiesPerConstraint];
-            for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraint; ++bodyIndexInConstraint)
+            for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < encodedBodyIndices.Length; ++bodyIndexInConstraint)
             {
-                broadcastedBodyIndices[bodyIndexInConstraint] = new Vector<int>(bodyIndices[bodyIndexInConstraint]);
+                //Note that the broadcastedBodies are created with the kinematic flag stripped, so when comparing against the constraint-held references, they will never return true.
+                //This means that kinematics can appear more than once in a single bundle, which is what we want. Kinematics can appear multiple times in batches, too.
+                broadcastedBodyIndices[bodyIndexInConstraint] = new Vector<int>(encodedBodyIndices[bodyIndexInConstraint] & Bodies.BodyReferenceMask);
             }
             var bundleCount = typeBatch.BundleCount;
             if (bundleCount <= probeLocationCount + 1) //(we always probe the last bundle)
@@ -432,7 +434,7 @@ namespace BepuPhysics.Constraints
                 //The fallback batch is small; there's no need to do a stochastic insertion. Just enumerate all bundles.
                 for (int bundleIndexInTypeBatch = 0; bundleIndexInTypeBatch < bundleCount; ++bundleIndexInTypeBatch)
                 {
-                    if (ProbeBundleForFallback(typeBatchBodyIndices, broadcastedBodyIndices, bodyIndices, bundleIndexInTypeBatch, ref targetBundleIndex, ref targetInnerIndex))
+                    if (ProbeBundleForFallback(typeBatchBodyIndices, broadcastedBodyIndices, encodedBodyIndices, bundleIndexInTypeBatch, ref targetBundleIndex, ref targetInnerIndex))
                         break;
                 }
             }
@@ -445,7 +447,7 @@ namespace BepuPhysics.Constraints
                 //First, probe the final bundle just in case it's nice and simple, then do stochastic probes.
                 //Stochastic probing works by pseudorandomly choosing a starting point, then picking probe locations based on that starting point.
                 var lastBundleIndex = bundleCount - 1;
-                if (!ProbeBundleForFallback(typeBatchBodyIndices, broadcastedBodyIndices, bodyIndices, lastBundleIndex, ref targetBundleIndex, ref targetInnerIndex))
+                if (!ProbeBundleForFallback(typeBatchBodyIndices, broadcastedBodyIndices, encodedBodyIndices, lastBundleIndex, ref targetBundleIndex, ref targetInnerIndex))
                 {
                     //No room in the final bundle; keep looking with stochastic probes.
                     var nextProbeIndex = (HashHelper.Rehash(handle.Value) & 0x7FFF_FFFF) % lastBundleIndex;
@@ -453,7 +455,7 @@ namespace BepuPhysics.Constraints
                     var remainder = lastBundleIndex - bundleJump * probeLocationCount;
                     for (int probeIndex = 0; probeIndex < probeLocationCount; ++probeIndex)
                     {
-                        if (ProbeBundleForFallback(typeBatchBodyIndices, broadcastedBodyIndices, bodyIndices, nextProbeIndex, ref targetBundleIndex, ref targetInnerIndex))
+                        if (ProbeBundleForFallback(typeBatchBodyIndices, broadcastedBodyIndices, encodedBodyIndices, nextProbeIndex, ref targetBundleIndex, ref targetInnerIndex))
                             break;
                         nextProbeIndex += bundleJump;
                         if (probeIndex < remainder)
@@ -478,7 +480,7 @@ namespace BepuPhysics.Constraints
                 typeBatch.ConstraintCount = newConstraintCount;
                 typeBatch.IndexToHandle[indexInTypeBatch] = handle;
                 ref var bundle = ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, bundleCount);
-                AddBodyReferencesLane(ref bundle, 0, bodyIndices);
+                AddBodyReferencesLane(ref bundle, 0, encodedBodyIndices);
                 //Clear the slot's accumulated impulse. The backing memory could be initialized to any value.
                 GatherScatter.ClearLane<TAccumulatedImpulse, float>(ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, bundleCount), 0);
                 Debug.Assert(typeBatch.PrestepData.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TPrestepData>());
@@ -678,6 +680,38 @@ namespace BepuPhysics.Constraints
 
 
         /// <summary>
+        /// Collects body references from active constraints and converts them into properly flagged constraint kinematic body handles.
+        /// </summary>
+        unsafe struct ActiveKinematicFlaggedBodyHandleCollector : IForEach<int>
+        {
+            public Bodies Bodies;
+            public int* DynamicBodyHandles;
+            public int DynamicCount;
+            public int* EncodedBodyIndices;
+            public int IndexCount;
+
+
+            public ActiveKinematicFlaggedBodyHandleCollector(Bodies bodies, int* dynamicHandles, int* encodedBodyIndices)
+            {
+                Bodies = bodies;
+                DynamicBodyHandles = dynamicHandles;
+                DynamicCount = 0;
+                EncodedBodyIndices = encodedBodyIndices;
+                IndexCount = 0;
+            }
+
+            public void LoopBody(int encodedBodyIndex)
+            {
+                if (Bodies.IsEncodedDynamicReference(encodedBodyIndex))
+                {
+                    DynamicBodyHandles[DynamicCount++] = Bodies.ActiveSet.IndexToHandle[encodedBodyIndex].Value;
+                }
+                EncodedBodyIndices[IndexCount++] = encodedBodyIndex;
+            }
+        }
+
+
+        /// <summary>
         /// Moves a constraint from one ConstraintBatch's TypeBatch to another ConstraintBatch's TypeBatch of the same type.
         /// </summary>
         /// <param name="sourceBatchIndex">Index of the batch that owns the type batch that is the source of the constraint transfer.</param>
@@ -691,14 +725,15 @@ namespace BepuPhysics.Constraints
             //It's not exactly trivial to keep everything straight, especially over time- it becomes a maintenance nightmare.
             //So instead, given that compressions should generally be extremely rare (relatively speaking) and highly deferrable, we'll accept some minor overhead.
             int bodiesPerConstraint = InternalBodiesPerConstraint;
-            var bodyHandles = stackalloc int[bodiesPerConstraint];
-            var bodyHandleCollector = new ActiveConstraintBodyHandleCollector(bodies, bodyHandles);
+            var dynamicBodyHandles = stackalloc int[bodiesPerConstraint];
+            var encodedBodyIndices = stackalloc int[bodiesPerConstraint];
+            var bodyHandleCollector = new ActiveKinematicFlaggedBodyHandleCollector(bodies, dynamicBodyHandles, encodedBodyIndices);
             EnumerateConnectedRawBodyReferences(ref typeBatch, indexInTypeBatch, ref bodyHandleCollector);
             Debug.Assert(targetBatchIndex <= solver.FallbackBatchThreshold,
                 "Constraint transfers should never target the fallback batch. Its registered body handles don't block new constraints so attempting to allocate in the same way wouldn't turn out well.");
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
             var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
-            solver.AllocateInBatch(targetBatchIndex, constraintHandle, new Span<BodyHandle>(bodyHandles, bodiesPerConstraint), typeId, out var targetReference);
+            solver.AllocateInBatch(targetBatchIndex, constraintHandle, new Span<BodyHandle>((BodyHandle*)dynamicBodyHandles, bodyHandleCollector.DynamicCount), new Span<int>(encodedBodyIndices, bodiesPerConstraint), typeId, out var targetReference);
 
             BundleIndexing.GetBundleIndices(targetReference.IndexInTypeBatch, out var targetBundle, out var targetInner);
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var sourceBundle, out var sourceInner);
@@ -901,7 +936,9 @@ namespace BepuPhysics.Constraints
                 var offset = 0;
                 for (int j = 0; j < bodiesPerConstraint; ++j)
                 {
-                    Unsafe.Add(ref targetReferencesLaneStart, offset) = activeBodySet.IndexToHandle[Unsafe.Add(ref sourceReferencesLaneStart, offset) & Bodies.BodyIndexMask].Value;
+                    var encodedBodyIndex = Unsafe.Add(ref sourceReferencesLaneStart, offset);
+                    //Note that when we transfer the body reference into the sleeping batch, the body reference turns into a handle- but it preserves the kinematic flag.
+                    Unsafe.Add(ref targetReferencesLaneStart, offset) = activeBodySet.IndexToHandle[encodedBodyIndex & Bodies.BodyReferenceMask].Value | (encodedBodyIndex & Bodies.KinematicMask);
                     offset += Vector<int>.Count;
                 }
             }
@@ -923,7 +960,7 @@ namespace BepuPhysics.Constraints
             //ValidateFallbackAccessSafety(ref targetTypeBatch, bodyCount);
             //solver.ValidateConstraintMaps(0, batchIndex, targetTypeBatchIndex);
             //solver.ValidateConstraintMaps(sourceSet, batchIndex, sourceTypeBatchIndex);
-            int* bodyIndices = stackalloc int[bodyCount];
+            Span<int> bodyIndices = stackalloc int[bodyCount];
             var sourceBundleCount = sourceTypeBatch.BundleCount;
             var sourceBodyReferences = sourceTypeBatch.BodyReferences.As<TBodyReferences>();
             var sourcePrestepData = sourceTypeBatch.PrestepData.As<TPrestepData>();
@@ -948,7 +985,7 @@ namespace BepuPhysics.Constraints
                     var sourceIndex = bundleStartConstraintIndex + sourceInnerIndex;
                     ref var bodyReferencesLane = ref Unsafe.As<TBodyReferences, int>(ref GatherScatter.GetOffsetInstance(ref sourceBodyReferencesBundle, sourceInnerIndex));
                     //Note that the sleeping set stores body references as handles, while the active set uses indices. We have to translate here.
-                    for (int i = 0; i < bodyCount; ++i)
+                    for (int i = 0; i < bodyIndices.Length; ++i)
                     {
                         //Bodies have already been moved into the active set, so we can use the mapping.
                         var bodyHandleValue = Unsafe.Add(ref bodyReferencesLane, Vector<int>.Count * i);
@@ -1039,7 +1076,9 @@ namespace BepuPhysics.Constraints
                 var offset = 0;
                 for (int j = 0; j < bodiesPerConstraint; ++j)
                 {
-                    Unsafe.Add(ref targetReferencesLaneStart, offset) = bodies.HandleToLocation[Unsafe.Add(ref sourceReferencesLaneStart, offset)].Index;
+                    var encodedBodyHandle = Unsafe.Add(ref sourceReferencesLaneStart, offset);                    
+                    //Note that encoded kinematicity flags are carried over to the active index reference.
+                    Unsafe.Add(ref targetReferencesLaneStart, offset) = bodies.HandleToLocation[encodedBodyHandle & Bodies.BodyReferenceMask].Index | (encodedBodyHandle & Bodies.KinematicMask);
                     offset += Vector<int>.Count;
                 }
                 var constraintHandle = sourceTypeBatch.IndexToHandle[sourceIndex];
@@ -1064,12 +1103,16 @@ namespace BepuPhysics.Constraints
                 var offset = 0;
                 for (int j = 0; j < bodiesPerConstraint; ++j)
                 {
-                    var bodyHandle = Unsafe.Add(ref sourceHandlesStart, offset);
-                    //Given that we're only adding references to bodies that already exist, and therefore were at some point in the active set, it should never be necessary
-                    //to resize the batch referenced handles structure.
-                    //Note that this will happily set an existing bit if the target batch is the fallback batch.
-                    targetBatchReferencedHandles.SetUnsafely(bodyHandle);
-                    offset += Vector<int>.Count;
+                    var encodedBodyHandle = Unsafe.Add(ref sourceHandlesStart, offset);
+                    if (Bodies.IsEncodedDynamicReference(encodedBodyHandle))
+                    {
+                        //Note that only dynamic bodies are added to the batch referenced handles.
+                        //Given that we're only adding references to bodies that already exist, and therefore were at some point in the active set, it should never be necessary
+                        //to resize the batch referenced handles structure.
+                        //Note that this will happily set an existing bit if the target batch is the fallback batch.
+                        targetBatchReferencedHandles.SetUnsafely(encodedBodyHandle);
+                        offset += Vector<int>.Count;
+                    }
                 }
             }
         }

@@ -143,13 +143,37 @@ namespace BepuPhysics
 
         public const int DoesntExistFlagIndex = 31;
         public const int KinematicFlagIndex = 30;
-        public const uint KinematicMask = 1u << KinematicFlagIndex;
+        public const int KinematicMask = 1 << KinematicFlagIndex;
         /// <summary>
-        /// Constraint body index references greater than a given unsigned value are either kinematic (1<<30 set) or correspond to an empty lane (1<<31 set).
+        /// Constraint body references greater than a given unsigned value are either kinematic (1<<30 set) or correspond to an empty lane (1<<31 set).
         /// </summary>
         public const uint DynamicLimit = KinematicMask;
-        public const uint BodyIndexMetadataMask = (1u << DoesntExistFlagIndex) | KinematicMask;
-        public const int BodyIndexMask = (int)~BodyIndexMetadataMask;
+        public const uint BodyReferenceMetadataMask = (1u << DoesntExistFlagIndex) | KinematicMask;
+        /// <summary>
+        /// Mask of bits containing the decoded body reference in a constraint body reference. For active constraints this would be the body index bits, for sleeping constraints this would be the body handle bits.
+        /// </summary>
+        public const int BodyReferenceMask = (int)~BodyReferenceMetadataMask;
+
+        /// <summary>
+        /// Checks whether a constraint encoded body reference value refers to a dynamic body.
+        /// </summary>
+        /// <param name="encodedBodyReferenceValue">Raw encoded value taken from a constraint.</param>
+        /// <returns>True if the encoded body reference refers to a dynamic body, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsEncodedDynamicReference(int encodedBodyReferenceValue)
+        {
+            return (encodedBodyReferenceValue & KinematicMask) == 0;
+        }
+        /// <summary>
+        /// Checks whether a constraint encoded body reference value refers to a kinematic body.
+        /// </summary>
+        /// <param name="encodedBodyReferenceValue">Raw encoded value taken from a constraint.</param>
+        /// <returns>True if the encoded body reference refers to a kinematic body, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsEncodedKinematicReference(int encodedBodyReferenceValue)
+        {
+            return (encodedBodyReferenceValue & KinematicMask) > 0;
+        }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherState<TAccessFilter>(Vector<int> encodedBodyIndices, bool worldInertia, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
@@ -161,28 +185,28 @@ namespace BepuPhysics
             {
                 var bodyIndices0 = encodedBodyIndices[0];
                 var empty0 = bodyIndices0 < 0;
-                var s0 = (float*)(solverStates + (bodyIndices0 & BodyIndexMask));
+                var s0 = (float*)(solverStates + (bodyIndices0 & BodyReferenceMask));
                 var bodyIndices1 = encodedBodyIndices[1];
                 var empty1 = bodyIndices1 < 0;
-                var s1 = (float*)(solverStates + (bodyIndices1 & BodyIndexMask));
+                var s1 = (float*)(solverStates + (bodyIndices1 & BodyReferenceMask));
                 var bodyIndices2 = encodedBodyIndices[2];
                 var empty2 = bodyIndices2 < 0;
-                var s2 = (float*)(solverStates + (bodyIndices2 & BodyIndexMask));
+                var s2 = (float*)(solverStates + (bodyIndices2 & BodyReferenceMask));
                 var bodyIndices3 = encodedBodyIndices[3];
                 var empty3 = bodyIndices3 < 0;
-                var s3 = (float*)(solverStates + (bodyIndices3 & BodyIndexMask));
+                var s3 = (float*)(solverStates + (bodyIndices3 & BodyReferenceMask));
                 var bodyIndices4 = encodedBodyIndices[4];
                 var empty4 = bodyIndices4 < 0;
-                var s4 = (float*)(solverStates + (bodyIndices4 & BodyIndexMask));
+                var s4 = (float*)(solverStates + (bodyIndices4 & BodyReferenceMask));
                 var bodyIndices5 = encodedBodyIndices[5];
                 var empty5 = bodyIndices5 < 0;
-                var s5 = (float*)(solverStates + (bodyIndices5 & BodyIndexMask));
+                var s5 = (float*)(solverStates + (bodyIndices5 & BodyReferenceMask));
                 var bodyIndices6 = encodedBodyIndices[6];
                 var empty6 = bodyIndices6 < 0;
-                var s6 = (float*)(solverStates + (bodyIndices6 & BodyIndexMask));
+                var s6 = (float*)(solverStates + (bodyIndices6 & BodyReferenceMask));
                 var bodyIndices7 = encodedBodyIndices[7];
                 var empty7 = bodyIndices7 < 0;
-                var s7 = (float*)(solverStates + (bodyIndices7 & BodyIndexMask));
+                var s7 = (float*)(solverStates + (bodyIndices7 & BodyReferenceMask));
 
                 //for (int i = 0; i < 8; ++i)
                 //{

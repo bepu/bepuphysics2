@@ -160,7 +160,7 @@ namespace BepuPhysics
             {
                 if (encodedBodyIndex < Bodies.DynamicLimit)
                 {
-                    Handles->Remove(Bodies.ActiveSet.IndexToHandle[encodedBodyIndex & Bodies.BodyIndexMask].Value);
+                    Handles->Remove(Bodies.ActiveSet.IndexToHandle[encodedBodyIndex & Bodies.BodyReferenceMask].Value);
                 }
             }
         }

@@ -575,7 +575,7 @@ namespace BepuPhysics
                             ref solverBatch.TypeBatches[solverBatch.TypeIndexToTypeBatchIndex[location.TypeId]], location.IndexInTypeBatch, ref bodyIndexEnumerator);
                         for (int i = 0; i < typeProcessor.BodiesPerConstraint; ++i)
                         {
-                            constraintReferencedBodyHandles.Add(ref bodies.ActiveSet.IndexToHandle[rawBodyIndices[i] & Bodies.BodyIndexMask].Value, pool);
+                            constraintReferencedBodyHandles.Add(ref bodies.ActiveSet.IndexToHandle[rawBodyIndices[i] & Bodies.BodyReferenceMask].Value, pool);
                         }
                         Console.Write($"{handle}, ");
                     }

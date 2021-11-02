@@ -58,7 +58,7 @@ namespace DemoRenderer.Constraints
                         for (int j = 0; j < bodyCount; ++j)
                         {
                             //Active set constraint body references refer directly to the body index.
-                            bodyIndices[j] = GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex) & Bodies.BodyIndexMask;
+                            bodyIndices[j] = GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex) & Bodies.BodyReferenceMask;
                         }
                         extractor.ExtractLines(ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex), setIndex, bodyIndices, bodies, ref tint, ref lines);
                     }
@@ -78,9 +78,9 @@ namespace DemoRenderer.Constraints
                         for (int j = 0; j < bodyCount; ++j)
                         {
                             //Inactive constraints store body references in the form of handles, so we have to follow the indirection.
-                            var bodyHandle = GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex);
+                            var bodyHandle = GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex) & Bodies.BodyReferenceMask;
                             Debug.Assert(bodies.HandleToLocation[bodyHandle].SetIndex == setIndex);
-                            bodyIndices[j] = bodies.HandleToLocation[bodyHandle].Index & Bodies.BodyIndexMask;
+                            bodyIndices[j] = bodies.HandleToLocation[bodyHandle].Index & Bodies.BodyReferenceMask;
                         }
                         extractor.ExtractLines(ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex), setIndex, bodyIndices, bodies, ref tint, ref lines);
                     }

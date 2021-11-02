@@ -302,7 +302,7 @@ namespace BepuPhysics
                             if (encodedBodyIndex > 0)
                             {
                                 var kinematicByEncodedIndex = (encodedBodyIndex & Bodies.KinematicMask) != 0;
-                                var kinematicByInertia = Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[encodedBodyIndex & Bodies.BodyIndexMask].Inertia.Local);
+                                var kinematicByInertia = Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[encodedBodyIndex & Bodies.BodyReferenceMask].Inertia.Local);
                                 Debug.Assert(kinematicByEncodedIndex == kinematicByInertia, "Constraint reference encoded kinematicity must match actual kinematicity by inertia.");
                             }
                         }
@@ -630,7 +630,7 @@ namespace BepuPhysics
                             if (HandleToConstraint[constraints[constraintForBodyIndex].ConnectingConstraintHandle.Value].BatchIndex == batchIndex)
                                 ++expectedCount;
                         }
-                        bodyReference |= (int)Bodies.KinematicMask;
+                        bodyReference |= Bodies.KinematicMask;
                     }
                     else
                     {
@@ -709,7 +709,7 @@ namespace BepuPhysics
                                     int bodyIndex;
                                     if (setIndex == 0)
                                     {
-                                        bodyIndex = constraintBodyReferences[i] & Bodies.BodyIndexMask;
+                                        bodyIndex = constraintBodyReferences[i] & Bodies.BodyReferenceMask;
                                     }
                                     else
                                     {
@@ -740,7 +740,7 @@ namespace BepuPhysics
                             int bodyReference = setIndex == 0 ? bodyIndex : bodySet.IndexToHandle[bodyIndex].Value;
                             var bodyReferenceInConstraint = constraintBodyReferences[constraintList[constraintIndex].BodyIndexInConstraint];
                             if (setIndex == 0)
-                                bodyReferenceInConstraint &= Bodies.BodyIndexMask;
+                                bodyReferenceInConstraint &= Bodies.BodyReferenceMask;
                             Debug.Assert(bodyReferenceInConstraint == bodyReference,
                                 "If a body refers to a constraint, the constraint should refer to the body.");
                         }
@@ -896,40 +896,25 @@ namespace BepuPhysics
             return synchronizedBatchCount;
         }
 
-        internal unsafe void AllocateInBatch(int targetBatchIndex, ConstraintHandle constraintHandle, Span<BodyHandle> bodyHandles, int typeId, out ConstraintReference reference)
+        internal unsafe void AllocateInBatch(int targetBatchIndex, ConstraintHandle constraintHandle, Span<BodyHandle> dynamicBodyHandles, Span<int> encodedBodyIndices, int typeId, out ConstraintReference reference)
         {
             ref var batch = ref ActiveSet.Batches[targetBatchIndex];
-            //Add all the constraint's body handles to the batch we found (or created) to block future references to the same bodies.
-            //Also, convert the handle into a memory index. Constraints store a direct memory reference for performance reasons.
-            var bodyIndices = stackalloc int[bodyHandles.Length];
-            Span<BodyHandle> dynamicBodyHandles = stackalloc BodyHandle[bodyHandles.Length];
-            int dynamicBodyCount = 0;
-            for (int j = 0; j < bodyHandles.Length; ++j)
+            for (int j = 0; j < encodedBodyIndices.Length; ++j)
             {
-                var bodyHandle = bodyHandles[j];
-                ref var location = ref bodies.HandleToLocation[bodyHandle.Value];
-                Debug.Assert(location.SetIndex == 0, "Creating a new constraint should have forced the connected bodies awake.");
-                var index = location.Index;
-                //Include the flag in the body index if it's kinematic.
-                if (Bodies.IsKinematic(bodies.ActiveSet.SolverStates[index].Inertia.Local))
+                //Include the body in the constrained kinematics set if necessary.
+                var encodedBodyIndex = encodedBodyIndices[j];
+                if (Bodies.IsEncodedKinematicReference(encodedBodyIndex))
                 {
-                    index |= (int)Bodies.KinematicMask;
-                    ConstrainedKinematicHandles.Add(bodyHandle.Value, pool);
+                    ConstrainedKinematicHandles.Add(bodies.ActiveSet.IndexToHandle[encodedBodyIndex & Bodies.BodyReferenceMask].Value, pool);
                 }
-                else
-                {
-                    dynamicBodyHandles[dynamicBodyCount++] = bodyHandles[j];
-                }
-                bodyIndices[j] = index;
             }
-            dynamicBodyHandles = dynamicBodyHandles.Slice(0, dynamicBodyCount);
             var typeProcessor = TypeProcessors[typeId];
             var typeBatch = batch.GetOrCreateTypeBatch(typeId, typeProcessor, GetMinimumCapacityForType(typeId), pool);
             int indexInTypeBatch;
             if (targetBatchIndex == FallbackBatchThreshold)
-                indexInTypeBatch = typeProcessor.AllocateInTypeBatchForFallback(ref *typeBatch, constraintHandle, bodyIndices, pool);
+                indexInTypeBatch = typeProcessor.AllocateInTypeBatchForFallback(ref *typeBatch, constraintHandle, encodedBodyIndices, pool);
             else
-                indexInTypeBatch = typeProcessor.AllocateInTypeBatch(ref *typeBatch, constraintHandle, bodyIndices, pool);
+                indexInTypeBatch = typeProcessor.AllocateInTypeBatch(ref *typeBatch, constraintHandle, encodedBodyIndices, pool);
             reference = new ConstraintReference(typeBatch, indexInTypeBatch);
             //TODO: We could adjust the typeBatchAllocation capacities in response to the allocated index.
             //If it exceeds the current capacity, we could ensure the new size is still included.
@@ -952,7 +937,7 @@ namespace BepuPhysics
             }
         }
 
-        unsafe internal Span<BodyHandle> GetBlockingBodyHandles(Span<BodyHandle> bodyHandles, Span<BodyHandle> allocation)
+        unsafe internal void GetBlockingBodyHandles(Span<BodyHandle> bodyHandles, ref Span<BodyHandle> blockingBodyHandlesAllocation, Span<int> encodedBodyIndices)
         {
             //Kinematics do not block allocation in a batch; they are treated as read only by the solver.
             int blockingCount = 0;
@@ -961,15 +946,20 @@ namespace BepuPhysics
             {
                 var location = bodies.HandleToLocation[bodyHandles[i].Value];
                 Debug.Assert(location.SetIndex == 0);
-                if (!Bodies.IsKinematicUnsafeGCHole(ref solverStates[location.Index].Inertia.Local))
+                if (Bodies.IsKinematicUnsafeGCHole(ref solverStates[location.Index].Inertia.Local))
                 {
-                    allocation[blockingCount++] = bodyHandles[i];
+                    encodedBodyIndices[i] = location.Index | Bodies.KinematicMask;
+                }
+                else
+                {
+                    blockingBodyHandlesAllocation[blockingCount++] = bodyHandles[i];
+                    encodedBodyIndices[i] = location.Index;
                 }
             }
-            return allocation.Slice(0, blockingCount);
+            blockingBodyHandlesAllocation = blockingBodyHandlesAllocation.Slice(0, blockingCount);
         }
 
-        internal unsafe bool TryAllocateInBatch(int typeId, int targetBatchIndex, Span<BodyHandle> blockingBodyHandles, Span<BodyHandle> bodyHandles, out ConstraintHandle constraintHandle, out ConstraintReference reference)
+        internal unsafe bool TryAllocateInBatch(int typeId, int targetBatchIndex, Span<BodyHandle> dynamicBodyHandles, Span<int> encodedBodyIndices, out ConstraintHandle constraintHandle, out ConstraintReference reference)
         {
             ref var set = ref ActiveSet;
             Debug.Assert(targetBatchIndex <= set.Batches.Count,
@@ -992,7 +982,7 @@ namespace BepuPhysics
                 if (targetBatchIndex < FallbackBatchThreshold)
                 {
                     //A non-fallback constraint batch already exists here. This may fail.
-                    if (!batchReferencedHandles[targetBatchIndex].CanFit(MemoryMarshal.Cast<BodyHandle, int>(blockingBodyHandles)))
+                    if (!batchReferencedHandles[targetBatchIndex].CanFit(MemoryMarshal.Cast<BodyHandle, int>(dynamicBodyHandles)))
                     {
                         //This batch cannot hold the constraint.
                         constraintHandle = new ConstraintHandle(-1);
@@ -1002,7 +992,7 @@ namespace BepuPhysics
                 }
             }
             constraintHandle = new ConstraintHandle(HandlePool.Take());
-            AllocateInBatch(targetBatchIndex, constraintHandle, bodyHandles, typeId, out reference);
+            AllocateInBatch(targetBatchIndex, constraintHandle, dynamicBodyHandles, encodedBodyIndices, typeId, out reference);
 
             if (constraintHandle.Value >= HandleToConstraint.Length)
             {
@@ -1010,12 +1000,13 @@ namespace BepuPhysics
                 Debug.Assert(constraintHandle.Value < HandleToConstraint.Length, "Handle indices should never jump by more than 1 slot, so doubling should always be sufficient.");
             }
             ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
+#if DEBUG
             //Note that new constraints are always active. It is assumed at this point that all connected bodies have been forced active.
-            for (int i = 0; i < bodyHandles.Length; ++i)
+            for (int i = 0; i < dynamicBodyHandles.Length; ++i)
             {
-                ref var bodyLocation = ref bodies.HandleToLocation[bodyHandles[i].Value];
-                Debug.Assert(bodyLocation.SetIndex == 0, "New constraints should only be created involving already-activated bodies.");
+                Debug.Assert(bodies.HandleToLocation[dynamicBodyHandles[i].Value].SetIndex == 0, "New constraints should only be created involving already-activated bodies.");
             }
+#endif
             constraintLocation.SetIndex = 0;
             constraintLocation.IndexInTypeBatch = reference.IndexInTypeBatch;
             constraintLocation.TypeId = typeId;
@@ -1068,10 +1059,11 @@ namespace BepuPhysics
         {
             ref var set = ref ActiveSet;
             Span<BodyHandle> blockingBodyHandles = stackalloc BodyHandle[bodyHandles.Length];
-            blockingBodyHandles = GetBlockingBodyHandles(bodyHandles, blockingBodyHandles);
+            Span<int> encodedBodyIndices = stackalloc int[bodyHandles.Length];
+            GetBlockingBodyHandles(bodyHandles, ref blockingBodyHandles, encodedBodyIndices);
             for (int i = 0; i <= set.Batches.Count; ++i)
             {
-                if (TryAllocateInBatch(description.ConstraintTypeId, i, blockingBodyHandles, bodyHandles, out handle, out var reference))
+                if (TryAllocateInBatch(description.ConstraintTypeId, i, blockingBodyHandles, encodedBodyIndices, out handle, out var reference))
                 {
                     ApplyDescriptionWithoutWaking(reference, description);
                     return;
@@ -1444,8 +1436,7 @@ namespace BepuPhysics
 
         /// <summary>
         /// Enumerates the set of body references associated with a constraint in order of their references within the constraint.
-        /// If the constraint is awake, this will report the raw body index and any encoded metadata, like whether the body is kinematic.
-        /// If the constraint is asleep, this will report the body handle.
+        /// This will report the raw body reference (body index if awake, handle if asleep) and any encoded metadata, like whether the body is kinematic.
         /// </summary>
         /// <param name="constraintHandle">Constraint to enumerate.</param>
         /// <param name="enumerator">Enumerator to use.</param>
@@ -1463,7 +1454,7 @@ namespace BepuPhysics
             public void LoopBody(int encodedBodyIndex)
             {
                 //This is only used on the active set, so we know we're getting body indices. They include encoded metadata that we can check to see whether the body is kinematic.
-                Wrapped.LoopBody(encodedBodyIndex & Bodies.BodyIndexMask);
+                Wrapped.LoopBody(encodedBodyIndex & Bodies.BodyReferenceMask);
 
             }
         }
@@ -1494,7 +1485,7 @@ namespace BepuPhysics
                 //This is only used on the active set, so we know we're getting body indices. They include encoded metadata that we can check to see whether the body is kinematic.
                 if (encodedBodyIndex < Bodies.DynamicLimit)
                 {
-                    Wrapped.LoopBody(encodedBodyIndex & Bodies.BodyIndexMask);
+                    Wrapped.LoopBody(encodedBodyIndex & Bodies.BodyReferenceMask);
                 }
             }
         }
