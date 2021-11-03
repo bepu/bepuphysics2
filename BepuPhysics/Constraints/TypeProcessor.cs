@@ -1075,7 +1075,7 @@ namespace BepuPhysics.Constraints
                 var offset = 0;
                 for (int j = 0; j < bodiesPerConstraint; ++j)
                 {
-                    var encodedBodyHandle = Unsafe.Add(ref sourceReferencesLaneStart, offset);                    
+                    var encodedBodyHandle = Unsafe.Add(ref sourceReferencesLaneStart, offset);
                     //Note that encoded kinematicity flags are carried over to the active index reference.
                     Unsafe.Add(ref targetReferencesLaneStart, offset) = bodies.HandleToLocation[encodedBodyHandle & Bodies.BodyReferenceMask].Index | (encodedBodyHandle & Bodies.KinematicMask);
                     offset += Vector<int>.Count;
@@ -1110,8 +1110,8 @@ namespace BepuPhysics.Constraints
                         //to resize the batch referenced handles structure.
                         //Note that this will happily set an existing bit if the target batch is the fallback batch.
                         targetBatchReferencedHandles.SetUnsafely(encodedBodyHandle);
-                        offset += Vector<int>.Count;
                     }
+                    offset += Vector<int>.Count;
                 }
             }
         }

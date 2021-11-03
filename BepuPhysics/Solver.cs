@@ -728,7 +728,7 @@ namespace BepuPhysics
                                     }
                                     else
                                     {
-                                        ref var referencedBodyLocation = ref bodies.HandleToLocation[constraintBodyReferences[i]];
+                                        ref var referencedBodyLocation = ref bodies.HandleToLocation[constraintBodyReferences[i] & Bodies.BodyReferenceMask];
                                         Debug.Assert(referencedBodyLocation.SetIndex == setIndex, "Any body involved with a constraint should be in the same set.");
                                         bodyIndex = referencedBodyLocation.Index;
                                     }
@@ -754,8 +754,7 @@ namespace BepuPhysics
                             //Active constraints refer to bodies by index; inactive constraints use handles.
                             int bodyReference = setIndex == 0 ? bodyIndex : bodySet.IndexToHandle[bodyIndex].Value;
                             var bodyReferenceInConstraint = constraintBodyReferences[constraintList[constraintIndex].BodyIndexInConstraint];
-                            if (setIndex == 0)
-                                bodyReferenceInConstraint &= Bodies.BodyReferenceMask;
+                            bodyReferenceInConstraint &= Bodies.BodyReferenceMask;
                             Debug.Assert(bodyReferenceInConstraint == bodyReference,
                                 "If a body refers to a constraint, the constraint should refer to the body.");
                         }
@@ -1093,6 +1092,7 @@ namespace BepuPhysics
         /// </summary>
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
         /// <param name="bodyHandles">Body handles used by the constraint.</param>
+        /// <param name="description">Description of the constraint to add.</param>
         /// <returns>Allocated constraint handle.</returns>
         public ConstraintHandle Add<TDescription>(Span<BodyHandle> bodyHandles, in TDescription description)
             where TDescription : unmanaged, IConstraintDescription<TDescription>
@@ -1103,10 +1103,12 @@ namespace BepuPhysics
             Debug.Assert(bodyHandles.Length == TypeProcessors[description.ConstraintTypeId].BodiesPerConstraint,
                 "The number of bodies supplied to a constraint add must match the expected number of bodies involved in that constraint type. Did you use the wrong Solver.Add overload?");
             //Adding a constraint assumes that the involved bodies are active, so wake up anything that is sleeping.
+            ValidateExistingHandles();
             for (int i = 0; i < bodyHandles.Length; ++i)
             {
                 awakener.AwakenBody(bodyHandles[i]);
             }
+            ValidateExistingHandles();
             Add(bodyHandles, description, out var constraintHandle);
             for (int i = 0; i < bodyHandles.Length; ++i)
             {
@@ -1114,6 +1116,7 @@ namespace BepuPhysics
                 bodies.ValidateExistingHandle(bodyHandle);
                 bodies.AddConstraint(bodies.HandleToLocation[bodyHandle.Value].Index, constraintHandle, i);
             }
+            ValidateExistingHandles();
             return constraintHandle;
         }
 
@@ -1122,6 +1125,7 @@ namespace BepuPhysics
         /// </summary>
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
         /// <param name="bodyHandle">Body connected to the constraint.</param>
+        /// <param name="description">Description of the constraint to add.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandle, in TDescription description)
             where TDescription : unmanaged, IOneBodyConstraintDescription<TDescription>
@@ -1136,6 +1140,7 @@ namespace BepuPhysics
         /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
         /// <param name="bodyHandleA">First body of the constraint.</param>
         /// <param name="bodyHandleB">Second body of the constraint.</param>
+        /// <param name="description">Description of the constraint to add.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, in TDescription description)
             where TDescription : unmanaged, ITwoBodyConstraintDescription<TDescription>
@@ -1151,6 +1156,7 @@ namespace BepuPhysics
         /// <param name="bodyHandleA">First body of the constraint.</param>
         /// <param name="bodyHandleB">Second body of the constraint.</param>
         /// <param name="bodyHandleC">Third body of the constraint.</param>
+        /// <param name="description">Description of the constraint to add.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, in TDescription description)
             where TDescription : unmanaged, IThreeBodyConstraintDescription<TDescription>
@@ -1167,6 +1173,7 @@ namespace BepuPhysics
         /// <param name="bodyHandleB">Second body of the constraint.</param>
         /// <param name="bodyHandleC">Third body of the constraint.</param>
         /// <param name="bodyHandleD">Fourth body of the constraint.</param>
+        /// <param name="description">Description of the constraint to add.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe ConstraintHandle Add<TDescription>(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, BodyHandle bodyHandleD, in TDescription description)
             where TDescription : unmanaged, IFourBodyConstraintDescription<TDescription>

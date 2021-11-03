@@ -295,22 +295,7 @@ namespace BepuPhysics
                         ref var targetSet = ref bodies.ActiveSet;
                         sourceSet.Collidables.CopyTo(job.SourceStart, targetSet.Collidables, job.TargetStart, job.Count);
                         sourceSet.Constraints.CopyTo(job.SourceStart, targetSet.Constraints, job.TargetStart, job.Count);
-                        //The world inertias must be updated as well. They are stored outside the sets.
-                        //Note that we use a manual loop copy for the local inertias and motion state since we're accessing them during the world inertia calculation anyway.
-                        //This can worsen the copy codegen a little, but it means we only have to scan the memory once.
-                        //(Realistically, either option is fast- these regions won't tend to fill L1.) 
-                        for (int i = 0; i < job.Count; ++i)
-                        {
-                            var sourceIndex = job.SourceStart + i;
-                            var targetIndex = job.TargetStart + i;
-                            ref var sourceState = ref sourceSet.SolverStates[sourceIndex];
-                            ref var targetState = ref targetSet.SolverStates[targetIndex];
-                            targetState = sourceState;
-                            //TODO: In principle, if velocity integration is always a part of the solver, then there is no need for this. That's not the case in 2.3.0, but embedded substepping should change that.
-                            //Leaving this here for now so we don't break the other substeppers (and because it's a fairly tiny concern), but something to consider later.
-                            PoseIntegration.RotateInverseInertia(sourceState.Inertia.Local.InverseInertiaTensor, sourceState.Motion.Pose.Orientation, out targetState.Inertia.World.InverseInertiaTensor);
-                            targetState.Inertia.Local.InverseMass = sourceState.Inertia.Local.InverseMass;
-                        }
+                        sourceSet.SolverStates.CopyTo(job.SourceStart, targetSet.SolverStates, job.TargetStart, job.Count);
                         sourceSet.Activity.CopyTo(job.SourceStart, targetSet.Activity, job.TargetStart, job.Count);
                         if (resetActivityStates)
                         {
