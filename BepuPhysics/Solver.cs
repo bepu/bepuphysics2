@@ -1103,12 +1103,10 @@ namespace BepuPhysics
             Debug.Assert(bodyHandles.Length == TypeProcessors[description.ConstraintTypeId].BodiesPerConstraint,
                 "The number of bodies supplied to a constraint add must match the expected number of bodies involved in that constraint type. Did you use the wrong Solver.Add overload?");
             //Adding a constraint assumes that the involved bodies are active, so wake up anything that is sleeping.
-            ValidateExistingHandles();
             for (int i = 0; i < bodyHandles.Length; ++i)
             {
                 awakener.AwakenBody(bodyHandles[i]);
             }
-            ValidateExistingHandles();
             Add(bodyHandles, description, out var constraintHandle);
             for (int i = 0; i < bodyHandles.Length; ++i)
             {
@@ -1116,7 +1114,6 @@ namespace BepuPhysics
                 bodies.ValidateExistingHandle(bodyHandle);
                 bodies.AddConstraint(bodies.HandleToLocation[bodyHandle.Value].Index, constraintHandle, i);
             }
-            ValidateExistingHandles();
             return constraintHandle;
         }
 

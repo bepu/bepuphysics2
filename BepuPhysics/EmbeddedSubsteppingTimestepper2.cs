@@ -46,8 +46,26 @@ namespace BepuPhysics
 
         public void Timestep(Simulation simulation, float dt, IThreadDispatcher threadDispatcher = null)
         {
+            simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
+            simulation.Solver.ValidateFallbackBatchEmptySlotReferences();
+            simulation.Solver.ValidateFallbackBatchAccessSafety();
+            simulation.Solver.ValidateFallbackBatchAccumulatedImpulses();
+            simulation.Solver.ValidateConstraintMaps();
+            simulation.Solver.ValidateConstraintReferenceKinematicity();
+            simulation.Solver.ValidateConstrainedKinematicsSet();
+            simulation.Solver.ValidateFallbackBodiesAreDynamic();
+            //simulation.Solver.ValidateExistingHandles();
             simulation.Sleep(threadDispatcher);
             Slept?.Invoke(dt, threadDispatcher);
+            simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
+            simulation.Solver.ValidateFallbackBatchEmptySlotReferences();
+            simulation.Solver.ValidateFallbackBatchAccessSafety();
+            simulation.Solver.ValidateFallbackBatchAccumulatedImpulses();
+            simulation.Solver.ValidateConstraintMaps();
+            simulation.Solver.ValidateConstraintReferenceKinematicity();
+            simulation.Solver.ValidateConstrainedKinematicsSet();
+            simulation.Solver.ValidateFallbackBodiesAreDynamic();
+            //simulation.Solver.ValidateExistingHandles();
 
             simulation.PredictBoundingBoxes(dt, threadDispatcher);
             BeforeCollisionDetection?.Invoke(dt, threadDispatcher);
@@ -64,7 +82,7 @@ namespace BepuPhysics
             simulation.Solver.ValidateConstraintReferenceKinematicity();
             simulation.Solver.ValidateConstrainedKinematicsSet();
             simulation.Solver.ValidateFallbackBodiesAreDynamic();
-            simulation.Solver.ValidateExistingHandles();
+            //simulation.Solver.ValidateExistingHandles();
 
             var constrainedBodySet = simulation.Solver.PrepareConstraintIntegrationResponsibilities(SubstepCount, threadDispatcher);
             simulation.Profiler.Start(simulation.Solver);
