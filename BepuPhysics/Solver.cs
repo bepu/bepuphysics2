@@ -1462,7 +1462,6 @@ namespace BepuPhysics
         internal void EnumerateConnectedRawBodyReferences<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
             ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
-            Debug.Assert(constraintLocation.SetIndex > 0, "This function is intended to be used only with sleeping constraints.");
             ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
             Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
             TypeProcessors[constraintLocation.TypeId].EnumerateConnectedRawBodyReferences(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
@@ -1517,7 +1516,7 @@ namespace BepuPhysics
         internal void EnumerateActiveDynamicConnectedBodyIndices<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
             ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
-            Debug.Assert(constraintLocation.SetIndex == 0, "This function is intended to be used only with the active set.");
+            Debug.Assert(constraintLocation.SetIndex == 0, "This function is intended to be used only with waking constraints.");
             ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
             Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
             ActiveDynamicEnumerator<TEnumerator> wrapper;
