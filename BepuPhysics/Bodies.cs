@@ -13,15 +13,17 @@ using System.Runtime.Intrinsics.X86;
 
 namespace BepuPhysics
 {
+    /// <summary>
+    /// Location of a body in memory.
+    /// </summary>
     public struct BodyMemoryLocation
     {
         /// <summary>
-        /// Index of the set owning the body reference. If the island index is 0, the body is active.
+        /// Index of the set owning the body reference. If the set index is 0, the body is awake. If the set index is greater than zero, the body is asleep.
         /// </summary>
         public int SetIndex;
         /// <summary>
-        /// Index of the body within its owning set. If the body is active (and so the Island index is -1), this is an index into the Bodies data arrays. 
-        /// If it is nonnegative, it is an index into the inactive island 
+        /// Index of the body within its owning set.
         /// </summary>
         public int Index;
     }
@@ -36,6 +38,9 @@ namespace BepuPhysics
         /// The backing array index may change in response to cache optimization.
         /// </summary>
         public Buffer<BodyMemoryLocation> HandleToLocation;
+        /// <summary>
+        /// Pool from which handles are pulled for new bodies.
+        /// </summary>
         public IdPool HandlePool;
         /// <summary>
         /// The set of existing bodies. The slot at index 0 contains all active bodies. Later slots, if allocated, contain the bodies associated with inactive islands.
@@ -261,9 +266,10 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bodyIndex">Index of the active body.</param>
         /// <param name="constraintHandle">Handle of the constraint to remove.</param>
-        internal void RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle)
+        /// <returns>True if the number of constraints remaining attached to the body is 0, false otherwise.</returns>
+        internal bool RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle)
         {
-            ActiveSet.RemoveConstraintReference(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, Pool);
+            return ActiveSet.RemoveConstraintReference(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, Pool);
         }
 
         /// <summary>
