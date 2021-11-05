@@ -793,7 +793,7 @@ namespace BepuPhysics
                 var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<float>.Count);
                 for (int i = 0; i < countInBundle; ++i)
                 {
-                    bodyIndices[i] = handleToLocation[bodyHandles[i]].Index;
+                    bodyIndices[i] = handleToLocation[bodyHandles[bundleBaseIndex + i]].Index;
                 }
 
                 var existingMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
@@ -834,7 +834,7 @@ namespace BepuPhysics
                 var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<float>.Count);
                 for (int i = 0; i < countInBundle; ++i)
                 {
-                    bodyIndices[i] = handleToLocation[bodyHandles[i]].Index;
+                    bodyIndices[i] = handleToLocation[bodyHandles[bundleBaseIndex + i]].Index;
                 }
 
                 var existingMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
@@ -848,11 +848,13 @@ namespace BepuPhysics
                 position += velocity.Linear * bundleDt;
                 //Kinematic bodies have infinite inertia, so using the angular momentum conserving codepaths would hit a singularity.
                 PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
-                if (callbacks.IntegrateVelocityForKinematics)
-                    callbacks.IntegrateVelocity(bodyIndicesVector, position, orientation, zeroInertia, existingMask, workerIndex, bundleDt, ref velocity);
-                //Writes to the empty lanes won't matter (scatter is masked), so we don't need to clean them up.
                 bodies.ScatterPose(ref position, ref orientation, bodyIndicesVector, existingMask);
-                bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndicesVector);
+                if (callbacks.IntegrateVelocityForKinematics)
+                {
+                    callbacks.IntegrateVelocity(bodyIndicesVector, position, orientation, zeroInertia, existingMask, workerIndex, bundleDt, ref velocity);
+                    //Writes to the empty lanes won't matter (scatter is masked), so we don't need to clean them up.
+                    bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndicesVector);
+                }
 
             }
         }
@@ -926,12 +928,14 @@ namespace BepuPhysics
                 else
                 {
                     var isKinematic =
-                        Vector.Equals(Vector.BitwiseOr(
-                            Vector.BitwiseOr(Vector.BitwiseOr(localInertia.InverseMass, localInertia.InverseInertiaTensor.XX), Vector.BitwiseOr(localInertia.InverseInertiaTensor.YX, localInertia.InverseInertiaTensor.YY)),
-                            Vector.BitwiseOr(Vector.BitwiseOr(localInertia.InverseInertiaTensor.ZX, localInertia.InverseInertiaTensor.ZY), localInertia.InverseInertiaTensor.ZZ)), Vector<float>.Zero);
+                    Vector.Equals(Vector.BitwiseOr(
+                        Vector.BitwiseOr(Vector.BitwiseOr(localInertia.InverseMass, localInertia.InverseInertiaTensor.XX), Vector.BitwiseOr(localInertia.InverseInertiaTensor.YX, localInertia.InverseInertiaTensor.YY)),
+                        Vector.BitwiseOr(Vector.BitwiseOr(localInertia.InverseInertiaTensor.ZX, localInertia.InverseInertiaTensor.ZY), localInertia.InverseInertiaTensor.ZZ)), Vector<float>.Zero);
                     unconstrainedVelocityIntegrationMask = Vector.AndNot(unconstrainedMask, isKinematic);
                     anyBodyInBundleNeedsVelocityIntegration = Vector.LessThanAny(unconstrainedVelocityIntegrationMask, Vector<int>.Zero);
                 }
+                //We don't want to scatter velocities into any slots that don't want velocity writes. By setting all the bits in such lanes, velocity scatter will skip them.
+                var velocityMaskedBodyIndices = Vector.BitwiseOr(bodyIndices, Vector.OnesComplement(unconstrainedVelocityIntegrationMask));
 
                 if (anyBodyInBundleIsUnconstrained)
                 {
@@ -990,19 +994,14 @@ namespace BepuPhysics
                             }
                         }
                         bodies.ScatterPose(ref position, ref orientation, bodyIndices, integratePoseMask);
-                        //We already masked the velocities above, so scattering them doesn't need its own mask.
-                        bodies.ScatterVelocities<AccessAll>(ref velocity, ref bodyIndices);
+                        if (anyBodyInBundleNeedsVelocityIntegration)
+                        {
+                            bodies.ScatterVelocities<AccessAll>(ref velocity, ref velocityMaskedBodyIndices);
+                        }
                     }
                 }
                 else
                 {
-                    //var halfDt = substepDt * 0.5f;
-                    //for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
-                    //{
-                    //    ref var state = ref bodies.ActiveSet.SolverStates[bundleBaseIndex + innerIndex];
-                    //    PoseIntegration.Integrate(state.Motion.Pose.Orientation, state.Motion.Velocity.Angular, halfDt, out state.Motion.Pose.Orientation);
-                    //    state.Motion.Pose.Position += substepDt * state.Motion.Velocity.Linear;
-                    //}
                     //All bodies in the bundle are constrained, so we do not need to do any kind of velocity integration.
                     PoseIntegration.Integrate(orientation, velocity.Angular, halfDt, out orientation);
                     position += velocity.Linear * bundleEffectiveDt;
