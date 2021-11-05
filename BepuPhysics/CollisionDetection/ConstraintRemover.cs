@@ -27,7 +27,7 @@ namespace BepuPhysics.CollisionDetection
 
         internal struct PerBodyRemovalTarget
         {
-            public int BodyIndex;
+            public int EncodedBodyIndex;
             public ConstraintHandle ConstraintHandle;
 
             public int BatchIndex;
@@ -145,18 +145,18 @@ namespace BepuPhysics.CollisionDetection
                 //Now extract and enqueue the body list constraint removal targets and the constraint batch body handle removal targets.
                 //We have to perform the enumeration here rather than in the later flush. Removals from type batches make enumerating connected body indices a race condition there.
                 ref var typeBatch = ref constraintBatch.TypeBatches[typeBatchIndex.TypeBatch];
-                var bodyIndices = stackalloc int[bodiesPerConstraint];
-                var enumerator = new ActiveConstraintBodyIndexCollector(bodyIndices);
+                var encodedBodyIndices = stackalloc int[bodiesPerConstraint];
+                var enumerator = new PassthroughReferenceCollector(encodedBodyIndices);
                 typeProcessor.EnumerateConnectedRawBodyReferences(ref typeBatch, constraint.IndexInTypeBatch, ref enumerator);
 
                 for (int i = 0; i < bodiesPerConstraint; ++i)
                 {
                     ref var target = ref typeBatchRemovals.PerBodyRemovalTargets.AllocateUnsafely();
-                    target.BodyIndex = bodyIndices[i];
+                    target.EncodedBodyIndex = encodedBodyIndices[i];
                     target.ConstraintHandle = constraintHandle;
 
                     target.BatchIndex = typeBatchIndex.Batch;
-                    target.BodyHandle = bodies.ActiveSet.IndexToHandle[target.BodyIndex];
+                    target.BodyHandle = bodies.ActiveSet.IndexToHandle[target.EncodedBodyIndex & Bodies.BodyReferenceMask];
                 }
             }
 
@@ -341,7 +341,12 @@ namespace BepuPhysics.CollisionDetection
                 for (int j = 0; j < removals.Count; ++j)
                 {
                     ref var target = ref removals[j];
-                    bodies.RemoveConstraintReference(target.BodyIndex, target.ConstraintHandle);
+                    if (bodies.RemoveConstraintReference(target.EncodedBodyIndex & Bodies.BodyReferenceMask, target.ConstraintHandle) && (target.EncodedBodyIndex & Bodies.KinematicMask) != 0)
+                    {
+                        //This is a kinematic, and it has no remaining constraint connections. Remove it from the solver constrained kinematic set.
+                        var removed = solver.ConstrainedKinematicHandles.FastRemove(target.BodyHandle.Value);
+                        Debug.Assert(removed, "The last constraint removed from a kinematic should see the body removed from the constrained kinematic set.");
+                    }
                 }
             }
         }
@@ -378,7 +383,7 @@ namespace BepuPhysics.CollisionDetection
                     for (int j = 0; j < removals.Count; ++j)
                     {
                         ref var target = ref removals[j];
-                        if (solver.ActiveSet.SequentialFallback.Remove(target.BodyIndex, ref allocationIdsToFree))
+                        if (solver.ActiveSet.SequentialFallback.Remove(target.EncodedBodyIndex & Bodies.BodyReferenceMask, ref allocationIdsToFree))
                         {
                             //No more constraints for this body in the fallback set; it should not exist in the fallback batch's referenced handles anymore.
                             //Debug.Assert(solver.batchReferencedHandles[target.BatchIndex].Contains(target.BodyHandle.Value) || bodies.GetBodyReference(target.BodyHandle).Kinematic,
@@ -389,7 +394,7 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
         }
-        public void TryRemoveAllConstraintsForBodyFromFallbackBatch(BodyHandle bodyHandle, int bodyIndex)
+        public void TryRemoveBodyFromConstrainedKinematicsAndRemoveAllConstraintsForBodyFromFallbackBatch(BodyHandle bodyHandle, int bodyIndex)
         {
             if (solver.ActiveSet.SequentialFallback.TryRemove(bodyIndex, ref allocationIdsToFree))
             {
@@ -397,6 +402,8 @@ namespace BepuPhysics.CollisionDetection
                     "The batch referenced handles must include all constraint-involved dynamics, but will not include kinematics.");
                 solver.batchReferencedHandles[solver.FallbackBatchThreshold].Unset(bodyHandle.Value);
             }
+            //Note that we don't check kinematicity here. If it's dynamic, that's fine, this won't do anything.
+            solver.ConstrainedKinematicHandles.FastRemove(bodyHandle.Value);
         }
 
         QuickList<TypeBatchIndex> removedTypeBatches;

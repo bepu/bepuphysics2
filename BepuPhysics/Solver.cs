@@ -8,6 +8,7 @@ using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using System.Runtime.InteropServices;
 using System.Numerics;
+using System.Threading;
 
 namespace BepuPhysics
 {
@@ -32,6 +33,9 @@ namespace BepuPhysics
         }
     }
 
+    /// <summary>
+    /// Location in memory where a constraint is stored.
+    /// </summary>
     public struct ConstraintLocation
     {
         //Note that the type id is included, even though we can extract it from a type parameter.
@@ -39,9 +43,21 @@ namespace BepuPhysics
         //so instead we keep a type id cached.
         //(You could pack these a bit- it's pretty reasonable to say you can't have more than 2^24 constraints of a given type and 2^8 constraint types...
         //It's just not that valuable, unless proven otherwise.)
+        /// <summary>
+        /// Index of the constraint set that owns the constraint. If zero, the constraint is attached to bodies that are awake.
+        /// </summary>
         public int SetIndex;
+        /// <summary>
+        /// Index of the constraint batch the constraint belongs to.
+        /// </summary>
         public int BatchIndex;
+        /// <summary>
+        /// Type id of the constraint. Used to look up the type batch index in a constraint batch's type id to type batch index table.
+        /// </summary>
         public int TypeId;
+        /// <summary>
+        /// Index of the constraint in a type batch.
+        /// </summary>
         public int IndexInTypeBatch;
     }
 
@@ -73,6 +89,9 @@ namespace BepuPhysics
         /// </summary>
         public IdPool HandlePool;
         internal BufferPool pool;
+        /// <summary>
+        /// Mapping from constraint handle (via its internal integer value) to the location of a constraint in memory.
+        /// </summary>
         public Buffer<ConstraintLocation> HandleToConstraint;
 
         /// <summary>
@@ -82,6 +101,10 @@ namespace BepuPhysics
         /// </summary>
         public int FallbackBatchThreshold { get; private set; }
 
+        /// <summary>
+        /// Lock used to add to the constrained kinematic handles from multiple threads, if necessary.
+        /// </summary>
+        internal SpinLock constrainedKinematicLock;
         /// <summary>
         /// Set of body handles associated with constrained kinematic bodies. These will be integrated during substepping.
         /// </summary>
@@ -327,14 +350,17 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        unsafe internal void ValidateConstrainedKinematicsSet()
+        unsafe public void ValidateConstrainedKinematicsSet()
         {
             ref var set = ref bodies.ActiveSet;
             for (int i = 0; i < set.Count; ++i)
             {
                 if (Bodies.IsKinematicUnsafeGCHole(ref set.SolverStates[i].Inertia.Local) && set.Constraints[i].Count > 0)
                 {
-                    Debug.Assert(ConstrainedKinematicHandles.Contains(set.IndexToHandle[i].Value), "Any active kinematic with constraints must appear in the constrained kinematic set.");
+                    var contained = ConstrainedKinematicHandles.Contains(set.IndexToHandle[i].Value);
+                    if (!contained)
+                        ValidateExistingHandles();
+                    Debug.Assert(contained, "Any active kinematic with constraints must appear in the constrained kinematic set.");
                 }
             }
             for (int i = 0; i < ConstrainedKinematicHandles.Count; ++i)
@@ -923,6 +949,15 @@ namespace BepuPhysics
                 }
             }
             var typeProcessor = TypeProcessors[typeId];
+            Debug.Assert(typeProcessor.BodiesPerConstraint == encodedBodyIndices.Length);
+            for (int i = 0; i < encodedBodyIndices.Length; ++i)
+            {
+                Debug.Assert(Bodies.IsEncodedKinematicReference(encodedBodyIndices[i]) == Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[encodedBodyIndices[i] & Bodies.BodyReferenceMask].Inertia.Local));
+                if (Bodies.IsEncodedKinematicReference(encodedBodyIndices[i]))
+                {
+                    Debug.Assert(ConstrainedKinematicHandles.Contains(bodies.ActiveSet.IndexToHandle[encodedBodyIndices[i] & Bodies.BodyReferenceMask].Value));
+                }
+            }
             var typeBatch = batch.GetOrCreateTypeBatch(typeId, typeProcessor, GetMinimumCapacityForType(typeId), pool);
             int indexInTypeBatch;
             if (targetBatchIndex == FallbackBatchThreshold)
@@ -1248,6 +1283,26 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Enumerates the bodies attached to an active constraint and removes the constraint's handle from all of the connected body constraint reference lists.
+        /// </summary>
+        struct RemoveConstraintReferencesFromBodiesEnumerator : IForEach<int>
+        {
+            internal Solver solver;
+            internal ConstraintHandle constraintHandle;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void LoopBody(int encodedBodyIndex)
+            {
+                var bodyIndex = encodedBodyIndex & Bodies.BodyReferenceMask;
+                //Note that this only looks in the active set. Directly removing inactive objects is unsupported- removals and adds activate all involved islands.
+                if (solver.bodies.RemoveConstraintReference(bodyIndex, constraintHandle) && Bodies.IsEncodedKinematicReference(encodedBodyIndex))
+                {
+                    var removed = solver.ConstrainedKinematicHandles.FastRemove(solver.bodies.ActiveSet.IndexToHandle[bodyIndex].Value);
+                    Debug.Assert(removed, "If we just removed the last constraint from a kinematic, then the constrained kinematics set must have contained the body handle so it can be removed.");
+                }
+            }
+        }
+
+        /// <summary>
         /// Removes the constraint associated with the given handle. Note that this may invalidate any outstanding direct constraint references
         /// by reordering the constraints within the TypeBatch subject to removal.
         /// </summary>
@@ -1262,10 +1317,10 @@ namespace BepuPhysics
                 awakener.AwakenConstraint(handle);
             }
             Debug.Assert(constraintLocation.SetIndex == 0);
-            ConstraintGraphRemovalEnumerator enumerator;
-            enumerator.bodies = bodies;
+            RemoveConstraintReferencesFromBodiesEnumerator enumerator;
+            enumerator.solver = this;
             enumerator.constraintHandle = handle;
-            EnumerateActiveConnectedBodyIndices(handle, ref enumerator);
+            EnumerateConnectedRawBodyReferences(handle, ref enumerator);
 
             pairCache.RemoveReferenceIfContactConstraint(handle, constraintLocation.TypeId);
             RemoveFromBatch(handle, constraintLocation.BatchIndex, constraintLocation.TypeId, constraintLocation.IndexInTypeBatch);
@@ -1571,7 +1626,6 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bodyHandleCapacity">Size of the span of body handles to allocate space for. Applies to batch referenced handle sets.</param>
         /// <param name="constraintHandleCapacity">Number of constraint handles to allocate space for. Applies to the handle->constraint mapping table.</param>
-        /// <param name="constrainedKinematicCapacity">Number of constrained kinematic body handles to allocate space for.</param>
         public void EnsureSolverCapacities(int bodyHandleCapacity, int constraintHandleCapacity)
         {
             if (HandleToConstraint.Length < constraintHandleCapacity)

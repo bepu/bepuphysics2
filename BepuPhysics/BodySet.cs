@@ -171,8 +171,16 @@ namespace BepuPhysics
             constraints.AllocateUnsafely() = constraint;
         }
 
+        /// <summary>
+        /// Removes a constraint from a body's constraint list.
+        /// </summary>
+        /// <param name="bodyIndex">Index of the body to remove the constraint reference from.</param>
+        /// <param name="constraintHandle">Handle of the constraint to remove.</param>
+        /// <param name="minimumConstraintCapacityPerBody">Minimum constraint capacity to maintain the body's constraint list. The list will automatically downsize as constraints are removed, but its capacity will not go below this threshold.</param>
+        /// <param name="pool">Pool to use to resize the constraint list.</param>
+        /// <returns>True if the number of constraints remaining attached to the body is 0, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle, int minimumConstraintCapacityPerBody, BufferPool pool)
+        internal bool RemoveConstraintReference(int bodyIndex, ConstraintHandle constraintHandle, int minimumConstraintCapacityPerBody, BufferPool pool)
         {
             //This uses a linear search. That's fine; bodies will rarely have more than a handful of constraints associated with them.
             //Attempting to use something like a hash set for fast removes would just introduce more constant overhead and slow it down on average.
@@ -197,6 +205,7 @@ namespace BepuPhysics
                 //The list can be trimmed down a bit while still holding all existing constraints and obeying the minimum capacity.
                 list.Resize(targetCapacity, pool);
             }
+            return list.Count == 0;
         }
 
         public bool BodyIsConstrainedBy(int bodyIndex, ConstraintHandle constraintHandle)

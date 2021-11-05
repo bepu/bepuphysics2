@@ -451,7 +451,7 @@ namespace BepuPhysics
                                 var bodyHandle = inactiveBodySet.IndexToHandle[bodyIndexInInactiveSet];
                                 ref var location = ref bodies.HandleToLocation[bodyHandle.Value];
                                 Debug.Assert(location.SetIndex == 0, "At this point, the sleep hasn't gone through so the set should still be 0.");
-                                constraintRemover.TryRemoveAllConstraintsForBodyFromFallbackBatch(bodyHandle, location.Index);
+                                constraintRemover.TryRemoveBodyFromConstrainedKinematicsAndRemoveAllConstraintsForBodyFromFallbackBatch(bodyHandle, location.Index);
                                 bodies.RemoveFromActiveSet(location.Index);
                                 //And now we can actually update the handle->body mapping.
                                 location.SetIndex = setIndex;

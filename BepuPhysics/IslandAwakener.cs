@@ -296,6 +296,18 @@ namespace BepuPhysics
                         sourceSet.Collidables.CopyTo(job.SourceStart, targetSet.Collidables, job.TargetStart, job.Count);
                         sourceSet.Constraints.CopyTo(job.SourceStart, targetSet.Constraints, job.TargetStart, job.Count);
                         sourceSet.SolverStates.CopyTo(job.SourceStart, targetSet.SolverStates, job.TargetStart, job.Count);
+                        //This rescans the memory, but it should be still floating in cache ready to access.
+                        for (int i = 0; i < sourceSet.Count; ++i)
+                        {
+                            var sourceBodyIndex = i + job.SourceStart;
+                            if (Bodies.IsKinematicUnsafeGCHole(ref sourceSet.SolverStates[sourceBodyIndex].Inertia.Local) && sourceSet.Constraints[sourceBodyIndex].Count > 0)
+                            {
+                                bool taken = false;
+                                solver.constrainedKinematicLock.Enter(ref taken);
+                                solver.ConstrainedKinematicHandles.AddUnsafely(sourceSet.IndexToHandle[sourceBodyIndex].Value);
+                                solver.constrainedKinematicLock.Exit();
+                            }
+                        }
                         sourceSet.Activity.CopyTo(job.SourceStart, targetSet.Activity, job.TargetStart, job.Count);
                         if (resetActivityStates)
                         {
@@ -378,7 +390,7 @@ namespace BepuPhysics
                         solver.TypeProcessors[job.TypeId].CopySleepingToActive(
                             job.SourceSet, job.Batch, job.SourceTypeBatch, job.TargetTypeBatch,
                             job.SourceStart, job.TargetStart, job.Count, bodies, solver);
-                        solver.ValidateConstraintMaps(0, job.Batch, job.TargetTypeBatch, job.TargetStart, job.Count);
+                        //solver.ValidateConstraintMaps(0, job.Batch, job.TargetTypeBatch, job.TargetStart, job.Count);
                     }
                     break;
                 case PhaseTwoJobType.AddFallbackTypeBatchConstraints:
