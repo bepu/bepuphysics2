@@ -194,9 +194,12 @@ namespace BepuPhysics
         static void FallbackIfInertiaIncompatible(in Vector3Wide previousAngularVelocity, ref Vector3Wide angularVelocity)
         {
             var infinity = new Vector<float>(float.PositiveInfinity);
-            angularVelocity.X = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(angularVelocity.X), infinity), angularVelocity.X, previousAngularVelocity.X);
-            angularVelocity.Y = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(angularVelocity.Y), infinity), angularVelocity.Y, previousAngularVelocity.Y);
-            angularVelocity.Z = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(angularVelocity.Z), infinity), angularVelocity.Z, previousAngularVelocity.Z);
+            var useNewVelocity = Vector.BitwiseAnd(Vector.LessThan(Vector.Abs(angularVelocity.X), infinity), Vector.BitwiseAnd(
+                Vector.LessThan(Vector.Abs(angularVelocity.Y), infinity), 
+                Vector.LessThan(Vector.Abs(angularVelocity.Z), infinity)));
+            angularVelocity.X = Vector.ConditionalSelect(useNewVelocity, angularVelocity.X, previousAngularVelocity.X);
+            angularVelocity.Y = Vector.ConditionalSelect(useNewVelocity, angularVelocity.Y, previousAngularVelocity.Y);
+            angularVelocity.Z = Vector.ConditionalSelect(useNewVelocity, angularVelocity.Z, previousAngularVelocity.Z);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
