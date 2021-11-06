@@ -344,7 +344,7 @@ namespace BepuPhysics
         {
             //If kinematics have their velocities integrated, then the first substep will have executed and left the claims at 1. Otherwise, the first substep will leave them cleared at 0.
             //The second substep and later will always run (since kinematics need their poses integrated regardless) so their sync index isn't weirdly conditional.
-            return substepIndex == 1 ? PoseIntegrator.Callbacks.IntegrateVelocityForKinematics ? 1 : 0 : Math.Max(0, syncIndex - syncStagesPerSubstep);
+            return substepIndex == 1 ? PoseIntegrator.Callbacks.IntegrateVelocityForKinematics ? 2 : 0 : Math.Max(0, syncIndex - syncStagesPerSubstep);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         int GetPreviousSyncIndexForWarmStart(int syncIndex, int synchronizedBatchCount)
