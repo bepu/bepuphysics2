@@ -103,7 +103,16 @@ namespace BepuPhysics.Constraints
             }
         }
         public abstract void ScaleAccumulatedImpulses(ref TypeBatch typeBatch, float scale);
-        public abstract void UpdateForBodyMemoryMove(ref TypeBatch typeBatch, int indexInTypeBatch, int bodyIndexInConstraint, int newBodyLocation);
+
+        /// <summary>
+        /// Updates a type batch's body index references for the movement of a body in memory.
+        /// </summary>
+        /// <param name="typeBatch">Type batch containing a constraint that references the body.</param>
+        /// <param name="indexInTypeBatch">Index of the constraint in the type batch.</param>
+        /// <param name="bodyIndexInConstraint">Index within the constraint of the body.</param>
+        /// <param name="newBodyLocation">New index of the body in the bodies active set.</param>
+        /// <returns>True if the body being moved was kinematic according to the constraint's reference.</returns>
+        public abstract bool UpdateForBodyMemoryMove(ref TypeBatch typeBatch, int indexInTypeBatch, int bodyIndexInConstraint, int newBodyLocation);
 
         public abstract void Scramble(ref TypeBatch typeBatch, Random random, ref Buffer<ConstraintLocation> handlesToConstraints);
 
@@ -805,14 +814,16 @@ namespace BepuPhysics.Constraints
         }
 
 
-        public sealed override void UpdateForBodyMemoryMove(ref TypeBatch typeBatch, int indexInTypeBatch, int bodyIndexInConstraint, int newBodyLocation)
+        public sealed override bool UpdateForBodyMemoryMove(ref TypeBatch typeBatch, int indexInTypeBatch, int bodyIndexInConstraint, int newBodyLocation)
         {
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var constraintBundleIndex, out var constraintInnerIndex);
             //Note that this relies on the bodyreferences memory layout. It uses the stride of vectors to skip to the next body based on the bodyIndexInConstraint.
             ref var bundle = ref Unsafe.As<TBodyReferences, Vector<int>>(ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, constraintBundleIndex));
             ref var referenceLocation = ref GatherScatter.Get(ref bundle, constraintInnerIndex + bodyIndexInConstraint * Vector<int>.Count);
             //Note that the old kinematic mask is preserved so that the caller doesn't have to requery the object for its kinematicity.
+            var isKinematic = Bodies.IsEncodedKinematicReference(referenceLocation);
             referenceLocation = newBodyLocation | (referenceLocation & Bodies.KinematicMask);
+            return isKinematic;
         }
 
         //Note that these next two sort key users require a generic sort key implementation; this avoids virtual dispatch on a per-object level while still sharing the bulk of the logic.

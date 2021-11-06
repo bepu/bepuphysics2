@@ -24,7 +24,7 @@ namespace Demos.Demos
             camera.Pitch = MathHelper.Pi * 0.1f;
             //Using minimum sized allocations forces as many resizes as possible.
             //Note the low solverFallbackBatchThreshold- we want the fallback batches to get tested thoroughly.
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(3), 1, solverFallbackBatchThreshold: 4, initialAllocationSizes:
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(3), 1, solverFallbackBatchThreshold: 2, initialAllocationSizes:
             new SimulationAllocationSizes
             {
                 Bodies = 1,
@@ -237,6 +237,7 @@ namespace Demos.Demos
             var timestepDuration = 1f / 60f;
             time += timestepDuration;
 
+            Simulation.Solver.ValidateConstrainedKinematicsSet();
             //Occasionally, the animation stops completely. The resulting velocities will be zero, so the kinematics will have a chance to rest (testing kinematic rest states).
             var dip = 0.1;
             var progressionMultiplier = 0.5 - dip + (1 + dip) * 0.5 * Math.Cos(time * 0.25);
@@ -285,6 +286,7 @@ namespace Demos.Demos
                     }
                 }
             }
+            Simulation.Solver.ValidateConstrainedKinematicsSet();
 
             //Remove some statics from the simulation.
             var missingStaticsAsymptote = 512;
@@ -296,6 +298,7 @@ namespace Demos.Demos
                 Simulation.Statics.RemoveAt(indexToRemove);
                 removedStatics.Enqueue(staticDescription, BufferPool);
             }
+            Simulation.Solver.ValidateConstrainedKinematicsSet();
 
             var staticApplyDescriptionsPerFrame = 8;
             for (int i = 0; i < staticApplyDescriptionsPerFrame; ++i)
@@ -311,6 +314,7 @@ namespace Demos.Demos
                 Simulation.Statics.ApplyDescription(handleToReapply, staticDescription);
             }
 
+            Simulation.Solver.ValidateConstrainedKinematicsSet();
 
             //Add some of the missing static bodies back into the simulation.
             var staticAddCount = removedStatics.Count * (staticRemovalsPerFrame / (float)missingStaticsAsymptote);
@@ -322,12 +326,13 @@ namespace Demos.Demos
             }
 
 
+            Simulation.Solver.ValidateConstrainedKinematicsSet();
             //Spray some shapes!
-            int newShapeCount = 8;
+            int newShapeCount = 1;
             var spawnPose = new RigidPose(new Vector3(0, 10, 0));
             for (int i = 0; i < newShapeCount; ++i)
             {
-                CreateBodyDescription(random, spawnPose, new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 75, -30 + 60 * (float)random.NextDouble()), default), out var bodyDescription);
+                CreateBodyDescription(random, spawnPose, new BodyVelocity(new Vector3(-60 + 120 * (float)random.NextDouble(), 0, -60 + 120 * (float)random.NextDouble()), default), out var bodyDescription);
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(bodyDescription), BufferPool);
             }
             int targetAsymptote = 65536;
@@ -347,6 +352,7 @@ namespace Demos.Demos
                     break;
                 }
             }
+            Simulation.Solver.ValidateConstrainedKinematicsSet();
 
             //Change some dynamic objects without adding/removing them to make sure all the state transition stuff works reasonably well.
             var dynamicApplyDescriptionsPerFrame = 8;
@@ -356,14 +362,15 @@ namespace Demos.Demos
                 Simulation.Bodies.GetDescription(handle, out var description);
                 Simulation.Shapes.RecursivelyRemoveAndDispose(description.Collidable.Shape, BufferPool);
                 CreateBodyDescription(random, description.Pose, description.Velocity, out var newDescription);
-                if (random.NextDouble() < 0.1f)
-                {
-                    //Occasionally make a dynamic kinematic.
-                    newDescription.LocalInertia = default;
-                }
+                //if (random.NextDouble() < 0.1f)
+                //{
+                //    //Occasionally make a dynamic kinematic.
+                //    newDescription.LocalInertia = default;
+                //}
                 Simulation.Bodies.ApplyDescription(handle, newDescription);
             }
 
+            Simulation.Solver.ValidateConstrainedKinematicsSet();
             base.Update(window, camera, input, dt);
 
             if (input != null && input.WasPushed(OpenTK.Input.Key.P))

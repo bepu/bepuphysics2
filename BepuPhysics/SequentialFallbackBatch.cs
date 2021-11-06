@@ -230,7 +230,7 @@ namespace BepuPhysics
                     ValidateSetReferences(solver, i);
             }
         }
-        internal void UpdateForBodyMemoryMove(int originalBodyIndex, int newBodyLocation)
+        internal void UpdateForDynamicBodyMemoryMove(int originalBodyIndex, int newBodyLocation)
         {
             Debug.Assert(dynamicBodyConstraintCounts.Keys.Allocated && !dynamicBodyConstraintCounts.ContainsKey(newBodyLocation), "If a body is being moved, as opposed to swapped, then the target index should not be present.");
             dynamicBodyConstraintCounts.GetTableIndices(ref originalBodyIndex, out var tableIndex, out var elementIndex);

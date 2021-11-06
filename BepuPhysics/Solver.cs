@@ -456,14 +456,14 @@ namespace BepuPhysics
                             ++fallbackConstraintsForDynamicBody;
                         }
                     }
+                    var bodyIsInFallbackDynamicsSet = ActiveSet.SequentialFallback.dynamicBodyConstraintCounts.TryGetValue(i, out var countForBody);
                     if (Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[i].Inertia.Local))
                     {
-                        Debug.Assert(fallbackConstraintsForDynamicBody == 0, "Kinematics should not be present in the dynamic bodies referenced by the fallback batch.");
+                        Debug.Assert(!bodyIsInFallbackDynamicsSet, "Kinematics should not be present in the dynamic bodies referenced by the fallback batch.");
                     }
                     else
                     {
-                        var succeeded = ActiveSet.SequentialFallback.dynamicBodyConstraintCounts.TryGetValue(i, out var countForBody);
-                        Debug.Assert(succeeded == (fallbackConstraintsForDynamicBody > 0), "The fallback batch should contain a reference to the dynamic body if there are constraints associated with it in the fallback batch.");
+                        Debug.Assert(bodyIsInFallbackDynamicsSet == (fallbackConstraintsForDynamicBody > 0), "The fallback batch should contain a reference to the dynamic body if there are constraints associated with it in the fallback batch.");
                         Debug.Assert(fallbackConstraintsForDynamicBody == countForBody, "If the dynamic body is referenced in the fallback batch, the brute force count should match the cached count.");
                     }
                 }
@@ -503,7 +503,7 @@ namespace BepuPhysics
                             for (int innerIndex = 0; innerIndex < Vector<int>.Count; ++innerIndex)
                             {
                                 var index = bodyReferencesForSource[innerIndex];
-                                if (index >= 0)
+                                if (index >= 0 && Bodies.IsEncodedDynamicReference(index))
                                 {
                                     var broadcasted = new Vector<int>(bodyReferencesForSource[innerIndex]);
                                     int matchesTotal = 0;
@@ -513,7 +513,7 @@ namespace BepuPhysics
                                         var matchesInLane = -Vector.Dot(Vector.Equals(broadcasted, bodyReferencesForTarget), Vector<int>.One);
                                         matchesTotal += matchesInLane;
                                     }
-                                    Debug.Assert(matchesTotal == 1, "A body reference should occur no more than once in any constraint bundle.");
+                                    Debug.Assert(matchesTotal == 1, "A dynamic body reference should occur no more than once in any constraint bundle.");
                                 }
                             }
                         }
@@ -1370,10 +1370,11 @@ namespace BepuPhysics
                 //This does require a virtual call, but memory swaps should not be an ultra-frequent thing.
                 //(A few hundred calls per frame in a simulation of 10000 active objects would probably be overkill.)
                 //(Also, there's a sufficient number of cache-missy indirections here that a virtual call is pretty irrelevant.)
-                TypeProcessors[constraintLocation.TypeId].UpdateForBodyMemoryMove(
+                var bodyIsKinematic = TypeProcessors[constraintLocation.TypeId].UpdateForBodyMemoryMove(
                     ref ActiveSet.Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId),
                     constraintLocation.IndexInTypeBatch, constraint.BodyIndexInConstraint, newIndex);
-                if (constraintLocation.BatchIndex == FallbackBatchThreshold)
+                //Note that only dynamic bodies 
+                if (!bodyIsKinematic && constraintLocation.BatchIndex == FallbackBatchThreshold)
                     bodyShouldBePresentInFallback = true;
             }
             return bodyShouldBePresentInFallback;
@@ -1388,8 +1389,8 @@ namespace BepuPhysics
         {
             if (UpdateConstraintsForBodyMemoryMove(originalBodyIndex, newBodyLocation))
             {
-                //One of the moved constraints involved the fallback batch, so we need to update the fallback batch's body indices.
-                ActiveSet.SequentialFallback.UpdateForBodyMemoryMove(originalBodyIndex, newBodyLocation);
+                //One of the moved constraints involved the fallback batch, and this body was dynamic, so we need to update the fallback batch's body indices.
+                ActiveSet.SequentialFallback.UpdateForDynamicBodyMemoryMove(originalBodyIndex, newBodyLocation);
             }
         }
 
@@ -1408,11 +1409,11 @@ namespace BepuPhysics
             }
             else if (aInFallback)
             {
-                ActiveSet.SequentialFallback.UpdateForBodyMemoryMove(a, b);
+                ActiveSet.SequentialFallback.UpdateForDynamicBodyMemoryMove(a, b);
             }
             else if (bInFallback)
             {
-                ActiveSet.SequentialFallback.UpdateForBodyMemoryMove(b, a);
+                ActiveSet.SequentialFallback.UpdateForDynamicBodyMemoryMove(b, a);
             }
         }
 
