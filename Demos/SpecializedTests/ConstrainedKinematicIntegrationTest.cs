@@ -18,7 +18,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(25, 4, 40);
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool,
-            new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(30, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(3), 1);
+            new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(30, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f }, new DemoPoseIntegratorCallbacks(new Vector3(0, -0.1f, 0)), new EmbeddedSubsteppingTimestepper2(3), 1);
             //new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(30, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper(), 8);
 
             var shapeA = new Box(.75f, 1, .5f);
@@ -47,8 +47,9 @@ namespace Demos.SpecializedTests
                 var x = 0;
                 var z = i * 3;
                 var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 8, z), collidableA, activity));
-                //var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, z), inertiaB, collidableB, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 8, z + 2), inertiaB, collidableB, activity));
                 Simulation.Bodies.GetBodyReference(a).Velocity.Linear = new Vector3(1, 0, 0);
+                Simulation.Bodies.GetBodyReference(b).Velocity.Linear = new Vector3(1, 0, 0);
                 //Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 //Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
