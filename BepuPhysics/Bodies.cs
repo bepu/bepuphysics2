@@ -352,14 +352,25 @@ namespace BepuPhysics
             }
         }
 
-        private struct ConnectedDynamicCounter : IForEach<int>
+        private struct DynamicToKinematicEnumerator : IForEach<int>
         {
             public int DynamicCount;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void LoopBody(int bodyIndex)
+            public unsafe void LoopBody(int encodedBodyReference)
             {
-                //The enumerator is only called if the body is dynamic, so just increment.
                 ++DynamicCount;
+            }
+        }
+        private unsafe struct KinematicToDynamicEnumerator : IForEach<int>
+        {
+            public const int MaximumBodiesPerConstraint = 4;
+            public int* DynamicBodyIndices;
+            public int DynamicCount;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public unsafe void LoopBody(int encodedBodyReference)
+            {
+                Debug.Assert(DynamicCount < MaximumBodiesPerConstraint, "We assumed that the number of bodies per constraint was limited; if this assumption fails, it could cause a stack overrun.");
+                DynamicBodyIndices[DynamicCount++] = encodedBodyReference;
             }
         }
 
@@ -389,10 +400,11 @@ namespace BepuPhysics
                     //Any constraints that connect only kinematic bodies together should be removed; they'll NaN out.
                     //Ideally, the user would handle this for all non-contact constraints, but it would be rather annoying to 
                     //have to explicitly enumerate and remove all contact constraints any time you wanted to make a body kinematic.
-                    ConnectedDynamicCounter enumerator;
+                    DynamicToKinematicEnumerator enumerator;
                     for (int i = 0; i < constraints.Count; ++i)
                     {
                         ref var constraint = ref constraints[i];
+                        solver.UpdateReferenceForBodyBecomingKinematic(constraint.ConnectingConstraintHandle, constraint.BodyIndexInConstraint);
                         enumerator.DynamicCount = 0;
                         solver.EnumerateConnectedDynamicBodies(constraint.ConnectingConstraintHandle, ref enumerator);
                         if (enumerator.DynamicCount == 0)
@@ -406,19 +418,54 @@ namespace BepuPhysics
                 {
                     //A kinematic body has become dynamic. Kinematic bodies do not block membership in constraint batches, dynamic bodies do.
                     //For any constraint connected to the new dynamic, ensure that it belongs to a constraint batch not shared by any other constraints connected to the same body.
-                    const int maximumBodiesPerConstraint = 4;
-                    int* handles = stackalloc int[maximumBodiesPerConstraint];
-                    ActiveConstraintDynamicBodyHandleCollector enumerator = new(this, handles);
-                    for (int i = 0; i < constraints.Count; ++i)
+                    int* dynamicBodyIndices = stackalloc int[KinematicToDynamicEnumerator.MaximumBodiesPerConstraint];
+                    int* dynamicBodyHandles = stackalloc int[KinematicToDynamicEnumerator.MaximumBodiesPerConstraint];
+                    KinematicToDynamicEnumerator enumerator;
+                    enumerator.DynamicBodyIndices = dynamicBodyIndices;
+                    enumerator.DynamicCount = 0;
+                    var indexToHandle = ActiveSet.IndexToHandle;
+                    var handleToConstraint = solver.HandleToConstraint;
+                    for (int constraintIndex = 0; constraintIndex < constraints.Count; ++constraintIndex)
                     {
-                        ref var constraint = ref constraints[i];
-                        enumerator.Count = 0;
+                        ref var constraint = ref constraints[constraintIndex];
+                        enumerator.DynamicCount = 0;
                         solver.EnumerateConnectedDynamicBodies(constraint.ConnectingConstraintHandle, ref enumerator);
-                        if (enumerator.Count == 0)
+                        for (int indexInDynamics = 0; indexInDynamics < enumerator.DynamicCount; ++indexInDynamics)
                         {
-                            //This constraint connects only kinematic bodies; keeping it in the solver would cause a singularity.
-                            solver.Remove(constraint.ConnectingConstraintHandle);
+                            dynamicBodyHandles[indexInDynamics] = indexToHandle[dynamicBodyIndices[indexInDynamics]].Value;
                         }
+                        //Since we haven't updated the constraint reference to this body's kinematicity yet, it was not included in the dynamicBodyHandles. 
+                        //Include it here.
+                        dynamicBodyHandles[enumerator.DynamicCount++] = handle.Value;
+                        var dynamicBodyHandlesSpan = new Span<int>(enumerator.DynamicBodyIndices, enumerator.DynamicCount);
+                        solver.GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
+                        var constraintLocation = handleToConstraint[constraint.ConnectingConstraintHandle.Value];
+                        bool foundBatch = false;
+                        ref var batch = ref solver.ActiveSet.Batches[constraintLocation.BatchIndex];
+                        ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
+                        for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+                        {
+                            if (solver.batchReferencedHandles[batchIndex].CanFit(dynamicBodyHandlesSpan))
+                            {
+                                //Because we haven't removed the constraint from the simulation, it's currently blocking the constraint batch it previously lived in.
+                                //It must have had at least one other dynamic before (otherwise it would have violated the 'constraints must have at least one dynamic in them' rule), so that body will block it.
+                                //This causes a little bit of batch inefficiency, but the batch compressor will take care of it eventually and this codepath is reasonably rare- the simplicity of reusing TransferConstraint wins.
+                                Debug.Assert(batchIndex != constraintLocation.BatchIndex, "It should not be possible for a newly dynamic reference to insert itself into the same batch it was in while kinematic.");
+                                solver.TypeProcessors[constraintLocation.TypeId].TransferConstraint(ref typeBatch, constraintLocation.BatchIndex, constraintLocation.IndexInTypeBatch, solver, this, batchIndex);
+                                foundBatch = true;
+                                break;
+                            }
+                        }
+                        if (!foundBatch && fallbackExists && constraintLocation.BatchIndex != solver.FallbackBatchThreshold)
+                        {
+                            //The fallback batch does not block new constraints regardless of what constraints are connected, so it's safe to add.
+                            solver.TypeProcessors[constraintLocation.TypeId].TransferConstraint(ref typeBatch, constraintLocation.BatchIndex, constraintLocation.IndexInTypeBatch, solver, this, solver.FallbackBatchThreshold);
+                            foundBatch = true;
+                        }
+                        //Note that we wait until the transfer completes to update the body reference in the constraint.
+                        //This ensures the transfer process still views the constraint as kinematic and doesn't try to remove handles from batch referenced handles that aren't present.
+                        solver.UpdateReferenceForBodyBecomingDynamic(constraint.ConnectingConstraintHandle, constraint.BodyIndexInConstraint);
+
                     }
                 }
             }
@@ -705,7 +752,6 @@ namespace BepuPhysics
         /// <typeparam name="TEnumerator">Type of the enumerator to execute on each connected body.</typeparam>
         /// <param name="bodyHandle">Handle of the body to enumerate the connections of. This body will not appear in the set of enumerated bodies, even if it is connected to itself somehow.</param>
         /// <param name="enumerator">Enumerator instance to run on each connected body.</param>
-        /// <param name="solver">Solver from which to pull constraint body references.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnumerateConnectedBodies<TEnumerator>(BodyHandle bodyHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<BodyHandle>
         {

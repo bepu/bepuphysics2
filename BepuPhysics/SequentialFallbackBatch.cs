@@ -161,8 +161,7 @@ namespace BepuPhysics
             for (int i = 0; i < bodyCount; ++i)
             {
                 var rawBodyIndex = bodyIndices[i];
-                var isDynamic = (rawBodyIndex & Bodies.KinematicMask) == 0;
-                if (isDynamic)
+                if (Bodies.IsEncodedDynamicReference(rawBodyIndex))
                 {
                     var bodyIndex = rawBodyIndex & Bodies.BodyReferenceMask;
                     if (Remove(bodyIndex, ref allocationIdsToFree))

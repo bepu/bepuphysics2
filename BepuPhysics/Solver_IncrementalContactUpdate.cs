@@ -79,6 +79,5 @@ namespace BepuPhysics
                 ExecuteMultithreaded<IncrementalContactDataUpdateFilter>(dt, threadDispatcher, incrementalContactUpdateWorker);
             }
         }
-
     }
 }

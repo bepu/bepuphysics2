@@ -158,7 +158,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void LoopBody(int encodedBodyIndex)
             {
-                if (encodedBodyIndex < Bodies.DynamicLimit)
+                if (Bodies.IsEncodedDynamicReference(encodedBodyIndex))
                 {
                     Handles->Remove(Bodies.ActiveSet.IndexToHandle[encodedBodyIndex & Bodies.BodyReferenceMask].Value);
                 }

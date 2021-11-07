@@ -176,7 +176,7 @@ namespace BepuPhysics.CollisionDetection
                 var constraintCacheIndex = pointers.ConstraintCache;
                 var oldConstraintCachePointer = PairCache.GetOldConstraintCachePointer(index);
                 var constraintHandle = *(ConstraintHandle*)oldConstraintCachePointer;
-                Solver.GetConstraintReference(constraintHandle, out var constraintReference);
+                var constraintReference = Solver.GetConstraintReference(constraintHandle);
                 Debug.Assert(
                     constraintReference.typeBatchPointer != null &&
                     constraintReference.IndexInTypeBatch >= 0 &&

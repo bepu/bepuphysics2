@@ -12,9 +12,15 @@ using System.Threading;
 
 namespace BepuPhysics
 {
+    /// <summary>
+    /// Reference to a constraint's memory location in the solver.
+    /// </summary>
     public unsafe struct ConstraintReference
     {
         internal TypeBatch* typeBatchPointer;
+        /// <summary>
+        /// Gets a reference to the type batch holding the constraint.
+        /// </summary>
         public ref TypeBatch TypeBatch
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -23,8 +29,16 @@ namespace BepuPhysics
                 return ref *typeBatchPointer;
             }
         }
+        /// <summary>
+        /// Index in the type batch where the constraint is allocated.
+        /// </summary>
         public readonly int IndexInTypeBatch;
 
+        /// <summary>
+        /// Creates a new constraint reference from a constraint memory location.
+        /// </summary>
+        /// <param name="typeBatchPointer">Pointer to the type batch where the constraint lives.</param>
+        /// <param name="indexInTypeBatch">Index in the type batch where the constraint is allocated.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ConstraintReference(TypeBatch* typeBatchPointer, int indexInTypeBatch)
         {
@@ -291,14 +305,14 @@ namespace BepuPhysics
         /// The reference is temporary; any constraint removals that affect the referenced type batch may invalidate the index.
         /// </summary>
         /// <param name="handle">Handle index of the constraint.</param>
-        /// <param name="reference">Temporary direct reference to the type batch and index in the type batch associated with the constraint handle.
-        /// May be invalidated by constraint removals.</param>
+        /// <returns>Temporary direct reference to the type batch and index in the type batch associated with the constraint handle.
+        /// May be invalidated by constraint removals.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetConstraintReference(ConstraintHandle handle, out ConstraintReference reference)
+        public unsafe ConstraintReference GetConstraintReference(ConstraintHandle handle)
         {
             AssertConstraintHandleExists(handle);
             ref var constraintLocation = ref HandleToConstraint[handle.Value];
-            reference = new ConstraintReference(Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatchPointer(constraintLocation.TypeId), constraintLocation.IndexInTypeBatch);
+            return new ConstraintReference(Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatchPointer(constraintLocation.TypeId), constraintLocation.IndexInTypeBatch);
         }
 
         [Conditional("DEBUG")]
@@ -1086,7 +1100,7 @@ namespace BepuPhysics
         public void ApplyDescriptionWithoutWaking<TDescription>(ConstraintHandle constraintHandle, in TDescription description)
             where TDescription : unmanaged, IConstraintDescription<TDescription>
         {
-            GetConstraintReference(constraintHandle, out var constraintReference);
+            var constraintReference = GetConstraintReference(constraintHandle);
             ApplyDescriptionWithoutWaking(constraintReference, description);
         }
 
@@ -1509,6 +1523,35 @@ namespace BepuPhysics
             return (float)Math.Sqrt(GetAccumulatedImpulseMagnitudeSquared(constraintHandle));
         }
 
+        internal interface IConstraintBodyReferenceMutationType { }
+        internal struct BecomingKinematic : IConstraintBodyReferenceMutationType { }
+        internal struct BecomingDynamic : IConstraintBodyReferenceMutationType { }
+        unsafe void UpdateReferenceForBodyKinematicChange<TMutationType>(ConstraintHandle connectingConstraintHandle, int bodyIndexInConstraint) where TMutationType : unmanaged, IConstraintBodyReferenceMutationType
+        {
+            var reference = GetConstraintReference(connectingConstraintHandle);
+            var bodiesPerConstraint = TypeProcessors[reference.TypeBatch.TypeId].BodiesPerConstraint;
+            var intsPerBundle = Vector<int>.Count * bodiesPerConstraint;
+            BundleIndexing.GetBundleIndices(reference.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
+            var firstBodyReference = (uint*)reference.TypeBatch.BodyReferences.Memory + intsPerBundle * bundleIndex + innerIndex;
+            if (typeof(TMutationType) == typeof(BecomingKinematic))
+                firstBodyReference[bodyIndexInConstraint * Vector<int>.Count] |= Bodies.KinematicMask;
+            else if (typeof(TMutationType) == typeof(BecomingDynamic))
+                firstBodyReference[bodyIndexInConstraint * Vector<int>.Count] &= Bodies.BodyReferenceMask;
+            else
+                Debug.Fail("Hey, that's not a valid type!");
+
+        }
+
+        internal unsafe void UpdateReferenceForBodyBecomingKinematic(ConstraintHandle connectingConstraintHandle, int bodyIndexInConstraint)
+        {
+            UpdateReferenceForBodyKinematicChange<BecomingKinematic>(connectingConstraintHandle, bodyIndexInConstraint);
+        }
+
+        internal void UpdateReferenceForBodyBecomingDynamic(ConstraintHandle connectingConstraintHandle, int bodyIndexInConstraint)
+        {
+            UpdateReferenceForBodyKinematicChange<BecomingDynamic>(connectingConstraintHandle, bodyIndexInConstraint);
+        }
+
         internal interface IConstraintReferenceReportType { }
         internal struct ReportEncodedReferences : IConstraintReferenceReportType { }
         internal struct ReportDecodedReferences : IConstraintReferenceReportType { }
@@ -1544,7 +1587,7 @@ namespace BepuPhysics
                 }
                 else if (typeof(TReportType) == typeof(ReportDecodedDynamicReferences))
                 {
-                    if ((raw & Bodies.KinematicMask) == 0)
+                    if (Bodies.IsEncodedDynamicReference(raw))
                         enumerator.LoopBody(raw & Bodies.BodyReferenceMask);
                 }
             }

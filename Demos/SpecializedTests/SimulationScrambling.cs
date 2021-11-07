@@ -317,7 +317,7 @@ namespace Demos.SpecializedTests
                 var constraintHandle = constraintHandles[i];
                 constraintHandlesToIdentity[constraintHandle.Value] = i;
                 simulation.Solver.GetDescription(constraintHandle, out constraintDescriptions[i].Description);
-                simulation.Solver.GetConstraintReference(constraintHandle, out var reference);
+                var reference = simulation.Solver.GetConstraintReference(constraintHandle);
 
                 var bodyIdentityEnumerator = new BodyEnumerator(simulation.Bodies, bodyHandlesToIdentity);
                 simulation.Solver.EnumerateConnectedRawBodyReferences(ref reference.TypeBatch, reference.IndexInTypeBatch, ref bodyIdentityEnumerator);

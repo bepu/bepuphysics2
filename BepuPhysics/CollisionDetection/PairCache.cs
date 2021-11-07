@@ -416,7 +416,7 @@ namespace BepuPhysics.CollisionDetection
             //Note that the update is being directed to the *next* worker caches. We have not yet performed the flush that swaps references.
             //Note that this assumes that the constraint handle is stored in the first 4 bytes of the constraint cache.
             *(ConstraintHandle*)NextWorkerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex) = constraintHandle;
-            solver.GetConstraintReference(constraintHandle, out var reference);
+            var reference = solver.GetConstraintReference(constraintHandle);
             Debug.Assert(reference.IndexInTypeBatch >= 0 && reference.IndexInTypeBatch < reference.TypeBatch.ConstraintCount);
             narrowPhase.contactConstraintAccessors[reference.TypeBatch.TypeId].ScatterNewImpulses(ref reference, ref impulses);
             //This mapping entry had to be deferred until now because no constraint handle was known until now. Now that we have it,

@@ -162,7 +162,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsEncodedDynamicReference(int encodedBodyReferenceValue)
         {
-            return (encodedBodyReferenceValue & KinematicMask) == 0;
+            return (uint)encodedBodyReferenceValue < DynamicLimit;
         }
         /// <summary>
         /// Checks whether a constraint encoded body reference value refers to a kinematic body.
@@ -172,7 +172,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsEncodedKinematicReference(int encodedBodyReferenceValue)
         {
-            return (encodedBodyReferenceValue & KinematicMask) > 0;
+            return (uint)encodedBodyReferenceValue >= DynamicLimit;
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
