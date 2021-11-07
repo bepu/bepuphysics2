@@ -444,8 +444,10 @@ namespace BepuPhysics
                         //Since we haven't updated the constraint reference to this body's kinematicity yet, it was not included in the dynamicBodyHandles. 
                         //Include it here.
                         dynamicBodyHandles[enumerator.DynamicCount++] = handle.Value;
+                        //Remove the kinematic flag from the body's encoded index. Updating this before attempting to transfer the constraint ensures that the proper flags get stored in the new location.
+                        encodedBodyIndices[constraint.BodyIndexInConstraint] &= BodyReferenceMask;
                         var dynamicBodyHandlesSpan = new Span<int>(dynamicBodyHandles, enumerator.DynamicCount);
-                        var encodedBodyIndicesSpan = new Span<int>(encodedBodyIndices, enumerator.DynamicCount);
+                        var encodedBodyIndicesSpan = new Span<int>(encodedBodyIndices, enumerator.EncodedCount);
                         solver.GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
                         var constraintLocation = handleToConstraint[constraint.ConnectingConstraintHandle.Value];
                         bool foundBatch = false;
@@ -465,16 +467,32 @@ namespace BepuPhysics
                                 break;
                             }
                         }
-                        if (!foundBatch && fallbackExists && constraintLocation.BatchIndex != solver.FallbackBatchThreshold)
+                        if (!foundBatch)
                         {
-                            //The fallback batch does not block new constraints regardless of what constraints are connected, so it's safe to add.
-                            solver.TypeProcessors[constraintLocation.TypeId].TransferConstraint(ref typeBatch, constraintLocation.BatchIndex, constraintLocation.IndexInTypeBatch, solver, this, solver.FallbackBatchThreshold,
+                            //Still need a batch. 
+                            if (fallbackExists && constraintLocation.BatchIndex != solver.FallbackBatchThreshold)
+                            {
+                                //There's a fallback, and the source *isn't* the fallback. We can safely transfer over.
+                                solver.TypeProcessors[constraintLocation.TypeId].TransferConstraint(ref typeBatch, constraintLocation.BatchIndex, constraintLocation.IndexInTypeBatch, solver, this, solver.FallbackBatchThreshold,
                                     new Span<BodyHandle>(dynamicBodyHandles, enumerator.DynamicCount), encodedBodyIndicesSpan);
-                            foundBatch = true;
+                                foundBatch = true;
+                            }
+                            else if (fallbackExists)
+                            {
+                                //There's a fallback, but the constraint is already in the fallback batch.
+                                //It's not safe to use TransferConstraint for fallback->fallback transfers; it assumes source and target differ.
+                                //Use a special case fallback move.
+
+                            }
+                            else
+                            {
+                                //No batch has been found that can hold the constraint, but there is room for additional constraint batches.
+                                var targetBatchIndex = solver.AllocateNewConstraintBatch();
+                                solver.TypeProcessors[constraintLocation.TypeId].TransferConstraint(ref typeBatch, constraintLocation.BatchIndex, constraintLocation.IndexInTypeBatch, solver, this, targetBatchIndex,
+                                    new Span<BodyHandle>(dynamicBodyHandles, enumerator.DynamicCount), encodedBodyIndicesSpan);
+                            }
                         }
-                        //Note that we wait until the transfer completes to update the body reference in the constraint.
-                        //This ensures the transfer process still views the constraint as kinematic and doesn't try to remove handles from batch referenced handles that aren't present.
-                        solver.UpdateReferenceForBodyBecomingDynamic(constraint.ConnectingConstraintHandle, constraint.BodyIndexInConstraint);
+                        //Note that there's no need to strip kinematic flags- we stripped the flag appropriately when we created the encodedBodyIndices earlier, and those were the values that got stuck into the new allocation.
 
                     }
                 }

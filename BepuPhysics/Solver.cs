@@ -1022,6 +1022,19 @@ namespace BepuPhysics
             blockingBodyHandlesAllocation = blockingBodyHandlesAllocation.Slice(0, blockingCount);
         }
 
+        internal int AllocateNewConstraintBatch()
+        {
+            ref var set = ref ActiveSet;
+            if (set.Batches.Count == set.Batches.Span.Length)
+                set.Batches.Resize(set.Batches.Count + 1, pool);
+            set.Batches.AllocateUnsafely() = new ConstraintBatch(pool, TypeProcessors.Length);
+            //Create an index set for the new batch.
+            if (set.Batches.Count == batchReferencedHandles.Span.Length)
+                batchReferencedHandles.Resize(set.Batches.Count + 1, pool);
+            batchReferencedHandles.AllocateUnsafely() = new IndexSet(pool, bodies.ActiveSet.Count);
+            return set.Batches.Count - 1;
+        }
+
         internal unsafe bool TryAllocateInBatch(int typeId, int targetBatchIndex, Span<BodyHandle> dynamicBodyHandles, Span<int> encodedBodyIndices, out ConstraintHandle constraintHandle, out ConstraintReference reference)
         {
             ref var set = ref ActiveSet;
@@ -1031,13 +1044,7 @@ namespace BepuPhysics
             {
                 //No batch available. Have to create a new one.
                 //Note that if there is no constraint batch for the given index, there is no way for the constraint add to be blocked. It's guaranteed success.
-                if (set.Batches.Count == set.Batches.Span.Length)
-                    set.Batches.Resize(set.Batches.Count + 1, pool);
-                set.Batches.AllocateUnsafely() = new ConstraintBatch(pool, TypeProcessors.Length);
-                //Create an index set for the new batch.
-                if (set.Batches.Count == batchReferencedHandles.Span.Length)
-                    batchReferencedHandles.Resize(set.Batches.Count + 1, pool);
-                batchReferencedHandles.AllocateUnsafely() = new IndexSet(pool, bodies.ActiveSet.Count);
+                AllocateNewConstraintBatch();
             }
             else
             {
@@ -1523,33 +1530,15 @@ namespace BepuPhysics
             return (float)Math.Sqrt(GetAccumulatedImpulseMagnitudeSquared(constraintHandle));
         }
 
-        internal interface IConstraintBodyReferenceMutationType { }
-        internal struct BecomingKinematic : IConstraintBodyReferenceMutationType { }
-        internal struct BecomingDynamic : IConstraintBodyReferenceMutationType { }
-        unsafe void UpdateReferenceForBodyKinematicChange<TMutationType>(ConstraintHandle connectingConstraintHandle, int bodyIndexInConstraint) where TMutationType : unmanaged, IConstraintBodyReferenceMutationType
+
+        internal unsafe void UpdateReferenceForBodyBecomingKinematic(ConstraintHandle connectingConstraintHandle, int bodyIndexInConstraint)
         {
             var reference = GetConstraintReference(connectingConstraintHandle);
             var bodiesPerConstraint = TypeProcessors[reference.TypeBatch.TypeId].BodiesPerConstraint;
             var intsPerBundle = Vector<int>.Count * bodiesPerConstraint;
             BundleIndexing.GetBundleIndices(reference.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
             var firstBodyReference = (uint*)reference.TypeBatch.BodyReferences.Memory + intsPerBundle * bundleIndex + innerIndex;
-            if (typeof(TMutationType) == typeof(BecomingKinematic))
-                firstBodyReference[bodyIndexInConstraint * Vector<int>.Count] |= Bodies.KinematicMask;
-            else if (typeof(TMutationType) == typeof(BecomingDynamic))
-                firstBodyReference[bodyIndexInConstraint * Vector<int>.Count] &= Bodies.BodyReferenceMask;
-            else
-                Debug.Fail("Hey, that's not a valid type!");
-
-        }
-
-        internal unsafe void UpdateReferenceForBodyBecomingKinematic(ConstraintHandle connectingConstraintHandle, int bodyIndexInConstraint)
-        {
-            UpdateReferenceForBodyKinematicChange<BecomingKinematic>(connectingConstraintHandle, bodyIndexInConstraint);
-        }
-
-        internal void UpdateReferenceForBodyBecomingDynamic(ConstraintHandle connectingConstraintHandle, int bodyIndexInConstraint)
-        {
-            UpdateReferenceForBodyKinematicChange<BecomingDynamic>(connectingConstraintHandle, bodyIndexInConstraint);
+            firstBodyReference[bodyIndexInConstraint * Vector<int>.Count] |= Bodies.KinematicMask;
         }
 
         internal interface IConstraintReferenceReportType { }
