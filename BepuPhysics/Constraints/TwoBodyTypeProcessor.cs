@@ -72,16 +72,6 @@ namespace BepuPhysics.Constraints
     {
         protected sealed override int InternalBodiesPerConstraint => 2;
 
-        public sealed override void EnumerateConnectedRawBodyReferences<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator)
-        {
-            BundleIndexing.GetBundleIndices(indexInTypeBatch, out var constraintBundleIndex, out var constraintInnerIndex);
-            ref var referenceA = ref GatherScatter.Get(ref Buffer<TwoBodyReferences>.Get(ref typeBatch.BodyReferences, constraintBundleIndex).IndexA, constraintInnerIndex);
-            ref var referenceB = ref Unsafe.Add(ref referenceA, Vector<int>.Count);
-            //Note that the variables are ref locals! This is important for correctness, because every execution of LoopBody could result in a swap.
-            //Ref locals aren't the only solution, but if you ever change this, make sure you account for the potential mutation in the enumerator.
-            enumerator.LoopBody(referenceA);
-            enumerator.LoopBody(referenceB);
-        }
         struct TwoBodySortKeyGenerator : ISortKeyGenerator<TwoBodyReferences>
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

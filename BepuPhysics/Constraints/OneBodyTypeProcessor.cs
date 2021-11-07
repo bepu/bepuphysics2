@@ -56,13 +56,6 @@ namespace BepuPhysics.Constraints
     {
         protected sealed override int InternalBodiesPerConstraint => 1;
 
-        public sealed unsafe override void EnumerateConnectedRawBodyReferences<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator)
-        {
-            BundleIndexing.GetBundleIndices(indexInTypeBatch, out var constraintBundleIndex, out var constraintInnerIndex);
-            enumerator.LoopBody(GatherScatter.Get(ref Buffer<Vector<int>>.Get(ref typeBatch.BodyReferences, constraintBundleIndex), constraintInnerIndex));
-        }
-
-
         struct OneBodySortKeyGenerator : ISortKeyGenerator<Vector<int>>
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

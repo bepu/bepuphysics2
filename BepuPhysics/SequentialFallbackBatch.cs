@@ -157,7 +157,7 @@ namespace BepuPhysics
             var allocationIdsToRemoveMemory = stackalloc int[maximumAllocationIdsToFree];
             var initialSpan = new Buffer<int>(allocationIdsToRemoveMemory, maximumAllocationIdsToFree);
             var allocationIdsToFree = new QuickList<int>(initialSpan);
-            typeProcessor.EnumerateConnectedRawBodyReferences(ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[typeId]], indexInTypeBatch, ref enumerator);
+            solver.EnumerateConnectedRawBodyReferences(ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[typeId]], indexInTypeBatch, ref enumerator);
             for (int i = 0; i < bodyCount; ++i)
             {
                 var rawBodyIndex = bodyIndices[i];
@@ -203,14 +203,7 @@ namespace BepuPhysics
                     {
                         var constraintHandle = typeBatch.IndexToHandle[constraintIndex];
                         var collector = new PassthroughReferenceCollector(connectedBodies);
-                        if (setIndex == 0)
-                        {
-                            solver.EnumerateActiveDynamicConnectedBodyIndices(constraintHandle, ref collector);
-                        }
-                        else
-                        {
-                            solver.EnumerateConnectedRawBodyReferences(constraintHandle, ref collector);
-                        }
+                        solver.EnumerateConnectedDynamicBodies(constraintHandle, ref collector);
                         for (int i = 0; i < bodiesPerConstraint; ++i)
                         {
                             var localBodyIndex = bodyConstraintCounts.IndexOf(connectedBodies[i]);

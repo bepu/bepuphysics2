@@ -150,7 +150,7 @@ namespace BepuPhysics
                     constraintHandles.Add(entry.ConnectingConstraintHandle, pool);
                     consideredConstraints.AddUnsafely(entry.ConnectingConstraintHandle.Value);
                     bodyEnumerator.ConstraintBodyIndices.Count = 0;
-                    solver.EnumerateActiveConnectedBodyIndices(entry.ConnectingConstraintHandle, ref bodyEnumerator);
+                    solver.EnumerateConnectedBodyReferences(entry.ConnectingConstraintHandle, ref bodyEnumerator);
                     for (int j = 0; j < bodyEnumerator.ConstraintBodyIndices.Count; ++j)
                     {
                         var connectedBodyIndex = bodyEnumerator.ConstraintBodyIndices[j];
@@ -571,7 +571,7 @@ namespace BepuPhysics
                         Debug.Assert(location.TypeId == typeBatch.TypeId);
                         ref var solverBatch = ref solver.Sets[0].Batches[location.BatchIndex];
                         bodyIndexEnumerator.Index = 0;
-                        typeProcessor.EnumerateConnectedRawBodyReferences(
+                        solver.EnumerateConnectedRawBodyReferences(
                             ref solverBatch.TypeBatches[solverBatch.TypeIndexToTypeBatchIndex[location.TypeId]], location.IndexInTypeBatch, ref bodyIndexEnumerator);
                         for (int i = 0; i < typeProcessor.BodiesPerConstraint; ++i)
                         {

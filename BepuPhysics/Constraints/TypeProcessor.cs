@@ -72,21 +72,14 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// Moves a constraint from one ConstraintBatch's TypeBatch to another ConstraintBatch's TypeBatch of the same type.
         /// </summary>
+        /// <param name="sourceTypeBatch">Source type batch from which the constraint will be taken.</param>
         /// <param name="sourceBatchIndex">Index of the batch that owns the type batch that is the source of the constraint transfer.</param>
         /// <param name="indexInTypeBatch">Index of the constraint to move in the current type batch.</param>
         /// <param name="solver">Solver that owns the batches.</param>
         /// <param name="bodies">Bodies set that owns all the constraint's bodies.</param>
         /// <param name="targetBatchIndex">Index of the ConstraintBatch in the solver to copy the constraint into.</param>
-        public unsafe abstract void TransferConstraint(ref TypeBatch typeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex);
+        public unsafe abstract void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex);
 
-        /// <summary>
-        /// Enumerates body references in the constraint. Reported body references (body index for an awake constraint, body handle for a sleeping constraint) include encoded metadata like whether the body is kinematic.
-        /// </summary>
-        /// <typeparam name="TEnumerator">Type of the enumerator called for each body index in the constraint.</typeparam>
-        /// <param name="typeBatch">Type batch containing the constraint to enumerate.</param>
-        /// <param name="indexInTypeBatch">Index of the constraint to enumerate in the type batch.</param>
-        /// <param name="enumerator">Enumerator called for each body index in the constraint.</param>
-        public abstract void EnumerateConnectedRawBodyReferences<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<int>;
         [Conditional("DEBUG")]
         protected abstract void ValidateAccumulatedImpulsesSizeInBytes(int sizeInBytes);
         public unsafe void EnumerateAccumulatedImpulses<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<float>
@@ -720,12 +713,13 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// Moves a constraint from one ConstraintBatch's TypeBatch to another ConstraintBatch's TypeBatch of the same type.
         /// </summary>
+        /// <param name="sourceTypeBatch">Source type batch to transfer the constraint out of.</param>
         /// <param name="sourceBatchIndex">Index of the batch that owns the type batch that is the source of the constraint transfer.</param>
         /// <param name="indexInTypeBatch">Index of the constraint to move in the current type batch.</param>
         /// <param name="solver">Solver that owns the batches.</param>
         /// <param name="bodies">Bodies set that owns all the constraint's bodies.</param>
         /// <param name="targetBatchIndex">Index of the ConstraintBatch in the solver to copy the constraint into.</param>
-        public unsafe override void TransferConstraint(ref TypeBatch typeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex)
+        public unsafe override void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex)
         {
             //Note that the following does some redundant work. It's technically possible to do better than this, but it requires bypassing a lot of bookkeeping.
             //It's not exactly trivial to keep everything straight, especially over time- it becomes a maintenance nightmare.
@@ -734,11 +728,9 @@ namespace BepuPhysics.Constraints
             var dynamicBodyHandles = stackalloc int[bodiesPerConstraint];
             var encodedBodyIndices = stackalloc int[bodiesPerConstraint];
             var bodyHandleCollector = new ActiveKinematicFlaggedBodyHandleCollector(bodies, dynamicBodyHandles, encodedBodyIndices);
-            EnumerateConnectedRawBodyReferences(ref typeBatch, indexInTypeBatch, ref bodyHandleCollector);
-            Debug.Assert(targetBatchIndex <= solver.FallbackBatchThreshold,
-                "Constraint transfers should never target the fallback batch. Its registered body handles don't block new constraints so attempting to allocate in the same way wouldn't turn out well.");
+            solver.EnumerateConnectedRawBodyReferences(ref sourceTypeBatch, indexInTypeBatch, ref bodyHandleCollector);
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
-            var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
+            var constraintHandle = sourceTypeBatch.IndexToHandle[indexInTypeBatch];
             solver.AllocateInBatch(targetBatchIndex, constraintHandle, new Span<BodyHandle>((BodyHandle*)dynamicBodyHandles, bodyHandleCollector.DynamicCount), new Span<int>(encodedBodyIndices, bodiesPerConstraint), typeId, out var targetReference);
 
             BundleIndexing.GetBundleIndices(targetReference.IndexInTypeBatch, out var targetBundle, out var targetInner);
@@ -747,9 +739,9 @@ namespace BepuPhysics.Constraints
             //Instead, we just directly copy from lane to lane.
             //Note that we leave out the runtime generated bits- they'll just get regenerated.
             CopyConstraintData(
-                ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, sourceBundle),
-                ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, sourceBundle),
-                ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, sourceBundle),
+                ref Buffer<TBodyReferences>.Get(ref sourceTypeBatch.BodyReferences, sourceBundle),
+                ref Buffer<TPrestepData>.Get(ref sourceTypeBatch.PrestepData, sourceBundle),
+                ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle),
                 sourceInner,
                 ref Buffer<TBodyReferences>.Get(ref targetReference.TypeBatch.BodyReferences, targetBundle),
                 ref Buffer<TPrestepData>.Get(ref targetReference.TypeBatch.PrestepData, targetBundle),

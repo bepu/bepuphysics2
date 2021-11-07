@@ -189,7 +189,7 @@ namespace BepuPhysics
             var indexSet = solver.batchReferencedHandles.GetPointer(batchIndex);
             var handleRemover = new ActiveBodyHandleRemover(solver.bodies, indexSet);
             var typeBatchIndex = TypeIndexToTypeBatchIndex[constraintTypeId];
-            solver.TypeProcessors[constraintTypeId].EnumerateConnectedRawBodyReferences(ref TypeBatches[typeBatchIndex], indexInTypeBatch, ref handleRemover);
+            solver.EnumerateConnectedRawBodyReferences(ref TypeBatches[typeBatchIndex], indexInTypeBatch, ref handleRemover);
         }
 
         public unsafe void Remove(int constraintTypeId, int indexInTypeBatch, bool isFallback, Solver solver)

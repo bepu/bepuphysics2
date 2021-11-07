@@ -742,7 +742,7 @@ namespace BepuPhysics
                             for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
                             {
                                 enumerator.Index = 0;
-                                processor.EnumerateConnectedRawBodyReferences(ref typeBatch, indexInTypeBatch, ref enumerator);
+                                EnumerateConnectedRawBodyReferences(ref typeBatch, indexInTypeBatch, ref enumerator);
 
                                 for (int i = 0; i < processor.BodiesPerConstraint; ++i)
                                 {
@@ -776,7 +776,7 @@ namespace BepuPhysics
                             ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
                             var processor = TypeProcessors[typeBatch.TypeId];
                             enumerator.Index = 0;
-                            processor.EnumerateConnectedRawBodyReferences(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
+                            EnumerateConnectedRawBodyReferences(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
                             //Active constraints refer to bodies by index; inactive constraints use handles.
                             int bodyReference = setIndex == 0 ? bodyIndex : bodySet.IndexToHandle[bodyIndex].Value;
                             var bodyReferenceInConstraint = constraintBodyReferences[constraintList[constraintIndex].BodyIndexInConstraint];
@@ -977,7 +977,7 @@ namespace BepuPhysics
             ref var handlesSet = ref batchReferencedHandles[targetBatchIndex];
             for (int i = 0; i < dynamicBodyHandles.Length; ++i)
             {
-                Debug.Assert(targetBatchIndex == FallbackBatchThreshold || !handlesSet.Contains(dynamicBodyHandles[i].Value), "Non-fallback batches should not come to include references to the same body more than once.");
+                Debug.Assert(targetBatchIndex == FallbackBatchThreshold || !handlesSet.Contains(dynamicBodyHandles[i].Value), "Non-fallback batches should not come to include references to the same dynamic body more than once.");
                 handlesSet.Set(dynamicBodyHandles[i].Value, pool);
             }
             if (targetBatchIndex == FallbackBatchThreshold)
@@ -1509,77 +1509,130 @@ namespace BepuPhysics
             return (float)Math.Sqrt(GetAccumulatedImpulseMagnitudeSquared(constraintHandle));
         }
 
+        internal interface IConstraintReferenceReportType { }
+        internal struct ReportEncodedReferences : IConstraintReferenceReportType { }
+        internal struct ReportDecodedReferences : IConstraintReferenceReportType { }
+        internal struct ReportDecodedDynamicReferences : IConstraintReferenceReportType { }
+
+        /// <summary>
+        /// Enumerates body references in the constraint. Reports data according to the TReportType.
+        /// </summary>
+        /// <typeparam name="TEnumerator">Type of the enumerator called for each body index in the constraint.</typeparam>
+        /// <typeparam name="TReportType">Type of information to report to the enumerator.</typeparam>
+        /// <param name="typeBatch">Type batch containing the constraint to enumerate.</param>
+        /// <param name="indexInTypeBatch">Index of the constraint to enumerate in the type batch.</param>
+        /// <param name="enumerator">Enumerator to call for each connected body reference.</param>
+        internal unsafe void EnumerateConnectedBodyReferences<TEnumerator, TReportType>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<int> where TReportType : unmanaged, IConstraintReferenceReportType
+        {
+            var bodiesPerConstraint = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
+            //Type batches store body references in AOSOA format, with one Vector<int> for each constraint body reference in sequence, tightly packed.
+            //We can extract directly from memory.
+            var bytesPerBundle = bodiesPerConstraint * Unsafe.SizeOf<Vector<int>>();
+            BundleIndexing.GetBundleIndices(indexInTypeBatch, out var bundleIndex, out var innerIndex);
+            Debug.Assert(bytesPerBundle * typeBatch.BundleCount <= typeBatch.BodyReferences.Length, "Buffer must be large enough to hold the bundles of our assumed size. If this fails, an important assumption has been invalidated somewhere.");
+            var startByte = bundleIndex * bytesPerBundle + innerIndex * 4;
+            for (int i = 0; i < bodiesPerConstraint; ++i)
+            {
+                var raw = *(int*)(typeBatch.BodyReferences.Memory + startByte + i * Unsafe.SizeOf<Vector<int>>());
+                if (typeof(TReportType) == typeof(ReportEncodedReferences))
+                {
+                    enumerator.LoopBody(raw);
+                }
+                else if (typeof(TReportType) == typeof(ReportDecodedReferences))
+                {
+                    enumerator.LoopBody(raw & Bodies.BodyReferenceMask);
+                }
+                else if (typeof(TReportType) == typeof(ReportDecodedDynamicReferences))
+                {
+                    if ((raw & Bodies.KinematicMask) == 0)
+                        enumerator.LoopBody(raw & Bodies.BodyReferenceMask);
+                }
+            }
+        }
         /// <summary>
         /// Enumerates the set of body references associated with a constraint in order of their references within the constraint.
         /// This will report the raw body reference (body index if awake, handle if asleep) and any encoded metadata, like whether the body is kinematic.
         /// </summary>
-        /// <param name="constraintHandle">Constraint to enumerate.</param>
-        /// <param name="enumerator">Enumerator to use.</param>
-        internal void EnumerateConnectedRawBodyReferences<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        /// <typeparam name="TEnumerator">Type of the enumerator to call on each connected body reference.</typeparam>
+        /// <param name="typeBatch">Type batch containing the constraint to enumerate.</param>
+        /// <param name="indexInTypeBatch">Index of the constraint to enumerate in the type batch.</param>
+        /// <param name="enumerator">Enumerator to call for each connected body reference.</param>
+        public unsafe void EnumerateConnectedRawBodyReferences<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
-            ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
-            ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
-            Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
-            TypeProcessors[constraintLocation.TypeId].EnumerateConnectedRawBodyReferences(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
-        }
-        struct ActiveBodyIndexEnumerator<TWrapped> : IForEach<int> where TWrapped : IForEach<int>
-        {
-            public TWrapped Wrapped;
-            public void LoopBody(int encodedBodyIndex)
-            {
-                //This is only used on the active set, so we know we're getting body indices. They include encoded metadata that we can check to see whether the body is kinematic.
-                Wrapped.LoopBody(encodedBodyIndex & Bodies.BodyReferenceMask);
-
-            }
+            EnumerateConnectedBodyReferences<TEnumerator, ReportEncodedReferences>(ref typeBatch, indexInTypeBatch, ref enumerator);
         }
 
         /// <summary>
-        /// Enumerates the set of body indices associated with an active constraint in order of their references within the constraint.
+        /// Enumerates the set of body references associated with a constraint in order of their references within the constraint.
+        /// This will report the raw body reference (body index if awake, handle if asleep) and any encoded metadata, like whether the body is kinematic.
         /// </summary>
+        /// <typeparam name="TEnumerator">Type of the enumerator to call on each connected body reference.</typeparam>
         /// <param name="constraintHandle">Constraint to enumerate.</param>
-        /// <param name="enumerator">Enumerator to use.</param>
-        internal void EnumerateActiveConnectedBodyIndices<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        /// <param name="enumerator">Enumerator to call for each connected body reference.</param>
+        public unsafe void EnumerateConnectedRawBodyReferences<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
             ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
-            Debug.Assert(constraintLocation.SetIndex == 0, "This function is intended to be used only with waking constraints.");
             ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
             Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
-            ActiveBodyIndexEnumerator<TEnumerator> wrapper;
-            wrapper.Wrapped = enumerator;
-            TypeProcessors[constraintLocation.TypeId].EnumerateConnectedRawBodyReferences(ref typeBatch, constraintLocation.IndexInTypeBatch, ref wrapper);
-            //Enumeration might have mutated the enumerator; if it's a value type, we need to copy those mutations back into it.
-            enumerator = wrapper.Wrapped;
-        }
-
-        struct ActiveDynamicEnumerator<TWrapped> : IForEach<int> where TWrapped : IForEach<int>
-        {
-            public TWrapped Wrapped;
-            public void LoopBody(int encodedBodyIndex)
-            {
-                //This is only used on the active set, so we know we're getting body indices. They include encoded metadata that we can check to see whether the body is kinematic.
-                if (encodedBodyIndex < Bodies.DynamicLimit)
-                {
-                    Wrapped.LoopBody(encodedBodyIndex & Bodies.BodyReferenceMask);
-                }
-            }
+            EnumerateConnectedBodyReferences<TEnumerator, ReportEncodedReferences>(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
         }
 
         /// <summary>
-        /// Enumerates the set of dynamic body indices associated with an active constraint in order of their references within the constraint.
+        /// Enumerates the set of body references associated with an active constraint in order of their references within the constraint.
+        /// This will report the body reference (body index if awake, handle if asleep) without any encoded kinematicity metadata.
         /// </summary>
+        /// <typeparam name="TEnumerator">Type of the enumerator to call on each connected body reference.</typeparam>
+        /// <param name="typeBatch">Type batch containing the constraint to enumerate.</param>
+        /// <param name="indexInTypeBatch">Index of the constraint to enumerate in the type batch.</param>
+        /// <param name="enumerator">Enumerator to call for each connected body reference.</param>
+        public unsafe void EnumerateConnectedBodyReferences<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        {
+            EnumerateConnectedBodyReferences<TEnumerator, ReportDecodedReferences>(ref typeBatch, indexInTypeBatch, ref enumerator);
+        }
+
+        /// <summary>
+        /// Enumerates the set of body references associated with an active constraint in order of their references within the constraint.
+        /// This will report the body reference (body index if awake, handle if asleep) without any encoded kinematicity metadata.
+        /// </summary>
+        /// <typeparam name="TEnumerator">Type of the enumerator to call on each connected body reference.</typeparam>
         /// <param name="constraintHandle">Constraint to enumerate.</param>
-        /// <param name="enumerator">Enumerator to use.</param>
-        internal void EnumerateActiveDynamicConnectedBodyIndices<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        /// <param name="enumerator">Enumerator to call for each connected body reference.</param>
+        public unsafe void EnumerateConnectedBodyReferences<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
             ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
-            Debug.Assert(constraintLocation.SetIndex == 0, "This function is intended to be used only with waking constraints.");
             ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
             Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
-            ActiveDynamicEnumerator<TEnumerator> wrapper;
-            wrapper.Wrapped = enumerator;
-            TypeProcessors[constraintLocation.TypeId].EnumerateConnectedRawBodyReferences(ref typeBatch, constraintLocation.IndexInTypeBatch, ref wrapper);
-            //Enumeration might have mutated the enumerator; if it's a value type, we need to copy those mutations back into it.
-            enumerator = wrapper.Wrapped;
+            EnumerateConnectedBodyReferences<TEnumerator, ReportDecodedReferences>(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
+        }
+
+        /// <summary>
+        /// Enumerates the set of dynamic body references associated with a constraint in order of their references within the constraint.
+        /// This will report the body reference (body index if awake, handle if asleep) without any encoded kinematicity metadata.
+        /// Kinematic references are skipped.
+        /// </summary>
+        /// <typeparam name="TEnumerator">Type of the enumerator to call on each connected dynamic body reference.</typeparam>
+        /// <param name="typeBatch">Type batch containing the constraint to enumerate.</param>
+        /// <param name="indexInTypeBatch">Index of the constraint to enumerate in the type batch.</param>
+        /// <param name="enumerator">Enumerator to call for each connected dynamic body reference.</param>
+        public unsafe void EnumerateConnectedDynamicBodies<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        {
+            EnumerateConnectedBodyReferences<TEnumerator, ReportDecodedDynamicReferences>(ref typeBatch, indexInTypeBatch, ref enumerator);
+        }
+
+        /// <summary>
+        /// Enumerates the set of dynamic body references associated with a constraint in order of their references within the constraint.
+        /// This will report the body reference (body index if awake, handle if asleep) without any encoded kinematicity metadata.
+        /// Kinematic references are skipped.
+        /// </summary>
+        /// <typeparam name="TEnumerator">Type of the enumerator to call on each connected dynamic body reference.</typeparam>
+        /// <param name="constraintHandle">Constraint to enumerate.</param>
+        /// <param name="enumerator">Enumerator to call for each connected dynamic body reference.</param>
+        public unsafe void EnumerateConnectedDynamicBodies<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        {
+            ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
+            ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
+            Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
+            EnumerateConnectedBodyReferences<TEnumerator, ReportDecodedDynamicReferences>(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
         }
 
         internal void GetSynchronizedBatchCount(out int synchronizedBatchCount, out bool fallbackExists)

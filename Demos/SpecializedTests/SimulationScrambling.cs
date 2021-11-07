@@ -159,7 +159,7 @@ namespace Demos.SpecializedTests
                         ConstraintBodyValidationEnumerator enumerator;
                         enumerator.ConstraintHandle = constraintHandle;
                         enumerator.Simulation = simulation;
-                        typeProcessor.EnumerateConnectedRawBodyReferences(ref typeBatch, indexInTypeBatch, ref enumerator);
+                        simulation.Solver.EnumerateConnectedRawBodyReferences(ref typeBatch, indexInTypeBatch, ref enumerator);
                     }
                 }
             }
@@ -320,7 +320,7 @@ namespace Demos.SpecializedTests
                 simulation.Solver.GetConstraintReference(constraintHandle, out var reference);
 
                 var bodyIdentityEnumerator = new BodyEnumerator(simulation.Bodies, bodyHandlesToIdentity);
-                simulation.Solver.TypeProcessors[reference.TypeBatch.TypeId].EnumerateConnectedRawBodyReferences(ref reference.TypeBatch, reference.IndexInTypeBatch, ref bodyIdentityEnumerator);
+                simulation.Solver.EnumerateConnectedRawBodyReferences(ref reference.TypeBatch, reference.IndexInTypeBatch, ref bodyIdentityEnumerator);
                 constraintDescriptions[i].BodyA = bodyIdentityEnumerator.IdentityA;
                 constraintDescriptions[i].BodyB = bodyIdentityEnumerator.IdentityB;
             }

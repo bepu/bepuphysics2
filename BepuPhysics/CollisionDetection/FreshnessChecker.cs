@@ -143,7 +143,7 @@ namespace BepuPhysics.CollisionDetection
             var typeProcessor = constraintRemover.solver.TypeProcessors[location.TypeId];
             var references = stackalloc int[typeProcessor.BodiesPerConstraint];
             var enumerator = new ActiveConstraintBodyIndexCollector(references);
-            typeProcessor.EnumerateConnectedRawBodyReferences(ref typeBatch, location.IndexInTypeBatch, ref enumerator);
+            constraintRemover.solver.EnumerateConnectedRawBodyReferences(ref typeBatch, location.IndexInTypeBatch, ref enumerator);
             for (int i = 0; i < typeProcessor.BodiesPerConstraint; ++i)
             {
                 var bodyHandle = constraintRemover.bodies.ActiveSet.IndexToHandle[references[i]];

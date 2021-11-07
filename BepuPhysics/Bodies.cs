@@ -364,35 +364,61 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void UpdateForKinematicStateChange(BodyHandle handle, ref BodyMemoryLocation location, ref BodySet set, bool newlyKinematic)
+        unsafe void UpdateForKinematicStateChange(BodyHandle handle, ref BodyMemoryLocation location, ref BodySet set, bool previouslyKinematic, bool currentlyKinematic)
         {
             Debug.Assert(location.SetIndex == 0, "If we're changing kinematic state, we should have already awoken the body.");
-            ref var collidable = ref set.Collidables[location.Index];
-            if (collidable.Shape.Exists)
+            if (previouslyKinematic != currentlyKinematic)
             {
-                var mobility = IsKinematic(set.SolverStates[location.Index].Inertia.Local) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
-                if (location.SetIndex == 0)
+                ref var collidable = ref set.Collidables[location.Index];
+                if (collidable.Shape.Exists)
                 {
-                    broadPhase.activeLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
+                    //Any collidable references need their encoded mobility updated.
+                    var mobility = currentlyKinematic ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
+                    if (location.SetIndex == 0)
+                    {
+                        broadPhase.activeLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
+                    }
+                    else
+                    {
+                        broadPhase.staticLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
+                    }
+                }
+                ref var constraints = ref set.Constraints[location.Index];
+                if (currentlyKinematic)
+                {
+                    //Any constraints that connect only kinematic bodies together should be removed; they'll NaN out.
+                    //Ideally, the user would handle this for all non-contact constraints, but it would be rather annoying to 
+                    //have to explicitly enumerate and remove all contact constraints any time you wanted to make a body kinematic.
+                    ConnectedDynamicCounter enumerator;
+                    for (int i = 0; i < constraints.Count; ++i)
+                    {
+                        ref var constraint = ref constraints[i];
+                        enumerator.DynamicCount = 0;
+                        solver.EnumerateConnectedDynamicBodies(constraint.ConnectingConstraintHandle, ref enumerator);
+                        if (enumerator.DynamicCount == 0)
+                        {
+                            //This constraint connects only kinematic bodies; keeping it in the solver would cause a singularity.
+                            solver.Remove(constraint.ConnectingConstraintHandle);
+                        }
+                    }
                 }
                 else
                 {
-                    broadPhase.staticLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
-                }
-            }
-            if (newlyKinematic)
-            {
-                ref var constraints = ref set.Constraints[location.Index];
-                ConnectedDynamicCounter enumerator;
-                for (int i = 0; i < constraints.Count; ++i)
-                {
-                    ref var constraint = ref constraints[i];
-                    enumerator.DynamicCount = 0;
-                    solver.EnumerateActiveDynamicConnectedBodyIndices(constraint.ConnectingConstraintHandle, ref enumerator);
-                    if (enumerator.DynamicCount == 0)
+                    //A kinematic body has become dynamic. Kinematic bodies do not block membership in constraint batches, dynamic bodies do.
+                    //For any constraint connected to the new dynamic, ensure that it belongs to a constraint batch not shared by any other constraints connected to the same body.
+                    const int maximumBodiesPerConstraint = 4;
+                    int* handles = stackalloc int[maximumBodiesPerConstraint];
+                    ActiveConstraintDynamicBodyHandleCollector enumerator = new(this, handles);
+                    for (int i = 0; i < constraints.Count; ++i)
                     {
-                        //This constraint connects only kinematic bodies; keeping it in the solver would cause a singularity.
-                        solver.Remove(constraint.ConnectingConstraintHandle);
+                        ref var constraint = ref constraints[i];
+                        enumerator.Count = 0;
+                        solver.EnumerateConnectedDynamicBodies(constraint.ConnectingConstraintHandle, ref enumerator);
+                        if (enumerator.Count == 0)
+                        {
+                            //This constraint connects only kinematic bodies; keeping it in the solver would cause a singularity.
+                            solver.Remove(constraint.ConnectingConstraintHandle);
+                        }
                     }
                 }
             }
@@ -420,9 +446,10 @@ namespace BepuPhysics
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
             ref var localInertiaReference = ref set.SolverStates[location.Index].Inertia.Local;
-            var newlyKinematic = IsKinematic(localInertia) && !IsKinematic(localInertiaReference);
+            var nowKinematic = IsKinematic(localInertia);
+            var previouslyKinematic = IsKinematicUnsafeGCHole(ref localInertiaReference);
             localInertiaReference = localInertia;
-            UpdateForKinematicStateChange(handle, ref location, ref set, newlyKinematic);
+            UpdateForKinematicStateChange(handle, ref location, ref set, previouslyKinematic, nowKinematic);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -488,10 +515,11 @@ namespace BepuPhysics
             ref var set = ref Sets[location.SetIndex];
             ref var collidable = ref set.Collidables[location.Index];
             var oldShape = collidable.Shape;
-            var newlyKinematic = IsKinematic(description.LocalInertia) && !IsKinematic(set.SolverStates[location.Index].Inertia.Local);
+            var nowKinematic = IsKinematic(description.LocalInertia);
+            var previouslyKinematic = IsKinematicUnsafeGCHole(ref set.SolverStates[location.Index].Inertia.Local);
             set.ApplyDescriptionByIndex(location.Index, description);
             UpdateForShapeChange(handle, location.Index, oldShape, description.Collidable.Shape);
-            UpdateForKinematicStateChange(handle, ref location, ref set, newlyKinematic);
+            UpdateForKinematicStateChange(handle, ref location, ref set, previouslyKinematic, nowKinematic);
             UpdateBounds(handle);
         }
 
@@ -651,7 +679,6 @@ namespace BepuPhysics
         /// <typeparam name="TEnumerator">Type of the enumerator to execute on each connected body.</typeparam>
         /// <param name="activeBodyIndex">Index of the active body to enumerate the connections of. This body will not appear in the set of enumerated bodies, even if it is connected to itself somehow.</param>
         /// <param name="enumerator">Enumerator instance to run on each connected body.</param>
-        /// <param name="solver">Solver from which to pull constraint body references.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void EnumerateConnectedBodyIndices<TEnumerator>(int activeBodyIndex, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
@@ -664,7 +691,7 @@ namespace BepuPhysics
             //Non-reversed iteration would result in skipped elements if the loop body removed anything. This relies on convention; any remover should be aware of this order.
             for (int i = list.Count - 1; i >= 0; --i)
             {
-                solver.EnumerateActiveConnectedBodyIndices(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
+                solver.EnumerateConnectedBodyReferences(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
             }
             //Note that we have to assume the enumerator contains state mutated by the internal loop bodies.
             //If it's a value type, those mutations won't be reflected in the original reference. 

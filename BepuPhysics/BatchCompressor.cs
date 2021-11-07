@@ -131,7 +131,7 @@ namespace BepuPhysics
             BufferPool pool, ref QuickList<Compression> compressions, ref TypeBatch typeBatch, int* bodyHandles, ref ActiveConstraintDynamicBodyHandleCollector handleAccumulator, TypeProcessor typeProcessor, int constraintIndex)
         {
             handleAccumulator.Count = 0;
-            typeProcessor.EnumerateConnectedRawBodyReferences(ref typeBatch, constraintIndex, ref handleAccumulator);
+            Solver.EnumerateConnectedRawBodyReferences(ref typeBatch, constraintIndex, ref handleAccumulator);
             var dynamicBodyHandles = new Span<int>(bodyHandles, handleAccumulator.Count);
             for (int batchIndex = nextBatchIndex - 1; batchIndex >= 0; --batchIndex)
             {

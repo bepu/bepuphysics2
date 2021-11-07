@@ -160,7 +160,7 @@ namespace BepuPhysics
             ConstraintHandleEnumerator enumerator;
             enumerator.BodyIndices = bodyIndices;
             enumerator.Count = 0;
-            solver.EnumerateActiveDynamicConnectedBodyIndices(constraintHandle, ref enumerator);
+            solver.EnumerateConnectedDynamicBodies(constraintHandle, ref enumerator);
             var dynamicBodyIndices = new Span<int>(enumerator.BodyIndices, enumerator.Count);
             for (int batchIndex = 0; batchIndex < Protobatches.Count; ++batchIndex)
             {

@@ -147,7 +147,7 @@ namespace BepuPhysics.CollisionDetection
                 ref var typeBatch = ref constraintBatch.TypeBatches[typeBatchIndex.TypeBatch];
                 var encodedBodyIndices = stackalloc int[bodiesPerConstraint];
                 var enumerator = new PassthroughReferenceCollector(encodedBodyIndices);
-                typeProcessor.EnumerateConnectedRawBodyReferences(ref typeBatch, constraint.IndexInTypeBatch, ref enumerator);
+                solver.EnumerateConnectedRawBodyReferences(ref typeBatch, constraint.IndexInTypeBatch, ref enumerator);
 
                 for (int i = 0; i < bodiesPerConstraint; ++i)
                 {
