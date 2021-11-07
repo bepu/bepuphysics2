@@ -69,16 +69,69 @@ namespace BepuPhysics.Constraints
         public unsafe abstract int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> encodedBodyIndices, BufferPool pool);
         public abstract void Remove(ref TypeBatch typeBatch, int index, ref Buffer<ConstraintLocation> handlesToConstraints, bool isFallback);
 
+
+        /// <summary>
+        /// Collects body references from active constraints and converts them into properly flagged constraint kinematic body handles.
+        /// </summary>
+        unsafe struct ActiveKinematicFlaggedBodyHandleCollector : IForEach<int>
+        {
+            public Bodies Bodies;
+            public int* DynamicBodyHandles;
+            public int DynamicCount;
+            public int* EncodedBodyIndices;
+            public int IndexCount;
+
+
+            public ActiveKinematicFlaggedBodyHandleCollector(Bodies bodies, int* dynamicHandles, int* encodedBodyIndices)
+            {
+                Bodies = bodies;
+                DynamicBodyHandles = dynamicHandles;
+                DynamicCount = 0;
+                EncodedBodyIndices = encodedBodyIndices;
+                IndexCount = 0;
+            }
+
+            public void LoopBody(int encodedBodyIndex)
+            {
+                if (Bodies.IsEncodedDynamicReference(encodedBodyIndex))
+                {
+                    DynamicBodyHandles[DynamicCount++] = Bodies.ActiveSet.IndexToHandle[encodedBodyIndex].Value;
+                }
+                EncodedBodyIndices[IndexCount++] = encodedBodyIndex;
+            }
+        }
         /// <summary>
         /// Moves a constraint from one ConstraintBatch's TypeBatch to another ConstraintBatch's TypeBatch of the same type.
         /// </summary>
-        /// <param name="sourceTypeBatch">Source type batch from which the constraint will be taken.</param>
+        /// <param name="sourceTypeBatch">Source type batch to transfer the constraint out of.</param>
         /// <param name="sourceBatchIndex">Index of the batch that owns the type batch that is the source of the constraint transfer.</param>
         /// <param name="indexInTypeBatch">Index of the constraint to move in the current type batch.</param>
         /// <param name="solver">Solver that owns the batches.</param>
         /// <param name="bodies">Bodies set that owns all the constraint's bodies.</param>
         /// <param name="targetBatchIndex">Index of the ConstraintBatch in the solver to copy the constraint into.</param>
-        public unsafe abstract void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex);
+        public unsafe void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex)
+        {
+            int bodiesPerConstraint = InternalBodiesPerConstraint;
+            var dynamicBodyHandles = stackalloc int[bodiesPerConstraint];
+            var encodedBodyIndices = stackalloc int[bodiesPerConstraint];
+            var bodyHandleCollector = new ActiveKinematicFlaggedBodyHandleCollector(bodies, dynamicBodyHandles, encodedBodyIndices);
+            solver.EnumerateConnectedRawBodyReferences(ref sourceTypeBatch, indexInTypeBatch, ref bodyHandleCollector);
+            var constraintHandle = sourceTypeBatch.IndexToHandle[indexInTypeBatch];
+            TransferConstraint(ref sourceTypeBatch, sourceBatchIndex, indexInTypeBatch, solver, bodies, targetBatchIndex, new Span<BodyHandle>(dynamicBodyHandles, bodyHandleCollector.DynamicCount), new Span<int>(encodedBodyIndices, bodiesPerConstraint));
+        }
+
+        /// <summary>
+        /// Moves a constraint from one ConstraintBatch's TypeBatch to another ConstraintBatch's TypeBatch of the same type.
+        /// </summary>
+        /// <param name="sourceTypeBatch">Source type batch to transfer the constraint out of.</param>
+        /// <param name="sourceBatchIndex">Index of the batch that owns the type batch that is the source of the constraint transfer.</param>
+        /// <param name="indexInTypeBatch">Index of the constraint to move in the current type batch.</param>
+        /// <param name="solver">Solver that owns the batches.</param>
+        /// <param name="bodies">Bodies set that owns all the constraint's bodies.</param>
+        /// <param name="targetBatchIndex">Index of the ConstraintBatch in the solver to copy the constraint into.</param>
+        /// <param name="dynamicBodyHandles">Set of body handles in the constraint referring to dynamic bodies.</param>
+        /// <param name="encodedBodyIndices">Set of encoded body indices to use in the new constraint allocation.</param>
+        public unsafe abstract void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex, Span<BodyHandle> dynamicBodyHandles, Span<int> encodedBodyIndices);
 
         [Conditional("DEBUG")]
         protected abstract void ValidateAccumulatedImpulsesSizeInBytes(int sizeInBytes);
@@ -678,37 +731,6 @@ namespace BepuPhysics.Constraints
         }
 
 
-        /// <summary>
-        /// Collects body references from active constraints and converts them into properly flagged constraint kinematic body handles.
-        /// </summary>
-        unsafe struct ActiveKinematicFlaggedBodyHandleCollector : IForEach<int>
-        {
-            public Bodies Bodies;
-            public int* DynamicBodyHandles;
-            public int DynamicCount;
-            public int* EncodedBodyIndices;
-            public int IndexCount;
-
-
-            public ActiveKinematicFlaggedBodyHandleCollector(Bodies bodies, int* dynamicHandles, int* encodedBodyIndices)
-            {
-                Bodies = bodies;
-                DynamicBodyHandles = dynamicHandles;
-                DynamicCount = 0;
-                EncodedBodyIndices = encodedBodyIndices;
-                IndexCount = 0;
-            }
-
-            public void LoopBody(int encodedBodyIndex)
-            {
-                if (Bodies.IsEncodedDynamicReference(encodedBodyIndex))
-                {
-                    DynamicBodyHandles[DynamicCount++] = Bodies.ActiveSet.IndexToHandle[encodedBodyIndex].Value;
-                }
-                EncodedBodyIndices[IndexCount++] = encodedBodyIndex;
-            }
-        }
-
 
         /// <summary>
         /// Moves a constraint from one ConstraintBatch's TypeBatch to another ConstraintBatch's TypeBatch of the same type.
@@ -719,19 +741,13 @@ namespace BepuPhysics.Constraints
         /// <param name="solver">Solver that owns the batches.</param>
         /// <param name="bodies">Bodies set that owns all the constraint's bodies.</param>
         /// <param name="targetBatchIndex">Index of the ConstraintBatch in the solver to copy the constraint into.</param>
-        public unsafe override void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex)
+        /// <param name="dynamicBodyHandles">Set of body handles in the constraint referring to dynamic bodies.</param>
+        /// <param name="encodedBodyIndices">Set of encoded body indices to use in the new constraint allocation.</param>
+        public unsafe override sealed void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex, Span<BodyHandle> dynamicBodyHandles, Span<int> encodedBodyIndices)
         {
-            //Note that the following does some redundant work. It's technically possible to do better than this, but it requires bypassing a lot of bookkeeping.
-            //It's not exactly trivial to keep everything straight, especially over time- it becomes a maintenance nightmare.
-            //So instead, given that compressions should generally be extremely rare (relatively speaking) and highly deferrable, we'll accept some minor overhead.
-            int bodiesPerConstraint = InternalBodiesPerConstraint;
-            var dynamicBodyHandles = stackalloc int[bodiesPerConstraint];
-            var encodedBodyIndices = stackalloc int[bodiesPerConstraint];
-            var bodyHandleCollector = new ActiveKinematicFlaggedBodyHandleCollector(bodies, dynamicBodyHandles, encodedBodyIndices);
-            solver.EnumerateConnectedRawBodyReferences(ref sourceTypeBatch, indexInTypeBatch, ref bodyHandleCollector);
-            //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
             var constraintHandle = sourceTypeBatch.IndexToHandle[indexInTypeBatch];
-            solver.AllocateInBatch(targetBatchIndex, constraintHandle, new Span<BodyHandle>((BodyHandle*)dynamicBodyHandles, bodyHandleCollector.DynamicCount), new Span<int>(encodedBodyIndices, bodiesPerConstraint), typeId, out var targetReference);
+            //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
+            solver.AllocateInBatch(targetBatchIndex, constraintHandle, dynamicBodyHandles, encodedBodyIndices, typeId, out var targetReference);
 
             BundleIndexing.GetBundleIndices(targetReference.IndexInTypeBatch, out var targetBundle, out var targetInner);
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var sourceBundle, out var sourceInner);
