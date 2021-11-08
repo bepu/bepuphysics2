@@ -24,7 +24,7 @@ namespace Demos.Demos
             camera.Pitch = MathHelper.Pi * 0.1f;
             //Using minimum sized allocations forces as many resizes as possible.
             //Note the low solverFallbackBatchThreshold- we want the fallback batches to get tested thoroughly.
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(3), 1, solverFallbackBatchThreshold: 2, initialAllocationSizes:
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(3), 1, solverFallbackBatchThreshold: 128, initialAllocationSizes:
             new SimulationAllocationSizes
             {
                 Bodies = 1,
@@ -362,12 +362,13 @@ namespace Demos.Demos
                 Simulation.Bodies.GetDescription(handle, out var description);
                 Simulation.Shapes.RecursivelyRemoveAndDispose(description.Collidable.Shape, BufferPool);
                 CreateBodyDescription(random, description.Pose, description.Velocity, out var newDescription);
-                //if (random.NextDouble() < 0.1f)
-                //{
-                //    //Occasionally make a dynamic kinematic.
-                //    newDescription.LocalInertia = default;
-                //}
+                if (random.NextDouble() < 0.1f)
+                {
+                    //Occasionally make a dynamic kinematic.
+                    newDescription.LocalInertia = default;
+                }
                 Simulation.Bodies.ApplyDescription(handle, newDescription);
+                Simulation.Solver.ValidateConstraintReferenceKinematicity();
             }
 
             Simulation.Solver.ValidateConstrainedKinematicsSet();

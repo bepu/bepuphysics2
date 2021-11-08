@@ -575,16 +575,6 @@ namespace BepuPhysics.Constraints
 
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected static void CopyConstraintData(
-             ref TBodyReferences sourceReferencesBundle, ref TPrestepData sourcePrestepBundle, ref TAccumulatedImpulse sourceAccumulatedBundle, int sourceInner,
-             ref TBodyReferences targetReferencesBundle, ref TPrestepData targetPrestepBundle, ref TAccumulatedImpulse targetAccumulatedBundle, int targetInner)
-        {
-            //Note that we do NOT copy the iteration data. It is regenerated each frame from scratch. 
-            GatherScatter.CopyLane(ref sourceReferencesBundle, sourceInner, ref targetReferencesBundle, targetInner);
-            GatherScatter.CopyLane(ref sourcePrestepBundle, sourceInner, ref targetPrestepBundle, targetInner);
-            GatherScatter.CopyLane(ref sourceAccumulatedBundle, sourceInner, ref targetAccumulatedBundle, targetInner);
-        }
         /// <summary>
         /// Overwrites all the data in the target constraint slot with source data.
         /// </summary>
@@ -595,9 +585,10 @@ namespace BepuPhysics.Constraints
             ref TBodyReferences targetReferencesBundle, ref TPrestepData targetPrestepBundle, ref TAccumulatedImpulse targetAccumulatedBundle, ref ConstraintHandle targetIndexToHandle,
             int targetInner, int targetIndex, ref Buffer<ConstraintLocation> handlesToConstraints)
         {
-            CopyConstraintData(
-                ref sourceReferencesBundle, ref sourcePrestepBundle, ref sourceAccumulatedBundle, sourceInner,
-                ref targetReferencesBundle, ref targetPrestepBundle, ref targetAccumulatedBundle, targetInner);
+            //Note that we do NOT copy the iteration data. It is regenerated each frame from scratch. 
+            GatherScatter.CopyLane(ref sourceReferencesBundle, sourceInner, ref targetReferencesBundle, targetInner);
+            GatherScatter.CopyLane(ref sourcePrestepBundle, sourceInner, ref targetPrestepBundle, targetInner);
+            GatherScatter.CopyLane(ref sourceAccumulatedBundle, sourceInner, ref targetAccumulatedBundle, targetInner);
             targetIndexToHandle = sourceHandle;
             handlesToConstraints[sourceHandle.Value].IndexInTypeBatch = targetIndex;
         }
@@ -752,17 +743,13 @@ namespace BepuPhysics.Constraints
             BundleIndexing.GetBundleIndices(targetReference.IndexInTypeBatch, out var targetBundle, out var targetInner);
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var sourceBundle, out var sourceInner);
             //We don't pull a description or anything from the old constraint. That would require having a unique mapping from constraint to 'full description'. 
-            //Instead, we just directly copy from lane to lane.
-            //Note that we leave out the runtime generated bits- they'll just get regenerated.
-            CopyConstraintData(
-                ref Buffer<TBodyReferences>.Get(ref sourceTypeBatch.BodyReferences, sourceBundle),
-                ref Buffer<TPrestepData>.Get(ref sourceTypeBatch.PrestepData, sourceBundle),
-                ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle),
-                sourceInner,
-                ref Buffer<TBodyReferences>.Get(ref targetReference.TypeBatch.BodyReferences, targetBundle),
-                ref Buffer<TPrestepData>.Get(ref targetReference.TypeBatch.PrestepData, targetBundle),
-                ref Buffer<TAccumulatedImpulse>.Get(ref targetReference.TypeBatch.AccumulatedImpulses, targetBundle),
-                targetInner);
+            //Instead, we just directly copy from lane to lane. Note that body references are excluded; AllocateInBatch already took care of setting those values.
+            GatherScatter.CopyLane(
+                ref Buffer<TPrestepData>.Get(ref sourceTypeBatch.PrestepData, sourceBundle), sourceInner,
+                ref Buffer<TPrestepData>.Get(ref targetReference.TypeBatch.PrestepData, targetBundle), targetInner);
+            GatherScatter.CopyLane(
+                ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle), sourceInner, 
+                ref Buffer<TAccumulatedImpulse>.Get(ref targetReference.TypeBatch.AccumulatedImpulses, targetBundle), targetInner);
 
             //Now we can get rid of the old allocation.
             //Note the use of RemoveFromBatch instead of Remove. Solver.Remove returns the handle to the pool, which we do not want!

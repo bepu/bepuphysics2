@@ -316,7 +316,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        unsafe internal void ValidateConstraintReferenceKinematicity()
+        public unsafe void ValidateConstraintReferenceKinematicity()
         {
             //Only the active set's body indices are flagged for kinematicity; the inactive sets store body handles.
             for (int setIndex = 0; setIndex < Sets.Length; ++setIndex)
@@ -964,14 +964,6 @@ namespace BepuPhysics
             }
             var typeProcessor = TypeProcessors[typeId];
             Debug.Assert(typeProcessor.BodiesPerConstraint == encodedBodyIndices.Length);
-            for (int i = 0; i < encodedBodyIndices.Length; ++i)
-            {
-                Debug.Assert(Bodies.IsEncodedKinematicReference(encodedBodyIndices[i]) == Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[encodedBodyIndices[i] & Bodies.BodyReferenceMask].Inertia.Local));
-                if (Bodies.IsEncodedKinematicReference(encodedBodyIndices[i]))
-                {
-                    Debug.Assert(ConstrainedKinematicHandles.Contains(bodies.ActiveSet.IndexToHandle[encodedBodyIndices[i] & Bodies.BodyReferenceMask].Value));
-                }
-            }
             var typeBatch = batch.GetOrCreateTypeBatch(typeId, typeProcessor, GetMinimumCapacityForType(typeId), pool);
             int indexInTypeBatch;
             if (targetBatchIndex == FallbackBatchThreshold)
