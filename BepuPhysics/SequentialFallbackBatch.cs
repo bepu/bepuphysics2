@@ -96,7 +96,7 @@ namespace BepuPhysics
         /// <param name="bodyReference">Body associated with a constraint in the fallback batch.</param>
         /// <param name="allocationIdsToFree">Allocations that should be freed once execution is back in a safe context.</param>
         /// <returns>True if the body was dynamic and no longer has any constraints associated with it in the fallback batch, false otherwise.</returns>
-        internal unsafe bool Remove(int bodyReference, ref QuickList<int> allocationIdsToFree)
+        internal unsafe bool RemoveOneBodyReferenceFromDynamicsSet(int bodyReference, ref QuickList<int> allocationIdsToFree)
         {
             if (!dynamicBodyConstraintCounts.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
                 return false;
@@ -121,12 +121,12 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Removes a body from the fallback batch if it is present.
+        /// Removes a body from the fallback batch's dynamic body constraint counts if it is present.
         /// </summary>
         /// <param name="bodyReference">Reference to the body to remove from the fallback batch.</param>
         /// <param name="allocationIdsToFree">Allocations that should be freed once execution is back in a safe context.</param>
         /// <returns>True if the body was present in the fallback batch and was removed, false otherwise.</returns>
-        internal unsafe bool TryRemove(int bodyReference, ref QuickList<int> allocationIdsToFree)
+        internal unsafe bool TryRemoveDynamicBodyFromTracking(int bodyReference, ref QuickList<int> allocationIdsToFree)
         {
             if (dynamicBodyConstraintCounts.Keys.Allocated && dynamicBodyConstraintCounts.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
             {
@@ -147,7 +147,7 @@ namespace BepuPhysics
         }
 
 
-        internal unsafe void Remove(Solver solver, BufferPool bufferPool, ref ConstraintBatch batch, ConstraintHandle constraintHandle, ref IndexSet fallbackBatchHandles, int typeId, int indexInTypeBatch)
+        internal unsafe void Remove(Solver solver, BufferPool bufferPool, ref ConstraintBatch batch, ref IndexSet fallbackBatchHandles, int typeId, int indexInTypeBatch)
         {
             var typeProcessor = solver.TypeProcessors[typeId];
             var bodyCount = typeProcessor.BodiesPerConstraint;
@@ -164,7 +164,7 @@ namespace BepuPhysics
                 if (Bodies.IsEncodedDynamicReference(rawBodyIndex))
                 {
                     var bodyIndex = rawBodyIndex & Bodies.BodyReferenceMask;
-                    if (Remove(bodyIndex, ref allocationIdsToFree))
+                    if (RemoveOneBodyReferenceFromDynamicsSet(bodyIndex, ref allocationIdsToFree))
                     {
                         fallbackBatchHandles.Remove(solver.bodies.ActiveSet.IndexToHandle[bodyIndex].Value);
                     }

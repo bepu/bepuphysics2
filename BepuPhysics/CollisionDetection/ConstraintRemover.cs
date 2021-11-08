@@ -383,7 +383,7 @@ namespace BepuPhysics.CollisionDetection
                     for (int j = 0; j < removals.Count; ++j)
                     {
                         ref var target = ref removals[j];
-                        if (solver.ActiveSet.SequentialFallback.Remove(target.EncodedBodyIndex & Bodies.BodyReferenceMask, ref allocationIdsToFree))
+                        if (solver.ActiveSet.SequentialFallback.RemoveOneBodyReferenceFromDynamicsSet(target.EncodedBodyIndex & Bodies.BodyReferenceMask, ref allocationIdsToFree))
                         {
                             //No more constraints for this body in the fallback set; it should not exist in the fallback batch's referenced handles anymore.
                             //Debug.Assert(solver.batchReferencedHandles[target.BatchIndex].Contains(target.BodyHandle.Value) || bodies.GetBodyReference(target.BodyHandle).Kinematic,
@@ -396,12 +396,7 @@ namespace BepuPhysics.CollisionDetection
         }
         public void TryRemoveBodyFromConstrainedKinematicsAndRemoveAllConstraintsForBodyFromFallbackBatch(BodyHandle bodyHandle, int bodyIndex)
         {
-            if (solver.ActiveSet.SequentialFallback.TryRemove(bodyIndex, ref allocationIdsToFree))
-            {
-                Debug.Assert(solver.batchReferencedHandles[solver.FallbackBatchThreshold].Contains(bodyHandle.Value) || bodies.GetBodyReference(bodyHandle).Kinematic,
-                    "The batch referenced handles must include all constraint-involved dynamics, but will not include kinematics.");
-                solver.batchReferencedHandles[solver.FallbackBatchThreshold].Unset(bodyHandle.Value);
-            }
+            solver.TryRemoveDynamicBodyFromFallback(bodyHandle, bodyIndex, ref allocationIdsToFree);
             //Note that we don't check kinematicity here. If it's dynamic, that's fine, this won't do anything.
             solver.ConstrainedKinematicHandles.FastRemove(bodyHandle.Value);
         }
