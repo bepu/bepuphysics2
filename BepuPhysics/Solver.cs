@@ -1670,7 +1670,6 @@ namespace BepuPhysics
             ref var constraints = ref bodies.ActiveSet.Constraints[bodyIndex];
             for (int constraintIndex = 0; constraintIndex < constraints.Count; ++constraintIndex)
             {
-                ValidateBatchReferencedHandlesVersusConstraintStoredReferences();
                 ref var constraint = ref constraints[constraintIndex];
                 enumerator.DynamicCount = 0;
                 enumerator.EncodedCount = 0;
@@ -1713,18 +1712,15 @@ namespace BepuPhysics
                         targetBatchIndex = AllocateNewConstraintBatch();
                     }
                 }
-                ValidateBatchReferencedHandlesVersusConstraintStoredReferences();
                 //Perform the transfer!
                 //Note that there's no need to strip kinematic flags- we stripped the flag appropriately when we created the encodedBodyIndices earlier, and those were the values that got stuck into the new allocation.
                 TypeProcessors[constraintLocation.TypeId].TransferConstraint(ref typeBatch, constraintLocation.BatchIndex, constraintLocation.IndexInTypeBatch, this, bodies, targetBatchIndex,
                     new Span<BodyHandle>(dynamicBodyHandles, enumerator.DynamicCount), encodedBodyIndicesSpan);
-                ValidateBatchReferencedHandlesVersusConstraintStoredReferences();
             }
             if(constraints.Count > 0)
             {
                 ConstrainedKinematicHandles.FastRemove(bodyHandle.Value);
             }
-            ValidateConstrainedKinematicsSet();
         }
 
         internal interface IConstraintReferenceReportType { }
