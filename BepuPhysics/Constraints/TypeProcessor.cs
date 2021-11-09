@@ -751,6 +751,13 @@ namespace BepuPhysics.Constraints
                 ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle), sourceInner,
                 ref Buffer<TAccumulatedImpulse>.Get(ref targetReference.TypeBatch.AccumulatedImpulses, targetBundle), targetInner);
 
+            //Don't forget to keep the solver's pointers consistent! We bypassed the usual add procedure, so the solver hasn't been notified yet.
+            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle.Value];
+            constraintLocation.BatchIndex = targetBatchIndex;
+            constraintLocation.IndexInTypeBatch = targetReference.IndexInTypeBatch;
+            constraintLocation.TypeId = typeId;
+            solver.AssertConstraintHandleExists(constraintHandle);
+
             //Now we can get rid of the old allocation.
             //Note the use of RemoveFromBatch instead of Remove. Solver.Remove returns the handle to the pool, which we do not want!
             //It may look a bit odd to use a solver-level function here, given that we are operating on batches and handling the solver state directly for the most part. 
@@ -758,13 +765,6 @@ namespace BepuPhysics.Constraints
             //Rather than reimplementing that we just reuse the solver's version. 
             //That sort of resource cleanup isn't required on add- everything that is needed already exists, and nothing is going away.
             solver.RemoveFromBatch(sourceBatchIndex, typeId, indexInTypeBatch);
-
-            //Don't forget to keep the solver's pointers consistent! We bypassed the usual add procedure, so the solver hasn't been notified yet.
-            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle.Value];
-            constraintLocation.BatchIndex = targetBatchIndex;
-            constraintLocation.IndexInTypeBatch = targetReference.IndexInTypeBatch;
-            constraintLocation.TypeId = typeId;
-
         }
 
         void InternalResize(ref TypeBatch typeBatch, BufferPool pool, int constraintCapacity)

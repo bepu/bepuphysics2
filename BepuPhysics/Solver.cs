@@ -658,18 +658,22 @@ namespace BepuPhysics
             for (int batchIndex = 0; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
             {
                 var batch = ActiveSet.Batches[batchIndex];
-                for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {
-                    var typeBatch = batch.TypeBatches[j];
+                    var typeBatch = batch.TypeBatches[typeBatchIndex];
                     Debug.Assert(TypeProcessors[typeBatch.TypeId].BodiesPerConstraint <= maximumBodyCountInConstraint);
-                    for (int k = 0; k < typeBatch.ConstraintCount; ++k)
+                    for (int constraintIndex = 0; constraintIndex < typeBatch.ConstraintCount; ++constraintIndex)
                     {
-                        PassthroughReferenceCollector debugEnumerator = new(debugReferences);
-                        EnumerateConnectedRawBodyReferences(typeBatch.IndexToHandle[k], ref debugEnumerator);
-                        for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < debugEnumerator.Index; ++bodyIndexInConstraint)
+                        var constraintHandle = typeBatch.IndexToHandle[constraintIndex];
+                        if (constraintHandle.Value >= 0)
                         {
-                            var isInReferencedHandles = batchReferencedHandles[batchIndex].Contains(bodies.ActiveSet.IndexToHandle[debugReferences[bodyIndexInConstraint] & Bodies.BodyReferenceMask].Value);
-                            Debug.Assert(isInReferencedHandles == Bodies.IsEncodedDynamicReference(debugReferences[bodyIndexInConstraint]));
+                            PassthroughReferenceCollector debugEnumerator = new(debugReferences);
+                            EnumerateConnectedRawBodyReferences(constraintHandle, ref debugEnumerator);
+                            for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < debugEnumerator.Index; ++bodyIndexInConstraint)
+                            {
+                                var isInReferencedHandles = batchReferencedHandles[batchIndex].Contains(bodies.ActiveSet.IndexToHandle[debugReferences[bodyIndexInConstraint] & Bodies.BodyReferenceMask].Value);
+                                Debug.Assert(isInReferencedHandles == Bodies.IsEncodedDynamicReference(debugReferences[bodyIndexInConstraint]));
+                            }
                         }
                     }
                 }
@@ -1686,7 +1690,7 @@ namespace BepuPhysics
                 ref var batch = ref ActiveSet.Batches[constraintLocation.BatchIndex];
                 ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
                 int targetBatchIndex = -1;
-                 
+
                 for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
                 {
                     if (batchReferencedHandles[batchIndex].CanFit(dynamicBodyHandlesSpan))
@@ -1717,7 +1721,7 @@ namespace BepuPhysics
                 TypeProcessors[constraintLocation.TypeId].TransferConstraint(ref typeBatch, constraintLocation.BatchIndex, constraintLocation.IndexInTypeBatch, this, bodies, targetBatchIndex,
                     new Span<BodyHandle>(dynamicBodyHandles, enumerator.DynamicCount), encodedBodyIndicesSpan);
             }
-            if(constraints.Count > 0)
+            if (constraints.Count > 0)
             {
                 ConstrainedKinematicHandles.FastRemove(bodyHandle.Value);
             }

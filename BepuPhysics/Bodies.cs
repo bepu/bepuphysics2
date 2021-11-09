@@ -356,7 +356,6 @@ namespace BepuPhysics
         unsafe void UpdateForKinematicStateChange(BodyHandle handle, ref BodyMemoryLocation location, ref BodySet set, bool previouslyKinematic, bool currentlyKinematic)
         {
             Debug.Assert(location.SetIndex == 0, "If we're changing kinematic state, we should have already awoken the body.");
-            solver.ValidateBatchReferencedHandlesVersusConstraintStoredReferences();
             if (previouslyKinematic != currentlyKinematic)
             {
                 ref var collidable = ref set.Collidables[location.Index];
@@ -376,15 +375,11 @@ namespace BepuPhysics
                 ref var constraints = ref set.Constraints[location.Index];
                 if (currentlyKinematic)
                 {
-                    solver.ValidateBatchReferencedHandlesVersusConstraintStoredReferences();
                     solver.UpdateReferencesForBodyBecomingKinematic(handle, location.Index);
-                    solver.ValidateBatchReferencedHandlesVersusConstraintStoredReferences();
                 }
                 else
                 {
-                    solver.ValidateBatchReferencedHandlesVersusConstraintStoredReferences();
                     solver.UpdateReferencesForBodyBecomingDynamic(handle, location.Index);
-                    solver.ValidateBatchReferencedHandlesVersusConstraintStoredReferences();
                 }
             }
         }
