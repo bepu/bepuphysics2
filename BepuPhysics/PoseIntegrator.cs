@@ -696,7 +696,6 @@ namespace BepuPhysics
 
         public void PredictBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
-            //No need to ensure inertias capacity here; world inertias are not computed during bounding box prediction.
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
             Callbacks.PrepareForIntegration(dt);

@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
+using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
@@ -69,18 +70,15 @@ namespace BepuPhysics
 
     public struct BoundingBoxInstance
     {
-        public RigidPose Pose;
-        public BodyVelocity Velocities;
         public int ShapeIndex;
         public BoundsContinuation Continuation;
     }
 
-    public struct BoundingBoxInstanceWide<TShape, TShapeWide> where TShape : unmanaged, IShape where TShapeWide : unmanaged, IShapeWide<TShape>
+    public struct BoundingBoxBatch
     {
-        public TShapeWide Shape;
-        public Vector<float> MaximumExpansion;
-        public RigidPoseWide Pose;
-        public BodyVelocityWide Velocities;
+        public Buffer<int> ShapeIndices;
+        public Buffer<BoundsContinuation> Continuations;
+        public int Count;
     }
 
     public struct BoundingBoxBatcher
@@ -92,7 +90,7 @@ namespace BepuPhysics
         internal float dt;
 
         int minimumBatchIndex, maximumBatchIndex;
-        Buffer<QuickList<BoundingBoxInstance>> batches;
+        Buffer<BoundingBoxBatch> batches;
 
         /// <summary>
         /// The number of bodies to accumulate per type before executing an AABB update. The more bodies per batch, the less virtual overhead and execution divergence.
@@ -116,48 +114,66 @@ namespace BepuPhysics
 
         public unsafe void ExecuteConvexBatch<TShape, TShapeWide>(ConvexShapeBatch<TShape, TShapeWide> shapeBatch) where TShape : unmanaged, IConvexShape where TShapeWide : unmanaged, IShapeWide<TShape>
         {
-            var instanceBundle = default(BoundingBoxInstanceWide<TShape, TShapeWide>);
-            if (instanceBundle.Shape.InternalAllocationSize > 0) //TODO: Check to make sure the JIT omits the branch.
+            Unsafe.SkipInit(out TShapeWide shapeWide);
+            if (shapeWide.InternalAllocationSize > 0) //TODO: Check to make sure the JIT omits the branch.
             {
-                var memory = stackalloc byte[instanceBundle.Shape.InternalAllocationSize];
-                instanceBundle.Shape.Initialize(new RawBuffer(memory, instanceBundle.Shape.InternalAllocationSize));
+                var memory = stackalloc byte[shapeWide.InternalAllocationSize];
+                shapeWide.Initialize(new RawBuffer(memory, shapeWide.InternalAllocationSize));
             }
             ref var batch = ref batches[shapeBatch.TypeId];
-            ref var instancesBase = ref batch[0];
+            var shapeIndices = batch.ShapeIndices;
+            var continuations = batch.Continuations;
             ref var activeSet = ref bodies.ActiveSet;
 
+            var continuationMask = new Vector<int>(1 << 31);
+            var dtWide = new Vector<float>(dt);
+            Span<float> minimumMarginSpan = stackalloc float[Vector<float>.Count];
+            Span<float> maximumMarginSpan = stackalloc float[Vector<float>.Count];
+            Span<int> allowExpansionBeyondSpeculativeMarginSpan = stackalloc int[Vector<int>.Count];
             for (int bundleStartIndex = 0; bundleStartIndex < batch.Count; bundleStartIndex += Vector<float>.Count)
             {
                 int countInBundle = batch.Count - bundleStartIndex;
                 if (countInBundle > Vector<float>.Count)
                     countInBundle = Vector<float>.Count;
-                ref var bundleInstancesStart = ref Unsafe.Add(ref instancesBase, bundleStartIndex);
+                var emptyTrailingMask = BundleIndexing.CreateTrailingMaskForCountInBundle(countInBundle);
+                var continuationsBundle = Unsafe.As<BoundsContinuation, Vector<int>>(ref continuations[bundleStartIndex]);
+                var bodyIndices = Vector.BitwiseOr(emptyTrailingMask, Vector.AndNot(continuationsBundle, continuationMask));
+                bodies.GatherState<AccessNoInertia>(bodyIndices, false, out var positions, out var orientations, out var velocities, out _);
+                shapeWide.GetBounds(ref orientations, countInBundle, out var maximumRadius, out var maximumAngularExpansion, out var bundleMin, out var bundleMax);
+                //BoundingBoxBatcher is responsible for updating the bounding box AND speculative margin.
+                //In order to know how much we're allowed to expand the bounding box, we need to know the speculative margin.
+                //It's defined by the velocity of the body, and bounded by the body's minimum and maximum.
+                var angularBoundsExpansion = BoundingBoxHelpers.GetAngularBoundsExpansion(Vector3Wide.Length(velocities.Angular), dtWide, maximumRadius, maximumAngularExpansion);
+                var speculativeMargin = Vector3Wide.Length(velocities.Linear) + angularBoundsExpansion;
+
                 //Note that doing a gather-scatter to enable vectorized bundle execution isn't worth it for some shape types.
                 //We're just ignoring that fact for simplicity. Bounding box updates aren't a huge concern overall. That said,
                 //if you want to optimize this further, the shape batches could choose between vectorized and gatherless scalar implementations on a per-type basis.
+                //TODO: This transposition could be significantly improved with intrinsics, as we did for the Bodies state gather operations.
+
                 for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
                 {
-                    ref var instance = ref Unsafe.Add(ref bundleInstancesStart, innerIndex);
-                    ref var targetInstanceSlot = ref GatherScatter.GetOffsetInstance(ref instanceBundle, innerIndex);
+                    var shapeIndex = shapeIndices[bundleStartIndex + innerIndex];
                     //This property should be a constant value and the JIT has type knowledge, so this branch should optimize out.
-                    if (instanceBundle.Shape.AllowOffsetMemoryAccess)
-                        targetInstanceSlot.Shape.WriteFirst(shapeBatch.shapes[instance.ShapeIndex]);
+                    if (shapeWide.AllowOffsetMemoryAccess)
+                        shapeWide.WriteFirst(shapeBatch.shapes[shapeIndex]);
                     else
-                        instanceBundle.Shape.WriteSlot(innerIndex, shapeBatch.shapes[instance.ShapeIndex]);
-                    Vector3Wide.WriteFirst(instance.Pose.Position, ref targetInstanceSlot.Pose.Position);
-                    QuaternionWide.WriteFirst(instance.Pose.Orientation, ref targetInstanceSlot.Pose.Orientation);
-                    Vector3Wide.WriteFirst(instance.Velocities.Linear, ref targetInstanceSlot.Velocities.Linear);
-                    Vector3Wide.WriteFirst(instance.Velocities.Angular, ref targetInstanceSlot.Velocities.Angular);
-                    ref var collidable = ref activeSet.Collidables[instance.Continuation.BodyIndex];
-                    GatherScatter.GetFirst(ref targetInstanceSlot.MaximumExpansion) =
-                        collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : collidable.SpeculativeMargin;
+                        shapeWide.WriteSlot(innerIndex, shapeBatch.shapes[shapeIndex]);
+                    ref var collidable = ref activeSet.Collidables[continuations[bundleStartIndex + innerIndex].BodyIndex];
+                    minimumMarginSpan[innerIndex] = collidable.Continuity.MinimumSpeculativeMargin;
+                    maximumMarginSpan[innerIndex] = collidable.Continuity.MaximumSpeculativeMargin;
+                    allowExpansionBeyondSpeculativeMarginSpan[innerIndex] = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? -1 : 0;
                 }
-                instanceBundle.Shape.GetBounds(ref instanceBundle.Pose.Orientation, countInBundle, out var maximumRadius, out var maximumAngularExpansion, out var bundleMin, out var bundleMax);
-                BoundingBoxHelpers.ExpandBoundingBoxes(ref bundleMin, ref bundleMax, ref instanceBundle.Velocities, dt,
-                    ref maximumRadius, ref maximumAngularExpansion, ref instanceBundle.MaximumExpansion);
+                var minimumSpeculativeMargin = new Vector<float>(minimumMarginSpan);
+                var maximumSpeculativeMargin = new Vector<float>(maximumMarginSpan);
+                var allowExpansionBeyondSpeculativeMargin = new Vector<int>(allowExpansionBeyondSpeculativeMarginSpan);
+                speculativeMargin = Vector.Max(minimumSpeculativeMargin, Vector.Min(maximumSpeculativeMargin, speculativeMargin));
+                var maximumBoundsExpansion = Vector.ConditionalSelect(allowExpansionBeyondSpeculativeMargin, new Vector<float>(float.MaxValue), speculativeMargin);
+                BoundingBoxHelpers.ExpandBoundingBoxes(ref bundleMin, ref bundleMax, velocities, dt,
+                    maximumRadius, maximumAngularExpansion, maximumBoundsExpansion);
                 //TODO: Note that this is an area that must be updated if you change the pose representation.
-                Vector3Wide.Add(instanceBundle.Pose.Position, bundleMin, out bundleMin);
-                Vector3Wide.Add(instanceBundle.Pose.Position, bundleMax, out bundleMax);
+                Vector3Wide.Add(positions, bundleMin, out bundleMin);
+                Vector3Wide.Add(positions, bundleMax, out bundleMax);
 
                 for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
                 {

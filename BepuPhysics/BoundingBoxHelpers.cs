@@ -11,8 +11,8 @@ namespace BepuPhysics
     public static class BoundingBoxHelpers
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetAngularBoundsExpansion(in Vector<float> angularSpeed, in Vector<float> vectorDt, in Vector<float> maximumRadius,
-            in Vector<float> maximumAngularExpansion, out Vector<float> angularExpansion)
+        public static Vector<float> GetAngularBoundsExpansion(Vector<float> angularSpeed, Vector<float> vectorDt, Vector<float> maximumRadius,
+            Vector<float> maximumAngularExpansion)
         {
             /*
             Angular requires a bit more care. Since the goal is to create a tight bound, simply using a v = w * r approximation isn't ideal. A slightly tighter can be found:
@@ -42,7 +42,7 @@ namespace BepuPhysics
             var cosAngleMinusOne = a2 * new Vector<float>(-1f / 2f) + a4 * new Vector<float>(1f / 24f) - a6 * new Vector<float>(1f / 720f);
             //Note that it's impossible for angular motion to cause an increase in bounding box size beyond (maximumRadius-minimumRadius) on any given axis.
             //That value, or a conservative approximation, is stored as the maximum angular expansion.
-            angularExpansion = Vector.Min(maximumAngularExpansion,
+            return Vector.Min(maximumAngularExpansion,
                 Vector.SquareRoot(new Vector<float>(-2f) * maximumRadius * maximumRadius * cosAngleMinusOne));
         }
 
@@ -100,17 +100,16 @@ namespace BepuPhysics
             Vector3Wide.Min(zero, linearDisplacement, out minExpansion);
             Vector3Wide.Max(zero, linearDisplacement, out maxExpansion);
             Vector3Wide.Length(angularVelocity, out var angularSpeed);
-            GetAngularBoundsExpansion(angularSpeed, vectorDt, maximumRadius, maximumAngularExpansion, out var angularExpansion);
+            var angularExpansion = GetAngularBoundsExpansion(angularSpeed, vectorDt, maximumRadius, maximumAngularExpansion);
             Vector3Wide.Subtract(minExpansion, angularExpansion, out minExpansion);
             Vector3Wide.Add(maxExpansion, angularExpansion, out maxExpansion);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ExpandBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max, ref BodyVelocityWide velocities, float dt,
-            ref Vector<float> maximumRadius, ref Vector<float> maximumAngularExpansion, ref Vector<float> maximumExpansion)
+        public static void ExpandBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max, BodyVelocityWide velocities, float dt,
+            Vector<float> maximumRadius, Vector<float> maximumAngularExpansion, Vector<float> maximumExpansion)
         {
             GetBoundsExpansion(velocities.Linear, velocities.Angular, dt, maximumRadius, maximumAngularExpansion, out var minDisplacement, out var maxDisplacement);
-            //The maximum expansion passed into this function is the speculative margin for discrete mode collidables, and ~infinity for passive or continuous ones.
             Vector3Wide.Max(-maximumExpansion, minDisplacement, out minDisplacement);
             Vector3Wide.Min(maximumExpansion, maxDisplacement, out maxDisplacement);
 
@@ -121,8 +120,8 @@ namespace BepuPhysics
 
         //This is simply a internally vectorized version of the above.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetAngularBoundsExpansion(in Vector3 angularVelocity, float dt,
-            float maximumRadius, float maximumAngularExpansion, out Vector3 expansion)
+        public static Vector3 GetAngularBoundsExpansion(Vector3 angularVelocity, float dt,
+            float maximumRadius, float maximumAngularExpansion)
         {
             var angularVelocityMagnitude = angularVelocity.Length();
             var a = MathHelper.Min(angularVelocityMagnitude * dt, MathHelper.Pi / 3f);
@@ -132,8 +131,7 @@ namespace BepuPhysics
             var cosAngleMinusOne = a2 * (-1f / 2f) + a4 * (1f / 24f) - a6 * (1f / 720f);
             //Note that it's impossible for angular motion to cause an increase in bounding box size beyond (maximumRadius-minimumRadius) on any given axis.
             //That value, or a conservative approximation, is stored as the maximum angular expansion.
-            expansion = new Vector3(MathHelper.Min(maximumAngularExpansion,
-                (float)Math.Sqrt(-2f * maximumRadius * maximumRadius * cosAngleMinusOne)));
+            return new Vector3(MathHelper.Min(maximumAngularExpansion, (float)Math.Sqrt(-2f * maximumRadius * maximumRadius * cosAngleMinusOne)));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -144,7 +142,7 @@ namespace BepuPhysics
             Vector3 zero = default;
             minExpansion = Vector3.Min(zero, linearDisplacement);
             maxExpansion = Vector3.Max(zero, linearDisplacement);
-            GetAngularBoundsExpansion(angularVelocity, dt, maximumRadius, maximumAngularExpansion, out var angularExpansion);
+            var angularExpansion = GetAngularBoundsExpansion(angularVelocity, dt, maximumRadius, maximumAngularExpansion);
 
             var maximumAllowedExpansionBroadcasted = new Vector3(maximumAllowedExpansion);
             minExpansion = Vector3.Max(-maximumAllowedExpansionBroadcasted, minExpansion - angularExpansion);
@@ -189,7 +187,7 @@ namespace BepuPhysics
                 Vector3Wide.Length(localPositionA, out var radiusB);
                 Vector3Wide.Length(localRelativeLinearVelocityA, out var linearSpeed);
                 var worstCaseRadius = linearSpeed * dt + radiusB;
-                GetAngularBoundsExpansion(Vector.SquareRoot(angularSpeedBSquared), maximumRadius + worstCaseRadius, maximumAngularExpansion + worstCaseRadius, new Vector<float>(dt), out var angularExpansionB);
+                var angularExpansionB = GetAngularBoundsExpansion(Vector.SquareRoot(angularSpeedBSquared), maximumRadius + worstCaseRadius, maximumAngularExpansion + worstCaseRadius, new Vector<float>(dt));
                 Vector3Wide.Subtract(minExpansion, angularExpansionB, out minExpansion);
                 Vector3Wide.Add(maxExpansion, angularExpansionB, out maxExpansion);
             }
@@ -232,11 +230,11 @@ namespace BepuPhysics
             shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, poseARotatedIntoBLocalSpace.Orientation, out var maximumRadiusA, out var maximumAngularExpansionA, out min, out max);
             //Object A could rotate around its center.
             var worstCaseRadiusA = shapePoseLocalToA.Position.Length();
-            GetAngularBoundsExpansion(velocityA.Angular, dt, worstCaseRadiusA + maximumRadiusA, worstCaseRadiusA + maximumAngularExpansionA, out var angularExpansionA);
+            var angularExpansionA = GetAngularBoundsExpansion(velocityA.Angular, dt, worstCaseRadiusA + maximumRadiusA, worstCaseRadiusA + maximumAngularExpansionA);
             //Rotation of object B could induce an arc in object A.
             //The furthest the convex can be from the compound local origin is no further than the sweep pushing it directly away from the compound, while rotation swings A's local pose away.
             var worstCaseRadiusB = sweep.Length() + localOffsetB.Length() + worstCaseRadiusA;
-            GetAngularBoundsExpansion(velocityB.Angular, dt, worstCaseRadiusB + maximumRadiusA, worstCaseRadiusB + maximumAngularExpansionA, out var angularExpansionB);
+            var angularExpansionB = GetAngularBoundsExpansion(velocityB.Angular, dt, worstCaseRadiusB + maximumRadiusA, worstCaseRadiusB + maximumAngularExpansionA);
             var combinedAngularExpansion = angularExpansionA + angularExpansionB;
 
             min = localOriginToA + min - combinedAngularExpansion;
@@ -258,10 +256,10 @@ namespace BepuPhysics
             QuaternionEx.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
 
             shape.ComputeAngularExpansionData(out var maximumRadiusA, out var maximumAngularExpansionA);
-            BoundingBoxHelpers.GetAngularBoundsExpansion(velocityA.Angular, dt, maximumRadiusA, maximumAngularExpansionA, out var angularExpansionA);
+            var angularExpansionA = GetAngularBoundsExpansion(velocityA.Angular, dt, maximumRadiusA, maximumAngularExpansionA);
             //The furthest the convex can be from the compound is no further than the sweep pushing it directly away from the compound.
             var worstCaseRadiusB = sweep.Length() + localOffsetB.Length();
-            BoundingBoxHelpers.GetAngularBoundsExpansion(velocityB.Angular, dt, worstCaseRadiusB + maximumRadiusA, worstCaseRadiusB + maximumAngularExpansionA, out var angularExpansionB);
+            var angularExpansionB = GetAngularBoundsExpansion(velocityB.Angular, dt, worstCaseRadiusB + maximumRadiusA, worstCaseRadiusB + maximumAngularExpansionA);
             var combinedAngularExpansion = angularExpansionA + angularExpansionB;
 
             shape.ComputeBounds(localOrientationA, out min, out max);
