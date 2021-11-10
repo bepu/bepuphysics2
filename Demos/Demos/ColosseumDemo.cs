@@ -77,7 +77,7 @@ namespace Demos.Demos
             var ringBoxShape = new Box(0.5f, 1, 3);
             ringBoxShape.ComputeInertia(1, out var ringBoxInertia);
             var boxDescription = BodyDescription.CreateDynamic(new Vector3(), ringBoxInertia,
-                new CollidableDescription(Simulation.Shapes.Add(ringBoxShape), 0.1f),
+                new CollidableDescription(Simulation.Shapes.Add(ringBoxShape)),
                 new BodyActivityDescription(0.0001f));
 
             var layerPosition = new Vector3();
@@ -97,15 +97,15 @@ namespace Demos.Demos
             }
 
             //Console.WriteLine($"box count: {Simulation.Bodies.ActiveSet.Count}");
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(500, 1, 500)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(500, 1, 500)))));
 
             var bulletShape = new Sphere(0.5f);
             bulletShape.ComputeInertia(.1f, out var bulletInertia);
-            bulletDescription = BodyDescription.CreateDynamic(new Vector3(), bulletInertia, new CollidableDescription(Simulation.Shapes.Add(bulletShape), 10), new BodyActivityDescription(0.01f));
+            bulletDescription = BodyDescription.CreateDynamic(new Vector3(), bulletInertia, new CollidableDescription(Simulation.Shapes.Add(bulletShape)), new BodyActivityDescription(0.01f));
 
             var shootiePatootieShape = new Sphere(3f);
             shootiePatootieShape.ComputeInertia(100, out var shootiePatootieInertia);
-            shootiePatootieDescription = BodyDescription.CreateDynamic(new Vector3(), shootiePatootieInertia, new CollidableDescription(Simulation.Shapes.Add(shootiePatootieShape), 10), new BodyActivityDescription(0.01f));
+            shootiePatootieDescription = BodyDescription.CreateDynamic(new Vector3(), shootiePatootieInertia, new CollidableDescription(Simulation.Shapes.Add(shootiePatootieShape)), new BodyActivityDescription(0.01f));
         }
 
         BodyDescription bulletDescription;

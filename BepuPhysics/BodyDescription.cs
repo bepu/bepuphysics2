@@ -143,7 +143,7 @@ namespace BepuPhysics
                 Pose = pose,
                 Velocity = velocity,
                 Activity = GetDefaultActivity(shape),
-                Collidable = new CollidableDescription(shapes.Add(shape), GetDefaultSpeculativeMargin(shape))
+                Collidable = new CollidableDescription(shapes.Add(shape))
             };
             shape.ComputeInertia(mass, out description.LocalInertia);
             return description;
@@ -266,7 +266,7 @@ namespace BepuPhysics
                 Pose = pose,
                 Velocity = velocity,
                 Activity = GetDefaultActivity(shape),
-                Collidable = new CollidableDescription(shapes.Add(shape), GetDefaultSpeculativeMargin(shape))
+                Collidable = new CollidableDescription(shapes.Add(shape))
             };
             return description;
         }

@@ -29,10 +29,10 @@ namespace Demos.SpecializedTests
 
             var shapeA = new Box(.75f, 1, .5f);
             var shapeIndexA = Simulation.Shapes.Add(shapeA);
-            var collidableA = new CollidableDescription(shapeIndexA, 0.1f);
+            var collidableA = new CollidableDescription(shapeIndexA);
             var shapeB = new Box(.75f, 1, .5f);
             var shapeIndexB = Simulation.Shapes.Add(shapeB);
-            var collidableB = new CollidableDescription(shapeIndexB, 0.1f);
+            var collidableB = new CollidableDescription(shapeIndexB);
             var activity = new BodyActivityDescription(0.01f);
             shapeA.ComputeInertia(1, out var inertiaA);
             shapeA.ComputeInertia(1, out var inertiaB);
@@ -161,7 +161,7 @@ namespace Demos.SpecializedTests
                 var sphere = new Sphere(0.125f);
                 //Treat each vertex as a point mass that cannot rotate.
                 var sphereInertia = new BodyInertia { InverseMass = 1 };
-                var sphereCollidable = new CollidableDescription(Simulation.Shapes.Add(sphere), 0.1f);
+                var sphereCollidable = new CollidableDescription(Simulation.Shapes.Add(sphere));
                 var a = new Vector3(x, 3, 0);
                 var b = new Vector3(x, 4, 0);
                 var c = new Vector3(x, 3, 1);
@@ -204,7 +204,7 @@ namespace Demos.SpecializedTests
                 var sphere = new Sphere(0.125f);
                 //Treat each vertex as a point mass that cannot rotate.
                 var sphereInertia = new BodyInertia { InverseMass = 1 };
-                var sphereCollidable = new CollidableDescription(Simulation.Shapes.Add(sphere), 0.1f);
+                var sphereCollidable = new CollidableDescription(Simulation.Shapes.Add(sphere));
                 var a = new Vector3(x, 3, 0);
                 var b = new Vector3(x, 4, 0);
                 var c = new Vector3(x + 1, 3, 0);
@@ -385,11 +385,11 @@ namespace Demos.SpecializedTests
             }
             {
                 var x = GetNextPosition(ref nextX);
-                var wheelShape = new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 0.1f)), 0.1f);
+                var wheelShape = new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 0.1f)));
                 var wheelOrientation = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI * 0.5f);
                 var aDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(x, 3, 0), wheelOrientation), inertiaA, wheelShape, activity);
                 var bDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(x, 6, 0), wheelOrientation), inertiaB, wheelShape, activity);
-                var cDescription = BodyDescription.CreateKinematic(new Vector3(x, 4.5f, -1), new CollidableDescription(Simulation.Shapes.Add(new Box(3, 6, 1)), 0.1f), activity);
+                var cDescription = BodyDescription.CreateKinematic(new Vector3(x, 4.5f, -1), new CollidableDescription(Simulation.Shapes.Add(new Box(3, 6, 1))), activity);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
                 var c = Simulation.Bodies.Add(cDescription);
@@ -417,7 +417,7 @@ namespace Demos.SpecializedTests
                 });
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)))));
         }
     }
 }

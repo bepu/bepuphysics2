@@ -127,15 +127,15 @@ namespace Demos.Demos.Sponsors
 
             const float floorSize = 240;
             const float wallThickness = 200;
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 20, floorSize)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * -0.5f - wallThickness * 0.5f, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * 0.5f + wallThickness * 0.5f, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, floorSize * -0.5f - wallThickness * 0.5f), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 30, wallThickness)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, floorSize * 0.5f + wallThickness * 0.5f), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 30, wallThickness)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 20, floorSize)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * -0.5f - wallThickness * 0.5f, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * 0.5f + wallThickness * 0.5f, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, floorSize * -0.5f - wallThickness * 0.5f), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 30, wallThickness)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, floorSize * 0.5f + wallThickness * 0.5f), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 30, wallThickness)))));
 
             const int characterCount = 1000;
             characterAIs = new QuickList<SponsorCharacterAI>(characterCount, BufferPool);
-            var characterCollidable = new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f)), 0.1f);
+            var characterCollidable = new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f)));
             for (int i = 0; i < characterCount; ++i)
             {
                 var position2D = newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
@@ -146,7 +146,7 @@ namespace Demos.Demos.Sponsors
             const int hutCount = 30;
             var hutBoxShape = new Box(0.4f, 2, 3);
             hutBoxShape.ComputeInertia(20, out var obstacleInertia);
-            var obstacleDescription = BodyDescription.CreateDynamic(new Vector3(), obstacleInertia, new CollidableDescription(Simulation.Shapes.Add(hutBoxShape), 0.1f), new BodyActivityDescription(1e-2f));
+            var obstacleDescription = BodyDescription.CreateDynamic(new Vector3(), obstacleInertia, new CollidableDescription(Simulation.Shapes.Add(hutBoxShape)), new BodyActivityDescription(1e-2f));
 
             for (int i = 0; i < hutCount; ++i)
             {
@@ -157,7 +157,7 @@ namespace Demos.Demos.Sponsors
 
             var overlordNewtShape = newtMesh;
             overlordNewtShape.Scale = new Vector3(60, 60, 60);
-            overlordNewtHandle = Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, -floorSize * 0.5f - 70), new CollidableDescription(Simulation.Shapes.Add(overlordNewtShape), 0.1f)));
+            overlordNewtHandle = Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, -floorSize * 0.5f - 70), new CollidableDescription(Simulation.Shapes.Add(overlordNewtShape))));
         }
 
 

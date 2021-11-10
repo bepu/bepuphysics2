@@ -45,7 +45,7 @@ namespace Demos.Demos
                         new Vector3(0, 5 + blockIndex * (boxShape.Height + 1), (forkIndex - forkCount * 0.5f) * (boxShape.Length + 4)),
                         //Make the uppermost block kinematic to hold up the rest of the chain.
                         blockIndex == blocksPerChain - 1 ? new BodyInertia() : boxInertia,
-                        new CollidableDescription(boxIndex, .1f),
+                        new CollidableDescription(boxIndex),
                         new BodyActivityDescription(.01f, 32));
                     blockHandles[blockIndex] = Simulation.Bodies.Add(bodyDescription);
                 }
@@ -62,12 +62,12 @@ namespace Demos.Demos
                 }
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(1, -0.5f, 1), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(1, -0.5f, 1), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)))));
 
             //Build the coin description for the ponz-I mean ICO.
             var coinShape = new Cylinder(1.5f, 0.2f);
             coinShape.ComputeInertia(1, out var coinInertia);
-            coinDescription = BodyDescription.CreateDynamic(RigidPose.Identity, coinInertia, new CollidableDescription(Simulation.Shapes.Add(coinShape), 0.1f), new BodyActivityDescription(0.01f));
+            coinDescription = BodyDescription.CreateDynamic(RigidPose.Identity, coinInertia, new CollidableDescription(Simulation.Shapes.Add(coinShape)), new BodyActivityDescription(0.01f));
         }
 
         BodyDescription coinDescription;

@@ -75,7 +75,7 @@ namespace DemoTests
                 var index = remapIndices[i];
                 ref var poseA = ref posesA[index];
                 ref var poseB = ref posesB[index];
-                batcher.Add(a.Shape, b.Shape, poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, Math.Max(a.SpeculativeMargin, b.SpeculativeMargin), new PairContinuation(index));
+                batcher.Add(a.Shape, b.Shape, poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, Math.Max(a.Continuity.MaximumSpeculativeMargin, b.Continuity.MaximumSpeculativeMargin), new PairContinuation(index));
             }
             batcher.Flush();
         }
@@ -231,12 +231,13 @@ namespace DemoTests
 
             var shapes = new Shapes(pool, 8);
             const float speculativeMargin = 0.1f;
-            var sphereCollidable = new CollidableDescription(shapes.Add(sphere), speculativeMargin);
-            var capsuleCollidable = new CollidableDescription(shapes.Add(capsule), speculativeMargin);
-            var boxCollidable = new CollidableDescription(shapes.Add(box), speculativeMargin);
-            var triangleCollidable = new CollidableDescription(shapes.Add(triangle), speculativeMargin);
-            var cylinderCollidable = new CollidableDescription(shapes.Add(cylinder), speculativeMargin);
-            var hullCollidable = new CollidableDescription(shapes.Add(convexHull), speculativeMargin);
+            var continuousDetection = ContinuousDetection.Discrete(speculativeMargin, speculativeMargin);
+            var sphereCollidable = new CollidableDescription(shapes.Add(sphere), continuousDetection);
+            var capsuleCollidable = new CollidableDescription(shapes.Add(capsule), continuousDetection);
+            var boxCollidable = new CollidableDescription(shapes.Add(box), continuousDetection);
+            var triangleCollidable = new CollidableDescription(shapes.Add(triangle), continuousDetection);
+            var cylinderCollidable = new CollidableDescription(shapes.Add(cylinder), continuousDetection);
+            var hullCollidable = new CollidableDescription(shapes.Add(convexHull), continuousDetection);
 
 
             var compoundBuilder = new CompoundBuilder(pool, shapes, 6);
@@ -249,11 +250,11 @@ namespace DemoTests
             compoundBuilder.BuildKinematicCompound(out var children, out _);
             var compound = new Compound(children);
             var bigCompound = new BigCompound(children, shapes, pool);
-            var compoundCollidable = new CollidableDescription(shapes.Add(compound), 0.1f);
-            var bigCompoundCollidable = new CollidableDescription(shapes.Add(bigCompound), 0.1f);
+            var compoundCollidable = new CollidableDescription(shapes.Add(compound), continuousDetection);
+            var bigCompoundCollidable = new CollidableDescription(shapes.Add(bigCompound), continuousDetection);
 
             DemoMeshHelper.CreateDeformedPlane(2, 2, (x, y) => new Vector3(x, 0, y), Vector3.One, pool, out var mesh);
-            var meshCollidable = new CollidableDescription(shapes.Add(mesh), 0.1f);
+            var meshCollidable = new CollidableDescription(shapes.Add(mesh), continuousDetection);
 
             const int pairCount = 31;
             const int poseIterations = 256;

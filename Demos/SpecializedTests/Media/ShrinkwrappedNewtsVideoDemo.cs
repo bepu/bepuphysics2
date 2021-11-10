@@ -46,13 +46,13 @@ namespace Demos.SpecializedTests
                 Simulation.Bodies.Add(bodyDescription);
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -30, 250), new CollidableDescription(Simulation.Shapes.Add(new Box(1000, 60, 500)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -60, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1000, 1, 1000)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -30, 250), new CollidableDescription(Simulation.Shapes.Add(new Box(1000, 60, 500)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -60, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1000, 1, 1000)))));
 
 
 
             DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(1, 1.5f, 1), out mesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(30, 0, 20), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(30, 0, 20), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh))));
         }
 
         Mesh mesh;
@@ -62,7 +62,7 @@ namespace Demos.SpecializedTests
             if(input.WasPushed(OpenTK.Input.Key.Z))
             {
                 mesh.Scale = new Vector3(30);
-                Simulation.Statics.Add(new StaticDescription(new Vector3(70, 0, 50), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3.1f * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
+                Simulation.Statics.Add(new StaticDescription(new Vector3(70, 0, 50), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3.1f * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh))));
             }
             base.Update(window, camera, input, dt);
         }

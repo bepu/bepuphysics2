@@ -90,7 +90,7 @@ namespace Demos.Demos
 
             var shape = new Sphere(1);
             shape.ComputeInertia(1, out var inertia);
-            var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, inertia, new CollidableDescription(Simulation.Shapes.Add(shape), 20f), new BodyActivityDescription(1e-2f));
+            var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, inertia, new CollidableDescription(Simulation.Shapes.Add(shape), ContinuousDetection.Discrete(20, 20)), new BodyActivityDescription(1e-2f));
 
             for (int i = 0; i < 100; ++i)
             {
@@ -104,7 +104,7 @@ namespace Demos.Demos
                 }
             }
 
-            collidableMaterials.Allocate(Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2500, 30, 2500)), 0.1f)))) =
+            collidableMaterials.Allocate(Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2500, 30, 2500)))))) =
                 new SimpleMaterial { FrictionCoefficient = 1, MaximumRecoveryVelocity = 2, SpringSettings = new SpringSettings(30, 1) };
         }
     }

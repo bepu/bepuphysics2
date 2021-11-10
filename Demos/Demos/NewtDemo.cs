@@ -667,7 +667,7 @@ namespace Demos.Demos
                 vertexHandles[i] = simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(
                     position + QuaternionEx.Transform(vertices[i], orientation), orientation), vertexInertia,
                     //Bodies don't have to have collidables. Take advantage of this for all the internal vertices.
-                    new CollidableDescription(vertexEdgeCounts[i] == edgeCountForInternalVertex ? new TypedIndex() : vertexShapeIndex, cellSize * 0.5f),
+                    new CollidableDescription(vertexEdgeCounts[i] == edgeCountForInternalVertex ? new TypedIndex() : vertexShapeIndex),
                     new BodyActivityDescription(-0.01f)));
                 ref var vertexSpatialIndex = ref vertexSpatialIndices[i];
                 filters.Allocate(vertexHandles[i]) = new DeformableCollisionFilter(vertexSpatialIndex.X, vertexSpatialIndex.Y, vertexSpatialIndex.Z, instanceId);
@@ -861,7 +861,7 @@ namespace Demos.Demos
 
             //Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)))));
             //Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(3)), 0.1f)));
 
         }

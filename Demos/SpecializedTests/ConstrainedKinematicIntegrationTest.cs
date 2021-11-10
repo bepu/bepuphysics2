@@ -23,10 +23,10 @@ namespace Demos.SpecializedTests
 
             var shapeA = new Box(.75f, 1, .5f);
             var shapeIndexA = Simulation.Shapes.Add(shapeA);
-            var collidableA = new CollidableDescription(shapeIndexA, 0.1f);
+            var collidableA = new CollidableDescription(shapeIndexA);
             var shapeB = new Box(.75f, 1, .5f);
             var shapeIndexB = Simulation.Shapes.Add(shapeB);
-            var collidableB = new CollidableDescription(shapeIndexB, 0.1f);
+            var collidableB = new CollidableDescription(shapeIndexB);
             var activity = new BodyActivityDescription(0.01f);
             shapeA.ComputeInertia(1, out var inertiaA);
             shapeA.ComputeInertia(1, out var inertiaB);
@@ -54,7 +54,7 @@ namespace Demos.SpecializedTests
                 //Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(8192, 1, 8192)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(8192, 1, 8192)))));
         }
     }
 }

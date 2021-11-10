@@ -35,17 +35,7 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         var location = new Vector3(1.5f, 1.5f, 4.4f) * new Vector3(i, j, k) + new Vector3(-width * 0.5f, 0.5f, -length * 0.5f);
-                        var bodyDescription = new BodyDescription
-                        {
-                            Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.01f },
-                            LocalInertia = localInertia,
-                            Pose = new RigidPose
-                            {
-                                Orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2),
-                                Position = location
-                            },
-                            Collidable = new CollidableDescription { SpeculativeMargin = 50.1f, Shape = shapeIndex }
-                        };
+                        var bodyDescription = BodyDescription.CreateDynamic(new RigidPose(location, QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2)), localInertia, new CollidableDescription(shapeIndex, ContinuousDetection.Discrete(50, 50)), new BodyActivityDescription(-1));
                         Simulation.Bodies.Add(bodyDescription);
 
                     }
@@ -53,16 +43,12 @@ namespace Demos.SpecializedTests
             }
             var boxShape = new Box(0.5f, 0.5f, 2.5f);
             boxShape.ComputeInertia(1, out var boxLocalInertia);
-            var boxDescription = new BodyDescription
-            {
-                Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = -0.01f },
-                LocalInertia = boxLocalInertia,
-                Pose = new(new(1, -0.5f, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), 0)),
-                Collidable = new CollidableDescription { SpeculativeMargin = 50.1f, Shape = Simulation.Shapes.Add(boxShape) }
-            };
+            var boxDescription = BodyDescription.CreateDynamic(new Vector3(1, -0.5f, 0), boxLocalInertia,
+                new CollidableDescription(Simulation.Shapes.Add(boxShape), ContinuousDetection.Discrete(50, 50)),
+                new BodyActivityDescription(-1));
             Simulation.Bodies.Add(boxDescription);
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), new CollidableDescription { SpeculativeMargin = 0.1f, Shape = Simulation.Shapes.Add(new Box(4, 1, 4)) }));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(4, 1, 4)))));
 
         }
 

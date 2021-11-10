@@ -22,17 +22,17 @@ namespace Demos.SpecializedTests
             filters = new CollidableProperty<SubgroupCollisionFilter>(BufferPool);
             Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks() { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionLastTimestepper());
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(70, 20, 80)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 7.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(80, 15, 90)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(90, 10, 100)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(100, 5, 110)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(70, 20, 80)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 7.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(80, 15, 90)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(90, 10, 100)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(100, 5, 110)))));
 
             //High fidelity simulation isn't super important on this one.
             Simulation.Solver.IterationCount = 2;
 
             DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(30), out var mesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 20, 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, 0), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 20, 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, 0), new CollidableDescription(Simulation.Shapes.Add(mesh))));
         }
 
         Random random = new Random(5);

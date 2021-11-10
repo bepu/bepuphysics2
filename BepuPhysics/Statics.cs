@@ -305,7 +305,6 @@ namespace BepuPhysics
             ref var collidable = ref Collidables[index];
             Debug.Assert(description.Collidable.Shape.Exists, "Static collidables must have a shape. Their only purpose is colliding.");
             collidable.Continuity = description.Collidable.Continuity;
-            collidable.SpeculativeMargin = description.Collidable.SpeculativeMargin;
             collidable.Shape = description.Collidable.Shape;
 
             ComputeNewBoundsAndAwaken(description.Pose, description.Collidable.Shape, ref filter, out bounds);
@@ -420,12 +419,10 @@ namespace BepuPhysics
         {
             ValidateExistingHandle(handle);
             var index = HandleToIndex[handle.Value];
-            BundleIndexing.GetBundleIndices(index, out var bundleIndex, out var innerIndex);
             description.Pose = Poses[index];
             ref var collidable = ref Collidables[index];
             description.Collidable.Continuity = collidable.Continuity;
             description.Collidable.Shape = collidable.Shape;
-            description.Collidable.SpeculativeMargin = collidable.SpeculativeMargin;
         }
 
         /// <summary>

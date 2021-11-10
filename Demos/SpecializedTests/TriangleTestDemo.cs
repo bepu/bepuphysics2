@@ -128,23 +128,23 @@ namespace Demos.SpecializedTests
                 ////bodyDescription.LocalInertia.InverseInertiaTensor = new Triangular3x3();
                 //Simulation.Bodies.Add(bodyDescription);
 
-                Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 5, 200)), 0.1f)));
-                Simulation.Statics.Add(new StaticDescription(new Vector3(10, -2, 30), new CollidableDescription(Simulation.Shapes.Add(new Box(10, 5, 10)), 0.1f)));
+                Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 5, 200)))));
+                Simulation.Statics.Add(new StaticDescription(new Vector3(10, -2, 30), new CollidableDescription(Simulation.Shapes.Add(new Box(10, 5, 10)))));
 
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 0), new BodyInertia { InverseMass = 1 }, new CollidableDescription(Simulation.Shapes.Add(new Sphere(1.75f)), 0.1f), new BodyActivityDescription(-1)));
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(20, 2, 3), Quaternion.CreateFromYawPitchRoll(0f, 1.745329E-05f, 0f)), new BodyInertia { InverseMass = 1 }, new CollidableDescription(Simulation.Shapes.Add(new Capsule(1, 2)), 0.1f), new BodyActivityDescription(-1)));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 0), new BodyInertia { InverseMass = 1 }, new CollidableDescription(Simulation.Shapes.Add(new Sphere(1.75f)), ContinuousDetection.Discrete(0.1f, 0.1f)), new BodyActivityDescription(-1)));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(20, 2, 3), Quaternion.CreateFromYawPitchRoll(0f, 1.745329E-05f, 0f)), new BodyInertia { InverseMass = 1 }, new CollidableDescription(Simulation.Shapes.Add(new Capsule(1, 2)), ContinuousDetection.Discrete(0.1f, 0.1f)), new BodyActivityDescription(-1)));
                 var testBox = new Box(2, 3, 2);
                 testBox.ComputeInertia(1, out var testBoxInertia);
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 6), testBoxInertia, new CollidableDescription(Simulation.Shapes.Add(testBox), 10.1f), new BodyActivityDescription(-1)));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 6), testBoxInertia, new CollidableDescription(Simulation.Shapes.Add(testBox), ContinuousDetection.Discrete(10.1f, 10.1f)), new BodyActivityDescription(-1)));
 
                 var cylinder = new Cylinder(1.75f, 2);
                 cylinder.ComputeInertia(1, out var cylinderInertia);
                 //cylinderInertia.InverseInertiaTensor = default;
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(20, 2, 9), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI / 2f)), cylinderInertia, new CollidableDescription(Simulation.Shapes.Add(cylinder), 5f), new BodyActivityDescription(-1)));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(20, 2, 9), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI / 2f)), cylinderInertia, new CollidableDescription(Simulation.Shapes.Add(cylinder), ContinuousDetection.Discrete(5f, 5f)), new BodyActivityDescription(-1)));
 
                 var cylinder2 = new Cylinder(.5f, 0.5f);
                 cylinder2.ComputeInertia(1, out var cylinder2Inertia);
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(23, 2, 9), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0)), cylinder2Inertia, new CollidableDescription(Simulation.Shapes.Add(cylinder2), 5f), new BodyActivityDescription(-1)));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(23, 2, 9), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0)), cylinder2Inertia, new CollidableDescription(Simulation.Shapes.Add(cylinder2), ContinuousDetection.Discrete(5f, 5f)), new BodyActivityDescription(-1)));
                 var points = new QuickList<Vector3>(8, BufferPool);
                 points.AllocateUnsafely() = new Vector3(0, 0, 0);
                 points.AllocateUnsafely() = new Vector3(0, 0, 2);
@@ -156,8 +156,8 @@ namespace Demos.SpecializedTests
                 points.AllocateUnsafely() = new Vector3(2, 2, 2);
                 var convexHull = new ConvexHull(points, BufferPool, out _);
                 convexHull.ComputeInertia(1, out var convexHullInertia);
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 12), convexHullInertia, new CollidableDescription(Simulation.Shapes.Add(convexHull), 0.1f), new BodyActivityDescription(-1)));
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(23, 2, 12), convexHullInertia, new CollidableDescription(Simulation.Shapes.Add(convexHull), 0.1f), new BodyActivityDescription(-1)));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 12), convexHullInertia, new CollidableDescription(Simulation.Shapes.Add(convexHull), ContinuousDetection.Discrete(0.1f, 0.1f)), new BodyActivityDescription(-1)));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(23, 2, 12), convexHullInertia, new CollidableDescription(Simulation.Shapes.Add(convexHull), ContinuousDetection.Discrete(0.1f, 0.1f)), new BodyActivityDescription(-1)));
 
                 CompoundBuilder builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
                 builder.Add(new Box(1, 1, 1), RigidPose.Identity, 1);
@@ -165,7 +165,7 @@ namespace Demos.SpecializedTests
                 builder.BuildDynamicCompound(out var children, out var compoundInertia);
                 //compoundInertia.InverseInertiaTensor = default;
                 var compound = new Compound(children);
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 3, 14), compoundInertia, new CollidableDescription(Simulation.Shapes.Add(compound), 10.1f), new BodyActivityDescription(-1)));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 3, 14), compoundInertia, new CollidableDescription(Simulation.Shapes.Add(compound), ContinuousDetection.Discrete(10.1f, 10.1f)), new BodyActivityDescription(-1)));
 
                 {
                     var triangles = new QuickList<Triangle>(4, BufferPool);
@@ -178,14 +178,14 @@ namespace Demos.SpecializedTests
                     triangles.AllocateUnsafely() = new Triangle { A = v0, B = v2, C = v1 };
                     triangles.AllocateUnsafely() = new Triangle { A = v1, B = v2, C = v3 };
                     var testMesh = new Mesh(triangles, Vector3.One, BufferPool);
-                    Simulation.Statics.Add(new StaticDescription(new Vector3(30, -2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(testMesh), 10.1f)));
+                    Simulation.Statics.Add(new StaticDescription(new Vector3(30, -2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(testMesh), ContinuousDetection.Discrete(10.1f, 10.1f))));
 
-                    Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Triangle(v2, v0, v1)), 10.1f)));
+                    Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Triangle(v2, v0, v1)), ContinuousDetection.Discrete(10.1f, 10.1f))));
                 }
 
 
                 DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(3), out var mesh);
-                var collidable = new CollidableDescription(Simulation.Shapes.Add(mesh), 2f);
+                var collidable = new CollidableDescription(Simulation.Shapes.Add(mesh), ContinuousDetection.Discrete(2f, 2f));
                 mesh.ComputeClosedInertia(1, out var newtInertia);
                 for (int i = 0; i < 5; ++i)
                 {
@@ -201,7 +201,7 @@ namespace Demos.SpecializedTests
                     triangles.AllocateUnsafely() = new Triangle { A = v0, B = v2, C = v1 };
                     triangles.AllocateUnsafely() = new Triangle { A = v1, B = v2, C = v3 };
                     var testMesh = new Mesh(triangles, Vector3.One, BufferPool);
-                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(22, -2.5f, 0), new BodyInertia { InverseMass = 1 }, new CollidableDescription(Simulation.Shapes.Add(testMesh), 10.1f), new BodyActivityDescription(-1f)));
+                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(22, -2.5f, 0), new BodyInertia { InverseMass = 1 }, new CollidableDescription(Simulation.Shapes.Add(testMesh), ContinuousDetection.Discrete(10.1f, 10.1f)), new BodyActivityDescription(-1f)));
                 }
             }
         }

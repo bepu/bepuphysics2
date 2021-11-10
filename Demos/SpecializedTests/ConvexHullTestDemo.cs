@@ -110,15 +110,15 @@ namespace Demos.SpecializedTests
             var hullShapeIndex = Simulation.Shapes.Add(hullShape);
             hullShape.ComputeInertia(1, out var inertia);
 
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(hullShapeIndex, 10.1f), new BodyActivityDescription(0.01f)));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(hullShapeIndex, ContinuousDetection.Discrete(20, 20)), new BodyActivityDescription(0.01f)));
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-25, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(2)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-20, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 2)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-15, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2f, 2f, 2f)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-10, -5, 5), new CollidableDescription(Simulation.Shapes.Add(new Triangle { A = new Vector3(0, 0, -10), B = new Vector3(5, 0, -10), C = new Vector3(0, 0, -5) }), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 1)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 5), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 1)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(hullShapeIndex, 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-25, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(2)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-20, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 2)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-15, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2f, 2f, 2f)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-10, -5, 5), new CollidableDescription(Simulation.Shapes.Add(new Triangle { A = new Vector3(0, 0, -10), B = new Vector3(5, 0, -10), C = new Vector3(0, 0, -5) }))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 1)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 5), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 1)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(hullShapeIndex)));
 
             var spacing = new Vector3(3f, 3f, 3);
             int width = 16;
@@ -133,11 +133,11 @@ namespace Demos.SpecializedTests
                     {
                         Simulation.Bodies.Add(BodyDescription.CreateDynamic(
                             new RigidPose(origin + spacing * new Vector3(i, j, k), BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f)),
-                            inertia, new CollidableDescription(hullShapeIndex, 1f), new BodyActivityDescription(0.01f)));
+                            inertia, new CollidableDescription(hullShapeIndex), new BodyActivityDescription(0.01f)));
                     }
                 }
             }
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1000, 1, 1000)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1000, 1, 1000)))));
         }
 
         void TestConvexHullCreation()

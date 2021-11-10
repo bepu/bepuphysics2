@@ -39,22 +39,7 @@ namespace Demos.SpecializedTests
                 for (int j = 0; j < length; ++j)
                 {
                     var location = new Vector3(0, 30, 0) + new Vector3(spacing, 0, spacing) * (new Vector3(i, 0, j) + new Vector3(-width * 0.5f, 0, -length * 0.5f));
-                    var bodyDescription = new BodyDescription
-                    {
-                        Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.01f },
-                        Pose = new RigidPose
-                        {
-                            Orientation = Quaternion.Identity,
-                            Position = location
-                        },
-                        Collidable = new CollidableDescription
-                        {
-                            Shape = clothNodeShapeIndex,
-                            Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                            SpeculativeMargin = 0.1f
-                        },
-                        LocalInertia = clothNodeInertia
-                    };
+                    var bodyDescription = BodyDescription.CreateDynamic(location, clothNodeInertia, new CollidableDescription(clothNodeShapeIndex, ContinuousDetection.Discrete(0, 0.1f)), new BodyActivityDescription(0.01f));
                     nodeHandles[i][j] = Simulation.Bodies.Add(bodyDescription);
 
                 }
@@ -101,39 +86,13 @@ namespace Demos.SpecializedTests
             var bigBallShape = new Sphere(25);
             var bigBallShapeIndex = Simulation.Shapes.Add(bigBallShape);
 
-            var bigBallDescription = new StaticDescription
-            {
-                Collidable = new CollidableDescription
-                {
-                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                    Shape = bigBallShapeIndex,
-                    SpeculativeMargin = 0.1f
-                },
-                Pose = new RigidPose
-                {
-                    Position = new Vector3(-10, -15, 0),
-                    Orientation = Quaternion.Identity
-                }
-            };
+            var bigBallDescription = new StaticDescription(new Vector3(-10, -15, 0), new CollidableDescription(bigBallShapeIndex, ContinuousDetection.Discrete(0, 0.1f)));
             Simulation.Statics.Add(bigBallDescription);
 
             var groundShape = new Box(200, 1, 200);
             var groundShapeIndex = Simulation.Shapes.Add(groundShape);
 
-            var groundDescription = new StaticDescription
-            {
-                Collidable = new CollidableDescription
-                {
-                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                    Shape = groundShapeIndex,
-                    SpeculativeMargin = 0.1f
-                },
-                Pose = new RigidPose
-                {
-                    Position = new Vector3(0, -10, 0),
-                    Orientation = Quaternion.Identity
-                }
-            };
+            var groundDescription = new StaticDescription(new Vector3(0, -10, 0), new CollidableDescription(groundShapeIndex));
             Simulation.Statics.Add(groundDescription);
         }
 

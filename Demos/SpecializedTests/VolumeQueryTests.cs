@@ -92,39 +92,12 @@ namespace Demos.SpecializedTests
 
                         if ((i + j + k) % 2 == 1)
                         {
-                            var bodyDescription = new BodyDescription
-                            {
-                                Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = -0.1f },
-                                Pose = new RigidPose
-                                {
-                                    Orientation = orientation,
-                                    Position = location
-                                },
-                                Collidable = new CollidableDescription
-                                {
-                                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                                    SpeculativeMargin = 0.1f,
-                                    Shape = shapeIndex
-                                }
-                            };
+                            var bodyDescription = BodyDescription.CreateKinematic(new RigidPose(location, orientation), new CollidableDescription(shapeIndex), new BodyActivityDescription(-1));
                             Simulation.Bodies.Add(bodyDescription);
                         }
                         else
                         {
-                            var staticDescription = new StaticDescription
-                            {
-                                Pose = new RigidPose
-                                {
-                                    Orientation = orientation,
-                                    Position = location
-                                },
-                                Collidable = new CollidableDescription
-                                {
-                                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                                    SpeculativeMargin = 0.1f,
-                                    Shape = shapeIndex
-                                }
-                            };
+                            var staticDescription = new StaticDescription(location, orientation, new CollidableDescription(shapeIndex));
                             Simulation.Statics.Add(staticDescription);
                         }
 

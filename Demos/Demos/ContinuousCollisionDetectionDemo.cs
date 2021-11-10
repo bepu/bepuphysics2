@@ -18,7 +18,7 @@ namespace Demos.Demos
 
         ConstraintHandle BuildSpinner(Vector3 initialPosition, float rotationSpeed)
         {
-            var spinnerBase = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1e-2f }, new CollidableDescription(Simulation.Shapes.Add(new Box(2, 2, 2)), 0.1f), new BodyActivityDescription(0.01f)));
+            var spinnerBase = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1e-2f }, new CollidableDescription(Simulation.Shapes.Add(new Box(2, 2, 2))), new BodyActivityDescription(0.01f)));
             var bladeShape = new Box(5, 0.01f, 1);
             bladeShape.ComputeInertia(1, out var bladeInertia);
             var shapeIndex = Simulation.Shapes.Add(bladeShape);
@@ -28,14 +28,14 @@ namespace Demos.Demos
             //Note that you can likely get away with a larger sweep convergence duration. 
             //The sweep convergence duration is the maximum size of the 'time of first impact' region that the sweep is allowed to terminate with; 
             //using a time of impact which is a little bit off won't usually cause much of a problem.
-            //Minimum progression duration is far more important to keep small, since collisions with a duration below the minimum progression duration may be missed entirely.
+            //Minimum progression duration is far more important to keep small for this type of use case, since collisions with a duration below the minimum progression duration may be missed entirely.
 
             //Note that it's possible for the blades to still go through each other in certain corner cases- the CCD sweep only detects time of *first* impact.
             //It's possible for the contacts associated with the first impact to be insufficient for later collisions within the same frame.
             //It's pretty rare, though- if you have a situation where that sort of failure is common, consider increasing the collidable's speculative margin or using a higher update rate.
             //(The reason why we don't always just rely on large speculative margins is ghost collisions- the speculative contacts might not represent collisions
             //that would have actually happened, but get included in the constraint solution anyway. They're fairly rare, but it's something to watch out for.)
-            var spinnerBlade = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, bladeInertia, new CollidableDescription(shapeIndex, 0.2f, ContinuousDetectionSettings.Continuous(1e-4f, 1e-4f)), new BodyActivityDescription(0.01f)));
+            var spinnerBlade = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, bladeInertia, new CollidableDescription(shapeIndex, ContinuousDetection.Continuous(1e-4f, 1e-4f, maximumSpeculativeMargin: 0.2f)), new BodyActivityDescription(0.01f)));
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new Hinge { LocalHingeAxisA = new Vector3(0, 0, 1), LocalHingeAxisB = new Vector3(0, 0, 1), LocalOffsetB = new Vector3(0, 0, -3), SpringSettings = new SpringSettings(30, 1) });
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new AngularAxisMotor { LocalAxisA = new Vector3(0, 0, 1), Settings = new MotorSettings(10, 1e-4f), TargetVelocity = rotationSpeed });
             return Simulation.Solver.Add(spinnerBase, new OneBodyLinearServo { ServoSettings = ServoSettings.Default, SpringSettings = new SpringSettings(30, 1) });
@@ -65,7 +65,7 @@ namespace Demos.Demos
                 {
                     //These two falling dynamics have pretty small speculative margins. The second one uses continuous collision detection sweeps to generate speculative contacts.
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-4 - 2 * j, 100 + (i + j) * 2, i * 2), new BodyVelocity { Linear = new Vector3(0, -150, 0) }, inertia,
-                        new CollidableDescription(shapeIndex, 0.01f), new BodyActivityDescription(0.01f)));
+                        new CollidableDescription(shapeIndex, ContinuousDetection.Discrete(maximumSpeculativeMargin: 0.01f)), new BodyActivityDescription(0.01f)));
                     //The minimum progression duration parameter at 1e-3 means the CCD sweep won't miss any collisions that last at least 1e-3 units of time- so, if time is measured in seconds,
                     //then this will capture any collision that an update rate of 1000hz would.
                     //Note also that the sweep convergence threshold is actually pretty loose at 100hz. Despite that, it can still lead to reasonably good speculative contacts with solid impact behavior.
@@ -73,7 +73,7 @@ namespace Demos.Demos
                     //runs to create the actual contact manifold. That provides high quality contact positions and speculative depths.
                     //If the ground that these boxes were smashing into was something like a mesh- which is infinitely thin- you may want to increase the sweep accuracy.
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(4 + 2 * j, 100 + (i + j) * 2, i * 2), new BodyVelocity { Linear = new Vector3(0, -150, 0) }, inertia,
-                        new CollidableDescription(shapeIndex, 0.01f, ContinuousDetectionSettings.Continuous(1e-3f, 1e-2f)), new BodyActivityDescription(0.01f)));
+                        new CollidableDescription(shapeIndex, ContinuousDetection.Continuous(1e-3f, 1e-2f, maximumSpeculativeMargin: 0.01f)), new BodyActivityDescription(0.01f)));
                 }
             }
             rolloverInfo = new RolloverInfo();
@@ -86,7 +86,7 @@ namespace Demos.Demos
             spinnerMotorB = BuildSpinner(new Vector3(5, 10, -5), 59);
             rolloverInfo.Add(new Vector3(0, 12, -5), "High angular velocity continuous detection");
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 10, 300)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 10, 300)))));
         }
 
         double time;

@@ -63,7 +63,7 @@ namespace Demos.Demos
             //Note the lack of damping- we want the gyroscope to keep spinning.
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new GyroscopicIntegratorCallbacks(new Vector3(0, -10, 0), 0f, 0f), new SubsteppingTimestepper(4), 2);
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(100, 1, 100)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(100, 1, 100)))));
 
             var gyroBaseBody = Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(0, 2, 0), Simulation.Shapes, new Box(.1f, 4, .1f)));
             var gyroSpinnerBody = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(2, 4, 0), new BodyVelocity(default, new Vector3(300, 0, 0)), 1, Simulation.Shapes, new Box(0.1f, 1f, 1f)));
@@ -77,7 +77,7 @@ namespace Demos.Demos
             builder.Dispose();
             var dzhanibekovShape = Simulation.Shapes.Add(new Compound(children));
             var dzhanibekovSpinnerBody = Simulation.Bodies.Add(
-                BodyDescription.CreateDynamic(new Vector3(6, 4, 0), new BodyVelocity(new Vector3(0, 0, 1), new Vector3(5, .001f, .001f)), inertia, new CollidableDescription(dzhanibekovShape, 0.1f), new BodyActivityDescription(0.01f)));
+                BodyDescription.CreateDynamic(new Vector3(6, 4, 0), new BodyVelocity(new Vector3(0, 0, 1), new Vector3(5, .001f, .001f)), inertia, new CollidableDescription(dzhanibekovShape), new BodyActivityDescription(0.01f)));
             var dzhanibekovBaseBody = Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(6, 1, 0), Simulation.Shapes, new Box(.1f, 2, .1f)));
             Simulation.Solver.Add(dzhanibekovBaseBody, dzhanibekovSpinnerBody, new BallSocket { LocalOffsetA = new Vector3(0, 3, 0), LocalOffsetB = new Vector3(0, 0, 0), SpringSettings = new SpringSettings(30, 1) });
         }

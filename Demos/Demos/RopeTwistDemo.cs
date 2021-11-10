@@ -102,7 +102,7 @@ namespace Demos.Demos
                 const float ropeBodyRadius = 0.1f;
                 const int ropeBodyCount = 130;
                 var wreckingBallPosition = startLocation - new Vector3(0, ropeBodyRadius + (ropeBodyRadius * 2 + ropeBodySpacing) * ropeBodyCount + bigWreckingBall.Radius, 0);
-                var description = BodyDescription.CreateDynamic(wreckingBallPosition, bigWreckingBallInertia, new CollidableDescription(bigWreckingBallIndex, 25f), new BodyActivityDescription(-0.01f));
+                var description = BodyDescription.CreateDynamic(wreckingBallPosition, bigWreckingBallInertia, new CollidableDescription(bigWreckingBallIndex), new BodyActivityDescription(-0.01f));
                 var wreckingBallBodyHandle = Simulation.Bodies.Add(description);
                 var wreckingBallBody = Simulation.Bodies.GetBodyReference(wreckingBallBodyHandle);
                 wreckingBallBody.Velocity.Angular = new Vector3(0, 20, 0);
@@ -116,7 +116,7 @@ namespace Demos.Demos
                     var ropeStartLocation = startLocation + horizontalOffset;
 
                     var springSettings = new SpringSettings(600, 1);
-                    var bodyHandles = RopeStabilityDemo.BuildRopeBodies(Simulation, ropeStartLocation, ropeBodyCount, ropeBodyRadius, ropeBodySpacing, 1f, 0, 25f);
+                    var bodyHandles = RopeStabilityDemo.BuildRopeBodies(Simulation, ropeStartLocation, ropeBodyCount, ropeBodyRadius, ropeBodySpacing, 1f, 0);
                     for (int i = 0; i < bodyHandles.Length; ++i)
                     {
                         filters.Allocate(bodyHandles[i]) = new Filter { RopeIndex = (short)ropeIndex, IndexInRope = (short)i };
@@ -161,7 +161,7 @@ namespace Demos.Demos
             }
 
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)))));
 
         }
     }

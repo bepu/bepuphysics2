@@ -30,7 +30,7 @@ namespace Demos.Demos.Characters
         public BodyHandle BodyHandle { get { return bodyHandle; } }
 
         public CharacterInput(CharacterControllers characters, Vector3 initialPosition, Capsule shape,
-            float speculativeMargin, float mass, float maximumHorizontalForce, float maximumVerticalGlueForce,
+            float minimumSpeculativeMargin, float mass, float maximumHorizontalForce, float maximumVerticalGlueForce,
             float jumpVelocity, float speed, float maximumSlope = MathF.PI * 0.25f)
         {
             this.characters = characters;
@@ -38,7 +38,10 @@ namespace Demos.Demos.Characters
 
             //Because characters are dynamic, they require a defined BodyInertia. For the purposes of the demos, we don't want them to rotate or fall over, so the inverse inertia tensor is left at its default value of all zeroes.
             //This is effectively equivalent to giving it an infinite inertia tensor- in other words, no torque will cause it to rotate.
-            bodyHandle = characters.Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f / mass }, new CollidableDescription(shapeIndex, speculativeMargin), new BodyActivityDescription(shape.Radius * 0.02f)));
+            bodyHandle = characters.Simulation.Bodies.Add(
+                BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f / mass }, 
+                new CollidableDescription(shapeIndex, ContinuousDetection.CreatePassive(minimumSpeculativeMargin, float.MaxValue)), 
+                new BodyActivityDescription(shape.Radius * 0.02f)));
             ref var character = ref characters.AllocateCharacter(bodyHandle);
             character.LocalUp = new Vector3(0, 1, 0);
             character.CosMaximumSlope = MathF.Cos(maximumSlope);
@@ -46,7 +49,7 @@ namespace Demos.Demos.Characters
             character.MaximumVerticalForce = maximumVerticalGlueForce;
             character.MaximumHorizontalForce = maximumHorizontalForce;
             character.MinimumSupportDepth = shape.Radius * -0.01f;
-            character.MinimumSupportContinuationDepth = -speculativeMargin;
+            character.MinimumSupportContinuationDepth = -minimumSpeculativeMargin;
             this.speed = speed;
             this.shape = shape;
         }

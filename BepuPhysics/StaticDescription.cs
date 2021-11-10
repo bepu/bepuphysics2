@@ -45,14 +45,12 @@ namespace BepuPhysics
         /// <param name="position">Position of the static.</param>
         /// <param name="orientation">Orientation of the static.</param>
         /// <param name="shapeIndex">Index of the static's shape in the simulation shapes set.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the static to allow speculative contacts to be generated.</param>
-        public StaticDescription(in Vector3 position, in Quaternion orientation, TypedIndex shapeIndex, float speculativeMargin)
+        public StaticDescription(in Vector3 position, in Quaternion orientation, TypedIndex shapeIndex)
         {
             Pose.Position = position;
             Pose.Orientation = orientation;
-            Collidable.Continuity = new ContinuousDetectionSettings();
+            Collidable.Continuity = ContinuousDetection.Passive;
             Collidable.Shape = shapeIndex;
-            Collidable.SpeculativeMargin = speculativeMargin;
         }
 
         /// <summary>
@@ -60,8 +58,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="position">Position of the static.</param>
         /// <param name="shapeIndex">Index of the static's shape in the simulation shapes set.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the body to allow speculative contacts to be generated.</param>
-        public StaticDescription(in Vector3 position, TypedIndex shapeIndex, float speculativeMargin) : this(position, Quaternion.Identity, shapeIndex, speculativeMargin)
+        public StaticDescription(in Vector3 position, TypedIndex shapeIndex) : this(position, Quaternion.Identity, shapeIndex)
         {
         }
     }

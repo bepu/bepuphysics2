@@ -44,43 +44,12 @@ namespace Demos.SpecializedTests
                         var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, 1, -length)) + randomizationBase + r * randomizationSpan;
                         if ((i + j + k) % 2 == 1)
                         {
-                            var bodyDescription = new BodyDescription
-                            {
-                                Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = -0.1f },
-                                Pose = new RigidPose
-                                {
-                                    Orientation = Quaternion.Identity,
-                                    Position = location
-                                },
-                                Collidable = new CollidableDescription
-                                {
-                                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                                    SpeculativeMargin = 0.1f,
-                                    Shape = shapeIndex
-                                },
-                                LocalInertia = sphereInertia
-                            };
-                            Simulation.Bodies.Add(bodyDescription);
+                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(location, sphereInertia, new CollidableDescription(shapeIndex), new BodyActivityDescription(-1)));
                         }
                         else
                         {
-                            var staticDescription = new StaticDescription
-                            {
-                                Pose = new RigidPose
-                                {
-                                    Orientation = Quaternion.Identity,
-                                    Position = location
-                                },
-                                Collidable = new CollidableDescription
-                                {
-                                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                                    SpeculativeMargin = 0.1f,
-                                    Shape = shapeIndex
-                                }
-                            };
-                            Simulation.Statics.Add(staticDescription);
+                            Simulation.Statics.Add(new StaticDescription(location, new CollidableDescription(shapeIndex)));
                         }
-
                     }
                 }
             }

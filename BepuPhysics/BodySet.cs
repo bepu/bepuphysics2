@@ -132,7 +132,6 @@ namespace BepuPhysics
             state.Inertia.Local = description.LocalInertia;
             ref var collidable = ref Collidables[index];
             collidable.Continuity = description.Collidable.Continuity;
-            collidable.SpeculativeMargin = description.Collidable.SpeculativeMargin;
             //Note that we change the shape here. If the collidable transitions from shapeless->shapeful or shapeful->shapeless, the broad phase has to be notified 
             //so that it can create/remove an entry. That's why this function isn't public.
             collidable.Shape = description.Collidable.Shape;
@@ -152,7 +151,6 @@ namespace BepuPhysics
             ref var collidable = ref Collidables[index];
             description.Collidable.Continuity = collidable.Continuity;
             description.Collidable.Shape = collidable.Shape;
-            description.Collidable.SpeculativeMargin = collidable.SpeculativeMargin;
             ref var activity = ref Activity[index];
             description.Activity.SleepThreshold = activity.SleepThreshold;
             description.Activity.MinimumTimestepCountUnderThreshold = activity.MinimumTimestepsUnderThreshold;

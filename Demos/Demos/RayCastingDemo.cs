@@ -120,11 +120,11 @@ namespace Demos
                         };
                         if ((i + j + k) % 2 == 1)
                         {
-                            Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(location, orientation), new CollidableDescription(shapeIndex, 0.1f), new BodyActivityDescription(-0.1f)));
+                            Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(location, orientation), new CollidableDescription(shapeIndex), new BodyActivityDescription(-0.1f)));
                         }
                         else
                         {
-                            Simulation.Statics.Add(new StaticDescription(location, orientation, new CollidableDescription(shapeIndex, 0.1f)));
+                            Simulation.Statics.Add(new StaticDescription(location, orientation, new CollidableDescription(shapeIndex)));
                         }
                     }
                 }
@@ -139,7 +139,7 @@ namespace Demos
                 }, new Vector3(1, 3, 1), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(
                 new Vector3(0, -10, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 4),
-                new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
+                new CollidableDescription(Simulation.Shapes.Add(planeMesh))));
 
             int raySourceCount = 3;
             raySources = new QuickList<QuickList<TestRay>>(raySourceCount, BufferPool);

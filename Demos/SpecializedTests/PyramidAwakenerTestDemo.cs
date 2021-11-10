@@ -41,7 +41,7 @@ namespace Demos.Demos
                             (rowIndex + 0.5f) * boxShape.Height,
                             (pyramidIndex - pyramidCount * 0.5f) * (boxShape.Length + 4)),
                             boxInertia,
-                            new CollidableDescription(boxIndex, 0.1f),
+                            new CollidableDescription(boxIndex),
                             new BodyActivityDescription(0.01f)));
                     }
                 }
@@ -50,7 +50,7 @@ namespace Demos.Demos
             var staticShape = new Box(250, 1, 250);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(staticShapeIndex, 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(staticShapeIndex)));
 
         }
         

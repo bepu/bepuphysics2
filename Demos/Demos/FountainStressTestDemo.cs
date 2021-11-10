@@ -57,7 +57,7 @@ namespace Demos.Demos
                             -staticGridWidthInInstances * staticSpacing * 0.5f + i * staticSpacing,
                             -4 + 4 * (float)Math.Cos(i * 0.3) + 4 * (float)Math.Cos(j * 0.3),
                             -staticGridWidthInInstances * staticSpacing * 0.5f + j * staticSpacing),
-                            new CollidableDescription(staticShapeIndex, 0.1f));
+                            new CollidableDescription(staticShapeIndex));
                     Simulation.Statics.Add(staticDescription);
                 }
             }
@@ -76,7 +76,7 @@ namespace Demos.Demos
                             startingRadius * (float)Math.Cos(angle),
                             0,
                             startingRadius * (float)Math.Sin(angle)),
-                            new CollidableDescription(kinematicShapeIndex, 0.1f),
+                            new CollidableDescription(kinematicShapeIndex),
                             new BodyActivityDescription(0, 4));
                 kinematicHandles[i] = Simulation.Bodies.Add(description);
             }
@@ -220,15 +220,15 @@ namespace Demos.Demos
             {
                 Pose = pose,
                 LocalInertia = inertia,
-                Collidable = new CollidableDescription(shapeIndex, 5f),
+                Collidable = new CollidableDescription(shapeIndex),
                 Activity = new BodyActivityDescription(0.1f),
                 Velocity = velocity
             };
             switch (random.Next(3))
             {
-                case 0: description.Collidable.Continuity = ContinuousDetectionSettings.Discrete; break;
-                case 1: description.Collidable.Continuity = ContinuousDetectionSettings.Passive; break;
-                case 2: description.Collidable.Continuity = ContinuousDetectionSettings.Continuous(1e-3f, 1e-3f); break;
+                case 0: description.Collidable.Continuity = ContinuousDetection.Discrete(); break;
+                case 1: description.Collidable.Continuity = ContinuousDetection.Passive; break;
+                case 2: description.Collidable.Continuity = ContinuousDetection.Continuous(1e-3f, 1e-3f, maximumSpeculativeMargin: 0.2f); break;
             }
         }
 

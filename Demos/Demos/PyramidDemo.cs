@@ -45,13 +45,13 @@ namespace Demos.Demos
                             (rowIndex + 0.5f) * boxShape.Height,
                             (pyramidIndex - pyramidCount * 0.5f) * (boxShape.Length + 4)),
                             boxInertia,
-                            new CollidableDescription(boxIndex, 0.1f),
+                            new CollidableDescription(boxIndex),
                             new BodyActivityDescription(0.01f)));
                     }
                 }
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2500, 1, 2500)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2500, 1, 2500)))));
         }
 
         //We'll randomize the size of bullets.

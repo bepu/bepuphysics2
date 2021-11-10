@@ -43,7 +43,7 @@ namespace Demos.Demos.Characters
                     var position = origin + new Vector3(i, 0, j) * spacing;
                     var orientation = QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble())), 10 * (float)random.NextDouble());
                     var shape = new Box(0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble());
-                    var collidable = new CollidableDescription(Simulation.Shapes.Add(shape), 0.1f);
+                    var collidable = new CollidableDescription(Simulation.Shapes.Add(shape));
                     shape.ComputeInertia(1, out var inertia);
                     var choice = (i + j) % 3;
                     switch (choice)
@@ -91,7 +91,7 @@ namespace Demos.Demos.Characters
 
             //Include a giant newt to test character-newt behavior and to ensure thematic consistency.
             DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(15, 15, 15), out var newtMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(newtMesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(newtMesh))));
 
             //Give the newt a tongue, I guess.
             var tongueBase = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(0, 8.4f, 24), default, default));
@@ -111,7 +111,7 @@ namespace Demos.Demos.Characters
             });
 
             //And a seesaw thing?
-            var seesawBase = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(0, 1f, 34f), new CollidableDescription(Simulation.Shapes.Add(new Box(0.2f, 1, 0.2f)), 0.1f), new BodyActivityDescription(0.01f)));
+            var seesawBase = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(0, 1f, 34f), new CollidableDescription(Simulation.Shapes.Add(new Box(0.2f, 1, 0.2f))), new BodyActivityDescription(0.01f)));
             var seesaw = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 1.7f, 34f), 1, Simulation.Shapes, new Box(1, 0.1f, 6f)));
             Simulation.Solver.Add(seesawBase, seesaw, new Hinge
             {
@@ -139,13 +139,13 @@ namespace Demos.Demos.Characters
                 pose.Orientation = Quaternion.Identity;
                 return pose;
             };
-            var platformCollidable = new CollidableDescription(Simulation.Shapes.Add(new Box(5, 1, 5)), 0.1f);
+            var platformCollidable = new CollidableDescription(Simulation.Shapes.Add(new Box(5, 1, 5)));
             for (int i = 0; i < movingPlatforms.Length; ++i)
             {
                 movingPlatforms[i] = new MovingPlatform(platformCollidable, i * 3559, 1f / 60f, Simulation, poseCreator);
             }
             var box = new Box(4, 1, 4);
-            var boxCollidable = new CollidableDescription(Simulation.Shapes.Add(box), 0.1f);
+            var boxCollidable = new CollidableDescription(Simulation.Shapes.Add(box));
             const int width = 8;
             for (int i = 0; i < width; ++i)
             {
@@ -157,7 +157,7 @@ namespace Demos.Demos.Characters
             }
 
             //Prevent the character from falling into the void.
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)))));
         }
 
 

@@ -30,7 +30,7 @@ namespace Demos.SpecializedTests
                     Simulation.Bodies.Add(
                         BodyDescription.CreateDynamic(
                             new Vector3(250 * (float)random.NextDouble() - 125, 2, 250 * (float)random.NextDouble() - 125), new BodyInertia { InverseMass = 1 },
-                            new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f)), 0.1f),
+                            new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f))),
                             new BodyActivityDescription(-1))));
 
                 character.CosMaximumSlope = .707f;
@@ -85,7 +85,7 @@ namespace Demos.SpecializedTests
                     return new Vector3(offsetFromCenter.X, MathF.Cos(x / 2f) + MathF.Sin(y / 2f), offsetFromCenter.Y);
                 }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
-                new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
+                new CollidableDescription(Simulation.Shapes.Add(planeMesh))));
 
             removedCharacters = new QuickQueue<CharacterController>(characters.CharacterCount, BufferPool);
         }

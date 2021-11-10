@@ -71,11 +71,11 @@ namespace Demos.Demos
             //Note that the timestepper also has callbacks that you can use for executing logic between processing stages, like BeforeCollisionDetection.
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new PlanetaryGravityCallbacks() { PlanetCenter = new Vector3(), Gravity = 100000 }, new PositionFirstTimestepper());
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Sphere(50)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Sphere(50)))));
 
             var orbiter = new Sphere(1f);
             orbiter.ComputeInertia(1, out var inertia);
-            var collidable = new CollidableDescription(Simulation.Shapes.Add(orbiter), 0.1f);
+            var collidable = new CollidableDescription(Simulation.Shapes.Add(orbiter));
             var spacing = new Vector3(5);
             const int length = 20;
             for (int i = 0; i < length; ++i)

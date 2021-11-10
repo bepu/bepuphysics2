@@ -51,7 +51,7 @@ namespace Demos.Demos
                 var boxShape = new Box(4, 0.5f, 6f);
                 boxShape.ComputeInertia(1, out var boxInertia);
                 //Note that sleeping is disabled with a negative velocity threshold. We want to watch the stack as we change simulation settings; if it's inactive, it won't respond!
-                var boxDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, new CollidableDescription(Simulation.Shapes.Add(boxShape), 0.1f), new BodyActivityDescription(-1f));
+                var boxDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, new CollidableDescription(Simulation.Shapes.Add(boxShape)), new BodyActivityDescription(-1f));
                 for (int i = 0; i < 20; ++i)
                 {
                     boxDescription.Pose = new RigidPose(new Vector3(0, 0.5f + boxShape.Height * (i + 0.5f), 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.05f * i));
@@ -61,7 +61,7 @@ namespace Demos.Demos
                 topBlockShape.ComputeInertia(200, out var topBlockInertia);
                 Simulation.Bodies.Add(
                     BodyDescription.CreateDynamic(boxDescription.Pose.Position + new Vector3(0, boxShape.HalfHeight + 1f, 0), topBlockInertia,
-                    new CollidableDescription(Simulation.Shapes.Add(topBlockShape), 0.1f), new BodyActivityDescription(-1f)));
+                    new CollidableDescription(Simulation.Shapes.Add(topBlockShape)), new BodyActivityDescription(-1f)));
 
                 rolloverInfo.Add(boxDescription.Pose.Position + new Vector3(0, 4, 0), "200:1 mass ratio");
             }
@@ -71,7 +71,7 @@ namespace Demos.Demos
                 //(Fortunately, all 5 degrees of freedom of each hinge constraint are solved analytically, so the convergence issues aren't quite as bad as they could be.)
                 var basePosition = new Vector3(-20, 20, 0);
                 var boxShape = new Box(0.5f, 0.5f, 3f);
-                var boxCollidable = new CollidableDescription(Simulation.Shapes.Add(boxShape), 0.1f);
+                var boxCollidable = new CollidableDescription(Simulation.Shapes.Add(boxShape));
                 boxShape.ComputeInertia(1, out var boxInertia);
                 var linkDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, boxCollidable, new BodyActivityDescription(0.01f));
    
@@ -108,7 +108,7 @@ namespace Demos.Demos
             }
 
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)))));
 
         }
         public override void Update(Window window, Camera camera, Input input, float dt)

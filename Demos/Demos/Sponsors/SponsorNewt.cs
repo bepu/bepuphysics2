@@ -20,7 +20,7 @@ namespace Demos.Demos.Sponsors
             var arenaSpan = arenaMax - arenaMin;
             var position = arenaMin + arenaSpan * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
             var angle = MathF.PI * 2 * (float)random.NextDouble();
-            BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(new Vector3(position.X, height, position.Y), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle)), new CollidableDescription(shape, 0.5f), new BodyActivityDescription(-1)));
+            BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(new Vector3(position.X, height, position.Y), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle)), new CollidableDescription(shape), new BodyActivityDescription(-1)));
             SponsorIndex = sponsorIndex;
         }
 

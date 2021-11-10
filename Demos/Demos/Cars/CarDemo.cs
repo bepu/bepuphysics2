@@ -95,7 +95,7 @@ namespace Demos.Demos.Cars
                     Simulation.Statics.Add(new StaticDescription(
                         new Vector3(0, buildingShape.HalfHeight, 0) + landmarkMin + landmarkSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()),
                         QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, (float)random.NextDouble() * MathF.PI),
-                        new CollidableDescription(Simulation.Shapes.Add(buildingShape), 0.1f)));
+                        new CollidableDescription(Simulation.Shapes.Add(buildingShape))));
                 }
             }
 
@@ -135,7 +135,7 @@ namespace Demos.Demos.Cars
 
                 }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
-                new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
+                new CollidableDescription(Simulation.Shapes.Add(planeMesh))));
 
 
         }
