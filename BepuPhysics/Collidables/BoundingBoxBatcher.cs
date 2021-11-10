@@ -78,7 +78,38 @@ namespace BepuPhysics
     {
         public Buffer<int> ShapeIndices;
         public Buffer<BoundsContinuation> Continuations;
+        public Buffer<MotionState> MotionStates;
         public int Count;
+        public bool Allocated => ShapeIndices.Allocated;
+
+        public BoundingBoxBatch(BufferPool pool, int initialCapacity)
+        {
+            pool.Take(initialCapacity, out ShapeIndices);
+            pool.Take(initialCapacity, out Continuations);
+            pool.Take(initialCapacity, out MotionStates);
+            Count = 0;
+        }
+        internal void Add(int shapeIndex, RigidPose pose, BodyVelocity velocity, BoundsContinuation continuation)
+        {
+            ShapeIndices[Count] = shapeIndex;
+            Continuations[Count] = continuation;
+            ref var motionState = ref MotionStates[Count];
+            motionState.Pose = pose;
+            motionState.Velocity = velocity;
+            Count++;
+        }
+
+        public void Dispose(BufferPool pool)
+        {
+            if (Allocated)
+            {
+                pool.Return(ref ShapeIndices);
+                pool.Return(ref Continuations);
+                pool.Return(ref MotionStates);
+                Count = 0;
+            }
+        }
+
     }
 
     public struct BoundingBoxBatcher
@@ -135,65 +166,76 @@ namespace BepuPhysics
                 int countInBundle = batch.Count - bundleStartIndex;
                 if (countInBundle > Vector<float>.Count)
                     countInBundle = Vector<float>.Count;
-                var emptyTrailingMask = BundleIndexing.CreateTrailingMaskForCountInBundle(countInBundle);
-                var continuationsBundle = Unsafe.As<BoundsContinuation, Vector<int>>(ref continuations[bundleStartIndex]);
-                var bodyIndices = Vector.BitwiseOr(emptyTrailingMask, Vector.AndNot(continuationsBundle, continuationMask));
-                bodies.GatherState<AccessNoInertia>(bodyIndices, false, out var positions, out var orientations, out var velocities, out _);
-                shapeWide.GetBounds(ref orientations, countInBundle, out var maximumRadius, out var maximumAngularExpansion, out var bundleMin, out var bundleMax);
-                //BoundingBoxBatcher is responsible for updating the bounding box AND speculative margin.
-                //In order to know how much we're allowed to expand the bounding box, we need to know the speculative margin.
-                //It's defined by the velocity of the body, and bounded by the body's minimum and maximum.
-                var angularBoundsExpansion = BoundingBoxHelpers.GetAngularBoundsExpansion(Vector3Wide.Length(velocities.Angular), dtWide, maximumRadius, maximumAngularExpansion);
-                var speculativeMargin = Vector3Wide.Length(velocities.Linear) + angularBoundsExpansion;
 
                 //Note that doing a gather-scatter to enable vectorized bundle execution isn't worth it for some shape types.
                 //We're just ignoring that fact for simplicity. Bounding box updates aren't a huge concern overall. That said,
                 //if you want to optimize this further, the shape batches could choose between vectorized and gatherless scalar implementations on a per-type basis.
                 //TODO: This transposition could be significantly improved with intrinsics, as we did for the Bodies state gather operations.
-
                 for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
                 {
                     var shapeIndex = shapeIndices[bundleStartIndex + innerIndex];
-                    //This property should be a constant value and the JIT has type knowledge, so this branch should optimize out.
-                    if (shapeWide.AllowOffsetMemoryAccess)
-                        shapeWide.WriteFirst(shapeBatch.shapes[shapeIndex]);
-                    else
-                        shapeWide.WriteSlot(innerIndex, shapeBatch.shapes[shapeIndex]);
+                    shapeWide.WriteSlot(innerIndex, shapeBatch.shapes[shapeIndex]);
                     ref var collidable = ref activeSet.Collidables[continuations[bundleStartIndex + innerIndex].BodyIndex];
                     minimumMarginSpan[innerIndex] = collidable.Continuity.MinimumSpeculativeMargin;
                     maximumMarginSpan[innerIndex] = collidable.Continuity.MaximumSpeculativeMargin;
                     allowExpansionBeyondSpeculativeMarginSpan[innerIndex] = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? -1 : 0;
                 }
+
+                Bodies.TransposeMotionStates(batch.MotionStates.Slice(bundleStartIndex, countInBundle), out var positions, out var orientations, out var velocities);
+                shapeWide.GetBounds(ref orientations, countInBundle, out var maximumRadius, out var maximumAngularExpansion, out var bundleMin, out var bundleMax);
+                //BoundingBoxBatcher is responsible for updating the bounding box AND speculative margin.
+                //In order to know how much we're allowed to expand the bounding box, we need to know the speculative margin.
+                //It's defined by the velocity of the body, and bounded by the body's minimum and maximum.
+                var angularBoundsExpansion = BoundingBoxHelpers.GetAngularBoundsExpansion(Vector3Wide.Length(velocities.Angular), dtWide, maximumRadius, maximumAngularExpansion);
+                var speculativeMargin = Vector3Wide.Length(velocities.Linear) * dtWide + angularBoundsExpansion;
+
+
                 var minimumSpeculativeMargin = new Vector<float>(minimumMarginSpan);
                 var maximumSpeculativeMargin = new Vector<float>(maximumMarginSpan);
                 var allowExpansionBeyondSpeculativeMargin = new Vector<int>(allowExpansionBeyondSpeculativeMarginSpan);
                 speculativeMargin = Vector.Max(minimumSpeculativeMargin, Vector.Min(maximumSpeculativeMargin, speculativeMargin));
                 var maximumBoundsExpansion = Vector.ConditionalSelect(allowExpansionBeyondSpeculativeMargin, new Vector<float>(float.MaxValue), speculativeMargin);
-                BoundingBoxHelpers.ExpandBoundingBoxes(ref bundleMin, ref bundleMax, velocities, dt,
-                    maximumRadius, maximumAngularExpansion, maximumBoundsExpansion);
+                BoundingBoxHelpers.GetBoundsExpansion(velocities.Linear, dtWide, angularBoundsExpansion, out var minExpansion, out var maxExpansion);
                 //TODO: Note that this is an area that must be updated if you change the pose representation.
-                Vector3Wide.Add(positions, bundleMin, out bundleMin);
-                Vector3Wide.Add(positions, bundleMax, out bundleMax);
+                bundleMin = positions + (bundleMin + minExpansion);
+                bundleMax = positions + (bundleMax + maxExpansion);
 
                 for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
                 {
-                    ref var instance = ref Unsafe.Add(ref bundleInstancesStart, innerIndex);
-                    broadPhase.GetActiveBoundsPointers(activeSet.Collidables[instance.Continuation.BodyIndex].BroadPhaseIndex, out var minPointer, out var maxPointer);
-                    ref var sourceBundleMin = ref GatherScatter.GetOffsetInstance(ref bundleMin, innerIndex);
-                    ref var sourceBundleMax = ref GatherScatter.GetOffsetInstance(ref bundleMax, innerIndex);
+                    var continuation = continuations[bundleStartIndex + innerIndex];
+                    ref var collidable = ref activeSet.Collidables[continuation.BodyIndex];
+                    collidable.SpeculativeMargin = speculativeMargin[innerIndex];
+                    broadPhase.GetActiveBoundsPointers(collidable.BroadPhaseIndex, out var minPointer, out var maxPointer);
+                    //ref var sourceBundleMin = ref GatherScatter.GetOffsetInstance(ref bundleMin, innerIndex);
+                    //ref var sourceBundleMax = ref GatherScatter.GetOffsetInstance(ref bundleMax, innerIndex);
+                    ////Note that we merge with the existing bounding box if the body is compound. This requires compounds to be initialized to (maxvalue, -maxvalue).
+                    ////TODO: We bite the bullet on quite a bit of complexity to avoid merging on non-compounds. Could be better overall to simply merge on all bodies. Certainly simpler.
+                    ////Worth checking the performance; if it's undetectable, just swap to the simpler version.
+                    //if (continuation.CompoundChild)
+                    //{
+                    //    var min = new Vector3(sourceBundleMin.X[0], sourceBundleMin.Y[0], sourceBundleMin.Z[0]);
+                    //    var max = new Vector3(sourceBundleMax.X[0], sourceBundleMax.Y[0], sourceBundleMax.Z[0]);
+                    //    BoundingBox.CreateMerged(*minPointer, *maxPointer, min, max, out *minPointer, out *maxPointer);
+                    //}
+                    //else
+                    //{
+                    //    *minPointer = new Vector3(sourceBundleMin.X[0], sourceBundleMin.Y[0], sourceBundleMin.Z[0]);
+                    //    *maxPointer = new Vector3(sourceBundleMax.X[0], sourceBundleMax.Y[0], sourceBundleMax.Z[0]);
+                    //}
+
                     //Note that we merge with the existing bounding box if the body is compound. This requires compounds to be initialized to (maxvalue, -maxvalue).
                     //TODO: We bite the bullet on quite a bit of complexity to avoid merging on non-compounds. Could be better overall to simply merge on all bodies. Certainly simpler.
                     //Worth checking the performance; if it's undetectable, just swap to the simpler version.
-                    if (instance.Continuation.CompoundChild)
+                    if (continuation.CompoundChild)
                     {
-                        var min = new Vector3(sourceBundleMin.X[0], sourceBundleMin.Y[0], sourceBundleMin.Z[0]);
-                        var max = new Vector3(sourceBundleMax.X[0], sourceBundleMax.Y[0], sourceBundleMax.Z[0]);
+                        var min = new Vector3(bundleMin.X[innerIndex], bundleMin.Y[innerIndex], bundleMin.Z[innerIndex]);
+                        var max = new Vector3(bundleMax.X[innerIndex], bundleMax.Y[innerIndex], bundleMax.Z[innerIndex]);
                         BoundingBox.CreateMerged(*minPointer, *maxPointer, min, max, out *minPointer, out *maxPointer);
                     }
                     else
                     {
-                        *minPointer = new Vector3(sourceBundleMin.X[0], sourceBundleMin.Y[0], sourceBundleMin.Z[0]);
-                        *maxPointer = new Vector3(sourceBundleMax.X[0], sourceBundleMax.Y[0], sourceBundleMax.Z[0]);
+                        *minPointer = new Vector3(bundleMin.X[innerIndex], bundleMin.Y[innerIndex], bundleMin.Z[innerIndex]);
+                        *maxPointer = new Vector3(bundleMax.X[innerIndex], bundleMax.Y[innerIndex], bundleMax.Z[innerIndex]);
                     }
                 }
             }
@@ -208,12 +250,13 @@ namespace BepuPhysics
             ref var activeSet = ref bodies.ActiveSet;
             for (int i = 0; i < batch.Count; ++i)
             {
-                ref var instance = ref batch[i];
-                var bodyIndex = instance.Continuation.BodyIndex;
+                var shapeIndex = batch.ShapeIndices[i];
+                ref var motionState = ref batch.MotionStates[i];
+                var bodyIndex = batch.Continuations[i].BodyIndex;
                 ref var collidable = ref activeSet.Collidables[bodyIndex];
                 broadPhase.GetActiveBoundsPointers(collidable.BroadPhaseIndex, out var min, out var max);
                 var maximumAllowedExpansion = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : collidable.SpeculativeMargin;
-                shapeBatch[instance.ShapeIndex].ComputeBounds(instance.Pose.Orientation, out *min, out *max);
+                shapeBatch[shapeIndex].ComputeBounds(motionState.Pose.Orientation, out *min, out *max);
                 //Working on the assumption that dynamic meshes are extremely rare, and that dynamic meshes with extremely high angular velocity are even rarer,
                 //we're just going to use a simplistic upper bound for angular expansion. This simplifies the mesh bounding box calculation quite a bit (no dot products).
                 var absMin = Vector3.Abs(*min);
@@ -222,9 +265,9 @@ namespace BepuPhysics
 
                 var minimumComponents = Vector3.Min(absMin, absMax);
                 var minimumRadius = MathHelper.Min(minimumComponents.X, MathHelper.Min(minimumComponents.Y, minimumComponents.Z));
-                BoundingBoxHelpers.ExpandBoundingBox(ref *min, ref *max, instance.Velocities.Linear, instance.Velocities.Angular, dt, maximumRadius, maximumRadius - minimumRadius, maximumAllowedExpansion);
-                *min += instance.Pose.Position;
-                *max += instance.Pose.Position;
+                BoundingBoxHelpers.ExpandBoundingBox(ref *min, ref *max, motionState.Velocity.Linear, motionState.Velocity.Angular, dt, maximumRadius, maximumRadius - minimumRadius, maximumAllowedExpansion);
+                *min += motionState.Pose.Position;
+                *max += motionState.Pose.Position;
             }
         }
 
@@ -236,27 +279,28 @@ namespace BepuPhysics
             var maxValue = new Vector3(-float.MaxValue);
             for (int i = 0; i < batch.Count; ++i)
             {
-                ref var instance = ref batch[i];
-                var bodyIndex = instance.Continuation.BodyIndex;
+                var shapeIndex = batch.ShapeIndices[i];
+                var bodyIndex = batch.Continuations[i].BodyIndex;
+                ref var motionState = ref batch.MotionStates[i];
                 //We have to clear out the bounds used by compounds, since each contributing body will merge their contribution into the whole.
                 broadPhase.GetActiveBoundsPointers(activeSet.Collidables[bodyIndex].BroadPhaseIndex, out var min, out var max);
                 *min = minValue;
                 *max = maxValue;
-                shapeBatch.shapes[instance.ShapeIndex].AddChildBoundsToBatcher(ref this, instance.Pose, instance.Velocities, bodyIndex);
+                shapeBatch.shapes[batch.ShapeIndices[i]].AddChildBoundsToBatcher(ref this, motionState.Pose, motionState.Velocity, bodyIndex);
             }
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Add(TypedIndex shapeIndex, in RigidPose pose, in BodyVelocity velocity, BoundsContinuation continuation)
+        void Add(TypedIndex shapeIndex, RigidPose pose, BodyVelocity velocity, BoundsContinuation continuation)
         {
             var typeIndex = shapeIndex.Type;
             Debug.Assert(typeIndex >= 0 && typeIndex < batches.Length, "The preallocated type batch array should be able to hold every type index. Is the type index broken?");
             ref var batchSlot = ref batches[typeIndex];
-            if (!batchSlot.Span.Allocated)
+            if (!batchSlot.Allocated)
             {
                 //No list exists for this type yet.
-                batchSlot = new QuickList<BoundingBoxInstance>(CollidablesPerFlush, pool);
+                batchSlot = new BoundingBoxBatch(pool, CollidablesPerFlush);
                 if (typeIndex < minimumBatchIndex)
                     minimumBatchIndex = typeIndex;
                 if (typeIndex > maximumBatchIndex)
@@ -266,16 +310,10 @@ namespace BepuPhysics
             //It technically opens the door for vectorizing their child pose calculations, but those are almost certainly not worth vectorizing anyway.
             //May want to consider directly triggering a bounds dispatch for compounds here. 
             //(Doing so WOULD be more complicated, though.)
-            ref var instance = ref batchSlot.AllocateUnsafely();
-            var shapeBatch = shapes[typeIndex];
-            instance.Pose = pose;
-            instance.Velocities = velocity;
-            instance.ShapeIndex = shapeIndex.Index;
-            instance.Continuation = continuation;
-
+            batchSlot.Add(shapeIndex.Index, pose, velocity, continuation);
             if (batchSlot.Count == CollidablesPerFlush)
             {
-                shapeBatch.ComputeBounds(ref this);
+                shapes[typeIndex].ComputeBounds(ref this);
                 batchSlot.Count = 0;
             }
         }
@@ -330,10 +368,7 @@ namespace BepuPhysics
                     shapes[i].ComputeBounds(ref this);
                 }
                 //Dispose of the batch and any associated buffers; since the flush is one pass, we won't be needing this again.
-                if (batch.Span.Allocated)
-                {
-                    batch.Dispose(pool);
-                }
+                batch.Dispose(pool);
             }
             pool.Return(ref batches);
         }

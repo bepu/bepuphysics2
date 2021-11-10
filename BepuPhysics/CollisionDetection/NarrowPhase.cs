@@ -465,12 +465,12 @@ namespace BepuPhysics.CollisionDetection
             ref RigidPose poseA, ref RigidPose poseB, ref BodyVelocity velocityA, ref BodyVelocity velocityB)
         {
             Debug.Assert(pair.A.Packed != pair.B.Packed);
-            //Note that the pair's margin is the larger of the two involved collidables. This is based on two observations:
-            //1) Values smaller than either contributor should never be used, because it may interfere with tuning. Difficult to choose substepping properties without a 
-            //known minimum value for speculative margins.
-            //2) The larger the margin, the higher the risk of ghost collisions. 
-            //Taken together, max is implied.
-            var speculativeMargin = Math.Max(aCollidable.SpeculativeMargin, bCollidable.SpeculativeMargin);
+            //Add the speculative margins, but try to obey both collidables' bounds. Note that in the case of nonoverlapping intervals, the higher min ends up used.
+            var speculativeMargin =
+                MathF.Max(aCollidable.Continuity.MinimumSpeculativeMargin, MathF.Max(bCollidable.Continuity.MinimumSpeculativeMargin,
+                MathF.Min(aCollidable.Continuity.MaximumSpeculativeMargin, MathF.Min(bCollidable.Continuity.MaximumSpeculativeMargin,
+                    aCollidable.SpeculativeMargin + bCollidable.SpeculativeMargin))));
+
             var allowExpansion = aCollidable.Continuity.AllowExpansionBeyondSpeculativeMargin | bCollidable.Continuity.AllowExpansionBeyondSpeculativeMargin;
             //Note that we pick float.MaxValue for the maximum bounds expansion passive-involving pairs.
             //This is a compromise- looser bounds are not a correctness issue, so we're trading off potentially more subpairs

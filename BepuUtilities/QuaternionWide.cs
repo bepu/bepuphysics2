@@ -615,6 +615,18 @@ namespace BepuUtilities
             GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;
             GatherScatter.GetFirst(ref targetSlot.Z) = source.Z;
             GatherScatter.GetFirst(ref targetSlot.W) = source.W;
+        }       
+
+        /// <summary>
+        /// Writes a value into a slot of the target bundle.
+        /// </summary>
+        /// <param name="source">Source of the value to write.</param>
+        /// <param name="slotIndex">Index of the slot to write into.</param>
+        /// <param name="target">Bundle to write the value into.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteSlot(in Quaternion source, int slotIndex, ref QuaternionWide target)
+        {
+            WriteFirst(source, ref GatherScatter.GetOffsetInstance(ref target, slotIndex));
         }
     }
 }

@@ -175,6 +175,131 @@ namespace BepuPhysics
             return (uint)encodedBodyReferenceValue >= DynamicLimit;
         }
 
+        //TODO: Good argument for source generation (or at least refactoring) here. The vectorized paths don't need much in the way of maintenance, but having a bunch of duplicates is unavoidably error prone.
+
+        /// <summary>
+        /// Transposes of bundle of array-of-structures layout motion states into a bundle of array-of-structures-of-arrays layout.
+        /// Size of buffer must be no larger than the <see cref="Vector{T}.Count"/>.
+        /// </summary>
+        /// <param name="states">Array-of-structures data to transpose.</param>
+        /// <param name="position">Array-of-structures-of-arrays positions.</param>
+        /// <param name="orientation">Array-of-structures-of-arrays orientations.</param>
+        /// <param name="velocity">Array-of-structures-of-arrays velocities.</param>
+        public static unsafe void TransposeMotionStates(Buffer<MotionState> states, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity)
+        {
+            Debug.Assert(states.Length > 0 && states.Length <= Vector<float>.Count);
+            if (Avx.IsSupported && Vector<float>.Count == 8)
+            {
+                var empty1 = states.Length <= 1;
+                var empty2 = states.Length <= 2;
+                var empty3 = states.Length <= 3;
+                var empty4 = states.Length <= 4;
+                var empty5 = states.Length <= 5;
+                var empty6 = states.Length <= 6;
+                var empty7 = states.Length <= 7;
+
+                var s0 = (float*)states.Memory;
+                var s1 = (float*)(states.Memory + 1);
+                var s2 = (float*)(states.Memory + 2);
+                var s3 = (float*)(states.Memory + 3);
+                var s4 = (float*)(states.Memory + 4);
+                var s5 = (float*)(states.Memory + 5);
+                var s6 = (float*)(states.Memory + 6);
+                var s7 = (float*)(states.Memory + 7);
+
+                {
+                    //Load every body for the first half of the motion state.
+                    //Note that buffers are allocated on cache line boundaries, so we can use aligned loads for all that matters.
+                    var m0 = Avx.LoadAlignedVector256(s0);
+                    var m1 = empty1 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s1);
+                    var m2 = empty2 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s2);
+                    var m3 = empty3 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s3);
+                    var m4 = empty4 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s4);
+                    var m5 = empty5 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s5);
+                    var m6 = empty6 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s6);
+                    var m7 = empty7 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s7);
+
+                    var n0 = Avx.UnpackLow(m0, m1);
+                    var n1 = Avx.UnpackLow(m2, m3);
+                    var n2 = Avx.UnpackLow(m4, m5);
+                    var n3 = Avx.UnpackLow(m6, m7);
+                    var n4 = Avx.UnpackHigh(m0, m1);
+                    var n5 = Avx.UnpackHigh(m2, m3);
+                    var n6 = Avx.UnpackHigh(m4, m5);
+                    var n7 = Avx.UnpackHigh(m6, m7);
+
+                    var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o3 = Avx.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o5 = Avx.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+
+                    orientation.X = Avx.Permute2x128(o0, o1, 0 | (2 << 4)).AsVector();
+                    orientation.Y = Avx.Permute2x128(o4, o5, 0 | (2 << 4)).AsVector();
+                    orientation.Z = Avx.Permute2x128(o2, o3, 0 | (2 << 4)).AsVector();
+                    orientation.W = Avx.Permute2x128(o6, o7, 0 | (2 << 4)).AsVector();
+
+                    position.X = Avx.Permute2x128(o0, o1, 1 | (3 << 4)).AsVector();
+                    position.Y = Avx.Permute2x128(o4, o5, 1 | (3 << 4)).AsVector();
+                    position.Z = Avx.Permute2x128(o2, o3, 1 | (3 << 4)).AsVector();
+                }
+
+                {
+                    //Second half.
+                    var m0 = Avx.LoadAlignedVector256(s0 + 8);
+                    var m1 = empty1 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s1 + 8);
+                    var m2 = empty2 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s2 + 8);
+                    var m3 = empty3 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s3 + 8);
+                    var m4 = empty4 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s4 + 8);
+                    var m5 = empty5 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s5 + 8);
+                    var m6 = empty6 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s6 + 8);
+                    var m7 = empty7 ? Vector256<float>.Zero : Avx.LoadAlignedVector256(s7 + 8);
+
+                    var n0 = Avx.UnpackLow(m0, m1);
+                    var n1 = Avx.UnpackLow(m2, m3);
+                    var n2 = Avx.UnpackLow(m4, m5);
+                    var n3 = Avx.UnpackLow(m6, m7);
+                    var n4 = Avx.UnpackHigh(m0, m1);
+                    var n5 = Avx.UnpackHigh(m2, m3);
+                    var n6 = Avx.UnpackHigh(m4, m5);
+                    var n7 = Avx.UnpackHigh(m6, m7);
+
+                    var o0 = Avx.Shuffle(n0, n1, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o1 = Avx.Shuffle(n2, n3, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o2 = Avx.Shuffle(n4, n5, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o3 = Avx.Shuffle(n6, n7, 0 | (1 << 2) | (0 << 4) | (1 << 6));
+                    var o4 = Avx.Shuffle(n0, n1, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+                    var o5 = Avx.Shuffle(n2, n3, 2 | (3 << 2) | (2 << 4) | (3 << 6));
+
+                    velocity.Linear.X = Avx.Permute2x128(o0, o1, 0 | (2 << 4)).AsVector();
+                    velocity.Linear.Y = Avx.Permute2x128(o4, o5, 0 | (2 << 4)).AsVector();
+                    velocity.Linear.Z = Avx.Permute2x128(o2, o3, 0 | (2 << 4)).AsVector();
+
+                    velocity.Angular.X = Avx.Permute2x128(o0, o1, 1 | (3 << 4)).AsVector();
+                    velocity.Angular.Y = Avx.Permute2x128(o4, o5, 1 | (3 << 4)).AsVector();
+                    velocity.Angular.Z = Avx.Permute2x128(o2, o3, 1 | (3 << 4)).AsVector();
+                }
+            }
+            else
+            {
+                Unsafe.SkipInit(out position);
+                Unsafe.SkipInit(out orientation);
+                Unsafe.SkipInit(out velocity);
+                for (int i = 0; i < states.Length; ++i)
+                {
+                    ref var state = ref states[i];
+                    Vector3Wide.WriteSlot(state.Pose.Position, i, ref position);
+                    QuaternionWide.WriteSlot(state.Pose.Orientation, i, ref orientation);
+                    Vector3Wide.WriteSlot(state.Velocity.Linear, i, ref velocity.Linear);
+                    Vector3Wide.WriteSlot(state.Velocity.Angular, i, ref velocity.Angular);
+                }
+            }
+        }
+
+
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherState<TAccessFilter>(Vector<int> encodedBodyIndices, bool worldInertia, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
             where TAccessFilter : unmanaged, IBodyAccessFilter

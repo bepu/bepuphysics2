@@ -46,9 +46,23 @@ namespace BepuPhysics
                 Vector.SquareRoot(new Vector<float>(-2f) * maximumRadius * maximumRadius * cosAngleMinusOne));
         }
 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetBoundsExpansion(in Vector3Wide linearVelocity, in Vector3Wide angularVelocity, float dt,
-            in Vector<float> maximumRadius, in Vector<float> maximumAngularExpansion, out Vector3Wide minExpansion, out Vector3Wide maxExpansion)
+        public static void GetBoundsExpansion(Vector3Wide linearVelocity, Vector<float> dtWide, Vector<float> angularExpansion, out Vector3Wide minExpansion, out Vector3Wide maxExpansion)
+        {
+            var linearDisplacement = linearVelocity * dtWide;
+            var zero = Vector<float>.Zero;
+            minExpansion = Vector3Wide.Min(zero, linearDisplacement);
+            maxExpansion = Vector3Wide.Max(zero, linearDisplacement);
+            Vector3Wide.Subtract(minExpansion, angularExpansion, out minExpansion);
+            Vector3Wide.Add(maxExpansion, angularExpansion, out maxExpansion);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetBoundsExpansion(
+            Vector3Wide linearVelocity, Vector3Wide angularVelocity, Vector<float> dtWide, Vector<float> maximumRadius, Vector<float> maximumAngularExpansion,
+            out Vector3Wide minBoundsExpansion, out Vector3Wide maxBoundsExpansion)
         {
             /*
             If an object sitting on a plane had a raw (unexpanded) AABB that is just barely above the plane, no contacts would be generated. 
@@ -93,25 +107,18 @@ namespace BepuPhysics
             Linear is pretty simple- expand the bounding box in the direction of linear displacement (linearVelocity * dt).
             */
 
-            Vector<float> vectorDt = new Vector<float>(dt);
-            Vector3Wide.Scale(linearVelocity, vectorDt, out var linearDisplacement);
-
-            var zero = Vector<float>.Zero;
-            Vector3Wide.Min(zero, linearDisplacement, out minExpansion);
-            Vector3Wide.Max(zero, linearDisplacement, out maxExpansion);
             Vector3Wide.Length(angularVelocity, out var angularSpeed);
-            var angularExpansion = GetAngularBoundsExpansion(angularSpeed, vectorDt, maximumRadius, maximumAngularExpansion);
-            Vector3Wide.Subtract(minExpansion, angularExpansion, out minExpansion);
-            Vector3Wide.Add(maxExpansion, angularExpansion, out maxExpansion);
+            var angularExpansion = GetAngularBoundsExpansion(angularSpeed, dtWide, maximumRadius, maximumAngularExpansion);
+            GetBoundsExpansion(linearVelocity, dtWide, angularExpansion, out minBoundsExpansion, out maxBoundsExpansion);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ExpandBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max, BodyVelocityWide velocities, float dt,
-            Vector<float> maximumRadius, Vector<float> maximumAngularExpansion, Vector<float> maximumExpansion)
+        public static void ExpandBoundingBoxes(BodyVelocityWide velocities, Vector<float> dtWide, Vector<float> maximumRadius, Vector<float> maximumAngularExpansion, Vector<float> maximumExpansion,
+            ref Vector3Wide min, ref Vector3Wide max)
         {
-            GetBoundsExpansion(velocities.Linear, velocities.Angular, dt, maximumRadius, maximumAngularExpansion, out var minDisplacement, out var maxDisplacement);
-            Vector3Wide.Max(-maximumExpansion, minDisplacement, out minDisplacement);
-            Vector3Wide.Min(maximumExpansion, maxDisplacement, out maxDisplacement);
+            GetBoundsExpansion(velocities.Linear, velocities.Angular, dtWide, maximumRadius, maximumAngularExpansion, out var minDisplacement, out var maxDisplacement);
+            minDisplacement = Vector3Wide.Max(-maximumExpansion, minDisplacement);
+            maxDisplacement = Vector3Wide.Min(maximumExpansion, maxDisplacement);
 
             Vector3Wide.Add(min, minDisplacement, out min);
             Vector3Wide.Add(max, maxDisplacement, out max);
@@ -178,7 +185,8 @@ namespace BepuPhysics
             in Vector<float> radiusA, in Vector3Wide localPositionA, in Vector3Wide localRelativeLinearVelocityA, in Vector3Wide angularVelocityA, in Vector3Wide angularVelocityB, float dt,
             in Vector<float> maximumRadius, in Vector<float> maximumAngularExpansion, in Vector<float> maximumAllowedExpansion)
         {
-            GetBoundsExpansion(localRelativeLinearVelocityA, angularVelocityA, dt,
+            var dtWide = new Vector<float>(dt);
+            GetBoundsExpansion(localRelativeLinearVelocityA, angularVelocityA, dtWide,
                 maximumRadius + radiusA, maximumAngularExpansion + radiusA, out var minExpansion, out var maxExpansion);
             Vector3Wide.LengthSquared(angularVelocityB, out var angularSpeedBSquared);
             if (Vector.GreaterThanAny(angularSpeedBSquared, Vector<float>.Zero))
@@ -187,7 +195,7 @@ namespace BepuPhysics
                 Vector3Wide.Length(localPositionA, out var radiusB);
                 Vector3Wide.Length(localRelativeLinearVelocityA, out var linearSpeed);
                 var worstCaseRadius = linearSpeed * dt + radiusB;
-                var angularExpansionB = GetAngularBoundsExpansion(Vector.SquareRoot(angularSpeedBSquared), maximumRadius + worstCaseRadius, maximumAngularExpansion + worstCaseRadius, new Vector<float>(dt));
+                var angularExpansionB = GetAngularBoundsExpansion(Vector.SquareRoot(angularSpeedBSquared), maximumRadius + worstCaseRadius, maximumAngularExpansion + worstCaseRadius, dtWide);
                 Vector3Wide.Subtract(minExpansion, angularExpansionB, out minExpansion);
                 Vector3Wide.Add(maxExpansion, angularExpansionB, out maxExpansion);
             }
