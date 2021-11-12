@@ -155,8 +155,6 @@ namespace BepuPhysics
             var shapeIndices = batch.ShapeIndices;
             var continuations = batch.Continuations;
             ref var activeSet = ref bodies.ActiveSet;
-
-            var continuationMask = new Vector<int>(1 << 31);
             var dtWide = new Vector<float>(dt);
             Span<float> minimumMarginSpan = stackalloc float[Vector<float>.Count];
             Span<float> maximumMarginSpan = stackalloc float[Vector<float>.Count];
@@ -173,9 +171,10 @@ namespace BepuPhysics
                 //TODO: This transposition could be significantly improved with intrinsics, as we did for the Bodies state gather operations.
                 for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
                 {
-                    var shapeIndex = shapeIndices[bundleStartIndex + innerIndex];
+                    var indexInBatch = bundleStartIndex + innerIndex;
+                    var shapeIndex = shapeIndices[indexInBatch];
                     shapeWide.WriteSlot(innerIndex, shapeBatch.shapes[shapeIndex]);
-                    ref var collidable = ref activeSet.Collidables[continuations[bundleStartIndex + innerIndex].BodyIndex];
+                    ref var collidable = ref activeSet.Collidables[continuations[indexInBatch].BodyIndex];
                     minimumMarginSpan[innerIndex] = collidable.Continuity.MinimumSpeculativeMargin;
                     maximumMarginSpan[innerIndex] = collidable.Continuity.MaximumSpeculativeMargin;
                     allowExpansionBeyondSpeculativeMarginSpan[innerIndex] = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? -1 : 0;
@@ -189,13 +188,14 @@ namespace BepuPhysics
                 var angularBoundsExpansion = BoundingBoxHelpers.GetAngularBoundsExpansion(Vector3Wide.Length(velocities.Angular), dtWide, maximumRadius, maximumAngularExpansion);
                 var speculativeMargin = Vector3Wide.Length(velocities.Linear) * dtWide + angularBoundsExpansion;
 
-
                 var minimumSpeculativeMargin = new Vector<float>(minimumMarginSpan);
                 var maximumSpeculativeMargin = new Vector<float>(maximumMarginSpan);
                 var allowExpansionBeyondSpeculativeMargin = new Vector<int>(allowExpansionBeyondSpeculativeMarginSpan);
                 speculativeMargin = Vector.Max(minimumSpeculativeMargin, Vector.Min(maximumSpeculativeMargin, speculativeMargin));
                 var maximumBoundsExpansion = Vector.ConditionalSelect(allowExpansionBeyondSpeculativeMargin, new Vector<float>(float.MaxValue), speculativeMargin);
                 BoundingBoxHelpers.GetBoundsExpansion(velocities.Linear, dtWide, angularBoundsExpansion, out var minExpansion, out var maxExpansion);
+                minExpansion = Vector3Wide.Max(-maximumBoundsExpansion, minExpansion);
+                maxExpansion = Vector3Wide.Min(maximumBoundsExpansion, maxExpansion);
                 //TODO: Note that this is an area that must be updated if you change the pose representation.
                 bundleMin = positions + (bundleMin + minExpansion);
                 bundleMax = positions + (bundleMax + maxExpansion);
@@ -204,7 +204,6 @@ namespace BepuPhysics
                 {
                     var continuation = continuations[bundleStartIndex + innerIndex];
                     ref var collidable = ref activeSet.Collidables[continuation.BodyIndex];
-                    collidable.SpeculativeMargin = speculativeMargin[innerIndex];
                     broadPhase.GetActiveBoundsPointers(collidable.BroadPhaseIndex, out var minPointer, out var maxPointer);
                     //ref var sourceBundleMin = ref GatherScatter.GetOffsetInstance(ref bundleMin, innerIndex);
                     //ref var sourceBundleMax = ref GatherScatter.GetOffsetInstance(ref bundleMax, innerIndex);
@@ -228,12 +227,14 @@ namespace BepuPhysics
                     //Worth checking the performance; if it's undetectable, just swap to the simpler version.
                     if (continuation.CompoundChild)
                     {
+                        collidable.SpeculativeMargin = MathF.Max(collidable.SpeculativeMargin, speculativeMargin[innerIndex]);
                         var min = new Vector3(bundleMin.X[innerIndex], bundleMin.Y[innerIndex], bundleMin.Z[innerIndex]);
                         var max = new Vector3(bundleMax.X[innerIndex], bundleMax.Y[innerIndex], bundleMax.Z[innerIndex]);
                         BoundingBox.CreateMerged(*minPointer, *maxPointer, min, max, out *minPointer, out *maxPointer);
                     }
                     else
                     {
+                        collidable.SpeculativeMargin = speculativeMargin[innerIndex];
                         *minPointer = new Vector3(bundleMin.X[innerIndex], bundleMin.Y[innerIndex], bundleMin.Z[innerIndex]);
                         *maxPointer = new Vector3(bundleMax.X[innerIndex], bundleMax.Y[innerIndex], bundleMax.Z[innerIndex]);
                     }
@@ -254,20 +255,33 @@ namespace BepuPhysics
                 ref var motionState = ref batch.MotionStates[i];
                 var bodyIndex = batch.Continuations[i].BodyIndex;
                 ref var collidable = ref activeSet.Collidables[bodyIndex];
-                broadPhase.GetActiveBoundsPointers(collidable.BroadPhaseIndex, out var min, out var max);
-                var maximumAllowedExpansion = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : collidable.SpeculativeMargin;
-                shapeBatch[shapeIndex].ComputeBounds(motionState.Pose.Orientation, out *min, out *max);
+                shapeBatch[shapeIndex].ComputeBounds(motionState.Pose.Orientation, out var min, out var max);
                 //Working on the assumption that dynamic meshes are extremely rare, and that dynamic meshes with extremely high angular velocity are even rarer,
                 //we're just going to use a simplistic upper bound for angular expansion. This simplifies the mesh bounding box calculation quite a bit (no dot products).
-                var absMin = Vector3.Abs(*min);
-                var absMax = Vector3.Abs(*max);
+                var absMin = Vector3.Abs(min);
+                var absMax = Vector3.Abs(max);
                 var maximumRadius = Vector3.Max(absMin, absMax).Length();
 
                 var minimumComponents = Vector3.Min(absMin, absMax);
                 var minimumRadius = MathHelper.Min(minimumComponents.X, MathHelper.Min(minimumComponents.Y, minimumComponents.Z));
-                BoundingBoxHelpers.ExpandBoundingBox(ref *min, ref *max, motionState.Velocity.Linear, motionState.Velocity.Angular, dt, maximumRadius, maximumRadius - minimumRadius, maximumAllowedExpansion);
-                *min += motionState.Pose.Position;
-                *max += motionState.Pose.Position;
+                var maximumAngularExpansion = maximumRadius - minimumRadius;
+
+                //BoundingBoxBatcher is responsible for updating the bounding box AND speculative margin.
+                //In order to know how much we're allowed to expand the bounding box, we need to know the speculative margin.
+                //It's defined by the velocity of the body, and bounded by the body's minimum and maximum.
+                var angularBoundsExpansion = BoundingBoxHelpers.GetAngularBoundsExpansion(motionState.Velocity.Angular.Length(), dt, maximumRadius, maximumAngularExpansion);
+                var speculativeMargin = motionState.Velocity.Linear.Length() * dt + angularBoundsExpansion;
+                speculativeMargin = MathF.Max(collidable.Continuity.MinimumSpeculativeMargin, MathF.Min(collidable.Continuity.MaximumSpeculativeMargin, speculativeMargin));
+                collidable.SpeculativeMargin = speculativeMargin;
+                var maximumAllowedExpansion = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : speculativeMargin;
+                BoundingBoxHelpers.GetBoundsExpansion(motionState.Velocity.Linear, dt, angularBoundsExpansion, out var minExpansion, out var maxExpansion);
+                var broadcastMaximumBoundsExpansion = new Vector3(maximumAllowedExpansion);
+                minExpansion = Vector3.Max(-broadcastMaximumBoundsExpansion, minExpansion);
+                maxExpansion = Vector3.Min(broadcastMaximumBoundsExpansion, maxExpansion);
+
+                broadPhase.GetActiveBoundsPointers(collidable.BroadPhaseIndex, out var minPointer, out var maxPointer);
+                *minPointer = motionState.Pose.Position + (min + minExpansion);
+                *maxPointer = motionState.Pose.Position + (max + maxExpansion);
             }
         }
 

@@ -316,7 +316,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public unsafe void ValidateConstraintReferenceKinematicity()
+        internal unsafe void ValidateConstraintReferenceKinematicity()
         {
             //Only the active set's body indices are flagged for kinematicity; the inactive sets store body handles.
             for (int setIndex = 0; setIndex < Sets.Length; ++setIndex)
@@ -364,7 +364,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        unsafe public void ValidateConstrainedKinematicsSet()
+        internal unsafe void ValidateConstrainedKinematicsSet()
         {
             ref var set = ref bodies.ActiveSet;
             for (int i = 0; i < set.Count; ++i)
@@ -651,7 +651,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public unsafe void ValidateBatchReferencedHandlesVersusConstraintStoredReferences()
+        internal unsafe void ValidateBatchReferencedHandlesVersusConstraintStoredReferences()
         {
             const int maximumBodyCountInConstraint = 4;
             int* debugReferences = stackalloc int[maximumBodyCountInConstraint];

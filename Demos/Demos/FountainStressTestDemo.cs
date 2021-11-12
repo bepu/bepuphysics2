@@ -156,6 +156,29 @@ namespace Demos.Demos
             }
         }
 
+        void CreateRandomMesh(out Mesh mesh, out BodyInertia inertia)
+        {
+            //We'll use a convex hull algorithm to generate the triangles for the mesh, rather than just spewing random triangle soups.
+            var pointCount = random.Next(4, 16);
+            BufferPool.Take(pointCount, out Buffer<Vector3> points);
+            for (int i = 0; i < pointCount; ++i)
+            {
+                points[i] = 2f * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
+            }
+            ConvexHullHelper.CreateShape(points, BufferPool, out _, out var convexHull);
+            BufferPool.Return(ref points);
+            ConvexHull.ConvexHullTriangleSource triangleSource = new(convexHull);
+            QuickList<Triangle> triangles = new(16, BufferPool);
+            while (triangleSource.GetNextTriangle(out var a, out var b, out var c))
+            {
+                triangles.Allocate(BufferPool) = new Triangle(a, b, c);
+            }
+            convexHull.Dispose(BufferPool);
+
+            mesh = new Mesh(triangles, new Vector3(1), BufferPool);
+            mesh.ComputeClosedInertia(1, out inertia);
+        }
+
         public void CreateBodyDescription(Random random, in RigidPose pose, in BodyVelocity velocity, out BodyDescription description)
         {
             //For the sake of the stress test, every single body has its own shape that gets removed when the body is removed.
@@ -169,7 +192,7 @@ namespace Demos.Demos
             }
             else
             {
-                switch (random.Next(0, 7))
+                switch (random.Next(0, 8))
                 {
                     default:
                         {
@@ -213,6 +236,14 @@ namespace Demos.Demos
                             shapeIndex = Simulation.Shapes.Add(new BigCompound(children, Simulation.Shapes, BufferPool));
                         }
                         break;
+                    case 7:
+                        {
+                            //As usual: avoid dynamic meshes. They're slow and triangles are infinitely thin, so behavior probably won't be what you want.
+                            //But dynamic meshes do exist, and so this demo shall test them.
+                            CreateRandomMesh(out var mesh, out inertia);
+                            shapeIndex = Simulation.Shapes.Add(mesh);
+                        }
+                        break;
                 }
             }
 
@@ -226,7 +257,7 @@ namespace Demos.Demos
             };
             switch (random.Next(3))
             {
-                case 0: description.Collidable.Continuity = ContinuousDetection.Discrete(); break;
+                case 0: description.Collidable.Continuity = ContinuousDetection.Discrete(0, 0.2f); break;
                 case 1: description.Collidable.Continuity = ContinuousDetection.Passive; break;
                 case 2: description.Collidable.Continuity = ContinuousDetection.Continuous(1e-3f, 1e-3f, maximumSpeculativeMargin: 0.2f); break;
             }
@@ -237,7 +268,6 @@ namespace Demos.Demos
             var timestepDuration = 1f / 60f;
             time += timestepDuration;
 
-            Simulation.Solver.ValidateConstrainedKinematicsSet();
             //Occasionally, the animation stops completely. The resulting velocities will be zero, so the kinematics will have a chance to rest (testing kinematic rest states).
             var dip = 0.1;
             var progressionMultiplier = 0.5 - dip + (1 + dip) * 0.5 * Math.Cos(time * 0.25);
@@ -286,7 +316,6 @@ namespace Demos.Demos
                     }
                 }
             }
-            Simulation.Solver.ValidateConstrainedKinematicsSet();
 
             //Remove some statics from the simulation.
             var missingStaticsAsymptote = 512;
@@ -298,7 +327,6 @@ namespace Demos.Demos
                 Simulation.Statics.RemoveAt(indexToRemove);
                 removedStatics.Enqueue(staticDescription, BufferPool);
             }
-            Simulation.Solver.ValidateConstrainedKinematicsSet();
 
             var staticApplyDescriptionsPerFrame = 8;
             for (int i = 0; i < staticApplyDescriptionsPerFrame; ++i)
@@ -314,8 +342,6 @@ namespace Demos.Demos
                 Simulation.Statics.ApplyDescription(handleToReapply, staticDescription);
             }
 
-            Simulation.Solver.ValidateConstrainedKinematicsSet();
-
             //Add some of the missing static bodies back into the simulation.
             var staticAddCount = removedStatics.Count * (staticRemovalsPerFrame / (float)missingStaticsAsymptote);
             for (int i = 0; i < staticAddCount; ++i)
@@ -326,13 +352,12 @@ namespace Demos.Demos
             }
 
 
-            Simulation.Solver.ValidateConstrainedKinematicsSet();
             //Spray some shapes!
             int newShapeCount = 1;
             var spawnPose = new RigidPose(new Vector3(0, 10, 0));
             for (int i = 0; i < newShapeCount; ++i)
             {
-                CreateBodyDescription(random, spawnPose, new BodyVelocity(new Vector3(-60 + 120 * (float)random.NextDouble(), 0, -60 + 120 * (float)random.NextDouble()), default), out var bodyDescription);
+                CreateBodyDescription(random, spawnPose, new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 0, -30 + 60 * (float)random.NextDouble()), default), out var bodyDescription);
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(bodyDescription), BufferPool);
             }
             int targetAsymptote = 65536;
@@ -352,7 +377,6 @@ namespace Demos.Demos
                     break;
                 }
             }
-            Simulation.Solver.ValidateConstrainedKinematicsSet();
 
             //Change some dynamic objects without adding/removing them to make sure all the state transition stuff works reasonably well.
             var dynamicApplyDescriptionsPerFrame = 8;
@@ -368,10 +392,8 @@ namespace Demos.Demos
                     newDescription.LocalInertia = default;
                 }
                 Simulation.Bodies.ApplyDescription(handle, newDescription);
-                Simulation.Solver.ValidateConstraintReferenceKinematicity();
             }
 
-            Simulation.Solver.ValidateConstrainedKinematicsSet();
             base.Update(window, camera, input, dt);
 
             if (input != null && input.WasPushed(OpenTK.Input.Key.P))

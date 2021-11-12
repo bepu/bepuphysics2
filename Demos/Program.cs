@@ -23,8 +23,8 @@ namespace Demos
             //HeadlessTest.Test<NewtDemo>(content, 4, 32, 512);
             //HeadlessTest.Test<ColosseumDemo>(content, 8, 32, 1024);
             //HeadlessTest.Test<RopeTwistDemo>(content, 4, 32, 512);
-            HeadlessTest.Test<RagdollTubeDemo>(content, 4, 128, 1024);
-            //DeterminismTest<FountainStressTestDemo>.Test(content, 1, 16384);
+            //HeadlessTest.Test<RagdollTubeDemo>(content, 4, 128, 1024);
+            DeterminismTest<FountainStressTestDemo>.Test(content, 1, 16384);
             var demo = new DemoHarness(loop, content);
             loop.Run(demo);
             loop.Dispose();
