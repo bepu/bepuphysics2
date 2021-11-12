@@ -683,7 +683,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static implicit operator Buffer<T>(in QuickList<T> list)
         {
-            return new Buffer<T>(list.Span.Memory, list.Count);
+            return new Buffer<T>(list.Span.Memory, list.Count, list.Span.Id);
         }
 
 
