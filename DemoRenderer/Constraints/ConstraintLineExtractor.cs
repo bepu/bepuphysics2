@@ -10,6 +10,7 @@ using BepuUtilities;
 using System.Numerics;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints.Contact;
+using System.Threading;
 
 namespace DemoRenderer.Constraints
 {
@@ -105,7 +106,7 @@ namespace DemoRenderer.Constraints
             public int ConstraintCount;
             public int LineStart;
             public int LinesPerConstraint;
-            public QuickList<LineInstance> jobLines;
+            public QuickList<LineInstance> JobLines;
         }
 
         public bool Enabled { get; set; } = true;
@@ -169,12 +170,16 @@ namespace DemoRenderer.Constraints
 
         Bodies bodies;
         Solver solver;
+        QuickList<LineInstance> targetLines;
         private void ExecuteJob(int jobIndex)
         {
             ref var job = ref jobs[jobIndex];
             ref var typeBatch = ref solver.Sets[job.SetIndex].Batches[job.BatchIndex].TypeBatches[job.TypeBatchIndex];
             Debug.Assert(lineExtractors[typeBatch.TypeId] != null, "Jobs should only be created for types which are registered and used.");
-            lineExtractors[typeBatch.TypeId].ExtractLines(bodies, job.SetIndex, ref typeBatch, job.ConstraintStart, job.ConstraintCount, ref job.jobLines);
+            lineExtractors[typeBatch.TypeId].ExtractLines(bodies, job.SetIndex, ref typeBatch, job.ConstraintStart, job.ConstraintCount, ref job.JobLines);
+            //Because the number of lines is not easily known ahead of time, the job accumulates a list locally and then copies it into the global buffer afterwards.
+            var targetStart = Interlocked.Add(ref targetLines.Count, job.JobLines.Count) - job.JobLines.Count;
+            job.JobLines.Span.Slice(job.JobLines.Count).CopyTo(0, targetLines, targetStart, job.JobLines.Count);
         }
 
 
@@ -209,13 +214,14 @@ namespace DemoRenderer.Constraints
                                     LineStart = neededLineCapacity,
                                     LinesPerConstraint = extractor.LinesPerConstraint
                                 }, pool);
+                                //Note that this is a conservative estimate. TypeBatches in the fallback constraint batch are not necessarily contiguous, so the allocated constraint count is possibly larger than the true number of constraints.
                                 neededLineCapacity += extractor.LinesPerConstraint * typeBatch.ConstraintCount;
                             }
                         }
                     }
                 }
             }
-            var maximumJobSize = Math.Max(1, neededLineCapacity / (jobsPerThread * Environment.ProcessorCount));
+            var maximumJobSize = Math.Min(32, Math.Max(1, neededLineCapacity / (jobsPerThread * Environment.ProcessorCount)));
             var originalJobCount = jobs.Count;
             //Split jobs if they're larger than desired to help load balancing a little bit. This isn't terribly important, but it's pretty easy.
             for (int i = 0; i < originalJobCount; ++i)
@@ -246,19 +252,24 @@ namespace DemoRenderer.Constraints
                 }
             }
             lines.EnsureCapacity(neededLineCapacity, pool);
-            lines.Count = neededLineCapacity; //Line additions will be performed on suballocated lists. This count will be used by the renderer when reading line data.
+            targetLines = lines;
             for (int i = 0; i < jobs.Count; ++i)
             {
-                //Creating a local copy of the list reference and count allows additions to proceed in parallel. 
-                jobs[i].jobLines = new QuickList<LineInstance>(lines.Span);
-                //By setting the count, we work around the fact that Array<T> doesn't support slicing.
-                jobs[i].jobLines.Count = jobs[i].LineStart;
+                //Local lists for each worker let the accumulation proceed in parallel. The results will be copied by the workers after they finish with a chunk with an interlocked claim on the main buffer.
+                //Could be quicker with per *worker* lists, but this doesn't really matter.
+                jobs[i].JobLines = new QuickList<LineInstance>(jobs[i].ConstraintCount * jobs[i].LinesPerConstraint, pool);
             }
             this.bodies = bodies;
             this.solver = solver;
             looper.For(0, jobs.Count, executeJobDelegate);
             this.bodies = null;
             this.solver = solver;
+            lines = targetLines;
+            targetLines = default;
+            for (int i = 0; i < jobs.Count; ++i)
+            {
+                jobs[i].JobLines.Dispose(pool);
+            }
         }
 
         public void Dispose()
