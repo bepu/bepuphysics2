@@ -353,11 +353,11 @@ namespace Demos.Demos
 
 
             //Spray some shapes!
-            int newShapeCount = 1;
+            int newShapeCount = 8;
             var spawnPose = new RigidPose(new Vector3(0, 10, 0));
             for (int i = 0; i < newShapeCount; ++i)
             {
-                CreateBodyDescription(random, spawnPose, new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 0, -30 + 60 * (float)random.NextDouble()), default), out var bodyDescription);
+                CreateBodyDescription(random, spawnPose, new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 75, -30 + 60 * (float)random.NextDouble()), default), out var bodyDescription);
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(bodyDescription), BufferPool);
             }
             int targetAsymptote = 65536;

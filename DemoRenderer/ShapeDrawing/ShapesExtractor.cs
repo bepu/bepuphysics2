@@ -134,7 +134,8 @@ namespace DemoRenderer.ShapeDrawing
                         instance.PackedColor = Helpers.PackColor(color);
                         instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
                         instance.Scale = Vector3.One;
-                        var id = (ulong)hull.Points.Memory ^ (ulong)hull.Points.Length;
+                        //Memory can be reused, so we slightly reduce the probability of a bad reuse by taking the first 64 bits of data into the hash.
+                        var id = (ulong)hull.Points.Memory ^ (ulong)hull.Points.Length ^ (*(ulong*)hull.Points.Memory);
                         if (!MeshCache.TryGetExistingMesh(id, out instance.VertexStart, out var vertices))
                         {
                             int triangleCount = 0;
@@ -187,7 +188,8 @@ namespace DemoRenderer.ShapeDrawing
                         instance.PackedColor = Helpers.PackColor(color);
                         instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
                         instance.Scale = mesh.Scale;
-                        var id = (ulong)mesh.Triangles.Memory ^ (ulong)mesh.Triangles.Length;
+                        //Memory can be reused, so we slightly reduce the probability of a bad reuse by taking the first 64 bits of data into the hash.
+                        var id = (ulong)mesh.Triangles.Memory ^ (ulong)mesh.Triangles.Length ^ (*(ulong*)mesh.Triangles.Memory); ;
                         instance.VertexCount = mesh.Triangles.Length * 3;
                         if (MeshCache.Allocate(id, instance.VertexCount, out instance.VertexStart, out var vertices))
                         {
