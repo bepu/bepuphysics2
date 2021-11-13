@@ -405,10 +405,15 @@ namespace BepuPhysics
             }
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
+            ref var inertiaReference = ref set.SolverStates[location.Index].Inertia;
             ref var localInertiaReference = ref set.SolverStates[location.Index].Inertia.Local;
             var nowKinematic = IsKinematic(localInertia);
-            var previouslyKinematic = IsKinematicUnsafeGCHole(ref localInertiaReference);
-            localInertiaReference = localInertia;
+            var previouslyKinematic = IsKinematicUnsafeGCHole(ref inertiaReference.Local);
+            inertiaReference.Local = localInertia;
+            //The world inertia is updated on demand and is not 'persistent' data.
+            //In the event that the body is now kinematic, it won't be updated by pose integration and such, so it should be initialized to zeroes.
+            //Since initializing it to zeroes unconditionally avoids dynamics having some undefined data lingering around in the worst case, might as well.
+            inertiaReference.World = default;
             UpdateForKinematicStateChange(handle, ref location, ref set, previouslyKinematic, nowKinematic);
         }
 
@@ -561,6 +566,19 @@ namespace BepuPhysics
 
                     }
                 }
+            }
+        }
+
+
+        internal void ValidateAwakeMotionStatesByHash(HashDiagnosticType type)
+        {
+            var instance = InvasiveHashDiagnostics.Instance;
+            ref int hash = ref instance.GetHashForType(type);
+            ref var set = ref ActiveSet;
+            for (int j = 0; j < set.Count; ++j)
+            {
+                ref var state = ref set.SolverStates[j];
+                instance.ContributeToHash(ref hash, state);
             }
         }
 

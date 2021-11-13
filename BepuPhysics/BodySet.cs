@@ -128,8 +128,10 @@ namespace BepuPhysics
             ref var state = ref SolverStates[index];
             state.Motion.Pose = description.Pose;
             state.Motion.Velocity = description.Velocity;
-            //Note that the world inertia is only valid in the velocity integration->pose integration interval, so we don't need to initialize it here.
             state.Inertia.Local = description.LocalInertia;
+            //Note that the world inertia is only valid in the velocity integration->pose integration interval, so we don't need to initialize it here for dynamics.
+            //Kinematics, though, can have their inertia updates skipped at runtime since the world inverse inertia should always be a bunch of zeroes, so we pre-zero it.
+            state.Inertia.World = default;
             ref var collidable = ref Collidables[index];
             collidable.Continuity = description.Collidable.Continuity;
             //Note that we change the shape here. If the collidable transitions from shapeless->shapeful or shapeful->shapeless, the broad phase has to be notified 

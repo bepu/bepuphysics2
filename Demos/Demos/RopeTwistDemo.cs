@@ -136,7 +136,7 @@ namespace Demos.Demos
                     for (int i = 0; i < bodyHandles.Length - 1; ++i)
                     {
                         //Note that you could also create constraints which span even more links. For example, connect i and i+1, i+2, i+4, i+8 and i+16 rather than just the nearest bodies.
-                        //That would make it behave a bit more like the previous cheat constraint, but it can be useful.
+                        //That tends to make mass ratios less of an issue, but this demo is a worst case stress test.
                         for (int j = 1; j <= constraintsPerBody; ++j)
                         {
                             if (!TryCreateConstraint(i, i + j))

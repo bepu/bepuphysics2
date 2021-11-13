@@ -606,7 +606,7 @@ namespace BepuPhysics
                             {
                                 var bodyIndex = bodyVector[innerIndex];
                                 if (bodyIndex >= 0)
-                                    hashes.ContributeToHash(ref hash, bodies.ActiveSet.IndexToHandle[bodyIndex]);
+                                    hashes.ContributeToHash(ref hash, bodies.ActiveSet.IndexToHandle[bodyIndex & Bodies.BodyReferenceMask].Value);
                                 else
                                     hashes.ContributeToHash(ref hash, bodyIndex);
                             }
@@ -621,31 +621,35 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        internal unsafe void ValidateFallbackBatchAccumulatedImpulses()
+        internal unsafe void ValidateAccumulatedImpulses()
         {
-            ref var set = ref ActiveSet;
-            if (set.Batches.Count > FallbackBatchThreshold)
+            var impulseMemory = stackalloc float[16];
+            var impulsesEnumerator = new ValidateAccumulatedImpulsesEnumerator { AccumulatedImpulses = impulseMemory };
+            for (int i = 0; i < Sets.Length; ++i)
             {
-                ref var batch = ref set.Batches[FallbackBatchThreshold];
-                var impulseMemory = stackalloc float[16];
-                var impulsesEnumerator = new ValidateAccumulatedImpulsesEnumerator { AccumulatedImpulses = impulseMemory };
-                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                ref var set = ref Sets[i];
+                if (!set.Allocated)
+                    continue;
+                for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
                 {
-                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-                    var dofCount = TypeProcessors[typeBatch.TypeId].ConstrainedDegreesOfFreedom;
-                    for (int constraintIndex = 0; constraintIndex < typeBatch.ConstraintCount; ++constraintIndex)
+                    ref var batch = ref set.Batches[batchIndex];
+                    for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                     {
-                        if (typeBatch.IndexToHandle[constraintIndex].Value >= 0)
+                        ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                        var dofCount = TypeProcessors[typeBatch.TypeId].ConstrainedDegreesOfFreedom;
+                        for (int constraintIndex = 0; constraintIndex < typeBatch.ConstraintCount; ++constraintIndex)
                         {
-                            impulsesEnumerator.Index = 0;
-                            TypeProcessors[typeBatch.TypeId].EnumerateAccumulatedImpulses(ref typeBatch, constraintIndex, ref impulsesEnumerator);
-                            for (int dofIndex = 0; dofIndex < dofCount; ++dofIndex)
+                            if (typeBatch.IndexToHandle[constraintIndex].Value >= 0)
                             {
-                                impulseMemory[dofIndex].Validate();
+                                impulsesEnumerator.Index = 0;
+                                TypeProcessors[typeBatch.TypeId].EnumerateAccumulatedImpulses(ref typeBatch, constraintIndex, ref impulsesEnumerator);
+                                for (int dofIndex = 0; dofIndex < dofCount; ++dofIndex)
+                                {
+                                    impulseMemory[dofIndex].Validate();
+                                }
                             }
                         }
                     }
-
                 }
             }
         }

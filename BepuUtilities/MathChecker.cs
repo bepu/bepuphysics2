@@ -22,7 +22,7 @@ namespace BepuUtilities
 
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -30,12 +30,12 @@ namespace BepuUtilities
         {
             if (IsInvalid(f))
             {
-                throw new InvalidOperationException("Invalid value.");
+                Debug.Fail("Invalid value.");
             }
         }
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -43,12 +43,12 @@ namespace BepuUtilities
         {
             if (IsInvalid(v.LengthSquared()))
             {
-                throw new InvalidOperationException("Invalid value.");
+                Debug.Fail("Invalid value.");
             }
         }
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -56,12 +56,12 @@ namespace BepuUtilities
         {
             if (IsInvalid(v.LengthSquared()))
             {
-                throw new InvalidOperationException("Invalid value.");
+                Debug.Fail("Invalid value.");
             }
         }
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -69,13 +69,13 @@ namespace BepuUtilities
         {
             if (IsInvalid(v.LengthSquared()))
             {
-                throw new InvalidOperationException("Invalid value.");
+                Debug.Fail("Invalid value.");
             }
         }
 
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -87,7 +87,7 @@ namespace BepuUtilities
         }
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -100,7 +100,7 @@ namespace BepuUtilities
         }
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -108,12 +108,12 @@ namespace BepuUtilities
         {
             if (IsInvalid(q.LengthSquared()))
             {
-                throw new InvalidOperationException("Invalid value.");
+                Debug.Fail("Invalid value.");
             }
         }
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -122,12 +122,12 @@ namespace BepuUtilities
             var lengthSquared = q.LengthSquared();
             if (IsInvalid(lengthSquared) && Math.Abs(1 - lengthSquared) < 1e-5f)
             {
-                throw new InvalidOperationException("Invalid value.");
+                Debug.Fail("Invalid value.");
             }
         }
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -142,7 +142,7 @@ namespace BepuUtilities
         }
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -153,7 +153,7 @@ namespace BepuUtilities
         }
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -164,7 +164,7 @@ namespace BepuUtilities
         }
 
         /// <summary>
-        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// Checks the value to see if it is a NaN or infinite.  If it is, a debug assertion will fail.
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
@@ -178,7 +178,7 @@ namespace BepuUtilities
         public static void Validate(this Vector<float> f, int laneCount = -1)
         {
             if (laneCount < -1 || laneCount > Vector<float>.Count)
-                throw new ArgumentException("Invalid lane count.");
+                Debug.Fail("Invalid lane count.");
             if (laneCount == -1)
                 laneCount = Vector<float>.Count;
             ref var casted = ref Unsafe.As<Vector<float>, float>(ref f);
@@ -187,7 +187,7 @@ namespace BepuUtilities
                 var value = Unsafe.Add(ref casted, i);
                 if (float.IsNaN(value) || float.IsInfinity(value))
                 {
-                    throw new InvalidOperationException($"Invalid floating point value: {value}.");
+                    Debug.Fail($"Invalid floating point value: {value}.");
                 }
             }
         }
@@ -205,7 +205,7 @@ namespace BepuUtilities
                     var value = Unsafe.Add(ref castedValues, i);
                     if (float.IsNaN(value) || float.IsInfinity(value))
                     {
-                        throw new InvalidOperationException($"Invalid floating point value: {value}.");
+                        Debug.Fail($"Invalid floating point value: {value}.");
                     }
                 }
             }

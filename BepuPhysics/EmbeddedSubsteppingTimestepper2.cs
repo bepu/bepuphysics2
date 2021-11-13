@@ -49,7 +49,7 @@ namespace BepuPhysics
             simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
             simulation.Solver.ValidateFallbackBatchEmptySlotReferences();
             simulation.Solver.ValidateFallbackBatchAccessSafety();
-            simulation.Solver.ValidateFallbackBatchAccumulatedImpulses();
+            simulation.Solver.ValidateAccumulatedImpulses();
             simulation.Solver.ValidateConstraintMaps();
             simulation.Solver.ValidateConstraintReferenceKinematicity();
             simulation.Solver.ValidateConstrainedKinematicsSet();
@@ -60,7 +60,7 @@ namespace BepuPhysics
             simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
             simulation.Solver.ValidateFallbackBatchEmptySlotReferences();
             simulation.Solver.ValidateFallbackBatchAccessSafety();
-            simulation.Solver.ValidateFallbackBatchAccumulatedImpulses();
+            simulation.Solver.ValidateAccumulatedImpulses();
             simulation.Solver.ValidateConstraintMaps();
             simulation.Solver.ValidateConstraintReferenceKinematicity();
             simulation.Solver.ValidateConstrainedKinematicsSet();
@@ -77,7 +77,7 @@ namespace BepuPhysics
             simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
             simulation.Solver.ValidateFallbackBatchEmptySlotReferences();
             simulation.Solver.ValidateFallbackBatchAccessSafety();
-            simulation.Solver.ValidateFallbackBatchAccumulatedImpulses();
+            simulation.Solver.ValidateAccumulatedImpulses();
             simulation.Solver.ValidateConstraintMaps();
             simulation.Solver.ValidateConstraintReferenceKinematicity();
             simulation.Solver.ValidateConstrainedKinematicsSet();
@@ -95,6 +95,8 @@ namespace BepuPhysics
             simulation.Solver.DisposeConstraintIntegrationResponsibilities();
             SubstepsComplete?.Invoke(dt, threadDispatcher);
 
+
+            simulation.Solver.ValidateAccumulatedImpulses();
             simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
         }
     }

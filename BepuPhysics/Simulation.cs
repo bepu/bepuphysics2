@@ -155,7 +155,6 @@ namespace BepuPhysics
             return shapefulBodyCount;
         }
 
-
         [Conditional("DEBUG")]
         internal void ValidateCollidables()
         {

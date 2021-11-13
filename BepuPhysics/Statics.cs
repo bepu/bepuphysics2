@@ -306,6 +306,7 @@ namespace BepuPhysics
             Debug.Assert(description.Collidable.Shape.Exists, "Static collidables must have a shape. Their only purpose is colliding.");
             collidable.Continuity = description.Collidable.Continuity;
             collidable.Shape = description.Collidable.Shape;
+            collidable.SpeculativeMargin = 0;
 
             ComputeNewBoundsAndAwaken(description.Pose, description.Collidable.Shape, ref filter, out bounds);
         }

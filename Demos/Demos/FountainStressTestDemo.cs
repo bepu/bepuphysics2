@@ -98,11 +98,16 @@ namespace Demos.Demos
 
         ConvexHull CreateRandomHull()
         {
-            const int pointCount = 32;
+            const int pointCount = 16;
             var points = new QuickList<Vector3>(pointCount, BufferPool);
-            for (int i = 0; i < pointCount; ++i)
+            //Create an initial tetrahedron to guarantee our random shape isn't degenerate.
+            points.AllocateUnsafely() = new Vector3(0.5f, 0.25f, 0.75f);
+            points.AllocateUnsafely() = points[0] + new Vector3(0.1f, 0, 0);
+            points.AllocateUnsafely() = points[0] + new Vector3(0, 0.1f, 0);
+            points.AllocateUnsafely() = points[0] + new Vector3(0, 0, 0.1f);
+            for (int i = 4; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3(1 * (float)random.NextDouble(), 0.5f * (float)random.NextDouble(), 1.5f * (float)random.NextDouble());
+                points.AllocateUnsafely() = new Vector3(1 * random.NextSingle(), 0.5f * random.NextSingle(), 1.5f * random.NextSingle());
             }
             var hull = new ConvexHull(points.Span.Slice(points.Count), BufferPool, out _);
             points.Dispose(BufferPool);
@@ -159,9 +164,15 @@ namespace Demos.Demos
         void CreateRandomMesh(out Mesh mesh, out BodyInertia inertia)
         {
             //We'll use a convex hull algorithm to generate the triangles for the mesh, rather than just spewing random triangle soups.
-            var pointCount = random.Next(4, 16);
+            var pointCount = random.Next(5, 16);
             BufferPool.Take(pointCount, out Buffer<Vector3> points);
-            for (int i = 0; i < pointCount; ++i)
+            //Create an initial tetrahedron to guarantee our random shape isn't degenerate.
+            points[0] = new Vector3(1);
+            points[1] = new Vector3(1) + new Vector3(0.1f, 0, 0);
+            points[2] = new Vector3(1) + new Vector3(0, 0.1f, 0);
+            points[3] = new Vector3(1) + new Vector3(0, 0, 0.1f);
+
+            for (int i = 4; i < pointCount; ++i)
             {
                 points[i] = 2f * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
             }
@@ -357,7 +368,7 @@ namespace Demos.Demos
             var spawnPose = new RigidPose(new Vector3(0, 10, 0));
             for (int i = 0; i < newShapeCount; ++i)
             {
-                CreateBodyDescription(random, spawnPose, new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 75, -30 + 60 * (float)random.NextDouble()), default), out var bodyDescription);
+                CreateBodyDescription(random, spawnPose, new BodyVelocity(new Vector3(-30 + 60 * random.NextSingle(), 75, -30 + 60 * random.NextSingle()), default), out var bodyDescription);
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(bodyDescription), BufferPool);
             }
             int targetAsymptote = 65536;

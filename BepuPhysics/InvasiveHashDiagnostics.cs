@@ -13,6 +13,16 @@ namespace BepuPhysics
     /// </summary>
     public enum HashDiagnosticType
     {
+        AwakeBodyStates0,
+        AwakeBodyStates1,
+        AwakeBodyStates2,
+        AwakeBodyStates3,
+        AwakeBodyStates4,
+        AwakeBodyStates5,
+        AwakeBodyStates6,
+        AwakeBodyStates7,
+        AwakeBodyStates8,
+        AwakeBodyStates9,
         AddSleepingToActiveForFallback,
         SolverBodyReferenceBeforeCollisionDetection,
         SolverBodyReferenceBeforePreflush,
@@ -47,7 +57,7 @@ namespace BepuPhysics
         /// <summary>
         /// This is meant as an internal diagnostic utility, so hardcoding some things is totally fine.
         /// </summary>
-        const int HashTypeCount = 24;
+        const int HashTypeCount = 34;
         public static InvasiveHashDiagnostics Instance;
         public static void Initialize(int runCount, int hashCapacityPerType)
         {
