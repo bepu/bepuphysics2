@@ -41,8 +41,8 @@ namespace Demos.Demos.Characters
                 for (int j = 0; j < 12; ++j)
                 {
                     var position = origin + new Vector3(i, 0, j) * spacing;
-                    var orientation = QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble())), 10 * (float)random.NextDouble());
-                    var shape = new Box(0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble());
+                    var orientation = QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle())), 10 * random.NextSingle());
+                    var shape = new Box(0.1f + 0.3f * random.NextSingle(), 0.1f + 0.3f * random.NextSingle(), 0.1f + 0.3f * random.NextSingle());
                     var collidable = new CollidableDescription(Simulation.Shapes.Add(shape));
                     shape.ComputeInertia(1, out var inertia);
                     var choice = (i + j) % 3;

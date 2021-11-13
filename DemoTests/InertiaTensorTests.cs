@@ -228,22 +228,22 @@ namespace DemoTests
             const int shapeTrials = 64;
             for (int i = 0; i < shapeTrials; ++i)
             {
-                var tester = new SphereInertiaTester { Sphere = new Sphere(0.01f + (float)random.NextDouble() * 10) };
+                var tester = new SphereInertiaTester { Sphere = new Sphere(0.01f + random.NextSingle() * 10) };
                 CheckInertia(ref tester);
             }
             for (int i = 0; i < shapeTrials; ++i)
             {
-                var tester = new CapsuleInertiaTester { Capsule = new Capsule(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10) };
+                var tester = new CapsuleInertiaTester { Capsule = new Capsule(0.01f + random.NextSingle() * 10, 0.01f + random.NextSingle() * 10) };
                 CheckInertia(ref tester);
             }
             for (int i = 0; i < shapeTrials; ++i)
             {
-                var tester = new CylinderInertiaTester { Cylinder = new Cylinder(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10) };
+                var tester = new CylinderInertiaTester { Cylinder = new Cylinder(0.01f + random.NextSingle() * 10, 0.01f + random.NextSingle() * 10) };
                 CheckInertia(ref tester);
             }
             for (int i = 0; i < shapeTrials; ++i)
             {
-                var tester = new BoxInertiaTester { Box = new Box(0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble()) };
+                var tester = new BoxInertiaTester { Box = new Box(0.01f + 10 * random.NextSingle(), 0.01f + 10 * random.NextSingle(), 0.01f + 10 * random.NextSingle()) };
                 CheckInertia(ref tester);
             }
             for (int i = 0; i < shapeTrials; ++i)
@@ -251,9 +251,9 @@ namespace DemoTests
                 var tester = new TriangleInertiaTester
                 {
                     Triangle = new Triangle(
-                        new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble()),
-                        new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble()),
-                        new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble())),
+                        new Vector3(-2 + 4 * random.NextSingle(), -2 + 4 * random.NextSingle(), -2 + 4 * random.NextSingle()),
+                        new Vector3(-2 + 4 * random.NextSingle(), -2 + 4 * random.NextSingle(), -2 + 4 * random.NextSingle()),
+                        new Vector3(-2 + 4 * random.NextSingle(), -2 + 4 * random.NextSingle(), -2 + 4 * random.NextSingle())),
                 };
                 CheckInertia(ref tester);
             }
@@ -264,7 +264,7 @@ namespace DemoTests
                 var pointSet = new QuickList<Vector3>(pointCount, pool);
                 for (int j = 0; j < pointCount; ++j)
                 {
-                    pointSet.AllocateUnsafely() = new Vector3(-1 + 2 * (float)random.NextDouble(), -1 + 2 * (float)random.NextDouble(), -1 + 2 * (float)random.NextDouble());
+                    pointSet.AllocateUnsafely() = new Vector3(-1 + 2 * random.NextSingle(), -1 + 2 * random.NextSingle(), -1 + 2 * random.NextSingle());
                 }
                 for (int j = 0; j < pointSet.Count; ++j)
                 {

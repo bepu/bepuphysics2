@@ -19,7 +19,7 @@ namespace Demos.SpecializedTests
         {
             const float sizeMin = 0.1f;
             const float sizeSpan = 200;
-            shape = new Sphere(sizeMin + sizeSpan * (float)random.NextDouble());
+            shape = new Sphere(sizeMin + sizeSpan * random.NextSingle());
         }
         public void GetPointInVolume(Random random, float innerMargin, ref Sphere shape, out Vector3 localPoint)
         {
@@ -30,7 +30,7 @@ namespace Demos.SpecializedTests
             min = -min;
             do
             {
-                localPoint = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                localPoint = min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
 
             } while (localPoint.LengthSquared() > radiusSquared);
         }
@@ -56,7 +56,7 @@ namespace Demos.SpecializedTests
         {
             const float sizeMin = 0.1f;
             const float sizeSpan = 200;
-            shape = new Capsule(sizeMin + sizeSpan * (float)random.NextDouble(), sizeMin * sizeSpan * (float)random.NextDouble());
+            shape = new Capsule(sizeMin + sizeSpan * random.NextSingle(), sizeMin * sizeSpan * random.NextSingle());
         }
         public void GetPointInVolume(Random random, float innerMargin, ref Capsule capsule, out Vector3 localPointInCapsule)
         {
@@ -68,7 +68,7 @@ namespace Demos.SpecializedTests
             min = -min;
             do
             {
-                localPointInCapsule = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                localPointInCapsule = min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                 var projectedCandidate = new Vector3(0, Math.Max(-capsule.HalfLength, Math.Min(capsule.HalfLength, localPointInCapsule.Y)), 0);
                 distanceSquared = Vector3.DistanceSquared(projectedCandidate, localPointInCapsule);
 
@@ -85,7 +85,7 @@ namespace Demos.SpecializedTests
             min = -min;
             do
             {
-                localPointOnCapsule = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                localPointOnCapsule = min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                 projectedCandidate = new Vector3(0, Math.Max(-capsule.HalfLength, Math.Min(capsule.HalfLength, localPointOnCapsule.Y)), 0);
                 offset = localPointOnCapsule - projectedCandidate;
                 distanceSquared = offset.LengthSquared();
@@ -111,7 +111,7 @@ namespace Demos.SpecializedTests
         {
             const float sizeMin = 0.1f;
             const float sizeSpan = 200;
-            shape = new Cylinder(sizeMin + sizeSpan * (float)random.NextDouble(), sizeMin * sizeSpan * (float)random.NextDouble());
+            shape = new Cylinder(sizeMin + sizeSpan * random.NextSingle(), sizeMin * sizeSpan * random.NextSingle());
         }
         public void GetPointInVolume(Random random, float innerMargin, ref Cylinder cylinder, out Vector3 localPointInCylinder)
         {
@@ -125,11 +125,11 @@ namespace Demos.SpecializedTests
             Vector2 randomHorizontal;
             do
             {
-                randomHorizontal = min + span * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
+                randomHorizontal = min + span * new Vector2(random.NextSingle(), random.NextSingle());
                 distanceSquared = randomHorizontal.LengthSquared();
 
             } while (distanceSquared > radiusSquared);
-            localPointInCylinder = new Vector3(randomHorizontal.X, -effectiveHalfLength + 2 * effectiveHalfLength * (float)random.NextDouble(), randomHorizontal.Y);
+            localPointInCylinder = new Vector3(randomHorizontal.X, -effectiveHalfLength + 2 * effectiveHalfLength * random.NextSingle(), randomHorizontal.Y);
         }
 
         public void GetSurface(Random random, ref Cylinder cylinder, out Vector3 localPointOnCylinder, out Vector3 localNormal)
@@ -149,14 +149,14 @@ namespace Demos.SpecializedTests
                 Vector2 randomHorizontal;
                 do
                 {
-                    randomHorizontal = min + span * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
+                    randomHorizontal = min + span * new Vector2(random.NextSingle(), random.NextSingle());
                     distanceSquared = randomHorizontal.LengthSquared();
 
                 } while (distanceSquared < 1e-7f);
                 var horizontalNormal = randomHorizontal / (float)Math.Sqrt(distanceSquared);
                 localNormal = new Vector3(horizontalNormal.X, 0, horizontalNormal.Y);
                 var horizontalOffset = horizontalNormal * cylinder.Radius;
-                localPointOnCylinder = new Vector3(horizontalOffset.X, -cylinder.HalfLength + 2 * cylinder.HalfLength * (float)random.NextDouble(), horizontalOffset.Y);
+                localPointOnCylinder = new Vector3(horizontalOffset.X, -cylinder.HalfLength + 2 * cylinder.HalfLength * random.NextSingle(), horizontalOffset.Y);
             }
             else
             {
@@ -166,7 +166,7 @@ namespace Demos.SpecializedTests
                 Vector2 randomHorizontal;
                 do
                 {
-                    randomHorizontal = min + span * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
+                    randomHorizontal = min + span * new Vector2(random.NextSingle(), random.NextSingle());
                     distanceSquared = randomHorizontal.LengthSquared();
 
                 } while (distanceSquared < cylinder.Radius * cylinder.Radius);
@@ -206,20 +206,20 @@ namespace Demos.SpecializedTests
         {
             const float sizeMin = 0.1f;
             const float sizeSpan = 200;
-            shape = new Box(sizeMin + sizeSpan * (float)random.NextDouble(), sizeMin * sizeSpan * (float)random.NextDouble(), sizeMin * sizeSpan * (float)random.NextDouble());
+            shape = new Box(sizeMin + sizeSpan * random.NextSingle(), sizeMin * sizeSpan * random.NextSingle(), sizeMin * sizeSpan * random.NextSingle());
         }
         public void GetPointInVolume(Random random, float innerMargin, ref Box box, out Vector3 localPoint)
         {
             var min = new Vector3(box.HalfWidth - innerMargin, box.HalfHeight - innerMargin, box.HalfLength - innerMargin);
             var span = min * 2;
             min = -min;
-            localPoint = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+            localPoint = min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
         }
 
         public void GetSurface(Random random, ref Box box, out Vector3 localPoint, out Vector3 localNormal)
         {
-            var a = (float)random.NextDouble();
-            var b = (float)random.NextDouble();
+            var a = random.NextSingle();
+            var b = random.NextSingle();
             var axisSign = (float)(random.Next(2) * 2 - 1);
             Vector3 x, y, z;
             switch (random.Next(3))
@@ -267,7 +267,7 @@ namespace Demos.SpecializedTests
             float length;
             do
             {
-                direction = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * new Vector3(2) - new Vector3(1);
+                direction = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * new Vector3(2) - new Vector3(1);
                 length = direction.Length();
             } while (length < 1e-7f);
             direction /= length;
@@ -279,10 +279,10 @@ namespace Demos.SpecializedTests
             do
             {
                 orientation = new Quaternion(
-                    (float)random.NextDouble() * 2 - 1,
-                    (float)random.NextDouble() * 2 - 1,
-                    (float)random.NextDouble() * 2 - 1,
-                    (float)random.NextDouble() * 2 - 1);
+                    random.NextSingle() * 2 - 1,
+                    random.NextSingle() * 2 - 1,
+                    random.NextSingle() * 2 - 1,
+                    random.NextSingle() * 2 - 1);
                 length = orientation.Length();
             } while (length < 1e-7f);
             Unsafe.As<Quaternion, Vector4>(ref orientation) /= length;
@@ -294,7 +294,7 @@ namespace Demos.SpecializedTests
             var exclusionSquared = centralExclusion * centralExclusion;
             do
             {
-                localPoint = span * (new Vector2((float)random.NextDouble(), (float)random.NextDouble()) - new Vector2(0.5f));
+                localPoint = span * (new Vector2(random.NextSingle(), random.NextSingle()) - new Vector2(0.5f));
             } while (localPoint.LengthSquared() < exclusionSquared);
 
             Vector3 basisX;
@@ -372,7 +372,7 @@ namespace Demos.SpecializedTests
                 for (int transformIteration = 0; transformIteration < transformIterations; ++transformIteration)
                 {
                     RigidPose pose;
-                    pose.Position = new Vector3(positionMin) + positionBoundsSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                    pose.Position = new Vector3(positionMin) + positionBoundsSpan * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                     GetUnitQuaternion(random, out pose.Orientation);
                     Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
                     RigidPoseWide poses;
@@ -381,12 +381,12 @@ namespace Demos.SpecializedTests
                     for (int rayIndex = 0; rayIndex < outsideToInsideRays; ++rayIndex)
                     {
                         tester.GetSurface(random, ref shape, out var pointOnSurface, out var normal);
-                        var localSourcePoint = pointOnSurface + normal * (outsideMinimumDistance + (float)random.NextDouble() * outsideDistanceSpan);
+                        var localSourcePoint = pointOnSurface + normal * (outsideMinimumDistance + random.NextSingle() * outsideDistanceSpan);
                         tester.GetPointInVolume(random, volumeInnerMargin, ref shape, out var localTargetPoint);
 
                         Matrix3x3.Transform(localSourcePoint, orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
-                        var directionScale = (0.01f + 2 * (float)random.NextDouble());
+                        var directionScale = (0.01f + 2 * random.NextSingle());
                         var localDirection = (localTargetPoint - localSourcePoint) * directionScale;
                         Matrix3x3.Transform(localDirection, orientation, out var direction);
 
@@ -414,7 +414,7 @@ namespace Demos.SpecializedTests
                         Matrix3x3.Transform(localSourcePoint, orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
 
-                        var directionScale = (0.01f + 100 * (float)random.NextDouble());
+                        var directionScale = (0.01f + 100 * random.NextSingle());
                         GetUnitDirection(random, out var direction);
                         direction *= directionScale;
 
@@ -437,11 +437,11 @@ namespace Demos.SpecializedTests
                     {
                         //Create a ray that lies on one of the shape's tangent planes, offset from the surface some amount to avoid numerical limitations.
                         tester.GetSurface(random, ref shape, out var pointOnSurface, out var localNormal);
-                        var localTargetPoint = pointOnSurface + localNormal * (tangentMinimumDistance + (float)random.NextDouble() * tangentDistanceSpan);
-                        var exclusion = tangentCentralExclusionMin + (float)random.NextDouble() * tangentCentralExclusionSpan;
-                        var span = 2 * exclusion + tangentSourceSpanMin + tangentSourceSpanSpan * (float)random.NextDouble();
+                        var localTargetPoint = pointOnSurface + localNormal * (tangentMinimumDistance + random.NextSingle() * tangentDistanceSpan);
+                        var exclusion = tangentCentralExclusionMin + random.NextSingle() * tangentCentralExclusionSpan;
+                        var span = 2 * exclusion + tangentSourceSpanMin + tangentSourceSpanSpan * random.NextSingle();
                         GetPointOnPlane(random, exclusion, span, ref localTargetPoint, ref localNormal, out var localSourcePoint);
-                        var directionScale = (0.01f + 2 * (float)random.NextDouble());
+                        var directionScale = (0.01f + 2 * random.NextSingle());
                         var localDirection = (localTargetPoint - localSourcePoint) * directionScale;
                         Matrix3x3.Transform(localSourcePoint, orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
@@ -456,13 +456,13 @@ namespace Demos.SpecializedTests
                     for (int rayIndex = 0; rayIndex < outwardPointingRays; ++rayIndex)
                     {
                         tester.GetSurface(random, ref shape, out var pointOnSurface, out var localNormal);
-                        var localSourcePoint = pointOnSurface + localNormal * (tangentMinimumDistance + (float)random.NextDouble() * tangentDistanceSpan);
+                        var localSourcePoint = pointOnSurface + localNormal * (tangentMinimumDistance + random.NextSingle() * tangentDistanceSpan);
                         Vector3 localTargetPoint;
                         do
                         {
-                            localTargetPoint = localSourcePoint + new Vector3(-0.5f * outwardPointingSpan) + new Vector3(outwardPointingSpan) * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                            localTargetPoint = localSourcePoint + new Vector3(-0.5f * outwardPointingSpan) + new Vector3(outwardPointingSpan) * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                         } while (Vector3.Dot(localTargetPoint - localSourcePoint, localNormal) < 0);
-                        var directionScale = (0.01f + 2 * (float)random.NextDouble());
+                        var directionScale = (0.01f + 2 * random.NextSingle());
                         var localDirection = (localTargetPoint - localSourcePoint) * directionScale;
                         Matrix3x3.Transform(localSourcePoint, orientation, out var sourcePoint);
                         sourcePoint += pose.Position;

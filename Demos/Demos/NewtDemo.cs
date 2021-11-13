@@ -741,13 +741,13 @@ namespace Demos.Demos
             var random = new Random(5);
             for (int i = 0; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3(3 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 3 * (float)random.NextDouble());
+                points.AllocateUnsafely() = new Vector3(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
             }
             var convexHull1 = new ConvexHull(points, BufferPool, out _);
             points.Count = 0;
             for (int i = 0; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3(3 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 3 * (float)random.NextDouble());
+                points.AllocateUnsafely() = new Vector3(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
             }
             var convexHull2 = new ConvexHull(points, BufferPool, out _);
             convexHull1.ComputeInertia(1, out var scalarInertiaA);

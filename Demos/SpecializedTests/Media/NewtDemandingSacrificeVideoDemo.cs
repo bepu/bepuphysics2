@@ -40,7 +40,7 @@ namespace Demos.SpecializedTests
 
         BodyVelocity GetRandomizedVelocity(in Vector3 linearVelocity)
         {
-            return new BodyVelocity { Linear = linearVelocity, Angular = new Vector3(-20) + 40 * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) };
+            return new BodyVelocity { Linear = linearVelocity, Angular = new Vector3(-20) + 40 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) };
         }
 
         public override void Update(Window window, Camera camera, Input input, float dt)
@@ -50,7 +50,7 @@ namespace Demos.SpecializedTests
                 Min = new Vector3(-10, 5, 70),
                 Max = new Vector3(10, 15, 70)
             });
-            var linearVelocity = Vector3.Normalize(new Vector3(-2 + 4 * (float)random.NextDouble(), 31 + 4 * (float)random.NextDouble(), 50) - pose.Position) * 40;
+            var linearVelocity = Vector3.Normalize(new Vector3(-2 + 4 * random.NextSingle(), 31 + 4 * random.NextSingle(), 50) - pose.Position) * 40;
             var handles = RagdollDemo.AddRagdoll(pose.Position, pose.Orientation, ragdollIndex++, filters, Simulation);
             //This could be done better, but...  ... .... ..........
             new BodyReference(handles.Hips, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);

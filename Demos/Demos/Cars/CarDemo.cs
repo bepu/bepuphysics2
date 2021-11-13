@@ -91,10 +91,10 @@ namespace Demos.Demos.Cars
                 var landmarkSpan = new Vector3(raceTrack.QuadrantRadius, 0, raceTrack.QuadrantRadius);
                 for (int j = 0; j < 25; ++j)
                 {
-                    var buildingShape = new Box(10 + (float)random.NextDouble() * 10, 20 + (float)random.NextDouble() * 20, 10 + (float)random.NextDouble() * 10);
+                    var buildingShape = new Box(10 + random.NextSingle() * 10, 20 + random.NextSingle() * 20, 10 + random.NextSingle() * 10);
                     Simulation.Statics.Add(new StaticDescription(
-                        new Vector3(0, buildingShape.HalfHeight, 0) + landmarkMin + landmarkSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()),
-                        QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, (float)random.NextDouble() * MathF.PI),
+                        new Vector3(0, buildingShape.HalfHeight, 0) + landmarkMin + landmarkSpan * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()),
+                        QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, random.NextSingle() * MathF.PI),
                         new CollidableDescription(Simulation.Shapes.Add(buildingShape))));
                 }
             }
@@ -105,15 +105,15 @@ namespace Demos.Demos.Cars
             for (int i = 0; i < aiCount; ++i)
             {
                 //The AI cars are very similar, except... we handicap them a little to make the player good about themselves.
-                var position = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
-                var orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * MathF.PI * 2);
+                var position = min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
+                var orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), random.NextSingle() * MathF.PI * 2);
                 aiControllers[i].Controller = new SimpleCarController(SimpleCar.Create(Simulation, properties, new RigidPose(position, orientation), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2f,
                     new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
                     new SpringSettings(5, 0.7f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
                     forwardSpeed: 50, forwardForce: 5, zoomMultiplier: 2, backwardSpeed: 10, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f,
                     wheelBaseLength: wheelBaseLength, wheelBaseWidth: wheelBaseWidth, ackermanSteering: 1);
                 
-                aiControllers[i].LaneOffset = (float)random.NextDouble() * 20 - 10;
+                aiControllers[i].LaneOffset = random.NextSingle() * 20 - 10;
             }
 
             DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,

@@ -80,14 +80,14 @@ namespace Demos.SpecializedTests
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        var r = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                        var r = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                         var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, -height, -length) * 0.5f) + randomizationBase + r * randomizationSpan;
 
                         Quaternion orientation;
-                        orientation.X = -1 + 2 * (float)random.NextDouble();
-                        orientation.Y = -1 + 2 * (float)random.NextDouble();
-                        orientation.Z = -1 + 2 * (float)random.NextDouble();
-                        orientation.W = 0.01f + (float)random.NextDouble();
+                        orientation.X = -1 + 2 * random.NextSingle();
+                        orientation.Y = -1 + 2 * random.NextSingle();
+                        orientation.Z = -1 + 2 * random.NextSingle();
+                        orientation.W = 0.01f + random.NextSingle();
                         QuaternionEx.Normalize(ref orientation);
 
                         if ((i + j + k) % 2 == 1)
@@ -113,9 +113,9 @@ namespace Demos.SpecializedTests
             for (int i = 0; i < boxCount; ++i)
             {
                 ref var box = ref queryBoxes.AllocateUnsafely();
-                var r = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                var r = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                 var boxOrigin = randomMin + r * randomSpan;
-                var boxHalfSize = new Vector3(0.25f + 0.75f * (float)random.NextDouble());
+                var boxHalfSize = new Vector3(0.25f + 0.75f * random.NextSingle());
                 box.Min = boxOrigin - boxHalfSize;
                 box.Max = boxOrigin + boxHalfSize;
             }

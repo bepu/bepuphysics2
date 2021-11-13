@@ -39,7 +39,7 @@ namespace Demos.SpecializedTests
                         var index = leafCountAlongXAxis * leafCountAlongYAxis * k + leafCountAlongXAxis * j + i;
                         leafBounds[index].Min = new Vector3(i, j, k) * boundsSpacing;
                         leafBounds[index].Max = leafBounds[index].Min + new Vector3(boundsSpan) +
-                            spanRange * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                            spanRange * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
 
                     }
                 }

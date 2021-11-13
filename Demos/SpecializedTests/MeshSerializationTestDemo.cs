@@ -45,7 +45,7 @@ namespace Demos.SpecializedTests
             var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDropInertia, new CollidableDescription(Simulation.Shapes.Add(shapeToDrop)), new BodyActivityDescription(0.01f));
             for (int i = 0; i < 1024; ++i)
             {
-                descriptionToDrop.Pose.Position = new Vector3(8 + 240 * (float)random.NextDouble(), 10 + 10 * (float)random.NextDouble(), 8 + 112 * (float)random.NextDouble());
+                descriptionToDrop.Pose.Position = new Vector3(8 + 240 * random.NextSingle(), 10 + 10 * random.NextSingle(), 8 + 112 * random.NextSingle());
                 Simulation.Bodies.Add(descriptionToDrop);
             }
 

@@ -28,14 +28,14 @@ namespace Demos.SpecializedTests
             RigidPose pose;
             var span = positionBounds.Max - positionBounds.Min;
 
-            pose.Position = positionBounds.Min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
-            var axis = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+            pose.Position = positionBounds.Min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
+            var axis = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
             var length = axis.Length();
             if (length > 0)
                 axis /= length;
             else
                 axis = new Vector3(0, 1, 0);
-            pose.Orientation = BepuUtilities.QuaternionEx.CreateFromAxisAngle(axis, 1203f * (float)random.NextDouble());
+            pose.Orientation = BepuUtilities.QuaternionEx.CreateFromAxisAngle(axis, 1203f * random.NextSingle());
             return pose;
         }
 

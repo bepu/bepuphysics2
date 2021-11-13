@@ -111,7 +111,7 @@
 //                var random = new Random(5);
 //                for (int i = 0; i < pointCount; ++i)
 //                {
-//                    randomizedPoints.AllocateUnsafely() = new Vector3(33 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 13 * (float)random.NextDouble());
+//                    randomizedPoints.AllocateUnsafely() = new Vector3(33 * random.NextSingle(), 1 * random.NextSingle(), 13 * random.NextSingle());
 //                }
 //                var shapeA = new ConvexHull(randomizedPoints.Span.Slice(randomizedPoints.Count), BufferPool, out var hullCenter);
 //                //var poseA = new RigidPose(new Vector3(12, 0.5f, 12), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f));

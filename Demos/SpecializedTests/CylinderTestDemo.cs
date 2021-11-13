@@ -73,13 +73,13 @@ namespace Demos.SpecializedTests
             for (int i = 0; i < warmupCount + capsuleTests; ++i)
             {
                 Vector3 randomPointNearCylinder;
-                var capsule = new Capsule(0.2f + .8f * (float)random.NextDouble(), 0.2f + 0.8f * (float)random.NextDouble());
+                var capsule = new Capsule(0.2f + .8f * random.NextSingle(), 0.2f + 0.8f * random.NextSingle());
                 var minimumDistance = 1f * (cylinder.Radius + cylinder.HalfLength);
                 var minimumDistanceSquared = minimumDistance * minimumDistance;
                 while (true)
                 {
                     randomPointNearCylinder = new Vector3((cylinder.Radius + capsule.HalfLength) * 2, (cylinder.HalfLength + capsule.HalfLength) * 2, (cylinder.Radius + capsule.HalfLength) * 2) *
-                        (new Vector3(2) * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) - Vector3.One);
+                        (new Vector3(2) * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One);
                     var pointOnCylinderAxis = new Vector3(0, MathF.Max(-cylinder.HalfLength, MathF.Min(cylinder.HalfLength, randomPointNearCylinder.Y)), 0);
                     var offset = randomPointNearCylinder - pointOnCylinderAxis;
                     var lengthSquared = offset.LengthSquared();
@@ -91,7 +91,7 @@ namespace Demos.SpecializedTests
                 float directionLengthSquared;
                 do
                 {
-                    direction = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * new Vector3(2) - Vector3.One;
+                    direction = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * new Vector3(2) - Vector3.One;
                     directionLengthSquared = direction.LengthSquared();
                 } while (directionLengthSquared < 1e-8f);
                 direction /= MathF.Sqrt(directionLengthSquared);

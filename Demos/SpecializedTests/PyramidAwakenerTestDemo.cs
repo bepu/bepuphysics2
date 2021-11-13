@@ -61,7 +61,7 @@ namespace Demos.Demos
             frameIndex++;
             if (frameIndex % 64 == 0)
             {
-                var bulletShape = new Sphere(0.5f + 5 * (float)random.NextDouble());
+                var bulletShape = new Sphere(0.5f + 5 * random.NextSingle());
                 bulletShape.ComputeInertia(bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, out var bulletInertia);
                 var bulletShapeIndex = Simulation.Shapes.Add(bulletShape);
                 var bodyDescription = BodyDescription.CreateConvexDynamic(

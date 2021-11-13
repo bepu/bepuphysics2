@@ -111,11 +111,11 @@ namespace Demos.Demos.Tanks
             var landmarkSpan = landmarkMax - landmarkMin;
             for (int j = 0; j < 25; ++j)
             {
-                var buildingShape = new Box(10 + (float)random.NextDouble() * 10, 20 + (float)random.NextDouble() * 20, 10 + (float)random.NextDouble() * 10);
-                var position = landmarkMin + landmarkSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                var buildingShape = new Box(10 + random.NextSingle() * 10, 20 + random.NextSingle() * 20, 10 + random.NextSingle() * 10);
+                var position = landmarkMin + landmarkSpan * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                 Simulation.Statics.Add(new StaticDescription(
                     new Vector3(0, buildingShape.HalfHeight - 4f + GetHeightForPosition(position.X, position.Z, planeWidth, inverseTerrainScale, terrainPosition), 0) + position,
-                    QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, (float)random.NextDouble() * MathF.PI),
+                    QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, random.NextSingle() * MathF.PI),
                     new CollidableDescription(Simulation.Shapes.Add(buildingShape))));
             }
 
@@ -138,13 +138,13 @@ namespace Demos.Demos.Tanks
             var playAreaSpan = playAreaMax - playAreaMin;
             for (int i = 0; i < aiTankCount; ++i)
             {
-                var horizontalPosition = playAreaMin + new Vector2((float)random.NextDouble(), (float)random.NextDouble()) * playAreaSpan;
+                var horizontalPosition = playAreaMin + new Vector2(random.NextSingle(), random.NextSingle()) * playAreaSpan;
                 aiTanks.AllocateUnsafely() = new AITank
                 {
                     Controller = new TankController(
                         Tank.Create(Simulation, bodyProperties, BufferPool, new RigidPose(
                             new Vector3(horizontalPosition.X, 10, horizontalPosition.Y),
-                            QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * 0.1f)),
+                            QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), random.NextSingle() * 0.1f)),
                             tankDescription), 20, 5, 2, 1, 3.5f),
                     HitPoints = 5
                 };

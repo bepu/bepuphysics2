@@ -171,11 +171,11 @@ namespace Demos.Demos
                     for (int i = 0; i < 128; ++i)
                     {
                         RigidPose localPose;
-                        localPose.Position = new Vector3(12, 6, 12) * (0.5f * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) - Vector3.One);
+                        localPose.Position = new Vector3(12, 6, 12) * (0.5f * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One);
                         float orientationLengthSquared;
                         do
                         {
-                            localPose.Orientation = new Quaternion((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                            localPose.Orientation = new Quaternion(random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle());
                             orientationLengthSquared = QuaternionEx.LengthSquared(ref localPose.Orientation);
                         }
                         while (orientationLengthSquared < 1e-9f);

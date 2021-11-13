@@ -29,7 +29,7 @@ namespace Demos.SpecializedTests
                 ref var character = ref characters.AllocateCharacter(
                     Simulation.Bodies.Add(
                         BodyDescription.CreateDynamic(
-                            new Vector3(250 * (float)random.NextDouble() - 125, 2, 250 * (float)random.NextDouble() - 125), new BodyInertia { InverseMass = 1 },
+                            new Vector3(250 * random.NextSingle() - 125, 2, 250 * random.NextSingle() - 125), new BodyInertia { InverseMass = 1 },
                             new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f))),
                             new BodyActivityDescription(-1))));
 
@@ -51,8 +51,8 @@ namespace Demos.SpecializedTests
             //    for (int j = 0; j < 100; ++j)
             //    {
             //        var position = origin + new Vector3(i, 0, j) * spacing;
-            //        var orientation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble())), 10 * (float)random.NextDouble());
-            //        var shape = new Box(0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble());
+            //        var orientation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle())), 10 * random.NextSingle());
+            //        var shape = new Box(0.1f + 0.3f * random.NextSingle(), 0.1f + 0.3f * random.NextSingle(), 0.1f + 0.3f * random.NextSingle());
             //        var collidable = new CollidableDescription(Simulation.Shapes.Add(shape), 0.1f);
             //        shape.ComputeInertia(1, out var inertia);
             //        var choice = (i + j) % 3;

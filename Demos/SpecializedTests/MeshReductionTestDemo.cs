@@ -116,8 +116,8 @@ namespace Demos.SpecializedTests
             //var random = new Random(5);
             //for (int i = 0; i < pointCount; ++i)
             //{
-            //    points.AllocateUnsafely() = new Vector3(3 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 3 * (float)random.NextDouble());
-            //    //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
+            //    points.AllocateUnsafely() = new Vector3(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
+            //    //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3(random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1)) * random.NextSingle();
             //}
             //var convexHull = new ConvexHull(points.Span.Slice(points.Count), BufferPool, out _);
             //box.ComputeInertia(1, out var boxInertia);
@@ -157,7 +157,7 @@ namespace Demos.SpecializedTests
                             //    break;
                             case 2:
                             default:
-                                var box = new Box(1 + 128 * (float)random.NextDouble(), 1 + 128 * (float)random.NextDouble(), 1 + 128 * (float)random.NextDouble());
+                                var box = new Box(1 + 128 * random.NextSingle(), 1 + 128 * random.NextSingle(), 1 + 128 * random.NextSingle());
                                 box.ComputeInertia(1, out var boxInertia);
                                 bodyDescription.Collidable.Shape = Simulation.Shapes.Add(box);
                                 bodyDescription.LocalInertia = boxInertia;

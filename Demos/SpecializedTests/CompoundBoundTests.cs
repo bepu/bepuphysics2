@@ -137,7 +137,7 @@ namespace Demos.Demos
 
         Vector3 GetRandomVector(float width, Random random)
         {
-            return new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * width - new Vector3(width * 0.5f);
+            return new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * width - new Vector3(width * 0.5f);
         }
         Random random = new Random(5);
         public unsafe override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)

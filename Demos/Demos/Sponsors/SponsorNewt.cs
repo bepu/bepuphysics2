@@ -18,8 +18,8 @@ namespace Demos.Demos.Sponsors
         public SponsorNewt(Simulation simulation, TypedIndex shape, float height, in Vector2 arenaMin, in Vector2 arenaMax, Random random, int sponsorIndex) : this()
         {
             var arenaSpan = arenaMax - arenaMin;
-            var position = arenaMin + arenaSpan * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
-            var angle = MathF.PI * 2 * (float)random.NextDouble();
+            var position = arenaMin + arenaSpan * new Vector2(random.NextSingle(), random.NextSingle());
+            var angle = MathF.PI * 2 * random.NextSingle();
             BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(new Vector3(position.X, height, position.Y), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle)), new CollidableDescription(shape), new BodyActivityDescription(-1)));
             SponsorIndex = sponsorIndex;
         }
@@ -40,7 +40,7 @@ namespace Demos.Demos.Sponsors
                 //Choose a jump location. It should be within the arena, and generally somewhere ahead of the newt.
                 QuaternionEx.TransformUnitZ(body.Pose.Orientation, out var backward);
                 jumpStart = new Vector2(body.Pose.Position.X, body.Pose.Position.Z);
-                jumpEnd = jumpStart + new Vector2(backward.X + (float)random.NextDouble() * 1.4f - 0.7f, backward.Z + (float)random.NextDouble() * 1.4f - 0.7f) * -20;
+                jumpEnd = jumpStart + new Vector2(backward.X + random.NextSingle() * 1.4f - 0.7f, backward.Z + random.NextSingle() * 1.4f - 0.7f) * -20;
                 jumpEnd -= jumpStart * 0.05f;
                 jumpEnd = Vector2.Max(arenaMin, Vector2.Min(arenaMax, jumpEnd));
                 jumpStartTime = time;

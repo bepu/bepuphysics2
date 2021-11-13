@@ -23,9 +23,9 @@ namespace Demos.SpecializedTests
             float a, b, c;
             do
             {
-                a = (float)random.NextDouble();
-                b = (float)random.NextDouble();
-                c = (float)random.NextDouble();
+                a = random.NextSingle();
+                b = random.NextSingle();
+                c = random.NextSingle();
                 total = a + b + c;
             } while (total < 1e-7f);
             var inverseTotal = 1f / total;
@@ -46,18 +46,18 @@ namespace Demos.SpecializedTests
             switch (edgeIndex)
             {
                 case 0:
-                    borderPoint = triangle.A + (triangle.B - triangle.A) * (float)random.NextDouble();
+                    borderPoint = triangle.A + (triangle.B - triangle.A) * random.NextSingle();
                     break;
                 case 1:
-                    borderPoint = triangle.A + (triangle.C - triangle.A) * (float)random.NextDouble();
+                    borderPoint = triangle.A + (triangle.C - triangle.A) * random.NextSingle();
                     break;
                 default:
-                    borderPoint = triangle.B + (triangle.C - triangle.B) * (float)random.NextDouble();
+                    borderPoint = triangle.B + (triangle.C - triangle.B) * random.NextSingle();
                     break;
             }
             var center = (triangle.A + triangle.B + triangle.C) / 3f;
             var offsetToBorder = borderPoint - center;
-            var localP = center + offsetToBorder * (1.01f + 4 * (float)random.NextDouble());
+            var localP = center + offsetToBorder * (1.01f + 4 * random.NextSingle());
 
             BepuUtilities.QuaternionEx.TransformWithoutOverlap(localP, pose.Orientation, out pointOutsideTriangle);
             pointOutsideTriangle += pose.Position;
@@ -116,24 +116,24 @@ namespace Demos.SpecializedTests
             const float shapeSpan = 100;
             for (int i = 0; i < 10000; ++i)
             {
-                triangle.A = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * shapeSpan + new Vector3(shapeMin);
-                triangle.B = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * shapeSpan + new Vector3(shapeMin);
-                triangle.C = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * shapeSpan + new Vector3(shapeMin);
+                triangle.A = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * shapeSpan + new Vector3(shapeMin);
+                triangle.B = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * shapeSpan + new Vector3(shapeMin);
+                triangle.C = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * shapeSpan + new Vector3(shapeMin);
                 
                 var localTriangleCenter = (triangle.A + triangle.B + triangle.C) / 3f;
                 triangle.A -= localTriangleCenter;
                 triangle.B -= localTriangleCenter;
                 triangle.C -= localTriangleCenter;
 
-                rayOrigin = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * shapeSpan + new Vector3(shapeMin);
+                rayOrigin = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * shapeSpan + new Vector3(shapeMin);
 
                 float orientationLengthSquared;
                 while (true)
                 {
-                    pose.Orientation.X = (float)random.NextDouble() * 2 - 1;
-                    pose.Orientation.Y = (float)random.NextDouble() * 2 - 1;
-                    pose.Orientation.Z = (float)random.NextDouble() * 2 - 1;
-                    pose.Orientation.W = (float)random.NextDouble() * 2 - 1;
+                    pose.Orientation.X = random.NextSingle() * 2 - 1;
+                    pose.Orientation.Y = random.NextSingle() * 2 - 1;
+                    pose.Orientation.Z = random.NextSingle() * 2 - 1;
+                    pose.Orientation.W = random.NextSingle() * 2 - 1;
                     orientationLengthSquared = pose.Orientation.LengthSquared();
                     if (orientationLengthSquared > 1e-7f)
                         break;
@@ -155,7 +155,7 @@ namespace Demos.SpecializedTests
                     GetPointOnTriangle(random, triangle, pose, out pointOnTriangle);
                     rayDirection = pointOnTriangle - rayOrigin;
                 } while (rayDirection.LengthSquared() < 1e-9f);
-                rayDirection *= (0.5f + 10 * (float)random.NextDouble()) / rayDirection.Length();
+                rayDirection *= (0.5f + 10 * random.NextSingle()) / rayDirection.Length();
                 var shouldHit = Vector3.Dot(rayDirection, normal) < 0;
                 TestRay(triangle, pose, rayOrigin, rayDirection, shouldHit, pointOnTriangle);
 
@@ -165,7 +165,7 @@ namespace Demos.SpecializedTests
                     GetPointOutsideTriangle(random, triangle, pose, out pointOutsideTriangle);
                     rayDirection = pointOutsideTriangle - rayOrigin;
                 } while (rayDirection.LengthSquared() < 1e-9f);
-                rayDirection *= (0.5f + 10 * (float)random.NextDouble()) / rayDirection.Length();
+                rayDirection *= (0.5f + 10 * random.NextSingle()) / rayDirection.Length();
                 TestRay(triangle, pose, rayOrigin, rayDirection, false, pointOutsideTriangle);
             }
 

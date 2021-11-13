@@ -58,8 +58,8 @@ namespace Demos.SpecializedTests
             var random = new Random(5);
             for (int i = 0; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3(3 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 3 * (float)random.NextDouble());
-                //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
+                points.AllocateUnsafely() = new Vector3(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
+                //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3(random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1)) * random.NextSingle();
             }
 
             var pointsBuffer = points.Span.Slice(points.Count);
@@ -149,7 +149,7 @@ namespace Demos.SpecializedTests
                 var points = new QuickList<Vector3>(pointCount, BufferPool);
                 for (int i = 0; i < pointCount; ++i)
                 {
-                    points.AllocateUnsafely() = new Vector3(1 * (float)random.NextDouble(), 2 * (float)random.NextDouble(), 3 * (float)random.NextDouble());
+                    points.AllocateUnsafely() = new Vector3(1 * random.NextSingle(), 2 * random.NextSingle(), 3 * random.NextSingle());
                 }
 
                 var pointsBuffer = points.Span.Slice(points.Count);

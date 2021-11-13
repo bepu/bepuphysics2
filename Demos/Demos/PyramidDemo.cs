@@ -61,7 +61,7 @@ namespace Demos.Demos
             if (input != null && input.WasPushed(OpenTK.Input.Key.Z))
             {
                 //Create the shape that we'll launch at the pyramids when the user presses a button.
-                var bulletShape = new Sphere(0.5f + 5 * (float)random.NextDouble());
+                var bulletShape = new Sphere(0.5f + 5 * random.NextSingle());
                 //Note that the use of radius^3 for mass can produce some pretty serious mass ratios. 
                 //Observe what happens when a large ball sits on top of a few boxes with a fraction of the mass-
                 //the collision appears much squishier and less stable. For most games, if you want to maintain rigidity, you'll want to use some combination of:

@@ -224,7 +224,7 @@ namespace DemoTests
             var points = new QuickList<Vector3>(pointCount, pool);
             for (int i = 0; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3(3 * (float)random.NextDouble(), 2 * (float)random.NextDouble(), (float)random.NextDouble());
+                points.AllocateUnsafely() = new Vector3(3 * random.NextSingle(), 2 * random.NextSingle(), random.NextSingle());
             }
             var pointsBuffer = points.Span.Slice(points.Count);
             ConvexHullHelper.CreateShape(pointsBuffer, pool, out _, out var convexHull);

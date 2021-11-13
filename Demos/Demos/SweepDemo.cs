@@ -81,7 +81,7 @@ namespace Demos.Demos
             var random = new Random(5);
             for (int i = 0; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3((float)random.NextDouble() - 0.5f, (float)random.NextDouble() - 0.5f, (float)random.NextDouble() - 0.5f);
+                points.AllocateUnsafely() = new Vector3(random.NextSingle() - 0.5f, random.NextSingle() - 0.5f, random.NextSingle() - 0.5f);
             }
             ConvexHullHelper.CreateShape(points.Span.Slice(points.Count), BufferPool, out _, out hull);
             points.Dispose(BufferPool);

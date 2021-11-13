@@ -120,17 +120,17 @@ namespace Demos.SpecializedTests
 
         static void GetRandomPose(Random random, out RigidPose pose)
         {
-            pose.Position = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+            pose.Position = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
 
             float orientationLengthSquared;
             do
             {
                 pose.Orientation = new Quaternion
                 {
-                    X = 2 * (float)random.NextDouble() - 1,
-                    Y = 2 * (float)random.NextDouble() - 1,
-                    Z = 2 * (float)random.NextDouble() - 1,
-                    W = 2 * (float)random.NextDouble() - 1
+                    X = 2 * random.NextSingle() - 1,
+                    Y = 2 * random.NextSingle() - 1,
+                    Z = 2 * random.NextSingle() - 1,
+                    W = 2 * random.NextSingle() - 1
                 };
             }
             while ((orientationLengthSquared = pose.Orientation.LengthSquared()) < 1e-5f);
@@ -164,8 +164,8 @@ namespace Demos.SpecializedTests
             //points.Allocate(pool) = new Vector3(1, 1, 1);
             for (int i = 0; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), 1 * (float)random.NextDouble(), (float)random.NextDouble());
-                //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
+                points.AllocateUnsafely() = new Vector3(random.NextSingle(), 1 * random.NextSingle(), random.NextSingle());
+                //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3(random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1)) * random.NextSingle();
             }
 
             var pointsBuffer = points.Span.Slice(points.Count);

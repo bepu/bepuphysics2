@@ -40,7 +40,7 @@ namespace Demos.SpecializedTests
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        var r = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                        var r = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                         var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, 1, -length)) + randomizationBase + r * randomizationSpan;
                         if ((i + j + k) % 2 == 1)
                         {

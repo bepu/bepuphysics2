@@ -15,7 +15,7 @@ namespace Demos.SpecializedTests
     {
         static void GetRandomLocation(Random random, ref BoundingBox locationBounds, out Vector3 location)
         {
-            location = (locationBounds.Max - locationBounds.Min) * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) + locationBounds.Min;
+            location = (locationBounds.Max - locationBounds.Min) * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) + locationBounds.Min;
         }
         struct OverlapHandler : IOverlapHandler
         {

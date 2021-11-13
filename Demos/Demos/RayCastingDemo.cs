@@ -79,7 +79,7 @@ namespace Demos
             var random = new Random(5);
             for (int i = 0; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3(1 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 1 * (float)random.NextDouble());
+                points.AllocateUnsafely() = new Vector3(1 * random.NextSingle(), 1 * random.NextSingle(), 1 * random.NextSingle());
             }
             var hullShape = new ConvexHull(points, BufferPool, out _);
             var sphereIndex = Simulation.Shapes.Add(sphere);
@@ -101,14 +101,14 @@ namespace Demos
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        var r = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                        var r = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                         var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, -height, -length) * 0.5f) + randomizationBase + r * randomizationSpan;
 
                         Quaternion orientation;
-                        orientation.X = -1 + 2 * (float)random.NextDouble();
-                        orientation.Y = -1 + 2 * (float)random.NextDouble();
-                        orientation.Z = -1 + 2 * (float)random.NextDouble();
-                        orientation.W = 0.01f + (float)random.NextDouble();
+                        orientation.X = -1 + 2 * random.NextSingle();
+                        orientation.Y = -1 + 2 * random.NextSingle();
+                        orientation.Z = -1 + 2 * random.NextSingle();
+                        orientation.W = 0.01f + random.NextSingle();
                         QuaternionEx.Normalize(ref orientation);
                         var shapeIndex = ((i + j + k) % 5) switch
                         {
@@ -220,7 +220,7 @@ namespace Demos
             float length;
             do
             {
-                direction = 2 * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) - Vector3.One;
+                direction = 2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One;
                 length = direction.Length();
             }
             while (length < 1e-7f);

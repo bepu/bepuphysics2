@@ -77,10 +77,10 @@ namespace Demos.Demos
             if (input.WasPushed(OpenTK.Input.Key.Z))
             {
                 //INVEST TODAY FOR INCREDIBLE RETURNS DON'T MISS OUT LOOK AT THE COINS THERE ARE A LOT OF THEM AND THEY COULD BE YOURS
-                var origin = new Vector3(-30, 5, -30) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * new Vector3(60, 30, 60);
+                var origin = new Vector3(-30, 5, -30) + new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * new Vector3(60, 30, 60);
                 for (int i = 0; i < 128; ++i)
                 {
-                    var direction = new Vector3(-1) + 2 * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                    var direction = new Vector3(-1) + 2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                     var length = direction.Length();
                     if (length > 1e-7f)
                         direction /= length;
@@ -88,9 +88,9 @@ namespace Demos.Demos
                         direction = new Vector3(0, 1, 0);
 
                     coinDescription.Pose = new(
-                        origin + direction * 10 * (float)random.NextDouble(),
-                        QuaternionEx.Normalize(new Quaternion(0.01f + (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble())));
-                    coinDescription.Velocity = new(direction * (5 + 30 * (float)random.NextDouble()));
+                        origin + direction * 10 * random.NextSingle(),
+                        QuaternionEx.Normalize(new Quaternion(0.01f + random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle())));
+                    coinDescription.Velocity = new(direction * (5 + 30 * random.NextSingle()));
                     Simulation.Bodies.Add(coinDescription);
                 }
             }

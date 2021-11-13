@@ -138,8 +138,8 @@ namespace Demos.Demos.Sponsors
             var characterCollidable = new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f)));
             for (int i = 0; i < characterCount; ++i)
             {
-                var position2D = newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
-                var targetPosition = 0.5f * (newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2((float)random.NextDouble(), (float)random.NextDouble()));
+                var position2D = newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2(random.NextSingle(), random.NextSingle());
+                var targetPosition = 0.5f * (newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2(random.NextSingle(), random.NextSingle()));
                 characterAIs.AllocateUnsafely() = new SponsorCharacterAI(characterControllers, characterCollidable, new Vector3(position2D.X, 5, position2D.Y), targetPosition);
             }
 
@@ -150,7 +150,7 @@ namespace Demos.Demos.Sponsors
 
             for (int i = 0; i < hutCount; ++i)
             {
-                var position2D = newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
+                var position2D = newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2(random.NextSingle(), random.NextSingle());
                 ColosseumDemo.CreateRing(Simulation, new Vector3(position2D.X, 0, position2D.Y), hutBoxShape, obstacleDescription, 5, 2, random.Next(1, 5));
 
             }

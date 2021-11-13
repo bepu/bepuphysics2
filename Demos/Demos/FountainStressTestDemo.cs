@@ -126,32 +126,32 @@ namespace Demos.Demos
                     switch (random.Next(0, 5))
                     {
                         default:
-                            AddConvexShape(new Sphere(0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out childInertia);
+                            AddConvexShape(new Sphere(0.35f + 0.35f * random.NextSingle()), out shapeIndex, out childInertia);
                             break;
                         case 1:
                             AddConvexShape(new Capsule(
-                                0.35f + 0.35f * (float)random.NextDouble(),
-                                0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out childInertia);
+                                0.35f + 0.35f * random.NextSingle(),
+                                0.35f + 0.35f * random.NextSingle()), out shapeIndex, out childInertia);
                             break;
                         case 2:
                             AddConvexShape(new Box(
-                                0.35f + 0.35f * (float)random.NextDouble(),
-                                0.35f + 0.35f * (float)random.NextDouble(),
-                                0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out childInertia);
+                                0.35f + 0.35f * random.NextSingle(),
+                                0.35f + 0.35f * random.NextSingle(),
+                                0.35f + 0.35f * random.NextSingle()), out shapeIndex, out childInertia);
                             break;
                         case 3:
-                            AddConvexShape(new Cylinder(0.1f + (float)random.NextDouble(), 0.2f + (float)random.NextDouble()), out shapeIndex, out childInertia);
+                            AddConvexShape(new Cylinder(0.1f + random.NextSingle(), 0.2f + random.NextSingle()), out shapeIndex, out childInertia);
                             break;
                         case 4:
                             AddConvexShape(CreateRandomHull(), out shapeIndex, out childInertia);
                             break;
                     }
                     RigidPose localPose;
-                    localPose.Position = new Vector3(2, 2, 2) * (0.5f * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) - Vector3.One);
+                    localPose.Position = new Vector3(2, 2, 2) * (0.5f * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One);
                     float orientationLengthSquared;
                     do
                     {
-                        localPose.Orientation = new Quaternion((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                        localPose.Orientation = new Quaternion(random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle());
                     }
                     while ((orientationLengthSquared = localPose.Orientation.LengthSquared()) < 1e-9f);
                     QuaternionEx.Scale(localPose.Orientation, 1f / MathF.Sqrt(orientationLengthSquared), out localPose.Orientation);
@@ -207,27 +207,27 @@ namespace Demos.Demos
                 {
                     default:
                         {
-                            AddConvexShape(new Sphere(0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                            AddConvexShape(new Sphere(0.35f + 0.35f * random.NextSingle()), out shapeIndex, out inertia);
                         }
                         break;
                     case 1:
                         {
                             AddConvexShape(new Capsule(
-                                0.35f + 0.35f * (float)random.NextDouble(),
-                                0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                                0.35f + 0.35f * random.NextSingle(),
+                                0.35f + 0.35f * random.NextSingle()), out shapeIndex, out inertia);
                         }
                         break;
                     case 2:
                         {
                             AddConvexShape(new Box(
-                                0.35f + 0.6f * (float)random.NextDouble(),
-                                0.35f + 0.6f * (float)random.NextDouble(),
-                                0.35f + 0.6f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                                0.35f + 0.6f * random.NextSingle(),
+                                0.35f + 0.6f * random.NextSingle(),
+                                0.35f + 0.6f * random.NextSingle()), out shapeIndex, out inertia);
                         }
                         break;
                     case 3:
                         {
-                            AddConvexShape(new Cylinder(0.1f + 0.5f * (float)random.NextDouble(), 0.2f + (float)random.NextDouble()), out shapeIndex, out inertia);
+                            AddConvexShape(new Cylinder(0.1f + 0.5f * random.NextSingle(), 0.2f + random.NextSingle()), out shapeIndex, out inertia);
                         }
                         break;
                     case 4:
@@ -348,7 +348,7 @@ namespace Demos.Demos
                 //Statics don't have as much in the way of transitions. They can't be shapeless, and going from one shape to another doesn't anything that a pose change doesn't. For now, we'll just test the application of descriptions with different poses.
                 var mutatedDescription = staticDescription;
                 mutatedDescription.Pose.Position.Y += 50;
-                QuaternionEx.Concatenate(mutatedDescription.Pose.Orientation, QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * MathF.PI), out mutatedDescription.Pose.Orientation);
+                QuaternionEx.Concatenate(mutatedDescription.Pose.Orientation, QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), random.NextSingle() * MathF.PI), out mutatedDescription.Pose.Orientation);
                 Simulation.Statics.ApplyDescription(handleToReapply, mutatedDescription);
                 Simulation.Statics.ApplyDescription(handleToReapply, staticDescription);
             }
