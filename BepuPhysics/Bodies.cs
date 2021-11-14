@@ -582,6 +582,17 @@ namespace BepuPhysics
             }
         }
 
+        public void ValidateAwakeCollidablesByHash(HashDiagnosticType type)
+        {
+            var instance = InvasiveHashDiagnostics.Instance;
+            ref int hash = ref instance.GetHashForType(type);
+            ref var set = ref ActiveSet;
+            for (int j = 0; j < set.Count; ++j)
+            {
+                instance.ContributeToHash(ref hash, set.Collidables[j]);
+            }
+        }
+
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
         {
             Debug.Assert(setsCapacity >= potentiallyAllocatedCount && potentiallyAllocatedCount <= Sets.Length);

@@ -137,6 +137,10 @@ namespace BepuPhysics
             //Note that we change the shape here. If the collidable transitions from shapeless->shapeful or shapeful->shapeless, the broad phase has to be notified 
             //so that it can create/remove an entry. That's why this function isn't public.
             collidable.Shape = description.Collidable.Shape;
+            //To avoid leaking undefined data, initialize the speculative margin to zero.
+            //Under normal circumstances, it should not be possible for any relevant system to see an undefined speculative margin, since PredictBoundingBoxes sets the value.
+            //However, corner cases like a body being added asleep and woken by the narrow phase can mean prediction does not run.
+            collidable.SpeculativeMargin = 0;
             ref var activity = ref Activity[index];
             activity.SleepThreshold = description.Activity.SleepThreshold;
             activity.MinimumTimestepsUnderThreshold = description.Activity.MinimumTimestepCountUnderThreshold;
