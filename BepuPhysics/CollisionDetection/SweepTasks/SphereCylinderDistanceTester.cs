@@ -11,7 +11,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var orientationMatrixB);
-            SphereCylinderTester.ComputeSphereToClosest(b, offsetB, orientationMatrixB, out _, out _, out _, out _, out _, out closestA);
+            SphereCylinderTester.ComputeSphereToClosest(b, offsetB, orientationMatrixB, out _, out _, out _, out _, out closestA);
 
             Vector3Wide.Length(closestA, out var contactDistanceFromSphereCenter);
             //Note negation; normal points from B to A by convention.

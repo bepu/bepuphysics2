@@ -17,7 +17,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeSphereToClosest(in CylinderWide b, in Vector3Wide offsetB, in Matrix3x3Wide orientationMatrixB,
-            out Vector3Wide cylinderLocalOffsetA, out Vector<int> horizontalClampRequired, out Vector<float> horizontalOffsetLength, out Vector<float> inverseHorizontalOffsetLength, 
+            out Vector3Wide cylinderLocalOffsetA, out Vector<float> horizontalOffsetLength, out Vector<float> inverseHorizontalOffsetLength, 
             out Vector3Wide sphereToClosestLocalB, out Vector3Wide sphereToClosest)
         {
             //Clamp the sphere position to the cylinder's volume.
@@ -26,7 +26,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             horizontalOffsetLength = Vector.SquareRoot(cylinderLocalOffsetA.X * cylinderLocalOffsetA.X + cylinderLocalOffsetA.Z * cylinderLocalOffsetA.Z);
             inverseHorizontalOffsetLength = Vector<float>.One / horizontalOffsetLength;
             var horizontalClampMultiplier = b.Radius * inverseHorizontalOffsetLength;
-            horizontalClampRequired = Vector.GreaterThan(horizontalOffsetLength, b.Radius);
+            var horizontalClampRequired = Vector.GreaterThan(horizontalOffsetLength, b.Radius);
             Vector3Wide clampedSpherePositionLocalB;
             clampedSpherePositionLocalB.X = Vector.ConditionalSelect(horizontalClampRequired, cylinderLocalOffsetA.X * horizontalClampMultiplier, cylinderLocalOffsetA.X);
             clampedSpherePositionLocalB.Y = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, cylinderLocalOffsetA.Y));
@@ -41,17 +41,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var orientationMatrixB);
             ComputeSphereToClosest(b, offsetB, orientationMatrixB, 
-                out var cylinderLocalOffsetA, out var horizontalClampRequired, out var horizontalOffsetLength, out var inverseHorizontalOffsetLength, 
+                out var cylinderLocalOffsetA, out var horizontalOffsetLength, out var inverseHorizontalOffsetLength, 
                 out var sphereToContactLocalB, out manifold.OffsetA);
 
             //If the sphere center is inside the cylinder, then we must compute the fastest way out of the cylinder.
             var absY = Vector.Abs(cylinderLocalOffsetA.Y);
-            var useInternal = Vector.AndNot(Vector.LessThanOrEqual(absY, b.HalfLength), horizontalClampRequired);
             var depthY = b.HalfLength - absY;
             var horizontalDepth = b.Radius - horizontalOffsetLength;
             var useDepthY = Vector.LessThanOrEqual(depthY, horizontalDepth);
             var useTopCapNormal = Vector.GreaterThan(cylinderLocalOffsetA.Y, Vector<float>.Zero);
             Vector3Wide localInternalNormal;
+
             var useHorizontalFallback = Vector.LessThanOrEqual(horizontalOffsetLength, b.Radius * new Vector<float>(1e-5f));
             localInternalNormal.X = Vector.ConditionalSelect(useDepthY, Vector<float>.Zero, Vector.ConditionalSelect(useHorizontalFallback, Vector<float>.One, cylinderLocalOffsetA.X * inverseHorizontalOffsetLength));
             localInternalNormal.Y = Vector.ConditionalSelect(useDepthY, Vector.ConditionalSelect(useTopCapNormal, Vector<float>.One, new Vector<float>(-1)), Vector<float>.Zero);
@@ -61,6 +61,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Note negation; normal points from B to A by convention.
             Vector3Wide.Scale(sphereToContactLocalB, new Vector<float>(-1) / contactDistanceFromSphereCenter, out var localExternalNormal);
 
+            //Can't rely on the external normal if the sphere is so close to the surface that the normal isn't numerically computable.
+            var useInternal = Vector.LessThan(contactDistanceFromSphereCenter, new Vector<float>(1e-7f));
             Vector3Wide.ConditionalSelect(useInternal, localInternalNormal, localExternalNormal, out var localNormal);
 
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientationMatrixB, out manifold.Normal);
