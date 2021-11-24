@@ -23,6 +23,18 @@ namespace BepuPhysics
         AwakeBodyStates7,
         AwakeBodyStates8,
         AwakeBodyStates9,
+        AwakeBodyStates10,
+        AwakeBodyCollidableStates0,
+        AwakeBodyCollidableStates1,
+        AwakeBodyCollidableStates2,
+        AwakeBodyCollidableStates3,
+        AwakeBodyCollidableStates4,
+        AwakeBodyCollidableStates5,
+        AwakeBodyCollidableStates6,
+        AwakeBodyCollidableStates7,
+        AwakeBodyCollidableStates8,
+        AwakeBodyCollidableStates9,
+        AwakeBodyCollidableStates10,
         AddSleepingToActiveForFallback,
         SolverBodyReferenceBeforeCollisionDetection,
         SolverBodyReferenceBeforePreflush,
@@ -57,7 +69,7 @@ namespace BepuPhysics
         /// <summary>
         /// This is meant as an internal diagnostic utility, so hardcoding some things is totally fine.
         /// </summary>
-        const int HashTypeCount = 34;
+        const int HashTypeCount = 46;
         public static InvasiveHashDiagnostics Instance;
         public static void Initialize(int runCount, int hashCapacityPerType)
         {
@@ -95,6 +107,7 @@ namespace BepuPhysics
                 return;
             if (CurrentHashIndex < 0)
                 throw new ArgumentException($"Invalid hash index: {CurrentHashIndex}");
+            bool anyFailed = false;
             for (int hashTypeIndex = 0; hashTypeIndex < Hashes[CurrentRunIndex].Length; ++hashTypeIndex)
             {
                 if (CurrentHashIndex >= Hashes[CurrentRunIndex][hashTypeIndex].Length)
@@ -104,8 +117,14 @@ namespace BepuPhysics
                     if (Hashes[CurrentRunIndex][hashTypeIndex][CurrentHashIndex] != Hashes[previousRunIndex][hashTypeIndex][CurrentHashIndex])
                     {
                         Console.WriteLine($"Hash failure on {(HashDiagnosticType)hashTypeIndex} frame {CurrentHashIndex}, current run {CurrentRunIndex} vs previous {previousRunIndex}: {Hashes[CurrentRunIndex][hashTypeIndex][CurrentHashIndex] } vs {Hashes[previousRunIndex][hashTypeIndex][CurrentHashIndex]}.");
+                        anyFailed = true;
                     }
                 }
+            }
+            if (anyFailed)
+            {
+                Console.WriteLine("Press enter to continue.");
+                Console.ReadLine();
             }
             ++CurrentHashIndex;
         }

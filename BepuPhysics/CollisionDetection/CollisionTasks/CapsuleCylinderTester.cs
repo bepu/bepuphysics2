@@ -207,7 +207,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             //All of the above excluded any consideration of the capsule's radius. Include it now.
             depth += a.Radius;
-            inactiveLanes = Vector.BitwiseOr(Vector.LessThan(depth, -speculativeMargin), inactiveLanes);
+            var negativeMargin = -speculativeMargin;
+            inactiveLanes = Vector.BitwiseOr(Vector.LessThan(depth, negativeMargin), inactiveLanes);
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //All lanes have a depth which cannot create any contacts due to the speculative margin. We can early out.
@@ -223,7 +224,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Segment-side case is handled in the same way as capsule-capsule- create an interval by projecting the segment onto the cylinder segment and then narrow the interval in response to noncoplanarity.
             //Segment-cap is easy too; project the segment down onto the cap plane. Clip it against the cap circle (solve a quadratic).
 
-            var useCapContacts = Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f));
+            var useCapContacts = Vector.AndNot(Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f)), inactiveLanes);
 
             //First, assume non-cap contacts.
             //Phrase the problem as a segment-segment test.
@@ -248,7 +249,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             var contactCount = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(contactTMax - contactTMin), b.HalfLength * new Vector<float>(1e-5f)), Vector<int>.One, new Vector<int>(2));
 
-            if (Vector.LessThanAny(Vector.AndNot(useCapContacts, inactiveLanes), Vector<int>.Zero))
+            if (Vector.LessThanAny(useCapContacts, Vector<int>.Zero))
             {
                 //At least one lane requires a cap contact.
                 //An important note: for highest quality, all clipping takes place on the *normal plane*. So segment-cap doesn't merely set the y component to zero (projecting along B's Y axis).
@@ -329,9 +330,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //In this case, both contact positions should be extremely close together anyway.
             var collapse = Vector.LessThan(Vector.Abs(faceNormalADotLocalNormal), new Vector<float>(1e-7f));
             manifold.Depth0 = Vector.ConditionalSelect(collapse, depth, manifold.Depth0);
-            var negativeMargin = -speculativeMargin;
-            manifold.Contact0Exists = Vector.GreaterThan(manifold.Depth0, negativeMargin);
-            manifold.Contact1Exists = Vector.BitwiseAnd(Vector.AndNot(Vector.Equals(contactCount, new Vector<int>(2)), collapse), Vector.GreaterThan(manifold.Depth1, negativeMargin));
+            manifold.Contact0Exists = Vector.AndNot(Vector.GreaterThanOrEqual(manifold.Depth0, negativeMargin), inactiveLanes);
+            manifold.Contact1Exists = Vector.AndNot(Vector.BitwiseAnd(Vector.AndNot(Vector.Equals(contactCount, new Vector<int>(2)), collapse), Vector.GreaterThanOrEqual(manifold.Depth1, negativeMargin)), inactiveLanes);
 
             //Push the contacts into world space.
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, worldRB, out manifold.Normal);
