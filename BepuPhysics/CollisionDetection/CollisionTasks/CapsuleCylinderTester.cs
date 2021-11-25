@@ -167,7 +167,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Division by zero is protected by the depth selection- if distance is zero, the depth is set to infinity and this normal won't be selected.
             Vector3Wide.Scale(localNormal, Vector<float>.One / distanceFromCylinderToLineSegment, out localNormal);
             var depth = Vector.ConditionalSelect(internalLineSegmentIntersected, new Vector<float>(float.MaxValue), -distanceFromCylinderToLineSegment);
-
+            var negativeMargin = -speculativeMargin;
+            inactiveLanes = Vector.BitwiseOr(Vector.LessThan(depth, negativeMargin), inactiveLanes);
             if (Vector.LessThanAny(Vector.AndNot(internalLineSegmentIntersected, inactiveLanes), Vector<int>.Zero))
             {
                 //At least one lane is intersecting deeply, so we need to examine the other possible normals.
@@ -207,7 +208,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             //All of the above excluded any consideration of the capsule's radius. Include it now.
             depth += a.Radius;
-            var negativeMargin = -speculativeMargin;
             inactiveLanes = Vector.BitwiseOr(Vector.LessThan(depth, negativeMargin), inactiveLanes);
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
