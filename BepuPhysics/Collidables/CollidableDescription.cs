@@ -26,10 +26,20 @@
         }
 
         /// <summary>
-        /// Constructs a new collidable description with default discrete continuity.
+        /// Constructs a new collidable description with <see cref="ContinuousDetectionMode.Passive"/>. Will use a minimum speculative margin of 0 and a maximum of <see cref="float.MaxValue"/>.
         /// </summary>
         /// <param name="shape">Shape used by the collidable.</param>
+        /// <remarks><see cref="ContinuousDetectionMode.Passive"/> and <see cref="ContinuousDetectionMode.Discrete"/> are equivalent in behavior when the maximum speculative margin is <see cref="float.MaxValue"/> since they both result in the same (unbounded) expansion of body bounding boxes in response to velocity.</remarks>
         public CollidableDescription(TypedIndex shape) : this(shape, ContinuousDetection.Passive)
+        {
+        }
+
+        /// <summary>
+        /// Constructs a new collidable description with <see cref="ContinuousDetectionMode.Discrete"/>. Will use a minimum speculative margin of 0 and the given maximumSpeculativeMargin.
+        /// </summary>
+        /// <param name="shape">Shape used by the collidable.</param>
+        /// <param name="maximumSpeculativeMargin">Maximum speculative margin to be used with the discrete continuity configuration.</param>
+        public CollidableDescription(TypedIndex shape, float maximumSpeculativeMargin) : this(shape, ContinuousDetection.Discrete(0, maximumSpeculativeMargin))
         {
         }
     }
