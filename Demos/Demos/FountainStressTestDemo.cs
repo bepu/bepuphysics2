@@ -362,7 +362,6 @@ namespace Demos.Demos
                 Simulation.Statics.Add(staticDescription);
             }
 
-
             //Spray some shapes!
             int newShapeCount = 8;
             var spawnPose = new RigidPose(new Vector3(0, 10, 0));
@@ -397,10 +396,15 @@ namespace Demos.Demos
                 Simulation.Bodies.GetDescription(handle, out var description);
                 Simulation.Shapes.RecursivelyRemoveAndDispose(description.Collidable.Shape, BufferPool);
                 CreateBodyDescription(random, description.Pose, description.Velocity, out var newDescription);
-                if (random.NextDouble() < 0.1f)
+                if (random.NextSingle() < 0.1f)
                 {
                     //Occasionally make a dynamic kinematic.
                     newDescription.LocalInertia = default;
+                }
+                else if (random.NextSingle() < 0.05f)
+                {
+                    //Occasionally make a rotation-locked dynamic.
+                    newDescription.LocalInertia.InverseInertiaTensor = default;
                 }
                 Simulation.Bodies.ApplyDescription(handle, newDescription);
             }

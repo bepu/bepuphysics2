@@ -187,6 +187,11 @@ namespace BepuPhysics
             {
                 AddCollidableToBroadPhase(handle, description.Pose, description.LocalInertia, ref ActiveSet.Collidables[index]);
             }
+            else
+            {
+                //Don't want to leak undefined data into the collidable state if there's no shape.
+                ActiveSet.Collidables[index].BroadPhaseIndex = -1;
+            }
             return handle;
         }
 
@@ -582,7 +587,7 @@ namespace BepuPhysics
             }
         }
 
-        public void ValidateAwakeCollidablesByHash(HashDiagnosticType type)
+        internal void ValidateAwakeCollidablesByHash(HashDiagnosticType type)
         {
             var instance = InvasiveHashDiagnostics.Instance;
             ref int hash = ref instance.GetHashForType(type);

@@ -46,6 +46,8 @@ namespace BepuPhysics
 
         public void Timestep(Simulation simulation, float dt, IThreadDispatcher threadDispatcher = null)
         {
+            //simulation.Bodies.ValidateAwakeMotionStatesByHash(HashDiagnosticType.AwakeBodyStates0);
+            //simulation.Bodies.ValidateAwakeCollidablesByHash(HashDiagnosticType.AwakeBodyCollidableStates0);
             simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
             simulation.Solver.ValidateFallbackBatchEmptySlotReferences();
             simulation.Solver.ValidateFallbackBatchAccessSafety();
@@ -66,14 +68,20 @@ namespace BepuPhysics
             simulation.Solver.ValidateConstrainedKinematicsSet();
             simulation.Solver.ValidateFallbackBodiesAreDynamic();
             //simulation.Solver.ValidateExistingHandles();
+            //simulation.Bodies.ValidateAwakeMotionStatesByHash(HashDiagnosticType.AwakeBodyStates1);
+            //simulation.Bodies.ValidateAwakeCollidablesByHash(HashDiagnosticType.AwakeBodyCollidableStates1);
 
             simulation.PredictBoundingBoxes(dt, threadDispatcher);
             BeforeCollisionDetection?.Invoke(dt, threadDispatcher);
 
+            //simulation.Bodies.ValidateAwakeMotionStatesByHash(HashDiagnosticType.AwakeBodyStates2);
+            //simulation.Bodies.ValidateAwakeCollidablesByHash(HashDiagnosticType.AwakeBodyCollidableStates2);
             simulation.CollisionDetection(dt, threadDispatcher);
             CollisionsDetected?.Invoke(dt, threadDispatcher);
             Debug.Assert(SubstepCount >= 0, "Substep count should be positive.");
 
+            //simulation.Bodies.ValidateAwakeMotionStatesByHash(HashDiagnosticType.AwakeBodyStates3);
+            //simulation.Bodies.ValidateAwakeCollidablesByHash(HashDiagnosticType.AwakeBodyCollidableStates3);
             simulation.Solver.ValidateTrailingTypeBatchBodyReferences();
             simulation.Solver.ValidateFallbackBatchEmptySlotReferences();
             simulation.Solver.ValidateFallbackBatchAccessSafety();
@@ -88,16 +96,22 @@ namespace BepuPhysics
             simulation.Profiler.Start(simulation.Solver);
             simulation.Solver.SolveStep2(dt, threadDispatcher);
             simulation.Profiler.End(simulation.Solver);
+            //simulation.Bodies.ValidateAwakeMotionStatesByHash(HashDiagnosticType.AwakeBodyStates4);
+            //simulation.Bodies.ValidateAwakeCollidablesByHash(HashDiagnosticType.AwakeBodyCollidableStates4);
             ConstraintsSolved?.Invoke(dt, threadDispatcher);
             simulation.Profiler.Start(simulation.PoseIntegrator);
             simulation.PoseIntegrator.IntegrateAfterSubstepping(constrainedBodySet, dt, SubstepCount, threadDispatcher);
             simulation.Profiler.End(simulation.PoseIntegrator);
+            //simulation.Bodies.ValidateAwakeMotionStatesByHash(HashDiagnosticType.AwakeBodyStates5);
+            //simulation.Bodies.ValidateAwakeCollidablesByHash(HashDiagnosticType.AwakeBodyCollidableStates5);
             simulation.Solver.DisposeConstraintIntegrationResponsibilities();
             SubstepsComplete?.Invoke(dt, threadDispatcher);
 
 
             simulation.Solver.ValidateAccumulatedImpulses();
             simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
+            //simulation.Bodies.ValidateAwakeMotionStatesByHash(HashDiagnosticType.AwakeBodyStates6);
+            //simulation.Bodies.ValidateAwakeCollidablesByHash(HashDiagnosticType.AwakeBodyCollidableStates6);
         }
     }
 }
