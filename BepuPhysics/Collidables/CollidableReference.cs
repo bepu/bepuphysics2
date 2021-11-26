@@ -5,6 +5,9 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Collidables
 {
+    /// <summary>
+    /// Represents how a collidable can interact and move.
+    /// </summary>
     public enum CollidableMobility
     {
         /// <summary>
@@ -21,8 +24,14 @@ namespace BepuPhysics.Collidables
         Static = 2
     }
 
+    /// <summary>
+    /// Uses a bitpacked representation to refer to a body or static collidable.
+    /// </summary>
     public struct CollidableReference : IEquatable<CollidableReference>
     {
+        /// <summary>
+        /// Bitpacked representation of the collidable reference.
+        /// </summary>
         public uint Packed;
 
         /// <summary>
@@ -102,7 +111,6 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Creates a collidable reference for a static.
         /// </summary>
-        /// <param name="mobility">Mobility type of the owner of the collidable.</param>
         /// <param name="handle">Handle of the owner of the collidable.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public CollidableReference(StaticHandle handle)
