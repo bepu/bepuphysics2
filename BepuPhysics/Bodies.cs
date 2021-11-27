@@ -53,6 +53,24 @@ namespace BepuPhysics
         /// <returns>Reference to the active body set.</returns>
         public unsafe ref BodySet ActiveSet { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return ref *Sets.Memory; } }
 
+        /// <summary>
+        /// Gets a reference to a body in the collection.
+        /// </summary>
+        /// <param name="handle">Handle of the body to pull a reference for.</param>
+        /// <returns>Reference to the requested body.</returns>
+        /// <remarks>This is an alias for the older <see cref="GetBodyReference"/> and the <see cref="BodyReference"/> constructor. They are all equivalent.</remarks>
+        public BodyReference this[BodyHandle handle]
+        {
+            get
+            {
+                return new BodyReference(handle, this);
+            }
+        }
+
+
+        /// <summary>
+        /// Gets the pool used by the bodies collection to allocate and free memory.
+        /// </summary>
         public BufferPool Pool { get; private set; }
 
         internal IslandAwakener awakener;
@@ -511,6 +529,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the body to grab a reference of.</param>
         /// <returns>Reference to the desired body.</returns>
+        /// <remarks>This is an alias for <see cref="this[BodyHandle]"/> and the <see cref="BodyReference"/> constructor. They are all equivalent.</remarks>
         public BodyReference GetBodyReference(BodyHandle handle)
         {
             ValidateExistingHandle(handle);

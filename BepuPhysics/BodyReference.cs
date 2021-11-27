@@ -30,6 +30,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the body to refer to.</param>
         /// <param name="bodies">Collection containing the body.</param>
+        /// <remarks>This is equivalent to <see cref="Bodies.GetBodyReference"/> and <see cref="Bodies.this[BodyHandle]"/>.</remarks>
         public BodyReference(BodyHandle handle, Bodies bodies)
         {
             Handle = handle;
