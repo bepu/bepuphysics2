@@ -35,6 +35,9 @@ namespace Demos.Demos
             //It's pretty rare, though- if you have a situation where that sort of failure is common, consider increasing the collidable's speculative margin or using a higher update rate.
             //(The reason why we don't always just rely on large speculative margins is ghost collisions- the speculative contacts might not represent collisions
             //that would have actually happened, but get included in the constraint solution anyway. They're fairly rare, but it's something to watch out for.)
+
+            //Using a restricted speculative margin by setting the maximumSpeculativeMargin to 0.2 means that collision detection won't accept distant contacts.
+            //This pretty much eliminates ghost collisions, while the continuous sweep helps avoid missed collisions.
             var spinnerBlade = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, bladeInertia, new CollidableDescription(shapeIndex, ContinuousDetection.Continuous(1e-4f, 1e-4f, maximumSpeculativeMargin: 0.2f)), new BodyActivityDescription(0.01f)));
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new Hinge { LocalHingeAxisA = new Vector3(0, 0, 1), LocalHingeAxisB = new Vector3(0, 0, 1), LocalOffsetB = new Vector3(0, 0, -3), SpringSettings = new SpringSettings(30, 1) });
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new AngularAxisMotor { LocalAxisA = new Vector3(0, 0, 1), Settings = new MotorSettings(10, 1e-4f), TargetVelocity = rotationSpeed });

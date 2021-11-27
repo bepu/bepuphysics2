@@ -419,8 +419,13 @@ namespace BepuPhysics.CollisionDetection
                 ref var setB = ref Bodies.Sets[bodyLocationB.SetIndex];
                 ref var stateA = ref setA.SolverStates[bodyLocationA.Index];
                 ref var stateB = ref setB.SolverStates[bodyLocationB.Index];
+                ref var collidableA = ref setA.Collidables[bodyLocationA.Index];
+                ref var collidableB = ref setB.Collidables[bodyLocationB.Index];
                 AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
-                    ref setA.Collidables[bodyLocationA.Index], ref setB.Collidables[bodyLocationB.Index],
+                    ref collidableA.Continuity, ref collidableB.Continuity,
+                    collidableA.SpeculativeMargin, collidableB.SpeculativeMargin,
+                    collidableA.Shape, collidableB.Shape,
+                    collidableA.BroadPhaseIndex, collidableB.BroadPhaseIndex,
                     ref stateA.Motion.Pose, ref stateB.Motion.Pose,
                     ref stateA.Motion.Velocity, ref stateB.Motion.Velocity);
             }
@@ -438,9 +443,14 @@ namespace BepuPhysics.CollisionDetection
                 var zeroVelocity = default(BodyVelocity);
                 ref var bodySet = ref Bodies.ActiveSet;
                 ref var bodyState = ref bodySet.SolverStates[bodyLocation.Index];
+                ref var collidableA = ref bodySet.Collidables[bodyLocation.Index];
+                ref var collidableB = ref Statics[staticIndex];
                 AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
-                    ref bodySet.Collidables[bodyLocation.Index], ref Statics.Collidables[staticIndex],
-                    ref bodyState.Motion.Pose, ref Statics.Poses[staticIndex],
+                    ref collidableA.Continuity, ref collidableB.Continuity,
+                    collidableA.SpeculativeMargin, 0,
+                    collidableA.Shape, collidableB.Shape,
+                    collidableA.BroadPhaseIndex, collidableB.BroadPhaseIndex,
+                    ref bodyState.Motion.Pose, ref collidableB.Pose,
                     ref bodyState.Motion.Velocity, ref zeroVelocity);
             }
 
@@ -461,17 +471,22 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void AddBatchEntries(int workerIndex, ref OverlapWorker overlapWorker,
-            ref CollidablePair pair, ref Collidable aCollidable, ref Collidable bCollidable,
-            ref RigidPose poseA, ref RigidPose poseB, ref BodyVelocity velocityA, ref BodyVelocity velocityB)
+            ref CollidablePair pair,
+            ref ContinuousDetection continuityA, ref ContinuousDetection continuityB,
+            float marginA, float marginB,
+            TypedIndex shapeA, TypedIndex shapeB,
+            int broadPhaseIndexA, int broadPhaseIndexB,
+            ref RigidPose poseA, ref RigidPose poseB,
+            ref BodyVelocity velocityA, ref BodyVelocity velocityB)
         {
             Debug.Assert(pair.A.Packed != pair.B.Packed);
             //Add the speculative margins, but try to obey both collidables' bounds. Note that in the case of nonoverlapping intervals, the higher min ends up used.
             var speculativeMargin =
-                MathF.Max(aCollidable.Continuity.MinimumSpeculativeMargin, MathF.Max(bCollidable.Continuity.MinimumSpeculativeMargin,
-                MathF.Min(aCollidable.Continuity.MaximumSpeculativeMargin, MathF.Min(bCollidable.Continuity.MaximumSpeculativeMargin,
-                    aCollidable.SpeculativeMargin + bCollidable.SpeculativeMargin))));
+                MathF.Max(continuityA.MinimumSpeculativeMargin, MathF.Max(continuityB.MinimumSpeculativeMargin,
+                MathF.Min(continuityA.MaximumSpeculativeMargin, MathF.Min(continuityB.MaximumSpeculativeMargin,
+                    marginA + marginB))));
 
-            var allowExpansion = aCollidable.Continuity.AllowExpansionBeyondSpeculativeMargin | bCollidable.Continuity.AllowExpansionBeyondSpeculativeMargin;
+            var allowExpansion = continuityA.AllowExpansionBeyondSpeculativeMargin | continuityB.AllowExpansionBeyondSpeculativeMargin;
             //Note that we pick float.MaxValue for the maximum bounds expansion passive-involving pairs.
             //This is a compromise- looser bounds are not a correctness issue, so we're trading off potentially more subpairs
             //and the need to compute a tighter maximum bound. That's not incredibly expensive, but it does add up. For now, we use the looser bound under the assumption
@@ -482,9 +497,9 @@ namespace BepuPhysics.CollisionDetection
             //Note that we never create 'unilateral' CCD pairs. That is, if either collidable in a pair enables a CCD feature, we just act like both are using it.
             //That keeps things a little simpler. Unlike v1, we don't have to worry about the implications of 'motion clamping' here- no need for deeper configuration.            
             CCDContinuationIndex continuationIndex = default;
-            if (aCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous || bCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous)
+            if (continuityA.Mode == ContinuousDetectionMode.Continuous || continuityB.Mode == ContinuousDetectionMode.Continuous)
             {
-                var sweepTask = SweepTaskRegistry.GetTask(aCollidable.Shape.Type, bCollidable.Shape.Type);
+                var sweepTask = SweepTaskRegistry.GetTask(shapeA.Type, shapeB.Type);
                 if (sweepTask != null)
                 {
                     //Not every continuous pair requires an actual sweep test. If the maximum approaching displacement for any point on the involved shapes isn't any larger
@@ -499,19 +514,19 @@ namespace BepuPhysics.CollisionDetection
                     var bInStaticTree = pair.B.Mobility == CollidableMobility.Static || Simulation.Bodies.HandleToLocation[pair.B.BodyHandle.Value].SetIndex > 0;
                     ref var aTree = ref aInStaticTree ? ref Simulation.BroadPhase.StaticTree : ref Simulation.BroadPhase.ActiveTree;
                     ref var bTree = ref bInStaticTree ? ref Simulation.BroadPhase.StaticTree : ref Simulation.BroadPhase.ActiveTree;
-                    BroadPhase.GetBoundsPointers(aCollidable.BroadPhaseIndex, ref aTree, out var aMin, out var aMax);
-                    BroadPhase.GetBoundsPointers(bCollidable.BroadPhaseIndex, ref bTree, out var bMin, out var bMax);
+                    BroadPhase.GetBoundsPointers(broadPhaseIndexA, ref aTree, out var aMin, out var aMax);
+                    BroadPhase.GetBoundsPointers(broadPhaseIndexB, ref bTree, out var bMin, out var bMax);
                     var maximumRadiusA = (*aMax - *aMin).Length() * 0.5f;
                     var maximumRadiusB = (*bMax - *bMin).Length() * 0.5f;
                     if ((velocityA.Angular.Length() * maximumRadiusA + velocityB.Angular.Length() * maximumRadiusB + (velocityB.Linear - velocityA.Linear).Length()) * timestepDuration > speculativeMargin)
                     {
-                        Simulation.Shapes[aCollidable.Shape.Type].GetShapeData(aCollidable.Shape.Index, out var shapeDataA, out var shapeSizeA);
-                        Simulation.Shapes[bCollidable.Shape.Type].GetShapeData(bCollidable.Shape.Index, out var shapeDataB, out var shapeSizeB);
+                        Simulation.Shapes[shapeA.Type].GetShapeData(shapeA.Index, out var shapeDataA, out var shapeSizeA);
+                        Simulation.Shapes[shapeB.Type].GetShapeData(shapeB.Index, out var shapeDataB, out var shapeSizeB);
                         float minimumSweepTimestepA, sweepConvergenceThresholdA;
-                        if (aCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous)
+                        if (continuityA.Mode == ContinuousDetectionMode.Continuous)
                         {
-                            minimumSweepTimestepA = aCollidable.Continuity.MinimumSweepTimestep;
-                            sweepConvergenceThresholdA = aCollidable.Continuity.SweepConvergenceThreshold;
+                            minimumSweepTimestepA = continuityA.MinimumSweepTimestep;
+                            sweepConvergenceThresholdA = continuityA.SweepConvergenceThreshold;
                         }
                         else
                         {
@@ -519,10 +534,10 @@ namespace BepuPhysics.CollisionDetection
                             sweepConvergenceThresholdA = float.MaxValue;
                         }
                         float minimumSweepTimestepB, sweepConvergenceThresholdB;
-                        if (bCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous)
+                        if (continuityB.Mode == ContinuousDetectionMode.Continuous)
                         {
-                            minimumSweepTimestepB = bCollidable.Continuity.MinimumSweepTimestep;
-                            sweepConvergenceThresholdB = bCollidable.Continuity.SweepConvergenceThreshold;
+                            minimumSweepTimestepB = continuityB.MinimumSweepTimestep;
+                            sweepConvergenceThresholdB = continuityB.SweepConvergenceThreshold;
                         }
                         else
                         {
@@ -531,8 +546,8 @@ namespace BepuPhysics.CollisionDetection
                         }
                         var filter = new CCDSweepFilter { NarrowPhase = this, Pair = pair, WorkerIndex = workerIndex };
                         if (sweepTask.Sweep(
-                            shapeDataA, aCollidable.Shape.Type, poseA.Orientation, velocityA,
-                            shapeDataB, bCollidable.Shape.Type, poseB.Position - poseA.Position, poseB.Orientation, velocityB,
+                            shapeDataA, shapeA.Type, poseA.Orientation, velocityA,
+                            shapeDataB, shapeB.Type, poseB.Position - poseA.Position, poseB.Orientation, velocityB,
                             timestepDuration,
                             //Note that we use the *smaller* thresholds. This allows high fidelity objects to demand more time even if paired with low fidelity objects.
                             Math.Min(minimumSweepTimestepA, minimumSweepTimestepB),
@@ -548,7 +563,7 @@ namespace BepuPhysics.CollisionDetection
                             PoseIntegration.Integrate(poseB.Orientation, velocityB.Angular, t1, out var integratedOrientationB);
                             var offsetB = poseB.Position - poseA.Position + (velocityB.Linear - velocityA.Linear) * t1;
                             overlapWorker.Batcher.Add(
-                               aCollidable.Shape, bCollidable.Shape,
+                               shapeA, shapeB,
                                offsetB, integratedOrientationA, integratedOrientationB, velocityA, velocityB,
                                speculativeMargin, maximumExpansion, new PairContinuation((int)continuationIndex.Packed));
                         }
@@ -560,7 +575,7 @@ namespace BepuPhysics.CollisionDetection
                 //No CCD continuation was created, so create a discrete one.
                 continuationIndex = overlapWorker.Batcher.Callbacks.AddDiscrete(ref pair);
                 overlapWorker.Batcher.Add(
-                   aCollidable.Shape, bCollidable.Shape,
+                   shapeA, shapeB,
                    poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, velocityA, velocityB,
                    speculativeMargin, maximumExpansion, new PairContinuation((int)continuationIndex.Packed));
             }

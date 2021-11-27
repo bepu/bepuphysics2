@@ -56,6 +56,18 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Gets a reference to the entirety of the static's memory.
+        /// </summary>
+        public ref Static Static
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return ref Statics[Handle];
+            }
+        }
+
+        /// <summary>
         /// Gets a reference to the static's pose.
         /// </summary>
         public ref RigidPose Pose
@@ -63,19 +75,19 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return ref Statics.Poses[Statics.HandleToIndex[Handle.Value]];
+                return ref Statics[Handle].Pose;
             }
         }
 
         /// <summary>
-        /// Gets a reference to the static's collidable.
+        /// Gets a reference to the static's collision continuity settings.
         /// </summary>
-        public ref Collidable Collidable
+        public ref ContinuousDetection Continuity
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return ref Statics.Collidables[Statics.HandleToIndex[Handle.Value]];
+                return ref Statics[Handle].Continuity;
             }
         }
 
@@ -142,7 +154,7 @@ namespace BepuPhysics
         public unsafe void GetBoundsReferencesFromBroadPhase(out Vector3* min, out Vector3* max)
         {
             var index = Index;
-            ref var collidable = ref Statics.Collidables[index];
+            ref var collidable = ref Statics[index];
             Debug.Assert(collidable.Shape.Exists, "Statics must have a shape. Something's not right here.");
             Statics.broadPhase.GetStaticBoundsPointers(collidable.BroadPhaseIndex, out min, out max);
         }

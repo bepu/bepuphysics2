@@ -174,7 +174,7 @@ namespace BepuPhysics
             Debug.Assert(inactiveShapefulBodyCount + Statics.Count == BroadPhase.StaticTree.LeafCount);
             for (int i = 0; i < Statics.Count; ++i)
             {
-                ref var collidable = ref Statics.Collidables[i];
+                ref var collidable = ref Statics[i];
                 Debug.Assert(collidable.Shape.Exists, "All static collidables must have shapes. That's their only purpose.");
 
                 Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < BroadPhase.StaticTree.LeafCount);

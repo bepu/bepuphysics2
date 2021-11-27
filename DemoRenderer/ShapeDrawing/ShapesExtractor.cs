@@ -280,7 +280,8 @@ namespace DemoRenderer.ShapeDrawing
             var staticBase = new Vector3(0.1f, 0.057f, 0.014f);
             var staticVariationSpan = new Vector3(0.07f, 0.07f, 0.03f);
             var color = staticBase + staticVariationSpan * colorVariation;
-            AddShape(shapes, statics.Collidables[index].Shape, ref statics.Poses[index], color);
+            ref var collidable = ref statics[index];
+            AddShape(shapes, collidable.Shape, ref collidable.Pose, color);
         }
 
         public void AddInstances(Simulation simulation, IThreadDispatcher threadDispatcher = null)

@@ -121,8 +121,10 @@ namespace BepuPhysics
             if (reference.Mobility == CollidableMobility.Static)
             {
                 var index = Statics.HandleToIndex[reference.StaticHandle.Value];
-                pose = Statics.Poses.Memory + index;
-                shape = Statics.Collidables[index].Shape;
+                ref var collidable = ref Statics[index];
+                //Not a GC hole; the Statics holds everything in unmoving memory.
+                pose = (RigidPose*)Unsafe.AsPointer(ref collidable.Pose);
+                shape = collidable.Shape;
             }
             else
             {

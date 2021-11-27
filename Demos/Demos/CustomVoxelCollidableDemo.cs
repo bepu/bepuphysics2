@@ -449,7 +449,7 @@ namespace Demos.Demos
             //The renderer doesn't have a super flexible drawing system, so we'll instead just directly add the voxel shapes. Not super efficient, but it works!
             var shape = new Box(voxels.VoxelSize.X, voxels.VoxelSize.Y, voxels.VoxelSize.Z);
             var shapeDataPointer = &shape;
-            ref var voxelsPose = ref Simulation.Statics.Poses[Simulation.Statics.HandleToIndex[handle.Value]];
+            ref var voxelsPose = ref Simulation.Statics[handle].Pose;
             for (int i = 0; i < voxels.ChildCount; ++i)
             {
                 var localPose = new RigidPose((voxels.VoxelIndices[i] + new Vector3(0.5f)) * voxels.VoxelSize);

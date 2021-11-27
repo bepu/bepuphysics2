@@ -47,13 +47,48 @@ namespace BepuPhysics
     }
 
     /// <summary>
-    /// Collection of allocated static collidables.
+    /// Stores data for a static collidable in the simulation. Statics can be posed and collide, but have no velocity and no dynamic behavior.
+    /// </summary>
+    /// <remarks>Unlike bodies, statics have a very simple access pattern. Most data is referenced together and there are no extreme high frequency data accesses like there are in the solver.
+    /// Everything can be conveniently stored within a single location contiguously.</remarks>
+    public struct Static
+    {
+        /// <summary>
+        /// Pose of the static collidable.
+        /// </summary>
+        public RigidPose Pose;
+
+        /// <summary>
+        /// Continuous collision detection settings for this collidable. Includes the collision detection mode to use and tuning variables associated with those modes.
+        /// </summary>
+        /// <remarks>Note that statics cannot move, so there is no difference between <see cref="ContinuousDetectionMode.Discrete"/> and <see cref="ContinuousDetectionMode.Passive"/> for them.
+        /// The minimum and maximum speculative margins will still constrain the margins created for each collision pair involved in the static.
+        /// Enabling <see cref="ContinuousDetectionMode.Continuous"/> will still require that pairs associated with the static use swept continuous collision detection.</remarks>
+        public ContinuousDetection Continuity;
+
+        /// <summary>
+        /// Index of the shape used by the static. While this can be changed, any transition from shapeless->shapeful or shapeful->shapeless must be reported to the broad phase. 
+        /// If you need to perform such a transition, consider using <see cref="Statics.SetShape"/> or Statics.ApplyDescription; those functions update the relevant state.
+        /// </summary>
+        public TypedIndex Shape;
+        //Note that statics do not store a 'speculative margin' independently of the contini
+        /// <summary>
+        /// Index of the collidable in the broad phase. Used to look up the target location for bounding box scatters. Under normal circumstances, this should not be set externally.
+        /// </summary>
+        public int BroadPhaseIndex;
+    }
+
+    /// <summary>
+    /// Collection of allocated statics.
     /// </summary>
     public class Statics
     {
+        //Unlike bodies, there's not a lot of value to tight packing for the sake of enumeration.
+        //This uses the same kind of handle indirection just to allow Count to be meaningful,
+        //but if there comes a time where maintaining this costs something, it can be pretty easily swapped out for an unmoving index approach.
+
         /// <summary>
         /// Remaps a static handle integer value to the actual array index of the static.
-        /// The backing array index may change in response to cache optimization.
         /// </summary>
         public Buffer<int> HandleToIndex;
         /// <summary>
@@ -63,10 +98,10 @@ namespace BepuPhysics
         /// <summary>
         /// The set of collidables owned by each static. Speculative margins, continuity settings, and shape indices can be changed directly.
         /// Shape indices cannot transition between pointing at a shape and pointing at nothing or vice versa without notifying the broad phase of the collidable addition or removal.
+        /// Consider using <see cref="SetShape"/> or <see cref="ApplyDescription(StaticHandle, in StaticDescription)"/> to handle the bookkeeping changes automatically if changing the shape.
         /// </summary>
-        public Buffer<Collidable> Collidables;
+        public Buffer<Static> StaticsBuffer;
 
-        public Buffer<RigidPose> Poses;
         public IdPool HandlePool;
         protected BufferPool pool;
         public int Count;
@@ -75,6 +110,35 @@ namespace BepuPhysics
         Bodies bodies;
         internal BroadPhase broadPhase;
         internal IslandAwakener awakener;
+
+        /// <summary>
+        /// Gets a reference to the raw memory backing a static collidable.
+        /// </summary>
+        /// <param name="handle">Handle of the static to retrieve a memory reference for.</param>
+        /// <returns>Direct reference to the memory backing a static collidable.</returns>
+        public ref Static this[StaticHandle handle]
+        {
+            get
+            {
+                ValidateExistingHandle(handle);
+                return ref StaticsBuffer[HandleToIndex[handle.Value]];
+            }
+        }
+
+        /// <summary>
+        /// Gets a reference to the raw memory backing a static collidable.
+        /// </summary>
+        /// <param name="index">Index of the static to retrieve a memory reference for.</param>
+        /// <returns>Direct reference to the memory backing a static collidable.</returns>
+        public ref Static this[int index]
+        {
+            get
+            {
+                Debug.Assert(index >= 0 && index < Count);
+                ValidateExistingHandle(IndexToHandle[index]);
+                return ref StaticsBuffer[index];
+            }
+        }
 
         public unsafe Statics(BufferPool pool, Shapes shapes, Bodies bodies, BroadPhase broadPhase, int initialCapacity = 4096)
         {
@@ -93,11 +157,10 @@ namespace BepuPhysics
             Debug.Assert(targetCapacity > 0, "Resize is not meant to be used as Dispose. If you want to return everything to the pool, use Dispose instead.");
             //Note that we base the bundle capacities on the static capacity. This simplifies the conditions on allocation
             targetCapacity = BufferPool.GetCapacityForCount<int>(targetCapacity);
-            Debug.Assert(Poses.Length != BufferPool.GetCapacityForCount<RigidPoseWide>(targetCapacity), "Should not try to use internal resize of the result won't change the size.");
-            pool.ResizeToAtLeast(ref Poses, targetCapacity, Count);
+            Debug.Assert(StaticsBuffer.Length != BufferPool.GetCapacityForCount<Static>(targetCapacity), "Should not try to use internal resize of the result won't change the size.");
+            pool.ResizeToAtLeast(ref StaticsBuffer, targetCapacity, Count);
             pool.ResizeToAtLeast(ref IndexToHandle, targetCapacity, Count);
             pool.ResizeToAtLeast(ref HandleToIndex, targetCapacity, Count);
-            pool.ResizeToAtLeast(ref Collidables, targetCapacity, Count);
             //Initialize all the indices beyond the copied region to -1.
             Unsafe.InitBlockUnaligned(HandleToIndex.Memory + Count, 0xFF, (uint)(sizeof(int) * (HandleToIndex.Length - Count)));
             //Note that we do NOT modify the idpool's internal queue size here. We lazily handle that during adds, and during explicit calls to EnsureCapacity, Compact, and Resize.
@@ -120,7 +183,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public void ValidateExistingHandle(StaticHandle handle)
+        internal void ValidateExistingHandle(StaticHandle handle)
         {
             Debug.Assert(StaticExists(handle), "Handle must exist according to the StaticExists test.");
             Debug.Assert(handle.Value >= 0, "Handles must be nonnegative.");
@@ -175,10 +238,10 @@ namespace BepuPhysics
             }
         }
 
-        unsafe void AwakenBodiesInExistingBounds<TFilter>(ref Collidable collidable, ref TFilter filter) where TFilter : struct, IStaticChangeAwakeningFilter
+        unsafe void AwakenBodiesInExistingBounds<TFilter>(int broadPhaseIndex, ref TFilter filter) where TFilter : struct, IStaticChangeAwakeningFilter
         {
-            Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < broadPhase.StaticTree.LeafCount);
-            broadPhase.GetStaticBoundsPointers(collidable.BroadPhaseIndex, out var minPointer, out var maxPointer);
+            Debug.Assert(broadPhaseIndex >= 0 && broadPhaseIndex < broadPhase.StaticTree.LeafCount);
+            broadPhase.GetStaticBoundsPointers(broadPhaseIndex, out var minPointer, out var maxPointer);
             BoundingBox oldBounds;
             oldBounds.Min = *minPointer;
             oldBounds.Max = *maxPointer;
@@ -197,9 +260,9 @@ namespace BepuPhysics
             ValidateExistingHandle(IndexToHandle[index]);
             var handle = IndexToHandle[index];
 
-            ref var collidable = ref Collidables[index];
+            ref var collidable = ref this[index];
             Debug.Assert(collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
-            AwakenBodiesInExistingBounds(ref collidable, ref filter);
+            AwakenBodiesInExistingBounds(collidable.BroadPhaseIndex, ref filter);
 
             var removedBroadPhaseIndex = collidable.BroadPhaseIndex;
             if (broadPhase.RemoveStaticAt(removedBroadPhaseIndex, out var movedLeaf))
@@ -213,7 +276,7 @@ namespace BepuPhysics
                 if (movedLeaf.Mobility == CollidableMobility.Static)
                 {
                     //This is a static collidable, not a body.
-                    Collidables[HandleToIndex[movedLeaf.StaticHandle.Value]].BroadPhaseIndex = removedBroadPhaseIndex;
+                    this[movedLeaf.StaticHandle].BroadPhaseIndex = removedBroadPhaseIndex;
                 }
                 else
                 {
@@ -232,9 +295,7 @@ namespace BepuPhysics
             {
                 var movedStaticOriginalIndex = Count;
                 //Copy the memory state of the last element down.
-                Poses[index] = Poses[movedStaticOriginalIndex];
-                //Note that if you ever treat the world inertias as 'always updated', it would need to be copied here.
-                Collidables[index] = Collidables[movedStaticOriginalIndex];
+                this[index] = this[movedStaticOriginalIndex];
                 //Point the static handles at the new location.
                 var lastHandle = IndexToHandle[movedStaticOriginalIndex];
                 HandleToIndex[lastHandle.Value] = index;
@@ -283,8 +344,8 @@ namespace BepuPhysics
         public void UpdateBounds(StaticHandle handle)
         {
             var index = HandleToIndex[handle.Value];
-            ref var collidable = ref Collidables[index];
-            shapes.UpdateBounds(Poses[index], ref collidable.Shape, out var bodyBounds);
+            ref var collidable = ref this[index];
+            shapes.UpdateBounds(collidable.Pose, ref collidable.Shape, out var bodyBounds);
             broadPhase.UpdateStaticBounds(collidable.BroadPhaseIndex, bodyBounds.Min, bodyBounds.Max);
         }
 
@@ -296,17 +357,13 @@ namespace BepuPhysics
             AwakenBodiesInBounds(ref bounds, ref filter);
         }
 
-
-
-
         internal void ApplyDescriptionByIndexWithoutBroadPhaseModification<TAwakeningFilter>(int index, in StaticDescription description, ref TAwakeningFilter filter, out BoundingBox bounds) where TAwakeningFilter : struct, IStaticChangeAwakeningFilter
         {
-            Poses[index] = description.Pose;
-            ref var collidable = ref Collidables[index];
+            ref var collidable = ref this[index];
+            collidable.Pose = description.Pose;
             Debug.Assert(description.Collidable.Shape.Exists, "Static collidables must have a shape. Their only purpose is colliding.");
             collidable.Continuity = description.Collidable.Continuity;
             collidable.Shape = description.Collidable.Shape;
-            collidable.SpeculativeMargin = 0;
 
             ComputeNewBoundsAndAwaken(description.Pose, description.Collidable.Shape, ref filter, out bounds);
         }
@@ -334,7 +391,7 @@ namespace BepuPhysics
             IndexToHandle[index] = handle;
             ApplyDescriptionByIndexWithoutBroadPhaseModification(index, description, ref filter, out var bounds);
             //This is a new add, so we need to add it to the broad phase.
-            Collidables[index].BroadPhaseIndex = broadPhase.AddStatic(new CollidableReference(handle), ref bounds);
+            this[index].BroadPhaseIndex = broadPhase.AddStatic(new CollidableReference(handle), ref bounds);
             return handle;
         }
 
@@ -361,10 +418,10 @@ namespace BepuPhysics
             ValidateExistingHandle(handle);
             Debug.Assert(newShape.Exists, "Statics must have a shape.");
             var index = HandleToIndex[handle.Value];
-            ref var collidable = ref Collidables[index];
-            AwakenBodiesInExistingBounds(ref collidable, ref filter);
+            ref var collidable = ref this[index];
+            AwakenBodiesInExistingBounds(collidable.BroadPhaseIndex, ref filter);
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            ComputeNewBoundsAndAwaken(Poses[index], newShape, ref filter, out var bounds);
+            ComputeNewBoundsAndAwaken(collidable.Pose, newShape, ref filter, out var bounds);
             broadPhase.UpdateStaticBounds(collidable.BroadPhaseIndex, bounds.Min, bounds.Max);
         }
 
@@ -393,10 +450,11 @@ namespace BepuPhysics
             var index = HandleToIndex[handle.Value];
             Debug.Assert(description.Collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
             //Wake all bodies up in the old bounds AND the new bounds. Sleeping bodies that may have been resting on the old static need to be aware of the new environment.
-            AwakenBodiesInExistingBounds(ref Collidables[index], ref filter);
+            var broadPhaseIndex = this[index].BroadPhaseIndex;
+            AwakenBodiesInExistingBounds(broadPhaseIndex, ref filter);
             ApplyDescriptionByIndexWithoutBroadPhaseModification(index, description, ref filter, out var bounds);
             //This applies to an existing static, so we should modify the static's bounds in the broad phase.
-            broadPhase.UpdateStaticBounds(Collidables[index].BroadPhaseIndex, bounds.Min, bounds.Max);
+            broadPhase.UpdateStaticBounds(broadPhaseIndex, bounds.Min, bounds.Max);
         }
 
         /// <summary>
@@ -420,8 +478,8 @@ namespace BepuPhysics
         {
             ValidateExistingHandle(handle);
             var index = HandleToIndex[handle.Value];
-            description.Pose = Poses[index];
-            ref var collidable = ref Collidables[index];
+            ref var collidable = ref this[index];
+            description.Pose = collidable.Pose;
             description.Collidable.Continuity = collidable.Continuity;
             description.Collidable.Shape = collidable.Shape;
         }
@@ -479,52 +537,10 @@ namespace BepuPhysics
         /// <remarks>The object can be reused if it is reinitialized by using EnsureCapacity or Resize.</remarks>
         public void Dispose()
         {
-            pool.Return(ref Poses);
+            pool.Return(ref StaticsBuffer);
             pool.Return(ref HandleToIndex);
             pool.Return(ref IndexToHandle);
-            pool.Return(ref Collidables);
             HandlePool.Dispose(pool);
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void GatherPose(ref float targetPositionBase, ref float targetOrientationBase, int targetLaneIndex, int index)
-        {
-            ref var source = ref Poses[index];
-            ref var targetPositionSlot = ref Unsafe.Add(ref targetPositionBase, targetLaneIndex);
-            ref var targetOrientationSlot = ref Unsafe.Add(ref targetOrientationBase, targetLaneIndex);
-            targetPositionSlot = source.Position.X;
-            Unsafe.Add(ref targetPositionSlot, Vector<float>.Count) = source.Position.Y;
-            Unsafe.Add(ref targetPositionSlot, 2 * Vector<float>.Count) = source.Position.Z;
-            targetOrientationSlot = source.Orientation.X;
-            Unsafe.Add(ref targetOrientationSlot, Vector<float>.Count) = source.Orientation.Y;
-            Unsafe.Add(ref targetOrientationSlot, 2 * Vector<float>.Count) = source.Orientation.Z;
-            Unsafe.Add(ref targetOrientationSlot, 3 * Vector<float>.Count) = source.Orientation.W;
-        }
-
-        //This looks a little different because it's used by AABB calculation, not constraint pairs.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void GatherDataForBounds(ref int start, int count, out RigidPoseWide poses, out Vector<int> shapeIndices, out Vector<float> maximumExpansion)
-        {
-            Debug.Assert(count <= Vector<float>.Count);
-            Unsafe.SkipInit(out poses);
-            Unsafe.SkipInit(out shapeIndices);
-            Unsafe.SkipInit(out maximumExpansion);
-            ref var targetPositionBase = ref Unsafe.As<Vector<float>, float>(ref poses.Position.X);
-            ref var targetOrientationBase = ref Unsafe.As<Vector<float>, float>(ref poses.Orientation.X);
-            ref var targetShapeBase = ref Unsafe.As<Vector<int>, int>(ref shapeIndices);
-            ref var targetExpansionBase = ref Unsafe.As<Vector<float>, float>(ref maximumExpansion);
-            for (int i = 0; i < count; ++i)
-            {
-                var index = Unsafe.Add(ref start, i);
-                GatherPose(ref targetPositionBase, ref targetOrientationBase, i, index);
-                ref var collidable = ref Collidables[index];
-                Unsafe.Add(ref targetShapeBase, i) = collidable.Shape.Index;
-                //Not entirely pleased with the fact that this pulls in some logic from bounds calculation.
-                Unsafe.Add(ref targetExpansionBase, i) = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : collidable.SpeculativeMargin;
-            }
-        }
-
-
-
     }
 }

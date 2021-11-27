@@ -256,7 +256,7 @@ namespace Demos.Demos.Sponsors
 
             //We'll hardcode the overlord newts. Not going to be a problem, I suspect.
             {
-                var worldTextPosition = Simulation.Statics.Poses[Simulation.Statics.HandleToIndex[overlordNewtHandle.Value]].Position + new Vector3(0, 48, 0);
+                var worldTextPosition = Simulation.Statics[overlordNewtHandle].Pose.Position + new Vector3(0, 48, 0);
                 Helpers.GetScreenLocation(worldTextPosition, viewProjection, resolution, out var screenspacePosition);
                 const float nameHeight = 14;
                 var name = sponsors3[0].Name;

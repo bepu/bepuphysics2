@@ -156,18 +156,19 @@ namespace BepuPhysics.Collidables
 
         /// <summary>
         /// Index of the shape used by the body. While this can be changed, any transition from shapeless->shapeful or shapeful->shapeless must be reported to the broad phase. 
-        /// If you need to perform such a transition, consider using Bodies.ChangeShape or Bodies.ApplyDescription; those functions update the relevant state.
+        /// If you need to perform such a transition, consider using <see cref="Bodies.SetShape"/> or <see cref="Bodies.ApplyDescription"/>; those functions update the relevant state.
         /// </summary>
         public TypedIndex Shape;
+
         /// <summary>
-        /// Size of the margin around the surface of the shape in which contacts can be generated. These contacts will have negative depth and only contribute if the frame's velocities
+        /// Automatically computed size of the margin around the surface of the shape in which contacts can be generated. These contacts will have negative depth and only contribute if the frame's velocities
         /// would push the shapes of a pair into overlap. 
-        /// <para>This is automatically set by bounding box prediction each frame, and is bound by the <see cref="ContinuousDetection.MinimumSpeculativeMargin"/> and <see cref="ContinuousDetection.MaximumSpeculativeMargin"/> values.
+        /// <para>This is automatically set by bounding box prediction each frame, and is bound by the collidable's <see cref="ContinuousDetection.MinimumSpeculativeMargin"/> and <see cref="ContinuousDetection.MaximumSpeculativeMargin"/> values.
         /// The effective speculative margin for a collision pair can also be modified from <see cref="INarrowPhaseCallbacks"/> callbacks.</para>
         /// <para>This should be positive to avoid jittering.</para>
         /// <para>It can also be used as a form of continuous collision detection, but excessively high values combined with fast motion may result in visible 'ghost collision' artifacts. 
         /// For continuous collision detection with less chance of ghost collisions, use <see cref="ContinuousDetectionMode.Continuous"/>.</para>
-        /// <para>Note that continuous collision detection will only refine collision times to within the speculative margin, so if using <see cref="ContinuousDetectionMode.Continuous"/>, consider using a smaller <see cref="ContinuousDetection.MaximumSpeculativeMargin"/> value.</para>
+        /// <para>If using <see cref="ContinuousDetectionMode.Continuous"/>, consider setting <see cref="ContinuousDetection.MaximumSpeculativeMargin"/> to a smaller value to help filter ghost collisions.</para>
         /// </summary>
         public float SpeculativeMargin;
         /// <summary>
