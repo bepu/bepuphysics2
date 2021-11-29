@@ -231,7 +231,7 @@ namespace BepuPhysics
                 broadPhase.StaticTree.GetOverlaps(bounds, ref collector);
                 for (int i = 0; i < collector.SleepingBodyHandles.Count; ++i)
                 {
-                    if (filter.ShouldAwaken(bodies.GetBodyReference(collector.SleepingBodyHandles[i])))
+                    if (filter.ShouldAwaken(bodies[collector.SleepingBodyHandles[i]]))
                         awakener.AwakenBody(collector.SleepingBodyHandles[i]);
                 }
                 collector.Dispose();

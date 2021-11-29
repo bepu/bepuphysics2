@@ -420,7 +420,7 @@ namespace Demos.Demos.Characters
             for (int i = start; i < end; ++i)
             {
                 ref var character = ref characters[i];
-                var characterBody = Simulation.Bodies.GetBodyReference(character.BodyHandle);
+                var characterBody = Simulation.Bodies[character.BodyHandle];
                 if (characterBody.Awake)
                 {
                     Simulation.BroadPhase.GetActiveBoundsPointers(characterBody.Collidable.BroadPhaseIndex, out var min, out var max);

@@ -34,7 +34,7 @@ namespace Demos.Demos.Sponsors
         public void Update(Simulation simulation, double time, float height, in Vector2 arenaMin, in Vector2 arenaMax, Random random, float inverseDt)
         {
             const float jumpDuration = 1;
-            var body = simulation.Bodies.GetBodyReference(BodyHandle);
+            var body = simulation.Bodies[BodyHandle];
             if (time >= nextAllowedJump)
             {
                 //Choose a jump location. It should be within the arena, and generally somewhere ahead of the newt.
@@ -96,7 +96,7 @@ namespace Demos.Demos.Sponsors
         public readonly void Render(Simulation simulation, List<Sponsor> sponsors, Renderer renderer, in Matrix viewProjection, in Vector2 resolution, TextBuilder text, Font font)
         {
             var name = sponsors[SponsorIndex].Name;
-            var body = simulation.Bodies.GetBodyReference(BodyHandle);
+            var body = simulation.Bodies[BodyHandle];
             Helpers.GetScreenLocation(body.Pose.Position + new Vector3(0, 8, 0), viewProjection, resolution, out var screenspacePosition);
             const float nameHeight = 14;
             var nameLength = GlyphBatch.MeasureLength(name, font, nameHeight);

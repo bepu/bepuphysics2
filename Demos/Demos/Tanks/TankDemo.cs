@@ -273,7 +273,7 @@ namespace Demos.Demos.Tanks
                 ref var impact = ref projectileImpacts[i];
                 ref var explosion = ref explosions.Allocate(BufferPool);
                 explosion.Age = 0;
-                explosion.Position = Simulation.Bodies.GetBodyReference(impact.ProjectileHandle).Pose.Position;
+                explosion.Position = Simulation.Bodies[impact.ProjectileHandle].Pose.Position;
                 explosion.Scale = 1f;
                 explosion.Color = new Vector3(1f, 0.5f, 0);
                 Simulation.Bodies.Remove(impact.ProjectileHandle);
@@ -289,7 +289,7 @@ namespace Demos.Demos.Tanks
                             if (aiTank.HitPoints == 0)
                             {
                                 ref var deathExplosion = ref explosions.Allocate(BufferPool);
-                                deathExplosion.Position = Simulation.Bodies.GetBodyReference(aiTank.Controller.Tank.Turret).Pose.Position;
+                                deathExplosion.Position = Simulation.Bodies[aiTank.Controller.Tank.Turret].Pose.Position;
                                 deathExplosion.Scale = 3;
                                 deathExplosion.Age = 0;
                                 deathExplosion.Color = new Vector3(1, 0, 0);

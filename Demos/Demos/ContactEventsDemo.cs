@@ -260,7 +260,7 @@ namespace Demos.Demos
         /// <param name="handler">Handlers to use for the body.</param>
         public void Register(BodyHandle body, IContactEventHandler handler)
         {
-            Register(simulation.Bodies.GetBodyReference(body).CollidableReference, handler);
+            Register(simulation.Bodies[body].CollidableReference, handler);
         }
 
         /// <summary>
@@ -308,7 +308,7 @@ namespace Demos.Demos
         /// <param name="body">Body to stop listening for.</param>
         public void Unregister(BodyHandle body)
         {
-            Unregister(simulation.Bodies.GetBodyReference(body).CollidableReference);
+            Unregister(simulation.Bodies[body].CollidableReference);
         }
 
         /// <summary>
@@ -709,10 +709,10 @@ namespace Demos.Demos
             eventHandler = new EventHandler(Simulation, BufferPool);
 
             var listenedBody1 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 5, 0), 1, Simulation.Shapes, new Box(1, 2, 3)));
-            events.Register(Simulation.Bodies.GetBodyReference(listenedBody1).CollidableReference, eventHandler);
+            events.Register(Simulation.Bodies[listenedBody1].CollidableReference, eventHandler);
 
             var listenedBody2 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0.5f, 10, 0), 1, Simulation.Shapes, new Capsule(0.25f, 0.7f)));
-            events.Register(Simulation.Bodies.GetBodyReference(listenedBody2).CollidableReference, eventHandler);
+            events.Register(Simulation.Bodies[listenedBody2].CollidableReference, eventHandler);
 
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 1, 30)))));

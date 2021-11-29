@@ -113,7 +113,7 @@ namespace Demos.Demos.Tanks
             //Decompose the aim direction into target angles for the turret and barrel servos.
             //First, we need to compute the frame of reference and transform the aim direction into the tank's local space.
             //aimDirection * inverse(body.Pose.Orientation) * Tank.LocalBodyPose.Orientation * inverse(Tank.TurretBasis)
-            QuaternionEx.ConcatenateWithoutOverlap(QuaternionEx.Conjugate(simulation.Bodies.GetBodyReference(Body).Pose.Orientation), FromBodyLocalToTurretBasisLocal, out var toTurretBasis);
+            QuaternionEx.ConcatenateWithoutOverlap(QuaternionEx.Conjugate(simulation.Bodies[Body].Pose.Orientation), FromBodyLocalToTurretBasisLocal, out var toTurretBasis);
             //-Z in the turret basis points along the 0 angle direction for both swivel and pitch.
             //+Y is 90 degrees for pitch.
             //+X is 90 degres for swivel.
@@ -150,7 +150,7 @@ namespace Demos.Demos.Tanks
         /// <param name="barrelDirection">Direction in which the barrel points.</param>
         public readonly void ComputeBarrelDirection(Simulation simulation, out Vector3 barrelDirection)
         {
-            QuaternionEx.Transform(BarrelLocalDirection, simulation.Bodies.GetBodyReference(Barrel).Pose.Orientation, out barrelDirection);
+            QuaternionEx.Transform(BarrelLocalDirection, simulation.Bodies[Barrel].Pose.Orientation, out barrelDirection);
         }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace Demos.Demos.Tanks
         /// <returns>Handle of the created projectile body.</returns>
         public BodyHandle Fire(Simulation simulation, CollidableProperty<TankDemoBodyProperties> bodyProperties)
         {
-            var barrel = simulation.Bodies.GetBodyReference(Barrel);
+            var barrel = simulation.Bodies[Barrel];
             ref var barrelPose = ref barrel.Pose;
             RigidPose.Transform(BarrelLocalProjectileSpawn, barrelPose, out var projectileSpawn);
             QuaternionEx.Transform(BarrelLocalDirection, barrelPose.Orientation, out var barrelDirection);
@@ -413,7 +413,7 @@ namespace Demos.Demos.Tanks
             ClearBodyProperties(ref properties[Body]);
             ClearBodyProperties(ref properties[Turret]);
             ClearBodyProperties(ref properties[Barrel]);
-            var turret = simulation.Bodies.GetBodyReference(Turret);
+            var turret = simulation.Bodies[Turret];
             turret.Awake = true;
             turret.Velocity.Linear += new Vector3(0, 10, 0);
             for (int i =0; i < Constraints.Length; ++i)

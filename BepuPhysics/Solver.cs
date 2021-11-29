@@ -351,7 +351,7 @@ namespace BepuPhysics
                                         else
                                         {
                                             //Sleeping set references are handles.
-                                            kinematicByInertia = bodies.GetBodyReference(new BodyHandle { Value = encodedBodyReference & Bodies.BodyReferenceMask }).Kinematic;
+                                            kinematicByInertia = bodies[new BodyHandle { Value = encodedBodyReference & Bodies.BodyReferenceMask }].Kinematic;
                                         }
                                         Debug.Assert(kinematicByEncodedReference == kinematicByInertia, "Constraint reference encoded kinematicity must match actual kinematicity by inertia.");
                                     }
@@ -379,7 +379,7 @@ namespace BepuPhysics
             }
             for (int i = 0; i < ConstrainedKinematicHandles.Count; ++i)
             {
-                var bodyReference = bodies.GetBodyReference(new BodyHandle(ConstrainedKinematicHandles[i]));
+                var bodyReference = bodies[new BodyHandle(ConstrainedKinematicHandles[i])];
                 Debug.Assert(bodyReference.Kinematic && bodyReference.Constraints.Count > 0, "Any body listed in the constrained kinematics set must be kinematic and constrained.");
             }
         }
@@ -1560,7 +1560,7 @@ namespace BepuPhysics
         {
             if (ActiveSet.SequentialFallback.TryRemoveDynamicBodyFromTracking(bodyIndex, ref allocationIdsToFree))
             {
-                Debug.Assert(batchReferencedHandles[FallbackBatchThreshold].Contains(bodyHandle.Value) || bodies.GetBodyReference(bodyHandle).Kinematic,
+                Debug.Assert(batchReferencedHandles[FallbackBatchThreshold].Contains(bodyHandle.Value) || bodies[bodyHandle].Kinematic,
                     "The batch referenced handles must include all constraint-involved dynamics, but will not include kinematics.");
                 batchReferencedHandles[FallbackBatchThreshold].Unset(bodyHandle.Value);
             }
@@ -1577,7 +1577,7 @@ namespace BepuPhysics
         }
         internal unsafe void UpdateReferencesForBodyBecomingKinematic(BodyHandle bodyHandle, int bodyIndex)
         {
-            Debug.Assert(bodies.GetBodyReference(bodyHandle).Kinematic);
+            Debug.Assert(bodies[bodyHandle].Kinematic);
             //Any constraints that connect only kinematic bodies together should be removed; they'll NaN out.
             //Ideally, the user would handle this for all non-contact constraints, but it would be rather annoying to 
             //have to explicitly enumerate and remove all contact constraints any time you wanted to make a body kinematic.

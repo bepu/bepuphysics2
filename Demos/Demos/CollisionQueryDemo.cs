@@ -126,7 +126,7 @@ namespace Demos.Demos
             }
             else
             {
-                var bodyReference = Simulation.Bodies.GetBodyReference(reference.BodyHandle);
+                var bodyReference = Simulation.Bodies[reference.BodyHandle];
                 pose = bodyReference.Pose;
                 shapeIndex = bodyReference.Collidable.Shape;
             }

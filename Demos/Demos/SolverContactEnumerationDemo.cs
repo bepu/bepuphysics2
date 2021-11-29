@@ -220,7 +220,7 @@ namespace Demos.Demos
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
-            var sensorBody = Simulation.Bodies.GetBodyReference(sensorBodyHandle);
+            var sensorBody = Simulation.Bodies[sensorBodyHandle];
             var extractor = new Extractor(BufferPool, sensorBody.Constraints.Count);
             //The basic idea behind the contact extractor is to submit it to a narrow phase contact accessor that is able to understand the solver's layout,
             //which will then call the contact extractor's relevant callbacks for the type of constraint encountered.
@@ -236,7 +236,7 @@ namespace Demos.Demos
             for (int manifoldIndex = 0; manifoldIndex < extractor.ConstraintContacts.Count; ++manifoldIndex)
             {
                 ref var constraintContacts = ref extractor.ConstraintContacts[manifoldIndex];
-                var bodyA = Simulation.Bodies.GetBodyReference(constraintContacts.BodyA);
+                var bodyA = Simulation.Bodies[constraintContacts.BodyA];
                 sensorContactCount += constraintContacts.Contacts.Count;
                 for (int contactIndex = 0; contactIndex < constraintContacts.Contacts.Count; ++contactIndex)
                 {

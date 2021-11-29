@@ -45,13 +45,13 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<CarDemo>();
             AddOption<ConstrainedKinematicIntegrationTest>();
             AddOption<ConstraintTestDemo>();
             AddOption<RagdollTubeDemo>();
             AddOption<FountainStressTestDemo>();
             AddOption<RopeTwistDemo>();
             AddOption<NewtDemo>();
-            AddOption<CarDemo>();
             AddOption<CharacterDemo>();
             AddOption<TankDemo>();
             AddOption<ColosseumDemo>();

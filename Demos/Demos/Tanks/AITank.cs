@@ -32,7 +32,7 @@ namespace Demos.Demos.Tanks
 
         public void Update(Simulation simulation, CollidableProperty<TankDemoBodyProperties> bodyProperties, Random random, long frameIndex, in Vector2 playAreaMin, in Vector2 playAreaMax, int aiIndex, ref QuickList<AITank> aiTanks, ref int projectileCount)
         {
-            ref var currentPose = ref simulation.Bodies.GetBodyReference(Controller.Tank.Body).Pose;
+            ref var currentPose = ref simulation.Bodies[Controller.Tank.Body].Pose;
             //tankBodyPose = localTankBodyPose * tankPose
             //tankPose = inverse(localTankBodyPose) * tankBodyPose
             QuaternionEx.TransformUnitY(QuaternionEx.Concatenate(QuaternionEx.Conjugate(Controller.Tank.BodyLocalOrientation), currentPose.Orientation), out var tankUp);
@@ -51,7 +51,7 @@ namespace Demos.Demos.Tanks
                 }
             }
             ref var targetTank = ref aiTanks[Target];
-            var targetTankBody = simulation.Bodies.GetBodyReference(targetTank.Controller.Tank.Body);
+            var targetTankBody = simulation.Bodies[targetTank.Controller.Tank.Body];
             ref var targetTankPosition = ref targetTankBody.Pose.Position;
             var currentTankPosition2D = new Vector2(currentPose.Position.X, currentPose.Position.Z);
             var targetTankPosition2D = new Vector2(targetTankPosition.X, targetTankPosition.Z);
@@ -91,7 +91,7 @@ namespace Demos.Demos.Tanks
             //If we're far away from the target but are pointing in the right direction, zoom.
             var zoom = targetDirectionLength > 50 && targetHorizontalMovementDirection.Y > 0.8f;
             //We're not going to compute an optimal firing solution- just aim directly at the middle of the other tank. Pretty poor choice, but that's fine.
-            ref var barrelPosition = ref simulation.Bodies.GetBodyReference(Controller.Tank.Barrel).Pose.Position;
+            ref var barrelPosition = ref simulation.Bodies[Controller.Tank.Barrel].Pose.Position;
             var barrelToTarget = targetTankPosition - barrelPosition;
             var barrelToTargetLength = barrelToTarget.Length();
             barrelToTarget = barrelToTargetLength > 1e-10f ? barrelToTarget / barrelToTargetLength : new Vector3(0, 1, 0);

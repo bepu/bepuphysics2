@@ -31,12 +31,12 @@ namespace Demos.Demos.Sponsors
 
         public void Update(CharacterControllers characters, Simulation simulation, ref QuickList<SponsorNewt> newts, in Vector2 arenaMin, in Vector2 arenaMax, Random random)
         {
-            var body = simulation.Bodies.GetBodyReference(bodyHandle);
+            var body = simulation.Bodies[bodyHandle];
             Vector2 influenceSum = default;
             bool spooked = false;
             for (int i = 0; i < newts.Count; ++i)
             {
-                ref var newtPosition = ref simulation.Bodies.GetBodyReference(newts[i].BodyHandle).Pose.Position;
+                ref var newtPosition = ref simulation.Bodies[newts[i].BodyHandle].Pose.Position;
                 var offset = newtPosition - body.Pose.Position;
                 var distance = offset.Length();
                 if (distance > 1e-10f)

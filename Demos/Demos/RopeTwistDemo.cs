@@ -104,7 +104,7 @@ namespace Demos.Demos
                 var wreckingBallPosition = startLocation - new Vector3(0, ropeBodyRadius + (ropeBodyRadius * 2 + ropeBodySpacing) * ropeBodyCount + bigWreckingBall.Radius, 0);
                 var description = BodyDescription.CreateDynamic(wreckingBallPosition, bigWreckingBallInertia, new CollidableDescription(bigWreckingBallIndex), new BodyActivityDescription(-0.01f));
                 var wreckingBallBodyHandle = Simulation.Bodies.Add(description);
-                var wreckingBallBody = Simulation.Bodies.GetBodyReference(wreckingBallBodyHandle);
+                var wreckingBallBody = Simulation.Bodies[wreckingBallBodyHandle];
                 wreckingBallBody.Velocity.Angular = new Vector3(0, 20, 0);
                 filters.Allocate(wreckingBallBodyHandle) = new Filter { RopeIndex = (short)(16384 + twistIndex), IndexInRope = ropeBodyCount };
 

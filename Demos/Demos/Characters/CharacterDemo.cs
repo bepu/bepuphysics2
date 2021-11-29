@@ -178,7 +178,7 @@ namespace Demos.Demos.Characters
 
             public void Update(Simulation simulation, double time)
             {
-                var body = simulation.Bodies.GetBodyReference(BodyHandle);
+                var body = simulation.Bodies[BodyHandle];
                 ref var pose = ref body.Pose;
                 ref var velocity = ref body.Velocity;
                 var targetPose = PoseCreator(time + TimeOffset);

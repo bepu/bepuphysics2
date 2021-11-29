@@ -37,7 +37,7 @@ namespace Demos.SpecializedTests
                 var z = i * 3;
                 var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, z), collidableA, activity));
                 var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, z), inertiaB, collidableB, activity));
-                Simulation.Bodies.GetBodyReference(a).Velocity.Linear = new Vector3(1, 0, 0);
+                Simulation.Bodies[a].Velocity.Linear = new Vector3(1, 0, 0);
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
@@ -48,8 +48,8 @@ namespace Demos.SpecializedTests
                 var z = i * 3;
                 var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 8, z), collidableA, activity));
                 var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 8, z + 2), inertiaB, collidableB, activity));
-                Simulation.Bodies.GetBodyReference(a).Velocity.Linear = new Vector3(1, 0, 0);
-                Simulation.Bodies.GetBodyReference(b).Velocity.Linear = new Vector3(1, 0, 0);
+                Simulation.Bodies[a].Velocity.Linear = new Vector3(1, 0, 0);
+                Simulation.Bodies[b].Velocity.Linear = new Vector3(1, 0, 0);
                 //Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 //Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
