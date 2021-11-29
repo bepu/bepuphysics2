@@ -296,8 +296,10 @@ namespace BepuPhysics
                 var shapeIndex = batch.ShapeIndices[i];
                 var bodyIndex = batch.Continuations[i].BodyIndex;
                 ref var motionState = ref batch.MotionStates[i];
-                //We have to clear out the bounds used by compounds, since each contributing body will merge their contribution into the whole.
-                broadPhase.GetActiveBoundsPointers(activeSet.Collidables[bodyIndex].BroadPhaseIndex, out var min, out var max);
+                //We have to clear out the bounds and speculative margin used by compounds, since each contributing body will merge their contribution into the whole.
+                ref var collidable = ref activeSet.Collidables[bodyIndex];
+                collidable.SpeculativeMargin = 0;
+                broadPhase.GetActiveBoundsPointers(collidable.BroadPhaseIndex, out var min, out var max);
                 *min = minValue;
                 *max = maxValue;
                 shapeBatch.shapes[batch.ShapeIndices[i]].AddChildBoundsToBatcher(ref this, motionState.Pose, motionState.Velocity, bodyIndex);
