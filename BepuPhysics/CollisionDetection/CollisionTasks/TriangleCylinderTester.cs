@@ -299,7 +299,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //y = sign(localNormal.Y) * b.HalfLength
                     //pointOnCylinder = (interiorOnCylinderN.X, y, interiorOnCylinderN.Y)
                     //t = dot(localTriangleCenter - pointOnCylinder, triangleNormal) / dot(triangleNormal, localNormal)
-                    var inverseDenominator = Vector<float>.One / faceNormalADotNormal;
+                    var inverseDenominator = new Vector<float>(-1f) / faceNormalADotNormal;
                     var yOffset = localTriangleCenter.Y - capCenterBY;
                     var xOffset0 = localTriangleCenter.X - interiorOnCylinder0.X;
                     var zOffset0 = localTriangleCenter.Z - interiorOnCylinder0.Y;
