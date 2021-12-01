@@ -80,12 +80,12 @@ namespace Demos.SpecializedTests
             builder.Add(new Box(1f, 1f, 1f), new RigidPose(new Vector3(1, 0, 0)), 1);
             builder.BuildDynamicCompound(out var children, out var inertia, out var center);
 
-            var compoundCollidable = new CollidableDescription(Simulation.Shapes.Add(new Compound(children)));
+            var compoundShapeIndex = Simulation.Shapes.Add(new Compound(children));
 
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 2, 0), inertia, compoundCollidable, new BodyActivityDescription(0.01f)));
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 4, 0), inertia, compoundCollidable, new BodyActivityDescription(0.01f)));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 2, 0), inertia, compoundShapeIndex, 0.01f));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 4, 0), inertia, compoundShapeIndex, 0.01f));
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(100, 1, 100)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(100, 1, 100))));
         }
     }
 }

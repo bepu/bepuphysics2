@@ -30,8 +30,8 @@ namespace Demos.Demos
             var bodyDescription = new BodyDescription
             {
                 //Make the uppermost block kinematic to hold up the rest of the chain.
-                Activity = new BodyActivityDescription(.01f),
-                Collidable = new CollidableDescription(ropeShapeIndex),
+                Activity = .01f,
+                Collidable = ropeShapeIndex,
             };
             for (int linkIndex = 0; linkIndex < bodyCount + 1; ++linkIndex)
             {
@@ -58,7 +58,7 @@ namespace Demos.Demos
         {
             var lastBodyReference = new BodyReference(bodyHandles[bodyHandles.Length - 1], simulation.Bodies);
             var wreckingBallPosition = lastBodyReference.Pose.Position - new Vector3(0, ropeBodyRadius + bodySpacing + wreckingBallRadius, 0);
-            var description = BodyDescription.CreateDynamic(wreckingBallPosition, wreckingBallInertia, new CollidableDescription(wreckingBallShapeIndex), new BodyActivityDescription(0.01f));
+            var description = BodyDescription.CreateDynamic(wreckingBallPosition, wreckingBallInertia, wreckingBallShapeIndex, 0.01f);
             //Give it a little bump.
             description.Velocity = new BodyVelocity(new Vector3(-10, 0, 0), default);
             var wreckingBallBodyHandle = simulation.Bodies.Add(description);
@@ -256,10 +256,10 @@ namespace Demos.Demos
                 rolloverInfo.Add(startLocation, $"100:1 mass ratio, {constraintsPerBody - 1}x extra skip constraints");
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(new Box(200, 1, 200))));
             Simulation.Statics.Add(new StaticDescription(
                 new Vector3(100, 70, 0), BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f),
-                new CollidableDescription(Simulation.Shapes.Add(new Capsule(8, 64)))));
+                Simulation.Shapes.Add(new Capsule(8, 64))));
 
         }
 

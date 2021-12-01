@@ -53,7 +53,7 @@ namespace Demos.Demos
                     {
                         var location = new Vector3(5, 5, 5) * new Vector3(i, j, k) + new Vector3(-width * 2.5f, 2.5f, -length * 2.5f);
                         //CreateKinematic is just a helper function that sets the inertia to all zeroes. We'll set the inertia to the actual value in the following switch.
-                        var bodyDescription = BodyDescription.CreateKinematic(location, new CollidableDescription(default), new BodyActivityDescription(0.1f));
+                        var bodyDescription = BodyDescription.CreateKinematic(location, default, 0.1f);
                         switch (j % 3)
                         {
                             case 0:
@@ -106,7 +106,7 @@ namespace Demos.Demos
                 {
                     return new Vector3(x, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y);
                 }, new Vector3(2, 3, 2), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-64, -10, -64), new CollidableDescription(Simulation.Shapes.Add(planeMesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-64, -10, -64), Simulation.Shapes.Add(planeMesh)));
 
         }
 

@@ -41,15 +41,15 @@ namespace Demos.SpecializedTests
 
             Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)))));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(3)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), Simulation.Shapes.Add(new Box(1500, 1, 1500))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), Simulation.Shapes.Add(new Sphere(3))));
 
             var bulletShape = new Sphere(0.5f);
             bulletShape.ComputeInertia(.25f, out var bulletInertia);
-            bulletDescription = BodyDescription.CreateDynamic(RigidPose.Identity, bulletInertia, new CollidableDescription(Simulation.Shapes.Add(bulletShape)), new BodyActivityDescription(0.01f));
+            bulletDescription = BodyDescription.CreateDynamic(RigidPose.Identity, bulletInertia, Simulation.Shapes.Add(bulletShape), 0.01f);
 
             DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(20), out var mesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(200, 0.5f, 120), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(200, 0.5f, 120), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), Simulation.Shapes.Add(mesh)));
         }
         BodyDescription bulletDescription;
         public override void Update(Window window, Camera camera, Input input, float dt)

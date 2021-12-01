@@ -44,14 +44,12 @@ namespace Demos.Demos
                             (-columnCount * 0.5f + columnIndex) * boxShape.Width,
                             (rowIndex + 0.5f) * boxShape.Height,
                             (pyramidIndex - pyramidCount * 0.5f) * (boxShape.Length + 4)),
-                            boxInertia,
-                            new CollidableDescription(boxIndex),
-                            new BodyActivityDescription(0.01f)));
+                            boxInertia, boxIndex, 0.01f));
                     }
                 }
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2500, 1, 2500)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), Simulation.Shapes.Add(new Box(2500, 1, 2500))));
         }
 
         //We'll randomize the size of bullets.

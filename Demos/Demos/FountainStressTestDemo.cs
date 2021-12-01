@@ -57,7 +57,7 @@ namespace Demos.Demos
                             -staticGridWidthInInstances * staticSpacing * 0.5f + i * staticSpacing,
                             -4 + 4 * (float)Math.Cos(i * 0.3) + 4 * (float)Math.Cos(j * 0.3),
                             -staticGridWidthInInstances * staticSpacing * 0.5f + j * staticSpacing),
-                            new CollidableDescription(staticShapeIndex));
+                            staticShapeIndex);
                     Simulation.Statics.Add(staticDescription);
                 }
             }
@@ -76,7 +76,7 @@ namespace Demos.Demos
                             startingRadius * (float)Math.Cos(angle),
                             0,
                             startingRadius * (float)Math.Sin(angle)),
-                            new CollidableDescription(kinematicShapeIndex),
+                            kinematicShapeIndex,
                             new BodyActivityDescription(0, 4));
                 kinematicHandles[i] = Simulation.Bodies.Add(description);
             }
@@ -262,8 +262,8 @@ namespace Demos.Demos
             {
                 Pose = pose,
                 LocalInertia = inertia,
-                Collidable = new CollidableDescription(shapeIndex),
-                Activity = new BodyActivityDescription(0.1f),
+                Collidable = shapeIndex,
+                Activity = 0.1f,
                 Velocity = velocity
             };
             switch (random.Next(3))

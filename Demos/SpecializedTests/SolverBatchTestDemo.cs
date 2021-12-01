@@ -37,7 +37,7 @@ namespace Demos.Demos
                 for (int j = 0; j < length; ++j)
                 {
                     var location = new Vector3(0, 30, 0) + new Vector3(spacing, 0, spacing) * (new Vector3(i, 0, j) + new Vector3(-width * 0.5f, 0, -length * 0.5f));
-                    var bodyDescription = BodyDescription.CreateDynamic(location, clothNodeInertia, new CollidableDescription(clothNodeShapeIndex), new BodyActivityDescription(0.01f));
+                    var bodyDescription = BodyDescription.CreateDynamic(location, clothNodeInertia, clothNodeShapeIndex, 0.01f);
                     nodeHandles[i][j] = Simulation.Bodies.Add(bodyDescription);
 
                 }
@@ -84,13 +84,13 @@ namespace Demos.Demos
             var bigBallShape = new Sphere(45);
             var bigBallShapeIndex = Simulation.Shapes.Add(bigBallShape);
 
-            var bigBallDescription = BodyDescription.CreateKinematic(new Vector3(-10, -15, 0), new CollidableDescription(bigBallShapeIndex), new BodyActivityDescription(0));
+            var bigBallDescription = BodyDescription.CreateKinematic(new Vector3(-10, -15, 0), bigBallShapeIndex, 0);
             bigBallHandle = Simulation.Bodies.Add(bigBallDescription);
 
             var groundShape = new Box(200, 1, 200);
             var groundShapeIndex = Simulation.Shapes.Add(groundShape);
 
-            var groundDescription = BodyDescription.CreateKinematic(new Vector3(0, -10, 0), new CollidableDescription(groundShapeIndex), new BodyActivityDescription(0));
+            var groundDescription = BodyDescription.CreateKinematic(new Vector3(0, -10, 0), groundShapeIndex, 0);
             Simulation.Bodies.Add(groundDescription);
         }
         BodyHandle bigBallHandle;

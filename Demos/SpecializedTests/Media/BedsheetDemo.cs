@@ -24,8 +24,8 @@ namespace Demos.Demos
         {
             var description = new BodyDescription
             {
-                Activity = new BodyActivityDescription(0.01f),
-                Collidable = new CollidableDescription(Simulation.Shapes.Add(new Sphere(bodyRadius))),
+                Activity = 0.01f,
+                Collidable = Simulation.Shapes.Add(new Sphere(bodyRadius)),
                 LocalInertia = default,
                 Pose = new RigidPose(default, orientation)
             };
@@ -130,12 +130,12 @@ namespace Demos.Demos
 
 
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(80, 20, 80)))));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-20, 22, 30), new CollidableDescription(Simulation.Shapes.Add(new Box(34, 4, 14)))));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(20, 22, 30), new CollidableDescription(Simulation.Shapes.Add(new Box(34, 4, 14)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), Simulation.Shapes.Add(new Box(80, 20, 80))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-20, 22, 30), Simulation.Shapes.Add(new Box(34, 4, 14))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(20, 22, 30), Simulation.Shapes.Add(new Box(34, 4, 14))));
 
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(65.5f, 8f, 20), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(15, 15)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(65.5f, 8f, 20), Simulation.Shapes.Add(new Cylinder(15, 15))));
 
 
             {
@@ -152,7 +152,7 @@ namespace Demos.Demos
                 CreateAreaConstraints(handles, new SpringSettings(30, 1));
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(400, 1, 400)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(new Box(400, 1, 400))));
 
         }
 

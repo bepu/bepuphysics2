@@ -191,7 +191,7 @@ namespace Demos.Demos.Tanks
             RigidPose.Transform(bodyToWheelSuspension + suspensionDirection * suspensionLength, tankPose, out wheelPose.Position);
             QuaternionEx.ConcatenateWithoutOverlap(localWheelOrientation, tankPose.Orientation, out wheelPose.Orientation);
 
-            var wheelHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(wheelPose, wheelInertia, new CollidableDescription(wheelShape), new BodyActivityDescription(0.01f)));
+            var wheelHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(wheelPose, wheelInertia, wheelShape, 0.01f));
             wheelHandles.AllocateUnsafely() = wheelHandle;
 
             //We need a LinearAxisServo to act as the suspension spring, pushing the wheel down.
@@ -244,7 +244,7 @@ namespace Demos.Demos.Tanks
         static ref SubgroupCollisionFilter CreatePart(Simulation simulation, in TankPartDescription part, RigidPose pose, CollidableProperty<TankDemoBodyProperties> properties, out BodyHandle handle)
         {
             RigidPose.MultiplyWithoutOverlap(part.Pose, pose, out var bodyPose);
-            handle = simulation.Bodies.Add(BodyDescription.CreateDynamic(bodyPose, part.Inertia, new CollidableDescription(part.Shape), new BodyActivityDescription(0.01f)));
+            handle = simulation.Bodies.Add(BodyDescription.CreateDynamic(bodyPose, part.Inertia, part.Shape, 0.01f));
             ref var partProperties = ref properties.Allocate(handle);
             partProperties = new TankDemoBodyProperties { Friction = part.Friction, TankPart = true };
             return ref partProperties.Filter;

@@ -48,7 +48,7 @@ namespace Demos.SpecializedTests
                 new BodyActivityDescription(-1));
             Simulation.Bodies.Add(boxDescription);
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(4, 1, 4)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), Simulation.Shapes.Add(new Box(4, 1, 4))));
 
         }
 

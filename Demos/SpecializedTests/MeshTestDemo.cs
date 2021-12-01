@@ -40,7 +40,7 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         var location = new Vector3(5, 5, 5) * new Vector3(i, j, k);// + new Vector3(-width * 1.5f, 1.5f, -length * 1.5f);
-                        var bodyDescription = BodyDescription.CreateDynamic(location, default, new CollidableDescription(default), new BodyActivityDescription(0.01f));
+                        var bodyDescription = BodyDescription.CreateDynamic(location, default, default, 0.01f);
                         switch ((i + j) % 3)
                         {
                             case 0:
@@ -69,16 +69,15 @@ namespace Demos.SpecializedTests
 
             DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(5, 5, 5), out var newtMesh);
             newtMesh.ComputeClosedInertia(10, out var newtInertia, out _);
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(30, 20, 30)), newtInertia,
-                new CollidableDescription(Simulation.Shapes.Add(newtMesh)), new BodyActivityDescription(0.01f)));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(30, 20, 30)), newtInertia, Simulation.Shapes.Add(newtMesh), 0.01f));
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(30, 15, 30), new CollidableDescription(Simulation.Shapes.Add(new Box(15, 1, 15)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(30, 15, 30), Simulation.Shapes.Add(new Box(15, 1, 15))));
 
             DemoMeshHelper.LoadModel(content, BufferPool, @"Content\box.obj", new Vector3(5, 1, 5), out var boxMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(10, 5, -20), new CollidableDescription(Simulation.Shapes.Add(boxMesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(10, 5, -20), Simulation.Shapes.Add(boxMesh)));
 
             DemoMeshHelper.CreateFan(64, 16, new Vector3(1, 1, 1), BufferPool, out var fanMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-10, 0, -20), new CollidableDescription(Simulation.Shapes.Add(fanMesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-10, 0, -20), Simulation.Shapes.Add(fanMesh)));
 
             const int planeWidth = 128;
             const int planeHeight = 128;
@@ -87,8 +86,7 @@ namespace Demos.SpecializedTests
                 {
                     return new Vector3(x - planeWidth / 2, 1 * MathF.Cos(x / 2f) * MathF.Sin(y / 2f), y - planeHeight / 2);
                 }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(64, -10, 64), BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
-                new CollidableDescription(Simulation.Shapes.Add(planeMesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(64, -10, 64), BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
         }
 
 

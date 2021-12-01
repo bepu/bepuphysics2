@@ -102,7 +102,7 @@ namespace Demos.Demos
                 const float ropeBodyRadius = 0.1f;
                 const int ropeBodyCount = 130;
                 var wreckingBallPosition = startLocation - new Vector3(0, ropeBodyRadius + (ropeBodyRadius * 2 + ropeBodySpacing) * ropeBodyCount + bigWreckingBall.Radius, 0);
-                var description = BodyDescription.CreateDynamic(wreckingBallPosition, bigWreckingBallInertia, new CollidableDescription(bigWreckingBallIndex), new BodyActivityDescription(-0.01f));
+                var description = BodyDescription.CreateDynamic(wreckingBallPosition, bigWreckingBallInertia, bigWreckingBallIndex, 0.01f);
                 var wreckingBallBodyHandle = Simulation.Bodies.Add(description);
                 var wreckingBallBody = Simulation.Bodies[wreckingBallBodyHandle];
                 wreckingBallBody.Velocity.Angular = new Vector3(0, 20, 0);
@@ -161,7 +161,7 @@ namespace Demos.Demos
             }
 
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(new Box(200, 1, 200))));
 
         }
     }

@@ -106,7 +106,7 @@ namespace Demos.Demos
             var description = new BodyDescription
             {
                 Activity = new BodyActivityDescription(0.01f),
-                Collidable = new CollidableDescription(Simulation.Shapes.Add(new Sphere(bodyRadius))),
+                Collidable = Simulation.Shapes.Add(new Sphere(bodyRadius)),
                 LocalInertia = default,
                 Pose = new RigidPose(default, orientation)
             };
@@ -241,10 +241,10 @@ namespace Demos.Demos
 
             Simulation.Statics.Add(new StaticDescription(
                 new Vector3(60, 20, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI * 0.5f),
-                new CollidableDescription(Simulation.Shapes.Add(new Capsule(8, 120)))));
+                Simulation.Shapes.Add(new Capsule(8, 120))));
             Simulation.Statics.Add(new StaticDescription(
                 new Vector3(30, 5, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f),
-                new CollidableDescription(Simulation.Shapes.Add(new Capsule(8, 60)))));
+                Simulation.Shapes.Add(new Capsule(8, 60))));
 
             {
                 var position = new Vector3(10, 40, -32);
@@ -254,7 +254,7 @@ namespace Demos.Demos
                 rolloverInfo.Add(position + new Vector3(32, 2, 0), "Medium stiffness with area constraints");
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-40, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-40, 0, 0), Simulation.Shapes.Add(new Box(200, 1, 200))));
 
         }
 

@@ -45,9 +45,7 @@ namespace Demos.Demos
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(
                         (-columnCount * 0.5f + columnIndex) * boxShape.Width,
                         (rowIndex + 0.5f) * boxShape.Height + 10, 0),
-                        boxInertia,
-                        new CollidableDescription(boxIndex),
-                        new BodyActivityDescription(0.01f)));
+                        boxInertia, boxIndex, 0.01f));
                 }
             }
 
@@ -62,8 +60,7 @@ namespace Demos.Demos
                 {
                     return new Vector3(x - planeWidth / 2, 1 * MathF.Cos(x / 2f) * MathF.Sin(y / 2f), y - planeHeight / 2);
                 }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
-                new CollidableDescription(Simulation.Shapes.Add(planeMesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
         }
 
         struct Contact

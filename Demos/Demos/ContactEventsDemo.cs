@@ -715,8 +715,8 @@ namespace Demos.Demos
             events.Register(Simulation.Bodies[listenedBody2].CollidableReference, eventHandler);
 
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 1, 30)))));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 3, 15), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 5, 1)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), Simulation.Shapes.Add(new Box(30, 1, 30))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 3, 15), Simulation.Shapes.Add(new Box(30, 5, 1))));
         }
 
         public override void Update(Window window, Camera camera, Input input, float dt)

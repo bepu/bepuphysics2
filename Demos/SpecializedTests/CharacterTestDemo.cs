@@ -30,8 +30,8 @@ namespace Demos.SpecializedTests
                     Simulation.Bodies.Add(
                         BodyDescription.CreateDynamic(
                             new Vector3(250 * random.NextSingle() - 125, 2, 250 * random.NextSingle() - 125), new BodyInertia { InverseMass = 1 },
-                            new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f))),
-                            new BodyActivityDescription(-1))));
+                            Simulation.Shapes.Add(new Capsule(0.5f, 1f)),
+                            -1)));
 
                 character.CosMaximumSlope = .707f;
                 character.LocalUp = Vector3.UnitY;
@@ -84,8 +84,7 @@ namespace Demos.SpecializedTests
                     Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
                     return new Vector3(offsetFromCenter.X, MathF.Cos(x / 2f) + MathF.Sin(y / 2f), offsetFromCenter.Y);
                 }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
-                new CollidableDescription(Simulation.Shapes.Add(planeMesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
 
             removedCharacters = new QuickQueue<CharacterController>(characters.CharacterCount, BufferPool);
         }

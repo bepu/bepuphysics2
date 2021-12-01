@@ -429,19 +429,19 @@ namespace Demos.Demos
                 }
             }
             voxels = new Voxels(voxelIndices, new Vector3(1, 1, 1), BufferPool);
-            handle = Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(voxels))));
+            handle = Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(voxels)));
 
             var random = new Random(5);
             var shapeToDrop = new Box(1, 1, 1);
             shapeToDrop.ComputeInertia(1, out var shapeToDropInertia);
-            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDropInertia, new CollidableDescription(Simulation.Shapes.Add(shapeToDrop)), new BodyActivityDescription(0.01f));
+            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDropInertia, Simulation.Shapes.Add(shapeToDrop), 0.01f);
             for (int i = 0; i < 4096; ++i)
             {
                 descriptionToDrop.Pose.Position = new Vector3(15 + 10 * random.NextSingle(), 45 + 150 * random.NextSingle(), 15 + 10 * random.NextSingle());
                 Simulation.Bodies.Add(descriptionToDrop);
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 1, 300)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), Simulation.Shapes.Add(new Box(300, 1, 300))));
         }
 
         public override unsafe void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)

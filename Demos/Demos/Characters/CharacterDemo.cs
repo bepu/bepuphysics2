@@ -43,19 +43,19 @@ namespace Demos.Demos.Characters
                     var position = origin + new Vector3(i, 0, j) * spacing;
                     var orientation = QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle())), 10 * random.NextSingle());
                     var shape = new Box(0.1f + 0.3f * random.NextSingle(), 0.1f + 0.3f * random.NextSingle(), 0.1f + 0.3f * random.NextSingle());
-                    var collidable = new CollidableDescription(Simulation.Shapes.Add(shape));
+                    var shapeIndex = Simulation.Shapes.Add(shape);
                     shape.ComputeInertia(1, out var inertia);
                     var choice = (i + j) % 3;
                     switch (choice)
                     {
                         case 0:
-                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(position, orientation), inertia, collidable, new BodyActivityDescription(0.01f)));
+                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(position, orientation), inertia, shapeIndex, 0.01f));
                             break;
                         case 1:
-                            Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(position, orientation), collidable, new BodyActivityDescription(0.01f)));
+                            Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(position, orientation), shapeIndex, 0.01f));
                             break;
                         case 2:
-                            Simulation.Statics.Add(new StaticDescription(position, orientation, collidable));
+                            Simulation.Statics.Add(new StaticDescription(position, orientation, shapeIndex));
                             break;
 
                     }
@@ -91,7 +91,7 @@ namespace Demos.Demos.Characters
 
             //Include a giant newt to test character-newt behavior and to ensure thematic consistency.
             DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(15, 15, 15), out var newtMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(newtMesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0.5f, 0), Simulation.Shapes.Add(newtMesh)));
 
             //Give the newt a tongue, I guess.
             var tongueBase = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(0, 8.4f, 24), default, default));
@@ -111,7 +111,7 @@ namespace Demos.Demos.Characters
             });
 
             //And a seesaw thing?
-            var seesawBase = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(0, 1f, 34f), new CollidableDescription(Simulation.Shapes.Add(new Box(0.2f, 1, 0.2f))), new BodyActivityDescription(0.01f)));
+            var seesawBase = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(0, 1f, 34f), Simulation.Shapes.Add(new Box(0.2f, 1, 0.2f)), 0.01f));
             var seesaw = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 1.7f, 34f), 1, Simulation.Shapes, new Box(1, 0.1f, 6f)));
             Simulation.Solver.Add(seesawBase, seesaw, new Hinge
             {
@@ -139,25 +139,25 @@ namespace Demos.Demos.Characters
                 pose.Orientation = Quaternion.Identity;
                 return pose;
             };
-            var platformCollidable = new CollidableDescription(Simulation.Shapes.Add(new Box(5, 1, 5)));
+            var platormShapeIndex = Simulation.Shapes.Add(new Box(5, 1, 5));
             for (int i = 0; i < movingPlatforms.Length; ++i)
             {
-                movingPlatforms[i] = new MovingPlatform(platformCollidable, i * 3559, 1f / 60f, Simulation, poseCreator);
+                movingPlatforms[i] = new MovingPlatform(platormShapeIndex, i * 3559, 1f / 60f, Simulation, poseCreator);
             }
             var box = new Box(4, 1, 4);
-            var boxCollidable = new CollidableDescription(Simulation.Shapes.Add(box));
+            var boxShapeIndex = Simulation.Shapes.Add(box);
             const int width = 8;
             for (int i = 0; i < width; ++i)
             {
                 for (int j = 0; j < width; ++j)
                 {
-                    Simulation.Statics.Add(new StaticDescription(new Vector3(box.Width, 0, box.Length) * new Vector3(i, 0, j) + new Vector3(32f, 1, 0), boxCollidable));
+                    Simulation.Statics.Add(new StaticDescription(new Vector3(box.Width, 0, box.Length) * new Vector3(i, 0, j) + new Vector3(32f, 1, 0), boxShapeIndex));
                 }
 
             }
 
             //Prevent the character from falling into the void.
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(new Box(200, 1, 200))));
         }
 
 

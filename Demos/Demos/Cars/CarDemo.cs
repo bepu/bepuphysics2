@@ -95,7 +95,7 @@ namespace Demos.Demos.Cars
                     Simulation.Statics.Add(new StaticDescription(
                         new Vector3(0, buildingShape.HalfHeight, 0) + landmarkMin + landmarkSpan * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()),
                         QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, random.NextSingle() * MathF.PI),
-                        new CollidableDescription(Simulation.Shapes.Add(buildingShape))));
+                        Simulation.Shapes.Add(buildingShape)));
                 }
             }
 
@@ -112,7 +112,7 @@ namespace Demos.Demos.Cars
                     new SpringSettings(5, 0.7f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
                     forwardSpeed: 50, forwardForce: 5, zoomMultiplier: 2, backwardSpeed: 10, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f,
                     wheelBaseLength: wheelBaseLength, wheelBaseWidth: wheelBaseWidth, ackermanSteering: 1);
-                
+
                 aiControllers[i].LaneOffset = random.NextSingle() * 20 - 10;
             }
 
@@ -135,7 +135,7 @@ namespace Demos.Demos.Cars
 
                 }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
-                new CollidableDescription(Simulation.Shapes.Add(planeMesh))));
+                Simulation.Shapes.Add(planeMesh)));
 
 
         }

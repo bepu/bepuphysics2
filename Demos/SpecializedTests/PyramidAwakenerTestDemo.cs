@@ -40,9 +40,7 @@ namespace Demos.Demos
                             (-columnCount * 0.5f + columnIndex) * boxShape.Width,
                             (rowIndex + 0.5f) * boxShape.Height,
                             (pyramidIndex - pyramidCount * 0.5f) * (boxShape.Length + 4)),
-                            boxInertia,
-                            new CollidableDescription(boxIndex),
-                            new BodyActivityDescription(0.01f)));
+                            boxInertia, boxIndex, 0.01f));
                     }
                 }
             }
@@ -50,10 +48,10 @@ namespace Demos.Demos
             var staticShape = new Box(250, 1, 250);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(staticShapeIndex)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), staticShapeIndex));
 
         }
-        
+
         int frameIndex;
         Random random = new Random(5);
         public override void Update(Window window, Camera camera, Input input, float dt)

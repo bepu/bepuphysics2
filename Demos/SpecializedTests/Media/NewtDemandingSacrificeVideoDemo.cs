@@ -22,17 +22,17 @@ namespace Demos.SpecializedTests
             filters = new CollidableProperty<SubgroupCollisionFilter>(BufferPool);
             Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks() { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionLastTimestepper());
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)))));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(70, 20, 80)))));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 7.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(80, 15, 90)))));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(90, 10, 100)))));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 2.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(100, 5, 110)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), Simulation.Shapes.Add(new Box(1500, 1, 1500))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), Simulation.Shapes.Add(new Box(70, 20, 80))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 7.5f, 0), Simulation.Shapes.Add(new Box(80, 15, 90))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 5, 0), Simulation.Shapes.Add(new Box(90, 10, 100))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 2.5f, 0), Simulation.Shapes.Add(new Box(100, 5, 110))));
 
             //High fidelity simulation isn't super important on this one.
             Simulation.Solver.IterationCount = 2;
 
             DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(30), out var mesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 20, 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, 0), new CollidableDescription(Simulation.Shapes.Add(mesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 20, 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, 0), Simulation.Shapes.Add(mesh)));
         }
 
         Random random = new Random(5);
@@ -52,23 +52,24 @@ namespace Demos.SpecializedTests
             });
             var linearVelocity = Vector3.Normalize(new Vector3(-2 + 4 * random.NextSingle(), 31 + 4 * random.NextSingle(), 50) - pose.Position) * 40;
             var handles = RagdollDemo.AddRagdoll(pose.Position, pose.Orientation, ragdollIndex++, filters, Simulation);
+            var bodies = Simulation.Bodies;
             //This could be done better, but...  ... .... ..........
-            new BodyReference(handles.Hips, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.Abdomen, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.Chest, Simulation.Bodies).Velocity =GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.Head, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.LeftArm.UpperArm, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.LeftArm.LowerArm, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.LeftArm.Hand, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.RightArm.UpperArm, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.RightArm.LowerArm, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.RightArm.Hand, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.LeftLeg.UpperLeg, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.LeftLeg.LowerLeg, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.LeftLeg.Foot, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.RightLeg.UpperLeg, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.RightLeg.LowerLeg, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
-            new BodyReference(handles.RightLeg.Foot, Simulation.Bodies).Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.Hips].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.Abdomen].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.Chest].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.Head].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.LeftArm.UpperArm].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.LeftArm.LowerArm].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.LeftArm.Hand].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.RightArm.UpperArm].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.RightArm.LowerArm].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.RightArm.Hand].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.LeftLeg.UpperLeg].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.LeftLeg.LowerLeg].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.LeftLeg.Foot].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.RightLeg.UpperLeg].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.RightLeg.LowerLeg].Velocity = GetRandomizedVelocity(linearVelocity);
+            bodies[handles.RightLeg.Foot].Velocity = GetRandomizedVelocity(linearVelocity);
 
             base.Update(window, camera, input, dt);
         }

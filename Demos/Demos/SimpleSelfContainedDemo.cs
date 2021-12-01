@@ -211,9 +211,9 @@ namespace Demos.Demos
             //Drop a ball on a big static box.
             var sphere = new Sphere(1);
             sphere.ComputeInertia(1, out var sphereInertia);
-            simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 5, 0), sphereInertia, new CollidableDescription(simulation.Shapes.Add(sphere)), new BodyActivityDescription(0.01f)));
+            simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 5, 0), sphereInertia, simulation.Shapes.Add(sphere), 0.01f));
 
-            simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(simulation.Shapes.Add(new Box(500, 1, 500)))));
+            simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), simulation.Shapes.Add(new Box(500, 1, 500))));
 
             var threadDispatcher = new SimpleThreadDispatcher(Environment.ProcessorCount);
 

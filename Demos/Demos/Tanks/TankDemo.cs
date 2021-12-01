@@ -116,7 +116,7 @@ namespace Demos.Demos.Tanks
                 Simulation.Statics.Add(new StaticDescription(
                     new Vector3(0, buildingShape.HalfHeight - 4f + GetHeightForPosition(position.X, position.Z, planeWidth, inverseTerrainScale, terrainPosition), 0) + position,
                     QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, random.NextSingle() * MathF.PI),
-                    new CollidableDescription(Simulation.Shapes.Add(buildingShape))));
+                    Simulation.Shapes.Add(buildingShape)));
             }
 
             DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,
@@ -125,8 +125,7 @@ namespace Demos.Demos.Tanks
                         var position2D = new Vector2(vX, vY) * terrainScale + terrainPosition;
                         return new Vector3(position2D.X, GetHeightForPosition(position2D.X, position2D.Y, planeWidth, inverseTerrainScale, terrainPosition), position2D.Y);
                     }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0),
-                new CollidableDescription(Simulation.Shapes.Add(planeMesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(planeMesh)));
 
             explosions = new QuickList<Explosion>(32, BufferPool);
 

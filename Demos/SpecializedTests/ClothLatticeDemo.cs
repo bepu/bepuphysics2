@@ -86,13 +86,13 @@ namespace Demos.SpecializedTests
             var bigBallShape = new Sphere(25);
             var bigBallShapeIndex = Simulation.Shapes.Add(bigBallShape);
 
-            var bigBallDescription = new StaticDescription(new Vector3(-10, -15, 0), new CollidableDescription(bigBallShapeIndex, ContinuousDetection.Discrete(0, 0.1f)));
+            var bigBallDescription = new StaticDescription(new Vector3(-10, -15, 0), bigBallShapeIndex);
             Simulation.Statics.Add(bigBallDescription);
 
             var groundShape = new Box(200, 1, 200);
             var groundShapeIndex = Simulation.Shapes.Add(groundShape);
 
-            var groundDescription = new StaticDescription(new Vector3(0, -10, 0), new CollidableDescription(groundShapeIndex));
+            var groundDescription = new StaticDescription(new Vector3(0, -10, 0), groundShapeIndex);
             Simulation.Statics.Add(groundDescription);
         }
 

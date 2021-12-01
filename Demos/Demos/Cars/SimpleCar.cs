@@ -43,7 +43,7 @@ namespace Demos.Demos.Cars
             RigidPose.Transform(bodyToWheelSuspension + suspensionDirection * suspensionLength, bodyPose, out wheelPose.Position);
             QuaternionEx.ConcatenateWithoutOverlap(localWheelOrientation, bodyPose.Orientation, out wheelPose.Orientation);
             WheelHandles handles;
-            handles.Wheel = simulation.Bodies.Add(BodyDescription.CreateDynamic(wheelPose, wheelInertia, new CollidableDescription(wheelShape), new BodyActivityDescription(0.01f)));
+            handles.Wheel = simulation.Bodies.Add(BodyDescription.CreateDynamic(wheelPose, wheelInertia, new CollidableDescription(wheelShape, 0.5f), new BodyActivityDescription(0.01f)));
 
             handles.SuspensionSpring = simulation.Solver.Add(bodyHandle, handles.Wheel, new LinearAxisServo
             {
@@ -85,7 +85,7 @@ namespace Demos.Demos.Cars
             in Vector3 suspensionDirection, float suspensionLength, in SpringSettings suspensionSettings, in Quaternion localWheelOrientation)
         {
             SimpleCar car;
-            car.Body = simulation.Bodies.Add(BodyDescription.CreateDynamic(pose, bodyInertia, new CollidableDescription(bodyShape), new BodyActivityDescription(0.01f)));
+            car.Body = simulation.Bodies.Add(BodyDescription.CreateDynamic(pose, bodyInertia, new CollidableDescription(bodyShape, 0.5f), new BodyActivityDescription(0.01f)));
             ref var bodyProperties = ref properties.Allocate(car.Body);
             bodyProperties = new CarBodyProperties { Friction = bodyFriction, Filter = new SubgroupCollisionFilter(car.Body.Value, 0) };
             QuaternionEx.TransformUnitY(localWheelOrientation, out var wheelAxis);

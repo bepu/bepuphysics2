@@ -104,7 +104,7 @@ namespace Demos.Demos
                 }
             }
 
-            collidableMaterials.Allocate(Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2500, 30, 2500)))))) =
+            collidableMaterials.Allocate(Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15f, 0), Simulation.Shapes.Add(new Box(2500, 30, 2500))))) =
                 new SimpleMaterial { FrictionCoefficient = 1, MaximumRecoveryVelocity = 2, SpringSettings = new SpringSettings(30, 1) };
         }
     }

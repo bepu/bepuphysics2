@@ -29,8 +29,7 @@ namespace Demos.SpecializedTests
             for (int meshIndex = 0; meshIndex < 3; ++meshIndex)
             {
                 Simulation.Bodies.Add(
-                    BodyDescription.CreateDynamic(new Vector3(0, 2 + meshIndex * 2, 0), approximateInertia,
-                    new CollidableDescription(meshShapeIndex), new BodyActivityDescription(0.01f)));
+                    BodyDescription.CreateDynamic(new Vector3(0, 2 + meshIndex * 2, 0), approximateInertia, meshShapeIndex, 0.01f));
             }
 
             var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 12);
@@ -44,13 +43,13 @@ namespace Demos.SpecializedTests
             compoundBuilder.Dispose();
             for (int i = 0; i < 3; ++i)
             {
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(5, 2 + i * 2, 0), compoundInertia, new CollidableDescription(compoundShapeIndex), new BodyActivityDescription(0.01f)));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(5, 2 + i * 2, 0), compoundInertia, compoundShapeIndex, 0.01f));
             }
 
             var staticShape = new Box(1500, 1, 1500);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(staticShapeIndex)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), staticShapeIndex));
         }
     }
 }

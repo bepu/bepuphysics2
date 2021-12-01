@@ -389,7 +389,7 @@ namespace Demos.SpecializedTests
                 var wheelOrientation = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI * 0.5f);
                 var aDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(x, 3, 0), wheelOrientation), inertiaA, wheelShape, activity);
                 var bDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(x, 6, 0), wheelOrientation), inertiaB, wheelShape, activity);
-                var cDescription = BodyDescription.CreateKinematic(new Vector3(x, 4.5f, -1), new CollidableDescription(Simulation.Shapes.Add(new Box(3, 6, 1))), activity);
+                var cDescription = BodyDescription.CreateKinematic(new Vector3(x, 4.5f, -1), Simulation.Shapes.Add(new Box(3, 6, 1)), activity);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
                 var c = Simulation.Bodies.Add(cDescription);
@@ -417,7 +417,7 @@ namespace Demos.SpecializedTests
                 });
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(256, 1, 256))));
         }
     }
 }

@@ -7,6 +7,9 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics
 {
+    /// <summary>
+    /// Describes the thresholds for a body going to sleep.
+    /// </summary>
     public struct BodyActivityDescription
     {
         /// <summary>
@@ -30,14 +33,42 @@ namespace BepuPhysics
             SleepThreshold = sleepThreshold;
             MinimumTimestepCountUnderThreshold = minimumTimestepCountUnderThreshold;
         }
+
+        /// <summary>
+        /// Creates a body activity description. Uses a <see cref="MinimumTimestepCountUnderThreshold"/> of 32.
+        /// </summary>
+        /// <param name="sleepThreshold">Threshold of squared velocity under which the body is allowed to go to sleep. This is compared against dot(linearVelocity, linearVelocity) + dot(angularVelocity, angularVelocity).</param>
+        /// Note that the body is not guaranteed to go to sleep immediately after meeting this minimum.</param>
+        public static implicit operator BodyActivityDescription(float sleepThreshold)
+        {
+            return new BodyActivityDescription(sleepThreshold);
+        }
     }
 
+    /// <summary>
+    /// Describes a body's state.
+    /// </summary>
     public struct BodyDescription
     {
+        /// <summary>
+        /// Position and orientation of the body.
+        /// </summary>
         public RigidPose Pose;
+        /// <summary>
+        /// Linear and angular velocity of the body.
+        /// </summary>
         public BodyVelocity Velocity;
+        /// <summary>
+        /// Mass and inertia tensor of the body.
+        /// </summary>
         public BodyInertia LocalInertia;
+        /// <summary>
+        /// Shape and collision detection settings for the body.
+        /// </summary>
         public CollidableDescription Collidable;
+        /// <summary>
+        /// Sleeping settings for the body.
+        /// </summary>
         public BodyActivityDescription Activity;
 
         //Convex shape helpers.
@@ -143,7 +174,7 @@ namespace BepuPhysics
                 Pose = pose,
                 Velocity = velocity,
                 Activity = GetDefaultActivity(shape),
-                Collidable = new CollidableDescription(shapes.Add(shape))
+                Collidable = shapes.Add(shape)
             };
             shape.ComputeInertia(mass, out description.LocalInertia);
             return description;
@@ -266,7 +297,7 @@ namespace BepuPhysics
                 Pose = pose,
                 Velocity = velocity,
                 Activity = GetDefaultActivity(shape),
-                Collidable = new CollidableDescription(shapes.Add(shape))
+                Collidable = shapes.Add(shape)
             };
             return description;
         }

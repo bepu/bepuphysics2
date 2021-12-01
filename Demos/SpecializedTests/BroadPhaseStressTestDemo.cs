@@ -44,11 +44,11 @@ namespace Demos.SpecializedTests
                         var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, 1, -length)) + randomizationBase + r * randomizationSpan;
                         if ((i + j + k) % 2 == 1)
                         {
-                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(location, sphereInertia, new CollidableDescription(shapeIndex), new BodyActivityDescription(-1)));
+                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(location, sphereInertia, shapeIndex, -1));
                         }
                         else
                         {
-                            Simulation.Statics.Add(new StaticDescription(location, new CollidableDescription(shapeIndex)));
+                            Simulation.Statics.Add(new StaticDescription(location, shapeIndex));
                         }
                     }
                 }

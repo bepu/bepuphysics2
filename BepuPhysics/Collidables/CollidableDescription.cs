@@ -42,5 +42,14 @@
         public CollidableDescription(TypedIndex shape, float maximumSpeculativeMargin) : this(shape, ContinuousDetection.Discrete(0, maximumSpeculativeMargin))
         {
         }
+
+        /// <summary>
+        /// Constructs a new collidable description with <see cref="ContinuousDetectionMode.Passive"/>. Will use a minimum speculative margin of 0 and a maximum of <see cref="float.MaxValue"/>.
+        /// </summary>
+        /// <param name="shapeIndex">Shape index to use for the collidable.</param>
+        public static implicit operator CollidableDescription(TypedIndex shapeIndex)
+        {
+            return new CollidableDescription(shapeIndex);
+        }
     }
 }

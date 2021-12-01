@@ -65,7 +65,7 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         var location = new Vector3(6, 3, 6) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 5.5f, -length * 1.5f);
-                        var bodyDescription = BodyDescription.CreateKinematic(location, new CollidableDescription(default), new BodyActivityDescription(0.01f));
+                        var bodyDescription = BodyDescription.CreateKinematic(location, default, 0.01f);
                         var index = shapeCount++;
                         switch (index % 5)
                         {
@@ -97,7 +97,7 @@ namespace Demos.SpecializedTests
             }
 
             DemoMeshHelper.CreateDeformedPlane(128, 128, (x, y) => new Vector3(x - 64, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - 64), new Vector3(4, 1, 4), BufferPool, out var mesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(mesh))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
         }
 
     }

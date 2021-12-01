@@ -56,13 +56,13 @@ namespace Demos.SpecializedTests
             builder.AddForKinematic(Simulation.Shapes.Add(new Box(1, 2, panelShape.Length)), new RigidPose(new Vector3(0, tubeRadius - 1, 0)), 0);
             builder.BuildKinematicCompound(out var children);
             var compound = new BigCompound(children, Simulation.Shapes, BufferPool);
-            tubeHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(tubeCenter, new BodyVelocity(default, new Vector3(0, 0, .25f)), new CollidableDescription(Simulation.Shapes.Add(compound)), new BodyActivityDescription()));
+            tubeHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(tubeCenter, new BodyVelocity(default, new Vector3(0, 0, .25f)), Simulation.Shapes.Add(compound), 0f));
             filters[tubeHandle] = new SubgroupCollisionFilter(int.MaxValue);
             builder.Dispose();
 
             var staticShape = new Box(300, 1, 300);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
-            var staticDescription = new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(staticShapeIndex));
+            var staticDescription = new StaticDescription(new Vector3(0, -0.5f, 0), staticShapeIndex);
             Simulation.Statics.Add(staticDescription);
         }
 
