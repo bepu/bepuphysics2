@@ -39,7 +39,7 @@ namespace Demos.SpecializedTests
                 for (int j = 0; j < length; ++j)
                 {
                     var location = new Vector3(0, 30, 0) + new Vector3(spacing, 0, spacing) * (new Vector3(i, 0, j) + new Vector3(-width * 0.5f, 0, -length * 0.5f));
-                    var bodyDescription = BodyDescription.CreateDynamic(location, clothNodeInertia, new CollidableDescription(clothNodeShapeIndex, ContinuousDetection.Discrete(0, 0.1f)), new BodyActivityDescription(0.01f));
+                    var bodyDescription = BodyDescription.CreateDynamic(location, clothNodeInertia, new(clothNodeShapeIndex, ContinuousDetection.Discrete(0, 0.1f)), 0.01f);
                     nodeHandles[i][j] = Simulation.Bodies.Add(bodyDescription);
 
                 }

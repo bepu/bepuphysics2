@@ -105,7 +105,7 @@ namespace Demos.Demos
         {
             var description = new BodyDescription
             {
-                Activity = new BodyActivityDescription(0.01f),
+                Activity = 0.01f,
                 Collidable = Simulation.Shapes.Add(new Sphere(bodyRadius)),
                 LocalInertia = default,
                 Pose = new RigidPose(default, orientation)

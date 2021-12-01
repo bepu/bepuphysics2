@@ -90,7 +90,7 @@ namespace Demos.Demos
 
             var shape = new Sphere(1);
             shape.ComputeInertia(1, out var inertia);
-            var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, inertia, new CollidableDescription(Simulation.Shapes.Add(shape), ContinuousDetection.Discrete(20, 20)), new BodyActivityDescription(1e-2f));
+            var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, inertia, new(Simulation.Shapes.Add(shape), ContinuousDetection.Discrete(20, 20)), 1e-2f);
 
             for (int i = 0; i < 100; ++i)
             {

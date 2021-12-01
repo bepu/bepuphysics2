@@ -110,7 +110,7 @@ namespace Demos.SpecializedTests
             var hullShapeIndex = Simulation.Shapes.Add(hullShape);
             hullShape.ComputeInertia(1, out var inertia);
 
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(hullShapeIndex, ContinuousDetection.Discrete(20, 20)), new BodyActivityDescription(0.01f)));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new (hullShapeIndex, ContinuousDetection.Discrete(20, 20)), 0.01f));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(-25, -5, 0), Simulation.Shapes.Add(new Sphere(2))));
             Simulation.Statics.Add(new StaticDescription(new Vector3(-20, -5, 0), Simulation.Shapes.Add(new Capsule(0.5f, 2))));

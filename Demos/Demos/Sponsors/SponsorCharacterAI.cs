@@ -15,7 +15,7 @@ namespace Demos.Demos.Sponsors
         Vector2 targetLocation;
         public SponsorCharacterAI(CharacterControllers characters, in CollidableDescription characterCollidable, in Vector3 initialPosition, in Vector2 targetLocation)
         {
-            bodyHandle = characters.Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f }, characterCollidable, new BodyActivityDescription(-1f)));
+            bodyHandle = characters.Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f }, characterCollidable, -1f));
 
             ref var character = ref characters.AllocateCharacter(bodyHandle);
             character.LocalUp = new Vector3(0, 1, 0);

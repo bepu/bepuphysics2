@@ -38,7 +38,7 @@ namespace Demos.Demos
 
             //Using a restricted speculative margin by setting the maximumSpeculativeMargin to 0.2 means that collision detection won't accept distant contacts.
             //This pretty much eliminates ghost collisions, while the continuous sweep helps avoid missed collisions.
-            var spinnerBlade = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, bladeInertia, new CollidableDescription(shapeIndex, ContinuousDetection.Continuous(1e-4f, 1e-4f, maximumSpeculativeMargin: 0.2f)), 0.01f));
+            var spinnerBlade = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, bladeInertia, new(shapeIndex, ContinuousDetection.Continuous(1e-4f, 1e-4f, maximumSpeculativeMargin: 0.2f)), 0.01f));
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new Hinge { LocalHingeAxisA = new Vector3(0, 0, 1), LocalHingeAxisB = new Vector3(0, 0, 1), LocalOffsetB = new Vector3(0, 0, -3), SpringSettings = new SpringSettings(30, 1) });
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new AngularAxisMotor { LocalAxisA = new Vector3(0, 0, 1), Settings = new MotorSettings(10, 1e-4f), TargetVelocity = rotationSpeed });
             return Simulation.Solver.Add(spinnerBase, new OneBodyLinearServo { ServoSettings = ServoSettings.Default, SpringSettings = new SpringSettings(30, 1) });
@@ -55,8 +55,8 @@ namespace Demos.Demos
             //Also note that the PositionFirstTimestepper is the simplest timestepping mode, but since it integrates velocity into position at the start of the frame, directly modified velocities outside of the timestep
             //will be integrated before collision detection or the solver has a chance to intervene. That's fine in this demo. Other built-in options include the PositionLastTimestepper and the SubsteppingTimestepper.
             //Note that the timestepper also has callbacks that you can use for executing logic between processing stages, like BeforeCollisionDetection.
-            Simulation = Simulation.Create(BufferPool, 
-                new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(240, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 1f }, 
+            Simulation = Simulation.Create(BufferPool,
+                new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(240, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 1f },
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var shape = new Box(1, 1, 1);
@@ -67,16 +67,16 @@ namespace Demos.Demos
                 for (int j = 0; j < 10; ++j)
                 {
                     //These two falling dynamics have pretty small speculative margins. The second one uses continuous collision detection sweeps to generate speculative contacts.
-                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-4 - 2 * j, 100 + (i + j) * 2, i * 2), new BodyVelocity { Linear = new Vector3(0, -150, 0) }, inertia,
-                        new CollidableDescription(shapeIndex, ContinuousDetection.Discrete(maximumSpeculativeMargin: 0.01f)), new BodyActivityDescription(0.01f)));
+                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-4 - 2 * j, 100 + (i + j) * 2, i * 2), new(new Vector3(0, -150, 0)), inertia,
+                        new(shapeIndex, ContinuousDetection.Discrete(maximumSpeculativeMargin: 0.01f)), 0.01f));
                     //The minimum progression duration parameter at 1e-3 means the CCD sweep won't miss any collisions that last at least 1e-3 units of time- so, if time is measured in seconds,
                     //then this will capture any collision that an update rate of 1000hz would.
                     //Note also that the sweep convergence threshold is actually pretty loose at 100hz. Despite that, it can still lead to reasonably good speculative contacts with solid impact behavior.
                     //That's because the sweep does not directly generate contacts- it generates a time of impact estimate, and then the discrete contact generation
                     //runs to create the actual contact manifold. That provides high quality contact positions and speculative depths.
                     //If the ground that these boxes were smashing into was something like a mesh- which is infinitely thin- you may want to increase the sweep accuracy.
-                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(4 + 2 * j, 100 + (i + j) * 2, i * 2), new BodyVelocity { Linear = new Vector3(0, -150, 0) }, inertia,
-                        new CollidableDescription(shapeIndex, ContinuousDetection.Continuous(1e-3f, 1e-2f, maximumSpeculativeMargin: 0.01f)), new BodyActivityDescription(0.01f)));
+                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(4 + 2 * j, 100 + (i + j) * 2, i * 2), new(new Vector3(0, -150, 0)), inertia,
+                        new(shapeIndex, ContinuousDetection.Continuous(1e-3f, 1e-2f, maximumSpeculativeMargin: 0.01f)), 0.01f));
                 }
             }
             rolloverInfo = new RolloverInfo();

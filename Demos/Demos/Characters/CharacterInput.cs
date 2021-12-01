@@ -39,9 +39,8 @@ namespace Demos.Demos.Characters
             //Because characters are dynamic, they require a defined BodyInertia. For the purposes of the demos, we don't want them to rotate or fall over, so the inverse inertia tensor is left at its default value of all zeroes.
             //This is effectively equivalent to giving it an infinite inertia tensor- in other words, no torque will cause it to rotate.
             bodyHandle = characters.Simulation.Bodies.Add(
-                BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f / mass }, 
-                new CollidableDescription(shapeIndex, ContinuousDetection.CreatePassive(minimumSpeculativeMargin, float.MaxValue)), 
-                new BodyActivityDescription(shape.Radius * 0.02f)));
+                BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f / mass },
+                new(shapeIndex, ContinuousDetection.CreatePassive(minimumSpeculativeMargin, float.MaxValue)), shape.Radius * 0.02f));
             ref var character = ref characters.AllocateCharacter(bodyHandle);
             character.LocalUp = new Vector3(0, 1, 0);
             character.CosMaximumSlope = MathF.Cos(maximumSlope);

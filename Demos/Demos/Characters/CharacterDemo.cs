@@ -171,7 +171,7 @@ namespace Demos.Demos.Characters
             public MovingPlatform(CollidableDescription collidable, double timeOffset, float goalSatisfactionTime, Simulation simulation, Func<double, RigidPose> poseCreator)
             {
                 PoseCreator = poseCreator;
-                BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(poseCreator(timeOffset), collidable, new BodyActivityDescription(-1)));
+                BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(poseCreator(timeOffset), collidable, -1));
                 InverseGoalSatisfactionTime = 1f / goalSatisfactionTime;
                 TimeOffset = timeOffset;
             }

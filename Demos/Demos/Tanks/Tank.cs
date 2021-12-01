@@ -165,9 +165,9 @@ namespace Demos.Demos.Tanks
             ref var barrelPose = ref barrel.Pose;
             RigidPose.Transform(BarrelLocalProjectileSpawn, barrelPose, out var projectileSpawn);
             QuaternionEx.Transform(BarrelLocalDirection, barrelPose.Orientation, out var barrelDirection);
-            var projectileHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(projectileSpawn, new BodyVelocity(barrelDirection * ProjectileSpeed + barrel.Velocity.Linear), ProjectileInertia,
+            var projectileHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(projectileSpawn, new(barrelDirection * ProjectileSpeed + barrel.Velocity.Linear), ProjectileInertia,
                 //The projectile moves pretty fast, so we'll use continuous collision detection.
-                new CollidableDescription(ProjectileShape, ContinuousDetection.Continuous(1e-3f, 1e-3f, 0, 0.1f)), new BodyActivityDescription(0.01f)));
+                new(ProjectileShape, ContinuousDetection.Continuous(1e-3f, 1e-3f, 0, 0.1f)), 0.01f));
             ref var projectileProperties = ref bodyProperties.Allocate(projectileHandle);
             projectileProperties.Friction = 1f;
             //Prevent the projectile from colliding with the firing tank.
@@ -406,7 +406,7 @@ namespace Demos.Demos.Tanks
         public void Explode(Simulation simulation, CollidableProperty<TankDemoBodyProperties> properties, BufferPool pool)
         {
             //When the tank explodes, we just remove all the binding constraints and let it fall apart and reset body properties.
-            for (int i =0; i < WheelHandles.Length; ++i)
+            for (int i = 0; i < WheelHandles.Length; ++i)
             {
                 ClearBodyProperties(ref properties[WheelHandles[i]]);
             }
@@ -416,7 +416,7 @@ namespace Demos.Demos.Tanks
             var turret = simulation.Bodies[Turret];
             turret.Awake = true;
             turret.Velocity.Linear += new Vector3(0, 10, 0);
-            for (int i =0; i < Constraints.Length; ++i)
+            for (int i = 0; i < Constraints.Length; ++i)
             {
                 simulation.Solver.Remove(Constraints[i]);
             }
