@@ -120,7 +120,7 @@ namespace Demos.Demos
             //Collidables can be associated with either bodies or statics. We have to look in a different place depending on which it is.
             if (reference.Mobility == CollidableMobility.Static)
             {
-                ref var collidable = ref Simulation.Statics[reference.StaticHandle];
+                var collidable = Simulation.Statics[reference.StaticHandle];
                 pose = collidable.Pose;
                 shapeIndex = collidable.Shape;
             }

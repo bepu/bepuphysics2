@@ -112,17 +112,30 @@ namespace BepuPhysics
         internal IslandAwakener awakener;
 
         /// <summary>
-        /// Gets a reference to the raw memory backing a static collidable.
+        /// Gets a reference to the memory backing a static collidable. The <see cref="StaticReference"/> type is a helper that exposes common operations for statics.
         /// </summary>
-        /// <param name="handle">Handle of the static to retrieve a memory reference for.</param>
-        /// <returns>Direct reference to the memory backing a static collidable.</returns>
-        public ref Static this[StaticHandle handle]
+        /// <param name="handle">Handle of the static to retrieve a reference for.</param>
+        /// <returns>Reference to the memory backing a static collidable.</returns>
+        /// <remarks>Equivalent to <see cref="GetStaticReference(StaticHandle)"/>.</remarks>
+        public StaticReference this[StaticHandle handle]
         {
             get
             {
                 ValidateExistingHandle(handle);
-                return ref StaticsBuffer[HandleToIndex[handle.Value]];
+                return new StaticReference(handle, this);
             }
+        }
+
+        /// <summary>
+        /// Gets a direct reference to the memory backing a static.
+        /// </summary>
+        /// <param name="handle">Handle of the static to get a reference of.</param>
+        /// <returns>Direct reference to the memory backing a static.</returns>
+        /// <remarks>This is distinct from the <see cref="this[StaticHandle]"/> indexer in that this returns the direct memory reference. <see cref="StaticReference"/> includes a layer of indirection that can expose more features.</remarks>
+        public ref Static GetDirectReference(StaticHandle handle)
+        {
+            ValidateExistingHandle(handle);
+            return ref StaticsBuffer[HandleToIndex[handle.Value]];
         }
 
         /// <summary>
@@ -276,7 +289,7 @@ namespace BepuPhysics
                 if (movedLeaf.Mobility == CollidableMobility.Static)
                 {
                     //This is a static collidable, not a body.
-                    this[movedLeaf.StaticHandle].BroadPhaseIndex = removedBroadPhaseIndex;
+                    GetDirectReference(movedLeaf.StaticHandle).BroadPhaseIndex = removedBroadPhaseIndex;
                 }
                 else
                 {

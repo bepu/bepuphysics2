@@ -49,47 +49,27 @@ namespace BepuPhysics
         /// <summary>
         /// Gets a the static's index in the statics collection.
         /// </summary>
-        public int Index
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Statics.HandleToIndex[Handle.Value]; }
-        }
+        public int Index => Statics.HandleToIndex[Handle.Value];
 
         /// <summary>
         /// Gets a reference to the entirety of the static's memory.
         /// </summary>
-        public ref Static Static
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return ref Statics[Handle];
-            }
-        }
+        public ref Static Static => ref Statics.GetDirectReference(Handle);
 
         /// <summary>
         /// Gets a reference to the static's pose.
         /// </summary>
-        public ref RigidPose Pose
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return ref Statics[Handle].Pose;
-            }
-        }
+        public ref RigidPose Pose => ref Statics.GetDirectReference(Handle).Pose;
 
         /// <summary>
         /// Gets a reference to the static's collision continuity settings.
         /// </summary>
-        public ref ContinuousDetection Continuity
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return ref Statics[Handle].Continuity;
-            }
-        }
+        public ref ContinuousDetection Continuity => ref Statics.GetDirectReference(Handle).Continuity;
+
+        /// <summary>
+        /// Gets the shape used by the static. To set the shape, use <see cref="SetShape(TypedIndex)"/> or <see cref="ApplyDescription(in StaticDescription)"/>.
+        /// </summary>
+        public TypedIndex Shape => Statics.GetDirectReference(Handle).Shape;
 
         /// <summary>
         /// <para>Gets a CollidableReference for this static. CollidableReferences uniquely identify a collidable object in a simulation by including both the dynamic/kinematic/static state of the object and its handle.</para>

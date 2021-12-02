@@ -16,7 +16,7 @@ namespace Demos.SpecializedTests
     public unsafe struct IndexReportingNarrowPhaseCallbacks : INarrowPhaseCallbacks
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
         {
             return true;
         }

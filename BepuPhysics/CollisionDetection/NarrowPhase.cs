@@ -405,27 +405,54 @@ namespace BepuPhysics.CollisionDetection
             Debug.Assert(a.Packed != b.Packed, "Excuse me, broad phase, but an object cannot collide with itself!");
             SortCollidableReferencesForPair(a, b, out var aMobility, out var bMobility, out a, out b);
             Debug.Assert(aMobility != CollidableMobility.Static || bMobility != CollidableMobility.Static, "Broad phase should not be able to generate static-static pairs.");
-            if (!Callbacks.AllowContactGeneration(workerIndex, a, b))
+
+            //Two static pairs are impossible (the broad phase doesn't test stuff in the static/sleeping tree against itself), and any pair with a static will put the body in slot A.
+            var twoBodies = bMobility != CollidableMobility.Static;
+            ref var bodyLocationA = ref Bodies.HandleToLocation[a.BodyHandle.Value];
+            ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
+            ref var stateA = ref setA.SolverStates[bodyLocationA.Index];
+            ref var collidableA = ref setA.Collidables[bodyLocationA.Index];
+            ContinuousDetection continuityB;
+            float speculativeMarginB;
+            if (twoBodies)
+            {
+                ref var bodyLocationB = ref Bodies.HandleToLocation[b.BodyHandle.Value];
+                ref var collidableB = ref Bodies.Sets[bodyLocationB.SetIndex].Collidables[bodyLocationB.Index];
+                continuityB = collidableB.Continuity;
+                speculativeMarginB = collidableB.SpeculativeMargin;
+            }
+            else
+            {
+                //Slot B is a static.
+                ref var staticB = ref Statics.GetDirectReference(b.StaticHandle);
+                continuityB = staticB.Continuity;
+                speculativeMarginB = 0;
+            }
+
+            //Add the speculative margins, but try to obey both collidables' bounds. Note that in the case of nonoverlapping intervals, the higher min ends up used.
+            var speculativeMargin =
+                MathF.Max(collidableA.Continuity.MinimumSpeculativeMargin, MathF.Max(continuityB.MinimumSpeculativeMargin,
+                MathF.Min(collidableA.Continuity.MaximumSpeculativeMargin, MathF.Min(continuityB.MaximumSpeculativeMargin,
+                    collidableA.SpeculativeMargin + speculativeMarginB))));
+
+            //By precalculating the speculative margin, we give the narrow phase callbacks the option of modifying it.
+            if (!Callbacks.AllowContactGeneration(workerIndex, a, b, ref speculativeMargin))
                 return;
             ref var overlapWorker = ref overlapWorkers[workerIndex];
             var pair = new CollidablePair(a, b);
-            if (aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static)
+            if (twoBodies)
             {
                 //Both references are bodies.
-                ref var bodyLocationA = ref Bodies.HandleToLocation[a.BodyHandle.Value];
                 ref var bodyLocationB = ref Bodies.HandleToLocation[b.BodyHandle.Value];
                 Debug.Assert(bodyLocationA.SetIndex == 0 || bodyLocationB.SetIndex == 0, "One of the two bodies must be active. Otherwise, something is busted!");
-                ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
                 ref var setB = ref Bodies.Sets[bodyLocationB.SetIndex];
-                ref var stateA = ref setA.SolverStates[bodyLocationA.Index];
                 ref var stateB = ref setB.SolverStates[bodyLocationB.Index];
-                ref var collidableA = ref setA.Collidables[bodyLocationA.Index];
                 ref var collidableB = ref setB.Collidables[bodyLocationB.Index];
                 AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
                     ref collidableA.Continuity, ref collidableB.Continuity,
-                    collidableA.SpeculativeMargin, collidableB.SpeculativeMargin,
                     collidableA.Shape, collidableB.Shape,
                     collidableA.BroadPhaseIndex, collidableB.BroadPhaseIndex,
+                    speculativeMargin,
                     ref stateA.Motion.Pose, ref stateB.Motion.Pose,
                     ref stateA.Motion.Velocity, ref stateB.Motion.Velocity);
             }
@@ -437,21 +464,17 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(aMobility != CollidableMobility.Static && bMobility == CollidableMobility.Static);
                 ref var bodyLocation = ref Bodies.HandleToLocation[a.BodyHandle.Value];
                 Debug.Assert(bodyLocation.SetIndex == 0, "The body of a body-static pair must be active.");
-                var staticIndex = Statics.HandleToIndex[b.StaticHandle.Value];
 
                 //TODO: Ideally, the compiler would see this and optimize away the relevant math in AddBatchEntries. That's a longshot, though. May want to abuse some generics to force it.
                 var zeroVelocity = default(BodyVelocity);
-                ref var bodySet = ref Bodies.ActiveSet;
-                ref var bodyState = ref bodySet.SolverStates[bodyLocation.Index];
-                ref var collidableA = ref bodySet.Collidables[bodyLocation.Index];
-                ref var collidableB = ref Statics[staticIndex];
+                ref var staticB = ref Statics.GetDirectReference(b.StaticHandle);
                 AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
-                    ref collidableA.Continuity, ref collidableB.Continuity,
-                    collidableA.SpeculativeMargin, 0,
-                    collidableA.Shape, collidableB.Shape,
-                    collidableA.BroadPhaseIndex, collidableB.BroadPhaseIndex,
-                    ref bodyState.Motion.Pose, ref collidableB.Pose,
-                    ref bodyState.Motion.Velocity, ref zeroVelocity);
+                    ref collidableA.Continuity, ref staticB.Continuity,
+                    collidableA.Shape, staticB.Shape,
+                    collidableA.BroadPhaseIndex, staticB.BroadPhaseIndex,
+                    speculativeMargin,
+                    ref stateA.Motion.Pose, ref staticB.Pose,
+                    ref stateA.Motion.Velocity, ref zeroVelocity);
             }
 
         }
@@ -473,19 +496,13 @@ namespace BepuPhysics.CollisionDetection
         private unsafe void AddBatchEntries(int workerIndex, ref OverlapWorker overlapWorker,
             ref CollidablePair pair,
             ref ContinuousDetection continuityA, ref ContinuousDetection continuityB,
-            float marginA, float marginB,
             TypedIndex shapeA, TypedIndex shapeB,
             int broadPhaseIndexA, int broadPhaseIndexB,
+            float speculativeMargin,
             ref RigidPose poseA, ref RigidPose poseB,
             ref BodyVelocity velocityA, ref BodyVelocity velocityB)
         {
             Debug.Assert(pair.A.Packed != pair.B.Packed);
-            //Add the speculative margins, but try to obey both collidables' bounds. Note that in the case of nonoverlapping intervals, the higher min ends up used.
-            var speculativeMargin =
-                MathF.Max(continuityA.MinimumSpeculativeMargin, MathF.Max(continuityB.MinimumSpeculativeMargin,
-                MathF.Min(continuityA.MaximumSpeculativeMargin, MathF.Min(continuityB.MaximumSpeculativeMargin,
-                    marginA + marginB))));
-
             var allowExpansion = continuityA.AllowExpansionBeyondSpeculativeMargin | continuityB.AllowExpansionBeyondSpeculativeMargin;
             //Note that we pick float.MaxValue for the maximum bounds expansion passive-involving pairs.
             //This is a compromise- looser bounds are not a correctness issue, so we're trading off potentially more subpairs
