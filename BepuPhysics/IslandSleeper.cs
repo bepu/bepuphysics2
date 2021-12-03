@@ -954,31 +954,6 @@ namespace BepuPhysics
             }
             ++scheduleOffset;
 
-
-            if (deterministic)
-            {
-                //The order in which sleeps occur affects the result of the simulation. To ensure determinism, we need to pin the sleep order to something
-                //which is deterministic. We will use the handle associated with each active body as the order provider.
-                pool.Take<int>(bodies.ActiveSet.Count, out var sortedIndices);
-                for (int i = 0; i < bodies.ActiveSet.Count; ++i)
-                {
-                    sortedIndices[i] = i;
-                }
-                //Handles are guaranteed to be unique; no need for three way partitioning.
-                HandleComparer comparer;
-                comparer.Handles = bodies.ActiveSet.IndexToHandle;
-                //TODO: This sort might end up being fairly expensive. On a very large simulation, it might even amount to 5% of the simulation time.
-                //It would be nice to come up with a better solution here. Some options include other sources of determinism, hiding the sort, and possibly enumerating directly over handles.
-                QuickSort.Sort(ref sortedIndices[0], 0, bodies.ActiveSet.Count - 1, ref comparer);
-
-                //Now that we have a sorted set of indices, we have eliminated nondeterminism related to memory layout. The initial target body indices can be remapped onto the sorted list.
-                for (int i = 0; i < traversalStartBodyIndices.Count; ++i)
-                {
-                    traversalStartBodyIndices[i] = sortedIndices[traversalStartBodyIndices[i]];
-                    Debug.Assert(traversalStartBodyIndices[i] >= 0 && traversalStartBodyIndices[i] < bodies.ActiveSet.Count);
-                }
-                pool.Return(ref sortedIndices);
-            }
             Sleep(ref traversalStartBodyIndices, threadDispatcher, deterministic, (int)Math.Ceiling(bodies.ActiveSet.Count * TargetSleptFraction), (int)Math.Ceiling(bodies.ActiveSet.Count * TargetTraversedFraction), false);
 
             traversalStartBodyIndices.Dispose(pool);
