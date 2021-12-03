@@ -367,7 +367,7 @@ namespace Demos.Demos
             var spawnPose = new RigidPose(new Vector3(0, 10, 0));
             for (int i = 0; i < newShapeCount; ++i)
             {
-                CreateBodyDescription(random, spawnPose, new BodyVelocity(new Vector3(-30 + 60 * random.NextSingle(), 75, -30 + 60 * random.NextSingle()), default), out var bodyDescription);
+                CreateBodyDescription(random, spawnPose, new Vector3(-30 + 60 * random.NextSingle(), 75, -30 + 60 * random.NextSingle()), out var bodyDescription);
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(bodyDescription), BufferPool);
             }
             int targetAsymptote = 65536;

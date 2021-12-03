@@ -20,10 +20,21 @@ namespace BepuPhysics
         /// <summary>
         /// Builds a new static description.
         /// </summary>
+        /// <param name="pose">Pose of the static collidable.</param>
+        /// <param name="collidable">Collidable description for the static.</param>
+        public StaticDescription(RigidPose pose, CollidableDescription collidable)
+        {
+            Pose = pose;
+            Collidable = collidable;
+        }
+
+        /// <summary>
+        /// Builds a new static description.
+        /// </summary>
         /// <param name="position">Position of the static.</param>
         /// <param name="orientation">Orientation of the static.</param>
         /// <param name="collidable">Collidable description for the static.</param>
-        public StaticDescription(in Vector3 position, in Quaternion orientation, in CollidableDescription collidable)
+        public StaticDescription(Vector3 position, Quaternion orientation, CollidableDescription collidable)
         {
             Pose.Position = position;
             Pose.Orientation = orientation;
@@ -35,7 +46,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="position">Position of the static.</param>
         /// <param name="collidable">Collidable description for the static.</param>
-        public StaticDescription(in Vector3 position, in CollidableDescription collidable) : this(position, Quaternion.Identity, collidable)
+        public StaticDescription(Vector3 position, CollidableDescription collidable) : this(position, Quaternion.Identity, collidable)
         {
         }
 
@@ -45,7 +56,7 @@ namespace BepuPhysics
         /// <param name="position">Position of the static.</param>
         /// <param name="orientation">Orientation of the static.</param>
         /// <param name="shapeIndex">Index of the static's shape in the simulation shapes set.</param>
-        public StaticDescription(in Vector3 position, in Quaternion orientation, TypedIndex shapeIndex)
+        public StaticDescription(Vector3 position, Quaternion orientation, TypedIndex shapeIndex)
         {
             Pose.Position = position;
             Pose.Orientation = orientation;
@@ -58,7 +69,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="position">Position of the static.</param>
         /// <param name="shapeIndex">Index of the static's shape in the simulation shapes set.</param>
-        public StaticDescription(in Vector3 position, TypedIndex shapeIndex) : this(position, Quaternion.Identity, shapeIndex)
+        public StaticDescription(Vector3 position, TypedIndex shapeIndex) : this(position, Quaternion.Identity, shapeIndex)
         {
         }
     }

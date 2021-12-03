@@ -27,7 +27,7 @@ namespace Demos.Demos
                 Activity = 0.01f,
                 Collidable = Simulation.Shapes.Add(new Sphere(bodyRadius)),
                 LocalInertia = default,
-                Pose = new RigidPose(default, orientation)
+                Pose = orientation
             };
             var inverseMass = 1f / massPerBody;
             BodyHandle[,] handles = new BodyHandle[height, width];

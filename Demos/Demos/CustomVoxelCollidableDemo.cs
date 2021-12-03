@@ -112,7 +112,7 @@ namespace Demos.Demos
             {
                 ref var voxelIndex = ref VoxelIndices[leafIndex];
                 //Note that you could make use of the voxel grid's regular structure to save some work dealing with orientations.
-                if (VoxelShape.RayTest(new RigidPose((voxelIndex + new Vector3(0.5f)) * VoxelSize), ray->Origin, ray->Direction, out var t, out var normal) && t <= *maximumT)
+                if (VoxelShape.RayTest(voxelIndex + new Vector3(0.5f) * VoxelSize, ray->Origin, ray->Direction, out var t, out var normal) && t <= *maximumT)
                 {
                     //Bring the ray normal back into world space.
                     Matrix3x3.Transform(normal, Orientation, out normal);
@@ -189,7 +189,7 @@ namespace Demos.Demos
         public readonly void GetPosedLocalChild(int childIndex, out Box childShape, out RigidPose childPose)
         {
             GetLocalChild(childIndex, out childShape);
-            childPose = new RigidPose((VoxelIndices[childIndex] + new Vector3(0.5f)) * VoxelSize);
+            childPose = (VoxelIndices[childIndex] + new Vector3(0.5f) * VoxelSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -451,7 +451,7 @@ namespace Demos.Demos
             ref var voxelsPose = ref Simulation.Statics[handle].Pose;
             for (int i = 0; i < voxels.ChildCount; ++i)
             {
-                var localPose = new RigidPose((voxels.VoxelIndices[i] + new Vector3(0.5f)) * voxels.VoxelSize);
+                var localPose = (voxels.VoxelIndices[i] + new Vector3(0.5f) * voxels.VoxelSize);
                 Compound.GetRotatedChildPose(localPose, voxelsPose.Orientation, out var childPose);
                 childPose.Position += voxelsPose.Position;
                 renderer.Shapes.AddShape(shapeDataPointer, Box.Id, Simulation.Shapes, ref childPose, new Vector3(0.8f, 0.2f, 0.2f));

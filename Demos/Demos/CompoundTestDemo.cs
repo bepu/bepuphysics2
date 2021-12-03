@@ -53,7 +53,7 @@ namespace Demos.Demos
                     {
                         for (int j = 0; j < gridWidth; ++j)
                         {
-                            compoundBuilder.Add(gridShapeIndex, new RigidPose(new Vector3(localPoseOffset, 0, localPoseOffset) + new Vector3(gridSpacing) * new Vector3(i, 0, j)), gridBoxInertia.InverseInertiaTensor, 1);
+                            compoundBuilder.Add(gridShapeIndex, new Vector3(localPoseOffset, 0, localPoseOffset) + new Vector3(gridSpacing) * new Vector3(i, 0, j), gridBoxInertia.InverseInertiaTensor, 1);
                         }
                     }
                     compoundBuilder.BuildDynamicCompound(out var gridChildren, out var gridInertia, out var center);
@@ -152,7 +152,7 @@ namespace Demos.Demos
                         compoundBuilder.Reset();
                         var clamp = new Compound(clampChildren);
                         var clampDescription = BodyDescription.CreateDynamic(
-                            new RigidPose(tableDescription.Pose.Position + new Vector3(2f, 0.3f, 0)), clampInertia, Simulation.Shapes.Add(clamp), 0.01f);
+                            tableDescription.Pose.Position + new Vector3(2f, 0.3f, 0), clampInertia, Simulation.Shapes.Add(clamp), 0.01f);
                         Simulation.Bodies.Add(clampDescription);
                     }
 

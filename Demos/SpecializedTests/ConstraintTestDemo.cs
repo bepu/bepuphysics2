@@ -387,8 +387,8 @@ namespace Demos.SpecializedTests
                 var x = GetNextPosition(ref nextX);
                 var wheelShape = new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 0.1f)));
                 var wheelOrientation = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI * 0.5f);
-                var aDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(x, 3, 0), wheelOrientation), inertiaA, wheelShape, activity);
-                var bDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(x, 6, 0), wheelOrientation), inertiaB, wheelShape, activity);
+                var aDescription = BodyDescription.CreateDynamic((new Vector3(x, 3, 0), wheelOrientation), inertiaA, wheelShape, activity);
+                var bDescription = BodyDescription.CreateDynamic((new Vector3(x, 6, 0), wheelOrientation), inertiaB, wheelShape, activity);
                 var cDescription = BodyDescription.CreateKinematic(new Vector3(x, 4.5f, -1), Simulation.Shapes.Add(new Box(3, 6, 1)), activity);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);

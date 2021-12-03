@@ -48,10 +48,10 @@ namespace Demos.Demos.Characters
                     switch (choice)
                     {
                         case 0:
-                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(position, orientation), shape.ComputeInertia(1), shapeIndex, 0.01f));
+                            Simulation.Bodies.Add(BodyDescription.CreateDynamic((position, orientation), shape.ComputeInertia(1), shapeIndex, 0.01f));
                             break;
                         case 1:
-                            Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(position, orientation), shapeIndex, 0.01f));
+                            Simulation.Bodies.Add(BodyDescription.CreateKinematic((position, orientation), shapeIndex, 0.01f));
                             break;
                         case 2:
                             Simulation.Statics.Add(new StaticDescription(position, orientation, shapeIndex));

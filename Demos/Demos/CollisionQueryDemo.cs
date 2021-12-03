@@ -231,7 +231,7 @@ namespace Demos.Demos
             {
                 for (int j = 0; j < 5; ++j)
                 {
-                    queries.Allocate(BufferPool) = new Query { Box = new Box(1, 1, 1), Pose = new RigidPose(basePosition + querySpacing * new Vector3(i, 0, j)) };
+                    queries.Allocate(BufferPool) = new Query { Box = new Box(1, 1, 1), Pose = basePosition + querySpacing * new Vector3(i, 0, j) };
                 }
             }
             //Note that the callbacks and set are value types, so you have to be a little careful about copying.

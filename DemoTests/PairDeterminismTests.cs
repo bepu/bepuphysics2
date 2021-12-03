@@ -241,12 +241,12 @@ namespace DemoTests
 
 
             var compoundBuilder = new CompoundBuilder(pool, shapes, 6);
-            compoundBuilder.AddForKinematic(sphereCollidable.Shape, new RigidPose(new Vector3(2, 0, 0)), 1);
-            compoundBuilder.AddForKinematic(capsuleCollidable.Shape, new RigidPose(new Vector3(0, 2, 0)), 1);
-            compoundBuilder.AddForKinematic(boxCollidable.Shape, new RigidPose(new Vector3(0, 0, 2)), 1);
-            compoundBuilder.AddForKinematic(triangleCollidable.Shape, new RigidPose(new Vector3(-2, 0, 1)), 1);
-            compoundBuilder.AddForKinematic(cylinderCollidable.Shape, new RigidPose(new Vector3(0, -2, 1)), 1);
-            compoundBuilder.AddForKinematic(hullCollidable.Shape, new RigidPose(new Vector3(0, 0, -2)), 1);
+            compoundBuilder.AddForKinematic(sphereCollidable.Shape, new Vector3(2, 0, 0), 1);
+            compoundBuilder.AddForKinematic(capsuleCollidable.Shape, new Vector3(0, 2, 0), 1);
+            compoundBuilder.AddForKinematic(boxCollidable.Shape, new Vector3(0, 0, 2), 1);
+            compoundBuilder.AddForKinematic(triangleCollidable.Shape, new Vector3(-2, 0, 1), 1);
+            compoundBuilder.AddForKinematic(cylinderCollidable.Shape, new Vector3(0, -2, 1), 1);
+            compoundBuilder.AddForKinematic(hullCollidable.Shape, new Vector3(0, 0, -2), 1);
             compoundBuilder.BuildKinematicCompound(out var children, out _);
             var compound = new Compound(children);
             var bigCompound = new BigCompound(children, shapes, pool);

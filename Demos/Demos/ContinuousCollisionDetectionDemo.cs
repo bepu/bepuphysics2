@@ -67,7 +67,7 @@ namespace Demos.Demos
                 for (int j = 0; j < 10; ++j)
                 {
                     //These two falling dynamics have pretty small speculative margins. The second one uses continuous collision detection sweeps to generate speculative contacts.
-                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-4 - 2 * j, 100 + (i + j) * 2, i * 2), new(new Vector3(0, -150, 0)), inertia,
+                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-4 - 2 * j, 100 + (i + j) * 2, i * 2), new Vector3(0, -150, 0), inertia,
                         new(shapeIndex, ContinuousDetection.Discrete(maximumSpeculativeMargin: 0.01f)), 0.01f));
                     //The minimum progression duration parameter at 1e-3 means the CCD sweep won't miss any collisions that last at least 1e-3 units of time- so, if time is measured in seconds,
                     //then this will capture any collision that an update rate of 1000hz would.
@@ -75,7 +75,7 @@ namespace Demos.Demos
                     //That's because the sweep does not directly generate contacts- it generates a time of impact estimate, and then the discrete contact generation
                     //runs to create the actual contact manifold. That provides high quality contact positions and speculative depths.
                     //If the ground that these boxes were smashing into was something like a mesh- which is infinitely thin- you may want to increase the sweep accuracy.
-                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(4 + 2 * j, 100 + (i + j) * 2, i * 2), new(new Vector3(0, -150, 0)), inertia,
+                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(4 + 2 * j, 100 + (i + j) * 2, i * 2), new Vector3(0, -150, 0), inertia,
                         new(shapeIndex, ContinuousDetection.Continuous(1e-3f, 1e-2f, maximumSpeculativeMargin: 0.01f)), 0.01f));
                 }
             }

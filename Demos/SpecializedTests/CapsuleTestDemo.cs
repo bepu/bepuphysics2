@@ -35,7 +35,7 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         var location = new Vector3(1.5f, 1.5f, 4.4f) * new Vector3(i, j, k) + new Vector3(-width * 0.5f, 0.5f, -length * 0.5f);
-                        var bodyDescription = BodyDescription.CreateDynamic(new RigidPose(location, QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2)), localInertia, new(shapeIndex, ContinuousDetection.Discrete(50, 50)), -1);
+                        var bodyDescription = BodyDescription.CreateDynamic((location, QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2)), localInertia, new(shapeIndex, ContinuousDetection.Discrete(50, 50)), -1);
                         Simulation.Bodies.Add(bodyDescription);
 
                     }

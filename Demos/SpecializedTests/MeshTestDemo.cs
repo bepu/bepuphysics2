@@ -69,7 +69,7 @@ namespace Demos.SpecializedTests
 
             DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(5, 5, 5), out var newtMesh);
             newtMesh.ComputeClosedInertia(10, out var newtInertia, out _);
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(30, 20, 30)), newtInertia, Simulation.Shapes.Add(newtMesh), 0.01f));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(30, 20, 30), newtInertia, Simulation.Shapes.Add(newtMesh), 0.01f));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(30, 15, 30), Simulation.Shapes.Add(new Box(15, 1, 15))));
 

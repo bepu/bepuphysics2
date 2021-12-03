@@ -75,9 +75,9 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new IndexReportingNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)), new PositionFirstTimestepper());
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 4);
-            builder.Add(new Sphere(0.5f), new RigidPose(new Vector3(-1, 0, 0)), 1);
-            builder.Add(new Capsule(0.5f, 1f), new RigidPose(new Vector3(0, 0, 0)), 1);
-            builder.Add(new Box(1f, 1f, 1f), new RigidPose(new Vector3(1, 0, 0)), 1);
+            builder.Add(new Sphere(0.5f), new Vector3(-1, 0, 0), 1);
+            builder.Add(new Capsule(0.5f, 1f), new Vector3(0, 0, 0), 1);
+            builder.Add(new Box(1f, 1f, 1f), new Vector3(1, 0, 0), 1);
             builder.BuildDynamicCompound(out var children, out var inertia, out var center);
 
             var compoundShapeIndex = Simulation.Shapes.Add(new Compound(children));

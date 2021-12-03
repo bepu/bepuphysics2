@@ -60,8 +60,7 @@ namespace Demos.Demos
             if (frameIndex % 64 == 0)
             {
                 var bulletShape = new Sphere(0.5f + 5 * random.NextSingle());
-                var bulletShapeIndex = Simulation.Shapes.Add(bulletShape);
-                var bodyDescription = BodyDescription.CreateDynamic(new Vector3(0, 8, -130), new(new Vector3(0, 0, 350)), bulletShape.ComputeInertia(bulletShape.Radius * bulletShape.Radius * bulletShape.Radius), Simulation.Shapes.Add(bulletShape), 0.01f);
+                var bodyDescription = BodyDescription.CreateDynamic(new Vector3(0, 8, -130), new Vector3(0, 0, 350), bulletShape.ComputeInertia(bulletShape.Radius * bulletShape.Radius * bulletShape.Radius), Simulation.Shapes.Add(bulletShape), 0.01f);
                 Simulation.Bodies.Add(bodyDescription);
             }
             if (frameIndex % 192 == 0)

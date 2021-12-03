@@ -70,7 +70,7 @@ namespace Demos.Demos
                 //Unfortunately, at the moment, bepuphysics v2 does not contain any alternative solvers, so if you can't afford to brute force the the problem away,
                 //the best solution is to cheat as much as possible to avoid the corner cases.
                 var bodyDescription = BodyDescription.CreateConvexDynamic(
-                    new Vector3(0, 8, -130), new BodyVelocity(new Vector3(0, 0, 150)), bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, Simulation.Shapes, bulletShape);
+                    new Vector3(0, 8, -130), new Vector3(0, 0, 150), bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, Simulation.Shapes, bulletShape);
                 Simulation.Bodies.Add(bodyDescription);
             }
             base.Update(window, camera, input, dt);

@@ -25,9 +25,7 @@ namespace Demos.Demos
                 for (int i = 0; i < boxCountPerRing; i++)
                 {
                     var angle = ((ringIndex & 1) == 0 ? i + 0.5f : i) * increment;
-                    bodyDescription.Pose = new RigidPose(
-                        position + new Vector3(-MathF.Cos(angle) * radius, (ringIndex + 0.5f) * ringBoxShape.Height, MathF.Sin(angle) * radius),
-                        QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle));
+                    bodyDescription.Pose = (position + new Vector3(-MathF.Cos(angle) * radius, (ringIndex + 0.5f) * ringBoxShape.Height, MathF.Sin(angle) * radius), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle));
                     simulation.Bodies.Add(bodyDescription);
                 }
             }
@@ -41,8 +39,7 @@ namespace Demos.Demos
             for (int i = 0; i < boxCount; i++)
             {
                 var angle = i * increment;
-                bodyDescription.Pose = new RigidPose(
-                    position + new Vector3(-MathF.Cos(angle) * radius, ringBoxShape.HalfWidth, MathF.Sin(angle) * radius),
+                bodyDescription.Pose = (position + new Vector3(-MathF.Cos(angle) * radius, ringBoxShape.HalfWidth, MathF.Sin(angle) * radius),
                     QuaternionEx.Concatenate(QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle + MathF.PI * 0.5f)));
                 simulation.Bodies.Add(bodyDescription);
             }
@@ -99,7 +96,7 @@ namespace Demos.Demos
             var bulletShape = new Sphere(0.5f);
             bulletDescription = BodyDescription.CreateDynamic(new Vector3(), bulletShape.ComputeInertia(.1f), Simulation.Shapes.Add(bulletShape), 0.01f);
 
-            var shootiePatootieShape = new Sphere(3f);            
+            var shootiePatootieShape = new Sphere(3f);
             shootiePatootieDescription = BodyDescription.CreateDynamic(new Vector3(), shootiePatootieShape.ComputeInertia(100), Simulation.Shapes.Add(shootiePatootieShape), 0.01f);
         }
 

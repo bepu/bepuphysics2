@@ -131,7 +131,7 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         Simulation.Bodies.Add(BodyDescription.CreateDynamic(
-                            new RigidPose(origin + spacing * new Vector3(i, j, k), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f)),
+                            (origin + spacing * new Vector3(i, j, k), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f)),
                             inertia, hullShapeIndex, 0.01f));
                     }
                 }

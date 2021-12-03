@@ -66,18 +66,18 @@ namespace Demos.Demos
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(100, 1, 100))));
 
             var gyroBaseBody = Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(0, 2, 0), Simulation.Shapes, new Box(.1f, 4, .1f)));
-            var gyroSpinnerBody = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(2, 4, 0), new BodyVelocity(default, new Vector3(300, 0, 0)), 1, Simulation.Shapes, new Box(0.1f, 1f, 1f)));
+            var gyroSpinnerBody = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(2, 4, 0), (default, new Vector3(300, 0, 0)), 1, Simulation.Shapes, new Box(0.1f, 1f, 1f)));
             Simulation.Solver.Add(gyroBaseBody, gyroSpinnerBody, new BallSocket { LocalOffsetA = new Vector3(0, 2, 0), LocalOffsetB = new Vector3(-2, 0, 0), SpringSettings = new SpringSettings(30, 1) });
 
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
-            builder.Add(new Box(1, 0.3f, 0.3f), new RigidPose(new Vector3(-0.5f, 0, 0)), 1);
-            builder.Add(new Box(0.3f, 2f, 0.3f), new RigidPose(new Vector3(0.15f, 0, 0)), 2);
+            builder.Add(new Box(1, 0.3f, 0.3f), new Vector3(-0.5f, 0, 0), 1);
+            builder.Add(new Box(0.3f, 2f, 0.3f), new Vector3(0.15f, 0, 0), 2);
             builder.BuildDynamicCompound(out var children, out var inertia, out _);
             builder.Dispose();
             var dzhanibekovShape = Simulation.Shapes.Add(new Compound(children));
             var dzhanibekovSpinnerBody = Simulation.Bodies.Add(
-                BodyDescription.CreateDynamic(new Vector3(6, 4, 0), new BodyVelocity(new Vector3(0, 0, 1), new Vector3(5, .001f, .001f)), inertia, dzhanibekovShape, 0.01f));
+                BodyDescription.CreateDynamic(new Vector3(6, 4, 0), (new Vector3(0, 0, 1), new Vector3(5, .001f, .001f)), inertia, dzhanibekovShape, 0.01f));
             var dzhanibekovBaseBody = Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(6, 1, 0), Simulation.Shapes, new Box(.1f, 2, .1f)));
             Simulation.Solver.Add(dzhanibekovBaseBody, dzhanibekovSpinnerBody, new BallSocket { LocalOffsetA = new Vector3(0, 3, 0), LocalOffsetB = new Vector3(0, 0, 0), SpringSettings = new SpringSettings(30, 1) });
         }

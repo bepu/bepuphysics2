@@ -92,7 +92,7 @@ namespace Demos.SpecializedTests
 
                         if ((i + j + k) % 2 == 1)
                         {
-                            var bodyDescription = BodyDescription.CreateKinematic(new RigidPose(location, orientation), shapeIndex, -1);
+                            var bodyDescription = BodyDescription.CreateKinematic((location, orientation), shapeIndex, -1);
                             Simulation.Bodies.Add(bodyDescription);
                         }
                         else

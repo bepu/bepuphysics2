@@ -120,7 +120,7 @@ namespace Demos
                         };
                         if ((i + j + k) % 2 == 1)
                         {
-                            Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(location, orientation), shapeIndex, -0.1f));
+                            Simulation.Bodies.Add(BodyDescription.CreateKinematic((location, orientation), shapeIndex, -0.1f));
                         }
                         else
                         {

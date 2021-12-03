@@ -54,7 +54,7 @@ namespace Demos.Demos
                 var boxDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, Simulation.Shapes.Add(boxShape), -1f);
                 for (int i = 0; i < 20; ++i)
                 {
-                    boxDescription.Pose = new RigidPose(new Vector3(0, 0.5f + boxShape.Height * (i + 0.5f), 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.05f * i));
+                    boxDescription.Pose = (new Vector3(0, 0.5f + boxShape.Height * (i + 0.5f), 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.05f * i));
                     Simulation.Bodies.Add(boxDescription);
                 }
                 var topBlockShape = new Box(8, 2, 8);

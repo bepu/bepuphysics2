@@ -87,7 +87,7 @@ namespace Demos.Demos
                     for (int k = 0; k < width; ++k)
                     {
                         Simulation.Bodies.Add(BodyDescription.CreateDynamic(
-                            origin + new Vector3(i, j, k) * spacing, new BodyVelocity(new Vector3(30, 0, 0)), inertia, orbiterShapeIndex, 0.01f));
+                            origin + new Vector3(i, j, k) * spacing, new Vector3(30, 0, 0), inertia, orbiterShapeIndex, 0.01f));
                     }
                 }
             }

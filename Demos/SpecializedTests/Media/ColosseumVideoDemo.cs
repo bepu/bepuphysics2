@@ -27,9 +27,7 @@ namespace Demos.SpecializedTests.Media
                 for (int i = 0; i < boxCountPerRing; i++)
                 {
                     var angle = ((ringIndex & 1) == 0 ? i + 0.5f : i) * increment;
-                    bodyDescription.Pose = new RigidPose(
-                        position + new Vector3(-MathF.Cos(angle) * radius, (ringIndex + 0.5f) * ringBoxShape.Height, MathF.Sin(angle) * radius),
-                        QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle));
+                    bodyDescription.Pose = (position + new Vector3(-MathF.Cos(angle) * radius, (ringIndex + 0.5f) * ringBoxShape.Height, MathF.Sin(angle) * radius), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle));
                     Simulation.Bodies.Add(bodyDescription);
                 }
             }
@@ -43,8 +41,7 @@ namespace Demos.SpecializedTests.Media
             for (int i = 0; i < boxCount; i++)
             {
                 var angle = i * increment;
-                bodyDescription.Pose = new RigidPose(
-                    position + new Vector3(-MathF.Cos(angle) * radius, ringBoxShape.HalfWidth, MathF.Sin(angle) * radius),
+                bodyDescription.Pose = (position + new Vector3(-MathF.Cos(angle) * radius, ringBoxShape.HalfWidth, MathF.Sin(angle) * radius),
                     QuaternionEx.Concatenate(QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle + MathF.PI * 0.5f)));
                 Simulation.Bodies.Add(bodyDescription);
             }

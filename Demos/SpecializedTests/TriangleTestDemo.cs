@@ -132,7 +132,7 @@ namespace Demos.SpecializedTests
                 Simulation.Statics.Add(new StaticDescription(new Vector3(10, -2, 30), Simulation.Shapes.Add(new Box(10, 5, 10))));
 
                 Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 0), new BodyInertia { InverseMass = 1 }, new(Simulation.Shapes.Add(new Sphere(1.75f)), ContinuousDetection.Discrete(0.1f, 0.1f)), -1));
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(20, 2, 3), Quaternion.CreateFromYawPitchRoll(0f, 1.745329E-05f, 0f)), new BodyInertia { InverseMass = 1 }, new(Simulation.Shapes.Add(new Capsule(1, 2)), ContinuousDetection.Discrete(0.1f, 0.1f)), -1));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic((new Vector3(20, 2, 3), Quaternion.CreateFromYawPitchRoll(0f, 1.745329E-05f, 0f)), new BodyInertia { InverseMass = 1 }, new(Simulation.Shapes.Add(new Capsule(1, 2)), ContinuousDetection.Discrete(0.1f, 0.1f)), -1));
                 var testBox = new Box(2, 3, 2);
                 var testBoxInertia = testBox.ComputeInertia(1);
                 Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(20, 2, 6), testBoxInertia, new(Simulation.Shapes.Add(testBox), ContinuousDetection.Discrete(10.1f, 10.1f)), -1));
@@ -140,11 +140,11 @@ namespace Demos.SpecializedTests
                 var cylinder = new Cylinder(1.75f, 2);
                 var cylinderInertia = cylinder.ComputeInertia(1);
                 //cylinderInertia.InverseInertiaTensor = default;
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(20, 2, 9), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI / 2f)), cylinderInertia, new(Simulation.Shapes.Add(cylinder), ContinuousDetection.Discrete(5f, 5f)), -1));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic((new Vector3(20, 2, 9), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI / 2f)), cylinderInertia, new(Simulation.Shapes.Add(cylinder), ContinuousDetection.Discrete(5f, 5f)), -1));
 
                 var cylinder2 = new Cylinder(.5f, 0.5f);
                 var cylinder2Inertia = cylinder2.ComputeInertia(1);
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(new Vector3(23, 2, 9), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0)), cylinder2Inertia, new(Simulation.Shapes.Add(cylinder2), ContinuousDetection.Discrete(5f, 5f)), -1));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic((new Vector3(23, 2, 9), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0)), cylinder2Inertia, new(Simulation.Shapes.Add(cylinder2), ContinuousDetection.Discrete(5f, 5f)), -1));
                 var points = new QuickList<Vector3>(8, BufferPool);
                 points.AllocateUnsafely() = new Vector3(0, 0, 0);
                 points.AllocateUnsafely() = new Vector3(0, 0, 2);

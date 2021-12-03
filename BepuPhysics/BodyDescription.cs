@@ -129,33 +129,6 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Creates a dynamic body description with identity orientation.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="velocity">Initial velocity of the body.</param>
-        /// <param name="inertia">Local inertia of the body.</param>
-        /// <param name="collidable">Collidable to associate with the body.</param>
-        /// <param name="activity">Activity settings for the body.</param>
-        /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateDynamic(in Vector3 position, in BodyVelocity velocity, in BodyInertia inertia, in CollidableDescription collidable, in BodyActivityDescription activity)
-        {
-            return new BodyDescription { Pose = new(position), Velocity = velocity, LocalInertia = inertia, Activity = activity, Collidable = collidable };
-        }
-
-        /// <summary>
-        /// Creates a dynamic body description with zero initial velocity and identity orientation.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="inertia">Local inertia of the body.</param>
-        /// <param name="collidable">Collidable to associate with the body.</param>
-        /// <param name="activity">Activity settings for the body.</param>
-        /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateDynamic(in Vector3 position, in BodyInertia inertia, in CollidableDescription collidable, in BodyActivityDescription activity)
-        {
-            return new BodyDescription { Pose = new(position), LocalInertia = inertia, Activity = activity, Collidable = collidable };
-        }
-
-        /// <summary>
         /// Creates a dynamic body description with collidable, inertia, and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
         /// </summary>
         /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
@@ -165,9 +138,7 @@ namespace BepuPhysics
         /// <param name="shapes">Shape collection to add the shape to.</param>
         /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
         /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateConvexDynamic<TConvexShape>(
-            in RigidPose pose, in BodyVelocity velocity, float mass, Shapes shapes, in TConvexShape shape)
-            where TConvexShape : unmanaged, IConvexShape
+        public static BodyDescription CreateConvexDynamic<TConvexShape>(in RigidPose pose, in BodyVelocity velocity, float mass, Shapes shapes, in TConvexShape shape) where TConvexShape : unmanaged, IConvexShape
         {
             var description = new BodyDescription
             {
@@ -181,23 +152,6 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Creates a dynamic body description with identity orientation and collidable, inertia, and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
-        /// </summary>
-        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="velocity">Initial velocity of the body.</param>
-        /// <param name="mass">Mass of the body. The inertia tensor will be calculated based on this mass and the shape.</param>
-        /// <param name="shapes">Shape collection to add the shape to.</param>
-        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
-        /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateConvexDynamic<TConvexShape>(
-            in Vector3 position, in BodyVelocity velocity, float mass, Shapes shapes, in TConvexShape shape)
-            where TConvexShape : unmanaged, IConvexShape
-        {
-            return CreateConvexDynamic(new RigidPose(position), velocity, mass, shapes, shape);
-        }
-
-        /// <summary>
         /// Creates a dynamic body description with zero initial velocity and collidable, inertia, and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
         /// </summary>
         /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
@@ -206,27 +160,9 @@ namespace BepuPhysics
         /// <param name="shapes">Shape collection to add the shape to.</param>
         /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
         /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateConvexDynamic<TConvexShape>(
-            in RigidPose pose, float mass, Shapes shapes, in TConvexShape shape)
-            where TConvexShape : unmanaged, IConvexShape
+        public static BodyDescription CreateConvexDynamic<TConvexShape>(in RigidPose pose, float mass, Shapes shapes, in TConvexShape shape) where TConvexShape : unmanaged, IConvexShape
         {
             return CreateConvexDynamic(pose, default, mass, shapes, shape);
-        }
-
-        /// <summary>
-        /// Creates a dynamic body description with zero initial velocity, identity orientation, and collidable, inertia, and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
-        /// </summary>
-        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="mass">Mass of the body. The inertia tensor will be calculated based on this mass and the shape.</param>
-        /// <param name="shapes">Shape collection to add the shape to.</param>
-        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
-        /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateConvexDynamic<TConvexShape>(
-            in Vector3 position, float mass, Shapes shapes, in TConvexShape shape)
-            where TConvexShape : unmanaged, IConvexShape
-        {
-            return CreateConvexDynamic(new RigidPose(position), default, mass, shapes, shape);
         }
 
         /// <summary>
@@ -255,31 +191,6 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Creates a kinematic body description with identity orientation.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="velocity">Initial velocity of the body.</param>
-        /// <param name="collidable">Collidable to associate with the body.</param>
-        /// <param name="activity">Activity settings for the body.</param>
-        /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateKinematic(in Vector3 position, in BodyVelocity velocity, in CollidableDescription collidable, in BodyActivityDescription activity)
-        {
-            return new BodyDescription { Pose = new(position), Velocity = velocity, Activity = activity, Collidable = collidable };
-        }
-
-        /// <summary>
-        /// Creates a kinematic body description with identity orientation and zero initial velocity.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="collidable">Collidable to associate with the body.</param>
-        /// <param name="activity">Activity settings for the body.</param>
-        /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateKinematic(in Vector3 position, in CollidableDescription collidable, in BodyActivityDescription activity)
-        {
-            return new BodyDescription { Pose = new(position), Activity = activity, Collidable = collidable };
-        }
-
-        /// <summary>
         /// Creates a kinematic body description with collidable and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
         /// </summary>
         /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
@@ -288,9 +199,7 @@ namespace BepuPhysics
         /// <param name="shapes">Shape collection to add the shape to.</param>
         /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
         /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateConvexKinematic<TConvexShape>(
-            in RigidPose pose, in BodyVelocity velocity, Shapes shapes, in TConvexShape shape)
-            where TConvexShape : unmanaged, IConvexShape
+        public static BodyDescription CreateConvexKinematic<TConvexShape>(in RigidPose pose, in BodyVelocity velocity, Shapes shapes, in TConvexShape shape) where TConvexShape : unmanaged, IConvexShape
         {
             var description = new BodyDescription
             {
@@ -302,21 +211,6 @@ namespace BepuPhysics
             return description;
         }
 
-        /// <summary>
-        /// Creates a kinematic body description with identity orientation and collidable and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
-        /// </summary>
-        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="velocity">Initial velocity of the body.</param>
-        /// <param name="shapes">Shape collection to add the shape to.</param>
-        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
-        /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateConvexKinematic<TConvexShape>(
-            in Vector3 position, in BodyVelocity velocity, Shapes shapes, in TConvexShape shape)
-            where TConvexShape : unmanaged, IConvexShape
-        {
-            return CreateConvexKinematic(new RigidPose(position), velocity, shapes, shape);
-        }
 
         /// <summary>
         /// Creates a kinematic body description with zero initial velocity and collidable and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
@@ -326,29 +220,9 @@ namespace BepuPhysics
         /// <param name="shapes">Shape collection to add the shape to.</param>
         /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
         /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateConvexKinematic<TConvexShape>(
-            in RigidPose pose, Shapes shapes, in TConvexShape shape)
-            where TConvexShape : unmanaged, IConvexShape
+        public static BodyDescription CreateConvexKinematic<TConvexShape>(in RigidPose pose, Shapes shapes, in TConvexShape shape) where TConvexShape : unmanaged, IConvexShape
         {
             return CreateConvexKinematic(pose, default, shapes, shape);
         }
-
-        /// <summary>
-        /// Creates a kinematic body description with zero initial velocity, identity orientation, and collidable and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
-        /// </summary>
-        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="shapes">Shape collection to add the shape to.</param>
-        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
-        /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateConvexKinematic<TConvexShape>(
-            in Vector3 position, Shapes shapes, in TConvexShape shape)
-            where TConvexShape : unmanaged, IConvexShape
-        {
-            return CreateConvexKinematic(new RigidPose(position), default, shapes, shape);
-        }
-
     }
-
-
 }

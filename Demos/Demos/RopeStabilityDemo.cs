@@ -36,7 +36,7 @@ namespace Demos.Demos
             for (int linkIndex = 0; linkIndex < bodyCount + 1; ++linkIndex)
             {
                 bodyDescription.LocalInertia = linkIndex == 0 ? new BodyInertia() : ropeInertia;
-                bodyDescription.Pose = new RigidPose(start - new Vector3(0, linkIndex * (bodySpacing + 2 * bodySize), 0));
+                bodyDescription.Pose = start - new Vector3(0, linkIndex * (bodySpacing + 2 * bodySize), 0);
                 handles[linkIndex] = simulation.Bodies.Add(bodyDescription);
             }
 
@@ -60,7 +60,7 @@ namespace Demos.Demos
             var wreckingBallPosition = lastBodyReference.Pose.Position - new Vector3(0, ropeBodyRadius + bodySpacing + wreckingBallRadius, 0);
             var description = BodyDescription.CreateDynamic(wreckingBallPosition, wreckingBallInertia, wreckingBallShapeIndex, 0.01f);
             //Give it a little bump.
-            description.Velocity = new BodyVelocity(new Vector3(-10, 0, 0), default);
+            description.Velocity = new Vector3(-10, 0, 0);
             var wreckingBallBodyHandle = simulation.Bodies.Add(description);
             return wreckingBallBodyHandle;
         }

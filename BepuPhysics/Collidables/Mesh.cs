@@ -151,7 +151,7 @@ namespace BepuPhysics.Collidables
         public readonly unsafe void GetPosedLocalChild(int triangleIndex, out Triangle target, out RigidPose childPose)
         {
             GetLocalChild(triangleIndex, out target);
-            childPose = new RigidPose((target.A + target.B + target.C) * (1f / 3f));
+            childPose = (target.A + target.B + target.C) * (1f / 3f);
             target.A -= childPose.Position;
             target.B -= childPose.Position;
             target.C -= childPose.Position;

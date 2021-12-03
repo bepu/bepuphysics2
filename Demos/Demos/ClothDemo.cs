@@ -71,7 +71,7 @@ namespace Demos.Demos
         {
             return true;
         }
-         
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
@@ -100,7 +100,7 @@ namespace Demos.Demos
     {
         delegate bool KinematicDecider(int rowIndex, int columnIndex, int width, int height);
 
-        BodyHandle[,] CreateBodyGrid(in Vector3 position, in Quaternion orientation, int width, int height, float spacing, float bodyRadius, float massPerBody,
+        BodyHandle[,] CreateBodyGrid(Vector3 position, Quaternion orientation, int width, int height, float spacing, float bodyRadius, float massPerBody,
             int instanceId, CollidableProperty<ClothCollisionFilter> filters, KinematicDecider isKinematic)
         {
             var description = new BodyDescription
@@ -108,7 +108,7 @@ namespace Demos.Demos
                 Activity = 0.01f,
                 Collidable = Simulation.Shapes.Add(new Sphere(bodyRadius)),
                 LocalInertia = default,
-                Pose = new RigidPose(default, orientation)
+                Pose = orientation
             };
             var inverseMass = 1f / massPerBody;
             BodyHandle[,] handles = new BodyHandle[height, width];

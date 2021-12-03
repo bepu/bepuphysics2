@@ -664,8 +664,7 @@ namespace Demos.Demos
             var vertexShapeIndex = simulation.Shapes.Add(vertexShape);
             for (int i = 0; i < vertices.Length; ++i)
             {
-                vertexHandles[i] = simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(
-                    position + QuaternionEx.Transform(vertices[i], orientation), orientation), vertexInertia,
+                vertexHandles[i] = simulation.Bodies.Add(BodyDescription.CreateDynamic((position + QuaternionEx.Transform(vertices[i], orientation), orientation), vertexInertia,
                     //Bodies don't have to have collidables. Take advantage of this for all the internal vertices.
                     vertexEdgeCounts[i] == edgeCountForInternalVertex ? new TypedIndex() : vertexShapeIndex, -0.01f));
                 ref var vertexSpatialIndex = ref vertexSpatialIndices[i];

@@ -79,7 +79,7 @@ namespace BepuPhysics
         /// <summary>
         /// Returns a pose with a position at (0,0,0) and identity orientation.
         /// </summary>
-        public static RigidPose Identity => new RigidPose(new Vector3());
+        public static RigidPose Identity => new RigidPose(default);
 
         /// <summary>
         /// Creates a rigid pose with the given position and orientation.
@@ -102,6 +102,33 @@ namespace BepuPhysics
         {
             Position = position;
             Orientation = Quaternion.Identity;
+        }
+
+        /// <summary>
+        /// Creates a pose by treating a <see cref="Vector3"/> as a position. Orientation is set to identity.
+        /// </summary>
+        /// <param name="position">Position to use in the pose.</param>
+        public static implicit operator RigidPose(Vector3 position)
+        {
+            return new RigidPose(position);
+        }
+
+        /// <summary>
+        /// Creates a pose by treating a <see cref="Quaternion"/> as an orientation in the pose. Position is set to zero.
+        /// </summary>
+        /// <param name="orientation">Orientation to use in the pose.</param>
+        public static implicit operator RigidPose(Quaternion orientation)
+        {
+            return new RigidPose(default, orientation);
+        }
+
+        /// <summary>
+        /// Creates a pose from a tuple of a position and orientation.
+        /// </summary>
+        /// <param name="poseComponents">Position and orientation to use in the pose.</param>
+        public static implicit operator RigidPose((Vector3 position, Quaternion orientation) poseComponents)
+        {
+            return new RigidPose(poseComponents.position, poseComponents.orientation);
         }
 
         /// <summary>
@@ -194,6 +221,24 @@ namespace BepuPhysics
         {
             Linear = linear;
             Angular = angular;
+        }
+
+        /// <summary>
+        /// Creates a body velocity by treating a <see cref="Vector3"/> as a linear velocity. Angular velocity is set to zero.
+        /// </summary>
+        /// <param name="linearVelocity">Linear velocity to use in the body velocity.</param>
+        public static implicit operator BodyVelocity(Vector3 linearVelocity)
+        {
+            return new BodyVelocity(linearVelocity);
+        }
+
+        /// <summary>
+        /// Creates a body velocity from a tuple of linear and angular velocities..
+        /// </summary>
+        /// <param name="velocities">Velocities to use in the body velocity.</param>
+        public static implicit operator BodyVelocity((Vector3 linearVelocity, Vector3 angularVelocity) velocities)
+        {
+            return new BodyVelocity(velocities.linearVelocity, velocities.angularVelocity);
         }
     }
 

@@ -55,7 +55,7 @@ namespace Demos.Demos.Tanks
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
             builder.Add(new Box(1.85f, 0.7f, 4.73f), RigidPose.Identity, 10);
-            builder.Add(new Box(1.85f, 0.6f, 2.5f), new RigidPose(new Vector3(0, 0.65f, -0.35f)), 0.5f);
+            builder.Add(new Box(1.85f, 0.6f, 2.5f), new Vector3(0, 0.65f, -0.35f), 0.5f);
             builder.BuildDynamicCompound(out var children, out var bodyInertia, out _);
             builder.Dispose();
             var bodyShape = new Compound(children);
@@ -69,8 +69,8 @@ namespace Demos.Demos.Tanks
             var tankDescription = new TankDescription
             {
                 Body = TankPartDescription.Create(10, new Box(4f, 1, 5), RigidPose.Identity, 0.5f, Simulation.Shapes),
-                Turret = TankPartDescription.Create(1, new Box(1.5f, 0.7f, 2f), new RigidPose(new Vector3(0, 0.85f, 0.4f)), 0.5f, Simulation.Shapes),
-                Barrel = TankPartDescription.Create(0.5f, new Box(0.2f, 0.2f, 3f), new RigidPose(new Vector3(0, 0.85f, 0.4f - 1f - 1.5f)), 0.5f, Simulation.Shapes),
+                Turret = TankPartDescription.Create(1, new Box(1.5f, 0.7f, 2f), new Vector3(0, 0.85f, 0.4f), 0.5f, Simulation.Shapes),
+                Barrel = TankPartDescription.Create(0.5f, new Box(0.2f, 0.2f, 3f), new Vector3(0, 0.85f, 0.4f - 1f - 1.5f), 0.5f, Simulation.Shapes),
                 TurretAnchor = new Vector3(0f, 0.5f, 0.4f),
                 BarrelAnchor = new Vector3(0, 0.5f + 0.35f, 0.4f - 1f),
                 TurretBasis = Quaternion.Identity,
@@ -96,7 +96,7 @@ namespace Demos.Demos.Tanks
                 WheelOrientation = QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * -0.5f),
             };
 
-            playerController = new TankController(Tank.Create(Simulation, bodyProperties, BufferPool, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), tankDescription), 20, 5, 2, 1, 3.5f);
+            playerController = new TankController(Tank.Create(Simulation, bodyProperties, BufferPool, (new Vector3(0, 10, 0), Quaternion.Identity), tankDescription), 20, 5, 2, 1, 3.5f);
 
 
             const int planeWidth = 257;
@@ -141,9 +141,8 @@ namespace Demos.Demos.Tanks
                 aiTanks.AllocateUnsafely() = new AITank
                 {
                     Controller = new TankController(
-                        Tank.Create(Simulation, bodyProperties, BufferPool, new RigidPose(
-                            new Vector3(horizontalPosition.X, 10, horizontalPosition.Y),
-                            QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), random.NextSingle() * 0.1f)),
+                        Tank.Create(Simulation, bodyProperties, BufferPool,
+                            (new Vector3(horizontalPosition.X, 10, horizontalPosition.Y), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), random.NextSingle() * 0.1f)),
                             tankDescription), 20, 5, 2, 1, 3.5f),
                     HitPoints = 5
                 };
