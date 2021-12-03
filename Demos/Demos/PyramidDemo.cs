@@ -53,7 +53,7 @@ namespace Demos.Demos
         }
 
         //We'll randomize the size of bullets.
-        Random random = new Random(5);
+        Random random = new(5);
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
             if (input != null && input.WasPushed(OpenTK.Input.Key.Z))
