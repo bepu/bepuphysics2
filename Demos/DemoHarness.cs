@@ -101,9 +101,6 @@ namespace Demos
             timingGraph.AddSeries("Collision Test", new Vector3(0, 1, 0), 0.25f, timeSamples.CollisionTesting);
             timingGraph.AddSeries("Narrow Flush", new Vector3(1, 0, 1), 0.25f, timeSamples.NarrowPhaseFlush);
             timingGraph.AddSeries("Solver", new Vector3(1, 0, 0), 0.5f, timeSamples.Solver);
-
-            timingGraph.AddSeries("Body Opt", new Vector3(1, 0.5f, 0), 0.125f, timeSamples.BodyOptimizer);
-            timingGraph.AddSeries("Constraint Opt", new Vector3(0, 0.5f, 1), 0.125f, timeSamples.ConstraintOptimizer);
             timingGraph.AddSeries("Batch Compress", new Vector3(0, 0.5f, 0), 0.125f, timeSamples.BatchCompressor);
 
             demoSet = new DemoSet();

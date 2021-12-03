@@ -25,8 +25,6 @@ namespace BepuPhysics
         public Bodies Bodies { get; private set; }
         public Statics Statics { get; private set; }
         public Shapes Shapes { get; private set; }
-        public BodyLayoutOptimizer BodyLayoutOptimizer { get; private set; }
-        public ConstraintLayoutOptimizer ConstraintLayoutOptimizer { get; private set; }
         public BatchCompressor SolverBatchCompressor { get; private set; }
         public Solver Solver { get; private set; }
         public IPoseIntegrator PoseIntegrator { get; private set; }
@@ -114,8 +112,6 @@ namespace BepuPhysics
             simulation.Solver.awakener = simulation.Awakener;
             simulation.Bodies.Initialize(simulation.Solver, simulation.Awakener, simulation.Sleeper);
             simulation.SolverBatchCompressor = new BatchCompressor(simulation.Solver, simulation.Bodies);
-            simulation.BodyLayoutOptimizer = new BodyLayoutOptimizer(simulation.Bodies, simulation.BroadPhase, simulation.Solver, bufferPool);
-            simulation.ConstraintLayoutOptimizer = new ConstraintLayoutOptimizer(simulation.Bodies, simulation.Solver);
             simulation.Timestepper = timestepper;
 
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation,
@@ -317,17 +313,10 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void IncrementallyOptimizeDataStructures(IThreadDispatcher threadDispatcher = null)
         {
-            //Note that constraint optimization should be performed after body optimization, since body optimization moves the bodies - and so affects the optimal constraint position.
-            //TODO: The order of these optimizer stages is performance relevant, even though they don't have any effect on correctness.
-            //You may want to try them in different locations to see how they impact cache residency.
-            profiler.Start(BodyLayoutOptimizer);
-            //BodyLayoutOptimizer.IncrementalOptimize();
-            profiler.End(BodyLayoutOptimizer);
-
-            profiler.Start(ConstraintLayoutOptimizer);
-            //ConstraintLayoutOptimizer.Update(BufferPool, threadDispatcher);
-            profiler.End(ConstraintLayoutOptimizer);
-
+            //Previously, this handled body and constraint memory layout optimization. 2.4 significantly changed how memory accesses work in the solver
+            //and the optimizers were no longer net wins, so all that's left is the batch compressor.
+            //It pulls constraints currently living in high constraint batch indices to lower constraint batches if possible.
+            //Over time, that'll tend to reduce sync points in the solver and improve performance.
             profiler.Start(SolverBatchCompressor);
             SolverBatchCompressor.Compress(BufferPool, threadDispatcher, threadDispatcher != null && Deterministic);
             profiler.End(SolverBatchCompressor);

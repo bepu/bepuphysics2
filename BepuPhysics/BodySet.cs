@@ -225,24 +225,6 @@ namespace BepuPhysics
             return false;
         }
 
-
-        /// <summary>
-        /// Swaps the memory of two bodies. Indexed by memory slot, not by handle index.
-        /// </summary>
-        /// <param name="slotA">Memory slot of the first body to swap.</param>
-        /// <param name="slotB">Memory slot of the second body to swap.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Swap(int slotA, int slotB, ref Buffer<BodyMemoryLocation> handleToIndex)
-        {
-            handleToIndex[IndexToHandle[slotA].Value].Index = slotB;
-            handleToIndex[IndexToHandle[slotB].Value].Index = slotA;
-            Helpers.Swap(ref IndexToHandle[slotA], ref IndexToHandle[slotB]);
-            Helpers.Swap(ref Collidables[slotA], ref Collidables[slotB]);
-            Helpers.Swap(ref SolverStates[slotA], ref SolverStates[slotB]);
-            Helpers.Swap(ref Activity[slotA], ref Activity[slotB]);
-            Helpers.Swap(ref Constraints[slotA], ref Constraints[slotB]);
-        }
-
         internal unsafe void InternalResize(int targetBodyCapacity, BufferPool pool)
         {
             Debug.Assert(targetBodyCapacity > 0, "Resize is not meant to be used as Dispose. If you want to return everything to the pool, use Dispose instead.");

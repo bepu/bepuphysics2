@@ -1440,29 +1440,6 @@ namespace BepuPhysics
             }
         }
 
-        /// <summary>
-        /// Changes the body references of all constraints associated with two bodies in response to them swapping slots in memory.
-        /// </summary>
-        /// <param name="a">First swapped body index.</param>
-        /// <param name="b">Second swapped body index.</param>
-        internal void UpdateForBodyMemorySwap(int a, int b)
-        {
-            var aInFallback = UpdateConstraintsForBodyMemoryMove(a, b);
-            var bInFallback = UpdateConstraintsForBodyMemoryMove(b, a);
-            if (aInFallback && bInFallback)
-            {
-                ActiveSet.SequentialFallback.UpdateForBodyMemorySwap(a, b);
-            }
-            else if (aInFallback)
-            {
-                ActiveSet.SequentialFallback.UpdateForDynamicBodyMemoryMove(a, b);
-            }
-            else if (bInFallback)
-            {
-                ActiveSet.SequentialFallback.UpdateForDynamicBodyMemoryMove(b, a);
-            }
-        }
-
         //TODO: Using a non-fixed time step isn't ideal to begin with, but these scaling functions are worse than they need to be.
         //Unfortunately, the faster alternative is quite a bit more complex- the accumulated impulses would need to be scaled alongside the warm start to minimize memory bandwidth.
         //Plus, none of this uses multithreading.

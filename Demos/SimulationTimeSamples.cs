@@ -27,8 +27,6 @@ namespace Demos
         public TimingsRingBuffer CollisionTesting;
         public TimingsRingBuffer NarrowPhaseFlush;
         public TimingsRingBuffer Solver;
-        public TimingsRingBuffer BodyOptimizer;
-        public TimingsRingBuffer ConstraintOptimizer;
         public TimingsRingBuffer BatchCompressor;
 
         public SimulationTimeSamples(int frameCapacity, BufferPool pool)
@@ -40,8 +38,6 @@ namespace Demos
             CollisionTesting = new TimingsRingBuffer(frameCapacity, pool);
             NarrowPhaseFlush = new TimingsRingBuffer(frameCapacity, pool);
             Solver = new TimingsRingBuffer(frameCapacity, pool);
-            BodyOptimizer = new TimingsRingBuffer(frameCapacity, pool);
-            ConstraintOptimizer = new TimingsRingBuffer(frameCapacity, pool);
             BatchCompressor = new TimingsRingBuffer(frameCapacity, pool);
         }
 
@@ -55,8 +51,6 @@ namespace Demos
             CollisionTesting.Add(simulation.Profiler[simulation.BroadPhaseOverlapFinder]);
             NarrowPhaseFlush.Add(simulation.Profiler[simulation.NarrowPhase]);
             Solver.Add(simulation.Profiler[simulation.Solver]);
-            BodyOptimizer.Add(simulation.Profiler[simulation.BodyLayoutOptimizer]);
-            ConstraintOptimizer.Add(simulation.Profiler[simulation.ConstraintLayoutOptimizer]);
             BatchCompressor.Add(simulation.Profiler[simulation.SolverBatchCompressor]);
         }
 
@@ -69,8 +63,6 @@ namespace Demos
             CollisionTesting.Dispose();
             NarrowPhaseFlush.Dispose();
             Solver.Dispose();
-            BodyOptimizer.Dispose();
-            ConstraintOptimizer.Dispose();
             BatchCompressor.Dispose();
         }
     }

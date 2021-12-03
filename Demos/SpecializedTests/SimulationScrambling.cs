@@ -14,23 +14,6 @@ namespace Demos.SpecializedTests
 {
     public static class SimulationScrambling
     {
-        public static void ScrambleBodies(Simulation simulation) 
-        {
-            //Having every single body in order is pretty unrealistic. In a real application, churn and general lack of care will result in 
-            //scrambled body versus constraint memory access patterns. That's a big increase in cache misses.
-            //Scrambling the body array simulates this.
-            //Given a sufficiently large added overhead, it would benefit the engine to include runtime cache optimization.
-            //That is, move the memory location of bodies (and constraints, within type batches) to maximize the number of accesses to already-cached bodies.
-
-            Random random = new Random(5);
-            for (int i = simulation.Bodies.ActiveSet.Count - 1; i >= 1; --i)
-            {
-                //This helper function handles the updates that have to be performed across all body-sensitive systems.
-                BodyLayoutOptimizer.SwapBodyLocation(simulation.Bodies, simulation.Solver, i, random.Next(i));
-            }
-
-        }
-
         public static void ScrambleConstraints(Solver solver)
         {
             Random random = new Random(5);
