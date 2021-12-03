@@ -93,7 +93,7 @@ namespace Demos.Demos
         void AddConvexShape<TConvex>(in TConvex convex, out TypedIndex shapeIndex, out BodyInertia inertia) where TConvex : unmanaged, IConvexShape
         {
             shapeIndex = Simulation.Shapes.Add(convex);
-            convex.ComputeInertia(1, out inertia);
+            inertia = convex.ComputeInertia(1);
         }
 
         ConvexHull CreateRandomHull()

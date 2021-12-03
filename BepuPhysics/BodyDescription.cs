@@ -176,7 +176,7 @@ namespace BepuPhysics
                 Activity = GetDefaultActivity(shape),
                 Collidable = shapes.Add(shape)
             };
-            shape.ComputeInertia(mass, out description.LocalInertia);
+            description.LocalInertia = shape.ComputeInertia(mass);
             return description;
         }
 

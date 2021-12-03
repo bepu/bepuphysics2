@@ -44,12 +44,11 @@ namespace Demos.Demos.Characters
                     var orientation = QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle())), 10 * random.NextSingle());
                     var shape = new Box(0.1f + 0.3f * random.NextSingle(), 0.1f + 0.3f * random.NextSingle(), 0.1f + 0.3f * random.NextSingle());
                     var shapeIndex = Simulation.Shapes.Add(shape);
-                    shape.ComputeInertia(1, out var inertia);
                     var choice = (i + j) % 3;
                     switch (choice)
                     {
                         case 0:
-                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(position, orientation), inertia, shapeIndex, 0.01f));
+                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(position, orientation), shape.ComputeInertia(1), shapeIndex, 0.01f));
                             break;
                         case 1:
                             Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(position, orientation), shapeIndex, 0.01f));

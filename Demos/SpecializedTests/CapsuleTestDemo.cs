@@ -23,7 +23,7 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var shape = new Capsule(.5f, .5f);
-            shape.ComputeInertia(1, out var localInertia);
+            var localInertia = shape.ComputeInertia(1);
             var shapeIndex = Simulation.Shapes.Add(shape);
             const int width = 1;
             const int height = 1;
@@ -42,8 +42,7 @@ namespace Demos.SpecializedTests
                 }
             }
             var boxShape = new Box(0.5f, 0.5f, 2.5f);
-            boxShape.ComputeInertia(1, out var boxLocalInertia);
-            var boxDescription = BodyDescription.CreateDynamic(new Vector3(1, -0.5f, 0), boxLocalInertia, new(Simulation.Shapes.Add(boxShape), ContinuousDetection.Discrete(50, 50)), -1);
+            var boxDescription = BodyDescription.CreateDynamic(new Vector3(1, -0.5f, 0), boxShape.ComputeInertia(1), new(Simulation.Shapes.Add(boxShape), ContinuousDetection.Discrete(50, 50)), -1);
             Simulation.Bodies.Add(boxDescription);
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), Simulation.Shapes.Add(new Box(4, 1, 4))));

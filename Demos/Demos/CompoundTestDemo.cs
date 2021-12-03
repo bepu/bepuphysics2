@@ -47,7 +47,7 @@ namespace Demos.Demos
                     const float gridSpacing = 1.5f;
                     const int gridWidth = 3;
                     var gridShapeIndex = Simulation.Shapes.Add(gridShape);
-                    gridShape.ComputeInertia(1, out var gridBoxInertia);
+                    var gridBoxInertia = gridShape.ComputeInertia(1);
                     float localPoseOffset = -0.5f * gridSpacing * (gridWidth - 1);
                     for (int i = 0; i < gridWidth; ++i)
                     {
@@ -70,7 +70,7 @@ namespace Demos.Demos
                 //Build a table and use it for a couple of different tests. 
                 {
                     var legShape = new Box(0.2f, 1, 0.2f);
-                    legShape.ComputeInertia(1f, out var legInverseInertia);
+                    var legInverseInertia = legShape.ComputeInertia(1f);
                     var legShapeIndex = Simulation.Shapes.Add(legShape);
                     var legPose0 = new RigidPose { Position = new Vector3(-1.5f, 0, -1.5f), Orientation = Quaternion.Identity };
                     var legPose1 = new RigidPose { Position = new Vector3(-1.5f, 0, 1.5f), Orientation = Quaternion.Identity };
@@ -133,7 +133,7 @@ namespace Demos.Demos
                         Simulation.Bodies.Add(tableDescription);
 
                         var clampPieceShape = new Box(2f, 0.1f, 0.3f);
-                        clampPieceShape.ComputeInertia(1f, out var clampPieceInverseInertia);
+                        var clampPieceInverseInertia = clampPieceShape.ComputeInertia(1f);
                         var clampPieceShapeIndex = Simulation.Shapes.Add(clampPieceShape);
                         var clamp0 = new RigidPose { Position = new Vector3(0, -0.2f, -1.1f), Orientation = Quaternion.Identity };
                         var clamp1 = new RigidPose { Position = new Vector3(0, 0.2f, -1.1f), Orientation = Quaternion.Identity };
@@ -163,7 +163,7 @@ namespace Demos.Demos
                     var random = new Random(5);
                     var treeCompoundBoxShape = new Box(0.5f, 1.5f, 1f);
                     var treeCompoundBoxShapeIndex = Simulation.Shapes.Add(treeCompoundBoxShape);
-                    treeCompoundBoxShape.ComputeInertia(1, out var childInertia);
+                    var childInertia = treeCompoundBoxShape.ComputeInertia(1);
                     for (int i = 0; i < 128; ++i)
                     {
                         RigidPose localPose;

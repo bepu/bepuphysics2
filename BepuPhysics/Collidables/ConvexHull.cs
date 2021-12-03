@@ -183,17 +183,14 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        /// <summary>
-        /// Computes the inertia of the convex hull.
-        /// </summary>
-        /// <param name="mass">Mass to scale the inertia tensor with.</param>
-        /// <param name="inertia">Inertia of the convex hull.</param>
-        public readonly void ComputeInertia(float mass, out BodyInertia inertia)
+        public readonly BodyInertia ComputeInertia(float mass)
         {
             var triangleSource = new ConvexHullTriangleSource(this);
             MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor);
+            BodyInertia inertia;
             inertia.InverseMass = 1f / mass;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
+            return inertia;
         }
 
         public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)

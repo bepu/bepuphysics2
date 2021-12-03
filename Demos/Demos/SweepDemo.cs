@@ -36,9 +36,9 @@ namespace Demos.Demos
             var box = new Box(2f, 2f, 2f);
             var capsule = new Capsule(1f, 1f);
             var sphere = new Sphere(1.5f);
-            box.ComputeInertia(1, out var boxInertia);
-            capsule.ComputeInertia(1, out var capsuleInertia);
-            sphere.ComputeInertia(1, out var sphereInertia);
+            var boxInertia = box.ComputeInertia(1);
+            var capsuleInertia = capsule.ComputeInertia(1);
+            var sphereInertia = sphere.ComputeInertia(1);
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);

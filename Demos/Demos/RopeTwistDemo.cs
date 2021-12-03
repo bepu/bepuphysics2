@@ -96,7 +96,7 @@ namespace Demos.Demos
 
                 var bigWreckingBall = new Sphere(3);
                 //This wrecking ball is much, much heavier.
-                bigWreckingBall.ComputeInertia(10000, out var bigWreckingBallInertia);
+                var bigWreckingBallInertia = bigWreckingBall.ComputeInertia(10000);
                 var bigWreckingBallIndex = Simulation.Shapes.Add(bigWreckingBall);
                 const float ropeBodySpacing = -0.1f;
                 const float ropeBodyRadius = 0.1f;

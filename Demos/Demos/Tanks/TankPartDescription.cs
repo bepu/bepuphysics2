@@ -29,7 +29,7 @@ namespace Demos.Demos.Tanks
         {
             TankPartDescription description;
             description.Shape = shapes.Add(shape);
-            shape.ComputeInertia(mass, out description.Inertia);
+            description.Inertia = shape.ComputeInertia(mass);
             description.Pose = pose;
             description.Friction = friction;
             return description;

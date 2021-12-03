@@ -145,8 +145,7 @@ namespace Demos.Demos.Sponsors
 
             const int hutCount = 30;
             var hutBoxShape = new Box(0.4f, 2, 3);
-            hutBoxShape.ComputeInertia(20, out var obstacleInertia);
-            var obstacleDescription = BodyDescription.CreateDynamic(new Vector3(), obstacleInertia, Simulation.Shapes.Add(hutBoxShape), 1e-2f);
+            var obstacleDescription = BodyDescription.CreateDynamic(new Vector3(), hutBoxShape.ComputeInertia(20), Simulation.Shapes.Add(hutBoxShape), 1e-2f);
 
             for (int i = 0; i < hutCount; ++i)
             {

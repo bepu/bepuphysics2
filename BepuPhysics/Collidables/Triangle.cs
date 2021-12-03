@@ -109,11 +109,13 @@ namespace BepuPhysics.Collidables
             return false;
         }
 
-        public readonly void ComputeInertia(float mass, out BodyInertia inertia)
+        public readonly BodyInertia ComputeInertia(float mass)
         {
             MeshInertiaHelper.ComputeTriangleContribution(A, B, C, mass, out var inertiaTensor);
+            BodyInertia inertia;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
             inertia.InverseMass = 1f / mass;
+            return inertia;
         }
 
         public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)

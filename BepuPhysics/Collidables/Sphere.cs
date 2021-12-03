@@ -95,8 +95,9 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
-        public readonly void ComputeInertia(float mass, out BodyInertia inertia)
+        public readonly BodyInertia ComputeInertia(float mass)
         {
+            BodyInertia inertia;
             inertia.InverseMass = 1f / mass;
             inertia.InverseInertiaTensor.XX = inertia.InverseMass / ((2f / 5f) * Radius * Radius);
             inertia.InverseInertiaTensor.YX = 0;
@@ -104,6 +105,7 @@ namespace BepuPhysics.Collidables
             inertia.InverseInertiaTensor.ZX = 0;
             inertia.InverseInertiaTensor.ZY = 0;
             inertia.InverseInertiaTensor.ZZ = inertia.InverseInertiaTensor.XX;
+            return inertia;
         }
 
         public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)

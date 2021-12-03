@@ -23,7 +23,7 @@ namespace DemoTests
 
         public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
         {
-            Sphere.ComputeInertia(mass, out inertia);
+            inertia = Sphere.ComputeInertia(mass);
         }
 
         public void ComputeBounds(out Vector3 min, out Vector3 max)
@@ -43,7 +43,7 @@ namespace DemoTests
 
         public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
         {
-            Capsule.ComputeInertia(mass, out inertia);
+            inertia = Capsule.ComputeInertia(mass);
         }
         public void ComputeBounds(out Vector3 min, out Vector3 max)
         {
@@ -63,7 +63,7 @@ namespace DemoTests
 
         public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
         {
-            Cylinder.ComputeInertia(mass, out inertia);
+            inertia = Cylinder.ComputeInertia(mass);
         }
         public void ComputeBounds(out Vector3 min, out Vector3 max)
         {
@@ -82,7 +82,7 @@ namespace DemoTests
         public Box Box;
         public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
         {
-            Box.ComputeInertia(mass, out inertia);
+            inertia = Box.ComputeInertia(mass);
         }
         public void ComputeBounds(out Vector3 min, out Vector3 max)
         {
@@ -101,7 +101,7 @@ namespace DemoTests
         public Triangle Triangle;
         public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
         {
-            Triangle.ComputeInertia(mass, out inertia);
+            inertia = Triangle.ComputeInertia(mass);
         }
         public void ComputeBounds(out Vector3 min, out Vector3 max)
         {
@@ -134,7 +134,7 @@ namespace DemoTests
         public ConvexHull Hull;
         public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
         {
-            Hull.ComputeInertia(mass, out inertia);
+            inertia = Hull.ComputeInertia(mass);
         }
         public void ComputeBounds(out Vector3 min, out Vector3 max)
         {

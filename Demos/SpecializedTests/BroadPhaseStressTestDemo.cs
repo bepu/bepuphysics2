@@ -23,7 +23,7 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var shape = new Sphere(0.5f);
-            shape.ComputeInertia(1, out var sphereInertia);
+            var sphereInertia = shape.ComputeInertia(1);
             var shapeIndex = Simulation.Shapes.Add(shape);
             const int width = 64;
             const int height = 64;

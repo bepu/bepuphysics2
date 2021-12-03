@@ -31,7 +31,7 @@ namespace Demos.Demos
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(3), 1);
 
             var boxShape = new Box(1, 1, 1);
-            boxShape.ComputeInertia(1, out var boxInertia);
+            var boxInertia = boxShape.ComputeInertia(1);
             var boxIndex = Simulation.Shapes.Add(boxShape);
             const int forkCount = 20;
             const int blocksPerChain = 20;
@@ -64,8 +64,7 @@ namespace Demos.Demos
 
             //Build the coin description for the ponz-I mean ICO.
             var coinShape = new Cylinder(1.5f, 0.2f);
-            coinShape.ComputeInertia(1, out var coinInertia);
-            coinDescription = BodyDescription.CreateDynamic(RigidPose.Identity, coinInertia, Simulation.Shapes.Add(coinShape), 0.01f);
+            coinDescription = BodyDescription.CreateDynamic(RigidPose.Identity, coinShape.ComputeInertia(1), Simulation.Shapes.Add(coinShape), 0.01f);
         }
 
         BodyDescription coinDescription;

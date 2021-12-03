@@ -20,7 +20,7 @@ namespace Demos.Demos
         {
             var spinnerBase = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1e-2f }, Simulation.Shapes.Add(new Box(2, 2, 2)), 0.01f));
             var bladeShape = new Box(5, 0.01f, 1);
-            bladeShape.ComputeInertia(1, out var bladeInertia);
+            var bladeInertia = bladeShape.ComputeInertia(1);
             var shapeIndex = Simulation.Shapes.Add(bladeShape);
             //Note that both the minimum progression duration and the sweep convergence duration are both very small at 1e-4. 
             //That will detect collisions with a precision equal to an update rate of 10,000hz.
@@ -60,7 +60,7 @@ namespace Demos.Demos
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var shape = new Box(1, 1, 1);
-            shape.ComputeInertia(1, out var inertia);
+            var inertia = shape.ComputeInertia(1);
             var shapeIndex = Simulation.Shapes.Add(shape);
             for (int i = 0; i < 10; ++i)
             {

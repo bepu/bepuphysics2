@@ -61,11 +61,11 @@ namespace Demos.Demos.Tanks
             var bodyShape = new Compound(children);
             var bodyShapeIndex = Simulation.Shapes.Add(bodyShape);
             var wheelShape = new Cylinder(0.4f, .18f);
-            wheelShape.ComputeInertia(0.25f, out var wheelInertia);
+            var wheelInertia = wheelShape.ComputeInertia(0.25f);
             var wheelShapeIndex = Simulation.Shapes.Add(wheelShape);
 
             var projectileShape = new Sphere(0.1f);
-            projectileShape.ComputeInertia(0.2f, out var projectileInertia);
+            var projectileInertia = projectileShape.ComputeInertia(0.2f);
             var tankDescription = new TankDescription
             {
                 Body = TankPartDescription.Create(10, new Box(4f, 1, 5), RigidPose.Identity, 0.5f, Simulation.Shapes),

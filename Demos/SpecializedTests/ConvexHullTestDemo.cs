@@ -108,8 +108,7 @@ namespace Demos.SpecializedTests
             Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
 
             var hullShapeIndex = Simulation.Shapes.Add(hullShape);
-            hullShape.ComputeInertia(1, out var inertia);
-
+            var inertia = hullShape.ComputeInertia(1);
             Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new (hullShapeIndex, ContinuousDetection.Discrete(20, 20)), 0.01f));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(-25, -5, 0), Simulation.Shapes.Add(new Sphere(2))));

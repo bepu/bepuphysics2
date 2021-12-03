@@ -25,7 +25,7 @@ namespace Demos.Demos
 
             //Build a grid of shapes to be connected.
             var clothNodeShape = new Sphere(0.5f);
-            clothNodeShape.ComputeInertia(1, out var clothNodeInertia);
+            var clothNodeInertia = clothNodeShape.ComputeInertia(1);
             var clothNodeShapeIndex = Simulation.Shapes.Add(clothNodeShape);
             const int width = 128;
             const int length = 128;

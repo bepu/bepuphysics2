@@ -33,7 +33,7 @@ namespace Demos.Demos
 
             //Drop a pyramid on top of the sensor so there are more contacts to look at.
             var boxShape = new Box(1, 1, 1);
-            boxShape.ComputeInertia(1, out var boxInertia);
+            var boxInertia = boxShape.ComputeInertia(1);
             var boxIndex = Simulation.Shapes.Add(boxShape);
 
             const int rowCount = 20;

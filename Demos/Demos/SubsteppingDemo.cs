@@ -24,7 +24,7 @@ namespace Demos.Demos
             camera.Yaw = 0;
             camera.Pitch = 0;
             timestepper = new EmbeddedSubsteppingTimestepper2(8);
-            Simulation = Simulation.Create(BufferPool, 
+            Simulation = Simulation.Create(BufferPool,
                 new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 120), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f },
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), timestepper, 8);
 
@@ -38,7 +38,7 @@ namespace Demos.Demos
                 var bodyHandles = RopeStabilityDemo.BuildRope(Simulation, startLocation, 12, bodyRadius, bodySpacing, 0, 1, 0, springSettings);
 
                 var bigWreckingBall = new Sphere(5);
-                bigWreckingBall.ComputeInertia(1000, out var bigWreckingBallInertia);
+                var bigWreckingBallInertia = bigWreckingBall.ComputeInertia(1000);
 
                 RopeStabilityDemo.AttachWreckingBall(Simulation, bodyHandles, bodyRadius, bodySpacing, 0, bigWreckingBall.Radius, bigWreckingBallInertia, Simulation.Shapes.Add(bigWreckingBall), springSettings);
                 rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "1000:1 mass ratio");
@@ -49,7 +49,7 @@ namespace Demos.Demos
                 //It's also the reason why we need higher substeps- 120hz frequency is too high for 60hz solving! Watch what happens when you drop the substep count to 3.
                 //(Note that the demos timestep frequency is 60hz, so 4 substeps is a 240hz solve rate- twice the 120hz contact frequency.)
                 var boxShape = new Box(4, 0.5f, 6f);
-                boxShape.ComputeInertia(1, out var boxInertia);
+                var boxInertia = boxShape.ComputeInertia(1);
                 //Note that sleeping is disabled with a negative velocity threshold. We want to watch the stack as we change simulation settings; if it's inactive, it won't respond!
                 var boxDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, Simulation.Shapes.Add(boxShape), -1f);
                 for (int i = 0; i < 20; ++i)
@@ -58,9 +58,8 @@ namespace Demos.Demos
                     Simulation.Bodies.Add(boxDescription);
                 }
                 var topBlockShape = new Box(8, 2, 8);
-                topBlockShape.ComputeInertia(200, out var topBlockInertia);
                 Simulation.Bodies.Add(
-                    BodyDescription.CreateDynamic(boxDescription.Pose.Position + new Vector3(0, boxShape.HalfHeight + 1f, 0), topBlockInertia,
+                    BodyDescription.CreateDynamic(boxDescription.Pose.Position + new Vector3(0, boxShape.HalfHeight + 1f, 0), topBlockShape.ComputeInertia(200),
                     Simulation.Shapes.Add(topBlockShape), -1f));
 
                 rolloverInfo.Add(boxDescription.Pose.Position + new Vector3(0, 4, 0), "200:1 mass ratio");
@@ -72,9 +71,8 @@ namespace Demos.Demos
                 var basePosition = new Vector3(-20, 20, 0);
                 var boxShape = new Box(0.5f, 0.5f, 3f);
                 var boxShapeIndex = Simulation.Shapes.Add(boxShape);
-                boxShape.ComputeInertia(1, out var boxInertia);
+                var boxInertia = boxShape.ComputeInertia(1);
                 var linkDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, boxShapeIndex, 0.01f);
-   
 
                 for (int chainIndex = 0; chainIndex < 4; ++chainIndex)
                 {

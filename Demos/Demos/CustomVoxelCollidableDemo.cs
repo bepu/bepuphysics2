@@ -433,8 +433,7 @@ namespace Demos.Demos
 
             var random = new Random(5);
             var shapeToDrop = new Box(1, 1, 1);
-            shapeToDrop.ComputeInertia(1, out var shapeToDropInertia);
-            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDropInertia, Simulation.Shapes.Add(shapeToDrop), 0.01f);
+            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDrop.ComputeInertia(1), Simulation.Shapes.Add(shapeToDrop), 0.01f);
             for (int i = 0; i < 4096; ++i)
             {
                 descriptionToDrop.Pose.Position = new Vector3(15 + 10 * random.NextSingle(), 45 + 150 * random.NextSingle(), 15 + 10 * random.NextSingle());

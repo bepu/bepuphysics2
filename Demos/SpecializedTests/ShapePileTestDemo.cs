@@ -44,11 +44,11 @@ namespace Demos.SpecializedTests
                 //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3(random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1)) * random.NextSingle();
             }
             var convexHull = new ConvexHull(points.Span.Slice(points.Count), BufferPool, out _);
-            box.ComputeInertia(1, out var boxInertia);
-            capsule.ComputeInertia(1, out var capsuleInertia);
-            sphere.ComputeInertia(1, out var sphereInertia);
-            cylinder.ComputeInertia(1, out var cylinderInertia);
-            convexHull.ComputeInertia(1, out var hullInertia);
+            var boxInertia = box.ComputeInertia(1);
+            var capsuleInertia = capsule.ComputeInertia(1);
+            var sphereInertia = sphere.ComputeInertia(1);
+            var cylinderInertia = cylinder.ComputeInertia(1);
+            var hullInertia = convexHull.ComputeInertia(1);
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);

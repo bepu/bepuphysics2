@@ -18,7 +18,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(25, 4, 40);
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool,
-                new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(30, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f }, 
+                new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(30, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f },
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -0.1f, 0)), new EmbeddedSubsteppingTimestepper2(3), 1);
 
             var shapeA = new Box(.75f, 1, .5f);
@@ -28,8 +28,8 @@ namespace Demos.SpecializedTests
             var shapeIndexB = Simulation.Shapes.Add(shapeB);
             var collidableB = new CollidableDescription(shapeIndexB);
             var activity = new BodyActivityDescription(0.01f);
-            shapeA.ComputeInertia(1, out var inertiaA);
-            shapeA.ComputeInertia(1, out var inertiaB);
+            var inertiaA = shapeA.ComputeInertia(1);
+            var inertiaB = shapeB.ComputeInertia(1);
 
             for (int i = 0; i < 32; ++i)
             {

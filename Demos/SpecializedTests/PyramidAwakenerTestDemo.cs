@@ -25,7 +25,7 @@ namespace Demos.Demos
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             var boxShape = new Box(1, 1, 1);
-            boxShape.ComputeInertia(1, out var boxInertia);
+            var boxInertia = boxShape.ComputeInertia(1);
             var boxIndex = Simulation.Shapes.Add(boxShape);
             const int pyramidCount = 10;
             for (int pyramidIndex = 0; pyramidIndex < pyramidCount; ++pyramidIndex)
@@ -60,10 +60,8 @@ namespace Demos.Demos
             if (frameIndex % 64 == 0)
             {
                 var bulletShape = new Sphere(0.5f + 5 * random.NextSingle());
-                bulletShape.ComputeInertia(bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, out var bulletInertia);
                 var bulletShapeIndex = Simulation.Shapes.Add(bulletShape);
-                var bodyDescription = BodyDescription.CreateConvexDynamic(
-                    new Vector3(0, 8, -130), new BodyVelocity(new Vector3(0, 0, 350)), bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, Simulation.Shapes, bulletShape);
+                var bodyDescription = BodyDescription.CreateDynamic(new Vector3(0, 8, -130), new(new Vector3(0, 0, 350)), bulletShape.ComputeInertia(bulletShape.Radius * bulletShape.Radius * bulletShape.Radius), Simulation.Shapes.Add(bulletShape), 0.01f);
                 Simulation.Bodies.Add(bodyDescription);
             }
             if (frameIndex % 192 == 0)

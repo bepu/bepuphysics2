@@ -145,8 +145,7 @@ namespace Demos.Demos
             //Note that this always registers a new shape instance. You could be more clever/efficient and share shapes, but the goal here is to show the most basic option.
             //Also, the cost of registering different shapes isn't that high for tiny implicit shapes.
             var shapeIndex = simulation.Shapes.Add(shape);
-            shape.ComputeInertia(mass, out var inertia);
-            var description = BodyDescription.CreateDynamic(pose, inertia, shapeIndex, 0.01f);
+            var description = BodyDescription.CreateDynamic(pose, shape.ComputeInertia(mass), shapeIndex, 0.01f);
             return simulation.Bodies.Add(description);
         }
 

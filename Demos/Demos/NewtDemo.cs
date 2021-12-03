@@ -659,7 +659,7 @@ namespace Demos.Demos
             pool.TakeAtLeast<BodyHandle>(vertices.Length, out var vertexHandles);
             var vertexShape = new Sphere(cellSize * 0.7f);
             var massPerVertex = density * (cellSize * cellSize * cellSize);
-            vertexShape.ComputeInertia(massPerVertex, out var vertexInertia);
+            var vertexInertia = vertexShape.ComputeInertia(massPerVertex);
             //vertexInertia.InverseInertiaTensor = default;
             var vertexShapeIndex = simulation.Shapes.Add(vertexShape);
             for (int i = 0; i < vertices.Length; ++i)
@@ -749,8 +749,8 @@ namespace Demos.Demos
                 points.AllocateUnsafely() = new Vector3(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
             }
             var convexHull2 = new ConvexHull(points, BufferPool, out _);
-            convexHull1.ComputeInertia(1, out var scalarInertiaA);
-            convexHull2.ComputeInertia(1, out var scalarInertiaB);
+            var scalarInertiaA = convexHull1.ComputeInertia(1);
+            var scalarInertiaB = convexHull2.ComputeInertia(1);
 
             BodyInertiaWide inertiaA;
             inertiaA.InverseMass = new Vector<float>(1);

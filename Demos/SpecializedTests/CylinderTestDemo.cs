@@ -173,8 +173,7 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)), new PositionFirstTimestepper());
 
             var cylinderShape = new Cylinder(1f, .2f);
-            cylinderShape.ComputeInertia(1, out var cylinderInertia);
-            var cylinder = BodyDescription.CreateDynamic(new Vector3(10f, 3, 0), cylinderInertia, new(Simulation.Shapes.Add(cylinderShape), ContinuousDetection.CreatePassive(1000f, 1000f)), 0.01f);
+            var cylinder = BodyDescription.CreateDynamic(new Vector3(10f, 3, 0), cylinderShape.ComputeInertia(1), new(Simulation.Shapes.Add(cylinderShape), ContinuousDetection.CreatePassive(1000f, 1000f)), 0.01f);
             Simulation.Bodies.Add(cylinder);
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(0, -6, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Sphere(2)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(7, -6, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Capsule(0.5f, 1f)));
@@ -186,7 +185,7 @@ namespace Demos.SpecializedTests
 
             cylinderShape = new Cylinder(1f, 3);
             var cylinderShapeIndex = Simulation.Shapes.Add(cylinderShape);
-            cylinderShape.ComputeInertia(1, out cylinderInertia);
+            var cylinderInertia = cylinderShape.ComputeInertia(1);
             //const int rowCount = 15;
             //for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex)
             //{
@@ -205,9 +204,9 @@ namespace Demos.SpecializedTests
             var box = new Box(1f, 3f, 2f);
             var capsule = new Capsule(1f, 1f);
             var sphere = new Sphere(1.5f);
-            box.ComputeInertia(1, out var boxInertia);
-            capsule.ComputeInertia(1, out var capsuleInertia);
-            sphere.ComputeInertia(1, out var sphereInertia);
+            var boxInertia = box.ComputeInertia(1);
+            var capsuleInertia = capsule.ComputeInertia(1);
+            var sphereInertia = sphere.ComputeInertia(1);
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);

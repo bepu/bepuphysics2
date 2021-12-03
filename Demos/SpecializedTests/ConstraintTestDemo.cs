@@ -34,8 +34,8 @@ namespace Demos.SpecializedTests
             var shapeIndexB = Simulation.Shapes.Add(shapeB);
             var collidableB = new CollidableDescription(shapeIndexB);
             var activity = new BodyActivityDescription(0.01f);
-            shapeA.ComputeInertia(1, out var inertiaA);
-            shapeA.ComputeInertia(1, out var inertiaB);
+            var inertiaA = shapeA.ComputeInertia(1);
+            var inertiaB = shapeB.ComputeInertia(1);
             var nextX = -10f;
             {
                 var x = GetNextPosition(ref nextX);

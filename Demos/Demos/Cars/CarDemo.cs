@@ -56,7 +56,7 @@ namespace Demos.Demos.Cars
             var bodyShape = new Compound(children);
             var bodyShapeIndex = Simulation.Shapes.Add(bodyShape);
             var wheelShape = new Cylinder(0.4f, .18f);
-            wheelShape.ComputeInertia(0.25f, out var wheelInertia);
+            var wheelInertia = wheelShape.ComputeInertia(0.25f);
             var wheelShapeIndex = Simulation.Shapes.Add(wheelShape);
 
             const float x = 0.9f;

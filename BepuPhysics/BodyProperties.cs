@@ -67,19 +67,38 @@ namespace BepuPhysics
         //systems needing to interact directly with this representation are often terrifically memory bound. Spending the extra ALU time to convert to a basis can actually be faster
         //than loading the extra 5 elements needed to express the full 3x3 rotation matrix. Also, it's marginally easier to keep the rotation normalized over time.
         //There may be an argument for the matrix variant to ALSO be stored for some bandwidth-unconstrained stages, but don't worry about that until there's a reason to worry about it.
+        /// <summary>
+        /// Orientation of the pose.
+        /// </summary>
         public Quaternion Orientation;
+        /// <summary>
+        /// Position of the pose.
+        /// </summary>
         public Vector3 Position;
 
-        public static RigidPose Identity { get; } = new RigidPose(new Vector3());
+        /// <summary>
+        /// Returns a pose with a position at (0,0,0) and identity orientation.
+        /// </summary>
+        public static RigidPose Identity => new RigidPose(new Vector3());
 
+        /// <summary>
+        /// Creates a rigid pose with the given position and orientation.
+        /// </summary>
+        /// <param name="position">Position of the pose.</param>
+        /// <param name="orientation">Orientation of the pose.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public RigidPose(in Vector3 position, in Quaternion orientation)
+        public RigidPose(Vector3 position, Quaternion orientation)
         {
             Position = position;
             Orientation = orientation;
         }
+
+        /// <summary>
+        /// Creates a rigid pose with the given position and identity orientation.
+        /// </summary>
+        /// <param name="position">Position of the pose.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public RigidPose(in Vector3 position)
+        public RigidPose(Vector3 position)
         {
             Position = position;
             Orientation = Quaternion.Identity;
@@ -136,37 +155,68 @@ namespace BepuPhysics
         }
     }
 
+    /// <summary>
+    /// Linear and angular velocity for a body.
+    /// </summary>
     [StructLayout(LayoutKind.Explicit, Size = 32)]
     public struct BodyVelocity
     {
+        /// <summary>
+        /// Linear velocity associated with the body.
+        /// </summary>
         [FieldOffset(0)]
         public Vector3 Linear;
 
+        /// <summary>
+        /// Angular velocity associated with the body.
+        /// </summary>
         [FieldOffset(16)]
         public Vector3 Angular;
 
+        /// <summary>
+        /// Creates a new set of body velocities. Angular velocity is set to zero.
+        /// </summary>
+        /// <param name="linear">Linear velocity to use for the body.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BodyVelocity(in Vector3 linear)
+        public BodyVelocity(Vector3 linear)
         {
             Linear = linear;
             Angular = default;
         }
 
+        /// <summary>
+        /// Creates a new set of body velocities.
+        /// </summary>
+        /// <param name="linear">Linear velocity to use for the body.</param>
+        /// <param name="angular">Angular velocity to use for the body.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BodyVelocity(in Vector3 linear, in Vector3 angular)
+        public BodyVelocity(Vector3 linear, Vector3 angular)
         {
             Linear = linear;
             Angular = angular;
         }
     }
 
+    /// <summary>
+    /// Stores the inertia for a body.
+    /// </summary>
+    /// <remarks>This representation stores the inverse mass and inverse inertia tensor. Most of the high frequency use cases in the engine naturally use the inverse.</remarks>
     [StructLayout(LayoutKind.Sequential, Size = 32, Pack = 4)]
     public struct BodyInertia
     {
+        /// <summary>
+        /// Inverse of the body's inertia tensor.
+        /// </summary>
         public Symmetric3x3 InverseInertiaTensor;
+        /// <summary>
+        /// Inverse of the body's mass.
+        /// </summary>
         public float InverseMass;
     }
 
+    /// <summary>
+    /// Stores the local and world views of a body's inertia, packed together for efficient access.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct BodyInertias
     {
@@ -196,7 +246,13 @@ namespace BepuPhysics
     [StructLayout(LayoutKind.Sequential)]
     public struct SolverState
     {
+        /// <summary>
+        /// Pose and velocity information for the body.
+        /// </summary>
         public MotionState Motion;
+        /// <summary>
+        /// Inertia information for the body.
+        /// </summary>
         public BodyInertias Inertia;
     }
 
@@ -243,6 +299,9 @@ namespace BepuPhysics
         public Vector<float> InverseMass;
     }
 
+    /// <summary>
+    /// Describes how a body sleeps, and its current state with respect to sleeping.
+    /// </summary>
     public struct BodyActivity
     {
         /// <summary>

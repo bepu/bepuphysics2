@@ -45,8 +45,7 @@ namespace Demos.SpecializedTests
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), Simulation.Shapes.Add(new Sphere(3))));
 
             var bulletShape = new Sphere(0.5f);
-            bulletShape.ComputeInertia(.25f, out var bulletInertia);
-            bulletDescription = BodyDescription.CreateDynamic(RigidPose.Identity, bulletInertia, Simulation.Shapes.Add(bulletShape), 0.01f);
+            bulletDescription = BodyDescription.CreateDynamic(RigidPose.Identity, bulletShape.ComputeInertia(.25f), Simulation.Shapes.Add(bulletShape), 0.01f);
 
             DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(20), out var mesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(200, 0.5f, 120), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), Simulation.Shapes.Add(mesh)));

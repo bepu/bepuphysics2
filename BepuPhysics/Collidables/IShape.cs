@@ -14,7 +14,19 @@ namespace BepuPhysics.Collidables
     /// </summary>
     public interface IShape
     {
+        //TODO: Note that these should really be *static* as they do not need any information about an instance, but static abstract interface methods are not yet out of preview.
+        /// <summary>
+        /// Unique type id for this shape type.
+        /// </summary>
         int TypeId { get; }
+        /// <summary>
+        /// Creates a shape batch for this type of shape.
+        /// </summary>
+        /// <param name="pool">Buffer pool used to create the batch.</param>
+        /// <param name="initialCapacity">Initial capacity to allocate within the batch.</param>
+        /// <param name="shapeBatches">The set of shapes to contain this batch.</param>
+        /// <returns>Shape batch for the shape type.</returns>
+        /// <remarks>This is typically used internally to initialize new shape collections in response to shapes being added. It is not likely to be useful outside of the engine.</remarks>
         ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches);
     }
 
@@ -26,13 +38,38 @@ namespace BepuPhysics.Collidables
     //Note, however, that we do not bother supporting velocity expansion on the one-off variant. For the purposes of adding objects to the simulation, that is basically irrelevant.
     //I don't predict ever needing it, but such an implementation could be added...
 
-
+    /// <summary>
+    /// Defines functions available on all convex shapes. Convex shapes have no hollowed out regions; any line passing through a convex shape will never enter and exit more than once.
+    /// </summary>
     public interface IConvexShape : IShape
     {
+        /// <summary>
+        /// Computes the bounding box of a shape given an orientation.
+        /// </summary>
+        /// <param name="orientation">Orientation of the shape to use when computing the bounding box.</param>
+        /// <param name="min">Minimum corner of the bounding box.</param>
+        /// <param name="max">Maximum corner of the bounding box.</param>
         void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max);
+
+        /// <summary>
+        /// Computes information about how the bounding box should be expanded in response to angular velocity.
+        /// </summary>
+        /// <param name="maximumRadius"></param>
+        /// <param name="maximumAngularExpansion"></param>
+        /// <remarks>This is typically used in the engine for predicting bounding boxes at the beginning of the frame.
+        /// Velocities are used to expand the bounding box so that likely future collisions will be detected.
+        /// Linear velocity expands the bounding box in a direct and simple way, but angular expansion requires more information about the shape. 
+        /// Imagine a long and thin capsule versus a sphere: high angular velocity may require significant expansion on the capsule, but spheres are rotationally invariant.</remarks>
         void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion);
 
-        void ComputeInertia(float mass, out BodyInertia inertia);
+        /// <summary>
+        /// Computes the inertia for a body given a mass.
+        /// </summary>
+        /// <param name="mass">Mass to use to compute the body's inertia.</param>
+        /// <returns>Inertia for the body.</returns>
+        /// <remarks>Note that the <see cref="BodyInertia"/> returned by this stores the inverse mass and inverse inertia tensor. 
+        /// This is because the most high frequency use of body inertia most naturally uses the inverse.</remarks>
+        BodyInertia ComputeInertia(float mass);
 
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal);
     }

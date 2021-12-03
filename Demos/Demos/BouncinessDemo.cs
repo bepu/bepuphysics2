@@ -88,9 +88,8 @@ namespace Demos.Demos
             var collidableMaterials = new CollidableProperty<SimpleMaterial>();
             Simulation = Simulation.Create(BufferPool, new BounceCallbacks() { CollidableMaterials = collidableMaterials }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(4), solverIterationCount: 2);
 
-            var shape = new Sphere(1);
-            shape.ComputeInertia(1, out var inertia);
-            var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, inertia, new(Simulation.Shapes.Add(shape), ContinuousDetection.Discrete(20, 20)), 1e-2f);
+            var shape = new Sphere(1);            
+            var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, shape.ComputeInertia(1), new(Simulation.Shapes.Add(shape), ContinuousDetection.Discrete(20, 20)), 1e-2f);
 
             for (int i = 0; i < 100; ++i)
             {

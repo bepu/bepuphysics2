@@ -24,9 +24,9 @@ namespace Demos.SpecializedTests
             var box = new Box(1f, 3f, 2f);
             var capsule = new Capsule(1f, 1f);
             var sphere = new Sphere(1f);
-            box.ComputeInertia(1, out var boxInertia);
-            capsule.ComputeInertia(1, out var capsuleInertia);
-            sphere.ComputeInertia(1, out var sphereInertia);
+            var boxInertia = box.ComputeInertia(1);
+            var capsuleInertia = capsule.ComputeInertia(1);
+            var sphereInertia = sphere.ComputeInertia(1);
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);

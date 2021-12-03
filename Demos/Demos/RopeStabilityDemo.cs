@@ -23,7 +23,7 @@ namespace Demos.Demos
         {
             BodyHandle[] handles = new BodyHandle[bodyCount + 1];
             var ropeShape = new Sphere(bodySize);
-            ropeShape.ComputeInertia(massPerBody, out var ropeInertia);
+            var ropeInertia = ropeShape.ComputeInertia(massPerBody);
             Symmetric3x3.Scale(ropeInertia.InverseInertiaTensor, inverseInertiaScale, out ropeInertia.InverseInertiaTensor);
             var ropeShapeIndex = simulation.Shapes.Add(ropeShape);
             //Build the links.
@@ -96,12 +96,12 @@ namespace Demos.Demos
 
             //So, even though you can avoid the need for these kinds of hacks, it's good to know that they exist should you find yourself in a circumstance where substepping isn't viable.
             Simulation = Simulation.Create(BufferPool,
-                new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f }, 
+                new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f },
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper());
 
             rolloverInfo = new RolloverInfo();
             var smallWreckingBall = new Sphere(1);
-            smallWreckingBall.ComputeInertia(5, out var smallWreckingBallInertia);
+            var smallWreckingBallInertia = smallWreckingBall.ComputeInertia(5);
             var smallWreckingBallIndex = Simulation.Shapes.Add(smallWreckingBall);
             {
                 //The first thing you might try when building a rope is a simple chain of low mass bodies connected by distance limits with the wrecking ball attached at the end in a natural way.
@@ -117,7 +117,7 @@ namespace Demos.Demos
             }
             var bigWreckingBall = new Sphere(3);
             //This wrecking ball is much, much heavier.
-            bigWreckingBall.ComputeInertia(100, out var bigWreckingBallInertia);
+            var bigWreckingBallInertia = bigWreckingBall.ComputeInertia(100);
             var bigWreckingBallIndex = Simulation.Shapes.Add(bigWreckingBall);
             {
                 //Everything identical to the first rope, but now with a heavier wrecking ball.

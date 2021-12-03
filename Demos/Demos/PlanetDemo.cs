@@ -74,7 +74,7 @@ namespace Demos.Demos
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Sphere(50))));
 
             var orbiter = new Sphere(1f);
-            orbiter.ComputeInertia(1, out var inertia);
+            var inertia = orbiter.ComputeInertia(1);
             var orbiterShapeIndex = Simulation.Shapes.Add(orbiter);
             var spacing = new Vector3(5);
             const int length = 20;
