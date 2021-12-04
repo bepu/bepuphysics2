@@ -14,11 +14,7 @@ namespace BepuPhysics
 {
     public interface IPoseIntegrator
     {
-        void IntegrateBodiesAndUpdateBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
         void PredictBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
-        void IntegrateVelocitiesBoundsAndInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
-        void IntegrateVelocitiesAndUpdateInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
-        void IntegratePoses(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
         void IntegrateAfterSubstepping(IndexSet constrainedBodies, float dt, int substepCount, IThreadDispatcher threadDispatcher = null);
     }
 
@@ -53,19 +49,18 @@ namespace BepuPhysics
 
         /// <summary>
         /// Gets whether the integrator should use only one step for unconstrained bodies when using a substepping solver.
-        /// If true, unconstrained bodies use a single step of length equal to the dt provided to Simulation.Timestep. 
+        /// If true, unconstrained bodies use a single step of length equal to the dt provided to <see cref="Simulation.Timestep"/>. 
         /// If false, unconstrained bodies will be integrated with the same number of substeps as the constrained bodies in the solver.
         /// </summary>
         bool AllowSubstepsForUnconstrainedBodies { get; }
 
         /// <summary>
         /// Gets whether the velocity integration callback should be called for kinematic bodies.
-        /// If true, IntegrateVelocity will be called for bundles including kinematic bodies.
+        /// If true, <see cref="IntegrateVelocity"/> will be called for bundles including kinematic bodies.
         /// If false, kinematic bodies will just continue using whatever velocity they have set.
         /// Most use cases should set this to false.
         /// </summary>
         bool IntegrateVelocityForKinematics { get; }
-
 
         /// <summary>
         /// Performs any required initialization logic after the Simulation instance has been constructed.
@@ -79,16 +74,6 @@ namespace BepuPhysics
         /// <param name="dt">Current time step duration.</param>
         void PrepareForIntegration(float dt);
 
-        /// <summary>
-        /// Callback called for each active body within the simulation during body integration.
-        /// </summary>
-        /// <param name="bodyIndex">Index of the body being visited.</param>
-        /// <param name="pose">Body's current pose.</param>
-        /// <param name="localInertia">Body's current local inertia.</param>
-        /// <param name="workerIndex">Index of the worker thread processing this body.</param>
-        /// <param name="velocity">Reference to the body's current velocity to integrate.</param>
-        void IntegrateVelocity(int bodyIndex, in RigidPose pose, in BodyInertia localInertia, int workerIndex, ref BodyVelocity velocity);
-
 
         /// <summary>
         /// Callback for a bundle of bodies being integrated.
@@ -97,7 +82,7 @@ namespace BepuPhysics
         /// <param name="position">Current body positions.</param>
         /// <param name="orientation">Current body orientations.</param>
         /// <param name="localInertia">Body's current local inertia.</param>
-        /// <param name="integrationMask">Mask indicating which lanes are active in the bundle. Active lanes will contain 0xFFFFFFFF, inactive lanes will contain 0. Lanes beyond bodyIndices.Length are undefined.</param>
+        /// <param name="integrationMask">Mask indicating which lanes are active in the bundle. Active lanes will contain 0xFFFFFFFF, inactive lanes will contain 0.</param>
         /// <param name="workerIndex">Index of the worker thread processing this bundle.</param>
         /// <param name="dt">Durations to integrate the velocity over. Can vary over lanes.</param>
         /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
@@ -195,7 +180,7 @@ namespace BepuPhysics
         {
             var infinity = new Vector<float>(float.PositiveInfinity);
             var useNewVelocity = Vector.BitwiseAnd(Vector.LessThan(Vector.Abs(angularVelocity.X), infinity), Vector.BitwiseAnd(
-                Vector.LessThan(Vector.Abs(angularVelocity.Y), infinity), 
+                Vector.LessThan(Vector.Abs(angularVelocity.Y), infinity),
                 Vector.LessThan(Vector.Abs(angularVelocity.Z), infinity)));
             angularVelocity.X = Vector.ConditionalSelect(useNewVelocity, angularVelocity.X, previousAngularVelocity.X);
             angularVelocity.Y = Vector.ConditionalSelect(useNewVelocity, angularVelocity.Y, previousAngularVelocity.Y);
@@ -291,22 +276,14 @@ namespace BepuPhysics
 
         public TCallbacks Callbacks;
 
-        Action<int> integrateBodiesAndUpdateBoundingBoxesWorker;
         Action<int> predictBoundingBoxesWorker;
-        Action<int> integrateVelocitiesBoundsAndInertiasWorker;
-        Action<int> integrateVelocitiesWorker;
-        Action<int> integratePosesWorker;
         public PoseIntegrator(Bodies bodies, Shapes shapes, BroadPhase broadPhase, TCallbacks callbacks)
         {
             this.bodies = bodies;
             this.shapes = shapes;
             this.broadPhase = broadPhase;
             Callbacks = callbacks;
-            integrateBodiesAndUpdateBoundingBoxesWorker = IntegrateBodiesAndUpdateBoundingBoxesWorker;
             predictBoundingBoxesWorker = PredictBoundingBoxesWorker;
-            integrateVelocitiesBoundsAndInertiasWorker = IntegrateVelocitiesBoundsAndInertiasWorker;
-            integrateVelocitiesWorker = IntegrateVelocitiesWorker;
-            integratePosesWorker = IntegratePosesWorker;
             integrateAfterSubsteppingWorker = IntegrateAfterSubsteppingWorker;
         }
 
@@ -480,11 +457,49 @@ namespace BepuPhysics
             }
         }
 
-        unsafe void PredictBoundingBoxes(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
+        unsafe void PredictBoundingBoxes(int startBundleIndex, int endBundleIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
-            ref var baseStates = ref bodies.ActiveSet.SolverStates[0];
-            ref var baseActivity = ref bodies.ActiveSet.Activity[0];
-            ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
+            var activities = bodies.ActiveSet.Activity;
+            var collidables = bodies.ActiveSet.Collidables;
+
+            var bundleCount = endBundleIndex - startBundleIndex;
+            Helpers.FillVectorWithLaneIndices(out var laneIndexOffsets);
+            var dtWide = new Vector<float>(dt);
+            var bodyCount = bodies.ActiveSet.Count;
+            for (int bundleIndex = 0; bundleIndex < bundleCount; ++bundleIndex)
+            {
+                var bundleStartBodyIndex = bundleIndex * Vector<float>.Count;
+                var countInBundle = bodyCount - bundleStartBodyIndex;
+                if (countInBundle > Vector<int>.Count)
+                    countInBundle = Vector<int>.Count;
+                var laneIndices = new Vector<int>(bundleStartBodyIndex) + laneIndexOffsets;
+                bodies.GatherState<AccessAll>(laneIndices, false, out var position, out var orientation, out var velocity, out var inertia);
+
+                Vector<int> integrationMask;
+                if (Callbacks.IntegrateVelocityForKinematics)
+                {
+                    integrationMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
+                }
+                else
+                {
+                    integrationMask = Vector.AndNot(BundleIndexing.CreateMaskForCountInBundle(countInBundle), IsKinematic(inertia));
+                }
+                var sleepEnergy = velocity.Linear.LengthSquared() + velocity.Angular.LengthSquared();
+
+                //Note that we're not storing out the integrated velocities. The integrated velocities are only used for bounding box prediction.
+                if (Vector.LessThanAny(integrationMask, Vector<int>.Zero))
+                    Callbacks.IntegrateVelocity(laneIndices, position, orientation, inertia, integrationMask, workerIndex, dtWide, ref velocity);
+
+                for (int i = 0; i < countInBundle; ++i)
+                {
+                    var bodyIndex = i + bundleStartBodyIndex;
+                    UpdateSleepCandidacy(sleepEnergy[bodyIndex], ref activities[bodyIndex]);
+
+                    boundingBoxBatcher.Add(bodyIndex, bodyPose, bodyVelocity, collidablles[bodyIndex]);
+                }
+
+            }
+
             for (int i = startIndex; i < endIndex; ++i)
             {
                 ref var state = ref Unsafe.Add(ref baseStates, i);
@@ -502,71 +517,6 @@ namespace BepuPhysics
 
                 //Note that we do not include fancier angular integration for the bounding box prediction- it's not very important.
                 boundingBoxBatcher.Add(i, motion.Pose, integratedVelocity, Unsafe.Add(ref baseCollidable, i));
-            }
-        }
-
-        unsafe void IntegrateVelocitiesBoundsAndInertias(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
-        {
-            ref var baseStates = ref bodies.ActiveSet.SolverStates[0];
-            ref var baseActivity = ref bodies.ActiveSet.Activity[0];
-            ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
-            for (int i = startIndex; i < endIndex; ++i)
-            {
-                ref var state = ref Unsafe.Add(ref baseStates, i);
-                ref var motion = ref state.Motion;
-                motion.Pose.Position.Validate();
-                motion.Pose.Orientation.ValidateOrientation();
-                motion.Velocity.Linear.Validate();
-                motion.Velocity.Angular.Validate();
-
-                UpdateSleepCandidacy(ref motion.Velocity, ref Unsafe.Add(ref baseActivity, i));
-
-                ref var inertia = ref state.Inertia;
-                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, motion.Pose.Orientation, out inertia.World.InverseInertiaTensor);
-                inertia.World.InverseMass = inertia.Local.InverseMass;
-
-                IntegrateAngularVelocity(motion.Pose, inertia.Local, inertia.World, ref motion.Velocity.Angular, dt);
-                Callbacks.IntegrateVelocity(i, motion.Pose, inertia.Local, workerIndex, ref motion.Velocity);
-
-                boundingBoxBatcher.Add(i, motion.Pose, motion.Velocity, Unsafe.Add(ref baseCollidable, i));
-            }
-        }
-
-
-        unsafe void IntegrateVelocities(int startIndex, int endIndex, float dt, int workerIndex)
-        {
-            ref var baseStates = ref bodies.ActiveSet.SolverStates[0];
-            for (int i = startIndex; i < endIndex; ++i)
-            {
-                ref var state = ref Unsafe.Add(ref baseStates, i);
-                ref var motion = ref state.Motion;
-                motion.Pose.Position.Validate();
-                motion.Pose.Orientation.ValidateOrientation();
-                motion.Velocity.Linear.Validate();
-                motion.Velocity.Angular.Validate();
-
-                ref var inertia = ref state.Inertia;
-                PoseIntegration.RotateInverseInertia(inertia.Local.InverseInertiaTensor, motion.Pose.Orientation, out inertia.World.InverseInertiaTensor);
-                inertia.World.InverseMass = inertia.Local.InverseMass;
-
-                IntegrateAngularVelocity(motion.Pose, inertia.Local, inertia.World, ref motion.Velocity.Angular, dt);
-                Callbacks.IntegrateVelocity(i, motion.Pose, inertia.Local, workerIndex, ref motion.Velocity);
-            }
-        }
-
-        unsafe void IntegratePoses(int startIndex, int endIndex, float dt, int workerIndex)
-        {
-            ref var baseStates = ref bodies.ActiveSet.SolverStates[0];
-            for (int i = startIndex; i < endIndex; ++i)
-            {
-                ref var state = ref Unsafe.Add(ref baseStates, i);
-                ref var motion = ref state.Motion;
-                motion.Pose.Position.Validate();
-                motion.Pose.Orientation.ValidateOrientation();
-                motion.Velocity.Linear.Validate();
-                motion.Velocity.Angular.Validate();
-
-                PoseIntegration.Integrate(motion.Pose, motion.Velocity, dt, out motion.Pose);
             }
         }
 
@@ -598,18 +548,6 @@ namespace BepuPhysics
             return true;
         }
 
-        void IntegrateBodiesAndUpdateBoundingBoxesWorker(int workerIndex)
-        {
-            var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
-            var bodyCount = bodies.ActiveSet.Count;
-            while (TryGetJob(bodyCount, out var start, out var exclusiveEnd))
-            {
-                IntegrateBodiesAndUpdateBoundingBoxes(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater, workerIndex);
-            }
-            boundingBoxUpdater.Flush();
-
-        }
-
         void PredictBoundingBoxesWorker(int workerIndex)
         {
             var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
@@ -619,35 +557,6 @@ namespace BepuPhysics
                 PredictBoundingBoxes(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater, workerIndex);
             }
             boundingBoxUpdater.Flush();
-        }
-
-        void IntegrateVelocitiesBoundsAndInertiasWorker(int workerIndex)
-        {
-            var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
-            var bodyCount = bodies.ActiveSet.Count;
-            while (TryGetJob(bodyCount, out var start, out var exclusiveEnd))
-            {
-                IntegrateVelocitiesBoundsAndInertias(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater, workerIndex);
-            }
-            boundingBoxUpdater.Flush();
-        }
-
-        void IntegrateVelocitiesWorker(int workerIndex)
-        {
-            var bodyCount = bodies.ActiveSet.Count;
-            while (TryGetJob(bodyCount, out var start, out var exclusiveEnd))
-            {
-                IntegrateVelocities(start, exclusiveEnd, cachedDt, workerIndex);
-            }
-        }
-
-        void IntegratePosesWorker(int workerIndex)
-        {
-            var bodyCount = bodies.ActiveSet.Count;
-            while (TryGetJob(bodyCount, out var start, out var exclusiveEnd))
-            {
-                IntegratePoses(start, exclusiveEnd, cachedDt, workerIndex);
-            }
         }
 
         void PrepareForMultithreadedExecution(int loopIterationCount, float dt, int workerCount, int substepCount = 1)
@@ -662,36 +571,6 @@ namespace BepuPhysics
             availableJobCount = loopIterationCount / jobSize;
             if (jobSize * availableJobCount < loopIterationCount)
                 ++availableJobCount;
-        }
-
-
-        public void IntegrateBodiesAndUpdateBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
-        {
-            var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-
-            Callbacks.PrepareForIntegration(dt);
-            if (threadDispatcher != null)
-            {
-                //While we do technically support multithreading here, scaling is going to be really, really bad if the simulation gets kicked out of L3 cache in between frames.
-                //The ratio of memory loads to actual compute work in this stage is extremely high, so getting scaling of 1.2x on a quad core is quite possible.
-                //On the upside, it is a very short stage. With any luck, one or more of the following will hold:
-                //1) the system has silly fast RAM,
-                //2) the CPU supports octochannel memory and just brute forces the issue,
-                //3) whatever the application is doing doesn't evict the entire L3 cache between frames.
-
-                //Note that this bottleneck means the fact that we're working through bodies in a nonvectorized fashion (in favor of optimizing storage for solver access) is not a problem.
-
-                PrepareForMultithreadedExecution(bodies.ActiveSet.Count, dt, threadDispatcher.ThreadCount);
-                this.threadDispatcher = threadDispatcher;
-                threadDispatcher.DispatchWorkers(integrateBodiesAndUpdateBoundingBoxesWorker);
-                this.threadDispatcher = null;
-            }
-            else
-            {
-                var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, pool, dt);
-                IntegrateBodiesAndUpdateBoundingBoxes(0, bodies.ActiveSet.Count, dt, ref boundingBoxUpdater, 0);
-                boundingBoxUpdater.Flush();
-            }
         }
 
         public void PredictBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
@@ -713,63 +592,6 @@ namespace BepuPhysics
                 boundingBoxUpdater.Flush();
             }
 
-        }
-
-        public void IntegrateVelocitiesBoundsAndInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
-        {
-            var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-
-            Callbacks.PrepareForIntegration(dt);
-            if (threadDispatcher != null)
-            {
-                PrepareForMultithreadedExecution(bodies.ActiveSet.Count, dt, threadDispatcher.ThreadCount);
-                this.threadDispatcher = threadDispatcher;
-                threadDispatcher.DispatchWorkers(integrateVelocitiesBoundsAndInertiasWorker);
-                this.threadDispatcher = null;
-            }
-            else
-            {
-                var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, pool, dt);
-                IntegrateVelocitiesBoundsAndInertias(0, bodies.ActiveSet.Count, dt, ref boundingBoxUpdater, 0);
-                boundingBoxUpdater.Flush();
-            }
-        }
-
-        public void IntegrateVelocitiesAndUpdateInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
-        {
-            var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-
-            Callbacks.PrepareForIntegration(dt);
-            if (threadDispatcher != null)
-            {
-                PrepareForMultithreadedExecution(bodies.ActiveSet.Count, dt, threadDispatcher.ThreadCount);
-                this.threadDispatcher = threadDispatcher;
-                threadDispatcher.DispatchWorkers(integrateVelocitiesWorker);
-                this.threadDispatcher = null;
-            }
-            else
-            {
-                IntegrateVelocities(0, bodies.ActiveSet.Count, dt, 0);
-            }
-        }
-
-        public void IntegratePoses(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
-        {
-            //This path is used with some other velocity/bounding box integration that handles world inertia calculation, so we don't need to worry about it.
-            var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-
-            Callbacks.PrepareForIntegration(dt);
-            if (threadDispatcher != null)
-            {
-                PrepareForMultithreadedExecution(bodies.ActiveSet.Count, dt, threadDispatcher.ThreadCount);
-                this.threadDispatcher = threadDispatcher;
-                threadDispatcher.DispatchWorkers(integratePosesWorker);
-                this.threadDispatcher = null;
-            }
-            else
-            {
-                IntegratePoses(0, bodies.ActiveSet.Count, dt, 0);
-            }
         }
 
 
@@ -861,6 +683,13 @@ namespace BepuPhysics
             }
         }
 
+        static Vector<int> IsKinematic(BodyInertiaWide inertia)
+        {
+            return Vector.Equals(Vector.BitwiseOr(
+                Vector.BitwiseOr(Vector.BitwiseOr(inertia.InverseMass, inertia.InverseInertiaTensor.XX), Vector.BitwiseOr(inertia.InverseInertiaTensor.YX, inertia.InverseInertiaTensor.YY)),
+                Vector.BitwiseOr(Vector.BitwiseOr(inertia.InverseInertiaTensor.ZX, inertia.InverseInertiaTensor.ZY), inertia.InverseInertiaTensor.ZZ)), Vector<float>.Zero);
+        }
+
         unsafe void IntegrateBundlesAfterSubstepping(ref IndexSet mergedConstrainedBodyHandles, int bundleStartIndex, int bundleEndIndex, float dt, float substepDt, int substepCount, int workerIndex)
         {
             var bodyCount = bodies.ActiveSet.Count;
@@ -929,10 +758,7 @@ namespace BepuPhysics
                 }
                 else
                 {
-                    var isKinematic =
-                    Vector.Equals(Vector.BitwiseOr(
-                        Vector.BitwiseOr(Vector.BitwiseOr(localInertia.InverseMass, localInertia.InverseInertiaTensor.XX), Vector.BitwiseOr(localInertia.InverseInertiaTensor.YX, localInertia.InverseInertiaTensor.YY)),
-                        Vector.BitwiseOr(Vector.BitwiseOr(localInertia.InverseInertiaTensor.ZX, localInertia.InverseInertiaTensor.ZY), localInertia.InverseInertiaTensor.ZZ)), Vector<float>.Zero);
+                    var isKinematic = IsKinematic(localInertia);
                     unconstrainedVelocityIntegrationMask = Vector.AndNot(unconstrainedMask, isKinematic);
                     anyBodyInBundleNeedsVelocityIntegration = Vector.LessThanAny(unconstrainedVelocityIntegrationMask, Vector<int>.Zero);
                 }

@@ -204,18 +204,6 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Updates the position, velocity, world inertia, deactivation candidacy and bounding boxes of active bodies.
-        /// </summary>
-        /// <param name="dt">Duration of the time step.</param>
-        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void IntegrateBodiesAndUpdateBoundingBoxes(float dt, IThreadDispatcher threadDispatcher = null)
-        {
-            profiler.Start(PoseIntegrator);
-            PoseIntegrator.IntegrateBodiesAndUpdateBoundingBoxes(dt, BufferPool, threadDispatcher);
-            profiler.End(PoseIntegrator);
-        }
-
-        /// <summary>
         /// Predicts the bounding boxes of active bodies by speculatively integrating velocity. Does not actually modify body velocities. Updates deactivation candidacy.
         /// </summary>
         /// <param name="dt">Duration of the time step.</param>
@@ -224,42 +212,6 @@ namespace BepuPhysics
         {
             profiler.Start(PoseIntegrator);
             PoseIntegrator.PredictBoundingBoxes(dt, BufferPool, threadDispatcher);
-            profiler.End(PoseIntegrator);
-        }
-
-        /// <summary>
-        /// Updates the velocities, world space inertias, bounding boxes, and deactivation candidacy of active bodies.
-        /// </summary>
-        /// <param name="dt">Duration of the time step.</param>
-        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void IntegrateVelocitiesBoundsAndInertias(float dt, IThreadDispatcher threadDispatcher = null)
-        {
-            profiler.Start(PoseIntegrator);
-            PoseIntegrator.IntegrateVelocitiesBoundsAndInertias(dt, BufferPool, threadDispatcher);
-            profiler.End(PoseIntegrator);
-        }
-
-        /// <summary>
-        /// Updates the velocities and world space inertias of active bodies.
-        /// </summary>
-        /// <param name="dt">Duration of the time step.</param>
-        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void IntegrateVelocitiesAndUpdateInertias(float dt, IThreadDispatcher threadDispatcher = null)
-        {
-            profiler.Start(PoseIntegrator);
-            PoseIntegrator.IntegrateVelocitiesAndUpdateInertias(dt, BufferPool, threadDispatcher);
-            profiler.End(PoseIntegrator);
-        }
-
-        /// <summary>
-        /// Updates the poses of active bodies.
-        /// </summary>
-        /// <param name="dt">Duration of the time step.</param>
-        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void IntegratePoses(float dt, IThreadDispatcher threadDispatcher = null)
-        {
-            profiler.Start(PoseIntegrator);
-            PoseIntegrator.IntegratePoses(dt, BufferPool, threadDispatcher);
             profiler.End(PoseIntegrator);
         }
 
@@ -281,30 +233,6 @@ namespace BepuPhysics
             profiler.Start(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher);
             profiler.End(NarrowPhase);
-        }
-
-        /// <summary>
-        /// Uses the current body velocities to incrementally update all active contact constraint penetration depths.
-        /// </summary>
-        /// <param name="dt">Duration of the time step.</param>
-        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void IncrementallyUpdateContactConstraints(float dt, IThreadDispatcher threadDispatcher = null)
-        {
-            profiler.Start(Solver);
-            Solver.IncrementallyUpdateContactConstraints(dt, threadDispatcher);
-            profiler.End(Solver);
-        }
-
-        /// <summary>
-        /// Solves all active constraints in the simulation.
-        /// </summary>
-        /// <param name="dt">Duration of the time step.</param>
-        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void Solve(float dt, IThreadDispatcher threadDispatcher = null)
-        {
-            profiler.Start(Solver);
-            Solver.Solve(dt, threadDispatcher);
-            profiler.End(Solver);
         }
 
         /// <summary>
