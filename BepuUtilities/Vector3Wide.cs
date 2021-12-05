@@ -559,7 +559,6 @@ namespace BepuUtilities
             ReadFirst(offset, out narrow);
         }
 
-
         /// <summary>
         /// Pulls one lane out of the wide representation.
         /// </summary>

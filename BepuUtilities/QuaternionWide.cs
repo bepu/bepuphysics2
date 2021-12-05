@@ -628,5 +628,18 @@ namespace BepuUtilities
         {
             WriteFirst(source, ref GatherScatter.GetOffsetInstance(ref target, slotIndex));
         }
+
+        /// <summary>
+        /// Pulls one lane out of the wide representation.
+        /// </summary>
+        /// <param name="wide">Source of the lane.</param>
+        /// <param name="slotIndex">Index of the lane within the wide representation to read.</param>
+        /// <param name="narrow">Non-SIMD type to store the lane in.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ReadSlot(ref QuaternionWide wide, int slotIndex, out Quaternion narrow)
+        {
+            ref var offset = ref GatherScatter.GetOffsetInstance(ref wide, slotIndex);
+            ReadFirst(offset, out narrow);
+        }
     }
 }

@@ -320,6 +320,19 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Checks inertia lanes for kinematicity (all inverse mass and inertia values are zero).
+        /// </summary>
+        /// <param name="inertia">Inertia to examine for kinematicity.</param>
+        /// <returns>Mask of lanes which contain zeroed inverse masses and inertias.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector<int> IsKinematic(BodyInertiaWide inertia)
+        {
+            return Vector.Equals(Vector.BitwiseOr(
+                Vector.BitwiseOr(Vector.BitwiseOr(inertia.InverseMass, inertia.InverseInertiaTensor.XX), Vector.BitwiseOr(inertia.InverseInertiaTensor.YX, inertia.InverseInertiaTensor.YY)),
+                Vector.BitwiseOr(Vector.BitwiseOr(inertia.InverseInertiaTensor.ZX, inertia.InverseInertiaTensor.ZY), inertia.InverseInertiaTensor.ZZ)), Vector<float>.Zero);
+        }
+
+        /// <summary>
         /// Gets whether the inertia matches that of a kinematic body (that is, all inverse mass and inertia components are zero).
         /// </summary>
         /// <param name="inertia">Body inertia to analyze.</param>

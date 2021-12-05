@@ -61,7 +61,7 @@ namespace Demos.Demos
             camera.Pitch = 0;
 
             //Note the lack of damping- we want the gyroscope to keep spinning.
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new GyroscopicIntegratorCallbacks(new Vector3(0, -10, 0), 0f, 0f), new SubsteppingTimestepper(4), 2);
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new GyroscopicIntegratorCallbacks(new Vector3(0, -10, 0), 0f, 0f), new EmbeddedSubsteppingTimestepper2(4), 1);
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(100, 1, 100))));
 
