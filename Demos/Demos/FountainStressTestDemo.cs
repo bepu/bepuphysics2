@@ -258,14 +258,7 @@ namespace Demos.Demos
                 }
             }
 
-            description = new BodyDescription
-            {
-                Pose = pose,
-                LocalInertia = inertia,
-                Collidable = shapeIndex,
-                Activity = 0.1f,
-                Velocity = velocity
-            };
+            description = BodyDescription.CreateDynamic(pose, velocity, inertia, shapeIndex, 0.1f);
             switch (random.Next(3))
             {
                 case 0: description.Collidable.Continuity = ContinuousDetection.Discrete(0, 0.2f); break;

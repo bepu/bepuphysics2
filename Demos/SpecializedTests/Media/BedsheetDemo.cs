@@ -22,13 +22,7 @@ namespace Demos.Demos
         BodyHandle[,] CreateBodyGrid(in Vector3 position, in Quaternion orientation, int width, int height, float spacing, float bodyRadius, float massPerBody,
             int instanceId, CollidableProperty<ClothCollisionFilter> filters, KinematicDecider isKinematic)
         {
-            var description = new BodyDescription
-            {
-                Activity = 0.01f,
-                Collidable = Simulation.Shapes.Add(new Sphere(bodyRadius)),
-                LocalInertia = default,
-                Pose = orientation
-            };
+            var description = BodyDescription.CreateKinematic(orientation, Simulation.Shapes.Add(new Sphere(bodyRadius)), 0.01f);
             var inverseMass = 1f / massPerBody;
             BodyHandle[,] handles = new BodyHandle[height, width];
             for (int rowIndex = 0; rowIndex < height; ++rowIndex)
