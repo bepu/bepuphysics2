@@ -82,11 +82,11 @@ namespace Demos.Demos
             camera.Pitch = 0;
             //This type of position-based bounciness requires feedback from position error to drive the corrective impulses that make stuff bounce.
             //The briefer a collision is, the more damped the bounce becomes relative to the physical ideal.
-            //To counteract this, a substepping timestepper is used. In the demos, we update the simulation at 60hz, so a substep count of 4 means the solver and integrator will run at 240hz.
+            //To counteract this, a substepping timestepper is used. In the demos, we update the simulation at 60hz, so a substep count of 8 means the solver and integrator will run at 480hz.
             //That allows higher stiffnesses to be used since collisions last longer relative to the solver timestep duration.
-            //(Note that substepping tends to be an extremely strong simulation stabilizer, so you can usually get away with lower solver iteration counts for better performance.)
+            //(Note that substepping tends to be an extremely strong simulation stabilizer, so you can usually get away with lower solver iteration counts for better performance. It defaults to 1 velocity iteration per substep.)
             var collidableMaterials = new CollidableProperty<SimpleMaterial>();
-            Simulation = Simulation.Create(BufferPool, new BounceCallbacks() { CollidableMaterials = collidableMaterials }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(4), solverIterationCount: 2);
+            Simulation = Simulation.Create(BufferPool, new BounceCallbacks() { CollidableMaterials = collidableMaterials }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 8);
 
             var shape = new Sphere(1);            
             var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, shape.ComputeInertia(1), new(Simulation.Shapes.Add(shape), ContinuousDetection.Discrete(20, 20)), 1e-2f);

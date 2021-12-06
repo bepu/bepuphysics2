@@ -83,11 +83,7 @@ namespace Demos.Demos
             var filters = new CollidableProperty<Filter>();
             Simulation = Simulation.Create(BufferPool,
                 new RopeNarrowPhaseCallbacks { ContactSpringiness = new SpringSettings(2000, 1), Filters = filters },
-                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(60), solverIterationCount: 1, solverFallbackBatchThreshold: 64);
-            //Simulation = Simulation.Create(BufferPool,
-            //    new RopeNarrowPhaseCallbacks { ContactSpringiness = new SpringSettings(2000, 1), Filters = filters },
-            //    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper2(60), solverIterationCount: 1, solverFallbackBatchThreshold: 512);
-
+                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 60);
 
             for (int twistIndex = 0; twistIndex < 1; ++twistIndex)
             {

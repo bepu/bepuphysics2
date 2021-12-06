@@ -54,7 +54,7 @@ namespace Demos.Demos
             //Having objects bounce a bunch on impact makes it harder to see.
             Simulation = Simulation.Create(BufferPool,
                 new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(240, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 1f },
-                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(4), 2);
+                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 8);
 
             var shape = new Box(1, 1, 1);
             var inertia = shape.ComputeInertia(1);

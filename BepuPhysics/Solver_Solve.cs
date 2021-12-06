@@ -131,14 +131,14 @@ namespace BepuPhysics
         (This will likely need to be updated to be cleverer as heterogeneous architectures gain popularity.)
         */
 
-        public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
+        public Solver(Bodies bodies, BufferPool pool, SolveDescription solveDescription,
             int initialCapacity,
             int initialIslandCapacity,
             int minimumCapacityPerTypeBatch, PoseIntegrator<TIntegrationCallbacks> poseIntegrator)
-            : base(bodies, pool, iterationCount, fallbackBatchThreshold, initialCapacity, initialIslandCapacity, minimumCapacityPerTypeBatch)
+            : base(bodies, pool, solveDescription, initialCapacity, initialIslandCapacity, minimumCapacityPerTypeBatch)
         {
             PoseIntegrator = poseIntegrator;
-            solveStep2Worker2 = SolveStep2Worker2;
+            solveWorker = SolveWorker;
             constraintIntegrationResponsibilitiesWorker = ConstraintIntegrationResponsibilitiesWorker;
         }
 
@@ -440,8 +440,8 @@ namespace BepuPhysics
             return offset + blocksPerWorker * workerIndex + Math.Min(remainder, workerIndex);
         }
 
-        Action<int> solveStep2Worker2;
-        void SolveStep2Worker2(int workerIndex)
+        Action<int> solveWorker;
+        void SolveWorker(int workerIndex)
         {
             //The solver has two codepaths: one thread, acting as an orchestrator, and the others, just waiting to be used.
             //There is no requirement that a worker thread above index 0 actually runs at all for a given dispatch.
@@ -1413,7 +1413,7 @@ namespace BepuPhysics
             }
             else
             {
-                ExecuteMultithreaded2(substepDt, threadDispatcher, solveStep2Worker2);
+                ExecuteMultithreaded2(substepDt, threadDispatcher, solveWorker);
             }
         }
     }

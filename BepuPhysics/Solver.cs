@@ -12,9 +12,12 @@ using System.Threading;
 
 namespace BepuPhysics
 {
+
+    /// <summary>
+    /// Holds and solves constraints between bodies in a simulation.
+    /// </summary>
     public abstract partial class Solver
     {
-
         /// <summary>
         /// Buffer containing all constraint sets. The first slot is dedicated to the active set; subsequent slots may be occupied by the constraints associated with inactive islands.
         /// </summary>
@@ -29,6 +32,9 @@ namespace BepuPhysics
         //inactive islands do not store the referenced handles since no new constraints are ever added.
         internal QuickList<IndexSet> batchReferencedHandles;
 
+        /// <summary>
+        /// Set of processors applied to batches of constraints of particular types, indexed by the constraint type id.
+        /// </summary>
         public TypeProcessor[] TypeProcessors;
 
         internal Bodies bodies;
@@ -61,7 +67,6 @@ namespace BepuPhysics
         /// </summary>
         public QuickSet<int, PrimitiveComparer<int>> ConstrainedKinematicHandles;
 
-
         protected int substepCount;
         /// <summary>
         /// Gets or sets the number of substeps the solver will simulate per call to Solve.
@@ -71,11 +76,12 @@ namespace BepuPhysics
             get { return substepCount; }
             set
             {
-                if (substepCount < 1)
+                if (value < 1)
                     throw new ArgumentException("Substep count must be positive.");
                 substepCount = value;
             }
         }
+
         int velocityIterationCount;
         /// <summary>
         /// Gets or sets the number of solver velocity iterations to compute per substep.
@@ -92,6 +98,11 @@ namespace BepuPhysics
                 velocityIterationCount = value;
             }
         }
+
+        /// <summary>
+        /// Callback executed to determine how many velocity iterations should be used for a given substep. If null, or if it returns a non-positive value, the <see cref="VelocityIterationCount"/> will be used instead.
+        /// </summary>
+        public SubstepVelocityIterationScheduler VelocityIterationScheduler { get; set; }
 
         int minimumCapacityPerTypeBatch;
         /// <summary>
@@ -194,20 +205,22 @@ namespace BepuPhysics
 
         Action<int> solveWorker;
         Action<int> incrementalContactUpdateWorker;
-        public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
+        protected Solver(Bodies bodies, BufferPool pool, SolveDescription solveDescription,
             int initialCapacity,
             int initialIslandCapacity,
             int minimumCapacityPerTypeBatch)
         {
-            this.velocityIterationCount = iterationCount;
+            SubstepCount = solveDescription.SubstepCount;
+            VelocityIterationCount = solveDescription.VelocityIterationCount;
+            VelocityIterationScheduler = solveDescription.VelocityIterationScheduler;
+            FallbackBatchThreshold = solveDescription.FallbackBatchThreshold;
             this.minimumCapacityPerTypeBatch = minimumCapacityPerTypeBatch;
             this.bodies = bodies;
             this.pool = pool;
             HandlePool = new IdPool(128, pool);
             ResizeSetsCapacity(initialIslandCapacity + 1, 0);
-            FallbackBatchThreshold = fallbackBatchThreshold;
-            ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
-            batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
+            ActiveSet = new ConstraintSet(pool, FallbackBatchThreshold + 1);
+            batchReferencedHandles = new QuickList<IndexSet>(FallbackBatchThreshold + 1, pool);
             ResizeHandleCapacity(initialCapacity);
             ConstrainedKinematicHandles = new QuickSet<int, PrimitiveComparer<int>>(bodies.HandleToLocation.Length, pool);
         }
