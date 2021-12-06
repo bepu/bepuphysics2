@@ -40,7 +40,7 @@ namespace BepuPhysics
             simulation.CollisionDetection(dt, threadDispatcher);
             CollisionsDetected?.Invoke(dt, threadDispatcher);
 
-            simulation.Solve(dt);
+            simulation.Solve(dt, threadDispatcher);
             ConstraintsSolved?.Invoke(dt, threadDispatcher);
 
             simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
