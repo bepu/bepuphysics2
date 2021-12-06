@@ -213,7 +213,7 @@ namespace Demos.Demos
             //PositionLastTimestepper avoids that by running collision detection and the solver first at the cost of a tiny amount of overhead.
             //(You could avoid the issue with PositionFirstTimestepper by modifying velocities in the PositionFirstTimestepper's BeforeCollisionDetection callback 
             //instead of outside the timestep, too, but it's a little more complicated.)
-            var simulation = Simulation.Create(bufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(4), 1);
+            var simulation = Simulation.Create(bufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(4), 1);
 
             //Drop a ball on a big static box.
             var sphere = new Sphere(1);

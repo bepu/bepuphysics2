@@ -57,7 +57,7 @@ namespace BepuPhysics
         /// </summary>
         public bool Deterministic { get; set; }
 
-         /// <summary>
+        /// <summary>
         /// Constructs a simulation supporting dynamic movement and constraints with the specified narrow phase callbacks.
         /// </summary>
         /// <param name="bufferPool">Buffer pool used to fill persistent structures and main thread ephemeral resources across the engine.</param>
@@ -103,7 +103,7 @@ namespace BepuPhysics
 
             simulation.Solver = new Solver<TPoseIntegratorCallbacks>(simulation.Bodies, simulation.BufferPool, solverIterationCount, solverFallbackBatchThreshold,
                 initialCapacity: initialAllocationSizes.Value.Constraints,
-                initialIslandCapacity: initialAllocationSizes.Value.Islands, 
+                initialIslandCapacity: initialAllocationSizes.Value.Islands,
                 minimumCapacityPerTypeBatch: initialAllocationSizes.Value.ConstraintsPerTypeBatch, poseIntegrator);
             simulation.constraintRemover = new ConstraintRemover(simulation.BufferPool, simulation.Bodies, simulation.Solver);
             simulation.Sleeper = new IslandSleeper(simulation.Bodies, simulation.Solver, simulation.BroadPhase, simulation.constraintRemover, simulation.BufferPool);
@@ -233,6 +233,25 @@ namespace BepuPhysics
             profiler.Start(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher);
             profiler.End(NarrowPhase);
+        }
+
+        /// <summary>
+        /// Updates the broad phase structure for the current body bounding boxes, finds potentially colliding pairs, and then executes the narrow phase for all such pairs. Generates contact constraints for the solver.
+        /// </summary>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void Solve(float dt, IThreadDispatcher threadDispatcher = null)
+        {
+            Profiler.Start(Solver);
+            var constrainedBodySet = Solver.PrepareConstraintIntegrationResponsibilities(threadDispatcher);
+            Solver.Solve(dt, threadDispatcher);
+            Profiler.End(Solver);
+
+            Profiler.Start(PoseIntegrator);
+            PoseIntegrator.IntegrateAfterSubstepping(constrainedBodySet, dt, Solver.SubstepCount, threadDispatcher);
+            Profiler.End(PoseIntegrator);
+
+            Solver.DisposeConstraintIntegrationResponsibilities();
         }
 
         /// <summary>

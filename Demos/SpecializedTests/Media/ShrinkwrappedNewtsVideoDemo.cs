@@ -18,7 +18,7 @@ namespace Demos.SpecializedTests
             camera.Yaw = 3 * MathHelper.Pi / 4;
             camera.Pitch = 0;// MathHelper.Pi * 0.15f;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(4), 1);
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(4), 1);
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
 

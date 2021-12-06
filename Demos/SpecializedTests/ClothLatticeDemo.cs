@@ -20,7 +20,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(-120, 30, -120);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = 0.1f;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(4), 1);
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(4), 1);
 
             //Build a grid of shapes to be connected.
             var clothNodeShape = new Sphere(0.5f);

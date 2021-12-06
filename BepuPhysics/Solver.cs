@@ -12,70 +12,7 @@ using System.Threading;
 
 namespace BepuPhysics
 {
-    /// <summary>
-    /// Reference to a constraint's memory location in the solver.
-    /// </summary>
-    public unsafe struct ConstraintReference
-    {
-        internal TypeBatch* typeBatchPointer;
-        /// <summary>
-        /// Gets a reference to the type batch holding the constraint.
-        /// </summary>
-        public ref TypeBatch TypeBatch
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return ref *typeBatchPointer;
-            }
-        }
-        /// <summary>
-        /// Index in the type batch where the constraint is allocated.
-        /// </summary>
-        public readonly int IndexInTypeBatch;
-
-        /// <summary>
-        /// Creates a new constraint reference from a constraint memory location.
-        /// </summary>
-        /// <param name="typeBatchPointer">Pointer to the type batch where the constraint lives.</param>
-        /// <param name="indexInTypeBatch">Index in the type batch where the constraint is allocated.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ConstraintReference(TypeBatch* typeBatchPointer, int indexInTypeBatch)
-        {
-            this.typeBatchPointer = typeBatchPointer;
-            IndexInTypeBatch = indexInTypeBatch;
-        }
-    }
-
-    /// <summary>
-    /// Location in memory where a constraint is stored.
-    /// </summary>
-    public struct ConstraintLocation
-    {
-        //Note that the type id is included, even though we can extract it from a type parameter.
-        //This is required for body memory swap induced reference changes- it is not efficient to include type metadata in the per-body connections,
-        //so instead we keep a type id cached.
-        //(You could pack these a bit- it's pretty reasonable to say you can't have more than 2^24 constraints of a given type and 2^8 constraint types...
-        //It's just not that valuable, unless proven otherwise.)
-        /// <summary>
-        /// Index of the constraint set that owns the constraint. If zero, the constraint is attached to bodies that are awake.
-        /// </summary>
-        public int SetIndex;
-        /// <summary>
-        /// Index of the constraint batch the constraint belongs to.
-        /// </summary>
-        public int BatchIndex;
-        /// <summary>
-        /// Type id of the constraint. Used to look up the type batch index in a constraint batch's type id to type batch index table.
-        /// </summary>
-        public int TypeId;
-        /// <summary>
-        /// Index of the constraint in a type batch.
-        /// </summary>
-        public int IndexInTypeBatch;
-    }
-
-    public partial class Solver
+    public abstract partial class Solver
     {
 
         /// <summary>
@@ -124,20 +61,35 @@ namespace BepuPhysics
         /// </summary>
         public QuickSet<int, PrimitiveComparer<int>> ConstrainedKinematicHandles;
 
-        int iterationCount;
+
+        protected int substepCount;
         /// <summary>
-        /// Gets or sets the number of solver iterations to compute per call to Update.
+        /// Gets or sets the number of substeps the solver will simulate per call to Solve.
         /// </summary>
-        public int IterationCount
+        public int SubstepCount
         {
-            get { return iterationCount; }
+            get { return substepCount; }
+            set
+            {
+                if (substepCount < 1)
+                    throw new ArgumentException("Substep count must be positive.");
+                substepCount = value;
+            }
+        }
+        int velocityIterationCount;
+        /// <summary>
+        /// Gets or sets the number of solver velocity iterations to compute per substep.
+        /// </summary>
+        public int VelocityIterationCount
+        {
+            get { return velocityIterationCount; }
             set
             {
                 if (value < 1)
                 {
                     throw new ArgumentException("Iteration count must be positive.");
                 }
-                iterationCount = value;
+                velocityIterationCount = value;
             }
         }
 
@@ -247,7 +199,7 @@ namespace BepuPhysics
             int initialIslandCapacity,
             int minimumCapacityPerTypeBatch)
         {
-            this.iterationCount = iterationCount;
+            this.velocityIterationCount = iterationCount;
             this.minimumCapacityPerTypeBatch = minimumCapacityPerTypeBatch;
             this.bodies = bodies;
             this.pool = pool;
@@ -257,11 +209,15 @@ namespace BepuPhysics
             ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
             batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
             ResizeHandleCapacity(initialCapacity);
-            solveWorker = SolveWorker;
-            incrementalContactUpdateWorker = IncrementalContactUpdateWorker;
             ConstrainedKinematicHandles = new QuickSet<int, PrimitiveComparer<int>>(bodies.HandleToLocation.Length, pool);
         }
 
+        /// <summary>
+        /// Registers a constraint type with the solver, creating a type processor for the type internally and allowing constraints of that type to be added to the solver.
+        /// </summary>
+        /// <typeparam name="TDescription">Type of the constraint to register with the solver.</typeparam>
+        /// <exception cref="ArgumentException">Fired when another constraint type of the same id has already been registered.</exception>
+        /// <remarks><see cref="DefaultTypes.RegisterDefaults(Solver, NarrowPhase)"/> is called during simuation creation and registers all the built in types. Calling <see cref="Register"/> manually is only necessary if custom types are used.</remarks>
         public void Register<TDescription>() where TDescription : unmanaged, IConstraintDescription<TDescription>
         {
             var description = default(TDescription);
@@ -1375,6 +1331,12 @@ namespace BepuPhysics
             HandlePool.Return(handle.Value, pool);
         }
 
+        /// <summary>
+        /// Gets the constraint description associated with a constraint reference.
+        /// </summary>
+        /// <typeparam name="TConstraintDescription">Type of the constraint description to retrieve.</typeparam>
+        /// <param name="constraintReference">Reference to the constraint to retrieve.</param>
+        /// <param name="description">Retrieved description of the constraint.</param>
         public void GetDescription<TConstraintDescription>(ConstraintReference constraintReference, out TConstraintDescription description)
             where TConstraintDescription : unmanaged, IConstraintDescription<TConstraintDescription>
         {
@@ -1386,6 +1348,12 @@ namespace BepuPhysics
             default(TConstraintDescription).BuildDescription(ref constraintReference.TypeBatch, bundleIndex, innerIndex, out description);
         }
 
+        /// <summary>
+        /// Gets the constraint description associated with a constraint handle.
+        /// </summary>
+        /// <typeparam name="TConstraintDescription">Type of the constraint description to retrieve.</typeparam>
+        /// <param name="handle">Handle of the constraint to retrieve.</param>
+        /// <param name="description">Retrieved description of the constraint.</param>
         public void GetDescription<TConstraintDescription>(ConstraintHandle handle, out TConstraintDescription description)
             where TConstraintDescription : unmanaged, IConstraintDescription<TConstraintDescription>
         {
@@ -1991,7 +1959,5 @@ namespace BepuPhysics
             pool.Return(ref HandleToConstraint);
             HandlePool.Dispose(pool);
         }
-
-
     }
 }

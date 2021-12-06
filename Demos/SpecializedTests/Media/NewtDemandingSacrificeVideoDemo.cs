@@ -20,7 +20,7 @@ namespace Demos.SpecializedTests
             camera.Pitch = MathHelper.Pi * -0.05f;
 
             filters = new CollidableProperty<SubgroupCollisionFilter>(BufferPool);
-            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks() { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(4), 1);
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks() { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(4), 1);
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), Simulation.Shapes.Add(new Box(1500, 1, 1500))));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), Simulation.Shapes.Add(new Box(70, 20, 80))));
@@ -29,7 +29,7 @@ namespace Demos.SpecializedTests
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 2.5f, 0), Simulation.Shapes.Add(new Box(100, 5, 110))));
 
             //High fidelity simulation isn't super important on this one.
-            Simulation.Solver.IterationCount = 2;
+            Simulation.Solver.VelocityIterationCount = 2;
 
             DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(30), out var mesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 20, 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, 0), Simulation.Shapes.Add(mesh)));

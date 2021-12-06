@@ -17,16 +17,14 @@ namespace Demos.Demos
     {
         RolloverInfo rolloverInfo;
 
-        EmbeddedSubsteppingTimestepper2 timestepper;
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 25, 80);
             camera.Yaw = 0;
             camera.Pitch = 0;
-            timestepper = new EmbeddedSubsteppingTimestepper2(8);
             Simulation = Simulation.Create(BufferPool,
                 new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 120), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f },
-                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), timestepper, 8);
+                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SubsteppingTimestepper(), 8);
 
             rolloverInfo = new RolloverInfo();
             {
@@ -111,31 +109,31 @@ namespace Demos.Demos
         }
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            var substepCountChange = (int)MathF.Max(1f, timestepper.SubstepCount * 0.25f);
-            var iterationCountChange = (int)MathF.Max(1f, Simulation.Solver.IterationCount * 0.25f);
+            var substepCountChange = (int)MathF.Max(1f, Simulation.Solver.SubstepCount * 0.25f);
+            var iterationCountChange = (int)MathF.Max(1f, Simulation.Solver.VelocityIterationCount * 0.25f);
             if (input.WasPushed(OpenTK.Input.Key.Z))
             {
-                timestepper.SubstepCount = Math.Max(1, timestepper.SubstepCount - substepCountChange);
+                Simulation.Solver.SubstepCount = Math.Max(1, Simulation.Solver.SubstepCount - substepCountChange);
             }
             if (input.WasPushed(OpenTK.Input.Key.X))
             {
-                timestepper.SubstepCount = Math.Min(8192, timestepper.SubstepCount + substepCountChange);
+                Simulation.Solver.SubstepCount = Math.Min(8192, Simulation.Solver.SubstepCount + substepCountChange);
             }
             if (input.WasPushed(OpenTK.Input.Key.C))
             {
-                Simulation.Solver.IterationCount = Math.Max(1, Simulation.Solver.IterationCount - iterationCountChange);
+                Simulation.Solver.VelocityIterationCount = Math.Max(1, Simulation.Solver.VelocityIterationCount - iterationCountChange);
             }
             if (input.WasPushed(OpenTK.Input.Key.V))
             {
-                Simulation.Solver.IterationCount = Math.Min(8192, Simulation.Solver.IterationCount + iterationCountChange);
+                Simulation.Solver.VelocityIterationCount = Math.Min(8192, Simulation.Solver.VelocityIterationCount + iterationCountChange);
             }
             base.Update(window, camera, input, dt);
         }
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
-            renderer.TextBatcher.Write(text.Clear().Append("Substep count: ").Append(timestepper.SubstepCount), new Vector2(16, renderer.Surface.Resolution.Y - 64), 16, new Vector3(1), font);
-            renderer.TextBatcher.Write(text.Clear().Append("Solver iteration count: ").Append(Simulation.Solver.IterationCount), new Vector2(16, renderer.Surface.Resolution.Y - 48), 16, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append("Substep count: ").Append(Simulation.Solver.SubstepCount), new Vector2(16, renderer.Surface.Resolution.Y - 64), 16, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append("Solver iteration count: ").Append(Simulation.Solver.VelocityIterationCount), new Vector2(16, renderer.Surface.Resolution.Y - 48), 16, new Vector3(1), font);
             renderer.TextBatcher.Write(text.Clear().Append("Press Z/X to change substep count, C/V to change solver iteration count."), new Vector2(16, renderer.Surface.Resolution.Y - 32), 16, new Vector3(1), font);
             rolloverInfo.Render(renderer, camera, input, text, font);
             base.Render(renderer, camera, input, text, font);

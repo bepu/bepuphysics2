@@ -9,72 +9,41 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Runtime.Intrinsics.X86;
+using System.Numerics;
+using System.Runtime.Intrinsics;
+using static BepuPhysics.Solver;
+using BepuPhysics.CollisionDetection;
 
 namespace BepuPhysics
 {
     public partial class Solver
     {
+        protected enum SolverStageType
+        {
+            IncrementalUpdate,
+            IntegrateConstrainedKinematics,
+            WarmStart,
+            Solve,
+        }
 
-        //This is going to look a bit more complicated than would be expected for a series of forloops.
-        //A naive implementation would look something like:
-        //1) PRESTEP: Parallel dispatch over all constraints, regardless of batch. (Presteps do not write shared data, so there is no need to redispatch per-batch.)
-        //2) WARMSTART: Loop over all constraint batches, parallel dispatch over all constraints in batch. (Warmstarts read and write velocities, so batch borders must be respected.)
-        //3) SOLVE ITERATIONS: Loop over iterations, loop over all constraint batches, parallel dispatch over all constraints in batch. (Solve iterations also read/write.) 
+        protected struct SolverSyncStage
+        {
+            public Buffer<int> Claims;
+            public int BatchIndex;
+            public int WorkBlockStartIndex;
+            public SolverStageType StageType;
 
-        //There are a few problems with this approach:
-        //1) Fork-join dispatches are not free. Expect ~2us overhead on the main thread for each one, regardless of the workload.
-        //If there are 10 constraint batches and 10 iterations, you're up to 1 + 10 + 10 * 10 = 111 dispatches. Over a fifth of a millisecond in pure overhead.
-        //This is just a byproduct of general purpose dispatchers not being able to make use of extremely fine grained application knowledge.
-        //Every dispatch has to get the threads rolling and scheduled, then the threads have to figure out when to go back into a blocked state
-        //when no more work is unavailable, and so on. Over and over and over again.
+            public SolverSyncStage(Buffer<int> claims, int workBlockStartIndex, SolverStageType type, int batchIndex = -1)
+            {
+                Claims = claims;
+                BatchIndex = batchIndex;
+                WorkBlockStartIndex = workBlockStartIndex;
+                StageType = type;
+            }
+        }
 
-        //2) The forloop provider is not guaranteed to maintain a relationship between forloop index and underlying hardware threads across multiple dispatches.
-        //In fact, we should expect the opposite. Work stealing is an important feature for threadpools to avoid pointless idle time.
-        //Unfortunately, this can destroy potential cache locality across solver iterations. This matters only a little bit for smaller simulations on a single processor-
-        //if a single core's solver iteration data can fit in L2, then having 'sticky' scheduling will help over multiple iterations. For a 256 KiB per-core L2,
-        //that would be a simulation of only about 700 big constraints per core. (That is actually quite a few back in BEPUphysics v1 land... not so much in v2.)
-
-        //Sticky scheduling becomes more important when talking about larger simulations. Consider L3; an 8 MiB L3 cache can hold over 20000 heavy constraints
-        //worth of solver iteration data. This is usually shared across all cores of a processor, so the stickiness isn't always useful. However, consider
-        //a multiprocessor system. When there are multiple processors, there are multiple L3 caches. Limiting the amount of communication between processors
-        //(and to potentially remote parts of system memory) is important, since those accesses tend to have longer latency and lower total bandwidth than direct L3 accesses.
-        //But you don't have to resort to big servers to see something like this- some processors, notably the recent Ryzen line, actually behave a bit like 
-        //multiple processors that happen to be stuck on the same chip. If the application requires tons of intercore communication, performance will suffer.
-        //And of course, cache misses just suck.
-
-        //3) Work stealing implementations that lack application knowledge will tend to make a given worker operate across noncontiguous regions, harming locality and forcing cache misses.
-
-        //So what do we do? We have special guarantees:
-        //1) We have to do a bunch of solver iterations in sequence, covering the exact same data over and over. Even the prestep and warmstart cover a lot of the same data.
-        //2) We can control the dispatch sizes within a frame. They're going to be the same, over and over, and the next dispatch follows immediately after the last.
-        //3) We can guarantee that individual work blocks are fairly small. (A handful of microseconds.)
-
-        //So, there's a few parts to the solution as implemented:
-        //1) Dispatch *once* and perform fine grained synchronization with busy waits to block at constraint batch borders. Unless the operating system
-        //reschedules a thread (which is very possible, but not a constant occurrence), a worker index will stay associated with the same underlying hardware.
-        //2) Worker start locations are spaced across the work blocks so that each worker has a high probability of claiming multiple blocks contiguously.
-        //3) Workers track the largest contiguous region that they've been able to claim within an iteration. This is used to provide the next iteration a better starting guess.
-
-        //So, for the most part, the same core/processor will tend to work on the same data over the course of the solve. Hooray!
-
-        //A couple of notes:
-        //1) We explicitly don't care about maintaining worker-data relationships between frames. The cache will likely be trashed by the rest of the program- even other parts
-        //of the physics simulation will evict stuff. We're primarily concerned about scheduling within the solver.
-        //2) Note that neither the prestep nor the warmstart are used to modify the work distribution for the solve- neither of those stages is proportional to the solve iteration load.
-
-        //3) Core-data stickiness doesn't really offer much value for L1/L2 caches. It doesn't take much to evict the entirety of the old data- a 3770K only holds 256KB in its L2.
-        //Even if we optimized every constraint to require no more than 350B per iteration for the heaviest constraint 
-        //(when this was written, it was at 602B per iteration), a single core's L2 could only hold up to about 750 constraints. 
-        //So, the 3770K under ideal circumstances would avoid evicting on a per-iteration basis if the simulation had a total of less than 3000 such constraints.
-        //A single thread of a 3700K at 4.5ghz could do prestep-warmstart-8iterations for that in ~2.6 milliseconds. In other words, it's a pretty small simulation.
-
-        //Sticky scheduling only becomes more useful when dealing with multiprocessor systems (or multiprocessor-ish systems, like ryzen) and big datasets, like you might find in an MMO server.
-        //A 3770K has 8MB of L3 cache shared across all cores, enough to hold a little under 24000 large constraint solves worth of data between iterations, which is a pretty large chunk.
-        //If you had four similar processors, you could ideally handle almost 100,000 constraints without suffering significant evictions in each processor's L3 during iterations.
-        //Without sticky scheduling, memory bandwidth use could skyrocket during iterations as the L3 gets missed over and over.
-
-
-        protected internal struct WorkBlock
+        protected struct WorkBlock
         {
             public int BatchIndex;
             public int TypeBatchIndex;
@@ -88,12 +57,110 @@ namespace BepuPhysics
             public int End;
         }
 
+        protected struct IntegrationWorkBlock
+        {
+            public int StartBundleIndex;
+            public int EndBundleIndex;
+        }
+
+        //This is up in Solver, instead of Solver<T>, due to explicit layout.
+        [StructLayout(LayoutKind.Explicit)]
+        protected struct SubstepMultithreadingContext
+        {
+            [FieldOffset(0)]
+            public Buffer<SolverSyncStage> Stages;
+            [FieldOffset(16)]
+            public Buffer<WorkBlock> IncrementalUpdateBlocks;
+            [FieldOffset(32)]
+            public Buffer<IntegrationWorkBlock> KinematicIntegrationBlocks;
+            [FieldOffset(48)]
+            public Buffer<WorkBlock> ConstraintBlocks;
+            [FieldOffset(64)]
+            public Buffer<int> ConstraintBatchBoundaries;
+            [FieldOffset(80)]
+            public float Dt;
+            [FieldOffset(84)]
+            public float InverseDt;
+            [FieldOffset(88)]
+            public int WorkerCount;
+
+
+            //This index is written during multithreaded execution; don't want to infest any of the more frequently read properties, so it's shoved out of any dangerous cache line.
+            /// <summary>
+            /// Monotonically increasing index of executed stages during a frame.
+            /// </summary>
+            [FieldOffset(256)]
+            public int SyncIndex;
+
+            /// <summary>
+            /// Counter of work completed for the current stage.
+            /// </summary>
+            [FieldOffset(384)]
+            public int CompletedWorkBlockCount;
+
+
+        }
+
+        public abstract IndexSet PrepareConstraintIntegrationResponsibilities(IThreadDispatcher threadDispatcher = null);
+        public abstract void DisposeConstraintIntegrationResponsibilities();
+        public abstract void Solve(float dt, IThreadDispatcher threadDispatcher = null);
+    }
+
+
+    /// <summary>
+    /// Handles integration-aware substepped solving.
+    /// </summary>
+    /// <typeparam name="TIntegrationCallbacks">Type of integration callbacks being used during the substepped solve.</typeparam>
+    public class Solver<TIntegrationCallbacks> : Solver where TIntegrationCallbacks : struct, IPoseIntegratorCallbacks
+    {
+        /*
+        There are two significant sources of complexity here:
+        1. The solver takes substeps, which means velocity/pose integration must be embedded into the solving process.
+        2. There are many sync points, and thread dispatches must manage these in a low overhead way.
+        
+        Looking at the single threaded implementation at the very bottom would be helpful for understanding the general flow of execution.
+
+        In order to reduce overall dispatch count and to share memory loads as much as possible, the first execution of a constraint affecting a body is responsible for that body's integration.
+        There are some special cases around this- kinematics must be handled in a separate prepass, since kinematics can appear in a given constraint batch more than once.
+        Unconstrained bodies will be integrated separately outside of the solver.
+
+        To reduce sync point overhead, worker threads do not enter blocking states. The main orchestrator thread never even yields- it only spins.
+        The main thread kicks off jobs to all available workers. If a worker has yielded previously, it may miss waking up, but that will not block the execution of other threads.
+        Work is scheduled such that the same thread operates on the same data each iteration/substep, if possible. This makes it more likely that a core will find relevant data in its local caches.
+        There is a tradeoff with workstealing- to keep overhead low while maintaining this consistent scheduling, threads only look for incrementally adjacent blocks. This can sometimes result in imbalanced workloads.
+        (This will likely need to be updated to be cleverer as heterogeneous architectures gain popularity.)
+        */
+
+        public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
+            int initialCapacity,
+            int initialIslandCapacity,
+            int minimumCapacityPerTypeBatch, PoseIntegrator<TIntegrationCallbacks> poseIntegrator)
+            : base(bodies, pool, iterationCount, fallbackBatchThreshold, initialCapacity, initialIslandCapacity, minimumCapacityPerTypeBatch)
+        {
+            PoseIntegrator = poseIntegrator;
+            solveStep2Worker2 = SolveStep2Worker2;
+            constraintIntegrationResponsibilitiesWorker = ConstraintIntegrationResponsibilitiesWorker;
+        }
+
+        /// <summary>
+        /// Pose integrator used by the simulation.
+        /// </summary>
+        public PoseIntegrator<TIntegrationCallbacks> PoseIntegrator { get; private set; }
         protected interface ITypeBatchSolveFilter
         {
             bool IncludeFallbackBatchForWorkBlocks { get; }
             bool AllowType(int typeId);
         }
+        protected struct IncrementalContactDataUpdateFilter : ITypeBatchSolveFilter
+        {
+            public bool IncludeFallbackBatchForWorkBlocks { get { return true; } }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowType(int typeId)
+            {
+                return NarrowPhase.IsContactConstraintType(typeId);
+            }
+        }
         protected struct MainSolveFilter : ITypeBatchSolveFilter
         {
             public bool IncludeFallbackBatchForWorkBlocks
@@ -110,6 +177,488 @@ namespace BepuPhysics
             {
                 return true;
             }
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WarmStartBlock<TBatchShouldIntegratePoses>(int workerIndex, int batchIndex, int typeBatchIndex, int startBundle, int endBundle, ref TypeBatch typeBatch, TypeProcessor typeProcessor, float dt, float inverseDt)
+            where TBatchShouldIntegratePoses : unmanaged, IBatchPoseIntegrationAllowed
+        {
+            if (batchIndex == 0)
+            {
+                Buffer<IndexSet> noFlagsRequired = default;
+                typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate, TBatchShouldIntegratePoses>(
+                    ref typeBatch, ref noFlagsRequired, bodies, ref PoseIntegrator.Callbacks,
+                    dt, inverseDt, startBundle, endBundle, workerIndex);
+            }
+            else
+            {
+                if (coarseBatchIntegrationResponsibilities[batchIndex][typeBatchIndex])
+                {
+                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate, TBatchShouldIntegratePoses>(
+                        ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks,
+                        dt, inverseDt, startBundle, endBundle, workerIndex);
+                }
+                else
+                {
+                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldNeverIntegrate, TBatchShouldIntegratePoses>(
+                        ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks,
+                        dt, inverseDt, startBundle, endBundle, workerIndex);
+                }
+            }
+        }
+        protected interface IStageFunction
+        {
+            void Execute(Solver solver, int blockIndex, int workerIndex);
+        }
+
+        //Split the solve process into a warmstart and solve, where warmstart doesn't try to store out anything. It just computes jacobians and modifies velocities according to the accumulated impulse.
+        //The solve step then *recomputes* jacobians from prestep data and pose information.
+        //Why? Memory bandwidth. Redoing the calculation is cheaper than storing it out.
+        struct WarmStartStep2StageFunction : IStageFunction
+        {
+            public float Dt;
+            public float InverseDt;
+            public int SubstepIndex;
+            public Solver<TIntegrationCallbacks> solver;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
+            {
+                ref var block = ref this.solver.substepContext.ConstraintBlocks[blockIndex];
+                ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
+                if (SubstepIndex == 0)
+                {
+                    this.solver.WarmStartBlock<DisallowPoseIntegration>(workerIndex, block.BatchIndex, block.TypeBatchIndex, block.StartBundle, block.End, ref typeBatch, typeProcessor, Dt, InverseDt);
+                }
+                else
+                {
+                    this.solver.WarmStartBlock<AllowPoseIntegration>(workerIndex, block.BatchIndex, block.TypeBatchIndex, block.StartBundle, block.End, ref typeBatch, typeProcessor, Dt, InverseDt);
+                }
+
+            }
+        }
+
+        struct SolveStep2StageFunction : IStageFunction
+        {
+            public float Dt;
+            public float InverseDt;
+            public Solver<TIntegrationCallbacks> solver;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
+            {
+                ref var block = ref this.solver.substepContext.ConstraintBlocks[blockIndex];
+                ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
+                typeProcessor.SolveStep2(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
+            }
+        }
+
+        struct IncrementalUpdateStageFunction : IStageFunction
+        {
+            public float Dt;
+            public float InverseDt;
+            public Solver<TIntegrationCallbacks> solver;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
+            {
+                ref var block = ref this.solver.substepContext.IncrementalUpdateBlocks[blockIndex];
+                ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                solver.TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
+            }
+        }
+
+        struct IntegrateConstrainedKinematicsStageFunction : IStageFunction
+        {
+            public float Dt;
+            public float InverseDt;
+            public int SubstepIndex;
+            public Solver<TIntegrationCallbacks> solver;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Execute(Solver solver, int blockIndex, int workerIndex)
+            {
+                ref var block = ref this.solver.substepContext.KinematicIntegrationBlocks[blockIndex];
+                if (SubstepIndex == 0)
+                {
+                    this.solver.PoseIntegrator.IntegrateKinematicVelocities(solver.ConstrainedKinematicHandles.Span.Slice(solver.ConstrainedKinematicHandles.Count), block.StartBundleIndex, block.EndBundleIndex, Dt, workerIndex);
+                }
+                else
+                {
+                    this.solver.PoseIntegrator.IntegrateKinematicPosesAndVelocities(solver.ConstrainedKinematicHandles.Span.Slice(solver.ConstrainedKinematicHandles.Count), block.StartBundleIndex, block.EndBundleIndex, Dt, workerIndex);
+                }
+            }
+        }
+
+        unsafe void ExecuteWorkerStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, int workerStart, int availableBlocksStartIndex, ref Buffer<int> claims, int previousSyncIndex, int syncIndex, ref int completedWorkBlocks) where TStageFunction : IStageFunction
+        {
+            if (workerStart == -1)
+            {
+                //Thread count exceeds work block count; nothing for this worker to do.
+                //(Technically, there's a possibility that an earlier thread would fail to wake and allowing this thread to steal that block COULD help,
+                //but on average it's better to keep jobs scheduled to the same core to avoid excess memory traffic, and we can rely on some other active worker to take care of it.)
+                return;
+            }
+            int workBlockIndex = workerStart;
+            int locallyCompletedCount = 0;
+            //Try to claim blocks by traversing forward until we're blocked by another claim.
+            while (Interlocked.CompareExchange(ref claims[workBlockIndex], syncIndex, previousSyncIndex) == previousSyncIndex)
+            {
+                //Successfully claimed a work block.
+                stageFunction.Execute(this, availableBlocksStartIndex + workBlockIndex, workerIndex);
+                ++locallyCompletedCount;
+                ++workBlockIndex;
+                if (workBlockIndex >= claims.Length)
+                {
+                    //Wrap around.
+                    workBlockIndex = 0;
+                }
+            }
+            //Try to claim work blocks going backward.
+            workBlockIndex = workerStart - 1;
+            while (true)
+            {
+                if (workBlockIndex < 0)
+                {
+                    //Wrap around.
+                    workBlockIndex = claims.Length - 1;
+                }
+                //Note the comparison: equal *or greater* blocks.
+                //Consider what happens if this thread was heavily delayed and the stage it was dispatched for has already ended.
+                //Other threads could be working on the next sync index. A mere equality test could result in this thread thinking there's work to be done, so it starts claiming for an *earlier* stage.
+                //Then everything dies.
+                if (Interlocked.CompareExchange(ref claims[workBlockIndex], syncIndex, previousSyncIndex) != previousSyncIndex)
+                {
+                    break;
+                }
+                //Successfully claimed a work block.
+                stageFunction.Execute(this, availableBlocksStartIndex + workBlockIndex, workerIndex);
+                ++locallyCompletedCount;
+                workBlockIndex--;
+            }
+            //No more adjacent work blocks are available. This thread is done!
+            Interlocked.Add(ref completedWorkBlocks, locallyCompletedCount);
+
+
+            //debugStageWorkBlocksCompleted[syncIndex - 1][workerIndex] = locallyCompletedCount;
+            //if (workerIndex == 3)
+            //{
+            //Console.WriteLine($"Worker {workerIndex}, stage {typeof(TStageFunction).Name}, sync index {syncIndex} completed {locallyCompletedCount / (double)claims.Length:G2} ({locallyCompletedCount} of {claims.Length}).");
+            //}
+            //for (int i = 0; i < claims.Length; ++i)
+            //{
+            //    if (claims[i] != syncIndex)
+            //    {
+            //        Console.WriteLine($"Failed to claim index {i}, claim value is {claims[i]} instead of {syncIndex}, previous claim should have been {previousSyncIndex}, worker start {workerStart}");
+            //    }
+            //}
+
+        }
+        void ExecuteMainStage<TStageFunction>(ref TStageFunction stageFunction, int workerIndex, int workerStart, ref SolverSyncStage stage, int previousSyncIndex, int syncIndex) where TStageFunction : IStageFunction
+        {
+            var availableBlocksCount = stage.Claims.Length;
+            if (availableBlocksCount == 0)
+                return;
+
+            //for (int i = 0; i < availableBlocksCount; ++i)
+            //{
+            //    stageFunction.Execute(this, stage.WorkBlockStartIndex + i, workerIndex);
+            //}
+            //return;
+            //Console.WriteLine($"Main executing {typeof(TStageFunction).Name} for sync index {syncIndex}, expected claim {syncIndex - previousSyncIndexOffset}");
+            if (availableBlocksCount == 1)
+            {
+                //Console.WriteLine($"Main thread is executing {syncIndex} by itself; stage function: {stageFunction.GetType().Name}");
+                //There is only one work block available. There's no reason to notify other threads about it or do any claims management; just execute it sequentially.
+                stageFunction.Execute(this, stage.WorkBlockStartIndex, workerIndex);
+            }
+            else
+            {
+                //Console.WriteLine($"Main thread is requesting workers begin for sync index {syncIndex}; stage function: {stageFunction.GetType().Name}");
+                //Write the new stage index so other spinning threads will begin work on it.
+                Volatile.Write(ref substepContext.SyncIndex, syncIndex);
+                ExecuteWorkerStage(ref stageFunction, workerIndex, workerStart, stage.WorkBlockStartIndex, ref stage.Claims, previousSyncIndex, syncIndex, ref substepContext.CompletedWorkBlockCount);
+
+                //Since we asked other threads to do work, we must wait until the requested work is done before proceeding.
+                //Note that we DO NOT yield on the main thread! 
+                //This significantly increases the chance *some* progress will be made on the available work, even if all other workers are stuck unscheduled.
+                //The reasoning here is that the OS is not likely to unschedule an active thread, but will be far less aggressive about scheduling a *currently unscheduled* thread.
+                //Critically, yielding threads are not in any kind of execution queue- from the OS's perspective, they aren't asking to be woken up.
+                //If another thread comes in with significant work, they could be stalled for (from the solver's perspective) an arbitrarily long time.
+                //By having the main thread never yield, the only way for all progress to halt is for the OS to aggressively unschedule the main thread.
+                //That is very rare when dealing with CPUs with plenty of cores to go around relative to the scheduled work.                
+                //(Why not notify the OS that waiting threads actually want to be executed? Just overhead. Feel free to experiment with different approaches, but so far this has won empirically.)
+                while (Volatile.Read(ref substepContext.CompletedWorkBlockCount) != availableBlocksCount)
+                {
+                    Thread.SpinWait(3);
+                }
+                //Console.WriteLine($"Completed blocks count: {substepContext.CompletedWorkBlockCount}.");
+                //All workers are done. We can safely reset the counter for the next time this stage is used.
+                substepContext.CompletedWorkBlockCount = 0;
+            }
+        }
+        protected SubstepMultithreadingContext substepContext;
+
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        int GetPreviousSyncIndexForIncrementalUpdate(int substepIndex, int syncIndex, int syncStagesPerSubstep)
+        {
+            return substepIndex == 1 ? 0 : Math.Max(0, syncIndex - syncStagesPerSubstep);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        int GetPreviousSyncIndexForIntegrateConstrainedKinematics(int substepIndex, int syncIndex, int syncStagesPerSubstep)
+        {
+            //If kinematics have their velocities integrated, then the first substep will have executed and left the claims at 1. Otherwise, the first substep will leave them cleared at 0.
+            //The second substep and later will always run (since kinematics need their poses integrated regardless) so their sync index isn't weirdly conditional.
+            return substepIndex == 1 ? PoseIntegrator.Callbacks.IntegrateVelocityForKinematics ? 2 : 0 : Math.Max(0, syncIndex - syncStagesPerSubstep);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        int GetPreviousSyncIndexForWarmStart(int syncIndex, int synchronizedBatchCount)
+        {
+            //The claims for warmstarts and solves are shared. So we want to look back to the last solve's claims, which would be beyond the incremental update and integrate constrained kinematics.
+            return Math.Max(0, syncIndex - synchronizedBatchCount - 2);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        int GetPreviousSyncIndexForSolve(int syncIndex, int synchronizedBatchCount)
+        {
+            return Math.Max(0, syncIndex - synchronizedBatchCount);
+        }
+
+        protected static int GetUniformlyDistributedStart(int workerIndex, int blockCount, int workerCount, int offset)
+        {
+            if (blockCount <= workerCount)
+            {
+                //Too few blocks to give every worker a job; give the jobs to the first context.WorkBlocks.Count workers.
+                return workerIndex < blockCount ? offset + workerIndex : -1;
+            }
+            var blocksPerWorker = blockCount / workerCount;
+            var remainder = blockCount - blocksPerWorker * workerCount;
+            return offset + blocksPerWorker * workerIndex + Math.Min(remainder, workerIndex);
+        }
+
+        Action<int> solveStep2Worker2;
+        void SolveStep2Worker2(int workerIndex)
+        {
+            //The solver has two codepaths: one thread, acting as an orchestrator, and the others, just waiting to be used.
+            //There is no requirement that a worker thread above index 0 actually runs at all for a given dispatch.
+            //If a worker fails to schedule for a long time because the OS went with a different thread, that's perfectly fine- 
+            //another thread will consume the work that would have otherwise been handled by it, and the execution as a whole
+            //will continue on unimpeded.
+            //There's still nothing done if the OS unschedules an active worker that claimed work, but that's a far, far rarer concern.
+            //Note that this attempts to maintain a given worker's relationship to a set of work blocks. This increases the probability that 
+            //data will remain in some cache that's reasonably close to the core.
+            int workerCount = substepContext.WorkerCount;
+            var incrementalUpdateWorkerStart = GetUniformlyDistributedStart(workerIndex, substepContext.IncrementalUpdateBlocks.Length, workerCount, 0);
+            var kinematicIntegrationWorkerStart = GetUniformlyDistributedStart(workerIndex, substepContext.KinematicIntegrationBlocks.Length, workerCount, 0);
+            Buffer<int> batchStarts;
+            ref var activeSet = ref ActiveSet;
+            unsafe
+            {
+                var batchStartsData = stackalloc int[activeSet.Batches.Count];
+                batchStarts = new Buffer<int>(batchStartsData, activeSet.Batches.Count);
+            }
+            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
+            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+            {
+                var batchOffset = batchIndex > 0 ? substepContext.ConstraintBatchBoundaries[batchIndex - 1] : 0;
+                var batchCount = substepContext.ConstraintBatchBoundaries[batchIndex] - batchOffset;
+                batchStarts[batchIndex] = GetUniformlyDistributedStart(workerIndex, batchCount, workerCount, 0);
+            }
+
+            Debug.Assert(activeSet.Batches.Count > 0, "Don't dispatch if there are no constraints.");
+
+            //TODO: Every single one of these offers up the same parameters. Could avoid the need to initialize any of them.
+            var incrementalUpdateStage = new IncrementalUpdateStageFunction
+            {
+                Dt = substepContext.Dt,
+                InverseDt = substepContext.InverseDt,
+                solver = this
+            };
+            var integrateConstrainedKinematicsStage = new IntegrateConstrainedKinematicsStageFunction
+            {
+                Dt = substepContext.Dt,
+                InverseDt = substepContext.InverseDt,
+                solver = this
+            };
+            var warmstartStage = new WarmStartStep2StageFunction
+            {
+                Dt = substepContext.Dt,
+                InverseDt = substepContext.InverseDt,
+                solver = this
+            };
+            var solveStage = new SolveStep2StageFunction
+            {
+                Dt = substepContext.Dt,
+                InverseDt = substepContext.InverseDt,
+                solver = this
+            };
+
+            var syncStagesPerSubstep = 2 + synchronizedBatchCount * (1 + VelocityIterationCount);
+            if (workerIndex == 0)
+            {
+                //This is the main 'orchestrator' thread. It tracks execution progress and notifies other threads that's it's time to work.
+                int syncIndex = 0;
+                for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
+                {
+                    //Note that the main thread's view of the sync index increments every single dispatch, even if there is no work.
+                    //This ensures that the workers are able to advance to the appropriate stage by examining the sync index snapshot.
+                    ++syncIndex;
+                    if (substepIndex > 0)
+                    {
+                        ExecuteMainStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, ref substepContext.Stages[0], GetPreviousSyncIndexForIncrementalUpdate(substepIndex, syncIndex, syncStagesPerSubstep), syncIndex);
+                    }
+                    //Note that we do not invoke velocity integration on the first substep if kinematics do not need velocity integration.
+                    ++syncIndex;
+                    if (substepIndex > 0 || PoseIntegrator.Callbacks.IntegrateVelocityForKinematics)
+                    {
+                        integrateConstrainedKinematicsStage.SubstepIndex = substepIndex;
+                        ExecuteMainStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, ref substepContext.Stages[1], GetPreviousSyncIndexForIntegrateConstrainedKinematics(substepIndex, syncIndex, syncStagesPerSubstep), syncIndex);
+                    }
+                    warmstartStage.SubstepIndex = substepIndex;
+                    for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+                    {
+                        ++syncIndex;
+                        ExecuteMainStage(ref warmstartStage, workerIndex, batchStarts[batchIndex], ref substepContext.Stages[batchIndex + 2], GetPreviousSyncIndexForWarmStart(syncIndex, synchronizedBatchCount), syncIndex);
+                    }
+                    if (fallbackExists)
+                    {
+                        //The fallback runs only on the main thread.
+                        ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                        ref var integrationFlagsForBatch = ref integrationFlags[FallbackBatchThreshold];
+                        for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[j];
+                            if (substepIndex == 0)
+                            {
+                                WarmStartBlock<DisallowPoseIntegration>(0, FallbackBatchThreshold, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepContext.Dt, substepContext.InverseDt);
+                            }
+                            else
+                            {
+                                WarmStartBlock<AllowPoseIntegration>(0, FallbackBatchThreshold, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepContext.Dt, substepContext.InverseDt);
+                            }
+                        }
+                    }
+                    for (int iterationIndex = 0; iterationIndex < VelocityIterationCount; ++iterationIndex)
+                    {
+                        for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+                        {
+                            //Note that this is using a 'different' stage by index than the worker thread if the iteration index > 1. 
+                            //That's totally fine- the warmstart/iteration stages share the same claims buffers per batch. They're redundant for the sake of easier indexing.
+                            ++syncIndex;
+                            ExecuteMainStage(ref solveStage, workerIndex, batchStarts[batchIndex], ref substepContext.Stages[batchIndex + 2], GetPreviousSyncIndexForSolve(syncIndex, synchronizedBatchCount), syncIndex);
+                        }
+                        if (fallbackExists)
+                        {
+                            //The fallback runs only on the main thread.
+                            ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                            for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                            {
+                                ref var typeBatch = ref batch.TypeBatches[j];
+                                TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, substepContext.Dt, substepContext.InverseDt, 0, typeBatch.BundleCount);
+                            }
+                        }
+                    }
+                }
+                //All done; notify waiting threads to join.
+                Volatile.Write(ref substepContext.SyncIndex, int.MinValue);
+            }
+            else
+            {
+                //This is a worker thread. It does not need to track execution progress; it only checks to see if there's any work that needs to be done, and if there is, does it, then goes back into a wait.
+                int latestCompletedSyncIndex = 0;
+                int syncIndexInSubstep = -1;
+                int substepIndex = 0;
+
+                while (true)
+                {
+                    var spinWait = new LocalSpinWait();
+                    int syncIndex;
+                    while (latestCompletedSyncIndex == (syncIndex = Volatile.Read(ref substepContext.SyncIndex)))
+                    {
+                        //No work yet available.
+                        spinWait.SpinOnce();
+                    }
+                    //Stages were set up prior to execution. Note that we don't attempt to ping pong buffers or anything; workblock claim indices monotonically increase across the execution of the solver.
+                    //This guarantees that a worker thread can go idle and miss an arbitrary number of stages without blocking any progress.
+                    if (syncIndex == int.MinValue)
+                    {
+                        //No more stages; exit the work loop.
+                        break;
+                    }
+                    //Extract the job type, stage index, and substep index from the sync index.
+                    var syncStepsSinceLast = syncIndex - latestCompletedSyncIndex;
+                    syncIndexInSubstep += syncStepsSinceLast;
+                    while (true)
+                    {
+                        if (syncIndexInSubstep >= syncStagesPerSubstep)
+                        {
+                            syncIndexInSubstep -= syncStagesPerSubstep;
+                            ++substepIndex;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    //Console.WriteLine($"Worker working on sync index {syncIndex}, sync index in substep: {syncIndexInSubstep}");
+                    //Note that we're going to do a compare exchange that prevents any claim on work blocks that *arent* of the previous sync index, which means we need the previous sync index.
+                    //Storing that in a reliable way is annoying, so we derive it from syncIndex.
+                    ref var stage = ref substepContext.Stages[syncIndexInSubstep];
+                    //Console.WriteLine($"Worker {workerIndex} executing {stage.StageType} for sync index {syncIndex}, stage index {syncIndexInSubstep}");
+                    switch (stage.StageType)
+                    {
+                        case SolverStageType.IncrementalUpdate:
+                            ExecuteWorkerStage(ref incrementalUpdateStage, workerIndex, incrementalUpdateWorkerStart, 0, ref stage.Claims, GetPreviousSyncIndexForIncrementalUpdate(substepIndex, syncIndex, syncStagesPerSubstep), syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
+                        case SolverStageType.IntegrateConstrainedKinematics:
+                            integrateConstrainedKinematicsStage.SubstepIndex = substepIndex;
+                            ExecuteWorkerStage(ref integrateConstrainedKinematicsStage, workerIndex, kinematicIntegrationWorkerStart, 0, ref stage.Claims, GetPreviousSyncIndexForIntegrateConstrainedKinematics(substepIndex, syncIndex, syncStagesPerSubstep), syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
+                        case SolverStageType.WarmStart:
+                            warmstartStage.SubstepIndex = substepIndex;
+                            ExecuteWorkerStage(ref warmstartStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, GetPreviousSyncIndexForWarmStart(syncIndex, synchronizedBatchCount), syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
+                        case SolverStageType.Solve:
+                            ExecuteWorkerStage(ref solveStage, workerIndex, batchStarts[stage.BatchIndex], stage.WorkBlockStartIndex, ref stage.Claims, GetPreviousSyncIndexForSolve(syncIndex, synchronizedBatchCount), syncIndex, ref substepContext.CompletedWorkBlockCount);
+                            break;
+                    }
+                    latestCompletedSyncIndex = syncIndex;
+
+                }
+            }
+
+        }
+
+        Buffer<IntegrationWorkBlock> BuildKinematicIntegrationWorkBlocks(int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlockCount)
+        {
+            var bundleCount = BundleIndexing.GetBundleCount(ConstrainedKinematicHandles.Count);
+            if (bundleCount > 0)
+            {
+                var targetBundlesPerBlock = bundleCount / targetBlockCount;
+                if (targetBundlesPerBlock < minimumBlockSizeInBundles)
+                    targetBundlesPerBlock = minimumBlockSizeInBundles;
+                if (targetBundlesPerBlock > maximumBlockSizeInBundles)
+                    targetBundlesPerBlock = maximumBlockSizeInBundles;
+                var blockCount = (bundleCount + targetBundlesPerBlock - 1) / targetBundlesPerBlock;
+                var bundlesPerBlock = bundleCount / blockCount;
+                var remainder = bundleCount - bundlesPerBlock * blockCount;
+                var previousEnd = 0;
+                pool.Take(blockCount, out Buffer<IntegrationWorkBlock> workBlocks);
+                for (int i = 0; i < blockCount; ++i)
+                {
+                    var bundleCountForBlock = bundlesPerBlock;
+                    if (i < remainder)
+                        ++bundleCountForBlock;
+                    workBlocks[i] = new IntegrationWorkBlock { StartBundleIndex = previousEnd, EndBundleIndex = previousEnd += bundleCountForBlock };
+                }
+                return workBlocks;
+
+            }
+            return default;
         }
 
         protected unsafe void BuildWorkBlocks<TTypeBatchFilter>(
@@ -172,579 +721,700 @@ namespace BepuPhysics
             }
         }
 
-
-        protected struct WorkerBounds
+        //Buffer<Buffer<int>> debugStageWorkBlocksCompleted;
+        protected void ExecuteMultithreaded2(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate)
         {
-            /// <summary>
-            /// Inclusive start of blocks known to be claimed by any worker.
-            /// </summary>
-            public int Min;
-            /// <summary>
-            /// Exclusive end of blocks known to be claimed by any worker.
-            /// </summary>
-            public int Max;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static void Merge(ref WorkerBounds current, ref WorkerBounds mergeSource)
-            {
-                if (mergeSource.Min < current.Min)
-                    current.Min = mergeSource.Min;
-                if (mergeSource.Max > current.Max)
-                    current.Max = mergeSource.Max;
-            }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool BoundsTouch(ref WorkerBounds a, ref WorkerBounds b)
-            {
-                //Note that touching is sufficient reason to merge. They don't have to actually intersect.
-                return a.Min - b.Max <= 0 && b.Min - a.Max <= 0;
-            }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static void MergeIfTouching(ref WorkerBounds current, ref WorkerBounds other)
-            {
-                //Could be a little more clever here if it matters.
-                if (BoundsTouch(ref current, ref other))
-                    Merge(ref current, ref other);
-
-            }
-        }
-        protected struct WorkBlocks<T> where T : unmanaged
-        {
-            public QuickList<T> Blocks;
-            public Buffer<int> Claims;
-
-            public void CreateClaims(BufferPool pool)
-            {
-                pool.TakeAtLeast(Blocks.Count, out Claims);
-                Claims.Clear(0, Blocks.Count);
-            }
-            public void Dispose(BufferPool pool)
-            {
-                Blocks.Dispose(pool);
-                pool.Return(ref Claims);
-            }
-        }
-
-        //Just bundling these up to avoid polluting the this. intellisense.
-        protected struct MultithreadingParameters
-        {
-            public float Dt;
-            public WorkBlocks<WorkBlock> ConstraintBlocks;
-            public Buffer<int> BatchBoundaries;
-            public int WorkerCompletedCount;
-            public int WorkerCount;
-
-            public WorkBlocks<WorkBlock> IncrementalUpdateBlocks;
-            public Buffer<int> IncrementalUpdateBatchBoundaries;
-
-            public Buffer<WorkerBounds> WorkerBoundsA;
-            public Buffer<WorkerBounds> WorkerBoundsB;
-
-            public Buffer<int> SyncStageWorkCounters;
-
-        }
-        protected MultithreadingParameters context;
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void MergeWorkerBounds(ref WorkerBounds bounds, ref Buffer<WorkerBounds> allWorkerBounds, int workerIndex)
-        {
-            for (int i = 0; i < workerIndex; ++i)
-            {
-                WorkerBounds.MergeIfTouching(ref bounds, ref allWorkerBounds[i]);
-            }
-            for (int i = workerIndex + 1; i < context.WorkerCount; ++i)
-            {
-                WorkerBounds.MergeIfTouching(ref bounds, ref allWorkerBounds[i]);
-            }
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        int TraverseForwardUntilBlocked<TStageFunction, TBlock>(ref TStageFunction stageFunction, ref WorkBlocks<TBlock> blocks, int blockIndex, ref WorkerBounds bounds, ref Buffer<WorkerBounds> allWorkerBounds, int workerIndex,
-            int batchEnd, int claimedState, int unclaimedState)
-            where TStageFunction : IStageFunction
-            where TBlock : unmanaged
-        {
-            //If no claim is made, this defaults to an invalid interval endpoint.
-            int highestLocallyClaimedIndex = -1;
-            while (true)
-            {
-                if (Interlocked.CompareExchange(ref blocks.Claims[blockIndex], claimedState, unclaimedState) == unclaimedState)
-                {
-                    highestLocallyClaimedIndex = blockIndex;
-                    bounds.Max = blockIndex + 1; //Exclusive bound.
-                    Debug.Assert(blockIndex < batchEnd);
-                    stageFunction.Execute(this, blockIndex, workerIndex);
-                    //Increment or exit.
-                    if (++blockIndex == batchEnd)
-                        break;
-                }
-                else
-                {
-                    //Already claimed.
-                    bounds.Max = blockIndex + 1; //Exclusive bound.
-                    break;
-                }
-            }
-            Debug.Assert(bounds.Max <= batchEnd);
-            MergeWorkerBounds(ref bounds, ref allWorkerBounds, workerIndex);
-            Debug.Assert(bounds.Max <= batchEnd);
-            return highestLocallyClaimedIndex;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        int TraverseBackwardUntilBlocked<TStageFunction, TBlock>(ref TStageFunction stageFunction, ref WorkBlocks<TBlock> blocks, int blockIndex, ref WorkerBounds bounds, ref Buffer<WorkerBounds> allWorkerBounds, int workerIndex,
-            int batchStart, int claimedState, int unclaimedState)
-            where TStageFunction : IStageFunction
-            where TBlock : unmanaged
-        {
-            //If no claim is made, this defaults to an invalid interval endpoint.
-            int lowestLocallyClaimedIndex = blocks.Blocks.Count;
-            while (true)
-            {
-                if (Interlocked.CompareExchange(ref blocks.Claims[blockIndex], claimedState, unclaimedState) == unclaimedState)
-                {
-                    lowestLocallyClaimedIndex = blockIndex;
-                    bounds.Min = blockIndex;
-                    Debug.Assert(blockIndex >= batchStart);
-                    stageFunction.Execute(this, blockIndex, workerIndex);
-                    //Decrement or exit.
-                    if (blockIndex == batchStart)
-                        break;
-                    --blockIndex;
-                }
-                else
-                {
-                    //Already claimed.
-                    bounds.Min = blockIndex;
-                    break;
-                }
-            }
-            MergeWorkerBounds(ref bounds, ref allWorkerBounds, workerIndex);
-            return lowestLocallyClaimedIndex;
-        }
-        protected interface IStageFunction
-        {
-            void Execute(Solver solver, int blockIndex, int workerIndex);
-        }
-        struct PrestepStageFunction : IStageFunction
-        {
-            public float Dt;
-            public float InverseDt;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex, int workerIndex)
-            {
-                ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
-                ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-                var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.Prestep(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
-            }
-        }
-        struct WarmStartStageFunction : IStageFunction
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex, int workerIndex)
-            {
-                ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
-                ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-                var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.WarmStart(ref typeBatch, solver.bodies, block.StartBundle, block.End);
-
-            }
-        }
-        struct SolveStageFunction : IStageFunction
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(Solver solver, int blockIndex, int workerIndex)
-            {
-                ref var block = ref solver.context.ConstraintBlocks.Blocks[blockIndex];
-                ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-                var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.SolveIteration(ref typeBatch, solver.bodies, block.StartBundle, block.End);
-            }
-        }
-
-
-
-        /// <summary>
-        /// Behaves like a framework SpinWait, but never voluntarily relinquishes the timeslice to off-core threads.
-        /// </summary>
-        /// <remarks><para>There are two big reasons for using this over the regular framework SpinWait:</para>
-        /// <para>1) The framework spinwait relies on spins for quite a while before resorting to any form of timeslice surrender.
-        /// Empirically, this is not ideal for the solver- if the sync condition isn't met within several nanoseconds, it will tend to be some microseconds away.
-        /// This spinwait is much more aggressive about moving to yields.</para>
-        /// <para>2) After a number of yields, the framework SpinWait will resort to calling Sleep.
-        /// This widens the potential set of schedulable threads to those not native to the current core. If we permit that transition, it is likely to evict cached solver data.
-        /// (For very large simulations, the use of Sleep(0) isn't that concerning- every iteration can be large enough to evict all of cache- 
-        /// but there still isn't much benefit to using it over yields in context.)</para>
-        /// <para>SpinWait will also fall back to Sleep(1) by default which obliterates performance, but that behavior can be disabled.</para>
-        /// <para>Note that this isn't an indication that the framework SpinWait should be changed, but rather that the solver's requirements are extremely specific and don't match
-        /// a general purpose solution very well.</para></remarks>
-        protected struct LocalSpinWait
-        {
-            public int WaitCount;
-
-            //Empirically, being pretty aggressive about yielding produces the best results. This is pretty reasonable- 
-            //a single constraint bundle can take hundreds of nanoseconds to finish.
-            //That would be a whole lot of spinning that could be used by some other thread. At worst, we're being friendlier to other applications on the system.
-            //This thread will likely be rescheduled on the same core, so it's unlikely that we'll lose any cache warmth (that we wouldn't have lost anyway).
-            public const int YieldThreshold = 3;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void SpinOnce()
-            {
-                if (WaitCount >= YieldThreshold)
-                {
-                    Thread.Yield();
-                }
-                else
-                {
-                    //We are sacrificing one important feature of the newer framework provided waits- normalized spinning (RuntimeThread.OptimalMaxSpinWaitsPerSpinIteration).
-                    //Different platforms can spin at significantly different speeds, so a single constant value for the maximum spin duration doesn't map well to all hardware.
-                    //On the upside, we tend to be concerned about two modes- waiting a very short time, and waiting a medium amount of time.
-                    //The specific length of the 'short' time doesn't matter too much, so long as it's fairly short.
-                    Thread.SpinWait(1 << WaitCount);
-                    ++WaitCount;
-                }
-
-            }
-        }
-
-
-        protected void InterstageSync(ref int syncStageIndex)
-        {
-            //No more work is available to claim, but not every thread is necessarily done with the work they claimed. So we need a dedicated sync- upon completing its local work,
-            //a worker increments the 'workerCompleted' counter, and the spins on that counter reaching workerCount * stageIndex.
-            ++syncStageIndex;
-            var neededCompletionCount = context.WorkerCount * syncStageIndex;
-            if (Interlocked.Increment(ref context.WorkerCompletedCount) != neededCompletionCount)
-            {
-                var spinWait = new LocalSpinWait();
-                while (Volatile.Read(ref context.WorkerCompletedCount) < neededCompletionCount)
-                {
-                    spinWait.SpinOnce();
-                }
-            }
-        }
-
-        protected void ExecuteStage<TStageFunction, TBlock>(ref TStageFunction stageFunction, ref WorkBlocks<TBlock> blocks,
-            ref Buffer<WorkerBounds> allWorkerBounds, ref Buffer<WorkerBounds> previousWorkerBounds, int workerIndex,
-            int batchStart, int batchEnd, ref int workerStart, ref int syncStage,
-            int claimedState, int unclaimedState)
-            where TStageFunction : IStageFunction
-            where TBlock : unmanaged
-        {
-            //It is possible for a worker to not have any job available in a particular batch. This can only happen when there are more workers than work blocks in the batch.
-            //The workers with indices beyond the available work blocks will have their starts all set to -1 by the scheduler.
-            //All previous workers will have tightly packed contiguous indices and won't be able to worksteal at all.
-            if (workerStart > -1)
-            {
-                Debug.Assert(workerStart >= batchStart && workerStart < batchEnd);
-                var blockIndex = workerStart;
-
-                ref var bounds = ref allWorkerBounds[workerIndex];
-
-                //Just assume the min will be claimed. There's a chance the thread will get preempted or the value will be read before it's actually claimed, but 
-                //that's a very small risk and doesn't affect long-term correctness. (It would just somewhat reduce workstealing effectiveness, and so performance.)
-                bounds.Min = blockIndex;
-                Debug.Assert(bounds.Max <= batchEnd);
-
-                //Note that initialization guarantees a start index in the batch; no test required.
-                //Note that we track the largest contiguous region over the course of the stage execution. The batch start of this worker will be set to the 
-                //minimum slot of the largest contiguous region so that following iterations will tend to have a better initial work distribution with less work stealing.
-                Debug.Assert(batchStart <= blockIndex && batchEnd > blockIndex);
-                var highestLocalClaim = TraverseForwardUntilBlocked(ref stageFunction, ref blocks, blockIndex, ref bounds, ref allWorkerBounds, workerIndex, batchEnd, claimedState, unclaimedState);
-
-                Debug.Assert(bounds.Max <= batchEnd);
-                //By now, we've reached the end of the contiguous region in the forward direction. Try walking the other way.
-                blockIndex = workerStart - 1;
-                //Note that there is no guarantee that the block will be in the batch- this could be the leftmost worker.
-                int lowestLocalClaim;
-                if (blockIndex >= batchStart)
-                {
-                    lowestLocalClaim = TraverseBackwardUntilBlocked(ref stageFunction, ref blocks, blockIndex, ref bounds, ref allWorkerBounds, workerIndex, batchStart, claimedState, unclaimedState);
-                }
-                else
-                {
-                    lowestLocalClaim = batchStart;
-                }
-                Debug.Assert(bounds.Max <= batchEnd);
-                //These are actually two inclusive bounds, so this is count - 1, but as long as we're consistent it's fine.
-                //For this first region, we need to check that it's actually a valid region- if the claims were blocked, it might not be.
-                var largestContiguousRegionSize = highestLocalClaim - lowestLocalClaim;
-                if (largestContiguousRegionSize >= 0)
-                    workerStart = lowestLocalClaim;
-                else
-                    largestContiguousRegionSize = 0; //It was an invalid region, but later invalid regions should be rejected by size. Setting to zero guarantees that later regions have to have at least one open slot.
-
-
-                //All contiguous slots have been claimed. Now just traverse to the end along the right direction.
-                while (bounds.Max < batchEnd)
-                {
-                    //Each of these iterations may find a contiguous region larger than our previous attempt.
-                    lowestLocalClaim = bounds.Max;
-                    highestLocalClaim = TraverseForwardUntilBlocked(ref stageFunction, ref blocks, bounds.Max, ref bounds, ref allWorkerBounds, workerIndex, batchEnd, claimedState, unclaimedState);
-                    //If the claim at index lowestLocalClaim was blocked, highestLocalClaim will be -1, so the size will be negative.
-                    var regionSize = highestLocalClaim - lowestLocalClaim; //again, actually count - 1
-                    if (regionSize > largestContiguousRegionSize)
-                    {
-                        workerStart = lowestLocalClaim;
-                        largestContiguousRegionSize = regionSize;
-                    }
-                    Debug.Assert(bounds.Max <= batchEnd);
-                }
-
-                //Traverse backwards.
-                while (bounds.Min > batchStart)
-                {
-                    //Note bounds.Min - 1; Min is inclusive, so in order to access a new location, it must be pushed out.
-                    //Note that the above condition uses a > to handle this.
-                    highestLocalClaim = bounds.Min - 1;
-                    lowestLocalClaim = TraverseBackwardUntilBlocked(ref stageFunction, ref blocks, highestLocalClaim, ref bounds, ref allWorkerBounds, workerIndex, batchStart, claimedState, unclaimedState);
-                    //If the claim at highestLocalClaim was blocked, lowestLocalClaim will be workblocks.Count, so the size will be negative.
-                    var regionSize = highestLocalClaim - lowestLocalClaim; //again, actually count - 1
-                    if (regionSize > largestContiguousRegionSize)
-                    {
-                        workerStart = lowestLocalClaim;
-                        largestContiguousRegionSize = regionSize;
-                    }
-                    Debug.Assert(bounds.Max <= batchEnd);
-                }
-
-                Debug.Assert(bounds.Min == batchStart && bounds.Max == batchEnd);
-
-            }
-            //Clear the previous bounds array before the sync so the next stage has fresh data.
-            //Note that this clear is unconditional- the previous worker data must be cleared out or trash data may find its way into the next stage.
-            previousWorkerBounds[workerIndex].Min = int.MaxValue;
-            previousWorkerBounds[workerIndex].Max = int.MinValue;
-
-            InterstageSync(ref syncStage);
-            //Swap the bounds buffers being used before proceeding.
-            var tempWorkerBounds = allWorkerBounds;
-            allWorkerBounds = previousWorkerBounds;
-            previousWorkerBounds = tempWorkerBounds;
-
-
-        }
-
-        protected static int GetUniformlyDistributedStart(int workerIndex, int blockCount, int workerCount, int offset)
-        {
-            if (blockCount <= workerCount)
-            {
-                //Too few blocks to give every worker a job; give the jobs to the first context.WorkBlocks.Count workers.
-                return workerIndex < blockCount ? offset + workerIndex : -1;
-            }
-            var blocksPerWorker = blockCount / workerCount;
-            var remainder = blockCount - blocksPerWorker * workerCount;
-            return offset + blocksPerWorker * workerIndex + Math.Min(remainder, workerIndex);
-        }
-
-        void SolveWorker(int workerIndex)
-        {
-            int prestepStart = GetUniformlyDistributedStart(workerIndex, context.ConstraintBlocks.Blocks.Count, context.WorkerCount, 0);
-            Buffer<int> batchStarts;
-            ref var activeSet = ref ActiveSet;
-            unsafe
-            {
-                //stackalloc is actually a little bit slow since the localsinit behavior forces a zeroing.
-                //Fortunately, this executes once per thread per frame. With 32 batches, it would add... a few nanoseconds per frame. We can accept that overhead.
-                //This is preferred over preallocating on the heap- we might write to these values and we don't want to risk false sharing for no reason. 
-                //A single instance of false sharing would cost far more than the overhead of zeroing out the array.
-                var batchStartsData = stackalloc int[activeSet.Batches.Count];
-                batchStarts = new Buffer<int>(batchStartsData, activeSet.Batches.Count);
-            }
-            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
-            {
-                var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
-                var batchCount = context.BatchBoundaries[batchIndex] - batchOffset;
-                batchStarts[batchIndex] = GetUniformlyDistributedStart(workerIndex, batchCount, context.WorkerCount, batchOffset);
-            }
-
-
-            int syncStage = 0;
-            //The claimed and unclaimed state swap after every usage of both pingpong claims buffers.
-            int claimedState = 1;
-            int unclaimedState = 0;
-            var bounds = context.WorkerBoundsA;
-            var boundsBackBuffer = context.WorkerBoundsB;
-            //Note that every batch has a different start position. Each covers a different subset of constraints, so they require different start locations.
-            //The same concept applies to the prestep- the prestep covers all constraints at once, rather than batch by batch.
-            var prestepStage = new PrestepStageFunction { Dt = context.Dt, InverseDt = 1f / context.Dt };
-            Debug.Assert(activeSet.Batches.Count > 0, "Don't dispatch if there are no constraints.");
-            //Technically this could mutate prestep starts, but at the moment we rebuild starts every frame anyway so it doesn't matter one way or the other.
-            ExecuteStage(ref prestepStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, 0, context.ConstraintBlocks.Blocks.Count,
-                ref prestepStart, ref syncStage, claimedState, unclaimedState);
-
-            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-            claimedState ^= 1;
-            unclaimedState ^= 1;
-            var warmStartStage = new WarmStartStageFunction();
-            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
-            {
-                var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
-                //Don't use the warm start to guess at the solve iteration work distribution.
-                var workerBatchStartCopy = batchStarts[batchIndex];
-                ExecuteStage(ref warmStartStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
-                    ref workerBatchStartCopy, ref syncStage, claimedState, unclaimedState);
-            }
-            claimedState ^= 1;
-            unclaimedState ^= 1;
-
-            var solveStage = new SolveStageFunction();
-            for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
-            {
-                for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
-                {
-                    var batchOffset = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
-                    ExecuteStage(ref solveStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[batchIndex],
-                        ref batchStarts[batchIndex], ref syncStage, claimedState, unclaimedState);
-                }
-                claimedState ^= 1;
-                unclaimedState ^= 1;
-            }
-        }
-
-        [Conditional("DEBUG")]
-        void ValidateWorkBlocks<TTypeBatchSolveFilter>(ref TTypeBatchSolveFilter filter) where TTypeBatchSolveFilter : ITypeBatchSolveFilter
-        {
-            ref var activeSet = ref ActiveSet;
-            int[][][] batches = new int[activeSet.Batches.Count][][];
-            for (int i = 0; i < activeSet.Batches.Count; ++i)
-            {
-                var typeBatches = batches[i] = new int[activeSet.Batches[i].TypeBatches.Count][];
-                for (int j = 0; j < typeBatches.Length; ++j)
-                {
-                    typeBatches[j] = new int[activeSet.Batches[i].TypeBatches[j].BundleCount];
-                }
-            }
-
-            for (int blockIndex = 0; blockIndex < context.ConstraintBlocks.Blocks.Count; ++blockIndex)
-            {
-                ref var block = ref context.ConstraintBlocks.Blocks[blockIndex];
-                for (int bundleIndex = block.StartBundle; bundleIndex < block.End; ++bundleIndex)
-                {
-                    ref var visitedCount = ref batches[block.BatchIndex][block.TypeBatchIndex][bundleIndex];
-                    ++visitedCount;
-                    Debug.Assert(visitedCount == 1);
-                }
-            }
-
-            for (int batchIndex = 0; batchIndex < batches.Length; ++batchIndex)
-            {
-                for (int typeBatchIndex = 0; typeBatchIndex < batches[batchIndex].Length; ++typeBatchIndex)
-                {
-                    ref var typeBatch = ref ActiveSet.Batches[batchIndex].TypeBatches[typeBatchIndex];
-                    if (filter.AllowType(typeBatch.TypeId))
-                    {
-                        for (int constraintIndex = 0; constraintIndex < batches[batchIndex][typeBatchIndex].Length; ++constraintIndex)
-                        {
-                            Debug.Assert(batches[batchIndex][typeBatchIndex][constraintIndex] == 1);
-                        }
-                    }
-                }
-            }
-
-        }
-
-        protected void ExecuteMultithreaded<TTypeBatchSolveFilter>(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate, bool includeIncrementalUpdate = false) where TTypeBatchSolveFilter : struct, ITypeBatchSolveFilter
-        {
-            var filter = default(TTypeBatchSolveFilter);
-            var workerCount = context.WorkerCount = threadDispatcher.ThreadCount;
-            context.WorkerCompletedCount = 0;
-            context.Dt = dt;
+            var workerCount = substepContext.WorkerCount = threadDispatcher.ThreadCount;
+            substepContext.Dt = dt;
+            substepContext.InverseDt = 1f / dt;
             //First build a set of work blocks.
             //The block size should be relatively small to give the workstealer something to do, but we don't want to go crazy with the number of blocks.
             //These values are found by empirical tuning. The optimal values may vary by architecture.
             //The goal here is to have just enough blocks that, in the event that we end up some underpowered threads (due to competition or hyperthreading), 
             //there are enough blocks that workstealing will still generally allow the extra threads to be useful.
-            const int targetBlocksPerBatchPerWorker = 1;
+            const int targetBlocksPerBatchPerWorker = 4;
             const int minimumBlockSizeInBundles = 1;
             const int maximumBlockSizeInBundles = 1024;
 
             var targetBlocksPerBatch = workerCount * targetBlocksPerBatchPerWorker;
-            BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref filter, out context.ConstraintBlocks.Blocks, out context.BatchBoundaries);
-            if (includeIncrementalUpdate)
-            {
-                //This looks a little weird- having a filter, which is sometimes the incremental filter, as the main filter- then having this internal filter that's conditionally used...
-                //It's just a hack to deal with the fact that we're in the middle of a fairly major restructuring in the solver. Once the old style incremental update is gone, the weirdness can be purged.
-                var incrementalFilter = new IncrementalContactDataUpdateFilter();
-                BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref incrementalFilter, out context.IncrementalUpdateBlocks.Blocks, out context.IncrementalUpdateBatchBoundaries);
-            }
-            ValidateWorkBlocks(ref filter);
+            var mainFilter = new MainSolveFilter();
+            var incrementalFilter = new IncrementalContactDataUpdateFilter();
+            BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref mainFilter, out var constraintBlocks, out substepContext.ConstraintBatchBoundaries);
+            BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref incrementalFilter, out var incrementalBlocks, out var incrementalUpdateBatchBoundaries);
+            pool.Return(ref incrementalUpdateBatchBoundaries); //TODO: No need to create this in the first place. Doesn't really cost anything, but...
+            substepContext.ConstraintBlocks = constraintBlocks.Span.Slice(constraintBlocks.Count);
+            substepContext.IncrementalUpdateBlocks = incrementalBlocks.Span.Slice(incrementalBlocks.Count);
+            substepContext.KinematicIntegrationBlocks = BuildKinematicIntegrationWorkBlocks(minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch);
 
-            //Note the clear; the block claims must be initialized to 0 so that the first worker stage knows that the data is available to claim.
-            context.ConstraintBlocks.CreateClaims(pool);
-            if (includeIncrementalUpdate)
-                context.IncrementalUpdateBlocks.CreateClaims(pool);
-            pool.Take(workerCount, out context.WorkerBoundsA);
-            pool.Take(workerCount, out context.WorkerBoundsB);
-            //The worker bounds front buffer should be initialized to avoid trash interval data from messing up the workstealing.
-            //The worker bounds back buffer will be cleared by the worker before moving on to the next stage.
-            for (int i = 0; i < workerCount; ++i)
+            //Not every batch will actually have work blocks associated with it; the batch compressor could be falling behind, which means older constraints could be at higher batches than they need to be, leaving gaps.
+            //We don't want to include those empty batches as sync points in the solver.
+            var batchCount = ActiveSet.Batches.Count;
+            substepContext.SyncIndex = 0;
+            var totalConstraintBatchWorkBlockCount = substepContext.ConstraintBatchBoundaries.Length == 0 ? 0 : substepContext.ConstraintBatchBoundaries[^1];
+            var totalClaimCount = incrementalBlocks.Count + substepContext.KinematicIntegrationBlocks.Length + totalConstraintBatchWorkBlockCount;
+            GetSynchronizedBatchCount(out var stagesPerIteration, out var fallbackExists);
+            pool.Take(2 + stagesPerIteration * (1 + VelocityIterationCount), out substepContext.Stages);
+            //Claims will be monotonically increasing throughout execution. All should start at zero to match with the initial sync index.
+            pool.Take<int>(totalClaimCount, out var claims);
+            claims.Clear(0, claims.Length);
+            substepContext.Stages[0] = new(claims.Slice(incrementalBlocks.Count), 0, SolverStageType.IncrementalUpdate);
+            substepContext.Stages[1] = new(claims.Slice(incrementalBlocks.Count, substepContext.KinematicIntegrationBlocks.Length), 0, SolverStageType.IntegrateConstrainedKinematics);
+            //Note that we create redundant stages that share the same workblock targets and claims buffers.
+            //This is just to make indexing a little simpler during the multithreaded work.
+            int targetStageIndex = 2;
+            //Warm start.
+            var preambleClaimCount = incrementalBlocks.Count + substepContext.KinematicIntegrationBlocks.Length;
+            int claimStart = preambleClaimCount;
+            for (int batchIndex = 0; batchIndex < stagesPerIteration; ++batchIndex)
             {
-                context.WorkerBoundsA[i] = new WorkerBounds { Min = int.MaxValue, Max = int.MinValue };
+                var stageIndex = targetStageIndex++;
+                var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+                var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+                substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.WarmStart, batchIndex);
+                claimStart += workBlocksInBatch;
+            }
+            for (int iterationIndex = 0; iterationIndex < VelocityIterationCount; ++iterationIndex)
+            {
+                //Solve. Note that we're reusing the same claims as were used in the warm start for these stages; the stages just tell the workers what kind of work to do.
+                claimStart = preambleClaimCount;
+                for (int batchIndex = 0; batchIndex < stagesPerIteration; ++batchIndex)
+                {
+                    var stageIndex = targetStageIndex++;
+                    var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+                    var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+                    substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.Solve, batchIndex);
+                    claimStart += workBlocksInBatch;
+                }
             }
 
-            pool.Take(2, out context.SyncStageWorkCounters);
-            context.SyncStageWorkCounters[0] = -1;
-            context.SyncStageWorkCounters[1] = -1;
+            //for (int i = 0; i < iterationCountPlusOne; ++i)
+            //{
+            //    int claimStart = incrementalBlocks.Count;
+            //    for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+            //    {
+            //        var stageIndex = targetStageIndex++;
+            //        var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+            //        var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+            //        substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart,  batchIndex);
+            //        claimStart += workBlocksInBatch;
+            //    }
+            //}
+
+            //var syncCount = substepCount * (1 + synchronizedBatchCount * (1 + IterationCount)) - 1;
+            //pool.Take(syncCount, out debugStageWorkBlocksCompleted);
+            //pool.Take<int>(syncCount * workerCount, out var workBlocksCompleted);
+            //workBlocksCompleted.Clear(0, workBlocksCompleted.Length);
+            //for (int i = 0; i < syncCount; ++i)
+            //{
+            //    debugStageWorkBlocksCompleted[i] = workBlocksCompleted.Slice(i * workerCount, workerCount);
+            //}
 
             //While we could be a little more aggressive about culling work with this condition, it doesn't matter much. Have to do it for correctness; worker relies on it.
             if (ActiveSet.Batches.Count > 0)
+            {
+                //workDelegate(0);
                 threadDispatcher.DispatchWorkers(workDelegate);
+            }
 
-            context.ConstraintBlocks.Dispose(pool);
-            if (includeIncrementalUpdate)
-                context.IncrementalUpdateBlocks.Dispose(pool);
-            pool.Return(ref context.BatchBoundaries);
-            pool.Return(ref context.WorkerBoundsA);
-            pool.Return(ref context.WorkerBoundsB);
-            pool.Return(ref context.SyncStageWorkCounters);
+            //pool.Take<int>(syncCount, out var availableCountPerSync);
+            //var syncIndex = 0;
+            //for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
+            //{
+            //    if (substepIndex > 0)
+            //    {
+            //        availableCountPerSync[syncIndex] = incrementalBlocks.Count;
+            //        ++syncIndex;
+            //    }
+            //    for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+            //    {
+            //        var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+            //        var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+            //        availableCountPerSync[syncIndex] = workBlocksInBatch;
+            //        ++syncIndex;
+            //    }
+            //    for (int i = 0; i < IterationCount; ++i)
+            //    {
+            //        for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
+            //        {
+            //            var batchStart = batchIndex == 0 ? 0 : substepContext.ConstraintBatchBoundaries[batchIndex - 1];
+            //            var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
+            //            availableCountPerSync[syncIndex] = workBlocksInBatch;
+            //            ++syncIndex;
+            //        }
+            //    }
+            //}
+
+            //pool.Take<int>(workerCount, out var workerBlocksCompletedSums);
+            //pool.Take<double>(workerCount, out var workerFractionSum);
+            //workerBlocksCompletedSums.Clear(0, workerBlocksCompletedSums.Length);
+            //var availableCountSum = 0;
+            //for (int i = 0; i < syncCount; ++i)
+            //{
+            //    if (availableCountPerSync[i] <= 1)
+            //        continue;
+            //    Console.WriteLine($"Sync {i}, available {availableCountPerSync[i]}, ideal {(availableCountPerSync[i] / (double)workerCount):G2}:");
+            //    var stageWorkerBlockCounts = debugStageWorkBlocksCompleted[i];
+            //    for (int j = 0; j < workerCount; ++j)
+            //    {
+            //        workerBlocksCompletedSums[j] += stageWorkerBlockCounts[j];
+            //        var expectedCount = availableCountPerSync[i] / (double)workerCount;
+            //        if (j >= availableCountPerSync[i])
+            //            workerFractionSum[j] += 1;
+            //        else
+            //            workerFractionSum[j] += stageWorkerBlockCounts[j] / expectedCount;
+            //        Console.WriteLine($"{j}: {stageWorkerBlockCounts[j]}");
+            //    }
+            //    availableCountSum += availableCountPerSync[i];
+            //}
+            ////var idealOccupancy = 1.0 / workerCount;
+            ////Console.WriteLine($"Worker occupancy (ideal {idealOccupancy}):");
+            ////for (int i = 0; i < workerCount; ++i)
+            ////{
+            ////    //Console.WriteLine($"{i}: {(workerBlocksCompletedSums[i] / (double)availableCountSum):G3}");
+            ////    Console.WriteLine($"{i}: {workerFractionSum[i] / syncCount:G3}");
+            ////}
+
+            //pool.Return(ref workerBlocksCompletedSums);
+            //pool.Return(ref workBlocksCompleted);
+            //pool.Return(ref debugStageWorkBlocksCompleted);
+            //pool.Return(ref availableCountPerSync);
+
+            pool.Return(ref claims);
+            pool.Return(ref substepContext.Stages);
+            pool.Return(ref substepContext.ConstraintBatchBoundaries);
+            pool.Return(ref substepContext.IncrementalUpdateBlocks);
+            if (substepContext.KinematicIntegrationBlocks.Allocated)
+                pool.Return(ref substepContext.KinematicIntegrationBlocks);
+            pool.Return(ref substepContext.ConstraintBlocks);
+
+
+
         }
 
-
-        public void Solve(float dt, IThreadDispatcher threadDispatcher = null)
+        struct IsFallbackBatch { }
+        struct IsNotFallbackBatch { }
+        unsafe bool ComputeIntegrationResponsibilitiesForConstraintRegion<TFallbackness>(int batchIndex, int typeBatchIndex, int constraintStart, int exclusiveConstraintEnd) where TFallbackness : unmanaged
         {
-            if (threadDispatcher == null)
+            ref var firstObservedForBatch = ref bodiesFirstObservedInBatches[batchIndex];
+            ref var integrationFlagsForTypeBatch = ref integrationFlags[batchIndex][typeBatchIndex];
+            ref var typeBatch = ref ActiveSet.Batches[batchIndex].TypeBatches[typeBatchIndex];
+            var typeBatchBodyReferences = typeBatch.BodyReferences.As<int>();
+            var bodiesPerConstraintInTypeBatch = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
+            var intsPerBundle = Vector<int>.Count * bodiesPerConstraintInTypeBatch;
+            var bundleStartIndex = constraintStart / Vector<float>.Count;
+            var bundleEndIndex = (exclusiveConstraintEnd + Vector<float>.Count - 1) / Vector<float>.Count;
+            Debug.Assert(bundleStartIndex >= 0 && bundleEndIndex <= typeBatch.BundleCount);
+            ref var activeSet = ref bodies.ActiveSet;
+
+            for (int bundleIndex = bundleStartIndex; bundleIndex < bundleEndIndex; ++bundleIndex)
             {
-                var inverseDt = 1f / dt;
-                ref var activeSet = ref ActiveSet;
-                var batchCount = activeSet.Batches.Count;
-                for (int i = 0; i < batchCount; ++i)
+                int bundleStartIndexInConstraints = bundleIndex * Vector<int>.Count;
+                int countInBundle = Math.Min(Vector<float>.Count, typeBatch.ConstraintCount - bundleStartIndexInConstraints);
+                //Body references are stored in AOSOA layout.
+                var bundleBodyReferencesStart = typeBatchBodyReferences.Memory + bundleIndex * intsPerBundle;
+                for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraintInTypeBatch; ++bodyIndexInConstraint)
                 {
-                    ref var batch = ref activeSet.Batches[i];
-                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                    ref var integrationFlagsForBodyInConstraint = ref integrationFlagsForTypeBatch[bodyIndexInConstraint];
+                    var bundleStart = bundleBodyReferencesStart + bodyIndexInConstraint * Vector<int>.Count;
+                    for (int bundleInnerIndex = 0; bundleInnerIndex < countInBundle; ++bundleInnerIndex)
                     {
-                        ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, dt, inverseDt, 0, typeBatch.BundleCount);
+                        //Constraints refer to bodies by index when they're in the active set, so we need to transform to handle to look up our merged batch results.
+                        int bodyIndex;
+                        if (typeof(TFallbackness) == typeof(IsFallbackBatch))
+                        {
+                            //Fallback batches can contain empty lanes; there's no guarantee of constraint contiguity. Such lanes are marked with -1 in the body references.
+                            //Just skip over them.
+                            var rawBodyIndex = bundleStart[bundleInnerIndex];
+                            if (rawBodyIndex == -1)
+                            {
+                                continue;
+                            }
+                            bodyIndex = rawBodyIndex & Bodies.BodyReferenceMask;
+                        }
+                        else
+                        {
+                            bodyIndex = bundleStart[bundleInnerIndex] & Bodies.BodyReferenceMask;
+                        }
+                        var bodyHandle = activeSet.IndexToHandle[bodyIndex].Value;
+                        if (firstObservedForBatch.Contains(bodyHandle))
+                        {
+                            if (typeof(TFallbackness) == typeof(IsFallbackBatch))
+                            {
+                                //This is a fallback. Being contained is not sufficient to require integration; it must also be the *first* constraint that will be executed.
+                                //This is guaranteed by the index of the constraint in the type batch, and the type batch's index.
+                                //Note that, since the fallback batch was the first time this body was seen, we know that *all* constraints associated with this body must be in the fallback batch.
+                                //This could be significantly optimized by not recalculating the earliest candidate every single time a body is encountered in the fallback batch, but
+                                //the fallback batch should effectively *never* contain any integration responsibilities.
+                                ulong earliestIndex = ulong.MaxValue;
+                                ref var constraintsForBody = ref activeSet.Constraints[bodyIndex];
+                                for (int constraintIndexInBody = 0; constraintIndexInBody < constraintsForBody.Count; ++constraintIndexInBody)
+                                {
+                                    ref var fallbackBatch = ref ActiveSet.Batches[FallbackBatchThreshold];
+                                    ref var location = ref HandleToConstraint[constraintsForBody[constraintIndexInBody].ConnectingConstraintHandle.Value];
+                                    var typeBatchIndexForCandidate = fallbackBatch.TypeIndexToTypeBatchIndex[location.TypeId];
+                                    var candidate = ((ulong)typeBatchIndexForCandidate << 32) | (uint)location.IndexInTypeBatch;
+                                    if (candidate < earliestIndex)
+                                        earliestIndex = candidate;
+                                }
+                                var indexInTypeBatch = bundleStartIndexInConstraints + bundleInnerIndex;
+                                var currentSlot = ((ulong)typeBatchIndex << 32) | (uint)indexInTypeBatch;
+                                if (currentSlot == earliestIndex)
+                                {
+                                    integrationFlagsForBodyInConstraint.AddUnsafely(indexInTypeBatch);
+                                }
+                            }
+                            else
+                            {
+                                //Not a fallback; being contained in the observed set is sufficient.
+                                integrationFlagsForBodyInConstraint.AddUnsafely(bundleStartIndexInConstraints + bundleInnerIndex);
+                            }
+                        }
                     }
                 }
-                for (int i = 0; i < batchCount; ++i)
+            }
+            //Precompute which type batches have *any* integration responsibilities, allowing us to use a all-or-nothing test before dispatching a workblock.
+            //Note that this could be vectorized the same way we did in the batch merging, but... less likely to be useful. Less constraints in sequence in type batches,
+            //and we're already within a multithreaded context. Saving 1 microsecond not terribly meaningful.
+            var flagBundleCount = IndexSet.GetBundleCapacity(typeBatch.ConstraintCount);
+            ulong mergedFlagBundles = 0;
+            for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraintInTypeBatch; ++bodyIndexInConstraint)
+            {
+                ref var integrationFlagsForBodyInTypeBatch = ref integrationFlagsForTypeBatch[bodyIndexInConstraint];
+                for (int i = 0; i < flagBundleCount; ++i)
                 {
-                    ref var batch = ref activeSet.Batches[i];
-                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                    mergedFlagBundles |= integrationFlagsForBodyInTypeBatch.Flags[i];
+                }
+            }
+            return mergedFlagBundles != 0;
+        }
+
+        void ConstraintIntegrationResponsibilitiesWorker(int workerIndex)
+        {
+            int jobIndex;
+            while ((jobIndex = Interlocked.Increment(ref nextConstraintIntegrationResponsibilityJobIndex) - 1) < integrationResponsibilityPrepassJobs.Count)
+            {
+                ref var job = ref integrationResponsibilityPrepassJobs[jobIndex];
+                if (job.batch == FallbackBatchThreshold)
+                    jobAlignedIntegrationResponsibilities[jobIndex] = ComputeIntegrationResponsibilitiesForConstraintRegion<IsFallbackBatch>(job.batch, job.typeBatch, job.start, job.end);
+                else
+                    jobAlignedIntegrationResponsibilities[jobIndex] = ComputeIntegrationResponsibilitiesForConstraintRegion<IsNotFallbackBatch>(job.batch, job.typeBatch, job.start, job.end);
+            }
+        }
+
+        int nextConstraintIntegrationResponsibilityJobIndex;
+        QuickList<(int batch, int typeBatch, int start, int end)> integrationResponsibilityPrepassJobs;
+        Buffer<bool> jobAlignedIntegrationResponsibilities;
+        Buffer<IndexSet> bodiesFirstObservedInBatches;
+        Buffer<Buffer<Buffer<IndexSet>>> integrationFlags;
+        /// <summary>
+        /// Caches a single bool for whether type batches within batches have constraints with any integration responsibilities.
+        /// Type batches with no integration responsibilities can use a codepath with no integration checks at all.
+        /// </summary>
+        Buffer<Buffer<bool>> coarseBatchIntegrationResponsibilities;
+        Action<int> constraintIntegrationResponsibilitiesWorker;
+        IndexSet mergedConstrainedBodyHandles;
+
+        public override unsafe IndexSet PrepareConstraintIntegrationResponsibilities(IThreadDispatcher threadDispatcher = null)
+        {
+            if (ActiveSet.Batches.Count > 0)
+            {
+                pool.Take(ActiveSet.Batches.Count, out integrationFlags);
+                integrationFlags[0] = default;
+                pool.Take(ActiveSet.Batches.Count, out coarseBatchIntegrationResponsibilities);
+                for (int batchIndex = 1; batchIndex < integrationFlags.Length; ++batchIndex)
+                {
+                    ref var batch = ref ActiveSet.Batches[batchIndex];
+                    ref var flagsForBatch = ref integrationFlags[batchIndex];
+                    pool.Take(batch.TypeBatches.Count, out flagsForBatch);
+                    pool.Take(batch.TypeBatches.Count, out coarseBatchIntegrationResponsibilities[batchIndex]);
+                    for (int typeBatchIndex = 0; typeBatchIndex < flagsForBatch.Length; ++typeBatchIndex)
                     {
-                        ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, bodies, 0, typeBatch.BundleCount);
+                        ref var flagsForTypeBatch = ref flagsForBatch[typeBatchIndex];
+                        ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                        var bodiesPerConstraint = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
+                        pool.Take(bodiesPerConstraint, out flagsForTypeBatch);
+                        for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraint; ++bodyIndexInConstraint)
+                        {
+                            flagsForTypeBatch[bodyIndexInConstraint] = new IndexSet(pool, typeBatch.ConstraintCount);
+                        }
                     }
                 }
-                for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
+
+                //Brute force fallback for debugging:
+                //for (int i = 0; i < bodies.ActiveSet.Count; ++i)
+                //{
+                //    ref var constraints = ref bodies.ActiveSet.Constraints[i];
+                //    ConstraintHandle minimumConstraint;
+                //    minimumConstraint.Value = -1;
+                //    int minimumBatchIndex = int.MaxValue;
+                //    int minimumIndexInConstraint = -1;
+                //    for (int j = 0; j < constraints.Count; ++j)
+                //    {
+                //        ref var constraint = ref constraints[j];
+                //        var batchIndex = HandleToConstraint[constraint.ConnectingConstraintHandle.Value].BatchIndex;
+                //        if (batchIndex < minimumBatchIndex)
+                //        {
+                //            minimumBatchIndex = batchIndex;
+                //            minimumIndexInConstraint = constraint.BodyIndexInConstraint;
+                //            minimumConstraint = constraint.ConnectingConstraintHandle;
+                //        }
+                //    }
+                //    if (minimumConstraint.Value >= 0)
+                //    {
+                //        ref var location = ref HandleToConstraint[minimumConstraint.Value];
+                //        var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
+                //        ref var indexSet = ref integrationFlags[location.BatchIndex][typeBatchIndex][minimumIndexInConstraint];
+                //        indexSet.AddUnsafely(location.IndexInTypeBatch);
+                //    }
+                //}
+
+                pool.Take(batchReferencedHandles.Count, out bodiesFirstObservedInBatches);
+                //We don't have to consider the first batch, since we know ahead of time that the first batch will be the first time we see any bodies in it.
+                //Just copy directly from the first batch into the merged to initialize it.
+                //Note "+ 64" instead of "+ 63": the highest possibly claimed id is inclusive!
+                pool.Take((bodies.HandlePool.HighestPossiblyClaimedId + 64) / 64, out mergedConstrainedBodyHandles.Flags);
+                var copyLength = Math.Min(mergedConstrainedBodyHandles.Flags.Length, batchReferencedHandles[0].Flags.Length);
+                batchReferencedHandles[0].Flags.CopyTo(0, mergedConstrainedBodyHandles.Flags, 0, copyLength);
+                batchReferencedHandles[0].Flags.Clear(copyLength, batchReferencedHandles[0].Flags.Length - copyLength);
+
+                //Yup, we're just leaving the first slot unallocated to avoid having to offset indices all over the place. Slight wonk, but not a big deal.
+                bodiesFirstObservedInBatches[0] = default;
+                pool.Take<bool>(batchReferencedHandles.Count, out var batchHasAnyIntegrationResponsibilities);
+                for (int batchIndex = 1; batchIndex < bodiesFirstObservedInBatches.Length; ++batchIndex)
                 {
-                    for (int i = 0; i < batchCount; ++i)
+                    ref var batchHandles = ref batchReferencedHandles[batchIndex];
+                    var bundleCount = Math.Min(mergedConstrainedBodyHandles.Flags.Length, batchHandles.Flags.Length);
+                    //Note that we bypass the constructor to avoid zeroing unnecessarily. Every bundle will be fully assigned.
+                    pool.Take(bundleCount, out bodiesFirstObservedInBatches[batchIndex].Flags);
+                }
+                GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
+                //Note that we are not multithreading the batch merging phase. This typically takes a handful of microseconds.
+                //You'd likely need millions of bodies before you'd see any substantial benefit from multithreading this.
+                var batchCount = ActiveSet.Batches.Count;
+                for (int batchIndex = 1; batchIndex < batchCount; ++batchIndex)
+                {
+                    ref var batchHandles = ref batchReferencedHandles[batchIndex];
+                    ref var firstObservedInBatch = ref bodiesFirstObservedInBatches[batchIndex];
+                    var flagBundleCount = Math.Min(mergedConstrainedBodyHandles.Flags.Length, batchHandles.Flags.Length);
+
+                    if (Avx2.IsSupported)
                     {
-                        ref var batch = ref activeSet.Batches[i];
+                        var avxBundleCount = flagBundleCount / 4;
+                        var horizontalAvxMerge = Vector256<ulong>.Zero;
+                        for (int avxBundleIndex = 0; avxBundleIndex < avxBundleCount; ++avxBundleIndex)
+                        {
+                            //These will *almost* always be aligned, but guaranteeing it is not worth the complexity.
+                            var mergeBundle = Avx2.LoadVector256((ulong*)((Vector256<ulong>*)mergedConstrainedBodyHandles.Flags.Memory + avxBundleIndex));
+                            var batchBundle = Avx2.LoadVector256((ulong*)((Vector256<ulong>*)batchHandles.Flags.Memory + avxBundleIndex));
+                            Avx.Store((ulong*)((Vector256<ulong>*)mergedConstrainedBodyHandles.Flags.Memory + avxBundleIndex), Avx2.Or(mergeBundle, batchBundle));
+                            //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
+                            var firstObservedBundle = Avx2.AndNot(mergeBundle, batchBundle);
+                            horizontalAvxMerge = Avx2.Or(firstObservedBundle, horizontalAvxMerge);
+                            Avx.Store((ulong*)((Vector256<ulong>*)firstObservedInBatch.Flags.Memory + avxBundleIndex), firstObservedBundle);
+                        }
+                        var notEqual = Avx2.Xor(Avx2.CompareEqual(horizontalAvxMerge, Vector256<ulong>.Zero), Vector256<ulong>.AllBitsSet);
+                        ulong horizontalMerge = (ulong)Avx2.MoveMask(notEqual.AsDouble());
+
+                        //Cleanup loop.
+                        for (int flagBundleIndex = avxBundleCount * 4; flagBundleIndex < flagBundleCount; ++flagBundleIndex)
+                        {
+                            var mergeBundle = mergedConstrainedBodyHandles.Flags[flagBundleIndex];
+                            var batchBundle = batchHandles.Flags[flagBundleIndex];
+                            mergedConstrainedBodyHandles.Flags[flagBundleIndex] = mergeBundle | batchBundle;
+                            //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
+                            var firstObservedBundle = ~mergeBundle & batchBundle;
+                            horizontalMerge |= firstObservedBundle;
+                            firstObservedInBatch.Flags[flagBundleIndex] = firstObservedBundle;
+                        }
+                        batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
+                    }
+                    else
+                    {
+                        ulong horizontalMerge = 0;
+                        for (int flagBundleIndex = 0; flagBundleIndex < flagBundleCount; ++flagBundleIndex)
+                        {
+                            var mergeBundle = mergedConstrainedBodyHandles.Flags[flagBundleIndex];
+                            var batchBundle = batchHandles.Flags[flagBundleIndex];
+                            mergedConstrainedBodyHandles.Flags[flagBundleIndex] = mergeBundle | batchBundle;
+                            //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
+                            var firstObservedBundle = ~mergeBundle & batchBundle;
+                            horizontalMerge |= firstObservedBundle;
+                            firstObservedInBatch.Flags[flagBundleIndex] = firstObservedBundle;
+                        }
+                        batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
+                    }
+                }
+
+                //var start = Stopwatch.GetTimestamp();
+                //We now have index sets representing the first time each body handle is observed in a batch.
+                //This process is significantly more expensive than the batch merging phase and can benefit from multithreading.
+                //It is still fairly cheap, though- we can't use really fine grained jobs or the cost of swapping jobs will exceed productive work.
+
+                //Note that we arbitrarily use single threaded execution if the job is small enough. Dispatching isn't free.
+                bool useSingleThreadedPath = true;
+                if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
+                {
+                    integrationResponsibilityPrepassJobs = new(128, pool);
+                    int constraintCount = 0;
+                    const int targetJobSize = 2048;
+                    Debug.Assert(targetJobSize % 64 == 0, "Target job size must be a multiple of the index set bundles to avoid threads working on the same flag bundle.");
+                    for (int batchIndex = 1; batchIndex < bodiesFirstObservedInBatches.Length; ++batchIndex)
+                    {
+                        if (!batchHasAnyIntegrationResponsibilities[batchIndex])
+                            continue;
+                        ref var batch = ref ActiveSet.Batches[batchIndex];
+                        for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                            constraintCount += typeBatch.ConstraintCount;
+                            int jobCountForTypeBatch = (typeBatch.ConstraintCount + targetJobSize - 1) / targetJobSize;
+                            for (int i = 0; i < jobCountForTypeBatch; ++i)
+                            {
+                                var jobStart = i * targetJobSize;
+                                var jobEnd = Math.Min(jobStart + targetJobSize, typeBatch.ConstraintCount);
+                                integrationResponsibilityPrepassJobs.Allocate(pool) = (batchIndex, typeBatchIndex, jobStart, jobEnd);
+                            }
+                        }
+                    }
+                    if (constraintCount > 4096 + threadDispatcher.ThreadCount * 1024)
+                    {
+                        nextConstraintIntegrationResponsibilityJobIndex = 0;
+                        useSingleThreadedPath = false;
+                        pool.Take(integrationResponsibilityPrepassJobs.Count, out jobAlignedIntegrationResponsibilities);
+                        //for (int i = 0; i < integrationResponsibilityPrepassJobs.Count; ++i)
+                        //{
+                        //    ref var job = ref integrationResponsibilityPrepassJobs[i];
+                        //    jobAlignedIntegrationResponsibilities[i] = ComputeIntegrationResponsibilitiesForConstraintRegion(job.batch, job.typeBatch, job.start, job.end);
+                        //}
+                        threadDispatcher.DispatchWorkers(constraintIntegrationResponsibilitiesWorker);
+
+                        //Coarse batch integration responsibilities start uninitialized. Possible to have multiple jobs per type batch in multithreaded case, so we need to init to merge.
+                        for (int i = 1; i < ActiveSet.Batches.Count; ++i)
+                        {
+                            ref var batch = ref ActiveSet.Batches[i];
+                            for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                            {
+                                coarseBatchIntegrationResponsibilities[i][j] = false;
+                            }
+                        }
+                        for (int i = 0; i < integrationResponsibilityPrepassJobs.Count; ++i)
+                        {
+                            ref var job = ref integrationResponsibilityPrepassJobs[i];
+                            coarseBatchIntegrationResponsibilities[job.batch][job.typeBatch] |= jobAlignedIntegrationResponsibilities[i];
+                        }
+                        pool.Return(ref jobAlignedIntegrationResponsibilities);
+                    }
+                    integrationResponsibilityPrepassJobs.Dispose(pool);
+                }
+                if (useSingleThreadedPath)
+                {
+                    for (int i = 1; i < synchronizedBatchCount; ++i)
+                    {
+                        if (!batchHasAnyIntegrationResponsibilities[i])
+                            continue;
+                        ref var batch = ref ActiveSet.Batches[i];
                         for (int j = 0; j < batch.TypeBatches.Count; ++j)
                         {
                             ref var typeBatch = ref batch.TypeBatches[j];
-                            TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, bodies, 0, typeBatch.BundleCount);
+                            coarseBatchIntegrationResponsibilities[i][j] = ComputeIntegrationResponsibilitiesForConstraintRegion<IsNotFallbackBatch>(i, j, 0, typeBatch.ConstraintCount);
+                        }
+                    }
+                    if (fallbackExists && batchHasAnyIntegrationResponsibilities[FallbackBatchThreshold])
+                    {
+                        ref var batch = ref ActiveSet.Batches[FallbackBatchThreshold];
+                        for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[j];
+                            coarseBatchIntegrationResponsibilities[FallbackBatchThreshold][j] = ComputeIntegrationResponsibilitiesForConstraintRegion<IsFallbackBatch>(FallbackBatchThreshold, j, 0, typeBatch.ConstraintCount);
+                        }
+                    }
+                }
+                //var end = Stopwatch.GetTimestamp();
+                //Console.WriteLine($"time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
+
+                ////Validation:
+                //for (int i = 0; i < bodies.ActiveSet.Count; ++i)
+                //{
+                //    ref var constraints = ref bodies.ActiveSet.Constraints[i];
+                //    ConstraintHandle minimumConstraint;
+                //    minimumConstraint.Value = -1;
+                //    int minimumBatchIndex = int.MaxValue;
+                //    int minimumBodyIndexInConstraint = -1;
+                //    ulong earliestSlotInFallback = ulong.MaxValue;
+                //    ConstraintHandle detectedConstraint;
+                //    detectedConstraint.Value = -1;
+                //    for (int j = 0; j < constraints.Count; ++j)
+                //    {
+                //        ref var constraint = ref constraints[j];
+                //        ref var location = ref HandleToConstraint[constraint.ConnectingConstraintHandle.Value];
+                //        var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
+
+                //        if (location.BatchIndex <= minimumBatchIndex) //Note that the only time it can be equal is if this is in the fallback batch.
+                //        {
+                //            if (location.BatchIndex == FallbackBatchThreshold)
+                //            {
+                //                var encodedSlotCandidate = ((ulong)typeBatchIndex << 32) | (uint)location.IndexInTypeBatch;
+                //                if (encodedSlotCandidate < earliestSlotInFallback)
+                //                {
+                //                    earliestSlotInFallback = encodedSlotCandidate;
+                //                    //We should only accept another fallback constraint as minimal if it has an earlier typebatch index/index in type batch.
+                //                    minimumBatchIndex = location.BatchIndex;
+                //                    minimumBodyIndexInConstraint = constraint.BodyIndexInConstraint;
+                //                    minimumConstraint = constraint.ConnectingConstraintHandle;
+                //                }
+                //            }
+                //            else
+                //            {
+                //                minimumBatchIndex = location.BatchIndex;
+                //                minimumBodyIndexInConstraint = constraint.BodyIndexInConstraint;
+                //                minimumConstraint = constraint.ConnectingConstraintHandle;
+                //            }
+                //        }
+
+                //        if (location.BatchIndex > 0)
+                //        {
+                //            ref var indexSet = ref integrationFlags[location.BatchIndex][typeBatchIndex][constraint.BodyIndexInConstraint];
+                //            if (indexSet.Contains(location.IndexInTypeBatch))
+                //            {
+                //                //This constraint has integration responsibility for this body.
+                //                Debug.Assert(detectedConstraint.Value == -1, "Only one constraint should have integration responsibility for a given body.");
+                //                detectedConstraint = constraint.ConnectingConstraintHandle;
+                //            }
+                //        }
+                //    }
+                //    if (constraints.Count > 0 && minimumBatchIndex > 0)
+                //        Debug.Assert(detectedConstraint.Value >= 0, "At least one constraint must have integration responsibility for a body if it has a constraint.");
+                //    if (minimumConstraint.Value >= 0)
+                //    {
+                //        Debug.Assert(minimumBatchIndex == 0 || detectedConstraint.Value == minimumConstraint.Value);
+                //        ref var location = ref HandleToConstraint[minimumConstraint.Value];
+                //        var typeBatchIndex = ActiveSet.Batches[location.BatchIndex].TypeIndexToTypeBatchIndex[location.TypeId];
+                //        if (location.BatchIndex > 0)
+                //        {
+                //            ref var indexSet = ref integrationFlags[location.BatchIndex][typeBatchIndex][minimumBodyIndexInConstraint];
+                //            Debug.Assert(indexSet.Contains(location.IndexInTypeBatch));
+                //        }
+                //    }
+                //}
+
+                pool.Return(ref batchHasAnyIntegrationResponsibilities);
+
+                Debug.Assert(!bodiesFirstObservedInBatches[0].Flags.Allocated, "Remember, we're assuming we're just leaving the first batch's slot empty to avoid indexing complexity.");
+                for (int batchIndex = 1; batchIndex < bodiesFirstObservedInBatches.Length; ++batchIndex)
+                {
+                    bodiesFirstObservedInBatches[batchIndex].Dispose(pool);
+                }
+                pool.Return(ref bodiesFirstObservedInBatches);
+
+                //Add the constrained kinematics to the constrained body handles. The kinematics were absent from batch referenced handles.
+                //TODO: This assumes the number of kinematics is low relative to the number of bodies and does not need to be multithreaded.
+                //This assumption is *usually* fine, but we should probably have a fallback that is more efficient if this assumption is wrong.
+                //Could maintain an indexset parallel to the ConstrainedKinematicHandles- same set, just different format.
+                //If we detect a lot of constrained kinematics, just do an indexset merge.
+                //That would be fast enough even if all bodies were kinematic.
+                for (int i = 0; i < ConstrainedKinematicHandles.Count; ++i)
+                {
+                    mergedConstrainedBodyHandles.AddUnsafely(ConstrainedKinematicHandles[i]);
+                }
+                return mergedConstrainedBodyHandles;
+            }
+            else
+            {
+                return new IndexSet();
+            }
+        }
+        public override void DisposeConstraintIntegrationResponsibilities()
+        {
+            if (ActiveSet.Batches.Count > 0)
+            {
+                Debug.Assert(!integrationFlags[0].Allocated, "Remember, we're assuming we're just leaving the first batch's slot empty to avoid indexing complexity.");
+                for (int batchIndex = 1; batchIndex < integrationFlags.Length; ++batchIndex)
+                {
+                    ref var flagsForBatch = ref integrationFlags[batchIndex];
+                    for (int typeBatchIndex = 0; typeBatchIndex < flagsForBatch.Length; ++typeBatchIndex)
+                    {
+                        ref var flagsForTypeBatch = ref flagsForBatch[typeBatchIndex];
+                        for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < flagsForTypeBatch.Length; ++bodyIndexInConstraint)
+                        {
+                            flagsForTypeBatch[bodyIndexInConstraint].Dispose(pool);
+                        }
+                        pool.Return(ref flagsForTypeBatch);
+                    }
+                    pool.Return(ref flagsForBatch);
+                    pool.Return(ref coarseBatchIntegrationResponsibilities[batchIndex]);
+                }
+                pool.Return(ref integrationFlags);
+                pool.Return(ref coarseBatchIntegrationResponsibilities);
+                mergedConstrainedBodyHandles.Dispose(pool);
+            }
+        }
+
+        public override void Solve(float totalDt, IThreadDispatcher threadDispatcher = null)
+        {
+            var substepDt = totalDt / substepCount;
+            PoseIntegrator.Callbacks.PrepareForIntegration(substepDt);
+            if (threadDispatcher == null)
+            {
+                var inverseDt = 1f / substepDt;
+                ref var activeSet = ref ActiveSet;
+                var batchCount = activeSet.Batches.Count;
+                var incrementalUpdateFilter = default(IncrementalContactDataUpdateFilter);
+                for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
+                {
+                    if (substepIndex > 0)
+                    {
+                        for (int i = 0; i < batchCount; ++i)
+                        {
+                            ref var batch = ref activeSet.Batches[i];
+                            for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                            {
+                                ref var typeBatch = ref batch.TypeBatches[j];
+                                if (incrementalUpdateFilter.AllowType(typeBatch.TypeId))
+                                    TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
+                            }
+                        }
+                        PoseIntegrator.IntegrateKinematicPosesAndVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, BundleIndexing.GetBundleCount(ConstrainedKinematicHandles.Count), substepDt, 0);
+                    }
+                    else
+                    {
+                        if (PoseIntegrator.Callbacks.IntegrateVelocityForKinematics)
+                            PoseIntegrator.IntegrateKinematicVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, BundleIndexing.GetBundleCount(ConstrainedKinematicHandles.Count), substepDt, 0);
+                    }
+                    for (int i = 0; i < batchCount; ++i)
+                    {
+                        ref var batch = ref activeSet.Batches[i];
+                        ref var integrationFlagsForBatch = ref integrationFlags[i];
+                        for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[j];
+                            if (substepIndex == 0)
+                            {
+                                WarmStartBlock<DisallowPoseIntegration>(0, i, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepDt, inverseDt);
+                            }
+                            else
+                            {
+                                WarmStartBlock<AllowPoseIntegration>(0, i, j, 0, typeBatch.BundleCount, ref typeBatch, TypeProcessors[typeBatch.TypeId], substepDt, inverseDt);
+                            }
+                        }
+                    }
+                    for (int iterationIndex = 0; iterationIndex < VelocityIterationCount; ++iterationIndex)
+                    {
+                        for (int i = 0; i < batchCount; ++i)
+                        {
+                            ref var batch = ref activeSet.Batches[i];
+                            for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                            {
+                                ref var typeBatch = ref batch.TypeBatches[j];
+                                TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
+                            }
                         }
                     }
                 }
             }
             else
             {
-                ExecuteMultithreaded<MainSolveFilter>(dt, threadDispatcher, solveWorker);
+                ExecuteMultithreaded2(substepDt, threadDispatcher, solveStep2Worker2);
             }
         }
-
     }
 }

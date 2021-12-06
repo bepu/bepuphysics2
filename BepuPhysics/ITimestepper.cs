@@ -38,6 +38,7 @@ namespace BepuPhysics
         /// <summary>
         /// Performs one timestep of the given length.
         /// </summary>
+        /// <param name="simulation">Simulation to be stepped forward in time.</param>
         /// <param name="dt">Duration of the time step.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         void Timestep(Simulation simulation, float dt, IThreadDispatcher threadDispatcher = null);
