@@ -673,6 +673,12 @@ namespace BepuUtilities
         }
 
         //TODO: We have better intrinsics options here for a fast rsqrt path.
+
+        /// <summary>
+        /// Computes a unit length vector pointing in the same direction as the input.
+        /// </summary>
+        /// <param name="v">Vector to normalize.</param>
+        /// <param name="result">Vector pointing in the same direction as the input, but with unit length.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Normalize(in Vector3Wide v, out Vector3Wide result)
         {
@@ -681,6 +687,11 @@ namespace BepuUtilities
             Scale(v, scale, out result);
         }
 
+        /// <summary>
+        /// Computes a unit length vector pointing in the same direction as the input.
+        /// </summary>
+        /// <param name="v">Vector to normalize.</param>
+        /// <returns>Vector pointing in the same direction as the input, but with unit length.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3Wide Normalize(Vector3Wide v)
         {
@@ -689,6 +700,13 @@ namespace BepuUtilities
             return v * scale;
         }
 
+        /// <summary>
+        /// Selects the left or right input for each lane depending on a mask.
+        /// </summary>
+        /// <param name="condition">Mask to use to decide between the left and right value for each lane..</param>
+        /// <param name="left">Value to choose if the condition mask is set.</param>
+        /// <param name="right">Value to choose if the condition mask is unset.</param>
+        /// <param name="result">Blended result.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ConditionalSelect(in Vector<int> condition, in Vector3Wide left, in Vector3Wide right, out Vector3Wide result)
         {
@@ -697,6 +715,13 @@ namespace BepuUtilities
             result.Z = Vector.ConditionalSelect(condition, left.Z, right.Z);
         }
 
+        /// <summary>
+        /// Selects the left or right input for each lane depending on a mask.
+        /// </summary>
+        /// <param name="condition">Mask to use to decide between the left and right value for each lane..</param>
+        /// <param name="left">Value to choose if the condition mask is set.</param>
+        /// <param name="right">Value to choose if the condition mask is unset.</param>
+        /// <returns>Blended result.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3Wide ConditionalSelect(Vector<int> condition, Vector3Wide left, Vector3Wide right)
         {
