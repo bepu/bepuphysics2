@@ -25,7 +25,6 @@ namespace Demos.Demos
         {
             public Vector3 PlanetCenter;
             public float Gravity;
-            float gravityDt;
 
             public readonly AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
 
@@ -37,6 +36,7 @@ namespace Demos.Demos
             {
             }
 
+            float gravityDt;
             public void PrepareForIntegration(float dt)
             {
                 //No point in repeating this for every body; cache it.
@@ -44,18 +44,11 @@ namespace Demos.Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void IntegrateVelocity(int bodyIndex, in RigidPose pose, in BodyInertia localInertia, int workerIndex, ref BodyVelocity velocity)
-            {
-                if (localInertia.InverseMass > 0) //Ignore kinematics.
-                {
-                    var offset = pose.Position - PlanetCenter;
-                    var distance = offset.Length();
-                    velocity.Linear -= gravityDt * offset / MathF.Max(1f, distance * distance * distance);
-                }
-            }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void IntegrateVelocity(in Vector<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
             {
+                var offset = position - Vector3Wide.Broadcast(PlanetCenter);
+                var distance = offset.Length();
+                velocity.Linear -= new Vector<float>(gravityDt) * offset / Vector.Max(Vector<float>.One, distance * distance * distance);
             }
         }
 

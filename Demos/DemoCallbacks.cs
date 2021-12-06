@@ -25,9 +25,6 @@ namespace Demos
         /// </summary>
         public float AngularDamping;
 
-        Vector3 gravityDt;
-        float linearDampingDt;
-        float angularDampingDt;
 
         /// <summary>
         /// Gets how the pose integrator should handle angular velocity integration.
@@ -68,43 +65,45 @@ namespace Demos
             AngularDamping = angularDamping;
         }
 
+        Vector3Wide gravityWideDt;
+        Vector<float> linearDampingDt;
+        Vector<float> angularDampingDt;
+
+        /// <summary>
+        /// Callback invoked ahead of dispatches that may call into <see cref="IntegrateVelocity"/>.
+        /// It may be called more than once with different values over a frame. For example, when performing bounding box prediction, velocity is integrated with a full frame time step duration.
+        /// During substepped solves, integration is split into substepCount steps, each with fullFrameDuration / substepCount duration.
+        /// The final integration pass for unconstrained bodies may be either fullFrameDuration or fullFrameDuration / substepCount, depending on the value of AllowSubstepsForUnconstrainedBodies. 
+        /// </summary>
+        /// <param name="dt">Current integration time step duration.</param>
+        /// <remarks>This is typically used for precomputing anything expensive that will be used across velocity integration.</remarks>
         public void PrepareForIntegration(float dt)
         {
             //No reason to recalculate gravity * dt for every body; just cache it ahead of time.
-            gravityDt = Gravity * dt;
             //Since these callbacks don't use per-body damping values, we can precalculate everything.
-            linearDampingDt = MathF.Pow(MathHelper.Clamp(1 - LinearDamping, 0, 1), dt);
-            angularDampingDt = MathF.Pow(MathHelper.Clamp(1 - AngularDamping, 0, 1), dt);
-            gravityWide = Vector3Wide.Broadcast(Gravity);
-        }
-        Vector3Wide gravityWide;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IntegrateVelocity(int bodyIndex, in RigidPose pose, in BodyInertia localInertia, int workerIndex, ref BodyVelocity velocity)
-        {
-            //Note that we avoid accelerating kinematics. Kinematics are any body with an inverse mass of zero (so a mass of ~infinity). No force can move them.
-            if (localInertia.InverseMass > 0)
-            {
-                velocity.Linear = (velocity.Linear + gravityDt) * linearDampingDt;
-                velocity.Angular = velocity.Angular * angularDampingDt;
-            }
-            //Implementation sidenote: Why aren't kinematics all bundled together separately from dynamics to avoid this per-body condition?
-            //Because kinematics can have a velocity- that is what distinguishes them from a static object. The solver must read velocities of all bodies involved in a constraint.
-            //Under ideal conditions, those bodies will be near in memory to increase the chances of a cache hit. If kinematics are separately bundled, the the number of cache
-            //misses necessarily increases. Slowing down the solver in order to speed up the pose integrator is a really, really bad trade, especially when the benefit is a few ALU ops.
-
-            //Note that you CAN technically modify the pose in IntegrateVelocity by directly accessing it through the Simulation.Bodies.ActiveSet.Poses, it just requires a little care and isn't directly exposed.
-            //If the PositionFirstTimestepper is being used, then the pose integrator has already integrated the pose.
-            //If the PositionLastTimestepper or SubsteppingTimestepper are in use, the pose has not yet been integrated.
-            //If your pose modification depends on the order of integration, you'll want to take this into account.
-
-            //This is also a handy spot to implement things like position dependent gravity or per-body damping.
+            linearDampingDt = new Vector<float>(MathF.Pow(MathHelper.Clamp(1 - LinearDamping, 0, 1), dt));
+            angularDampingDt = new Vector<float>(MathF.Pow(MathHelper.Clamp(1 - AngularDamping, 0, 1), dt));
+            gravityWideDt = Vector3Wide.Broadcast(Gravity * dt);
         }
 
+        /// <summary>
+        /// Callback for a bundle of bodies being integrated.
+        /// </summary>
+        /// <param name="bodyIndices">Indices of the bodies being integrated in this bundle.</param>
+        /// <param name="position">Current body positions.</param>
+        /// <param name="orientation">Current body orientations.</param>
+        /// <param name="localInertia">Body's current local inertia.</param>
+        /// <param name="integrationMask">Mask indicating which lanes are active in the bundle. Active lanes will contain 0xFFFFFFFF, inactive lanes will contain 0.</param>
+        /// <param name="workerIndex">Index of the worker thread processing this bundle.</param>
+        /// <param name="dt">Durations to integrate the velocity over. Can vary over lanes.</param>
+        /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IntegrateVelocity(in Vector<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
         {
+            //This is also a handy spot to implement things like position dependent gravity or per-body damping. Here, 
             //Note that we don't have to check for kinematics; IntegrateVelocityForKinematics returns false, so we'll never see them in this callback.
-            velocity.Linear += gravityWide * dt;
+            velocity.Linear = (velocity.Linear + gravityWideDt) * linearDampingDt;
+            velocity.Angular = velocity.Angular * angularDampingDt;
         }
     }
     public unsafe struct DemoNarrowPhaseCallbacks : INarrowPhaseCallbacks

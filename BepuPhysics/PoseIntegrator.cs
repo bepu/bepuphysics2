@@ -69,11 +69,14 @@ namespace BepuPhysics
         void Initialize(Simulation simulation);
 
         /// <summary>
-        /// Called prior to integrating the simulation's active bodies. When used with a substepping timestepper, this could be called multiple times per frame with different time step values.
+        /// Callback invoked ahead of dispatches that may call into <see cref="IntegrateVelocity"/>.
+        /// It may be called more than once with different values over a frame. For example, when performing bounding box prediction, velocity is integrated with a full frame time step duration.
+        /// During substepped solves, integration is split into substepCount steps, each with fullFrameDuration / substepCount duration.
+        /// The final integration pass for unconstrained bodies may be either fullFrameDuration or fullFrameDuration / substepCount, depending on the value of AllowSubstepsForUnconstrainedBodies. 
         /// </summary>
-        /// <param name="dt">Current time step duration.</param>
+        /// <param name="dt">Current integration time step duration.</param>
+        /// <remarks>This is typically used for precomputing anything expensive that will be used across velocity integration.</remarks>
         void PrepareForIntegration(float dt);
-
 
         /// <summary>
         /// Callback for a bundle of bodies being integrated.
@@ -697,6 +700,10 @@ namespace BepuPhysics
 
         public void IntegrateAfterSubstepping(IndexSet constrainedBodies, float dt, int substepCount, IThreadDispatcher threadDispatcher)
         {
+            //The only bodies undergoing *velocity* integration during the post-integration step are unconstrained.
+            var substepDt = dt / substepCount;
+            var velocityIntegrationTimestep = Callbacks.AllowSubstepsForUnconstrainedBodies ? substepDt : dt;
+            Callbacks.PrepareForIntegration(velocityIntegrationTimestep);
             if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
             {
                 PrepareForMultithreadedExecution(BundleIndexing.GetBundleCount(bodies.ActiveSet.Count), dt, threadDispatcher.ThreadCount, substepCount);
@@ -708,7 +715,7 @@ namespace BepuPhysics
             }
             else
             {
-                IntegrateBundlesAfterSubstepping(ref constrainedBodies, 0, BundleIndexing.GetBundleCount(bodies.ActiveSet.Count), dt, dt / substepCount, substepCount, 0);
+                IntegrateBundlesAfterSubstepping(ref constrainedBodies, 0, BundleIndexing.GetBundleCount(bodies.ActiveSet.Count), dt, substepDt, substepCount, 0);
             }
         }
     }

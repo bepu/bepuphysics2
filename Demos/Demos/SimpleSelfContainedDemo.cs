@@ -130,7 +130,6 @@ namespace Demos.Demos
         public struct PoseIntegratorCallbacks : IPoseIntegratorCallbacks
         {
             public Vector3 Gravity;
-            Vector3 gravityDt;
 
             /// <summary>
             /// Performs any required initialization logic after the Simulation instance has been constructed.
@@ -167,36 +166,39 @@ namespace Demos.Demos
                 Gravity = gravity;
             }
 
+            //Note that velocity integration uses "wide" types. These are array-of-struct-of-arrays types that use SIMD accelerated types underneath.
+            //Rather than handling a single body at a time, the callback handles up to Vector<float>.Count bodies simultaneously.
+            Vector3Wide gravityWideDt;
+
             /// <summary>
-            /// Called prior to integrating the simulation's active bodies. When used with a substepping timestepper, this could be called multiple times per frame with different time step values.
+            /// Callback invoked ahead of dispatches that may call into <see cref="IntegrateVelocity"/>.
+            /// It may be called more than once with different values over a frame. For example, when performing bounding box prediction, velocity is integrated with a full frame time step duration.
+            /// During substepped solves, integration is split into substepCount steps, each with fullFrameDuration / substepCount duration.
+            /// The final integration pass for unconstrained bodies may be either fullFrameDuration or fullFrameDuration / substepCount, depending on the value of AllowSubstepsForUnconstrainedBodies. 
             /// </summary>
-            /// <param name="dt">Current time step duration.</param>
+            /// <param name="dt">Current integration time step duration.</param>
+            /// <remarks>This is typically used for precomputing anything expensive that will be used across velocity integration.</remarks>
             public void PrepareForIntegration(float dt)
             {
                 //No reason to recalculate gravity * dt for every body; just cache it ahead of time.
-                gravityDt = Gravity * dt;
+                gravityWideDt = Vector3Wide.Broadcast(Gravity * dt);
             }
 
             /// <summary>
-            /// Callback called for each active body within the simulation during body integration.
+            /// Callback for a bundle of bodies being integrated.
             /// </summary>
-            /// <param name="bodyIndex">Index of the body being visited.</param>
-            /// <param name="pose">Body's current pose.</param>
+            /// <param name="bodyIndices">Indices of the bodies being integrated in this bundle.</param>
+            /// <param name="position">Current body positions.</param>
+            /// <param name="orientation">Current body orientations.</param>
             /// <param name="localInertia">Body's current local inertia.</param>
-            /// <param name="workerIndex">Index of the worker thread processing this body.</param>
-            /// <param name="velocity">Reference to the body's current velocity to integrate.</param>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void IntegrateVelocity(int bodyIndex, in RigidPose pose, in BodyInertia localInertia, int workerIndex, ref BodyVelocity velocity)
-            {
-                //Note that we avoid accelerating kinematics. Kinematics are any body with an inverse mass of zero (so a mass of ~infinity). No force can move them.
-                if (localInertia.InverseMass > 0)
-                {
-                    velocity.Linear = velocity.Linear + gravityDt;
-                }
-            }
+            /// <param name="integrationMask">Mask indicating which lanes are active in the bundle. Active lanes will contain 0xFFFFFFFF, inactive lanes will contain 0.</param>
+            /// <param name="workerIndex">Index of the worker thread processing this bundle.</param>
+            /// <param name="dt">Durations to integrate the velocity over. Can vary over lanes.</param>
+            /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void IntegrateVelocity(in Vector<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
             {
+                velocity.Linear += gravityWideDt;
             }
 
         }

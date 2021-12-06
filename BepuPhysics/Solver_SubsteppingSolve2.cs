@@ -111,6 +111,9 @@ namespace BepuPhysics
             constraintIntegrationResponsibilitiesWorker = ConstraintIntegrationResponsibilitiesWorker;
         }
 
+        /// <summary>
+        /// Pose integrator used by the simulation.
+        /// </summary>
         public PoseIntegrator<TIntegrationCallbacks> PoseIntegrator { get; private set; }
 
 
@@ -1213,6 +1216,7 @@ namespace BepuPhysics
         public override void SolveStep2(float totalDt, IThreadDispatcher threadDispatcher = null)
         {
             var substepDt = totalDt / substepCount;
+            PoseIntegrator.Callbacks.PrepareForIntegration(substepDt);
             if (threadDispatcher == null)
             {
                 var inverseDt = 1f / substepDt;

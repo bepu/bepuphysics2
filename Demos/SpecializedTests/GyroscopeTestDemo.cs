@@ -41,13 +41,9 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IntegrateVelocity(int bodyIndex, in RigidPose pose, in BodyInertia localInertia, int workerIndex, ref BodyVelocity velocity)
-        {
-            innerCallbacks.IntegrateVelocity(bodyIndex, pose, localInertia, workerIndex, ref velocity);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IntegrateVelocity(in Vector<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
         {
+            innerCallbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, integrationMask, workerIndex, dt, ref velocity);
         }
 
     }
