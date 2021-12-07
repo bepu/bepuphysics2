@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepuUtilities.Memory;
+using System;
 
 namespace BepuPhysics
 {
@@ -82,7 +83,7 @@ namespace BepuPhysics
         /// <param name="substepVelocityIterations">Number of velocity iterations to use in each substep. Number of substeps will be determined by the length of the span.</param>
         /// <param name="fallbackVelocityIterationCount">Number of velocity iterations per substep for any substep that is not given a positive number of velocity iterations by the scheduler.</param>
         /// <param name="fallbackBatchThreshold">Number of synchronzed constraint batches to use before using a fallback approach.</param>
-        public SolveDescription(Span<int> substepVelocityIterations, int fallbackVelocityIterationCount = 1, int fallbackBatchThreshold = DefaultFallbackBatchThreshold)
+        public SolveDescription(ReadOnlySpan<int> substepVelocityIterations, int fallbackVelocityIterationCount = 1, int fallbackBatchThreshold = DefaultFallbackBatchThreshold)
         {
             SubstepCount = substepVelocityIterations.Length;
             VelocityIterationCount = fallbackVelocityIterationCount;
@@ -112,7 +113,23 @@ namespace BepuPhysics
         /// Creates a solve description with the given number of substeps and velocity iterations per substep and a fallback threshold of <see cref="DefaultFallbackBatchThreshold"/>.
         /// </summary>
         /// <param name="substepVelocityIterations">Number of velocity iterations to use in each substep. Number of substeps will be determined by the length of the span.</param>
-        public static implicit operator SolveDescription(Span<int> substepVelocityIterations)
+        public static implicit operator SolveDescription(ReadOnlySpan<int> substepVelocityIterations)
+        {
+            return new SolveDescription(substepVelocityIterations);
+        }
+        /// <summary>
+        /// Creates a solve description with the given number of substeps and velocity iterations per substep and a fallback threshold of <see cref="DefaultFallbackBatchThreshold"/>.
+        /// </summary>
+        /// <param name="substepVelocityIterations">Number of velocity iterations to use in each substep. Number of substeps will be determined by the length of the span.</param>
+        public static implicit operator SolveDescription(int[] substepVelocityIterations)
+        {
+            return new SolveDescription(substepVelocityIterations);
+        }
+        /// <summary>
+        /// Creates a solve description with the given number of substeps and velocity iterations per substep and a fallback threshold of <see cref="DefaultFallbackBatchThreshold"/>.
+        /// </summary>
+        /// <param name="substepVelocityIterations">Number of velocity iterations to use in each substep. Number of substeps will be determined by the length of the span.</param>
+        public static implicit operator SolveDescription(Buffer<int> substepVelocityIterations)
         {
             return new SolveDescription(substepVelocityIterations);
         }

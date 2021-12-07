@@ -205,22 +205,6 @@ namespace BepuPhysics
                     var continuation = continuations[bundleStartIndex + innerIndex];
                     ref var collidable = ref activeSet.Collidables[continuation.BodyIndex];
                     broadPhase.GetActiveBoundsPointers(collidable.BroadPhaseIndex, out var minPointer, out var maxPointer);
-                    //ref var sourceBundleMin = ref GatherScatter.GetOffsetInstance(ref bundleMin, innerIndex);
-                    //ref var sourceBundleMax = ref GatherScatter.GetOffsetInstance(ref bundleMax, innerIndex);
-                    ////Note that we merge with the existing bounding box if the body is compound. This requires compounds to be initialized to (maxvalue, -maxvalue).
-                    ////TODO: We bite the bullet on quite a bit of complexity to avoid merging on non-compounds. Could be better overall to simply merge on all bodies. Certainly simpler.
-                    ////Worth checking the performance; if it's undetectable, just swap to the simpler version.
-                    //if (continuation.CompoundChild)
-                    //{
-                    //    var min = new Vector3(sourceBundleMin.X[0], sourceBundleMin.Y[0], sourceBundleMin.Z[0]);
-                    //    var max = new Vector3(sourceBundleMax.X[0], sourceBundleMax.Y[0], sourceBundleMax.Z[0]);
-                    //    BoundingBox.CreateMerged(*minPointer, *maxPointer, min, max, out *minPointer, out *maxPointer);
-                    //}
-                    //else
-                    //{
-                    //    *minPointer = new Vector3(sourceBundleMin.X[0], sourceBundleMin.Y[0], sourceBundleMin.Z[0]);
-                    //    *maxPointer = new Vector3(sourceBundleMax.X[0], sourceBundleMax.Y[0], sourceBundleMax.Z[0]);
-                    //}
 
                     //Note that we merge with the existing bounding box if the body is compound. This requires compounds to be initialized to (maxvalue, -maxvalue).
                     //TODO: We bite the bullet on quite a bit of complexity to avoid merging on non-compounds. Could be better overall to simply merge on all bodies. Certainly simpler.

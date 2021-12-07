@@ -24,7 +24,7 @@ namespace Demos.Demos
             camera.Pitch = MathHelper.Pi * 0.1f;
             //Using minimum sized allocations forces as many resizes as possible.
             //Note the low solverFallbackBatchThreshold- we want the fallback batches to get tested thoroughly.
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, fallbackBatchThreshold: 2), initialAllocationSizes:
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(new[] { 2, 1, 1 }, fallbackBatchThreshold: 2), initialAllocationSizes:
             new SimulationAllocationSizes
             {
                 Bodies = 1,
