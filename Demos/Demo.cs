@@ -41,7 +41,7 @@ namespace Demos
             //For example, if you're using the 64 core quad memory channel AMD 3990x on a scene composed of thousands of ragdolls, 
             //there won't be enough memory bandwidth to even feed half the physical cores. Using all 128 logical cores would just add overhead.
 
-            //It may be worth using something like hwloc to extract extra information to reason about.
+            //It may be worth using something like hwloc or CPUID to extract extra information to reason about.
             //var targetThreadCount = Math.Max(1, Environment.ProcessorCount > 4 ? Environment.ProcessorCount - 2 : Environment.ProcessorCount - 1);
             var targetThreadCount = 30;
             ThreadDispatcher = new SimpleThreadDispatcher(targetThreadCount);

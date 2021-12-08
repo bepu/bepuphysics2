@@ -34,14 +34,12 @@ namespace Demos.Demos
             innerCallbacks = new DemoPoseIntegratorCallbacks(gravity, linearDamping, angularDamping);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void PrepareForIntegration(float dt)
         {
             innerCallbacks.PrepareForIntegration(dt);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IntegrateVelocity(in Vector<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
+        public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<float> dt, ref BodyVelocityWide velocity)
         {
             innerCallbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, integrationMask, workerIndex, dt, ref velocity);
         }

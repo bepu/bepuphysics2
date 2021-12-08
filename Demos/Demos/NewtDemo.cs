@@ -698,7 +698,7 @@ namespace Demos.Demos
             edges.Dispose(pool);
         }
 
-
+       
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-5f, 5.5f, 5f);

@@ -97,8 +97,7 @@ namespace Demos
         /// <param name="workerIndex">Index of the worker thread processing this bundle.</param>
         /// <param name="dt">Durations to integrate the velocity over. Can vary over lanes.</param>
         /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IntegrateVelocity(in Vector<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
+        public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<float> dt, ref BodyVelocityWide velocity)
         {
             //This is also a handy spot to implement things like position dependent gravity or per-body damping. Here, 
             //Note that we don't have to check for kinematics; IntegrateVelocityForKinematics returns false, so we'll never see them in this callback.

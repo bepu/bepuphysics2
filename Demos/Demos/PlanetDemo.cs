@@ -43,8 +43,7 @@ namespace Demos.Demos
                 gravityDt = dt * Gravity;
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void IntegrateVelocity(in Vector<int> bodyIndices, in Vector3Wide position, in QuaternionWide orientation, in BodyInertiaWide localInertia, in Vector<int> integrationMask, int workerIndex, in Vector<float> dt, ref BodyVelocityWide velocity)
+            public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<float> dt, ref BodyVelocityWide velocity)
             {
                 var offset = position - Vector3Wide.Broadcast(PlanetCenter);
                 var distance = offset.Length();
