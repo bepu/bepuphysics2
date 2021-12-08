@@ -13,14 +13,6 @@ namespace BepuPhysics
     public delegate void TimestepperStageHandler(float dt, IThreadDispatcher threadDispatcher);
 
     /// <summary>
-    /// Delegate used by ITimesteppers for stage callbacks within substepping loops.
-    /// </summary>
-    /// <param name="substepIndex">Index of the substep executing this stage.</param>
-    /// <param name="dt">Time step duration.</param>
-    /// <param name="threadDispatcher">Thread dispatcher used for this timestep.</param>
-    public delegate void TimestepperSubstepStageHandler(int substepIndex, float dt, IThreadDispatcher threadDispatcher);
-
-    /// <summary>
     /// Defines a type capable of updating the simulation state for a given elapsed time.
     /// </summary>
     public interface ITimestepper

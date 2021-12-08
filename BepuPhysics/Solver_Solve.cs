@@ -520,6 +520,7 @@ namespace BepuPhysics
                 //This is the main 'orchestrator' thread. It tracks execution progress and notifies other threads that's it's time to work.
                 for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
                 {
+                    OnSubstepStarted(substepIndex);
                     //Note that variable velocity iteration counts per substep means that not every substep will exhaust the entirety of the allocated sync points.
                     //That's fine; we just need to ensure that each substep starts at a point that the worker threads can recognize is in the appropriate substep.
                     //Easiest to have a consistent size for each substep so the workers can simply divide the sync index to get the substep index.
@@ -584,6 +585,7 @@ namespace BepuPhysics
                             }
                         }
                     }
+                    OnSubstepEnded(substepIndex);
                 }
                 //All done; notify waiting threads to join.
                 Volatile.Write(ref substepContext.SyncIndex, int.MinValue);
@@ -1413,6 +1415,7 @@ namespace BepuPhysics
                 var incrementalUpdateFilter = default(IncrementalContactDataUpdateFilter);
                 for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
                 {
+                    OnSubstepStarted(substepIndex);
                     if (substepIndex > 0)
                     {
                         for (int i = 0; i < batchCount; ++i)
@@ -1462,6 +1465,7 @@ namespace BepuPhysics
                             }
                         }
                     }
+                    OnSubstepEnded(substepIndex);
                 }
             }
             else

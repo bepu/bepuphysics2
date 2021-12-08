@@ -119,6 +119,33 @@ namespace BepuPhysics
         int[] minimumInitialCapacityPerTypeBatch = new int[0];
 
         /// <summary>
+        /// Delegate type of solver substep begin/end events.
+        /// </summary>
+        /// <param name="substepIndex">Index of the substep that the event is about.</param>
+        public delegate void SubstepEvent(int substepIndex);
+        /// <summary>
+        /// Event invoked when the solver begins a substep. If the solver is executing on multiple threads, this will be invoked within the multithreaded dispatch on worker thread 0.
+        /// </summary>
+        /// <remarks>Take care when attempting to dispatch multithreaded operations from within this event.
+        /// If using the same <see cref="IThreadDispatcher"/> instance as the solver, the dispatcher implementation must be reentrant. The demos implementation is not.</remarks>
+        public event SubstepEvent SubstepStarted;
+        /// <summary>
+        /// Event invoked when the solver completes a substep. If the solver is executing on multiple threads, this will be invoked within the multithreaded dispatch on worker thread 0.
+        /// </summary>
+        /// <remarks>Take care when attempting to dispatch multithreaded operations from within this event.
+        /// If using the same <see cref="IThreadDispatcher"/> instance as the solver, the dispatcher implementation must be reentrant. The demos implementation is not.</remarks>
+        public event SubstepEvent SubstepEnded;
+
+        protected void OnSubstepStarted(int substepIndex)
+        {
+            SubstepStarted?.Invoke(substepIndex);
+        }
+        protected void OnSubstepEnded(int substepIndex)
+        {
+            SubstepEnded?.Invoke(substepIndex);
+        }
+
+        /// <summary>
         /// Sets the minimum capacity initially allocated to a new type batch of the given type.
         /// </summary>
         /// <param name="typeId">Id of the constraint type to check the initial capacity of.</param>
