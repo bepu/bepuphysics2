@@ -111,6 +111,13 @@ namespace Demos
         public float MaximumRecoveryVelocity;
         public float FrictionCoefficient;
 
+        public DemoNarrowPhaseCallbacks(SpringSettings contactSpringiness, float maximumRecoveryVelocity = 2f, float frictionCoefficient = 1f)
+        {
+            ContactSpringiness = contactSpringiness;
+            MaximumRecoveryVelocity = maximumRecoveryVelocity;
+            FrictionCoefficient = frictionCoefficient;
+        }
+
         public void Initialize(Simulation simulation)
         {
             //Use a default if the springiness value wasn't initialized... at least until struct field initializers are supported outside of previews.

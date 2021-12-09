@@ -51,10 +51,12 @@ namespace Demos.Demos
             camera.Pitch = 0;
             //Note the higher stiffness on contacts for this demo. That's not ideal for general stability at the demo timestep duration default of 60hz, but
             //this demo doesn't have any significant solver complexity and we want to see the CCD in action more clearly- which means more rigid contact.
-            //Having objects bounce a bunch on impact makes it harder to see.
+            //Having objects bounce (or even squish through each other if they're thin enough!) makes things harder to see.
+            //Note that this demo only uses 1 substep. For high impact velocities, more velocity iterations can avoid inducing rotations due to incomplete contact solves in any given substep.
+            //That's handy for keeping the impact more controlled and visualizing the difference between discrete and continuous modes.
             Simulation = Simulation.Create(BufferPool,
-                new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(240, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 1f },
-                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 8);
+                new DemoNarrowPhaseCallbacks(new SpringSettings(120, 1), maximumRecoveryVelocity: 1f),
+                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), (1, 8));
 
             var shape = new Box(1, 1, 1);
             var inertia = shape.ComputeInertia(1);
