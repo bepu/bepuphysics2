@@ -308,13 +308,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref wsvA, ref wsvB, linearJacobian, angularJA, angularJB, inertiaA, inertiaB, ref csi);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
-            in Vector<float> dt, in Vector2Wide accumulatedImpulses, ref PointOnLineServoPrestepData prestep)
-        {
-        }
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref PointOnLineServoPrestepData prestepData) { }
     }
 
     public class PointOnLineServoTypeProcessor : TwoBodyTypeProcessor<PointOnLineServoPrestepData, PointOnLineServoProjection, Vector2Wide, PointOnLineServoFunctions, AccessAll, AccessAll, AccessAll, AccessAll>

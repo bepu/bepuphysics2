@@ -228,15 +228,10 @@ namespace BepuPhysics.Constraints
 
             ApplyImpulse(direction, angularJA, angularJB, inertiaA, inertiaB, csi, ref wsvA, ref wsvB);
         }
-
-
+        
+        public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
-            in Vector<float> dt, in Vector<float> accumulatedImpulses, ref DistanceLimitPrestepData prestep)
-        {
-        }
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref DistanceLimitPrestepData prestepData) { }
     }
 
 

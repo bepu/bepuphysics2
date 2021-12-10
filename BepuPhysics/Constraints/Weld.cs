@@ -93,6 +93,7 @@ namespace BepuPhysics.Constraints
 
     public struct WeldFunctions : ITwoBodyConstraintFunctions<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>
     {
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
             ref WeldPrestepData prestep, out WeldProjection projection)
@@ -356,14 +357,10 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(inertiaA, inertiaB, offset, orientationCSI, offsetCSI, ref wsvA, ref wsvB);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
-            in Vector<float> dt, in WeldAccumulatedImpulses accumulatedImpulses, ref WeldPrestepData prestep)
-        {
-        }
 
+        public bool RequiresIncrementalSubstepUpdates => false;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref WeldPrestepData prestepData) { }
     }
 
 

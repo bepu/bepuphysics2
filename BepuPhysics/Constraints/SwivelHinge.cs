@@ -331,13 +331,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(offsetA, offsetB, swivelHingeJacobian, inertiaA, inertiaB, ref csi, ref wsvA, ref wsvB);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
-            in Vector<float> dt, in Vector4Wide accumulatedImpulses, ref SwivelHingePrestepData prestep)
-        {
-        }
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref SwivelHingePrestepData prestepData) { }
     }
 
     public class SwivelHingeTypeProcessor : TwoBodyTypeProcessor<SwivelHingePrestepData, SwivelHingeProjection, Vector4Wide, SwivelHingeFunctions, AccessNoPosition, AccessNoPosition, AccessAll, AccessAll>

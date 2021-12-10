@@ -235,7 +235,7 @@ for (int i = 0; i < contactCount; ++i)
         public TwistFrictionProjection Twist;
     }
 
-    public struct Contact<#=contactCount#><#=suffix#>Functions : I<#=suffix#>ContactConstraintFunctions<Contact<#=contactCount#><#=suffix#>PrestepData, Contact<#=contactCount#><#=suffix#>Projection, Contact<#=contactCount#>AccumulatedImpulses>
+    public struct Contact<#=contactCount#><#=suffix#>Functions : I<#=bodyCount == 1 ? "OneBody" : "TwoBody"#>ConstraintFunctions<Contact<#=contactCount#><#=suffix#>PrestepData, Contact<#=contactCount#><#=suffix#>Projection, Contact<#=contactCount#>AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
@@ -312,8 +312,10 @@ for (int i = 0; i < contactCount; ++i)
             TwistFriction<#=suffix#>.Solve(ref projection.Normal, ref projection.InertiaA, <#if (bodyCount == 2) {#>ref projection.InertiaB, <#}#>ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => true;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA,<#if(bodyCount == 2) {#> in BodyVelocityWide velocityB,<#}#> ref Contact<#=contactCount#><#=suffix#>PrestepData prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA,<#if(bodyCount == 2) {#> in BodyVelocityWide velocityB,<#}#> ref Contact<#=contactCount#><#=suffix#>PrestepData prestep)
         {
 <#for (int i = 0; i < contactCount; ++i) {#>
             PenetrationLimit<#=suffix#>.UpdatePenetrationDepth(dt, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.OffsetB, <#}#>prestep.Normal, velocityA, <#if (bodyCount == 2) {#>velocityB, <#}#>ref prestep.Contact<#=i#>.Depth);

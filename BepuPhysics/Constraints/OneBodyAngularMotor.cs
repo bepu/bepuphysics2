@@ -98,7 +98,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Subtract(biasImpulse, softnessComponent, out var csi);
             Vector3Wide.Subtract(csi, csiVelocityComponent, out csi);
 
-            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulse, ref csi);            
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulse, ref csi);
 
             ApplyImpulse(ref velocityA.Angular, impulseToVelocityA, csi);
         }
@@ -130,12 +130,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref wsvA.Angular, inertiaA.InverseInertiaTensor, csi);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector<float> dt, in Vector3Wide accumulatedImpulses, ref OneBodyAngularMotorPrestepData prestep)
-        {
-        }
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyAngularMotorPrestepData prestepData) { }
     }
 
     public class OneBodyAngularMotorTypeProcessor : OneBodyTypeProcessor<OneBodyAngularMotorPrestepData, OneBodyAngularServoProjection, Vector3Wide, OneBodyAngularMotorFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngular>

@@ -300,7 +300,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-    public struct Contact1OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>
+    public struct Contact1OneBodyFunctions : IOneBodyConstraintFunctions<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
@@ -345,8 +345,10 @@ namespace BepuPhysics.Constraints.Contact
             TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => true;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact1OneBodyPrestepData prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact1OneBodyPrestepData prestep)
         {
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, velocityA, ref prestep.Contact0.Depth);
         }
@@ -510,7 +512,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-    public struct Contact2OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses>
+    public struct Contact2OneBodyFunctions : IOneBodyConstraintFunctions<Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
@@ -559,8 +561,10 @@ namespace BepuPhysics.Constraints.Contact
             TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => true;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact2OneBodyPrestepData prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact2OneBodyPrestepData prestep)
         {
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, velocityA, ref prestep.Contact0.Depth);
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, velocityA, ref prestep.Contact1.Depth);
@@ -739,7 +743,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-    public struct Contact3OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses>
+    public struct Contact3OneBodyFunctions : IOneBodyConstraintFunctions<Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
@@ -793,8 +797,10 @@ namespace BepuPhysics.Constraints.Contact
             TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => true;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact3OneBodyPrestepData prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact3OneBodyPrestepData prestep)
         {
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, velocityA, ref prestep.Contact0.Depth);
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, velocityA, ref prestep.Contact1.Depth);
@@ -986,7 +992,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-    public struct Contact4OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact4OneBodyPrestepData, Contact4OneBodyProjection, Contact4AccumulatedImpulses>
+    public struct Contact4OneBodyFunctions : IOneBodyConstraintFunctions<Contact4OneBodyPrestepData, Contact4OneBodyProjection, Contact4AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
@@ -1045,8 +1051,10 @@ namespace BepuPhysics.Constraints.Contact
             TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => true;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact4OneBodyPrestepData prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, ref Contact4OneBodyPrestepData prestep)
         {
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, velocityA, ref prestep.Contact0.Depth);
             PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, velocityA, ref prestep.Contact1.Depth);
@@ -1231,7 +1239,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-    public struct Contact1Functions : IContactConstraintFunctions<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses>
+    public struct Contact1Functions : ITwoBodyConstraintFunctions<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
@@ -1280,8 +1288,10 @@ namespace BepuPhysics.Constraints.Contact
             TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => true;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact1PrestepData prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact1PrestepData prestep)
         {
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact0.Depth);
         }
@@ -1461,7 +1471,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-    public struct Contact2Functions : IContactConstraintFunctions<Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses>
+    public struct Contact2Functions : ITwoBodyConstraintFunctions<Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
@@ -1515,8 +1525,10 @@ namespace BepuPhysics.Constraints.Contact
             TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => true;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact2PrestepData prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact2PrestepData prestep)
         {
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact0.Depth);
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact1.Depth);
@@ -1711,7 +1723,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-    public struct Contact3Functions : IContactConstraintFunctions<Contact3PrestepData, Contact3Projection, Contact3AccumulatedImpulses>
+    public struct Contact3Functions : ITwoBodyConstraintFunctions<Contact3PrestepData, Contact3Projection, Contact3AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
@@ -1771,8 +1783,10 @@ namespace BepuPhysics.Constraints.Contact
             TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => true;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact3PrestepData prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact3PrestepData prestep)
         {
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact0.Depth);
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact1.Depth);
@@ -1980,7 +1994,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-    public struct Contact4Functions : IContactConstraintFunctions<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses>
+    public struct Contact4Functions : ITwoBodyConstraintFunctions<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(
@@ -2046,8 +2060,10 @@ namespace BepuPhysics.Constraints.Contact
             TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => true;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact4PrestepData prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref Contact4PrestepData prestep)
         {
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact0.Depth);
             PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.Contact1.Depth);

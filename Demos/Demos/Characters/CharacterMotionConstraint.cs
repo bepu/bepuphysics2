@@ -382,11 +382,11 @@ namespace Demos.Demos.Characters
             ApplyVerticalImpulse(basis, verticalAngularJacobianA, verticalCorrectiveImpulse, inertiaA, ref velocityA);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide velocityA, 
-            in Vector<float> dt, in CharacterMotionAccumulatedImpulse accumulatedImpulses, ref StaticCharacterMotionPrestep prestep)
+        
+        public bool RequiresIncrementalSubstepUpdates => true;
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, ref StaticCharacterMotionPrestep prestep)
         {
+
         }
     }
 
@@ -808,12 +808,11 @@ namespace Demos.Demos.Characters
             ApplyVerticalImpulse(basis, verticalAngularJacobianA, verticalAngularJacobianB, verticalCorrectiveImpulse, inertiaA, inertiaB, ref velocityA, ref velocityB);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide velocityA, 
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide velocityB,
-            in Vector<float> dt, in CharacterMotionAccumulatedImpulse accumulatedImpulses, ref DynamicCharacterMotionPrestep prestep)
+        
+        public bool RequiresIncrementalSubstepUpdates => true;
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref DynamicCharacterMotionPrestep prestep)
         {
+
         }
     }
 

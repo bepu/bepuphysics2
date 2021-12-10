@@ -304,15 +304,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(inertiaA.InverseMass, inertiaB.InverseMass, inertiaC.InverseMass, inertiaD.InverseMass, negatedJA, jacobianB, jacobianC, jacobianD, csi, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
-            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in BodyVelocityWide wsvC,
-            in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, in BodyVelocityWide wsvD,
-            in Vector<float> dt, in Vector<float> accumulatedImpulses, ref VolumeConstraintPrestepData prestep)
-        {
-        }
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, in BodyVelocityWide wsvC, in BodyVelocityWide wsvD, ref VolumeConstraintPrestepData prestepData) { }
     }
 
 

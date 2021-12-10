@@ -229,9 +229,6 @@ namespace BepuPhysics
             return count;
         }
 
-
-        Action<int> solveWorker;
-        Action<int> incrementalContactUpdateWorker;
         protected Solver(Bodies bodies, BufferPool pool, SolveDescription solveDescription,
             int initialCapacity,
             int initialIslandCapacity,

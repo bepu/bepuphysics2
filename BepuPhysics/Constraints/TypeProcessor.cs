@@ -213,9 +213,13 @@ namespace BepuPhysics.Constraints
             where TAllowPoseIntegration : unmanaged, IBatchPoseIntegrationAllowed;
         public abstract void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
-        public virtual void IncrementallyUpdateContactData(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int end)
+        /// <summary>
+        /// Gets whether this type requires incremental updates for each substep in a frame beyond the first.
+        /// </summary>
+        public abstract bool RequiresIncrementalSubstepUpdates { get; }
+        public virtual void IncrementallyUpdateForSubstep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int end)
         {
-            Debug.Fail("A contact data update was scheduled for a type batch that does not have a contact data update implementation.");
+            Debug.Fail("An incremental update was scheduled for a type batch that does not have a contact data update implementation.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

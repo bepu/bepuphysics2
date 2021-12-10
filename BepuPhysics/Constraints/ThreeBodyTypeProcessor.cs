@@ -42,11 +42,11 @@ namespace BepuPhysics.Constraints
             in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, float dt, float inverseDt,
             ref TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC);
 
-        void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
-            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in BodyVelocityWide wsvC,
-            in Vector<float> dt, in TAccumulatedImpulse accumulatedImpulses, ref TPrestepData prestep);
+        /// <summary>
+        /// Gets whether this constraint type requires incremental updates for each substep taken beyond the first.
+        /// </summary>
+        bool RequiresIncrementalSubstepUpdates { get; }
+        void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, in BodyVelocityWide wsvC, ref TPrestepData prestepData);
     }
 
     /// <summary>
@@ -233,6 +233,24 @@ namespace BepuPhysics.Constraints
                 bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references.IndexA);
                 bodies.ScatterVelocities<TSolveAccessFilterB>(ref wsvB, ref references.IndexB);
                 bodies.ScatterVelocities<TSolveAccessFilterC>(ref wsvC, ref references.IndexC);
+            }
+        }
+
+        public override bool RequiresIncrementalSubstepUpdates => default(TConstraintFunctions).RequiresIncrementalSubstepUpdates;
+        public unsafe override void IncrementallyUpdateForSubstep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<ThreeBodyReferences>();
+            var function = default(TConstraintFunctions);
+            var dtWide = new Vector<float>(dt);
+            for (int i = startBundle; i < exclusiveEndBundle; ++i)
+            {
+                ref var prestep = ref prestepBundles[i];
+                ref var references = ref bodyReferencesBundles[i];
+                bodies.GatherState<AccessOnlyVelocity>(references.IndexA, true, out _, out _, out var wsvA, out _);
+                bodies.GatherState<AccessOnlyVelocity>(references.IndexB, true, out _, out _, out var wsvB, out _);
+                bodies.GatherState<AccessOnlyVelocity>(references.IndexC, true, out _, out _, out var wsvC, out _);
+                function.IncrementallyUpdateForSubstep(dtWide, wsvA, wsvB, wsvC, ref prestep);
             }
         }
     }

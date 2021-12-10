@@ -271,7 +271,7 @@ namespace BepuPhysics
             {
                 ref var block = ref this.solver.substepContext.IncrementalUpdateBlocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-                solver.TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
+                solver.TypeProcessors[typeBatch.TypeId].IncrementallyUpdateForSubstep(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
             }
         }
 
@@ -1425,7 +1425,7 @@ namespace BepuPhysics
                             {
                                 ref var typeBatch = ref batch.TypeBatches[j];
                                 if (incrementalUpdateFilter.AllowType(typeBatch.TypeId))
-                                    TypeProcessors[typeBatch.TypeId].IncrementallyUpdateContactData(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
+                                    TypeProcessors[typeBatch.TypeId].IncrementallyUpdateForSubstep(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
                             }
                         }
                         PoseIntegrator.IntegrateKinematicPosesAndVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, BundleIndexing.GetBundleCount(ConstrainedKinematicHandles.Count), substepDt, 0);

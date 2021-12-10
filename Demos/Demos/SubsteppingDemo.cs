@@ -24,7 +24,7 @@ namespace Demos.Demos
             camera.Pitch = 0;
             Simulation = Simulation.Create(BufferPool,
                 new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 120), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f },
-                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 8);
+                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), (8, 8));
 
             rolloverInfo = new RolloverInfo();
             {

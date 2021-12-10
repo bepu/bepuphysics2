@@ -211,7 +211,7 @@ namespace BepuPhysics.Constraints.Contact
     }
 
     public struct ContactNonconvexOneBodyFunctions<TPrestep, TProjection, TAccumulatedImpulses> :
-        IOneBodyContactConstraintFunctions<TPrestep, TProjection, TAccumulatedImpulses>
+        IOneBodyConstraintFunctions<TPrestep, TProjection, TAccumulatedImpulses>
         where TPrestep : struct, INonconvexContactPrestep<TPrestep>
         where TProjection : struct, INonconvexOneBodyProjection<TProjection>
         where TAccumulatedImpulses : struct
@@ -337,10 +337,21 @@ namespace BepuPhysics.Constraints.Contact
         {
             throw new System.NotImplementedException();
         }
+
+        public bool RequiresIncrementalSubstepUpdates => true;
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref TPrestep prestep)
+        {
+            ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
+            for (int i = 0; i < prestep.ContactCount; ++i)
+            {
+                ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
+                PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestepContact.Offset, prestepContact.Normal, wsvA, ref prestepContact.Depth);
+            }
+        }
     }
 
     public struct ContactNonconvexTwoBodyFunctions<TPrestep, TProjection, TAccumulatedImpulses> :
-        IContactConstraintFunctions<TPrestep, TProjection, TAccumulatedImpulses>
+        ITwoBodyConstraintFunctions<TPrestep, TProjection, TAccumulatedImpulses>
         where TPrestep : struct, ITwoBodyNonconvexContactPrestep<TPrestep>
         where TProjection : struct, INonconvexTwoBodyProjection<TProjection>
         where TAccumulatedImpulses : struct
@@ -414,17 +425,6 @@ namespace BepuPhysics.Constraints.Contact
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref TPrestep prestep)
-        {
-            ref var prestepOffsetB = ref prestep.GetOffsetB(ref prestep);
-            ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
-            for (int i = 0; i < prestep.ContactCount; ++i)
-            {
-                ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
-                PenetrationLimit.UpdatePenetrationDepth(dt, prestepContact.Offset, prestepOffsetB, prestepContact.Normal, velocityA, velocityB, ref prestepContact.Depth);
-            }
-        }
 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
@@ -466,13 +466,17 @@ namespace BepuPhysics.Constraints.Contact
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
-            in Vector<float> dt, in TAccumulatedImpulses accumulatedImpulses, ref TPrestep prestep)
+
+        public bool RequiresIncrementalSubstepUpdates => true;
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TPrestep prestep)
         {
-            throw new System.NotImplementedException();
+            ref var prestepOffsetB = ref prestep.GetOffsetB(ref prestep);
+            ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
+            for (int i = 0; i < prestep.ContactCount; ++i)
+            {
+                ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
+                PenetrationLimit.UpdatePenetrationDepth(dt, prestepContact.Offset, prestepOffsetB, prestepContact.Normal, wsvA, wsvB, ref prestepContact.Depth);
+            }
         }
     }
 }

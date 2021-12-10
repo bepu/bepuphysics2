@@ -25,20 +25,11 @@ namespace BepuPhysics.Constraints
         void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt,
             ref TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA);
 
-        void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
-            in Vector<float> dt, in TAccumulatedImpulse accumulatedImpulses, ref TPrestepData prestep);
-    }
-
-    /// <summary>
-    /// Prestep, warm start, solve iteration, and incremental contact update functions for a one body contact constraint type.
-    /// </summary>
-    /// <typeparam name="TPrestepData">Type of the prestep data used by the constraint.</typeparam>
-    /// <typeparam name="TAccumulatedImpulse">Type of the accumulated impulses used by the constraint.</typeparam>
-    /// <typeparam name="TProjection">Type of the projection to input.</typeparam>
-    public interface IOneBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse> : IOneBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
-    {
-        void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocity, ref TPrestepData prestepData);
+        /// <summary>
+        /// Gets whether this constraint type requires incremental updates for each substep taken beyond the first.
+        /// </summary>
+        bool RequiresIncrementalSubstepUpdates { get; }
+        void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocity, ref TPrestepData prestepData);
     }
 
     //Not a big fan of complex generic-filled inheritance hierarchies, but this is the shortest evolutionary step to removing duplicates.
@@ -198,27 +189,30 @@ namespace BepuPhysics.Constraints
                 bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references);
             }
         }
+
+        public override bool RequiresIncrementalSubstepUpdates => default(TConstraintFunctions).RequiresIncrementalSubstepUpdates;
+        public unsafe override void IncrementallyUpdateForSubstep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        {
+            var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
+            var bodyReferencesBundles = typeBatch.BodyReferences.As<Vector<int>>();
+            var function = default(TConstraintFunctions);
+            var dtWide = new Vector<float>(dt);
+            for (int i = startBundle; i < exclusiveEndBundle; ++i)
+            {
+                ref var prestep = ref prestepBundles[i];
+                ref var references = ref bodyReferencesBundles[i];
+                bodies.GatherState<AccessOnlyVelocity>(references, true, out _, out _, out var wsvA, out _);
+                function.IncrementallyUpdateForSubstep(dtWide, wsvA, ref prestep);
+            }
+        }
     }
 
     public abstract class OneBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         : OneBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions, AccessNoPose, AccessNoPose>
         where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
-        where TConstraintFunctions : unmanaged, IOneBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        where TConstraintFunctions : unmanaged, IOneBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
-        public unsafe override void IncrementallyUpdateContactData(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
-        {
-            ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
-            ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
-            var function = default(TConstraintFunctions);
-            var dtWide = new Vector<float>(dt);
-            for (int i = startBundle; i < exclusiveEndBundle; ++i)
-            {
-                ref var prestep = ref Unsafe.Add(ref prestepBase, i);
-                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
-                bodies.GatherState<AccessOnlyVelocity>(references, true, out _, out _, out var wsvA, out _);
-                function.IncrementallyUpdateContactData(dtWide, wsvA, ref prestep);
-            }
-        }
+
     }
 
 }

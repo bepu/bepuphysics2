@@ -169,12 +169,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(inertiaA.InverseInertiaTensor, csi, ref wsvA.Angular);
         }
 
+        public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector<float> dt, in Vector3Wide accumulatedImpulses, ref OneBodyAngularServoPrestepData prestep)
-        {
-        }
+        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyAngularServoPrestepData prestepData) { }
     }
 
     public class OneBodyAngularServoTypeProcessor : OneBodyTypeProcessor<OneBodyAngularServoPrestepData, OneBodyAngularServoProjection, Vector3Wide, OneBodyAngularServoFunctions, AccessOnlyAngular, AccessOnlyAngular>
