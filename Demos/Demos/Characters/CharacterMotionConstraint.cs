@@ -306,19 +306,85 @@ namespace Demos.Demos.Characters
             ApplyVerticalImpulse(basis, verticalAngularJacobianA, verticalCorrectiveImpulse, projection.InertiaA, ref velocityA);
         }
 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref StaticCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA)
-        {
-            throw new NotImplementedException();
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref StaticCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA)
+        {            
+            ComputeJacobians(prestep.OffsetFromCharacter, prestep.SurfaceBasis,
+                out var basis, out var horizontalAngularJacobianA, out var verticalAngularJacobianA);
+            ApplyHorizontalImpulse(basis, horizontalAngularJacobianA, accumulatedImpulses.Horizontal, inertiaA, ref velocityA);
+            ApplyVerticalImpulse(basis, verticalAngularJacobianA, accumulatedImpulses.Vertical, inertiaA, ref velocityA);
         }
         
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref StaticCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA)
-        {
-            throw new NotImplementedException();
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref StaticCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA)
+        {            
+            //The motion constraint is split into two parts: the horizontal constraint, and the vertical constraint.
+            //The horizontal constraint acts almost exactly like the TangentFriction, but we'll duplicate some of the logic to keep this implementation self-contained.
+            ComputeJacobians(prestep.OffsetFromCharacter, prestep.SurfaceBasis,
+                out var basis, out var horizontalAngularJacobianA, out var verticalAngularJacobianA);
+
+            //Compute the velocity error by projecting the body velocity into constraint space using the transposed jacobian.
+            Vector2Wide horizontalLinearA;
+            Vector3Wide.Dot(basis.X, velocityA.Linear, out horizontalLinearA.X);
+            Vector3Wide.Dot(basis.Z, velocityA.Linear, out horizontalLinearA.Y);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(velocityA.Angular, horizontalAngularJacobianA, out var horizontalAngularA);
+            Vector2Wide.Add(horizontalLinearA, horizontalAngularA, out var horizontalVelocity);
+
+            //I'll omit the details of where this comes from, but you can check out the other constraints or the sorta-tutorial Inequality1DOF constraint to explain the details,
+            //plus some other references. The idea is that we need a way to transform the constraint space velocity (that we get from transforming body velocities
+            //by the transpose jacobian) into a corrective impulse for the solver iterations. That corrective impulse is then used to update the velocities on each iteration execution.
+            //This transform is the 'effective mass', representing the mass felt by the constraint in its local space.
+            //In concept, this constraint is actually two separate constraints solved iteratively, so we have two separate such effective mass transforms.
+            Symmetric3x3Wide.MatrixSandwich(horizontalAngularJacobianA, inertiaA.InverseInertiaTensor, out var inverseHorizontalEffectiveMass);
+            //The linear jacobians are unit length vectors, so J * M^-1 * JT is just M^-1.
+            inverseHorizontalEffectiveMass.XX += inertiaA.InverseMass;
+            inverseHorizontalEffectiveMass.YY += inertiaA.InverseMass;
+            Symmetric2x2Wide.InvertWithoutOverlap(inverseHorizontalEffectiveMass, out var horizontalEffectiveMass);
+
+            Vector2Wide horizontalConstraintSpaceVelocityChange;
+            horizontalConstraintSpaceVelocityChange.X = prestep.TargetVelocity.X - horizontalVelocity.X;
+            //The surface basis's Z axis points in the opposite direction to the view direction, so negate the target velocity along the Z axis to point it in the expected direction.
+            horizontalConstraintSpaceVelocityChange.Y = -prestep.TargetVelocity.Y - horizontalVelocity.Y;
+            Symmetric2x2Wide.TransformWithoutOverlap(horizontalConstraintSpaceVelocityChange, horizontalEffectiveMass, out var horizontalCorrectiveImpulse);
+
+            //Limit the force applied by the horizontal motion constraint. Note that this clamps the *accumulated* impulse applied this time step, not just this one iterations' value.
+            var previousHorizontalAccumulatedImpulse = accumulatedImpulses.Horizontal;
+            Vector2Wide.Add(accumulatedImpulses.Horizontal, horizontalCorrectiveImpulse, out accumulatedImpulses.Horizontal);
+            Vector2Wide.Length(accumulatedImpulses.Horizontal, out var horizontalImpulseMagnitude);
+            //Note division by zero guard.
+            var dtWide = new Vector<float>(dt);
+            var maximumHorizontalImpulse = prestep.MaximumHorizontalForce * dtWide;
+            var scale = Vector.Min(Vector<float>.One, maximumHorizontalImpulse / Vector.Max(new Vector<float>(1e-16f), horizontalImpulseMagnitude));
+            Vector2Wide.Scale(accumulatedImpulses.Horizontal, scale, out accumulatedImpulses.Horizontal);
+            Vector2Wide.Subtract(accumulatedImpulses.Horizontal, previousHorizontalAccumulatedImpulse, out horizontalCorrectiveImpulse);
+
+            ApplyHorizontalImpulse(basis, horizontalAngularJacobianA, horizontalCorrectiveImpulse, inertiaA, ref velocityA);
+
+            //Same thing for the vertical constraint.
+            Vector3Wide.Dot(basis.Y, velocityA.Linear, out var verticalLinearA);
+            Vector3Wide.Dot(velocityA.Angular, verticalAngularJacobianA, out var verticalAngularA);
+			//If the character is deeply penetrating, the vertical motion constraint will allow some separating velocity- just enough for one frame of integration to reach zero depth.
+			var verticalBiasVelocity = Vector.Max(Vector<float>.Zero, prestep.Depth * inverseDt);
+
+            //The vertical constraint just targets zero velocity, but does not attempt to fight any velocity which would merely push the character out of penetration.
+            //Note that many characters will just have zero inverse inertia tensors to prevent them from rotating, so this could be optimized.
+            //(Removing a transform wouldn't matter, but avoiding the storage of an inertia tensor in the projection would be useful.)
+            //We don't take advantage of this optimization for simplicity, and so that you could use this constraint unchanged in a simulation
+            //where the orientation is instead controlled by some other constraint or torque- imagine a game with gravity that points in different directions.
+            Symmetric3x3Wide.VectorSandwich(verticalAngularJacobianA, inertiaA.InverseInertiaTensor, out var verticalAngularContributionA);
+            var inverseVerticalEffectiveMass = verticalAngularContributionA + inertiaA.InverseMass;
+            var verticalCorrectiveImpulse = (verticalBiasVelocity - verticalLinearA - verticalAngularA) / inverseVerticalEffectiveMass;
+
+            //Clamp the vertical constraint's impulse, but note that this is a bit different than above- the vertical constraint is not allowed to *push*, so there's an extra bound at zero.
+            var previousVerticalAccumulatedImpulse = accumulatedImpulses.Vertical;
+            var maximumVerticalImpulse = prestep.MaximumVerticalForce * dtWide;
+            accumulatedImpulses.Vertical = Vector.Min(Vector<float>.Zero, Vector.Max(accumulatedImpulses.Vertical + verticalCorrectiveImpulse, -maximumVerticalImpulse));
+            verticalCorrectiveImpulse = accumulatedImpulses.Vertical - previousVerticalAccumulatedImpulse;
+
+            ApplyVerticalImpulse(basis, verticalAngularJacobianA, verticalCorrectiveImpulse, inertiaA, ref velocityA);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide velocityA, 
             in Vector<float> dt, in CharacterMotionAccumulatedImpulse accumulatedImpulses, ref StaticCharacterMotionPrestep prestep)
         {
         }
@@ -654,20 +720,98 @@ namespace Demos.Demos.Characters
             ApplyVerticalImpulse(basis, verticalAngularJacobianA, verticalAngularJacobianB, verticalCorrectiveImpulse, projection.InertiaA, projection.InertiaB, ref velocityA, ref velocityB);
         }
 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref DynamicCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
-        {
-            throw new NotImplementedException();
+        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref DynamicCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
+        {            
+            ComputeJacobians(prestep.OffsetFromCharacter, prestep.OffsetFromSupport, prestep.SurfaceBasis,
+                out var basis, out var horizontalAngularJacobianA, out var horizontalAngularJacobianB, out var verticalAngularJacobianA, out var verticalAngularJacobianB);
+            ApplyHorizontalImpulse(basis, horizontalAngularJacobianA, horizontalAngularJacobianB, accumulatedImpulses.Horizontal, inertiaA, inertiaB, ref velocityA, ref velocityB);
+            ApplyVerticalImpulse(basis, verticalAngularJacobianA, verticalAngularJacobianB, accumulatedImpulses.Vertical, inertiaA, inertiaB, ref velocityA, ref velocityB);
         }
         
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref DynamicCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
-        {
-            throw new NotImplementedException();
+        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref DynamicCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
+        {            
+            //The motion constraint is split into two parts: the horizontal constraint, and the vertical constraint.
+            //The horizontal constraint acts almost exactly like the TangentFriction, but we'll duplicate some of the logic to keep this implementation self-contained.
+            ComputeJacobians(prestep.OffsetFromCharacter, prestep.OffsetFromSupport, prestep.SurfaceBasis,
+                out var basis, out var horizontalAngularJacobianA, out var horizontalAngularJacobianB, out var verticalAngularJacobianA, out var verticalAngularJacobianB);
+
+            //Compute the velocity error by projecting the body velocity into constraint space using the transposed jacobian.
+            Vector2Wide horizontalLinearA;
+            Vector3Wide.Dot(basis.X, velocityA.Linear, out horizontalLinearA.X);
+            Vector3Wide.Dot(basis.Z, velocityA.Linear, out horizontalLinearA.Y);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(velocityA.Angular, horizontalAngularJacobianA, out var horizontalAngularA);
+            Vector2Wide negatedHorizontalLinearB;
+            Vector3Wide.Dot(basis.X, velocityB.Linear, out negatedHorizontalLinearB.X);
+            Vector3Wide.Dot(basis.Z, velocityB.Linear, out negatedHorizontalLinearB.Y);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(velocityB.Angular, horizontalAngularJacobianB, out var horizontalAngularB);
+            Vector2Wide.Add(horizontalAngularA, horizontalAngularB, out var horizontalAngular);
+            Vector2Wide.Subtract(horizontalLinearA, negatedHorizontalLinearB, out var horizontalLinear);
+            Vector2Wide.Add(horizontalAngular, horizontalLinear, out var horizontalVelocity);
+
+            //I'll omit the details of where this comes from, but you can check out the other constraints or the sorta-tutorial Inequality1DOF constraint to explain the details,
+            //plus some other references. The idea is that we need a way to transform the constraint space velocity (that we get from transforming body velocities
+            //by the transpose jacobian) into a corrective impulse for the solver iterations. That corrective impulse is then used to update the velocities on each iteration execution.
+            //This transform is the 'effective mass', representing the mass felt by the constraint in its local space.
+            //In concept, this constraint is actually two separate constraints solved iteratively, so we have two separate such effective mass transforms.
+            Symmetric3x3Wide.MatrixSandwich(horizontalAngularJacobianA, inertiaA.InverseInertiaTensor, out var horizontalAngularContributionA);
+            Symmetric3x3Wide.MatrixSandwich(horizontalAngularJacobianB, inertiaB.InverseInertiaTensor, out var horizontalAngularContributionB);
+            Symmetric2x2Wide.Add(horizontalAngularContributionA, horizontalAngularContributionB, out var inverseHorizontalEffectiveMass);
+            //The linear jacobians are unit length vectors, so J * M^-1 * JT is just M^-1.
+            var linearContribution = inertiaA.InverseMass + inertiaB.InverseMass;
+            inverseHorizontalEffectiveMass.XX += linearContribution;
+            inverseHorizontalEffectiveMass.YY += linearContribution;
+            Symmetric2x2Wide.InvertWithoutOverlap(inverseHorizontalEffectiveMass, out var horizontalEffectiveMass);
+
+            Vector2Wide horizontalConstraintSpaceVelocityChange;
+            horizontalConstraintSpaceVelocityChange.X = prestep.TargetVelocity.X - horizontalVelocity.X;
+            //The surface basis's Z axis points in the opposite direction to the view direction, so negate the target velocity along the Z axis to point it in the expected direction.
+            horizontalConstraintSpaceVelocityChange.Y = -prestep.TargetVelocity.Y - horizontalVelocity.Y;
+            Symmetric2x2Wide.TransformWithoutOverlap(horizontalConstraintSpaceVelocityChange, horizontalEffectiveMass, out var horizontalCorrectiveImpulse);
+
+            //Limit the force applied by the horizontal motion constraint. Note that this clamps the *accumulated* impulse applied this time step, not just this one iterations' value.
+            var previousHorizontalAccumulatedImpulse = accumulatedImpulses.Horizontal;
+            Vector2Wide.Add(accumulatedImpulses.Horizontal, horizontalCorrectiveImpulse, out accumulatedImpulses.Horizontal);
+            Vector2Wide.Length(accumulatedImpulses.Horizontal, out var horizontalImpulseMagnitude);
+            //Note division by zero guard.
+            var dtWide = new Vector<float>(dt);
+            var maximumHorizontalImpulse = prestep.MaximumHorizontalForce * dtWide;
+            var scale = Vector.Min(Vector<float>.One, maximumHorizontalImpulse / Vector.Max(new Vector<float>(1e-16f), horizontalImpulseMagnitude));
+            Vector2Wide.Scale(accumulatedImpulses.Horizontal, scale, out accumulatedImpulses.Horizontal);
+            Vector2Wide.Subtract(accumulatedImpulses.Horizontal, previousHorizontalAccumulatedImpulse, out horizontalCorrectiveImpulse);
+
+            ApplyHorizontalImpulse(basis, horizontalAngularJacobianA, horizontalAngularJacobianB, horizontalCorrectiveImpulse, inertiaA, inertiaB, ref velocityA, ref velocityB);
+
+            //Same thing for the vertical constraint.
+            Vector3Wide.Dot(basis.Y, velocityA.Linear, out var verticalLinearA);
+            Vector3Wide.Dot(velocityA.Angular, verticalAngularJacobianA, out var verticalAngularA);
+            Vector3Wide.Dot(basis.Y, velocityB.Linear, out var negatedVerticalLinearB);
+            Vector3Wide.Dot(velocityB.Angular, verticalAngularJacobianB, out var verticalAngularB);
+			//If the character is deeply penetrating, the vertical motion constraint will allow some separating velocity- just enough for one frame of integration to reach zero depth.
+			var verticalBiasVelocity = Vector.Max(Vector<float>.Zero, prestep.Depth * inverseDt);
+
+            //The vertical constraint just targets zero velocity, but does not attempt to fight any velocity which would merely push the character out of penetration.
+            //Note that many characters will just have zero inverse inertia tensors to prevent them from rotating, so this could be optimized.
+            //(Removing a transform wouldn't matter, but avoiding the storage of an inertia tensor in the projection would be useful.)
+            //We don't take advantage of this optimization for simplicity, and so that you could use this constraint unchanged in a simulation
+            //where the orientation is instead controlled by some other constraint or torque- imagine a game with gravity that points in different directions.
+            Symmetric3x3Wide.VectorSandwich(verticalAngularJacobianA, inertiaA.InverseInertiaTensor, out var verticalAngularContributionA);
+            Symmetric3x3Wide.VectorSandwich(verticalAngularJacobianB, inertiaB.InverseInertiaTensor, out var verticalAngularContributionB);
+            var inverseVerticalEffectiveMass = verticalAngularContributionA + verticalAngularContributionB + linearContribution;
+            var verticalCorrectiveImpulse = (verticalBiasVelocity - verticalLinearA + negatedVerticalLinearB - verticalAngularA - verticalAngularB) / inverseVerticalEffectiveMass;
+
+            //Clamp the vertical constraint's impulse, but note that this is a bit different than above- the vertical constraint is not allowed to *push*, so there's an extra bound at zero.
+            var previousVerticalAccumulatedImpulse = accumulatedImpulses.Vertical;
+            var maximumVerticalImpulse = prestep.MaximumVerticalForce * dtWide;
+            accumulatedImpulses.Vertical = Vector.Min(Vector<float>.Zero, Vector.Max(accumulatedImpulses.Vertical + verticalCorrectiveImpulse, -maximumVerticalImpulse));
+            verticalCorrectiveImpulse = accumulatedImpulses.Vertical - previousVerticalAccumulatedImpulse;
+
+            ApplyVerticalImpulse(basis, verticalAngularJacobianA, verticalAngularJacobianB, verticalCorrectiveImpulse, inertiaA, inertiaB, ref velocityA, ref velocityB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB,
+            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide velocityA, 
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide velocityB,
             in Vector<float> dt, in CharacterMotionAccumulatedImpulse accumulatedImpulses, ref DynamicCharacterMotionPrestep prestep)
         {
         }
