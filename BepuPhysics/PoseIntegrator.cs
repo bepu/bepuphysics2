@@ -263,14 +263,8 @@ namespace BepuPhysics
 
 
     /// <summary>
-    /// Integrates the velocity of mobile bodies over time into changes in position and orientation. Also applies gravitational acceleration to dynamic bodies.
+    /// Handles body integration work that isn't bundled into the solver's execution. Predicts bounding boxes, integrates velocity and poses for unconstrained bodies, and does final post-substepping pose integration for constrained bodies.
     /// </summary>
-    /// <remarks>
-    /// This variant of the integrator uses a single global gravity. Other integrators that provide per-entity gravity could exist later.
-    /// This integrator also assumes that the bodies positions are stored in terms of single precision floats. Later on, we will likely modify the Bodies
-    /// storage to allow different representations for larger simulations. That will require changes in this integrator, the relative position calculation of collision detection,
-    /// the bounding box calculation, and potentially even in the broadphase in extreme cases (64 bit per component positions).
-    /// </remarks>
     public class PoseIntegrator<TCallbacks> : IPoseIntegrator where TCallbacks : IPoseIntegratorCallbacks
     {
         Bodies bodies;
