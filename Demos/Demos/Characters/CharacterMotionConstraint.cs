@@ -386,7 +386,18 @@ namespace Demos.Demos.Characters
         public bool RequiresIncrementalSubstepUpdates => true;
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, ref StaticCharacterMotionPrestep prestep)
         {
+            //Since collision detection doesn't run for every substep, we approximate the change in depth for the vertical motion constraint by integrating the velocity along the support normal.
+            //This is pretty subtle. If you disable it entirely (return false from "RequiresIncrementalSubstepUpdates" above), you might not even notice.
+            //If you disable the vertical motion constraint, then it can definitely be disabled.
 
+            //Any movement of the character or its support along N results in a change in the vertical motion constraint's perception of depth.
+            //estimatedPenetrationDepthChange = dot(normal, velocityDtA.Linear + velocityDtA.Angular x contactOffsetA) - dot(normal, velocityDtB.Linear + velocityDtB.Angular x contactOffsetB)
+            Vector3Wide.CrossWithoutOverlap(velocityA.Angular, prestep.OffsetFromCharacter, out var wxra);
+            Vector3Wide.Add(wxra, velocityA.Linear, out var contactVelocityA);
+
+            var normal = QuaternionWide.TransformUnitY(prestep.SurfaceBasis);
+            Vector3Wide.Dot(normal, contactVelocityA, out var estimatedDepthChangeVelocity);
+            prestep.Depth -= estimatedDepthChangeVelocity * dt;
         }
     }
 
@@ -812,7 +823,21 @@ namespace Demos.Demos.Characters
         public bool RequiresIncrementalSubstepUpdates => true;
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref DynamicCharacterMotionPrestep prestep)
         {
+            //Since collision detection doesn't run for every substep, we approximate the change in depth for the vertical motion constraint by integrating the velocity along the support normal.
+            //This is pretty subtle. If you disable it entirely (return false from "RequiresIncrementalSubstepUpdates" above), you might not even notice.
+            //If you disable the vertical motion constraint, then it can definitely be disabled.
 
+            //Any movement of the character or its support along N results in a change in the vertical motion constraint's perception of depth.
+            //estimatedPenetrationDepthChange = dot(normal, velocityDtA.Linear + velocityDtA.Angular x contactOffsetA) - dot(normal, velocityDtB.Linear + velocityDtB.Angular x contactOffsetB)
+            Vector3Wide.CrossWithoutOverlap(velocityA.Angular, prestep.OffsetFromCharacter, out var wxra);
+            Vector3Wide.Add(wxra, velocityA.Linear, out var contactVelocityA);
+
+            var normal = QuaternionWide.TransformUnitY(prestep.SurfaceBasis);
+            Vector3Wide.CrossWithoutOverlap(velocityB.Angular, prestep.OffsetFromSupport, out var wxrb);
+            Vector3Wide.Add(wxrb, velocityB.Linear, out var contactVelocityB);
+            Vector3Wide.Subtract(contactVelocityA, contactVelocityB, out var contactVelocityDifference);
+            Vector3Wide.Dot(normal, contactVelocityDifference, out var estimatedDepthChangeVelocity);
+            prestep.Depth -= estimatedDepthChangeVelocity * dt;
         }
     }
 

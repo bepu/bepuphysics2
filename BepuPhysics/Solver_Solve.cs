@@ -155,14 +155,15 @@ namespace BepuPhysics
             bool IncludeFallbackBatchForWorkBlocks { get; }
             bool AllowType(int typeId);
         }
-        protected struct IncrementalContactDataUpdateFilter : ITypeBatchSolveFilter
+        protected struct IncrementalUpdateForSubstepFilter : ITypeBatchSolveFilter
         {
+            public TypeProcessor[] TypeProcessors;
             public bool IncludeFallbackBatchForWorkBlocks { get { return true; } }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool AllowType(int typeId)
             {
-                return NarrowPhase.IsContactConstraintType(typeId);
+                return TypeProcessors[typeId].RequiresIncrementalSubstepUpdates;
             }
         }
         protected struct MainSolveFilter : ITypeBatchSolveFilter
@@ -786,9 +787,9 @@ namespace BepuPhysics
 
             var targetBlocksPerBatch = workerCount * targetBlocksPerBatchPerWorker;
             var mainFilter = new MainSolveFilter();
-            var incrementalFilter = new IncrementalContactDataUpdateFilter();
+            var incrementalUpdateFilter = new IncrementalUpdateForSubstepFilter { TypeProcessors = TypeProcessors };
             BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref mainFilter, out var constraintBlocks, out substepContext.ConstraintBatchBoundaries);
-            BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref incrementalFilter, out var incrementalBlocks, out var incrementalUpdateBatchBoundaries);
+            BuildWorkBlocks(pool, minimumBlockSizeInBundles, maximumBlockSizeInBundles, targetBlocksPerBatch, ref incrementalUpdateFilter, out var incrementalBlocks, out var incrementalUpdateBatchBoundaries);
             pool.Return(ref incrementalUpdateBatchBoundaries); //TODO: No need to create this in the first place. Doesn't really cost anything, but...
             substepContext.ConstraintBlocks = constraintBlocks.Span.Slice(constraintBlocks.Count);
             substepContext.IncrementalUpdateBlocks = incrementalBlocks.Span.Slice(incrementalBlocks.Count);
@@ -1412,7 +1413,6 @@ namespace BepuPhysics
                 var inverseDt = 1f / substepDt;
                 ref var activeSet = ref ActiveSet;
                 var batchCount = activeSet.Batches.Count;
-                var incrementalUpdateFilter = default(IncrementalContactDataUpdateFilter);
                 for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)
                 {
                     OnSubstepStarted(substepIndex);
@@ -1424,8 +1424,9 @@ namespace BepuPhysics
                             for (int j = 0; j < batch.TypeBatches.Count; ++j)
                             {
                                 ref var typeBatch = ref batch.TypeBatches[j];
-                                if (incrementalUpdateFilter.AllowType(typeBatch.TypeId))
-                                    TypeProcessors[typeBatch.TypeId].IncrementallyUpdateForSubstep(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
+                                var processor = TypeProcessors[typeBatch.TypeId];
+                                if (processor.RequiresIncrementalSubstepUpdates)
+                                    processor.IncrementallyUpdateForSubstep(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
                             }
                         }
                         PoseIntegrator.IntegrateKinematicPosesAndVelocities(ConstrainedKinematicHandles.Span.Slice(ConstrainedKinematicHandles.Count), 0, BundleIndexing.GetBundleCount(ConstrainedKinematicHandles.Count), substepDt, 0);
