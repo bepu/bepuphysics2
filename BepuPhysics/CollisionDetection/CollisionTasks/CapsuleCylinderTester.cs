@@ -168,7 +168,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(localNormal, Vector<float>.One / distanceFromCylinderToLineSegment, out localNormal);
             var depth = Vector.ConditionalSelect(internalLineSegmentIntersected, new Vector<float>(float.MaxValue), -distanceFromCylinderToLineSegment);
             var negativeMargin = -speculativeMargin;
-            inactiveLanes = Vector.BitwiseOr(Vector.LessThan(depth, negativeMargin), inactiveLanes);
+            inactiveLanes = Vector.BitwiseOr(Vector.LessThan(depth + a.Radius, negativeMargin), inactiveLanes);
             if (Vector.LessThanAny(Vector.AndNot(internalLineSegmentIntersected, inactiveLanes), Vector<int>.Zero))
             {
                 //At least one lane is intersecting deeply, so we need to examine the other possible normals.
