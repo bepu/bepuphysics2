@@ -5,9 +5,13 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Constraints
-{
- 
-    public struct TwoBody1DOFJacobians
+{ 
+    //TODO: These are notes about the mathy bits underlying constraints. They were written for the original pre-2.4 version of the solver.
+    //Most of it's still applicable, but 2.4 and up no longer have separate 'projection' states, and while packing is still important, it applies to *prestep data*.
+    //There's a lot less room for tricky premultiplication to save memory bandwidth, simply because those quantities are all in registers/L1 cache during a constraint solve in 2.4+.
+    //Would be nice to update those parts.
+
+    internal struct TwoBody1DOFJacobians
     {
         public Vector3Wide LinearA;
         public Vector3Wide AngularA;
@@ -15,9 +19,7 @@ namespace BepuPhysics.Constraints
         public Vector3Wide AngularB;
     }
 
-
-
-    public struct Projection2Body1DOF
+    internal struct Projection2Body1DOF
     {
         //Rather than projecting from world space to constraint space *velocity* using JT, we precompute JT * effective mass
         //and go directly from world space velocity to constraint space impulse.
@@ -43,7 +45,7 @@ namespace BepuPhysics.Constraints
         public Vector3Wide CSIToWSVAngularB;
     }
 
-    public static class Inequality2Body1DOF
+    internal static class Inequality2Body1DOF
     {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
