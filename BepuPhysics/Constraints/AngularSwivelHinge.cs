@@ -173,7 +173,7 @@ namespace BepuPhysics.Constraints
             //Note that this causes a discontinuity in jacobian length at the poles. We just don't worry about it.
             Helpers.FindPerpendicular(swivelAxis, out var fallbackJacobian);
             Vector3Wide.Dot(jacobianA, jacobianA, out var jacobianLengthSquared);
-            var useFallback = Vector.LessThan(jacobianLengthSquared, new Vector<float>(1e-7f));
+            var useFallback = Vector.LessThan(jacobianLengthSquared, new Vector<float>(1e-3f));
             Vector3Wide.ConditionalSelect(useFallback, fallbackJacobian, jacobianA, out jacobianA);
         }
 

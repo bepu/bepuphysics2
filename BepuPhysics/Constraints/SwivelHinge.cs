@@ -247,11 +247,16 @@ namespace BepuPhysics.Constraints
             Matrix3x3Wide.TransformWithoutOverlap(localOffsetB, orientationMatrixB, out offsetB);
             Matrix3x3Wide.TransformWithoutOverlap(localHingeAxisB, orientationMatrixB, out hingeAxis);
             Vector3Wide.CrossWithoutOverlap(swivelAxis, hingeAxis, out swivelHingeJacobian);
+            //If the axes are aligned, then it'll be zero length and the effective mass can get NaNsploded.
+            var lengthSquared = swivelHingeJacobian.LengthSquared();
+            var useFallbackJacobian = Vector.LessThan(lengthSquared, new Vector<float>(1e-3f));
+            //This causes a discontinuity, but a discontinuity is better than a NaNsplode.
+            swivelHingeJacobian = Vector3Wide.ConditionalSelect(useFallbackJacobian, hingeAxis, swivelHingeJacobian);
         }
 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref SwivelHingePrestepData prestep, ref Vector4Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
-            ComputeJacobian(prestep.LocalOffsetA, prestep.LocalSwivelAxisA, prestep.LocalOffsetB, prestep.LocalHingeAxisB, orientationA, orientationB, 
+            ComputeJacobian(prestep.LocalOffsetA, prestep.LocalSwivelAxisA, prestep.LocalOffsetB, prestep.LocalHingeAxisB, orientationA, orientationB,
                 out _, out _, out var offsetA, out var offsetB, out var swivelHingeJacobian);
             ApplyImpulse(offsetA, offsetB, swivelHingeJacobian, inertiaA, inertiaB, ref accumulatedImpulses, ref wsvA, ref wsvB);
         }
@@ -262,7 +267,7 @@ namespace BepuPhysics.Constraints
             //[ I, skew(offsetA),   -I, -skew(offsetB)    ]
             //[ 0, swivelA x hingeB, 0, -swivelA x hingeB ]
 
-            ComputeJacobian(prestep.LocalOffsetA, prestep.LocalSwivelAxisA, prestep.LocalOffsetB, prestep.LocalHingeAxisB, orientationA, orientationB, 
+            ComputeJacobian(prestep.LocalOffsetA, prestep.LocalSwivelAxisA, prestep.LocalOffsetB, prestep.LocalHingeAxisB, orientationA, orientationB,
                 out var swivelAxis, out var hingeAxis, out var offsetA, out var offsetB, out var swivelHingeJacobian);
 
             //The upper left 3x3 block is just the ball socket.
