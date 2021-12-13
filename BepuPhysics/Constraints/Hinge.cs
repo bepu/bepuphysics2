@@ -347,6 +347,9 @@ namespace BepuPhysics.Constraints
             Vector2Wide.Scale(accumulatedImpulses.Hinge, softnessImpulseScale, out var hingeSoftnessContribution);
             Vector2Wide.Subtract(csi.Hinge, hingeSoftnessContribution, out csi.Hinge);
 
+            accumulatedImpulses.BallSocket += csi.BallSocket;
+            accumulatedImpulses.Hinge += csi.Hinge;
+
             ApplyImpulse(offsetA, offsetB, hingeJacobian, inertiaA, inertiaB, csi, ref wsvA, ref wsvB);
         }
 

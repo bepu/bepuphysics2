@@ -47,7 +47,7 @@ namespace BepuUtilities
         }
 
         /// <summary>
-        /// Performs a component wide add between two vectors.
+        /// Performs a componentwise add between two vectors.
         /// </summary>
         /// <param name="a">First vector to add.</param>
         /// <param name="b">Second vector to add.</param>
@@ -72,6 +72,12 @@ namespace BepuUtilities
             result.Y = v.Y + s;
             result.Z = v.Z + s;
         }
+        /// <summary>
+        /// Performs a componentwise add between two vectors.
+        /// </summary>
+        /// <param name="a">First vector to add.</param>
+        /// <param name="b">Second vector to add.</param>
+        /// <returns>Sum of a and b.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3Wide operator +(Vector3Wide a, Vector3Wide b)
         {

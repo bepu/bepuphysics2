@@ -333,6 +333,8 @@ namespace BepuPhysics.Constraints
             Vector4Wide.Scale(accumulatedImpulses, softnessImpulseScale, out var softnessContribution);
             Vector4Wide.Subtract(csi, softnessContribution, out csi);
 
+            accumulatedImpulses += csi;
+
             ApplyImpulse(offsetA, offsetB, swivelHingeJacobian, inertiaA, inertiaB, ref csi, ref wsvA, ref wsvB);
         }
 

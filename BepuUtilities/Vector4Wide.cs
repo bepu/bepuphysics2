@@ -4,6 +4,9 @@ using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
 {
+    /// <summary>
+    /// Four dimensional vector with <see cref="Vector{T}.Count"/> (with generic type argument of <see cref="float"/>) SIMD lanes.
+    /// </summary>
     public struct Vector4Wide
     {
         public Vector<float> X;
@@ -20,13 +23,82 @@ namespace BepuUtilities
             broadcasted.W = new Vector<float>(source.W);
         }
 
+
+        /// <summary>
+        /// Performs a componentwise add between two vectors.
+        /// </summary>
+        /// <param name="a">First vector to add.</param>
+        /// <param name="b">Second vector to add.</param>
+        /// <param name="result">Sum of a and b.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(in Vector4Wide a, in Vector4Wide b, out Vector4Wide result)
+        public static void Add(Vector4Wide a, Vector4Wide b, out Vector4Wide result)
         {
             result.X = a.X + b.X;
             result.Y = a.Y + b.Y;
             result.Z = a.Z + b.Z;
             result.W = a.W + b.W;
+        }
+        /// <summary>
+        /// Finds the result of adding a scalar to every component of a vector.
+        /// </summary>
+        /// <param name="v">Vector to add to.</param>
+        /// <param name="s">Scalar to add to every component of the vector.</param>
+        /// <param name="result">Vector with components equal to the input vector added to the input scalar.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Add(Vector4Wide v, Vector<float> s, out Vector4Wide result)
+        {
+            result.X = v.X + s;
+            result.Y = v.Y + s;
+            result.Z = v.Z + s;
+            result.W = v.W + s;
+        }
+        /// <summary>
+        /// Performs a componentwise add between two vectors.
+        /// </summary>
+        /// <param name="a">First vector to add.</param>
+        /// <param name="b">Second vector to add.</param>
+        /// <returns>Sum of a and b.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector4Wide operator +(Vector4Wide a, Vector4Wide b)
+        {
+            Vector4Wide result;
+            result.X = a.X + b.X;
+            result.Y = a.Y + b.Y;
+            result.Z = a.Z + b.Z;
+            result.W = a.W + b.W;
+            return result;
+        }
+        /// <summary>
+        /// Finds the result of adding a scalar to every component of a vector.
+        /// </summary>
+        /// <param name="v">Vector to add to.</param>
+        /// <param name="s">Scalar to add to every component of the vector.</param>
+        /// <returns>Vector with components equal to the input vector added to the input scalar.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector4Wide operator +(Vector4Wide v, Vector<float> s)
+        {
+            Vector4Wide result;
+            result.X = v.X + s;
+            result.Y = v.Y + s;
+            result.Z = v.Z + s;
+            result.W = v.W + s;
+            return result;
+        }
+        /// <summary>
+        /// Finds the result of adding a scalar to every component of a vector.
+        /// </summary>
+        /// <param name="v">Vector to add to.</param>
+        /// <param name="s">Scalar to add to every component of the vector.</param>
+        /// <returns>Vector with components equal to the input vector added to the input scalar.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector4Wide operator +(Vector<float> s, Vector4Wide v)
+        {
+            Vector4Wide result;
+            result.X = v.X + s;
+            result.Y = v.Y + s;
+            result.Z = v.Z + s;
+            result.W = v.W + s;
+            return result;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
