@@ -13,7 +13,7 @@ using System.Text;
 namespace Demos.Demos
 {
     /// <summary>
-    /// Shows a completely isolated usage of the engine without using any of the other demo types.
+    /// Shows a completely isolated usage of the engine without using any of the other demo physics-related types.
     /// </summary>
     public static class SimpleSelfContainedDemo
     {
@@ -94,7 +94,8 @@ namespace Demos.Demos
 
                 //The engine does not define any per-body material properties. Instead, all material lookup and blending operations are handled by the callbacks.
                 //For the purposes of this demo, we'll use the same settings for all pairs.
-                //(Note that there's no bounciness property! See here for more details: https://github.com/bepu/bepuphysics2/issues/3 and check out the BouncinessDemo for some options.)
+                //(Note that there's no 'bounciness' or 'coefficient of restitution' property!
+                //Bounciness is handled through the contact spring settings instead. Setting See here for more details: https://github.com/bepu/bepuphysics2/issues/3 and check out the BouncinessDemo for some options.)
                 pairMaterial.FrictionCoefficient = 1f;
                 pairMaterial.MaximumRecoveryVelocity = 2f;
                 pairMaterial.SpringSettings = new SpringSettings(30, 1);
@@ -129,8 +130,6 @@ namespace Demos.Demos
         //Note that the engine does not require any particular form of gravity- it, like all the contact callbacks, is managed by a callback.
         public struct PoseIntegratorCallbacks : IPoseIntegratorCallbacks
         {
-            public Vector3 Gravity;
-
             /// <summary>
             /// Performs any required initialization logic after the Simulation instance has been constructed.
             /// </summary>
@@ -160,6 +159,8 @@ namespace Demos.Demos
             /// Most use cases should set this to false.
             /// </summary>
             public readonly bool IntegrateVelocityForKinematics => false;
+
+            public Vector3 Gravity;
 
             public PoseIntegratorCallbacks(Vector3 gravity) : this()
             {
@@ -211,12 +212,8 @@ namespace Demos.Demos
         {
             //The buffer pool is a source of raw memory blobs for the engine to use.
             var bufferPool = new BufferPool();
-            //Note that you can also control the order of internal stage execution using a different ITimestepper implementation.
-            //The PositionFirstTimestepper is the simplest timestepping mode in a technical sense, but since it integrates velocity into position at the start of the frame, 
-            //directly modified velocities outside of the timestep will be integrated before collision detection or the solver has a chance to intervene.
-            //PositionLastTimestepper avoids that by running collision detection and the solver first at the cost of a tiny amount of overhead.
-            //(You could avoid the issue with PositionFirstTimestepper by modifying velocities in the PositionFirstTimestepper's BeforeCollisionDetection callback 
-            //instead of outside the timestep, too, but it's a little more complicated.)
+            //The following sets up a simulation with the callbacks defined above, and tells it to use 4 solver substeps per frame with 1 velocity iteration per substep.
+            //It uses the default SubsteppingTimestepper. You could use a custom ITimestepper implementation to customize when stages run relative to each other, or to insert more callbacks.         
             var simulation = Simulation.Create(bufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
 
             //Drop a ball on a big static box.
@@ -226,6 +223,7 @@ namespace Demos.Demos
 
             simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), simulation.Shapes.Add(new Box(500, 1, 500))));
 
+            //Any IThreadDispatcher implementation can be used for multithreading. Here, we use the demos SimpleThreadDispatcher.
             var threadDispatcher = new SimpleThreadDispatcher(Environment.ProcessorCount);
 
             //Now take 100 time steps!
@@ -233,6 +231,9 @@ namespace Demos.Demos
             {
                 //Multithreading is pretty pointless for a simulation of one ball, but passing a IThreadDispatcher instance is all you have to do to enable multithreading.
                 //If you don't want to use multithreading, don't pass a IThreadDispatcher.
+                
+                //Note that each timestep is 0.01 units in duration, so all 100 time steps will last 1 unit of time.
+                //(Usually, units of time are defined to be seconds, but the engine has no preconceived notions about units. All it sees are the numbers.)
                 simulation.Timestep(0.01f, threadDispatcher);
             }
 
