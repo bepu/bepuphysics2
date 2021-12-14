@@ -453,6 +453,7 @@ namespace Demos.Demos
                 SpringSettings = springSettings
             });
             simulation.Solver.Add(handles.Hips, handles.Abdomen, BuildAngularMotor());
+
             //Abdomen-Chest
             var upperSpine = (abdomenPose.Position + chestPose.Position) * 0.5f;
             simulation.Solver.Add(handles.Abdomen, handles.Chest, new BallSocket
@@ -477,6 +478,7 @@ namespace Demos.Demos
                 SpringSettings = springSettings
             });
             simulation.Solver.Add(handles.Abdomen, handles.Chest, BuildAngularMotor());
+
             //Chest-Head
             var neck = (headPose.Position + chestPose.Position) * 0.5f;
             simulation.Solver.Add(handles.Chest, handles.Head, new BallSocket

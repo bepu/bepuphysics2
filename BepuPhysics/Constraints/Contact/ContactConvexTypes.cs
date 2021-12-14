@@ -378,15 +378,7 @@ namespace BepuPhysics.Constraints.Contact
             //That can cause some subtle behavioral issues sometimes, so we approximate lever arm with the contact depth, assuming that the contact surface area will increase as the depth increases.
             var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * accumulatedImpulses.Penetration0 * prestep.Contact0.Depth;
             TwistFrictionOneBody.Solve2(prestep.Normal, inertiaA, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
-        }
-                
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector<float> dt, in Contact1AccumulatedImpulses accumulatedImpulses, ref Contact1OneBodyPrestepData prestep)
-        {
-            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, wsvA, ref prestep.Contact0.Depth);
-        }
+        }               
     }
     
     /// <summary>
@@ -600,16 +592,7 @@ namespace BepuPhysics.Constraints.Contact
                 accumulatedImpulses.Penetration0 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact0.OffsetA) +
                 accumulatedImpulses.Penetration1 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact1.OffsetA));
             TwistFrictionOneBody.Solve2(prestep.Normal, inertiaA, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
-        }
-                
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector<float> dt, in Contact2AccumulatedImpulses accumulatedImpulses, ref Contact2OneBodyPrestepData prestep)
-        {
-            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, wsvA, ref prestep.Contact0.Depth);
-            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, wsvA, ref prestep.Contact1.Depth);
-        }
+        }               
     }
     
     /// <summary>
@@ -840,17 +823,7 @@ namespace BepuPhysics.Constraints.Contact
                 accumulatedImpulses.Penetration1 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact1.OffsetA) +
                 accumulatedImpulses.Penetration2 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact2.OffsetA));
             TwistFrictionOneBody.Solve2(prestep.Normal, inertiaA, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
-        }
-                
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector<float> dt, in Contact3AccumulatedImpulses accumulatedImpulses, ref Contact3OneBodyPrestepData prestep)
-        {
-            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, wsvA, ref prestep.Contact0.Depth);
-            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, wsvA, ref prestep.Contact1.Depth);
-            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact2.OffsetA, prestep.Normal, wsvA, ref prestep.Contact2.Depth);
-        }
+        }               
     }
     
     /// <summary>
@@ -1098,18 +1071,7 @@ namespace BepuPhysics.Constraints.Contact
                 accumulatedImpulses.Penetration2 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact2.OffsetA) +
                 accumulatedImpulses.Penetration3 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact3.OffsetA));
             TwistFrictionOneBody.Solve2(prestep.Normal, inertiaA, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
-        }
-                
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector<float> dt, in Contact4AccumulatedImpulses accumulatedImpulses, ref Contact4OneBodyPrestepData prestep)
-        {
-            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.Normal, wsvA, ref prestep.Contact0.Depth);
-            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.Normal, wsvA, ref prestep.Contact1.Depth);
-            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact2.OffsetA, prestep.Normal, wsvA, ref prestep.Contact2.Depth);
-            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.Contact3.OffsetA, prestep.Normal, wsvA, ref prestep.Contact3.Depth);
-        }
+        }               
     }
     
     /// <summary>
@@ -1323,17 +1285,7 @@ namespace BepuPhysics.Constraints.Contact
             //That can cause some subtle behavioral issues sometimes, so we approximate lever arm with the contact depth, assuming that the contact surface area will increase as the depth increases.
             var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * accumulatedImpulses.Penetration0 * prestep.Contact0.Depth;
             TwistFriction.Solve2(prestep.Normal, inertiaA, inertiaB, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
-        }
-                
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, 
-            in Vector<float> dt, in Contact1AccumulatedImpulses accumulatedImpulses, ref Contact1PrestepData prestep)
-        {
-            prestep.OffsetB = positionB - positionA;
-            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact0.Depth);
-        }
+        }               
     }
     
     /// <summary>
@@ -1566,18 +1518,7 @@ namespace BepuPhysics.Constraints.Contact
                 accumulatedImpulses.Penetration0 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact0.OffsetA) +
                 accumulatedImpulses.Penetration1 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact1.OffsetA));
             TwistFriction.Solve2(prestep.Normal, inertiaA, inertiaB, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
-        }
-                
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, 
-            in Vector<float> dt, in Contact2AccumulatedImpulses accumulatedImpulses, ref Contact2PrestepData prestep)
-        {
-            prestep.OffsetB = positionB - positionA;
-            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact0.Depth);
-            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact1.Depth);
-        }
+        }               
     }
     
     /// <summary>
@@ -1828,19 +1769,7 @@ namespace BepuPhysics.Constraints.Contact
                 accumulatedImpulses.Penetration1 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact1.OffsetA) +
                 accumulatedImpulses.Penetration2 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact2.OffsetA));
             TwistFriction.Solve2(prestep.Normal, inertiaA, inertiaB, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
-        }
-                
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, 
-            in Vector<float> dt, in Contact3AccumulatedImpulses accumulatedImpulses, ref Contact3PrestepData prestep)
-        {
-            prestep.OffsetB = positionB - positionA;
-            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact0.Depth);
-            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact1.Depth);
-            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact2.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact2.Depth);
-        }
+        }               
     }
     
     /// <summary>
@@ -2109,20 +2038,7 @@ namespace BepuPhysics.Constraints.Contact
                 accumulatedImpulses.Penetration2 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact2.OffsetA) +
                 accumulatedImpulses.Penetration3 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact3.OffsetA));
             TwistFriction.Solve2(prestep.Normal, inertiaA, inertiaB, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
-        }
-                
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, 
-            in Vector<float> dt, in Contact4AccumulatedImpulses accumulatedImpulses, ref Contact4PrestepData prestep)
-        {
-            prestep.OffsetB = positionB - positionA;
-            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact0.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact0.Depth);
-            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact1.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact1.Depth);
-            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact2.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact2.Depth);
-            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.Contact3.OffsetA, prestep.OffsetB, prestep.Normal, wsvA, wsvB, ref prestep.Contact3.Depth);
-        }
+        }               
     }
     
     /// <summary>

@@ -377,23 +377,7 @@ for (int i = 0; i < contactCount; ++i)
 <#}#>
 <#}#>
             TwistFriction<#=suffix#>.Solve2(prestep.Normal, inertiaA, <#if (bodyCount == 2) {#>inertiaB, <#}#>maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
-        }
-                
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateForNewPose(
-            in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA, 
-<# if(bodyCount == 2) {#>
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in BodyVelocityWide wsvB, 
-<#}#>
-            in Vector<float> dt, in Contact<#= contactCount #>AccumulatedImpulses accumulatedImpulses, ref Contact<#= contactCount #><#=suffix#>PrestepData prestep)
-        {
-<#if (bodyCount == 2) {#>
-            prestep.OffsetB = positionB - positionA;
-<#}#>
-<#for (int i = 0; i < contactCount; ++i) {#>
-            PenetrationLimit<#=suffix#>.UpdatePenetrationDepth(dt, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.OffsetB, <#}#>prestep.Normal, wsvA, <#if (bodyCount == 2) {#>wsvB, <#}#>ref prestep.Contact<#=i#>.Depth);
-<#}#>
-        }
+        }               
     }
     
     /// <summary>
