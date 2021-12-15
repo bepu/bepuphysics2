@@ -160,7 +160,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector.LessThanOrEqual(caPlaneTest, Vector<float>.Zero)));
             var cylinderInsideAndBelowTriangle = Vector.BitwiseAnd(cylinderInsideTriangleEdgePlanes, cylinderBelowPlane);
 
-            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
             TriangleWide.ComputeNondegenerateTriangleMask(triangleAB, triangleCA, triangleNormalLength, out var triangleEpsilonScale, out var nondegenerateMask);
             inactiveLanes = Vector.BitwiseOr(Vector.OnesComplement(nondegenerateMask), inactiveLanes);
             inactiveLanes = Vector.BitwiseOr(cylinderInsideAndBelowTriangle, inactiveLanes);

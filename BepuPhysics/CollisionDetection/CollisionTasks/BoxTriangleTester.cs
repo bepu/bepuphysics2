@@ -333,7 +333,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.Abs(triangleNormal.X) * a.HalfWidth + Vector.Abs(triangleNormal.Y) * a.HalfHeight + Vector.Abs(triangleNormal.Z) * a.HalfLength - Vector.Abs(trianglePlaneOffset);
             Select(ref depth, ref localNormal, triangleFaceDepth, calibratedTriangleNormal);
 
-            ManifoldCandidateHelper.CreateActiveMask(pairCount, out var activeLanes);
+            var activeLanes = BundleIndexing.CreateMaskForCountInBundle(pairCount);
             //The following was created for MeshReduction when it demanded all contact normals be correct during separation.
             //Other pairs don't have that requirement, and we ended modifying MeshReduction to be a little less picky.
             //This remains for posterity because, hey, it works, and if you need it, there it is.

@@ -331,7 +331,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.LengthSquared(abB, out var abBLengthSquared);
             Vector3Wide.LengthSquared(caA, out var caALengthSquared);
             Vector3Wide.LengthSquared(caB, out var caBLengthSquared);
-            ManifoldCandidateHelper.CreateActiveMask(pairCount, out var allowContacts);
+            var allowContacts = BundleIndexing.CreateMaskForCountInBundle(pairCount);
             //The following was created for MeshReduction when it demanded all contact normals be correct during separation.
             //Other pairs don't have that requirement, and we ended modifying MeshReduction to be a little less picky.
             //This remains for posterity because, hey, it works, and if you need it, there it is.

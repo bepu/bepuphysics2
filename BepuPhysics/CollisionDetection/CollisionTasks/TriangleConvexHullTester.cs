@@ -59,8 +59,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector.BitwiseAnd(Vector.LessThanOrEqual(bcPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(caPlaneTest, Vector<float>.Zero)));
             var hullInsideAndBelowTriangle = Vector.BitwiseAnd(hullBelowPlane, hullInsideTriangleEdgePlanes);
 
-
-            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
             TriangleWide.ComputeNondegenerateTriangleMask(triangleAB, triangleCA, triangleNormalLength, out var triangleEpsilonScale, out var nondegenerateMask);
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
             var epsilonScale = Vector.Min(triangleEpsilonScale, hullEpsilonScale);

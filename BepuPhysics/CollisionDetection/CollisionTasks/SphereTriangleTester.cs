@@ -67,7 +67,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var outsideAnyEdge = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideAC, outsideBC));
             Unsafe.SkipInit(out Vector3Wide localClosestOnTriangle);
             var negativeOne = new Vector<int>(-1);
-            ManifoldCandidateHelper.CreateActiveMask(pairCount, out var activeLanes);
+            var activeLanes = BundleIndexing.CreateMaskForCountInBundle(pairCount);
             if (Vector.EqualsAny(Vector.BitwiseAnd(activeLanes, outsideAnyEdge), negativeOne))
             {
                 //At least one lane detected a point outside of the triangle. Choose one edge which is outside as the representative.

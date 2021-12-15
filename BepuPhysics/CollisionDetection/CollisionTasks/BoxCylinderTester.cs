@@ -123,7 +123,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             CylinderSupportFinder cylinderSupportFinder = default;
 
             //We now have a decent estimate for the local normal and an initial simplex to work from. Refine it to a local minimum.
-            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
 
             var depthThreshold = -speculativeMargin;
             var epsilonScale = Vector.Min(Vector.Max(a.HalfWidth, Vector.Max(a.HalfHeight, a.HalfLength)), Vector.Max(b.HalfLength, b.Radius));

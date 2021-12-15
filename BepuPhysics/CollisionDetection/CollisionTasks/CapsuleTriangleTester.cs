@@ -193,7 +193,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(useEdge, edgeNormal, faceNormal, out var localNormal);
             Vector3Wide.Dot(localNormal, faceNormal, out var localNormalDotFaceNormal);
             var collidingWithSolidSide = Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<float>(TriangleWide.BackfaceNormalDotRejectionThreshold));
-            ManifoldCandidateHelper.CreateActiveMask(pairCount, out var activeLanes);
+            var activeLanes = BundleIndexing.CreateMaskForCountInBundle(pairCount);
             TriangleWide.ComputeNondegenerateTriangleMask(ab, ac, faceNormalLength, out _, out var nondegenerateMask);
             var negativeMargin = -speculativeMargin;
             var allowContacts = Vector.BitwiseAnd(Vector.BitwiseAnd(Vector.GreaterThanOrEqual(depth + a.Radius, negativeMargin), activeLanes), Vector.BitwiseAnd(collidingWithSolidSide, nondegenerateMask));

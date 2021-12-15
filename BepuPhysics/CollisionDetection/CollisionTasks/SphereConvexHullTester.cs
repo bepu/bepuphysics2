@@ -29,7 +29,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
             var hullSupportFinder = default(ConvexHullSupportFinder);
             var sphereSupportFinder = default(SphereSupportFinder);
-            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
             var epsilonScale = Vector.Min(a.Radius, hullEpsilonScale);
             DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Sphere, SphereWide, SphereSupportFinder>.FindMinimumDepth(

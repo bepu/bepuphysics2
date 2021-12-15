@@ -152,7 +152,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Blindly trying a bunch of low probability feature pairs- especially those which would fall into the above- isn't very wise.
 
             //We now have a decent estimate for the local normal and an initial simplex to work from. Refine it to a local minimum.
-            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
 
             var depthThreshold = -speculativeMargin;
             var epsilonScale = Vector.Min(Vector.Max(a.HalfLength, a.Radius), Vector.Max(b.HalfLength, b.Radius));

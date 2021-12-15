@@ -382,7 +382,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var faceBZDepth = b.HalfLength + a.HalfWidth * absRBZ.X + a.HalfHeight * absRBZ.Y + a.HalfLength * absRBZ.Z - Vector.Abs(bLocalOffsetB.Z);
             Select(ref depth, ref localNormal, ref faceBZDepth, ref rB.Z.X, ref rB.Z.Y, ref rB.Z.Z);
 
-            ManifoldCandidateHelper.CreateActiveMask(pairCount, out var activeLanes);
+            var activeLanes = BundleIndexing.CreateMaskForCountInBundle(pairCount);
             var minimumDepth = -speculativeMargin;
             var allowContacts = Vector.BitwiseAnd(activeLanes, Vector.GreaterThanOrEqual(depth, minimumDepth));
             if (Vector.EqualsAll(allowContacts, Vector<int>.Zero))

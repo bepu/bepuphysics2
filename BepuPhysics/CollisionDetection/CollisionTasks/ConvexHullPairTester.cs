@@ -33,7 +33,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
             var hullSupportFinder = default(ConvexHullSupportFinder);
-            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
             a.EstimateEpsilonScale(inactiveLanes, out var aEpsilonScale);
             b.EstimateEpsilonScale(inactiveLanes, out var bEpsilonScale);
             var epsilonScale = Vector.Min(aEpsilonScale, bEpsilonScale);
