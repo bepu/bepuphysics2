@@ -115,37 +115,13 @@ for (int i = 0; i < contactCount ; ++i)
             return ref Unsafe.Add(ref impulses.Contact0, index);
         }
     }
-
-    public unsafe struct Contact<#= contactCount #>NonconvexProjection : INonconvexTwoBodyProjection<Contact<#= contactCount #>NonconvexProjection>
-    {
-        public NonconvexTwoBodyProjectionCommon Common;
-        //Nonprimitive fixed would be pretty convenient.
-<#
-for (int i = 0; i < contactCount ; ++i)
-{#>
-        public ContactNonconvexTwoBodyProjection Contact<#=i#>;
-<#}#>
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref ContactNonconvexTwoBodyProjection GetFirstContact(ref Contact<#= contactCount #>NonconvexProjection projection)
-        {
-            return ref projection.Contact0;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexTwoBodyProjectionCommon GetCommonProperties(ref Contact<#= contactCount #>NonconvexProjection projection)
-        {
-            return ref projection.Common;
-        }
-
-        public readonly int ContactCount => <#= contactCount #>;
-    }
-    
+        
     /// <summary>
     /// Handles the solve iterations of a bunch of <#= contactCount #>-contact nonconvex two body manifold constraints.
     /// </summary>
     public class Contact<#= contactCount #>NonconvexTypeProcessor :
-        TwoBodyContactTypeProcessor<Contact<#= contactCount #>NonconvexPrestepData, Contact<#= contactCount #>NonconvexProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses,
-            ContactNonconvexTwoBodyFunctions<Contact<#= contactCount #>NonconvexPrestepData, Contact<#= contactCount #>NonconvexProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses>>
+        TwoBodyContactTypeProcessor<Contact<#= contactCount #>NonconvexPrestepData, Contact<#= contactCount #>NonconvexAccumulatedImpulses,
+            ContactNonconvexTwoBodyFunctions<Contact<#= contactCount #>NonconvexPrestepData, Contact<#= contactCount #>NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = <#= 13 + contactCount #>;
@@ -226,38 +202,14 @@ for (int i = 0; i < contactCount ; ++i)
                 
         public readonly int ContactCount => <#= contactCount #>;
         public readonly int BodyCount => 1;
-    }
-
-    public unsafe struct Contact<#= contactCount #>NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact<#= contactCount #>NonconvexOneBodyProjection>
-    {
-        public NonconvexOneBodyProjectionCommon Common;
-        //Nonprimitive fixed would be pretty convenient.
-<#
-for (int i = 0; i < contactCount ; ++i)
-{#>
-        public ContactNonconvexOneBodyProjection Contact<#=i#>;
-<#}#>
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref ContactNonconvexOneBodyProjection GetFirstContact(ref Contact<#= contactCount #>NonconvexOneBodyProjection projection)
-        {
-            return ref projection.Contact0;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexOneBodyProjectionCommon GetCommonProperties(ref Contact<#= contactCount #>NonconvexOneBodyProjection projection)
-        {
-            return ref projection.Common;
-        }
-
-        public readonly int ContactCount => <#= contactCount #>;
-    }
+    }    
 
     /// <summary>
     /// Handles the solve iterations of a bunch of <#= contactCount #>-contact nonconvex one body manifold constraints.
     /// </summary>
     public class Contact<#= contactCount #>NonconvexOneBodyTypeProcessor :
-        OneBodyContactTypeProcessor<Contact<#= contactCount #>NonconvexOneBodyPrestepData, Contact<#= contactCount #>NonconvexOneBodyProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses,
-            ContactNonconvexOneBodyFunctions<Contact<#= contactCount #>NonconvexOneBodyPrestepData, Contact<#= contactCount #>NonconvexOneBodyProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses>>
+        OneBodyContactTypeProcessor<Contact<#= contactCount #>NonconvexOneBodyPrestepData, Contact<#= contactCount #>NonconvexAccumulatedImpulses,
+            ContactNonconvexOneBodyFunctions<Contact<#= contactCount #>NonconvexOneBodyPrestepData, Contact<#= contactCount #>NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = <#= 6 + contactCount #>;

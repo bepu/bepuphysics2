@@ -26,7 +26,7 @@ namespace DemoRenderer.Constraints
         public abstract void ExtractLines(Bodies bodies, int setIndex, ref TypeBatch typeBatch, int constraintStart, int constraintCount, ref QuickList<LineInstance> lines);
     }
 
-    class TypeLineExtractor<T, TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses> : TypeLineExtractor
+    class TypeLineExtractor<T, TBodyReferences, TPrestep, TAccumulatedImpulses> : TypeLineExtractor
         where TBodyReferences : unmanaged
         where TPrestep : unmanaged
         where T : struct, IConstraintLineExtractor<TPrestep>
@@ -123,45 +123,45 @@ namespace DemoRenderer.Constraints
         {
             this.pool = pool;
             lineExtractors = new TypeLineExtractor[32];
-            AllocateSlot(BallSocketTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketLineExtractor, TwoBodyReferences, BallSocketPrestepData, BallSocketProjection, Vector3Wide>();
-            AllocateSlot(BallSocketServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketServoLineExtractor, TwoBodyReferences, BallSocketServoPrestepData, BallSocketServoProjection, Vector3Wide>();
-            AllocateSlot(BallSocketMotorTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketMotorLineExtractor, TwoBodyReferences, BallSocketMotorPrestepData, BallSocketMotorProjection, Vector3Wide>();
-            AllocateSlot(WeldTypeProcessor.BatchTypeId) = new TypeLineExtractor<WeldLineExtractor, TwoBodyReferences, WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>();
-            AllocateSlot(DistanceServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<DistanceServoLineExtractor, TwoBodyReferences, DistanceServoPrestepData, DistanceServoProjection, Vector<float>>();
-            AllocateSlot(DistanceLimitTypeProcessor.BatchTypeId) = new TypeLineExtractor<DistanceLimitLineExtractor, TwoBodyReferences, DistanceLimitPrestepData, DistanceLimitProjection, Vector<float>>();
-            AllocateSlot(CenterDistanceTypeProcessor.BatchTypeId) = new TypeLineExtractor<CenterDistanceLineExtractor, TwoBodyReferences, CenterDistancePrestepData, CenterDistanceProjection, Vector<float>>();
-            AllocateSlot(PointOnLineServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<PointOnLineLineExtractor, TwoBodyReferences, PointOnLineServoPrestepData, PointOnLineServoProjection, Vector2Wide>();
-            AllocateSlot(LinearAxisServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<LinearAxisServoLineExtractor, TwoBodyReferences, LinearAxisServoPrestepData, LinearAxisServoProjection, Vector<float>>();
-            AllocateSlot(AngularSwivelHingeTypeProcessor.BatchTypeId) = new TypeLineExtractor<AngularSwivelHingeLineExtractor, TwoBodyReferences, AngularSwivelHingePrestepData, AngularSwivelHingeProjection, Vector<float>>();
-            AllocateSlot(SwivelHingeTypeProcessor.BatchTypeId) = new TypeLineExtractor<SwivelHingeLineExtractor, TwoBodyReferences, SwivelHingePrestepData, SwivelHingeProjection, Vector4Wide>();
-            AllocateSlot(HingeTypeProcessor.BatchTypeId) = new TypeLineExtractor<HingeLineExtractor, TwoBodyReferences, HingePrestepData, HingeProjection, HingeAccumulatedImpulses>();
-            AllocateSlot(OneBodyLinearServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<OneBodyLinearServoLineExtractor, Vector<int>, OneBodyLinearServoPrestepData, OneBodyLinearServoProjection, Vector<float>>();
+            AllocateSlot(BallSocketTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketLineExtractor, TwoBodyReferences, BallSocketPrestepData, Vector3Wide>();
+            AllocateSlot(BallSocketServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketServoLineExtractor, TwoBodyReferences, BallSocketServoPrestepData, Vector3Wide>();
+            AllocateSlot(BallSocketMotorTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketMotorLineExtractor, TwoBodyReferences, BallSocketMotorPrestepData, Vector3Wide>();
+            AllocateSlot(WeldTypeProcessor.BatchTypeId) = new TypeLineExtractor<WeldLineExtractor, TwoBodyReferences, WeldPrestepData, WeldAccumulatedImpulses>();
+            AllocateSlot(DistanceServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<DistanceServoLineExtractor, TwoBodyReferences, DistanceServoPrestepData, Vector<float>>();
+            AllocateSlot(DistanceLimitTypeProcessor.BatchTypeId) = new TypeLineExtractor<DistanceLimitLineExtractor, TwoBodyReferences, DistanceLimitPrestepData, Vector<float>>();
+            AllocateSlot(CenterDistanceTypeProcessor.BatchTypeId) = new TypeLineExtractor<CenterDistanceLineExtractor, TwoBodyReferences, CenterDistancePrestepData, Vector<float>>();
+            AllocateSlot(PointOnLineServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<PointOnLineLineExtractor, TwoBodyReferences, PointOnLineServoPrestepData, Vector2Wide>();
+            AllocateSlot(LinearAxisServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<LinearAxisServoLineExtractor, TwoBodyReferences, LinearAxisServoPrestepData, Vector<float>>();
+            AllocateSlot(AngularSwivelHingeTypeProcessor.BatchTypeId) = new TypeLineExtractor<AngularSwivelHingeLineExtractor, TwoBodyReferences, AngularSwivelHingePrestepData, Vector<float>>();
+            AllocateSlot(SwivelHingeTypeProcessor.BatchTypeId) = new TypeLineExtractor<SwivelHingeLineExtractor, TwoBodyReferences, SwivelHingePrestepData, Vector4Wide>();
+            AllocateSlot(HingeTypeProcessor.BatchTypeId) = new TypeLineExtractor<HingeLineExtractor, TwoBodyReferences, HingePrestepData, HingeAccumulatedImpulses>();
+            AllocateSlot(OneBodyLinearServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<OneBodyLinearServoLineExtractor, Vector<int>, OneBodyLinearServoPrestepData, Vector<float>>();
 
-            AllocateSlot(Contact1OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact1OneBodyLineExtractor, Vector<int>, Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>();
-            AllocateSlot(Contact2OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact2OneBodyLineExtractor, Vector<int>, Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses>();
-            AllocateSlot(Contact3OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact3OneBodyLineExtractor, Vector<int>, Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses>();
-            AllocateSlot(Contact4OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact4OneBodyLineExtractor, Vector<int>, Contact4OneBodyPrestepData, Contact4OneBodyProjection, Contact4AccumulatedImpulses>();
+            AllocateSlot(Contact1OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact1OneBodyLineExtractor, Vector<int>, Contact1OneBodyPrestepData, Contact1AccumulatedImpulses>();
+            AllocateSlot(Contact2OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact2OneBodyLineExtractor, Vector<int>, Contact2OneBodyPrestepData, Contact2AccumulatedImpulses>();
+            AllocateSlot(Contact3OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact3OneBodyLineExtractor, Vector<int>, Contact3OneBodyPrestepData, Contact3AccumulatedImpulses>();
+            AllocateSlot(Contact4OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact4OneBodyLineExtractor, Vector<int>, Contact4OneBodyPrestepData, Contact4AccumulatedImpulses>();
 
-            AllocateSlot(Contact1TypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact1LineExtractor, TwoBodyReferences, Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses>();
-            AllocateSlot(Contact2TypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact2LineExtractor, TwoBodyReferences, Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses>();
-            AllocateSlot(Contact3TypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact3LineExtractor, TwoBodyReferences, Contact3PrestepData, Contact3Projection, Contact3AccumulatedImpulses>();
-            AllocateSlot(Contact4TypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact4LineExtractor, TwoBodyReferences, Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses>();
+            AllocateSlot(Contact1TypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact1LineExtractor, TwoBodyReferences, Contact1PrestepData, Contact1AccumulatedImpulses>();
+            AllocateSlot(Contact2TypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact2LineExtractor, TwoBodyReferences, Contact2PrestepData, Contact2AccumulatedImpulses>();
+            AllocateSlot(Contact3TypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact3LineExtractor, TwoBodyReferences, Contact3PrestepData, Contact3AccumulatedImpulses>();
+            AllocateSlot(Contact4TypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact4LineExtractor, TwoBodyReferences, Contact4PrestepData, Contact4AccumulatedImpulses>();
 
-            AllocateSlot(Contact2NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact2NonconvexOneBodyLineExtractor, Vector<int>, Contact2NonconvexOneBodyPrestepData, Contact2NonconvexOneBodyProjection, Contact2NonconvexAccumulatedImpulses>();
-            AllocateSlot(Contact3NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact3NonconvexOneBodyLineExtractor, Vector<int>, Contact3NonconvexOneBodyPrestepData, Contact3NonconvexOneBodyProjection, Contact3NonconvexAccumulatedImpulses>();
-            AllocateSlot(Contact4NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact4NonconvexOneBodyLineExtractor, Vector<int>, Contact4NonconvexOneBodyPrestepData, Contact4NonconvexOneBodyProjection, Contact4NonconvexAccumulatedImpulses>();
-            //AllocateSlot(Contact5NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact5NonconvexOneBodyLineExtractor, Vector<int>, Contact5NonconvexOneBodyPrestepData, Contact5NonconvexOneBodyProjection, Contact5NonconvexAccumulatedImpulses>();
-            //AllocateSlot(Contact6NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact6NonconvexOneBodyLineExtractor, Vector<int>, Contact6NonconvexOneBodyPrestepData, Contact6NonconvexOneBodyProjection, Contact6NonconvexAccumulatedImpulses>();
-            //AllocateSlot(Contact7NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact7NonconvexOneBodyLineExtractor, Vector<int>, Contact7NonconvexOneBodyPrestepData, Contact7NonconvexOneBodyProjection, Contact7NonconvexAccumulatedImpulses>();
-            //AllocateSlot(Contact8NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact8NonconvexOneBodyLineExtractor, Vector<int>, Contact8NonconvexOneBodyPrestepData, Contact8NonconvexOneBodyProjection, Contact8NonconvexAccumulatedImpulses>();
+            AllocateSlot(Contact2NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact2NonconvexOneBodyLineExtractor, Vector<int>, Contact2NonconvexOneBodyPrestepData, Contact2NonconvexAccumulatedImpulses>();
+            AllocateSlot(Contact3NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact3NonconvexOneBodyLineExtractor, Vector<int>, Contact3NonconvexOneBodyPrestepData, Contact3NonconvexAccumulatedImpulses>();
+            AllocateSlot(Contact4NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact4NonconvexOneBodyLineExtractor, Vector<int>, Contact4NonconvexOneBodyPrestepData, Contact4NonconvexAccumulatedImpulses>();
+            //AllocateSlot(Contact5NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact5NonconvexOneBodyLineExtractor, Vector<int>, Contact5NonconvexOneBodyPrestepData, Contact5NonconvexAccumulatedImpulses>();
+            //AllocateSlot(Contact6NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact6NonconvexOneBodyLineExtractor, Vector<int>, Contact6NonconvexOneBodyPrestepData, Contact6NonconvexAccumulatedImpulses>();
+            //AllocateSlot(Contact7NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact7NonconvexOneBodyLineExtractor, Vector<int>, Contact7NonconvexOneBodyPrestepData, Contact7NonconvexAccumulatedImpulses>();
+            //AllocateSlot(Contact8NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact8NonconvexOneBodyLineExtractor, Vector<int>, Contact8NonconvexOneBodyPrestepData, Contact8NonconvexAccumulatedImpulses>();
 
-            AllocateSlot(Contact2NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact2NonconvexLineExtractor, TwoBodyReferences, Contact2NonconvexPrestepData, Contact2NonconvexProjection, Contact2NonconvexAccumulatedImpulses>();
-            AllocateSlot(Contact3NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact3NonconvexLineExtractor, TwoBodyReferences, Contact3NonconvexPrestepData, Contact3NonconvexProjection, Contact3NonconvexAccumulatedImpulses>();
-            AllocateSlot(Contact4NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact4NonconvexLineExtractor, TwoBodyReferences, Contact4NonconvexPrestepData, Contact4NonconvexProjection, Contact4NonconvexAccumulatedImpulses>();
-            //AllocateSlot(Contact5NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact5NonconvexLineExtractor, TwoBodyReferences, Contact5NonconvexPrestepData, Contact5NonconvexProjection, Contact5NonconvexAccumulatedImpulses>();
-            //AllocateSlot(Contact6NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact6NonconvexLineExtractor, TwoBodyReferences, Contact6NonconvexPrestepData, Contact6NonconvexProjection, Contact6NonconvexAccumulatedImpulses>();
-            //AllocateSlot(Contact7NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact7NonconvexLineExtractor, TwoBodyReferences, Contact7NonconvexPrestepData, Contact7NonconvexProjection, Contact7NonconvexAccumulatedImpulses>();
-            //AllocateSlot(Contact8NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact8NonconvexLineExtractor, TwoBodyReferences, Contact8NonconvexPrestepData, Contact8NonconvexProjection, Contact8NonconvexAccumulatedImpulses>();
+            AllocateSlot(Contact2NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact2NonconvexLineExtractor, TwoBodyReferences, Contact2NonconvexPrestepData, Contact2NonconvexAccumulatedImpulses>();
+            AllocateSlot(Contact3NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact3NonconvexLineExtractor, TwoBodyReferences, Contact3NonconvexPrestepData, Contact3NonconvexAccumulatedImpulses>();
+            AllocateSlot(Contact4NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact4NonconvexLineExtractor, TwoBodyReferences, Contact4NonconvexPrestepData, Contact4NonconvexAccumulatedImpulses>();
+            //AllocateSlot(Contact5NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact5NonconvexLineExtractor, TwoBodyReferences, Contact5NonconvexPrestepData, Contact5NonconvexAccumulatedImpulses>();
+            //AllocateSlot(Contact6NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact6NonconvexLineExtractor, TwoBodyReferences, Contact6NonconvexPrestepData, Contact6NonconvexAccumulatedImpulses>();
+            //AllocateSlot(Contact7NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact7NonconvexLineExtractor, TwoBodyReferences, Contact7NonconvexPrestepData, Contact7NonconvexAccumulatedImpulses>();
+            //AllocateSlot(Contact8NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact8NonconvexLineExtractor, TwoBodyReferences, Contact8NonconvexPrestepData, Contact8NonconvexAccumulatedImpulses>();
 
             jobs = new QuickList<ThreadJob>(Environment.ProcessorCount * (jobsPerThread + 1), pool);
 

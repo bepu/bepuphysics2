@@ -26,13 +26,8 @@ namespace BepuPhysics.Constraints
     /// </summary>
     /// <typeparam name="TPrestepData">Type of the prestep data used by the constraint.</typeparam>
     /// <typeparam name="TAccumulatedImpulse">Type of the accumulated impulses used by the constraint.</typeparam>
-    /// <typeparam name="TProjection">Type of the projection to input.</typeparam>
-    public interface ITwoBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+    public interface ITwoBodyConstraintFunctions<TPrestepData, TAccumulatedImpulse>
     {
-        void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TPrestepData prestepData, out TProjection projection);
-        void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
-        void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
-
         void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             ref TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB);
         void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
@@ -50,11 +45,11 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Shared implementation across all two body constraints.
     /// </summary>
-    public abstract class TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions,
+    public abstract class TwoBodyTypeProcessor<TPrestepData, TAccumulatedImpulse, TConstraintFunctions,
         TWarmStartAccessFilterA, TWarmStartAccessFilterB, TSolveAccessFilterA, TSolveAccessFilterB>
-        : TypeProcessor<TwoBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
-        where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
-        where TConstraintFunctions : unmanaged, ITwoBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        : TypeProcessor<TwoBodyReferences, TPrestepData, TAccumulatedImpulse>
+        where TPrestepData : unmanaged where TAccumulatedImpulse : unmanaged
+        where TConstraintFunctions : unmanaged, ITwoBodyConstraintFunctions<TPrestepData, TAccumulatedImpulse>
         where TWarmStartAccessFilterA : unmanaged, IBodyAccessFilter
         where TWarmStartAccessFilterB : unmanaged, IBodyAccessFilter
         where TSolveAccessFilterA : unmanaged, IBodyAccessFilter
@@ -114,69 +109,6 @@ namespace BepuPhysics.Constraints
             VerifySortRegion<TwoBodySortKeyGenerator>(ref typeBatch, bundleStartIndex, constraintCount, ref sortedKeys, ref sortedSourceIndices);
         }
 
-
-
-        //The following covers the common loop logic for all two body constraints. Each iteration invokes the warm start function type.
-        //This abstraction should, in theory, have zero overhead if the implementation of the interface is in a struct with aggressive inlining.
-
-        //By providing the overrides at this level, the concrete implementation (assuming it inherits from one of the prestep-providing variants)
-        //only has to specify *type* arguments associated with the interface-implementing struct-delegates. It's going to look very strange, but it's low overhead
-        //and minimizes per-type duplication.
-
-
-        public unsafe override void Prestep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
-        {
-            ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
-            ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
-            ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
-            var function = default(TConstraintFunctions);
-            for (int i = startBundle; i < exclusiveEndBundle; ++i)
-            {
-                ref var prestep = ref Unsafe.Add(ref prestepBase, i);
-                ref var projection = ref Unsafe.Add(ref projectionBase, i);
-                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
-                bodies.GatherState(ref references, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
-                function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, dt, inverseDt, ref prestep, out projection);
-            }
-        }
-
-        public unsafe override void WarmStart(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle)
-        {
-            ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
-            ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
-            ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
-            var function = default(TConstraintFunctions);
-            for (int i = startBundle; i < exclusiveEndBundle; ++i)
-            {
-                ref var projection = ref Unsafe.Add(ref projectionBase, i);
-                ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
-                bodies.GatherState(ref references, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
-                function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references.IndexA);
-                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref references.IndexB);
-
-            }
-        }
-
-        public unsafe override void SolveIteration(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle)
-        {
-            ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
-            ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
-            ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
-            var function = default(TConstraintFunctions);
-            for (int i = startBundle; i < exclusiveEndBundle; ++i)
-            {
-                ref var projection = ref Unsafe.Add(ref projectionBase, i);
-                ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
-                bodies.GatherState(ref references, out var orientationA, out var wsvA, out var inertiaA, out var ab, out var orientationB, out var wsvB, out var inertiaB);
-                function.Solve(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref references.IndexA);
-                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref references.IndexB);
-            }
-        }
-
         //public const int WarmStartPrefetchDistance = 8;
         //public const int SolvePrefetchDistance = 4;
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -230,6 +162,13 @@ namespace BepuPhysics.Constraints
         //}
 
 
+
+        //The following covers the common loop logic for all two body constraints. Each iteration invokes the warm start function type.
+        //This abstraction should, in theory, have zero overhead if the implementation of the interface is in a struct with aggressive inlining.
+
+        //By providing the overrides at this level, the concrete implementation (assuming it inherits from one of the prestep-providing variants)
+        //only has to specify *type* arguments associated with the interface-implementing struct-delegates. It's going to look very strange, but it's low overhead
+        //and minimizes per-type duplication.
 
         public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
             ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks,
@@ -312,10 +251,10 @@ namespace BepuPhysics.Constraints
         }
     }
 
-    public abstract class TwoBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
-        : TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions, AccessNoPose, AccessNoPose, AccessNoPose, AccessNoPose>
-        where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
-        where TConstraintFunctions : unmanaged, ITwoBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+    public abstract class TwoBodyContactTypeProcessor<TPrestepData, TAccumulatedImpulse, TConstraintFunctions>
+        : TwoBodyTypeProcessor<TPrestepData, TAccumulatedImpulse, TConstraintFunctions, AccessNoPose, AccessNoPose, AccessNoPose, AccessNoPose>
+        where TPrestepData : unmanaged where TAccumulatedImpulse : unmanaged
+        where TConstraintFunctions : unmanaged, ITwoBodyConstraintFunctions<TPrestepData, TAccumulatedImpulse>
     {
     }
 }

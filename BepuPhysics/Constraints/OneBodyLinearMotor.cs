@@ -64,34 +64,8 @@ namespace BepuPhysics.Constraints
         public MotorSettingsWide Settings;
     }
 
-    public struct OneBodyLinearMotorFunctions : IOneBodyConstraintFunctions<OneBodyLinearMotorPrestepData, OneBodyLinearServoProjection, Vector3Wide>
+    public struct OneBodyLinearMotorFunctions : IOneBodyConstraintFunctions<OneBodyLinearMotorPrestepData, Vector3Wide>
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
-            float dt, float inverseDt, ref OneBodyLinearMotorPrestepData prestep, out OneBodyLinearServoProjection projection)
-        {
-            //TODO: Note that this grabs a world position. That poses a problem for different position representations.
-            projection.Inertia = inertiaA;
-
-            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
-
-            OneBodyLinearServoFunctions.ComputeTransforms(prestep.LocalOffset, orientationA, effectiveMassCFMScale, inertiaA, out projection.Offset, out projection.EffectiveMass);
-            projection.BiasVelocity = prestep.TargetVelocity;
-        }
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            OneBodyLinearServoFunctions.ApplyImpulse(ref velocityA, projection, ref accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            OneBodyLinearServoFunctions.SharedSolve(ref velocityA, projection, ref accumulatedImpulse);
-        }
-
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref OneBodyLinearMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
@@ -125,7 +99,7 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyLinearMotorPrestepData prestepData) { }
     }
-    public class OneBodyLinearMotorTypeProcessor : OneBodyTypeProcessor<OneBodyLinearMotorPrestepData, OneBodyLinearServoProjection, Vector3Wide, OneBodyLinearMotorFunctions, AccessNoPosition, AccessNoPosition>
+    public class OneBodyLinearMotorTypeProcessor : OneBodyTypeProcessor<OneBodyLinearMotorPrestepData, Vector3Wide, OneBodyLinearMotorFunctions, AccessNoPosition, AccessNoPosition>
     {
         public const int BatchTypeId = 45;
     }

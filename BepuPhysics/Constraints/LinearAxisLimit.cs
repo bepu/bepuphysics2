@@ -87,69 +87,8 @@ namespace BepuPhysics.Constraints
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct LinearAxisLimitFunctions : ITwoBodyConstraintFunctions<LinearAxisLimitPrestepData, LinearAxisServoProjection, Vector<float>>
+    public struct LinearAxisLimitFunctions : ITwoBodyConstraintFunctions<LinearAxisLimitPrestepData, Vector<float>>
     {
-        public struct LimitJacobianModifier : LinearAxisServoFunctions.IJacobianModifier
-        {
-            public Vector<float> MinimumOffset;
-            public Vector<float> MaximumOffset;
-            public Vector<float> Error;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Modify(in Vector3Wide anchorA, in Vector3Wide anchorB, ref Vector3Wide normal)
-            {
-                Vector3Wide.Subtract(anchorB, anchorA, out var anchorOffset);
-                Vector3Wide.Dot(anchorOffset, normal, out var planeNormalDot);
-
-                var minimumError = MinimumOffset - planeNormalDot;
-                var maximumError = planeNormalDot - MaximumOffset;
-                var useMin = Vector.LessThan(Vector.Abs(minimumError), Vector.Abs(maximumError));
-
-                Error = Vector.ConditionalSelect(useMin, minimumError, maximumError);
-                normal.X = Vector.ConditionalSelect(useMin, -normal.X, normal.X);
-                normal.Y = Vector.ConditionalSelect(useMin, -normal.Y, normal.Y);
-                normal.Z = Vector.ConditionalSelect(useMin, -normal.Z, normal.Z);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            float dt, float inverseDt, ref LinearAxisLimitPrestepData prestep, out LinearAxisServoProjection projection)
-        {
-            Unsafe.SkipInit(out projection);
-            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            LimitJacobianModifier modifier;
-            modifier.MinimumOffset = prestep.MinimumOffset;
-            modifier.MaximumOffset = prestep.MaximumOffset;
-            modifier.Error = default;
-            LinearAxisServoFunctions.ComputeTransforms(ref modifier, prestep.LocalOffsetA, prestep.LocalOffsetB, prestep.LocalPlaneNormal, orientationA, inertiaA, ab, orientationB, inertiaB, effectiveMassCFMScale,
-                out var anchorA, out var anchorB, out var normal, out var effectiveMass,
-                out projection.LinearVelocityToImpulseA, out projection.AngularVelocityToImpulseA, out projection.AngularVelocityToImpulseB,
-                out projection.LinearImpulseToVelocityA, out projection.AngularImpulseToVelocityA, out projection.NegatedLinearImpulseToVelocityB, out projection.AngularImpulseToVelocityB);
-
-            InequalityHelpers.ComputeBiasVelocity(modifier.Error, positionErrorToVelocity, inverseDt, out var biasVelocity);
-            projection.BiasImpulse = biasVelocity * effectiveMass;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            LinearAxisServoFunctions.ApplyImpulse(ref velocityA, ref velocityB,
-                projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.NegatedLinearImpulseToVelocityB, projection.AngularImpulseToVelocityB,
-                ref accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            LinearAxisServoFunctions.ComputeCorrectiveImpulse(ref velocityA, ref velocityB, projection.LinearVelocityToImpulseA, projection.AngularVelocityToImpulseA, projection.AngularVelocityToImpulseB,
-                projection.BiasImpulse, projection.SoftnessImpulseScale, accumulatedImpulse, out var csi);
-            InequalityHelpers.ClampPositive(ref accumulatedImpulse, ref csi);
-            LinearAxisServoFunctions.ApplyImpulse(ref velocityA, ref velocityB,
-                projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.NegatedLinearImpulseToVelocityB, projection.AngularImpulseToVelocityB,
-                ref csi);
-        }
-
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ComputeJacobians(
             in Vector3Wide ab, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector3Wide localPlaneNormal, in Vector3Wide localOffsetA, in Vector3Wide localOffsetB, in Vector<float> minimumOffset, in Vector<float> maximumOffset,
@@ -211,7 +150,7 @@ namespace BepuPhysics.Constraints
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref LinearAxisLimitPrestepData prestepData) { }
     }
 
-    public class LinearAxisLimitTypeProcessor : TwoBodyTypeProcessor<LinearAxisLimitPrestepData, LinearAxisServoProjection, Vector<float>, LinearAxisLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
+    public class LinearAxisLimitTypeProcessor : TwoBodyTypeProcessor<LinearAxisLimitPrestepData, Vector<float>, LinearAxisLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 40;
     }

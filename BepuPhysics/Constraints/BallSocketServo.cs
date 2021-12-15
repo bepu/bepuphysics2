@@ -72,52 +72,8 @@ namespace BepuPhysics.Constraints
         public ServoSettingsWide ServoSettings;
     }
 
-    public struct BallSocketServoProjection
+    public struct BallSocketServoFunctions : ITwoBodyConstraintFunctions<BallSocketServoPrestepData, Vector3Wide>
     {
-        public Vector3Wide OffsetA;
-        public Vector3Wide OffsetB;
-        public Vector3Wide BiasVelocity;
-        public Symmetric3x3Wide EffectiveMass;
-        public Vector<float> SoftnessImpulseScale;
-        public Vector<float> MaximumImpulse;
-        public BodyInertiaWide InertiaA;
-        public BodyInertiaWide InertiaB;
-    }
-
-    public struct BallSocketServoFunctions : ITwoBodyConstraintFunctions<BallSocketServoPrestepData, BallSocketServoProjection, Vector3Wide>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            float dt, float inverseDt, ref BallSocketServoPrestepData prestep, out BallSocketServoProjection projection)
-        {
-            projection.InertiaA = inertiaA;
-            projection.InertiaB = inertiaB;
-
-            //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out projection.OffsetA);
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out projection.OffsetB);
-            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            BallSocketShared.ComputeEffectiveMass(inertiaA, inertiaB, projection.OffsetA, projection.OffsetB, effectiveMassCFMScale, out projection.EffectiveMass);
-
-            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Vector3Wide.Add(ab, projection.OffsetB, out var anchorB);
-            Vector3Wide.Subtract(anchorB, projection.OffsetA, out var error);
-            ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out projection.BiasVelocity, out projection.MaximumImpulse);
-        }
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BallSocketServoProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            BallSocketShared.ApplyImpulse(ref velocityA, ref velocityB, projection.OffsetA, projection.OffsetB, projection.InertiaA, projection.InertiaB, accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BallSocketServoProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            BallSocketShared.Solve(ref velocityA, ref velocityB, projection.OffsetA, projection.OffsetB, projection.BiasVelocity, projection.EffectiveMass, projection.SoftnessImpulseScale, projection.MaximumImpulse, ref accumulatedImpulse, projection.InertiaA, projection.InertiaB);
-        }
-
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref BallSocketServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var offsetA);
@@ -150,7 +106,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket servo constraints.
     /// </summary>
-    public class BallSocketServoTypeProcessor : TwoBodyTypeProcessor<BallSocketServoPrestepData, BallSocketServoProjection, Vector3Wide, BallSocketServoFunctions, AccessNoPosition, AccessNoPosition, AccessAll, AccessAll>
+    public class BallSocketServoTypeProcessor : TwoBodyTypeProcessor<BallSocketServoPrestepData, Vector3Wide, BallSocketServoFunctions, AccessNoPosition, AccessNoPosition, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 53;
     }

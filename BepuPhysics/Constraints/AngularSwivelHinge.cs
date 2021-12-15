@@ -68,92 +68,8 @@ namespace BepuPhysics.Constraints
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct AngularSwivelHingeProjection
+    public struct AngularSwivelHingeFunctions : ITwoBodyConstraintFunctions<AngularSwivelHingePrestepData, Vector<float>>
     {
-        //JacobianB = -JacobianA, so no need to store it explicitly.
-        public Vector3Wide VelocityToImpulseA;
-        public Vector<float> BiasImpulse;
-        public Vector<float> SoftnessImpulseScale;
-        public Vector3Wide ImpulseToVelocityA;
-        public Vector3Wide NegatedImpulseToVelocityB;
-    }
-
-    public struct AngularSwivelHingeFunctions : ITwoBodyConstraintFunctions<AngularSwivelHingePrestepData, AngularSwivelHingeProjection, Vector<float>>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            float dt, float inverseDt, ref AngularSwivelHingePrestepData prestep, out AngularSwivelHingeProjection projection)
-        {
-            //The swivel hinge attempts to keep an axis on body A separated 90 degrees from an axis on body B. In other words, this is the same as a hinge joint, but with one fewer DOF.
-            //C = dot(swivelA, hingeB) = 0
-            //C' = dot(d/dt(swivelA), hingeB) + dot(swivelA, d/dt(hingeB)) = 0
-            //C' = dot(angularVelocityB x hingeB, swivelA) + dot(hingeB, angularVelocityA x swivelA) = 0
-            //C' = dot(hingeB x swivelA, angularVelocityB) + dot(angularVelocityA, swivelA x hingeB) = 0
-            //Providing jacobians of:
-            //JA = swivelA x hingeB
-            //JB = hingeB x swivelA
-            //a x b == -b x a, so JB == -JA.
-
-            //Now, we choose the storage representation. The default approach would be to store JA, the effective mass, and both inverse inertias, requiring 6 + 1 + 6 + 6 scalars.  
-            //The alternative is to store JAT * effectiveMass, and then also JA * inverseInertiaTensor(A/B), requiring only 3 + 3 + 3 scalars.
-            //So, overall, prebaking saves us 10 scalars and a bit of iteration-time ALU.
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalSwivelAxisA, orientationA, out var swivelAxis);
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalHingeAxisB, orientationB, out var hingeAxis);
-            Vector3Wide.CrossWithoutOverlap(swivelAxis, hingeAxis, out var jacobianA);
-            //In the event that the axes are parallel, there is no unique jacobian. Arbitrarily pick one.
-            //Note that this causes a discontinuity in jacobian length at the poles. We just don't worry about it.
-            Helpers.FindPerpendicular(swivelAxis, out var fallbackJacobian);
-            Vector3Wide.Dot(jacobianA, jacobianA, out var jacobianLengthSquared);
-            var useFallback = Vector.LessThan(jacobianLengthSquared, new Vector<float>(1e-7f));
-            Vector3Wide.ConditionalSelect(useFallback, fallbackJacobian, jacobianA, out jacobianA);
-
-            //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
-
-            //This computes the effective mass using the usual (J * M^-1 * JT)^-1 formulation, but we actually make use of the intermediate result J * M^-1 so we compute it directly.
-            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
-            //Note that we don't use -jacobianA here, so we're actually storing out the negated version of the transform. That's fine; we'll simply subtract in the iteration.
-            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
-            Vector3Wide.Dot(projection.ImpulseToVelocityA, jacobianA, out var angularA);
-            Vector3Wide.Dot(projection.NegatedImpulseToVelocityB, jacobianA, out var angularB);
-
-            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            var effectiveMass = effectiveMassCFMScale / (angularA + angularB);
-            Vector3Wide.Scale(jacobianA, effectiveMass, out projection.VelocityToImpulseA);
-
-            Vector3Wide.Dot(hingeAxis, swivelAxis, out var error);
-            //Note the negation: we want to oppose the separation. TODO: arguably, should bake the negation into positionErrorToVelocity, given its name.
-            projection.BiasImpulse = -effectiveMass * positionErrorToVelocity * error;
-
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ApplyImpulse(ref Vector3Wide angularVelocityA, ref Vector3Wide angularVelocityB, ref AngularSwivelHingeProjection projection, ref Vector<float> csi)
-        {
-            Vector3Wide.Scale(projection.ImpulseToVelocityA, csi, out var velocityChangeA);
-            Vector3Wide.Add(angularVelocityA, velocityChangeA, out angularVelocityA);
-            Vector3Wide.Scale(projection.NegatedImpulseToVelocityB, csi, out var negatedVelocityChangeB);
-            Vector3Wide.Subtract(angularVelocityB, negatedVelocityChangeB, out angularVelocityB);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref AngularSwivelHingeProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, ref projection, ref accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref AngularSwivelHingeProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            //JB = -JA. This is (angularVelocityA * JA + angularVelocityB * JB) * effectiveMass => (angularVelocityA - angularVelocityB) * (JA * effectiveMass)
-            Vector3Wide.Subtract(velocityA.Angular, velocityB.Angular, out var difference);
-            Vector3Wide.Dot(difference, projection.VelocityToImpulseA, out var csi);
-            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
-            csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - csi;
-
-            accumulatedImpulse += csi;
-            ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, ref projection, ref csi);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ApplyImpulse(in Vector3Wide impulseToVelocityA, in Vector3Wide negatedImpulseToVelocityB, in Vector<float> csi, ref Vector3Wide angularVelocityA, ref Vector3Wide angularVelocityB)
         {
@@ -231,7 +147,7 @@ namespace BepuPhysics.Constraints
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularSwivelHingePrestepData prestepData) { }
     }
 
-    public class AngularSwivelHingeTypeProcessor : TwoBodyTypeProcessor<AngularSwivelHingePrestepData, AngularSwivelHingeProjection, Vector<float>, AngularSwivelHingeFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
+    public class AngularSwivelHingeTypeProcessor : TwoBodyTypeProcessor<AngularSwivelHingePrestepData, Vector<float>, AngularSwivelHingeFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 24;
     }

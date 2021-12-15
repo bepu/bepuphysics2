@@ -74,17 +74,7 @@ namespace BepuPhysics.Constraints
         public ServoSettingsWide ServoSettings;
     }
 
-    public struct OneBodyLinearServoProjection
-    {
-        public Vector3Wide Offset;
-        public Vector3Wide BiasVelocity;
-        public Symmetric3x3Wide EffectiveMass;
-        public Vector<float> SoftnessImpulseScale;
-        public Vector<float> MaximumImpulse;
-        public BodyInertiaWide Inertia;
-    }
-
-    public struct OneBodyLinearServoFunctions : IOneBodyConstraintFunctions<OneBodyLinearServoPrestepData, OneBodyLinearServoProjection, Vector3Wide>
+    public struct OneBodyLinearServoFunctions : IOneBodyConstraintFunctions<OneBodyLinearServoPrestepData, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeTransforms(in Vector3Wide localOffset, in QuaternionWide orientation, in Vector<float> effectiveMassCFMScale,
@@ -100,72 +90,6 @@ namespace BepuPhysics.Constraints
             inverseEffectiveMass.ZZ += inertia.InverseMass;
             Symmetric3x3Wide.Invert(inverseEffectiveMass, out effectiveMass);
             Symmetric3x3Wide.Scale(effectiveMass, effectiveMassCFMScale, out effectiveMass);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
-            float dt, float inverseDt, ref OneBodyLinearServoPrestepData prestep, out OneBodyLinearServoProjection projection)
-        {
-            //TODO: Note that this grabs a world position. That poses a problem for different position representations.
-            projection.Inertia = inertiaA;
-
-            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-
-            ComputeTransforms(prestep.LocalOffset, orientationA, effectiveMassCFMScale, inertiaA, out projection.Offset, out projection.EffectiveMass);
-
-            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Vector3Wide.Add(projection.Offset, positionA, out var worldGrabPoint);
-            Vector3Wide.Subtract(prestep.Target, worldGrabPoint, out var error);
-            ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out projection.BiasVelocity, out projection.MaximumImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref BodyVelocityWide velocityA, in OneBodyLinearServoProjection projection, ref Vector3Wide csi)
-        {
-            Vector3Wide.CrossWithoutOverlap(projection.Offset, csi, out var wsi);
-            Symmetric3x3Wide.TransformWithoutOverlap(wsi, projection.Inertia.InverseInertiaTensor, out var change);
-            Vector3Wide.Add(velocityA.Angular, change, out velocityA.Angular);
-
-            Vector3Wide.Scale(csi, projection.Inertia.InverseMass, out change);
-            Vector3Wide.Add(velocityA.Linear, change, out velocityA.Linear);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            ApplyImpulse(ref velocityA, projection, ref accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SharedSolve(ref BodyVelocityWide velocities, in OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular);
-            Vector3Wide.CrossWithoutOverlap(velocities.Angular, projection.Offset, out var angularCSV);
-            Vector3Wide.Add(velocities.Linear, angularCSV, out var csv);
-            Vector3Wide.Subtract(projection.BiasVelocity, csv, out csv);
-
-            Symmetric3x3Wide.TransformWithoutOverlap(csv, projection.EffectiveMass, out var csi);
-            Vector3Wide.Scale(accumulatedImpulse, projection.SoftnessImpulseScale, out var softness);
-            Vector3Wide.Subtract(csi, softness, out csi);
-
-            //The motor has a limited maximum force, so clamp the accumulated impulse. Watch out for division by zero.
-            ServoSettingsWide.ClampImpulse(projection.MaximumImpulse, ref accumulatedImpulse, ref csi);
-            var previous = accumulatedImpulse;
-            Vector3Wide.Add(accumulatedImpulse, csi, out accumulatedImpulse);
-            Vector3Wide.Length(accumulatedImpulse, out var impulseMagnitude);
-            var newMagnitude = Vector.Min(impulseMagnitude, projection.MaximumImpulse);
-            var scale = newMagnitude / impulseMagnitude;
-            Vector3Wide.Scale(accumulatedImpulse, scale, out accumulatedImpulse);
-            Vector3Wide.ConditionalSelect(Vector.GreaterThan(impulseMagnitude, Vector<float>.Zero), accumulatedImpulse, previous, out accumulatedImpulse);
-            Vector3Wide.Subtract(accumulatedImpulse, previous, out csi);
-
-            ApplyImpulse(ref velocities, projection, ref csi);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref OneBodyLinearServoProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            SharedSolve(ref velocityA, projection, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -221,7 +145,7 @@ namespace BepuPhysics.Constraints
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyLinearServoPrestepData prestepData) { }
     }
 
-    public class OneBodyLinearServoTypeProcessor : OneBodyTypeProcessor<OneBodyLinearServoPrestepData, OneBodyLinearServoProjection, Vector3Wide, OneBodyLinearServoFunctions, AccessAll, AccessAll>
+    public class OneBodyLinearServoTypeProcessor : OneBodyTypeProcessor<OneBodyLinearServoPrestepData, Vector3Wide, OneBodyLinearServoFunctions, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 44;
     }

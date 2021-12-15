@@ -23,14 +23,8 @@ namespace BepuPhysics.Constraints
     /// </summary>
     /// <typeparam name="TPrestepData">Type of the prestep data used by the constraint.</typeparam>
     /// <typeparam name="TAccumulatedImpulse">Type of the accumulated impulses used by the constraint.</typeparam>
-    /// <typeparam name="TProjection">Type of the projection to input.</typeparam>
-    public interface IThreeBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+    public interface IThreeBodyConstraintFunctions<TPrestepData, TAccumulatedImpulse>
     {
-        void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide ac, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
-            float dt, float inverseDt, ref TPrestepData prestepData, out TProjection projection);
-        void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
-        void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref TProjection projection, ref TAccumulatedImpulse accumulatedImpulse);
-
         void WarmStart2(
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
@@ -52,11 +46,11 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Shared implementation across all three body constraints.
     /// </summary>
-    public abstract class ThreeBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions,
+    public abstract class ThreeBodyTypeProcessor<TPrestepData, TAccumulatedImpulse, TConstraintFunctions,
         TWarmStartAccessFilterA, TWarmStartAccessFilterB, TWarmStartAccessFilterC, TSolveAccessFilterA, TSolveAccessFilterB, TSolveAccessFilterC>
-        : TypeProcessor<ThreeBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
-        where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
-        where TConstraintFunctions : unmanaged, IThreeBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        : TypeProcessor<ThreeBodyReferences, TPrestepData, TAccumulatedImpulse>
+        where TPrestepData : unmanaged where TAccumulatedImpulse : unmanaged
+        where TConstraintFunctions : unmanaged, IThreeBodyConstraintFunctions<TPrestepData, TAccumulatedImpulse>
         where TWarmStartAccessFilterA : unmanaged, IBodyAccessFilter
         where TWarmStartAccessFilterB : unmanaged, IBodyAccessFilter
         where TWarmStartAccessFilterC : unmanaged, IBodyAccessFilter
@@ -104,70 +98,7 @@ namespace BepuPhysics.Constraints
         {
             VerifySortRegion<ThreeBodySortKeyGenerator>(ref typeBatch, bundleStartIndex, constraintCount, ref sortedKeys, ref sortedSourceIndices);
         }
-
-        public unsafe override void Prestep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
-        {
-            ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
-            ref var bodyReferencesBase = ref Unsafe.AsRef<ThreeBodyReferences>(typeBatch.BodyReferences.Memory);
-            ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
-            var function = default(TConstraintFunctions);
-            for (int i = startBundle; i < exclusiveEndBundle; ++i)
-            {
-                ref var prestep = ref Unsafe.Add(ref prestepBase, i);
-                ref var projection = ref Unsafe.Add(ref projectionBase, i);
-                ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
-                bodies.GatherState(ref references,
-                    out var orientationA, out var wsvA, out var inertiaA,
-                    out var ab, out var orientationB, out var wsvB, out var inertiaB,
-                    out var ac, out var orientationC, out var wsvC, out var inertiaC);
-                function.Prestep(orientationA, inertiaA, ab, orientationB, inertiaB, ac, orientationC, inertiaC, dt, inverseDt, ref prestep, out projection);
-            }
-        }
-
-        public unsafe override void WarmStart(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle)
-        {
-            ref var bodyReferencesBase = ref Unsafe.AsRef<ThreeBodyReferences>(typeBatch.BodyReferences.Memory);
-            ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
-            ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
-            var function = default(TConstraintFunctions);
-            for (int i = startBundle; i < exclusiveEndBundle; ++i)
-            {
-                ref var projection = ref Unsafe.Add(ref projectionBase, i);
-                ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
-                bodies.GatherState(ref bodyReferences,
-                    out var orientationA, out var wsvA, out var inertiaA,
-                    out var ab, out var orientationB, out var wsvB, out var inertiaB,
-                    out var ac, out var orientationC, out var wsvC, out var inertiaC);
-                function.WarmStart(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences.IndexA);
-                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref bodyReferences.IndexB);
-                bodies.ScatterVelocities<AccessAll>(ref wsvC, ref bodyReferences.IndexC);
-
-            }
-        }
-
-        public unsafe override void SolveIteration(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle)
-        {
-            ref var bodyReferencesBase = ref Unsafe.AsRef<ThreeBodyReferences>(typeBatch.BodyReferences.Memory);
-            ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
-            ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
-            var function = default(TConstraintFunctions);
-            for (int i = startBundle; i < exclusiveEndBundle; ++i)
-            {
-                ref var projection = ref Unsafe.Add(ref projectionBase, i);
-                ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
-                ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
-                bodies.GatherState(ref bodyReferences,
-                    out var orientationA, out var wsvA, out var inertiaA,
-                    out var ab, out var orientationB, out var wsvB, out var inertiaB,
-                    out var ac, out var orientationC, out var wsvC, out var inertiaC);
-                function.Solve(ref wsvA, ref wsvB, ref wsvC, ref projection, ref accumulatedImpulses);
-                bodies.ScatterVelocities<AccessAll>(ref wsvA, ref bodyReferences.IndexA);
-                bodies.ScatterVelocities<AccessAll>(ref wsvB, ref bodyReferences.IndexB);
-                bodies.ScatterVelocities<AccessAll>(ref wsvC, ref bodyReferences.IndexC);
-            }
-        }
+       
         public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
             ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)

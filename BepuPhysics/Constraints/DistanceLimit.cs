@@ -100,66 +100,8 @@ namespace BepuPhysics.Constraints
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct DistanceLimitProjection
+    public struct DistanceLimitFunctions : ITwoBodyConstraintFunctions<DistanceLimitPrestepData, Vector<float>>
     {
-        public Vector3Wide LinearVelocityToImpulseA;
-        public Vector3Wide AngularVelocityToImpulseA;
-        public Vector3Wide AngularVelocityToImpulseB;
-        public Vector<float> BiasImpulse;
-        public Vector<float> SoftnessImpulseScale;
-        public Vector3Wide LinearImpulseToVelocityA;
-        public Vector3Wide AngularImpulseToVelocityA;
-        public Vector3Wide LinearImpulseToVelocityB;
-        public Vector3Wide AngularImpulseToVelocityB;
-    }
-
-    public struct DistanceLimitFunctions : ITwoBodyConstraintFunctions<DistanceLimitPrestepData, DistanceLimitProjection, Vector<float>>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            float dt, float inverseDt, ref DistanceLimitPrestepData prestep, out DistanceLimitProjection projection)
-        {
-            DistanceServoFunctions.GetDistance(orientationA, ab, orientationB, prestep.LocalOffsetA, prestep.LocalOffsetB,
-                out var anchorOffsetA, out var anchorOffsetB, out var anchorOffset, out var distance);
-            //If the current distance is closer to the minimum, calibrate for the minimum. Otherwise, calibrate for the maximum.
-            var useMinimum = Vector.LessThan(Vector.Abs(distance - prestep.MinimumDistance), Vector.Abs(distance - prestep.MaximumDistance));
-            var sign = Vector.ConditionalSelect(useMinimum, new Vector<float>(-1f), Vector<float>.One);
-            Vector3Wide.Scale(anchorOffset, sign / distance, out var direction);
-            DistanceServoFunctions.ComputeTransforms(inertiaA, inertiaB, anchorOffsetA, anchorOffsetB, distance, ref direction, dt,
-                prestep.SpringSettings, out var positionErrorToVelocity, out projection.SoftnessImpulseScale, out var effectiveMass,
-                out projection.LinearVelocityToImpulseA, out projection.AngularVelocityToImpulseA, out projection.AngularVelocityToImpulseB,
-                out projection.LinearImpulseToVelocityA, out projection.AngularImpulseToVelocityA, out projection.LinearImpulseToVelocityB, out projection.AngularImpulseToVelocityB);
-
-            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            var error = Vector.ConditionalSelect(useMinimum, prestep.MinimumDistance - distance, distance - prestep.MaximumDistance);
-            InequalityHelpers.ComputeBiasVelocity(error, positionErrorToVelocity, inverseDt, out var biasVelocity);
-            projection.BiasImpulse = biasVelocity * effectiveMass;
-
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref DistanceLimitProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            DistanceServoFunctions.ApplyImpulse(ref velocityA, ref velocityB,
-                projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.LinearImpulseToVelocityB, projection.AngularImpulseToVelocityB, accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref DistanceLimitProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
-            Vector3Wide.Dot(velocityA.Linear, projection.LinearVelocityToImpulseA, out var linearCSIA);
-            Vector3Wide.Dot(velocityB.Linear, projection.LinearVelocityToImpulseA, out var negatedLinearCSIB);
-            Vector3Wide.Dot(velocityA.Angular, projection.AngularVelocityToImpulseA, out var angularCSIA);
-            Vector3Wide.Dot(velocityB.Angular, projection.AngularVelocityToImpulseB, out var angularCSIB);
-            var csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (linearCSIA + angularCSIA - negatedLinearCSIB + angularCSIB);
-            InequalityHelpers.ClampPositive(ref accumulatedImpulse, ref csi);
-            DistanceServoFunctions.ApplyImpulse(ref velocityA, ref velocityB,
-                projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.LinearImpulseToVelocityB, projection.AngularImpulseToVelocityB, csi);
-
-        }
-
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(in Vector3Wide linearJacobianA, in Vector3Wide angularJacobianA, in Vector3Wide angularJacobianB, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
             in Vector<float> csi, ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
@@ -228,7 +170,7 @@ namespace BepuPhysics.Constraints
 
             ApplyImpulse(direction, angularJA, angularJB, inertiaA, inertiaB, csi, ref wsvA, ref wsvB);
         }
-        
+
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref DistanceLimitPrestepData prestepData) { }
@@ -238,7 +180,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of distance servos.
     /// </summary>
-    public class DistanceLimitTypeProcessor : TwoBodyTypeProcessor<DistanceLimitPrestepData, DistanceLimitProjection, Vector<float>, DistanceLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
+    public class DistanceLimitTypeProcessor : TwoBodyTypeProcessor<DistanceLimitPrestepData, Vector<float>, DistanceLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 34;
     }

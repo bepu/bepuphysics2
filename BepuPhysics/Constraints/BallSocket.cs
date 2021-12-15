@@ -63,52 +63,8 @@ namespace BepuPhysics.Constraints
         public Vector3Wide LocalOffsetB;
         public SpringSettingsWide SpringSettings;
     }
-
-    public struct BallSocketProjection
+    public struct BallSocketFunctions : ITwoBodyConstraintFunctions<BallSocketPrestepData, Vector3Wide>
     {
-        public Vector3Wide OffsetA;
-        public Vector3Wide OffsetB;
-        public Vector3Wide BiasVelocity;
-        public Symmetric3x3Wide EffectiveMass;
-        public Vector<float> SoftnessImpulseScale;
-        public BodyInertiaWide InertiaA;
-        public BodyInertiaWide InertiaB;
-    }
-
-    public struct BallSocketFunctions : ITwoBodyConstraintFunctions<BallSocketPrestepData, BallSocketProjection, Vector3Wide>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            float dt, float inverseDt, ref BallSocketPrestepData prestep, out BallSocketProjection projection)
-        {
-            projection.InertiaA = inertiaA;
-            projection.InertiaB = inertiaB;
-
-            //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out projection.OffsetA);
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out projection.OffsetB);
-            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            BallSocketShared.ComputeEffectiveMass(inertiaA, inertiaB, projection.OffsetA, projection.OffsetB, effectiveMassCFMScale, out projection.EffectiveMass);
-
-            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Vector3Wide.Add(ab, projection.OffsetB, out var anchorB);
-            Vector3Wide.Subtract(anchorB, projection.OffsetA, out var error);
-            Vector3Wide.Scale(error, positionErrorToVelocity, out projection.BiasVelocity);
-        }
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BallSocketProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            BallSocketShared.ApplyImpulse(ref velocityA, ref velocityB, projection.OffsetA, projection.OffsetB, projection.InertiaA, projection.InertiaB, accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BallSocketProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            BallSocketShared.Solve(ref velocityA, ref velocityB, projection.OffsetA, projection.OffsetB, projection.BiasVelocity, projection.EffectiveMass, projection.SoftnessImpulseScale, ref accumulatedImpulse, projection.InertiaA, projection.InertiaB);
-        }
-
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             ref BallSocketPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
@@ -143,7 +99,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket constraints.
     /// </summary>
-    public class BallSocketTypeProcessor : TwoBodyTypeProcessor<BallSocketPrestepData, BallSocketProjection, Vector3Wide, BallSocketFunctions, AccessNoPosition, AccessNoPosition, AccessAll, AccessAll>
+    public class BallSocketTypeProcessor : TwoBodyTypeProcessor<BallSocketPrestepData, Vector3Wide, BallSocketFunctions, AccessNoPosition, AccessNoPosition, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 22;
     }

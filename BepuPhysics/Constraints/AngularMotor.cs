@@ -57,50 +57,8 @@ namespace BepuPhysics.Constraints
         public MotorSettingsWide Settings;
     }
 
-    public struct AngularMotorProjection
+    public struct AngularMotorFunctions : ITwoBodyConstraintFunctions<AngularMotorPrestepData, Vector3Wide>
     {
-        public Symmetric3x3Wide EffectiveMass;
-        public Vector3Wide BiasImpulse;
-        public Vector<float> SoftnessImpulseScale;
-        public Vector<float> MaximumImpulse;
-        public Symmetric3x3Wide ImpulseToVelocityA;
-        public Symmetric3x3Wide NegatedImpulseToVelocityB;
-    }
-
-
-    public struct AngularMotorFunctions : ITwoBodyConstraintFunctions<AngularMotorPrestepData, AngularMotorProjection, Vector3Wide>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            float dt, float inverseDt, ref AngularMotorPrestepData prestep, out AngularMotorProjection projection)
-        {
-            projection.ImpulseToVelocityA = inertiaA.InverseInertiaTensor;
-            projection.NegatedImpulseToVelocityB = inertiaB.InverseInertiaTensor;
-
-            //Jacobians are just the identity matrix.
-            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
-
-            Symmetric3x3Wide.Add(projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, out var unsoftenedInverseEffectiveMass);
-            Symmetric3x3Wide.Invert(unsoftenedInverseEffectiveMass, out var unsoftenedEffectiveMass);
-            Symmetric3x3Wide.Scale(unsoftenedEffectiveMass, effectiveMassCFMScale, out projection.EffectiveMass);
-
-            QuaternionWide.TransformWithoutOverlap(prestep.TargetVelocityLocalA, orientationA, out var biasVelocity);
-            Symmetric3x3Wide.TransformWithoutOverlap(biasVelocity, projection.EffectiveMass, out projection.BiasImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref AngularMotorProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            AngularServoFunctions.ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref AngularMotorProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            AngularServoFunctions.Solve(ref velocityA, ref velocityB, projection.EffectiveMass, projection.SoftnessImpulseScale, projection.BiasImpulse,
-                projection.MaximumImpulse, projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, ref accumulatedImpulse);
-        }
-
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref AngularMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             AngularServoFunctions.ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, accumulatedImpulses);
@@ -134,7 +92,7 @@ namespace BepuPhysics.Constraints
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularMotorPrestepData prestepData) { }
     }
 
-    public class AngularMotorTypeProcessor : TwoBodyTypeProcessor<AngularMotorPrestepData, AngularMotorProjection, Vector3Wide, AngularMotorFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngularWithoutPose>
+    public class AngularMotorTypeProcessor : TwoBodyTypeProcessor<AngularMotorPrestepData, Vector3Wide, AngularMotorFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngularWithoutPose>
     {
         public const int BatchTypeId = 30;
     }

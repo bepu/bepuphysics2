@@ -67,49 +67,8 @@ namespace BepuPhysics.Constraints
         public MotorSettingsWide Settings;
     }
 
-    public struct BallSocketMotorProjection
+    public struct BallSocketMotorFunctions : ITwoBodyConstraintFunctions<BallSocketMotorPrestepData, Vector3Wide>
     {
-        public Vector3Wide OffsetA;
-        public Vector3Wide OffsetB;
-        public Vector3Wide BiasVelocity;
-        public Symmetric3x3Wide EffectiveMass;
-        public Vector<float> SoftnessImpulseScale;
-        public Vector<float> MaximumImpulse;
-        public BodyInertiaWide InertiaA;
-        public BodyInertiaWide InertiaB;
-    }
-
-    public struct BallSocketMotorFunctions : ITwoBodyConstraintFunctions<BallSocketMotorPrestepData, BallSocketMotorProjection, Vector3Wide>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            float dt, float inverseDt, ref BallSocketMotorPrestepData prestep, out BallSocketMotorProjection projection)
-        {
-            projection.InertiaA = inertiaA;
-            projection.InertiaB = inertiaB;
-
-            //The offset for A just goes directly to B's anchor.
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out projection.OffsetB);
-            Vector3Wide.Add(ab, projection.OffsetB, out projection.OffsetA);
-            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
-            BallSocketShared.ComputeEffectiveMass(inertiaA, inertiaB, projection.OffsetA, projection.OffsetB, effectiveMassCFMScale, out projection.EffectiveMass);
-
-            QuaternionWide.Transform(prestep.TargetVelocityLocalA, orientationA, out projection.BiasVelocity);
-            Vector3Wide.Negate(projection.BiasVelocity, out projection.BiasVelocity);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BallSocketMotorProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            BallSocketShared.ApplyImpulse(ref velocityA, ref velocityB, projection.OffsetA, projection.OffsetB, projection.InertiaA, projection.InertiaB, accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BallSocketMotorProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            BallSocketShared.Solve(ref velocityA, ref velocityB, projection.OffsetA, projection.OffsetB, projection.BiasVelocity, projection.EffectiveMass, projection.SoftnessImpulseScale, projection.MaximumImpulse, ref accumulatedImpulse, projection.InertiaA, projection.InertiaB);
-        }
-
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref BallSocketMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out var targetOffsetB);
@@ -139,7 +98,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket motor constraints.
     /// </summary>
-    public class BallSocketMotorTypeProcessor : TwoBodyTypeProcessor<BallSocketMotorPrestepData, BallSocketMotorProjection, Vector3Wide, BallSocketMotorFunctions, AccessNoOrientation, AccessAll, AccessAll, AccessAll>
+    public class BallSocketMotorTypeProcessor : TwoBodyTypeProcessor<BallSocketMotorPrestepData, Vector3Wide, BallSocketMotorFunctions, AccessNoOrientation, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 52;
     }

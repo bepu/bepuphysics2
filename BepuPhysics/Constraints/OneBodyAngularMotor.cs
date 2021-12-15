@@ -57,57 +57,13 @@ namespace BepuPhysics.Constraints
         public MotorSettingsWide Settings;
     }
 
-    public struct OneBodyAngularMotorFunctions : IOneBodyConstraintFunctions<OneBodyAngularMotorPrestepData, OneBodyAngularServoProjection, Vector3Wide>
+    public struct OneBodyAngularMotorFunctions : IOneBodyConstraintFunctions<OneBodyAngularMotorPrestepData, Vector3Wide>
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
-            float dt, float inverseDt, ref OneBodyAngularMotorPrestepData prestep, out OneBodyAngularServoProjection projection)
-        {
-            projection.ImpulseToVelocity = inertiaA.InverseInertiaTensor;
-
-            //Jacobians are just the identity matrix.
-            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
-            Symmetric3x3Wide.Invert(inertiaA.InverseInertiaTensor, out projection.VelocityToImpulse);
-            Symmetric3x3Wide.Scale(projection.VelocityToImpulse, effectiveMassCFMScale, out projection.VelocityToImpulse);
-
-            Symmetric3x3Wide.TransformWithoutOverlap(prestep.TargetVelocity, projection.VelocityToImpulse, out projection.BiasImpulse);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(ref Vector3Wide angularVelocity, in Symmetric3x3Wide impulseToVelocity, in Vector3Wide csi)
         {
             Symmetric3x3Wide.TransformWithoutOverlap(csi, impulseToVelocity, out var velocityChange);
             Vector3Wide.Add(angularVelocity, velocityChange, out angularVelocity);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref OneBodyAngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            ApplyImpulse(ref velocityA.Angular, projection.ImpulseToVelocity, accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref BodyVelocityWide velocityA,
-            in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, in Vector3Wide biasImpulse, in Vector<float> maximumImpulse,
-            in Symmetric3x3Wide impulseToVelocityA, ref Vector3Wide accumulatedImpulse)
-        {
-            //Jacobians are just I.
-            Symmetric3x3Wide.TransformWithoutOverlap(velocityA.Angular, effectiveMass, out var csiVelocityComponent);
-            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - csiaAngular;
-            Vector3Wide.Scale(accumulatedImpulse, softnessImpulseScale, out var softnessComponent);
-            Vector3Wide.Subtract(biasImpulse, softnessComponent, out var csi);
-            Vector3Wide.Subtract(csi, csiVelocityComponent, out csi);
-
-            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulse, ref csi);
-
-            ApplyImpulse(ref velocityA.Angular, impulseToVelocityA, csi);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref OneBodyAngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
-        {
-            Solve(ref velocityA, projection.VelocityToImpulse, projection.SoftnessImpulseScale, projection.BiasImpulse,
-                projection.MaximumImpulse, projection.ImpulseToVelocity, ref accumulatedImpulse);
         }
 
         public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref OneBodyAngularMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
@@ -135,7 +91,7 @@ namespace BepuPhysics.Constraints
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyAngularMotorPrestepData prestepData) { }
     }
 
-    public class OneBodyAngularMotorTypeProcessor : OneBodyTypeProcessor<OneBodyAngularMotorPrestepData, OneBodyAngularServoProjection, Vector3Wide, OneBodyAngularMotorFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngular>
+    public class OneBodyAngularMotorTypeProcessor : OneBodyTypeProcessor<OneBodyAngularMotorPrestepData, Vector3Wide, OneBodyAngularMotorFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngular>
     {
         public const int BatchTypeId = 43;
     }

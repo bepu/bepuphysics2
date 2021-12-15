@@ -66,67 +66,8 @@ namespace BepuPhysics.Constraints
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct CenterDistanceProjection
+    public struct CenterDistanceConstraintFunctions : ITwoBodyConstraintFunctions<CenterDistancePrestepData, Vector<float>>
     {
-        public Vector3Wide JacobianA;
-        public Vector<float> BiasVelocity;
-        public Vector<float> SoftnessImpulseScale;
-        public Vector<float> EffectiveMass;
-        public Vector<float> InverseMassA;
-        public Vector<float> InverseMassB;
-    }
-
-    public struct CenterDistanceConstraintFunctions : ITwoBodyConstraintFunctions<CenterDistancePrestepData, CenterDistanceProjection, Vector<float>>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            float dt, float inverseDt, ref CenterDistancePrestepData prestep, out CenterDistanceProjection projection)
-        {
-            Vector3Wide.Length(ab, out var distance);
-            Vector3Wide.Scale(ab, Vector<float>.One / distance, out projection.JacobianA);
-
-            var useFallback = Vector.LessThan(distance, new Vector<float>(1e-10f));
-            projection.JacobianA.X = Vector.ConditionalSelect(useFallback, Vector<float>.One, projection.JacobianA.X);
-            projection.JacobianA.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, projection.JacobianA.Y);
-            projection.JacobianA.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, projection.JacobianA.Z);
-
-            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            //Jacobian is just the unit length direction, so the effective mass is simple:
-            projection.EffectiveMass = effectiveMassCFMScale / (inertiaA.InverseMass + inertiaB.InverseMass);
-            projection.InverseMassA = inertiaA.InverseMass;
-            projection.InverseMassB = inertiaB.InverseMass;
-
-            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            projection.BiasVelocity = (distance - prestep.TargetDistance) * positionErrorToVelocity;
-
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ApplyImpulse(ref BodyVelocityWide a, ref BodyVelocityWide b, ref CenterDistanceProjection projection, ref Vector<float> impulse)
-        {
-            Vector3Wide.Scale(projection.JacobianA, impulse * projection.InverseMassA, out var changeA);
-            Vector3Wide.Scale(projection.JacobianA, impulse * projection.InverseMassB, out var negatedChangeB);
-            Vector3Wide.Add(a.Linear, changeA, out a.Linear);
-            Vector3Wide.Subtract(b.Linear, negatedChangeB, out b.Linear);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref CenterDistanceProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref CenterDistanceProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
-            Vector3Wide.Dot(velocityA.Linear, projection.JacobianA, out var linearCSVA);
-            Vector3Wide.Dot(velocityB.Linear, projection.JacobianA, out var negatedCSVB);
-            var csi = (projection.BiasVelocity - (linearCSVA - negatedCSVB)) * projection.EffectiveMass - accumulatedImpulse * projection.SoftnessImpulseScale;
-            accumulatedImpulse += csi;
-            ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref csi);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ApplyImpulse(in Vector3Wide jacobianA, in Vector<float> inverseMassA, in Vector<float> inverseMassB, in Vector<float> impulse, ref BodyVelocityWide a, ref BodyVelocityWide b)
         {
@@ -167,7 +108,7 @@ namespace BepuPhysics.Constraints
 
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
             //Jacobian is just the unit length direction, so the effective mass is simple:
-            var effectiveMass = effectiveMassCFMScale / (inertiaA.InverseMass + inertiaB.InverseMass);  
+            var effectiveMass = effectiveMassCFMScale / (inertiaA.InverseMass + inertiaB.InverseMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             var biasVelocity = (distance - prestep.TargetDistance) * positionErrorToVelocity;
@@ -190,7 +131,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of distance servos.
     /// </summary>
-    public class CenterDistanceTypeProcessor : TwoBodyTypeProcessor<CenterDistancePrestepData, CenterDistanceProjection, Vector<float>, CenterDistanceConstraintFunctions, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear>
+    public class CenterDistanceTypeProcessor : TwoBodyTypeProcessor<CenterDistancePrestepData, Vector<float>, CenterDistanceConstraintFunctions, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear>
     {
         public const int BatchTypeId = 35;
     }

@@ -86,21 +86,7 @@ namespace BepuPhysics.Constraints
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct LinearAxisServoProjection
-    {
-        public Vector3Wide LinearVelocityToImpulseA;
-        public Vector3Wide AngularVelocityToImpulseA;
-        public Vector3Wide AngularVelocityToImpulseB;
-        public Vector<float> BiasImpulse;
-        public Vector<float> SoftnessImpulseScale;
-        public Vector<float> MaximumImpulse;
-        public Vector3Wide LinearImpulseToVelocityA;
-        public Vector3Wide NegatedLinearImpulseToVelocityB;
-        public Vector3Wide AngularImpulseToVelocityA;
-        public Vector3Wide AngularImpulseToVelocityB;
-    }
-
-    public struct LinearAxisServoFunctions : ITwoBodyConstraintFunctions<LinearAxisServoPrestepData, LinearAxisServoProjection, Vector<float>>
+    public struct LinearAxisServoFunctions : ITwoBodyConstraintFunctions<LinearAxisServoPrestepData, Vector<float>>
     {
         public interface IJacobianModifier
         {
@@ -160,25 +146,6 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Scale(angularB, effectiveMass, out angularVelocityToImpulseB);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            float dt, float inverseDt, ref LinearAxisServoPrestepData prestep, out LinearAxisServoProjection projection)
-        {
-            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            var modifier = new NoChangeModifier();
-            ComputeTransforms(ref modifier, prestep.LocalOffsetA, prestep.LocalOffsetB, prestep.LocalPlaneNormal, orientationA, inertiaA, ab, orientationB, inertiaB, effectiveMassCFMScale,
-                out var anchorA, out var anchorB, out var normal, out var effectiveMass,
-                out projection.LinearVelocityToImpulseA, out projection.AngularVelocityToImpulseA, out projection.AngularVelocityToImpulseB,
-                out projection.LinearImpulseToVelocityA, out projection.AngularImpulseToVelocityA, out projection.NegatedLinearImpulseToVelocityB, out projection.AngularImpulseToVelocityB);
-
-            Vector3Wide.Subtract(anchorB, anchorA, out var anchorOffset);
-            Vector3Wide.Dot(anchorOffset, normal, out var planeNormalDot);
-
-            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            ServoSettingsWide.ComputeClampedBiasVelocity(planeNormalDot - prestep.TargetOffset, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out projection.BiasImpulse, out projection.MaximumImpulse);
-            projection.BiasImpulse *= effectiveMass;
-        }
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB,
@@ -195,14 +162,6 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Add(angularChangeB, velocityB.Angular, out velocityB.Angular);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            ApplyImpulse(ref velocityA, ref velocityB,
-                projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.NegatedLinearImpulseToVelocityB, projection.AngularImpulseToVelocityB,
-                ref accumulatedImpulse);
-        }
-
         public static void ComputeCorrectiveImpulse(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB,
             in Vector3Wide linearVelocityToImpulseA, in Vector3Wide angularVelocityToImpulseA, in Vector3Wide angularVelocityToImpulseB,
             in Vector<float> biasImpulse, in Vector<float> softnessImpulseScale, in Vector<float> accumulatedImpulse, out Vector<float> csi)
@@ -216,16 +175,6 @@ namespace BepuPhysics.Constraints
             csi = biasImpulse - accumulatedImpulse * softnessImpulseScale - (linearA + angularA - negatedLinearB + angularB);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            ComputeCorrectiveImpulse(ref velocityA, ref velocityB, projection.LinearVelocityToImpulseA, projection.AngularVelocityToImpulseA, projection.AngularVelocityToImpulseB,
-                projection.BiasImpulse, projection.SoftnessImpulseScale, accumulatedImpulse, out var csi);
-            ServoSettingsWide.ClampImpulse(projection.MaximumImpulse, ref accumulatedImpulse, ref csi);
-            ApplyImpulse(ref velocityA, ref velocityB,
-                projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.NegatedLinearImpulseToVelocityB, projection.AngularImpulseToVelocityB,
-                ref csi);
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(in Vector3Wide linearJA, in Vector3Wide angularImpulseToVelocityA, in Vector3Wide angularImpulseToVelocityB, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
@@ -298,7 +247,7 @@ namespace BepuPhysics.Constraints
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref LinearAxisServoPrestepData prestepData) { }
     }
 
-    public class LinearAxisServoTypeProcessor : TwoBodyTypeProcessor<LinearAxisServoPrestepData, LinearAxisServoProjection, Vector<float>, LinearAxisServoFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
+    public class LinearAxisServoTypeProcessor : TwoBodyTypeProcessor<LinearAxisServoPrestepData, Vector<float>, LinearAxisServoFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 38;
     }

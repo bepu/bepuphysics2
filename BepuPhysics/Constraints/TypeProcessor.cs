@@ -201,10 +201,6 @@ namespace BepuPhysics.Constraints
         public abstract void Initialize(ref TypeBatch typeBatch, int initialCapacity, BufferPool pool);
         public abstract void Resize(ref TypeBatch typeBatch, int newCapacity, BufferPool pool);
 
-        public abstract void Prestep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
-        public abstract void WarmStart(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle);
-        public abstract void SolveIteration(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle);
-
         public abstract void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies,
             ref TIntegratorCallbacks poseIntegratorCallbacks,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
@@ -242,7 +238,7 @@ namespace BepuPhysics.Constraints
     //Note that the only reason to have generics at the type level here is to avoid the need to specify them for each individual function. It's functionally equivalent, but this just
     //cuts down on the syntax noise a little bit. 
     //Really, you could use a bunch of composed static generic helpers.
-    public abstract class TypeProcessor<TBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse> : TypeProcessor where TBodyReferences : unmanaged where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
+    public abstract class TypeProcessor<TBodyReferences, TPrestepData, TAccumulatedImpulse> : TypeProcessor where TBodyReferences : unmanaged where TPrestepData : unmanaged where TAccumulatedImpulse : unmanaged
     {
         protected override int InternalConstrainedDegreesOfFreedom
         {
@@ -332,7 +328,6 @@ namespace BepuPhysics.Constraints
             GatherScatter.ClearLane<TAccumulatedImpulse, float>(ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
             var bundleCount = typeBatch.BundleCount;
             Debug.Assert(typeBatch.PrestepData.Length >= bundleCount * Unsafe.SizeOf<TPrestepData>());
-            Debug.Assert(typeBatch.Projection.Length >= bundleCount * Unsafe.SizeOf<TProjection>());
             Debug.Assert(typeBatch.BodyReferences.Length >= bundleCount * Unsafe.SizeOf<TBodyReferences>());
             Debug.Assert(typeBatch.AccumulatedImpulses.Length >= bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
             Debug.Assert(typeBatch.IndexToHandle.Length >= typeBatch.ConstraintCount);
@@ -540,7 +535,6 @@ namespace BepuPhysics.Constraints
                 //Clear the slot's accumulated impulse. The backing memory could be initialized to any value.
                 GatherScatter.ClearLane<TAccumulatedImpulse, float>(ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, bundleCount), 0);
                 Debug.Assert(typeBatch.PrestepData.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TPrestepData>());
-                Debug.Assert(typeBatch.Projection.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TProjection>());
                 Debug.Assert(typeBatch.BodyReferences.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TBodyReferences>());
                 Debug.Assert(typeBatch.AccumulatedImpulses.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
                 Debug.Assert(typeBatch.IndexToHandle.Length >= typeBatch.ConstraintCount);
@@ -568,7 +562,6 @@ namespace BepuPhysics.Constraints
                 typeBatch.IndexToHandle[indexInTypeBatch] = handle;
                 Debug.Assert(typeBatch.ConstraintCount <= typeBatch.IndexToHandle.Length);
                 Debug.Assert(typeBatch.PrestepData.Length >= bundleCount * Unsafe.SizeOf<TPrestepData>());
-                Debug.Assert(typeBatch.Projection.Length >= bundleCount * Unsafe.SizeOf<TProjection>());
                 Debug.Assert(typeBatch.BodyReferences.Length >= bundleCount * Unsafe.SizeOf<TBodyReferences>());
                 Debug.Assert(typeBatch.AccumulatedImpulses.Length >= bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
                 //ValidateEmptyFallbackSlots(ref typeBatch);
@@ -780,7 +773,6 @@ namespace BepuPhysics.Constraints
             var bundleCapacity = BundleIndexing.GetBundleCount(typeBatch.IndexToHandle.Length);
             //Note that the projection is not copied over. It is ephemeral data. (In the same vein as above, if memory is an issue, we could just allocate projections on demand.)
             var bundleCount = typeBatch.BundleCount;
-            pool.ResizeToAtLeast(ref typeBatch.Projection, bundleCapacity * Unsafe.SizeOf<TProjection>(), 0);
             pool.ResizeToAtLeast(ref typeBatch.BodyReferences, bundleCapacity * Unsafe.SizeOf<TBodyReferences>(), bundleCount * Unsafe.SizeOf<TBodyReferences>());
             pool.ResizeToAtLeast(ref typeBatch.PrestepData, bundleCapacity * Unsafe.SizeOf<TPrestepData>(), bundleCount * Unsafe.SizeOf<TPrestepData>());
             pool.ResizeToAtLeast(ref typeBatch.AccumulatedImpulses, bundleCapacity * Unsafe.SizeOf<TAccumulatedImpulse>(), bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());

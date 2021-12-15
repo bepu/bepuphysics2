@@ -66,65 +66,8 @@ namespace BepuPhysics.Constraints
         public MotorSettingsWide Settings;
     }
 
-    public struct AngularAxisMotorProjection
+    public struct AngularAxisMotorFunctions : ITwoBodyConstraintFunctions<AngularAxisMotorPrestepData, Vector<float>>
     {
-        public Vector3Wide VelocityToImpulseA;
-        public Vector<float> BiasImpulse;
-        public Vector<float> SoftnessImpulseScale;
-        public Vector<float> MaximumImpulse;
-        public Vector3Wide ImpulseToVelocityA;
-        public Vector3Wide NegatedImpulseToVelocityB;
-    }
-
-
-    public struct AngularAxisMotorFunctions : ITwoBodyConstraintFunctions<AngularAxisMotorPrestepData, AngularAxisMotorProjection, Vector<float>>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide ab, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            float dt, float inverseDt, ref AngularAxisMotorPrestepData prestep, out AngularAxisMotorProjection projection)
-        {
-            //Velocity level constraint that acts directly on the given axes. Jacobians just the axes, nothing complicated. 1DOF, so we do premultiplication.
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axis);
-            Symmetric3x3Wide.TransformWithoutOverlap(axis, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
-            Vector3Wide.Dot(axis, projection.ImpulseToVelocityA, out var contributionA);
-            Symmetric3x3Wide.TransformWithoutOverlap(axis, inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
-            Vector3Wide.Dot(axis, projection.NegatedImpulseToVelocityB, out var contributionB);
-            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
-            var effectiveMass = effectiveMassCFMScale / (contributionA + contributionB);
-
-            Vector3Wide.Scale(axis, effectiveMass, out projection.VelocityToImpulseA);
-
-            projection.BiasImpulse = prestep.TargetVelocity * effectiveMass;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref Vector3Wide angularVelocityA, ref Vector3Wide angularVelocityB, in AngularAxisMotorProjection projection, in Vector<float> csi)
-        {
-            Vector3Wide.Scale(projection.ImpulseToVelocityA, csi, out var velocityChangeA);
-            Vector3Wide.Scale(projection.NegatedImpulseToVelocityB, csi, out var negatedVelocityChangeB);
-            Vector3Wide.Add(angularVelocityA, velocityChangeA, out angularVelocityA);
-            Vector3Wide.Subtract(angularVelocityB, negatedVelocityChangeB, out angularVelocityB);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref AngularAxisMotorProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, projection, accumulatedImpulse);
-        }
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref AngularAxisMotorProjection projection, ref Vector<float> accumulatedImpulse)
-        {
-            //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
-            Vector3Wide.Dot(velocityA.Angular, projection.VelocityToImpulseA, out var csiA);
-            Vector3Wide.Dot(velocityB.Angular, projection.VelocityToImpulseA, out var negatedCSIB);
-            var csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiA - negatedCSIB);
-            ServoSettingsWide.ClampImpulse(projection.MaximumImpulse, ref accumulatedImpulse, ref csi);
-            ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, projection, csi);
-
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(in Vector3Wide impulseToVelocityA, in Vector3Wide negatedImpulseToVelocityB, in Vector<float> csi, ref Vector3Wide angularVelocityA, ref Vector3Wide angularVelocityB)
         {
@@ -162,7 +105,7 @@ namespace BepuPhysics.Constraints
         public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularAxisMotorPrestepData prestepData) { }
     }
 
-    public class AngularAxisMotorTypeProcessor : TwoBodyTypeProcessor<AngularAxisMotorPrestepData, AngularAxisMotorProjection, Vector<float>, AngularAxisMotorFunctions, AccessOnlyAngular, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngular>
+    public class AngularAxisMotorTypeProcessor : TwoBodyTypeProcessor<AngularAxisMotorPrestepData, Vector<float>, AngularAxisMotorFunctions, AccessOnlyAngular, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 41;
     }
