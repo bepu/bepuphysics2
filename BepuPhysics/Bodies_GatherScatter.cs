@@ -41,43 +41,10 @@ namespace BepuPhysics
             Vector3Wide.WriteFirst(state.Velocity.Angular, ref GetOffsetInstance(ref velocity.Angular, bodyIndexInBundle));
         }
 
-        /// <summary>
-        /// Gathers motion state information for a body bundle into an AOSOA bundle.
-        /// </summary>
-        /// <param name="references">Active body indices being gathered.</param>
-        /// <param name="position">Gathered absolute position of the body.</param>
-        /// <param name="orientation">Gathered orientation of the body.</param>
-        /// <param name="velocity">Gathered velocity of the body.</param>
-        /// <param name="inertia">Gathered inertia of the body.</param>
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherState(ref Vector<int> references,
-            out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
-        {
-            Unsafe.SkipInit(out position);
-            Unsafe.SkipInit(out orientation);
-            Unsafe.SkipInit(out velocity);
-            Unsafe.SkipInit(out inertia);
-            //TODO: This function and its users (which should be relatively few) is a problem for large world position precision.
-            //It directly reports the position, thereby infecting vectorized logic with the high precision representation.
-            //You might be able to redesign the users of this function to not need it, but that comes with its own difficulties
-            //(for example, making the grab motor rely on having its goal offset updated every frame by the user).
-            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
-            ref var baseIndex = ref Unsafe.As<Vector<int>, int>(ref references);
-
-            for (int i = 0; i < Vector<int>.Count; ++i)
-            {
-                var index = Unsafe.Add(ref baseIndex, i);
-                if (index < 0)
-                    continue;
-                WriteGatherMotionState(index, i, ref ActiveSet.SolverStates, ref position, ref orientation, ref velocity);
-                WriteGatherInertia(index, i, ref ActiveSet.SolverStates, ref inertia);
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void FallbackGatherMotionState(SolverState* states, Vector<int> baseIndex, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
+        unsafe static void FallbackGatherMotionState(SolverState* states, Vector<int> encodedBodyIndices, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
         {
-            var indices = (int*)Unsafe.AsPointer(ref baseIndex);
             var pPositionX = (float*)Unsafe.AsPointer(ref position.X);
             var pPositionY = (float*)Unsafe.AsPointer(ref position.Y);
             var pPositionZ = (float*)Unsafe.AsPointer(ref position.Z);
@@ -94,10 +61,10 @@ namespace BepuPhysics
 
             for (int i = 0; i < Vector<int>.Count; ++i)
             {
-                var index = indices[i];
-                if (index < 0)
+                var encodedBodyIndex = encodedBodyIndices[i];
+                if (encodedBodyIndex < 0)
                     continue;
-                var stateValues = (float*)(states + index);
+                var stateValues = (float*)(states + (encodedBodyIndex & BodyReferenceMask));
                 pPositionX[i] = stateValues[MotionState.OffsetToPositionX];
                 pPositionY[i] = stateValues[MotionState.OffsetToPositionY];
                 pPositionZ[i] = stateValues[MotionState.OffsetToPositionZ];
@@ -114,9 +81,8 @@ namespace BepuPhysics
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void FallbackGatherInertia(SolverState* states, Vector<int> baseIndex, ref BodyInertiaWide inertia, int offsetInFloats)
+        unsafe static void FallbackGatherInertia(SolverState* states, Vector<int> encodedBodyIndices, ref BodyInertiaWide inertia, int offsetInFloats)
         {
-            var indices = (int*)Unsafe.AsPointer(ref baseIndex);
             var pMass = (float*)Unsafe.AsPointer(ref inertia.InverseMass);
             var pInertiaXX = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.XX);
             var pInertiaYX = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.YX);
@@ -127,10 +93,10 @@ namespace BepuPhysics
 
             for (int i = 0; i < Vector<int>.Count; ++i)
             {
-                var index = indices[i];
-                if (index < 0)
+                var encodedBodyIndex = encodedBodyIndices[i];
+                if (encodedBodyIndex < 0)
                     continue;
-                var inertiaValues = (float*)(states + index) + offsetInFloats;
+                var inertiaValues = (float*)(states + (encodedBodyIndex & BodyReferenceMask)) + offsetInFloats;
                 pInertiaXX[i] = inertiaValues[0];
                 pInertiaYX[i] = inertiaValues[1];
                 pInertiaYY[i] = inertiaValues[2];
@@ -572,6 +538,15 @@ namespace BepuPhysics
             }
             else
             {
+                for (int innerIndex = 0; innerIndex < Vector<int>.Count; ++innerIndex)
+                {
+                    if (mask[innerIndex] == 0)
+                        continue;
+                    ref var pose = ref ActiveSet.SolverStates[encodedBodyIndices[innerIndex]].Motion.Pose;
+                    pose.Position = new Vector3(position.X[innerIndex], position.Y[innerIndex], position.Z[innerIndex]);
+                    pose.Orientation = new Quaternion(orientation.X[innerIndex], orientation.Y[innerIndex], orientation.Z[innerIndex], orientation.W[innerIndex]);
+
+                }
             }
 
         }
@@ -633,6 +608,19 @@ namespace BepuPhysics
             }
             else
             {
+                for (int innerIndex = 0; innerIndex < Vector<int>.Count; ++innerIndex)
+                {
+                    if (mask[innerIndex] == 0)
+                        continue;
+                    ref var target = ref ActiveSet.SolverStates[encodedBodyIndices[innerIndex]].Inertia.World;
+                    target.InverseInertiaTensor.XX = inertia.InverseInertiaTensor.XX[innerIndex];
+                    target.InverseInertiaTensor.YX = inertia.InverseInertiaTensor.YX[innerIndex];
+                    target.InverseInertiaTensor.YY = inertia.InverseInertiaTensor.YY[innerIndex];
+                    target.InverseInertiaTensor.ZX = inertia.InverseInertiaTensor.ZX[innerIndex];
+                    target.InverseInertiaTensor.ZY = inertia.InverseInertiaTensor.ZY[innerIndex];
+                    target.InverseInertiaTensor.ZZ = inertia.InverseInertiaTensor.ZZ[innerIndex];
+                    target.InverseMass = inertia.InverseMass[innerIndex];
+                }
             }
         }
 

@@ -308,7 +308,7 @@ namespace BepuPhysics
             {
                 var movedStaticOriginalIndex = Count;
                 //Copy the memory state of the last element down.
-                this[index] = this[movedStaticOriginalIndex];
+                this[index] = StaticsBuffer[movedStaticOriginalIndex];
                 //Point the static handles at the new location.
                 var lastHandle = IndexToHandle[movedStaticOriginalIndex];
                 HandleToIndex[lastHandle.Value] = index;
