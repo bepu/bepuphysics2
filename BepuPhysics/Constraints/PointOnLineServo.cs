@@ -125,13 +125,13 @@ namespace BepuPhysics.Constraints
             Vector3Wide.CrossWithoutOverlap(linearJacobian.X, offsetB, out angularJB.X);
             Vector3Wide.CrossWithoutOverlap(linearJacobian.Y, offsetB, out angularJB.Y);
         }
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref PointOnLineServoPrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref PointOnLineServoPrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalDirection, prestep.LocalOffsetA, prestep.LocalOffsetB, out _, out var linearJacobian, out var angularJA, out var angularJB);
             ApplyImpulse(ref wsvA, ref wsvB, linearJacobian, angularJA, angularJB, inertiaA, inertiaB, ref accumulatedImpulses);
         }
 
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref PointOnLineServoPrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref PointOnLineServoPrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //This constrains a point on B to a line attached to A. It works on two degrees of freedom at the same time; those are the tangent axes to the line direction.
             //The error is measured as closest offset from the line. In other words:

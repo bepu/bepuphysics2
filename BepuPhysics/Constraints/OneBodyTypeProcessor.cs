@@ -15,9 +15,9 @@ namespace BepuPhysics.Constraints
     /// <typeparam name="TAccumulatedImpulse">Type of the accumulated impulses used by the constraint.</typeparam>
     public interface IOneBodyConstraintFunctions<TPrestepData, TAccumulatedImpulse>
     {
-        void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+        void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             ref TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA);
-        void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt,
+        void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt,
             ref TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA);
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace BepuPhysics.Constraints
         //only has to specify *type* arguments associated with the interface-implementing struct-delegates. It's going to look very strange, but it's low overhead
         //and minimizes per-type duplication.
 
-        public unsafe override void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
+        public unsafe override void WarmStart<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
             ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
@@ -101,7 +101,7 @@ namespace BepuPhysics.Constraints
                 //if (typeof(TAllowPoseIntegration) == typeof(AllowPoseIntegration))
                 //    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, new Vector<float>(dt), accumulatedImpulses, ref prestep);
 
-                function.WarmStart2(positionA, orientationA, inertiaA, ref prestep, ref accumulatedImpulses, ref wsvA);
+                function.WarmStart(positionA, orientationA, inertiaA, ref prestep, ref accumulatedImpulses, ref wsvA);
 
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
@@ -116,7 +116,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe override void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void Solve(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<Vector<int>>();
@@ -130,7 +130,7 @@ namespace BepuPhysics.Constraints
                 ref var references = ref bodyReferencesBundles[i];
                 bodies.GatherState<TSolveAccessFilterA>(references, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
 
-                function.Solve2(positionA, orientationA, inertiaA, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA);
+                function.Solve(positionA, orientationA, inertiaA, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA);
 
                 bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references);
             }

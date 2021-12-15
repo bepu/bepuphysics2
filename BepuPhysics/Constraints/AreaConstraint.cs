@@ -120,7 +120,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Add(jacobianB, jacobianC, out negatedJacobianA);
         }
 
-        public void WarmStart2(
+        public void WarmStart(
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, 
             in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, 
@@ -130,7 +130,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(inertiaA.InverseMass, inertiaB.InverseMass, inertiaC.InverseMass, negatedJacobianA, jacobianB, jacobianC, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC);
         }
 
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, float dt, float inverseDt, ref AreaConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, float dt, float inverseDt, ref AreaConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC)
         {
             ComputeJacobian(positionA, positionB, positionC, out var normalLength, out var negatedJacobianA, out var jacobianB, out var jacobianC);
 

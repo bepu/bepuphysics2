@@ -192,7 +192,7 @@ namespace BepuPhysics
             if (batchIndex == 0)
             {
                 Buffer<IndexSet> noFlagsRequired = default;
-                typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldAlwaysIntegrate, TBatchShouldIntegratePoses>(
+                typeProcessor.WarmStart<TIntegrationCallbacks, BatchShouldAlwaysIntegrate, TBatchShouldIntegratePoses>(
                     ref typeBatch, ref noFlagsRequired, bodies, ref PoseIntegrator.Callbacks,
                     dt, inverseDt, startBundle, endBundle, workerIndex);
             }
@@ -200,13 +200,13 @@ namespace BepuPhysics
             {
                 if (coarseBatchIntegrationResponsibilities[batchIndex][typeBatchIndex])
                 {
-                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldConditionallyIntegrate, TBatchShouldIntegratePoses>(
+                    typeProcessor.WarmStart<TIntegrationCallbacks, BatchShouldConditionallyIntegrate, TBatchShouldIntegratePoses>(
                         ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks,
                         dt, inverseDt, startBundle, endBundle, workerIndex);
                 }
                 else
                 {
-                    typeProcessor.WarmStart2<TIntegrationCallbacks, BatchShouldNeverIntegrate, TBatchShouldIntegratePoses>(
+                    typeProcessor.WarmStart<TIntegrationCallbacks, BatchShouldNeverIntegrate, TBatchShouldIntegratePoses>(
                         ref typeBatch, ref integrationFlags[batchIndex][typeBatchIndex], bodies, ref PoseIntegrator.Callbacks,
                         dt, inverseDt, startBundle, endBundle, workerIndex);
                 }
@@ -220,7 +220,7 @@ namespace BepuPhysics
         //Split the solve process into a warmstart and solve, where warmstart doesn't try to store out anything. It just computes jacobians and modifies velocities according to the accumulated impulse.
         //The solve step then *recomputes* jacobians from prestep data and pose information.
         //Why? Memory bandwidth. Redoing the calculation is cheaper than storing it out.
-        struct WarmStartStep2StageFunction : IStageFunction
+        struct WarmStartStageFunction : IStageFunction
         {
             public float Dt;
             public float InverseDt;
@@ -245,7 +245,7 @@ namespace BepuPhysics
             }
         }
 
-        struct SolveStep2StageFunction : IStageFunction
+        struct SolveStageFunction : IStageFunction
         {
             public float Dt;
             public float InverseDt;
@@ -257,7 +257,7 @@ namespace BepuPhysics
                 ref var block = ref this.solver.substepContext.ConstraintBlocks[blockIndex];
                 ref var typeBatch = ref solver.ActiveSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                 var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-                typeProcessor.SolveStep2(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
+                typeProcessor.Solve(ref typeBatch, solver.bodies, Dt, InverseDt, block.StartBundle, block.End);
             }
         }
 
@@ -502,13 +502,13 @@ namespace BepuPhysics
                 InverseDt = substepContext.InverseDt,
                 solver = this
             };
-            var warmstartStage = new WarmStartStep2StageFunction
+            var warmstartStage = new WarmStartStageFunction
             {
                 Dt = substepContext.Dt,
                 InverseDt = substepContext.InverseDt,
                 solver = this
             };
-            var solveStage = new SolveStep2StageFunction
+            var solveStage = new SolveStageFunction
             {
                 Dt = substepContext.Dt,
                 InverseDt = substepContext.InverseDt,
@@ -582,7 +582,7 @@ namespace BepuPhysics
                             for (int j = 0; j < batch.TypeBatches.Count; ++j)
                             {
                                 ref var typeBatch = ref batch.TypeBatches[j];
-                                TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, substepContext.Dt, substepContext.InverseDt, 0, typeBatch.BundleCount);
+                                TypeProcessors[typeBatch.TypeId].Solve(ref typeBatch, bodies, substepContext.Dt, substepContext.InverseDt, 0, typeBatch.BundleCount);
                             }
                         }
                     }
@@ -1462,7 +1462,7 @@ namespace BepuPhysics
                             for (int j = 0; j < batch.TypeBatches.Count; ++j)
                             {
                                 ref var typeBatch = ref batch.TypeBatches[j];
-                                TypeProcessors[typeBatch.TypeId].SolveStep2(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
+                                TypeProcessors[typeBatch.TypeId].Solve(ref typeBatch, bodies, substepDt, inverseDt, 0, typeBatch.BundleCount);
                             }
                         }
                     }

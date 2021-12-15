@@ -201,13 +201,13 @@ namespace BepuPhysics.Constraints
         public abstract void Initialize(ref TypeBatch typeBatch, int initialCapacity, BufferPool pool);
         public abstract void Resize(ref TypeBatch typeBatch, int newCapacity, BufferPool pool);
 
-        public abstract void WarmStart2<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies,
+        public abstract void WarmStart<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies,
             ref TIntegratorCallbacks poseIntegratorCallbacks,
             float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
             where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode
             where TAllowPoseIntegration : unmanaged, IBatchPoseIntegrationAllowed;
-        public abstract void SolveStep2(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
+        public abstract void Solve(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
 
         /// <summary>
         /// Gets whether this type requires incremental updates for each substep in a frame beyond the first.

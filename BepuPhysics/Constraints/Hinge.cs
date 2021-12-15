@@ -113,7 +113,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Add(velocityB.Angular, angularChangeB, out velocityB.Angular);
         }
 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref HingePrestepData prestep, ref HingeAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref HingePrestepData prestep, ref HingeAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var orientationMatrixA);
             Matrix3x3Wide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationMatrixA, out var offsetA);
@@ -125,7 +125,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(offsetA, offsetB, hingeJacobian, inertiaA, inertiaB, accumulatedImpulses, ref wsvA, ref wsvB);
         }
 
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref HingePrestepData prestep, ref HingeAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref HingePrestepData prestep, ref HingeAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //5x12 jacobians, from BallSocket and AngularHinge:
             //[ I, skew(offsetA),   -I, -skew(offsetB)    ]

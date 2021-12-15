@@ -5,41 +5,11 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Constraints.Contact
 {
-    //For in depth explanations of constraints, check the Inequality1DOF.cs implementation.
-    //The details are omitted for brevity in other implementations.
-
-    public struct TwistFrictionProjection
-    {
-        //Jacobians and inertia are shared with other constraints.
-        public Vector<float> EffectiveMass;
-    }
-
     /// <summary>
     /// Handles the tangent friction implementation.
     /// </summary>
     public static class TwistFriction
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB, ref Vector3Wide angularJacobianA,
-            out TwistFrictionProjection projection)
-        {
-            //Compute effective mass matrix contributions. No linear contributions for the twist constraint.
-            //Note that we use the angularJacobianA (that is, the normal) for both, despite angularJacobianB = -angularJacobianA. That's fine- J * M * JT is going to be positive regardless.
-            Symmetric3x3Wide.VectorSandwich(angularJacobianA, inertiaA.InverseInertiaTensor, out var angularA);
-            Symmetric3x3Wide.VectorSandwich(angularJacobianA, inertiaB.InverseInertiaTensor, out var angularB);
-
-            //No softening; this constraint is rigid by design. (It does support a maximum force, but that is distinct from a proper damping ratio/natural frequency.)
-            //Note that we have to guard against two bodies with infinite inertias. This is a valid state! 
-            //(We do not have to do such guarding on constraints with linear jacobians; dynamic bodies cannot have zero *mass*.)
-            //(Also note that there's no need for epsilons here... users shouldn't be setting their inertias to the absurd values it would take to cause a problem.
-            //Invalid conditions can't arise dynamically.)
-            var inverseEffectiveMass = angularA + angularB;
-            var inverseIsZero = Vector.Equals(Vector<float>.Zero, inverseEffectiveMass);
-            projection.EffectiveMass = Vector.ConditionalSelect(inverseIsZero, Vector<float>.Zero, Vector<float>.One / inverseEffectiveMass);
-
-            //Note that friction constraints have no bias velocity. They target zero velocity.
-        }
-
         /// <summary>
         /// Transforms an impulse from constraint space to world space, uses it to modify the cached world space velocities of the bodies.
         /// </summary>
@@ -52,13 +22,6 @@ namespace BepuPhysics.Constraints.Contact
             Symmetric3x3Wide.TransformWithoutOverlap(worldCorrectiveImpulseA, inertiaB.InverseInertiaTensor, out var worldCorrectiveVelocityB);
             Vector3Wide.Add(wsvA.Angular, worldCorrectiveVelocityA, out wsvA.Angular);
             Vector3Wide.Subtract(wsvB.Angular, worldCorrectiveVelocityB, out wsvB.Angular);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarmStart(ref Vector3Wide angularJacobianA, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB,
-            ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
-        {
-            ApplyImpulse(angularJacobianA, inertiaA, inertiaB, accumulatedImpulse, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -78,23 +41,14 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref Vector3Wide angularJacobianA, ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB, ref TwistFrictionProjection projection,
-            ref Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
-        {
-            ComputeCorrectiveImpulse(angularJacobianA, projection.EffectiveMass, wsvA, wsvB, maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
-            ApplyImpulse(angularJacobianA, inertiaA, inertiaB, correctiveCSI, ref wsvA, ref wsvB);
-
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarmStart2(in Vector3Wide angularJacobianA, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
+        public static void WarmStart(in Vector3Wide angularJacobianA, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
             in Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ApplyImpulse(angularJacobianA, inertiaA, inertiaB, accumulatedImpulse, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve2(in Vector3Wide angularJacobianA, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
+        public static void Solve(in Vector3Wide angularJacobianA, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
             in Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Compute effective mass matrix contributions. No linear contributions for the twist constraint.

@@ -14,14 +14,6 @@ namespace BepuPhysics.Constraints.Contact
             public Matrix2x3Wide LinearA;
             public Matrix2x3Wide AngularA;
         }
-        public struct Projection
-        {
-            //Jacobians are generated on the fly from the tangents and offsets.
-            //The tangents are reconstructed from the surface basis.
-            //This saves 11 floats per constraint relative to the seminaive baseline of two shared linear jacobians and four angular jacobians. 
-            public Vector3Wide OffsetA;
-            public Symmetric2x2Wide EffectiveMass;
-        }
 
         //Since this is an unshared specialized implementation, the jacobian calculation is kept in here rather than in the batch.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -32,23 +24,6 @@ namespace BepuPhysics.Constraints.Contact
             jacobians.LinearA.Y = tangentY;
             Vector3Wide.CrossWithoutOverlap(offsetA, tangentX, out jacobians.AngularA.X);
             Vector3Wide.CrossWithoutOverlap(offsetA, tangentY, out jacobians.AngularA.Y);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Vector3Wide offsetA, ref BodyInertiaWide inertiaA,
-            out Projection projection)
-        {
-            ComputeJacobians(tangentX, tangentY, offsetA, out var jacobians);
-            //Compute effective mass matrix contributions.
-            Symmetric2x2Wide.SandwichScale(jacobians.LinearA, inertiaA.InverseMass, out var linearContributionA);
-            Symmetric3x3Wide.MatrixSandwich(jacobians.AngularA, inertiaA.InverseInertiaTensor, out var angularContributionA);
-
-            //No softening; this constraint is rigid by design. (It does support a maximum force, but that is distinct from a proper damping ratio/natural frequency.)
-            Symmetric2x2Wide.Add(linearContributionA, angularContributionA, out var inverseEffectiveMass);
-            Symmetric2x2Wide.InvertWithoutOverlap(inverseEffectiveMass, out projection.EffectiveMass);
-            projection.OffsetA = offsetA;
-
-            //Note that friction constraints have no bias velocity. They target zero velocity.
         }
 
         /// <summary>
@@ -65,16 +40,6 @@ namespace BepuPhysics.Constraints.Contact
             Symmetric3x3Wide.TransformWithoutOverlap(angularImpulseA, inertiaA.InverseInertiaTensor, out correctiveVelocityA.Angular);
             Vector3Wide.Add(wsvA.Linear, correctiveVelocityA.Linear, out wsvA.Linear);
             Vector3Wide.Add(wsvA.Angular, correctiveVelocityA.Angular, out wsvA.Angular);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarmStart(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Projection projection, ref BodyInertiaWide inertiaA,
-            ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
-        {
-            ComputeJacobians(tangentX, tangentY, projection.OffsetA, out var jacobians);
-            //TODO: If the previous frame and current frame are associated with different time steps, the previous frame's solution won't be a good solution anymore.
-            //To compensate for this, the accumulated impulse should be scaled if dt changes.
-            ApplyImpulse(jacobians, inertiaA, accumulatedImpulse, ref wsvA);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -100,18 +65,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref Vector3Wide tangentX, ref Vector3Wide tangentY,
-            ref Projection projection, ref BodyInertiaWide inertiaA, ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
-        {
-            ComputeJacobians(tangentX, tangentY, projection.OffsetA, out var jacobians);
-            ComputeCorrectiveImpulse(wsvA, projection.EffectiveMass, jacobians, maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
-            ApplyImpulse(jacobians, inertiaA, correctiveCSI, ref wsvA);
-
-        }
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarmStart2(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetToManifoldCenterA, in BodyInertiaWide inertiaA, in Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
+        public static void WarmStart(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetToManifoldCenterA, in BodyInertiaWide inertiaA, in Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
             ComputeJacobians(tangentX, tangentY, offsetToManifoldCenterA, out var jacobians);
             //TODO: If the previous frame and current frame are associated with different time steps, the previous frame's solution won't be a good solution anymore.
@@ -120,7 +74,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve2(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetToManifoldCenterA, in BodyInertiaWide inertiaA,
+        public static void Solve(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetToManifoldCenterA, in BodyInertiaWide inertiaA,
             in Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
             ComputeJacobians(tangentX, tangentY, offsetToManifoldCenterA, out var jacobians);
