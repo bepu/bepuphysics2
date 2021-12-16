@@ -15,7 +15,9 @@ jobs:
     - uses: actions/checkout@v2 
     - uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 6.x
+        dotnet-version: |
+          5.x
+          6.x
     - name: Install dependencies
       run: |
         dotnet restore DemoContentBuilder

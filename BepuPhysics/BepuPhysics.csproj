@@ -20,7 +20,7 @@
     <DelaySign>false</DelaySign>
     <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <TieredCompilation>false</TieredCompilation>
+    <!--<TieredCompilation>false</TieredCompilation>-->
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
