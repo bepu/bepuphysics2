@@ -10,71 +10,69 @@ using System.Runtime.CompilerServices;
 
 namespace Demos.Demos
 {
-    public struct SimpleMaterial
-    {
-        public SpringSettings SpringSettings;
-        public float FrictionCoefficient;
-        public float MaximumRecoveryVelocity;
-    }
-    public unsafe struct BounceCallbacks : INarrowPhaseCallbacks
-    {
-        public CollidableProperty<SimpleMaterial> CollidableMaterials;
-
-        public void Initialize(Simulation simulation)
-        {
-            //The callbacks get created before the simulation so that they can be given to the simulation. The property needs a simulation reference, so we hand it over in the initialize.
-            CollidableMaterials.Initialize(simulation);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
-        {
-            //While the engine won't even try creating pairs between statics at all, it will ask about kinematic-kinematic pairs.
-            //Those pairs cannot emit constraints since both involved bodies have infinite inertia. Since most of the demos don't need
-            //to collect information about kinematic-kinematic pairs, we'll require that at least one of the bodies needs to be dynamic.
-            return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB)
-        {
-            return true;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
-        {
-            //For the purposes of this demo, we'll use multiplicative blending for the friction and choose spring properties according to which collidable has a higher maximum recovery velocity.
-            var a = CollidableMaterials[pair.A];
-            var b = CollidableMaterials[pair.B];
-            pairMaterial.FrictionCoefficient = a.FrictionCoefficient * b.FrictionCoefficient;
-            pairMaterial.MaximumRecoveryVelocity = MathF.Max(a.MaximumRecoveryVelocity, b.MaximumRecoveryVelocity);
-            pairMaterial.SpringSettings = pairMaterial.MaximumRecoveryVelocity == a.MaximumRecoveryVelocity ? a.SpringSettings : b.SpringSettings;
-            return true;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
-        {
-            return true;
-        }
-
-        public void Dispose()
-        {
-        }
-    }
-
     /// <summary>
     /// Shows how to configure things to bounce in the absence of a coefficient of restitution.
     /// </summary>
     /// <remarks>
-    /// v2 does not currently support traditional coefficients of restitution because it conflicts with speculative contacts.
-    /// While it could be added later in a limited way- trusting the user to configure bounciness/speculative margins such that things mostly work-
-    /// for now, there is no traditional 0 to 1 bounciness value. All contacts are, however, springs.
-    /// With a little configuration, you can give objects physically reasonable bounciness.
+    /// v2 does not support traditional coefficients of restitution because it conflicts with speculative contacts.
+    /// All contacts are, however, springs. With a little configuration, you can give objects physically reasonable bounciness.
     /// </remarks>
     public class BouncinessDemo : Demo
     {
+        public struct SimpleMaterial
+        {
+            public SpringSettings SpringSettings;
+            public float FrictionCoefficient;
+            public float MaximumRecoveryVelocity;
+        }
+        public unsafe struct BounceCallbacks : INarrowPhaseCallbacks
+        {
+            public CollidableProperty<SimpleMaterial> CollidableMaterials;
+
+            public void Initialize(Simulation simulation)
+            {
+                //The callbacks get created before the simulation so that they can be given to the simulation. The property needs a simulation reference, so we hand it over in the initialize.
+                CollidableMaterials.Initialize(simulation);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+            {
+                //While the engine won't even try creating pairs between statics at all, it will ask about kinematic-kinematic pairs.
+                //Those pairs cannot emit constraints since both involved bodies have infinite inertia. Since most of the demos don't need
+                //to collect information about kinematic-kinematic pairs, we'll require that at least one of the bodies needs to be dynamic.
+                return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowContactGeneration(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB)
+            {
+                return true;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+            {
+                //For the purposes of this demo, we'll use multiplicative blending for the friction and choose spring properties according to which collidable has a higher maximum recovery velocity.
+                var a = CollidableMaterials[pair.A];
+                var b = CollidableMaterials[pair.B];
+                pairMaterial.FrictionCoefficient = a.FrictionCoefficient * b.FrictionCoefficient;
+                pairMaterial.MaximumRecoveryVelocity = MathF.Max(a.MaximumRecoveryVelocity, b.MaximumRecoveryVelocity);
+                pairMaterial.SpringSettings = pairMaterial.MaximumRecoveryVelocity == a.MaximumRecoveryVelocity ? a.SpringSettings : b.SpringSettings;
+                return true;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
+            {
+                return true;
+            }
+
+            public void Dispose()
+            {
+            }
+        }
+
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 40, 200);
@@ -86,10 +84,10 @@ namespace Demos.Demos
             //That allows higher stiffnesses to be used since collisions last longer relative to the solver timestep duration.
             //(Note that substepping tends to be an extremely strong simulation stabilizer, so you can usually get away with lower solver iteration counts for better performance. It defaults to 1 velocity iteration per substep.)
             var collidableMaterials = new CollidableProperty<SimpleMaterial>();
-            Simulation = Simulation.Create(BufferPool, new BounceCallbacks() { CollidableMaterials = collidableMaterials }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 8);
+            Simulation = Simulation.Create(BufferPool, new BounceCallbacks() { CollidableMaterials = collidableMaterials }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), 8);
 
-            var shape = new Sphere(1);            
-            var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, shape.ComputeInertia(1), new(Simulation.Shapes.Add(shape), ContinuousDetection.Discrete(20, 20)), 1e-2f);
+            var shape = new Sphere(1);
+            var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, shape.ComputeInertia(1), Simulation.Shapes.Add(shape), 1e-2f);
 
             for (int i = 0; i < 100; ++i)
             {

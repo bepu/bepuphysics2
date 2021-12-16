@@ -70,6 +70,7 @@ namespace Demos
             AddOption<CollisionQueryDemo>();
             AddOption<SolverContactEnumerationDemo>();
             AddOption<CustomVoxelCollidableDemo>();
+            AddOption<BouncinessDemo>();
             AddOption<SponsorDemo>();
         }
 
