@@ -96,8 +96,14 @@ namespace Demos.Demos
                     //We'll drop balls in a grid. From left to right, we increase stiffness, and from back to front (relative to the camera), we'll increase damping.
                     //Note that higher frequency values tend to result in smaller bounces even at 0 damping. This is not physically realistic; it's a byproduct of the solver timestep being too long to properly handle extremely brief contacts.
                     //(Try increasing the substep count above to higher values and watch how the bounce gets closer and closer to equal height across frequency values.)
+
+                    //We choose a relatively high MaximumRecoveryVeloctity of 1000 so that the spring can actually push things back into the air, but be careful about assigning it to float.MaxValue.
+                    //Substepping uses an approximate contact update rather than re-running the entirety of collision detection over and over.
+                    //It can accumulate error in contact penetration depths. If using many substeps with high stiffness/low damping collisions, these small depth errors can result in very large velocities.
+                    //If you need extremely high contact spring frequencies, you may need to run collision detection more often (that is, call Simulation.Timestep more often with fewer solver substeps to compensate),
+                    //but limiting the recovery velocity will at least stop it from exploding.
                     ballDescription.Pose.Position = new Vector3(i * 3 - 99f * 3f / 2f, 100, j * 3 - 230);
-                    collidableMaterials.Allocate(Simulation.Bodies.Add(ballDescription)) = new SimpleMaterial { FrictionCoefficient = 1, MaximumRecoveryVelocity = float.MaxValue, SpringSettings = new SpringSettings(5 + 0.25f * i, j * j / 10000f) };
+                    collidableMaterials.Allocate(Simulation.Bodies.Add(ballDescription)) = new SimpleMaterial { FrictionCoefficient = 1, MaximumRecoveryVelocity = 1000, SpringSettings = new SpringSettings(5 + 0.25f * i, j * j / 10000f) };
                 }
             }
 
