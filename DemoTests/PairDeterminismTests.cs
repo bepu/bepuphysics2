@@ -67,15 +67,23 @@ namespace DemoTests
         }
 
         static void ComputeCollisions(CollisionTaskRegistry registry, Shapes shapes, BufferPool pool,
-            ref Manifolds manifolds, CollidableDescription a, CollidableDescription b, ref Buffer<RigidPose> posesA, ref Buffer<RigidPose> posesB, Buffer<int> remapIndices, int pairCount)
+            ref Manifolds manifolds, CollidableDescription a, CollidableDescription b, ref Buffer<RigidPose> posesA, ref Buffer<RigidPose> posesB, Buffer<int> remapIndices, int pairCount, Random random)
         {
-            var batcher = new CollisionBatcher<BatcherCallbacks>(pool, shapes, registry, 1 / 60f, new BatcherCallbacks { Pool = pool, Manifolds = manifolds });
+            const float dt = 1 / 60f;
+            var callbacks = new BatcherCallbacks { Pool = pool, Manifolds = manifolds };
+            var batcher = new CollisionBatcher<BatcherCallbacks>(pool, shapes, registry, dt, callbacks);
+            int flushInterval = random.Next(Math.Max(1, pairCount / 5), pairCount);
             for (int i = 0; i < pairCount; ++i)
             {
                 var index = remapIndices[i];
                 ref var poseA = ref posesA[index];
                 ref var poseB = ref posesB[index];
                 batcher.Add(a.Shape, b.Shape, poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, Math.Max(a.Continuity.MaximumSpeculativeMargin, b.Continuity.MaximumSpeculativeMargin), new PairContinuation(index));
+                if (i % flushInterval == flushInterval - 1)
+                {
+                    batcher.Flush();
+                    batcher = new CollisionBatcher<BatcherCallbacks>(pool, shapes, registry, dt, callbacks);
+                }
             }
             batcher.Flush();
         }
@@ -99,7 +107,7 @@ namespace DemoTests
                     posesB[i] = TestHelpers.CreateRandomPose(random, positionBounds);
                     remapIndices[i] = i;
                 };
-                ComputeCollisions(registry, shapes, pool, ref originalManifolds, a, b, ref posesA, ref posesB, remapIndices, pairCount);
+                ComputeCollisions(registry, shapes, pool, ref originalManifolds, a, b, ref posesA, ref posesB, remapIndices, pairCount, random);
 
                 for (int i = 0; i < pairCount; ++i)
                 {
@@ -149,7 +157,7 @@ namespace DemoTests
                         remapIndices[i] = remainingIndices[toTake];
                         remainingIndices.FastRemoveAt(toTake);
                     }
-                    ComputeCollisions(registry, shapes, pool, ref comparisonManifolds, a, b, ref posesA, ref posesB, remapIndices, pairCount);
+                    ComputeCollisions(registry, shapes, pool, ref comparisonManifolds, a, b, ref posesA, ref posesB, remapIndices, pairCount, random);
                     for (int i = 0; i < pairCount; ++i)
                     {
                         Assert.True(originalManifolds.ManifoldIsConvex[i] == comparisonManifolds.ManifoldIsConvex[i], $"{pairName} manifolds don't even have the same convexity state! {originalManifolds.ManifoldIsConvex[i]} versus {comparisonManifolds.ManifoldIsConvex[i]}");
@@ -256,8 +264,8 @@ namespace DemoTests
             DemoMeshHelper.CreateDeformedPlane(2, 2, (x, y) => new Vector3(x, 0, y), Vector3.One, pool, out var mesh);
             var meshCollidable = new CollidableDescription(shapes.Add(mesh), continuousDetection);
 
-            const int pairCount = 31;
-            const int poseIterations = 256;
+            const int pairCount = 128;
+            const int poseIterations = 64;
             const int remapIterations = 64;
             var bounds = new BoundingBox(new Vector3(-6), new Vector3(6));
             const int randomSeed = 5;
@@ -316,6 +324,7 @@ namespace DemoTests
 
             TestPair(meshCollidable, meshCollidable, bounds, pairCount, poseIterations, remapIterations, registry, pool, shapes, randomSeed);
 
+            pool.Clear();
         }
     }
 }
