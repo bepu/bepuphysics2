@@ -2,9 +2,9 @@
 
 ## Library
 
-The easiest way to build the library is using the latest version of Visual Studio with the .NET Core workload installed to open and build the `Library.sln`.
+The easiest way to build the library is using the latest version of Visual Studio with the .NET desktop development workload installed to open and build the `Library.sln`.
 
-The library tends to use the latest C# language features. At the time of writing, it requires C# 8.0. It does not use any of 8.0's runtime specific features, so it should be consumable in .NET Framework projects.
+The library tends to use the latest C# language features. At the time of writing, it requires C# 9.0.
 
 `BepuPhysics.csproj` uses T4 templates for code generation in a few places. If changes are made to the templates, you'll need a build pipeline that can process them (like Visual Studio). The repository contains the original generated .cs files, so if no changes are made, the templates do not need to be evaluated.
 
@@ -12,7 +12,7 @@ The libraries target .NET 5.
 
 ## Demos
 
-`Demos.sln` contains all the projects necessary to build and run the demos application. The default demo renderer uses DX11, and the content pipeline's shader compiler requires the Windows SDK. The demos application targets .NET 5.
+`Demos.sln` contains all the projects necessary to build and run the demos application. The default demo renderer uses DX11, and the content pipeline's shader compiler requires the Windows SDK. The demos application targets .NET 6.
 
 There's also an [OpenGL version of the demos](https://github.com/bepu/bepuphysics2/tree/master/Demos.GL). You can run it from the command line in the repository root using `dotnet run --project Demos.GL/Demos.csproj -c Release`.
 
@@ -34,7 +34,7 @@ Some extra checks for data validity can be enabled with the `CHECKMATH` compilat
 
 ## Runtime
 
-The library makes heavy use of SIMD intrinsics through `System.Numerics.Vectors`. Good performance requires a IL to native assembly compiler which is aware of these intrinsics. Right now, that means something like CoreCLR's RyuJIT. Other runtimes may not support the intrinsics and may suffer massive slowdowns- sometimes 10 to 100 times slower, if they run at all.
+The library makes heavy use of SIMD intrinsics through `System.Numerics.Vectors` and `System.Runtime.Intrinsics`. Good performance requires a IL to native assembly compiler which is aware of these intrinsics. Right now, that means something like CoreCLR's RyuJIT. Other runtimes may not support the intrinsics and may suffer massive slowdowns- sometimes 10 to 100 times slower, if they run at all.
 
 Performance scales up with higher SIMD machine widths. Machines with full rate AVX2 will tend to significantly outperform SSE-limited machines.
 

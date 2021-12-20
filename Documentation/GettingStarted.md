@@ -26,14 +26,13 @@ Note that `TNarrowPhaseCallbacks` and `TPoseIntegratorCallbacks` are required to
 
 A similar pattern is used in many places across the engine. You can think about these as compile time delegates or closures, just with nastier syntax.
 
-`Simulation.Create` also has a set of optional parameters to initialize a couple of Solver properties and the initial allocations. The most interesting optional parameter is the `ITimeStepper`, which defines the order of stage execution within the engine.
+`SolveDescription` describes how the simulation should schedule updates. You can set the number of velocity iterations and substeps that occur in each simulation timestep. For simulations with difficult constraint configurations, using more substeps can help stabilize the simulation far more cheaply than increasing velocity iterations can. For advanced use cases, you can schedule the number of velocity iterations for each substep individually.
 
-The engine includes a few `ITimeStepper` types out of the box:
-1. [`PositionFirstTimestepper`](../BepuPhysics/PositionFirstTimestepper.cs) first integrates positions and velocities, then detects collisions and solves. In between calls to Timestep, the velocities are in a freshly-solved state and the body position is in the same position as when contacts were created. Velocities modified between `Timestep` calls will be trusted and integrated directly into body poses regardless of collisions or constraints, so using the exposed stage events to make velocity modifications may be wise.
-2. [`PositionLastTimestepper`](../BepuPhysics/PositionLastTimestepper.cs) flips things around and integrates positions last. Velocities set between `Timestep` calls will be run through the solver before being integrated, but poses won't be the same as the poses which generated the latest contacts. Has a very small performance penalty compared to `PositionFirstTimestepper` due to splitting velocity and position integration.
-3. [`SubsteppingTimestepper`](../BepuPhysics/SubsteppingTimestepper.cs) allows pose integration and solving to run at a higher rate than collision detection. This can be very helpful for simulations with complex constraint configurations with high robustness requirements. The [`SubsteppingDemo`](../Demos/Demos/SubsteppingDemo.cs) shows an example of how effective substeps can be for pathologically difficult constraint configurations.
+There's also a fallback batch threshold, which you can safely leave at the default value almost always- it's the number of synchronized constraint batches that the simulation will create before falling back to a special case solve when individual bodies have excessive numbers of constraints connected to them. 
 
-The default `ITimeStepper` is the `PositionFirstTimestepper`.
+`Simulation.Create` also has a couple of optional parameters: initial allocation sizes to pull from the resource pool (to avoid unnecessary resizing later), and the `ITimestepper` which defines the order of stage execution within the engine.
+
+The engine includes only one `ITimeStepper` type out of the box, which gets used if no other `ITimestepper` is provided: the [`DefaultTimestepper`](../BepuPhysics/DefaultTimestepper.cs). It checks candidates for sleeping, computes bounding boxes, performs collision detection, solves constraints (which includes any necessary body velocity/pose integration), then does some incremental optimization work on internal data structures. There are callbacks between stages that can be hooked into. A custom `ITimestepper` could be provided that changes what stages execute or their order.
 
 ## Timestepping/updating
 
@@ -59,11 +58,11 @@ Creating a body with zero inverse mass and inverse inertia will create a kinemat
 
 The `CollidableDescription` takes a reference to a shape allocated in the `Simulation.Shapes` set. Shapes are allocated independently from bodies. Multiple bodies can refer to the same allocated shape. Collidables are also allowed to refer to no shape at all which can be useful for creating some constraint systems.
 
-Note that there is no internal list of `BodyDescription` instances, nor a single "Body" type anywhere. Instead, all body properties are split across several buffers. Further, there are multiple `BodySet` instances, each with their own set of buffers. These buffers are set up for efficient internal access, with the first `BodySet` storing all active bodies and the later sets containing inactive body data. The `BodyDescription` is decomposed into these separate pieces upon being added.
+Note that there is no internal list of `BodyDescription` instances, nor a single "Body" type anywhere. Instead, body properties are split across different buffers depending on internal memory access patterns. Further, there are multiple `BodySet` instances, each with their own set of buffers. These buffers are set up for efficient internal access, with the first `BodySet` storing all active bodies and the later sets containing inactive body data. The `BodyDescription` is decomposed into these separate pieces upon being added.
 
-To access an existing body's data, the body's current memory location must be looked up using the handle returned by the `Add` call. The `BodyReference` convenience type can make this a little easier by hiding the lookup process.
+To access an existing body's data, the body's current memory location must be looked up using the handle returned by the `Add` call. The `BodyReference` convenience type can make this a little easier by hiding the lookup process. You can get a `BodyReference` by indexing: `Simulation.Bodies[BodyHandle]`.
 
-Bodies may move around in memory during execution or when other bodies are added, removed, awoken, or slept. Holding onto the raw memory location through one of these changes may result in the pointer pointing to undefined data; the handle should be used to perform a fresh lookup any time the memory location could have been invalidated.
+Bodies may move around in memory during execution or when other bodies are added, removed, awoken, or slept. Holding onto the raw memory location through one of these changes may result in the pointer pointing to undefined data. The `BodyReference` type performs lookups on demand, and remains valid so long as the wrapped `BodyHandle` does.
 
 ## Statics
 
@@ -80,13 +79,11 @@ Constraints can be used to control the relative motion of bodies. There are a [w
 Some examples of constraints in the demos include:
 1. [`RagdollDemo`](../Demos/Demos/RagdollDemo.cs) is a... demo of ragdolls. 
 2. [`CarDemo`](../Demos/Demos/CarDemo.cs) shows how to build a simple constraint based car (and bad AI drivers).
-3. [`RopeStabilityDemo`](../Demos/Demos/RopeStabilityDemo.cs) shows some constraint failure modes and how to fix them.
+3. [`RopeStabilityDemo`](../Demos/Demos/RopeStabilityDemo.cs) shows some constraint configuration failure modes and how to fix them.
 4. [`NewtDemo`](../Demos/Demos/NewtDemo.cs) shows how to make a squishy newt.
 5. [`ClothDemo`](../Demos/Demos/ClothDemo.cs) shows how to make sheets of cloth with different properties.
 
 Existing raw constraint data is more difficult to access than body data. There is a similar handle->memory location lookup, but the data itself is stored a few layers deep in array-of-structures-of-arrays format for performance. Pulling data out of this representation is not very convenient, so the `Solver` has `ApplyDescription` and `GetDescription` for accessing constraint data. Custom descriptions can be created to access only subsets of a constraint's full data.
-
-Note that `Simulation.Solver.Add` has a few overloads for different body counts, but it does not check to ensure that the appropriate overload is called for the constraint type at compile time. When compiled with the `DEBUG` symbol, a `Debug.Assert` will catch the problem at runtime. (I'll probably rework this into a compile time error later.)
 
 ## Queries
 
@@ -118,4 +115,4 @@ As the above suggests, the engine uses a lot of idioms which are historically un
 
 In summary, it's a very low level API. The intent is to maximize performance, then expose as much as possible to let application-specific convenient abstractions be built on top.
 
-All of this puts a heavier burden on users. They must be familiar with value type semantics, new performance minded language features, pointers, and all sorts of other unusual-for-C# stuff. If you've got questions, feel free to post them on the [forum](https://github.com/bepu/bepuphysics2/discussions).
+All of this puts a heavier burden on users. They must be familiar with value type semantics, new performance minded language features, pointers, and all sorts of other unusual-for-C# stuff. If you've got questions, feel free to post them in the [discussions](https://github.com/bepu/bepuphysics2/discussions).
