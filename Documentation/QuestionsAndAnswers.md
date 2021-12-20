@@ -49,9 +49,9 @@ Hope that they happen to have exactly the same architecture so that every single
 
 If the target hardware is known to be identical (maybe a networked console game where users only play against other users of the exact same hardware), you might be fine. Sometimes, you'll even get lucky and end up with two different desktop processors that produce identical results.
 
-But, in general, the only way to guarantee cross platform determinism is to avoid generating any instructions which may differ between hardware. A common solution here is to use fixed point rather than floating point math.
+But, in general, the only way to guarantee cross platform determinism is to avoid generating any instructions which may differ between hardware. A common solution here is to use software floating point or fixed point rather than native floating point math.
 
-At the moment, BEPUphysics v2 does not support fixed point math out of the box, and it would be a pretty enormous undertaking to port it all over without destroying performance.
+At the moment, BEPUphysics v2 does not support software floats or fixed math out of the box, and it would be a pretty enormous undertaking to port it all over without destroying performance.
 
 I may look into conditionally compiled alternative scalar types in the future. I can't guarantee when or if I'll get around to it, though; don't wait for me!
 
@@ -86,8 +86,6 @@ You're not crazy- it doesn't exist! Instead, at the time of writing, there is fr
 Frequency and damping ratio can achieve some of the same effects as restitution with a bit of configuration. Check out the [BouncinessDemo](../Demos/Demos/BouncinessDemo.cs) for an example. 
 
 The reason for the lack of a traditional coefficient of restitution is speculative contacts. v1 used them too, but v2 pushes their usage much further and uses them as the primary form of continuous collision detection. Most of the problems caused by speculative contacts (like ghost contacts) have been smoothed over, but the naive implementation of velocity-flip restitution simply doesn't work with speculative contacts.
-
-I'd like to see if the frequency/damping ratio can suffice for most use cases. If this is a critical problem for what you are trying to do, let me know. I can't guarantee I'll fix it in the near term, but if it becomes a blocking problem for a large number of people (or myself) there's a better chance that I'll spend the time to add a workaround.
 
 ### Swept shape tests against the backfaces of meshes don't go through, but collisions do. What's going on?
 
