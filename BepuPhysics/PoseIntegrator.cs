@@ -399,8 +399,8 @@ namespace BepuPhysics
         void PredictBoundingBoxesWorker(int workerIndex)
         {
             var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
-            var bodyCount = bodies.ActiveSet.Count;
-            while (TryGetJob(bodyCount, out var start, out var exclusiveEnd))
+            var bundleCount = BundleIndexing.GetBundleCount(bodies.ActiveSet.Count);
+            while (TryGetJob(bundleCount, out var start, out var exclusiveEnd))
             {
                 PredictBoundingBoxes(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater, workerIndex);
             }
@@ -431,6 +431,7 @@ namespace BepuPhysics
                 PrepareForMultithreadedExecution(BundleIndexing.GetBundleCount(bodies.ActiveSet.Count), dt, threadDispatcher.ThreadCount);
                 this.threadDispatcher = threadDispatcher;
                 threadDispatcher.DispatchWorkers(predictBoundingBoxesWorker);
+                //predictBoundingBoxesWorker(0);
                 this.threadDispatcher = null;
             }
             else
