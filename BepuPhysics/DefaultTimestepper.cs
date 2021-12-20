@@ -10,7 +10,7 @@ namespace BepuPhysics
     /// Updates the simulation in the order of: sleeper -> predict body bounding boxes -> collision detection -> substepping solve -> data structure optimization.
     /// Each substep of the solve simulates and integrates a sub-timestep of length dt/substepCount.
     /// </summary>
-    public class SubsteppingTimestepper : ITimestepper
+    public class DefaultTimestepper : ITimestepper
     {
         /// <summary>
         /// Fires after the sleeper completes and before bodies are integrated.

@@ -563,7 +563,7 @@ namespace BepuPhysics
 
         unsafe struct ValidateAccumulatedImpulsesEnumerator : IForEach<float>
         {
-            public int Index = 0;
+            public int Index;
             public float* AccumulatedImpulses;
             public void LoopBody(float impulse)
             {
@@ -617,7 +617,7 @@ namespace BepuPhysics
         internal unsafe void ValidateAccumulatedImpulses()
         {
             var impulseMemory = stackalloc float[16];
-            var impulsesEnumerator = new ValidateAccumulatedImpulsesEnumerator { AccumulatedImpulses = impulseMemory };
+            var impulsesEnumerator = new ValidateAccumulatedImpulsesEnumerator { Index = 0, AccumulatedImpulses = impulseMemory };
             for (int i = 0; i < Sets.Length; ++i)
             {
                 ref var set = ref Sets[i];

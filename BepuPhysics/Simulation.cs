@@ -63,7 +63,7 @@ namespace BepuPhysics
         /// <param name="bufferPool">Buffer pool used to fill persistent structures and main thread ephemeral resources across the engine.</param>
         /// <param name="narrowPhaseCallbacks">Callbacks to use in the narrow phase.</param>
         /// <param name="poseIntegratorCallbacks">Callbacks to use in the pose integrator.</param>
-        /// <param name="timestepper">Timestepper that defines how the simulation state should be updated. If null, <see cref="SubsteppingTimestepper"/> is used.</param>
+        /// <param name="timestepper">Timestepper that defines how the simulation state should be updated. If null, <see cref="DefaultTimestepper"/> is used.</param>
         /// <param name="solveDescription">Describes how the solver should execute, including the number of substeps and the number of velocity iterations per substep.</param>
         /// <param name="initialAllocationSizes">Allocation sizes to initialize the simulation with. If left null, default values are chosen.</param>
         /// <returns>New simulation.</returns>
@@ -110,7 +110,7 @@ namespace BepuPhysics
             simulation.Solver.awakener = simulation.Awakener;
             simulation.Bodies.Initialize(simulation.Solver, simulation.Awakener, simulation.Sleeper);
             simulation.SolverBatchCompressor = new BatchCompressor(simulation.Solver, simulation.Bodies);
-            simulation.Timestepper = timestepper ?? new SubsteppingTimestepper();
+            simulation.Timestepper = timestepper ?? new DefaultTimestepper();
 
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation,
                 DefaultTypes.CreateDefaultCollisionTaskRegistry(), DefaultTypes.CreateDefaultSweepTaskRegistry(),
