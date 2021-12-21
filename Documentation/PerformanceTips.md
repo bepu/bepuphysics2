@@ -36,4 +36,4 @@ Note that cylinders and convex hulls will likely [become faster](https://github.
 ## Solver Optimization
 -Try using the minimum number of iterations sufficient to retain stability. The cost of the solver stage is linear with the number of iterations, and some simulations can get by with very few.
 
--For some simulations with very complex constraint configurations, there may be no practical number of solver iterations. In these cases, you may need to instead use a shorter time step duration for the entire simulation or use the `SubsteppingTimestepper`. See the [`SubsteppingDemo`](../Demos/SubsteppingDemo.cs) for an example.
+-For some simulations with very complex constraint configurations, there may be no practical number of solver iterations that can stabilize the simulation. In these cases, you may need to instead use substepping or a shorter time step duration for the entire simulation. More frequent solver execution can massively improve simulation quality, allowing you to drop velocity iteration counts massively (even to just 1 per substep). See the [`SubsteppingDemo`](../Demos/SubsteppingDemo.cs) for an example of substepping in action.
