@@ -20,7 +20,7 @@ namespace Demos.Demos
             camera.Position = new Vector3(-120, 30, -120);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = 0.1f;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
             Simulation.Solver.VelocityIterationCount = 8;
 
             //Build a grid of shapes to be connected.

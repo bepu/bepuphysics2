@@ -26,7 +26,7 @@ namespace Demos.Demos
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
             //Drop a pyramid on top of the sensor so there are more contacts to look at.
             var boxShape = new Box(1, 1, 1);

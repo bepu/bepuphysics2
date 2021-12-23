@@ -16,13 +16,13 @@ namespace BepuPhysics
     public struct SolveDescription
     {
         /// <summary>
-        /// Number of substeps to execute each time the solver runs.
-        /// </summary>
-        public int SubstepCount;
-        /// <summary>
         /// Number of velocity iterations to use in the solver if there is no <see cref="VelocityIterationScheduler"/> or if it returns a non-positive value for a substep.
         /// </summary>
         public int VelocityIterationCount;
+        /// <summary>
+        /// Number of substeps to execute each time the solver runs.
+        /// </summary>
+        public int SubstepCount;
         /// <summary>
         /// Number of synchronzed constraint batches to use before using a fallback approach.
         /// </summary>
@@ -49,10 +49,10 @@ namespace BepuPhysics
         /// <summary>
         /// Creates a solve description.
         /// </summary>
-        /// <param name="substepCount">Number of substeps in the solve.</param>
         /// <param name="velocityIterationCount">Number of velocity iterations per substep.</param>
+        /// <param name="substepCount">Number of substeps in the solve.</param>
         /// <param name="fallbackBatchThreshold">Number of synchronzed constraint batches to use before using a fallback approach.</param>
-        public SolveDescription(int substepCount, int velocityIterationCount = 1, int fallbackBatchThreshold = DefaultFallbackBatchThreshold)
+        public SolveDescription(int velocityIterationCount, int substepCount, int fallbackBatchThreshold = DefaultFallbackBatchThreshold)
         {
             SubstepCount = substepCount;
             VelocityIterationCount = velocityIterationCount;
@@ -94,18 +94,18 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Creates a solve description with 1 velocity iteration per substep and a fallback threshold of <see cref="DefaultFallbackBatchThreshold"/>.
+        /// Creates a solve description with the given number of velocity iterations and a single substep, with a fallback threshold of <see cref="DefaultFallbackBatchThreshold"/>.
         /// </summary>
-        /// <param name="substepCount">Number of substeps per solve.</param>
-        public static implicit operator SolveDescription(int substepCount)
+        /// <param name="velocityIterationCount">Number of velocity iterations per substep.</param>
+        public static implicit operator SolveDescription(int velocityIterationCount)
         {
-            return new SolveDescription(substepCount);
+            return new SolveDescription(velocityIterationCount, 1);
         }
         /// <summary>
         /// Creates a solve description with the given number of substeps and velocity iterations per substep and a fallback threshold of <see cref="DefaultFallbackBatchThreshold"/>.
         /// </summary>
         /// <param name="schedule">Number of substeps and iterations per solve.</param>
-        public static implicit operator SolveDescription((int substepCount, int iterationsPerSubstep) schedule)
+        public static implicit operator SolveDescription((int iterationsPerSubstep, int substepCount) schedule)
         {
             return new SolveDescription(schedule.substepCount, schedule.iterationsPerSubstep);
         }

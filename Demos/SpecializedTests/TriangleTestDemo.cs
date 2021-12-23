@@ -92,7 +92,7 @@ namespace Demos.SpecializedTests
 
                 Simulation = Simulation.Create(BufferPool,
                     new DemoNarrowPhaseCallbacks() { ContactSpringiness = new BepuPhysics.Constraints.SpringSettings(30, 1), FrictionCoefficient = 1, MaximumRecoveryVelocity = 5 },
-                    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
+                    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
                 //var triangleDescription = new StaticDescription
                 //{

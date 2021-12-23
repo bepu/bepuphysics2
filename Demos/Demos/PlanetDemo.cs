@@ -58,7 +58,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new PlanetaryGravityCallbacks() { PlanetCenter = new Vector3(), Gravity = 100000 }, 4);
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new PlanetaryGravityCallbacks() { PlanetCenter = new Vector3(), Gravity = 100000 }, new SolveDescription(1, 4));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Sphere(50))));
 

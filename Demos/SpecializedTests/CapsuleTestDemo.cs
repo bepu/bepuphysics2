@@ -20,7 +20,7 @@ namespace Demos.SpecializedTests
             //camera.Yaw = MathHelper.Pi ; 
             camera.Yaw = MathHelper.Pi * 3f / 4;
             //camera.Pitch = MathHelper.Pi * 0.1f;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
             var shape = new Capsule(.5f, .5f);
             var localInertia = shape.ComputeInertia(1);

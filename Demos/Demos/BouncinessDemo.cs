@@ -84,7 +84,7 @@ namespace Demos.Demos
             //That allows higher stiffnesses to be used since collisions last longer relative to the solver timestep duration.
             //(Note that substepping tends to be an extremely strong simulation stabilizer, so you can usually get away with lower solver iteration counts for better performance. It defaults to 1 velocity iteration per substep.)
             var collidableMaterials = new CollidableProperty<SimpleMaterial>();
-            Simulation = Simulation.Create(BufferPool, new BounceCallbacks() { CollidableMaterials = collidableMaterials }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), 8);
+            Simulation = Simulation.Create(BufferPool, new BounceCallbacks() { CollidableMaterials = collidableMaterials }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(1, 8));
 
             var shape = new Sphere(1);
             var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, shape.ComputeInertia(1), Simulation.Shapes.Add(shape), 1e-2f);

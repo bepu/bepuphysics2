@@ -24,8 +24,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(25, 4, 40);
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool,
-            new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(30, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
-            //new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(30, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstTimestepper(), 8);
+            new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(30, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
             var shapeA = new Box(.75f, 1, .5f);
             var shapeIndexA = Simulation.Shapes.Add(shapeA);

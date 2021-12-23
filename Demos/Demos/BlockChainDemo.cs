@@ -25,7 +25,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 3)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), angularDamping: 0.2f), new SolveDescription(8, 1));
 
             var boxShape = new Box(1, 1, 1);
             var boxInertia = boxShape.ComputeInertia(1);
@@ -61,7 +61,7 @@ namespace Demos.Demos
 
             //Build the coin description for the ponz-I mean ICO.
             var coinShape = new Cylinder(1.5f, 0.2f);
-            coinDescription = BodyDescription.CreateDynamic(RigidPose.Identity, coinShape.ComputeInertia(1), Simulation.Shapes.Add(coinShape), 0.01f);
+            coinDescription = BodyDescription.CreateDynamic(RigidPose.Identity, coinShape.ComputeInertia(1), Simulation.Shapes.Add(coinShape), 0.03f);
         }
 
         BodyDescription coinDescription;

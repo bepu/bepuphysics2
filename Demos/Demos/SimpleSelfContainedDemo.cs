@@ -214,7 +214,7 @@ namespace Demos.Demos
             var bufferPool = new BufferPool();
             //The following sets up a simulation with the callbacks defined above, and tells it to use 4 solver substeps per frame with 1 velocity iteration per substep.
             //It uses the default SubsteppingTimestepper. You could use a custom ITimestepper implementation to customize when stages run relative to each other, or to insert more callbacks.         
-            var simulation = Simulation.Create(bufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
+            var simulation = Simulation.Create(bufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
             //Drop a ball on a big static box.
             var sphere = new Sphere(1);

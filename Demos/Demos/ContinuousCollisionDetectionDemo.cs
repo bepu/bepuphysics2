@@ -56,7 +56,7 @@ namespace Demos.Demos
             //That's handy for keeping the impact more controlled and visualizing the difference between discrete and continuous modes.
             Simulation = Simulation.Create(BufferPool,
                 new DemoNarrowPhaseCallbacks(new SpringSettings(120, 1), maximumRecoveryVelocity: 1f),
-                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), (1, 8));
+                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             var shape = new Box(1, 1, 1);
             var inertia = shape.ComputeInertia(1);

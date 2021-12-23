@@ -25,7 +25,7 @@ namespace DemoTests
         }
         static void Test<T>(BufferPool pool, Random random, int constraintTypeBodyCount) where T : unmanaged, IConstraintDescription<T>
         {
-            var simulation = Simulation.Create(pool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(), 4);
+            var simulation = Simulation.Create(pool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(), new SolveDescription(1, 4));
 
 
             const int bodyCount = 2048;
@@ -96,7 +96,7 @@ namespace DemoTests
         [Fact]
         public static void TestMappings()
         {
-            var pool = new BufferPool();            
+            var pool = new BufferPool();
             var random = new Random(5);
             Test<Contact1OneBody>(pool, random, 1);
             Test<Contact2OneBody>(pool, random, 1);

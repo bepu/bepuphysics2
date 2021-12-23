@@ -42,7 +42,7 @@ namespace Demos.Demos.Cars
 
             var properties = new CollidableProperty<CarBodyProperties>();
 
-            Simulation = Simulation.Create(BufferPool, new CarCallbacks() { Properties = properties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
+            Simulation = Simulation.Create(BufferPool, new CarCallbacks() { Properties = properties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
             builder.Add(new Box(1.85f, 0.7f, 4.73f), RigidPose.Identity, 10);

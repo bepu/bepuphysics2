@@ -706,7 +706,7 @@ namespace Demos.Demos
             camera.Pitch = MathHelper.Pi * 0.15f;
 
             var filters = new CollidableProperty<DeformableCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), 4);
+            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(1, 4));
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
             float cellSize = 0.1f;

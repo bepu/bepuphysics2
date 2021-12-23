@@ -109,7 +109,7 @@ namespace Demos.Demos.Sponsors
             camera.Pitch = 0.4f;
 
             characterControllers = new CharacterControllers(BufferPool);
-            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characterControllers), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
+            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characterControllers), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
             DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(-10, 10, -10), out var newtMesh);
             var newtShape = Simulation.Shapes.Add(newtMesh);

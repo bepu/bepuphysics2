@@ -25,7 +25,7 @@ namespace Demos.Demos.Characters
             camera.Pitch = 0;
 
             characters = new CharacterControllers(BufferPool);
-            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
+            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
             CreateCharacter(new Vector3(0, 2, -4));
 

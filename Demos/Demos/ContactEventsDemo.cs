@@ -702,7 +702,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi;
 
             events = new ContactEvents(ThreadDispatcher, BufferPool);
-            Simulation = Simulation.Create(BufferPool, new ContactEventCallbacks(events), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), 4);
+            Simulation = Simulation.Create(BufferPool, new ContactEventCallbacks(events), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
             eventHandler = new EventHandler(Simulation, BufferPool);
 
             var listenedBody1 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 5, 0), 1, Simulation.Shapes, new Box(1, 2, 3)));
