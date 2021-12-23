@@ -615,7 +615,14 @@ namespace BepuPhysics
             for (int j = 0; j < set.Count; ++j)
             {
                 ref var state = ref set.SolverStates[j];
-                instance.ContributeToHash(ref hash, state);
+                instance.ContributeToHash(ref hash, state.Motion.Pose.Position);
+                instance.ContributeToHash(ref hash, state.Motion.Pose.Orientation);
+                instance.ContributeToHash(ref hash, state.Motion.Velocity.Linear);
+                instance.ContributeToHash(ref hash, state.Motion.Velocity.Angular);
+                instance.ContributeToHash(ref hash, state.Inertia.Local.InverseInertiaTensor);
+                instance.ContributeToHash(ref hash, state.Inertia.Local.InverseMass);
+                instance.ContributeToHash(ref hash, state.Inertia.World.InverseInertiaTensor);
+                instance.ContributeToHash(ref hash, state.Inertia.World.InverseMass);
             }
         }
 
