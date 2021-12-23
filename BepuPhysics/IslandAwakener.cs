@@ -802,6 +802,7 @@ namespace BepuPhysics
 
         internal void DisposeForCompletedAwakenings(ref QuickList<int> setIndices)
         {
+            Debug.Assert(setIndices.Count > 0 == phaseOneJobs.Span.Allocated && setIndices.Count > 0 == phaseTwoJobs.Span.Allocated);
             for (int i = 0; i < setIndices.Count; ++i)
             {
                 var setIndex = setIndices[i];
@@ -821,16 +822,19 @@ namespace BepuPhysics
                 sleeper.ReturnSetId(setIndex);
 
             }
-            phaseOneJobs.Dispose(pool);
-            for (int i = 0; i < phaseTwoJobs.Count; ++i)
+            if (phaseOneJobs.Span.Allocated)
             {
-                ref var job = ref phaseTwoJobs[i];
-                if (job.Type == PhaseTwoJobType.AddFallbackTypeBatchConstraints)
+                phaseOneJobs.Dispose(pool);
+                for (int i = 0; i < phaseTwoJobs.Count; ++i)
                 {
-                    pool.Return(ref job.AddFallbackTypeBatchConstraints.Sources);
+                    ref var job = ref phaseTwoJobs[i];
+                    if (job.Type == PhaseTwoJobType.AddFallbackTypeBatchConstraints)
+                    {
+                        pool.Return(ref job.AddFallbackTypeBatchConstraints.Sources);
+                    }
                 }
+                phaseTwoJobs.Dispose(pool);
             }
-            phaseTwoJobs.Dispose(pool);
         }
     }
 }

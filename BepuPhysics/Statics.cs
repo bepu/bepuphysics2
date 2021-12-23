@@ -204,24 +204,27 @@ namespace BepuPhysics
                 "This static handle doesn't seem to exist, or the mappings are out of sync. If a handle exists, both directions should match.");
         }
 
-        struct SleepingBodyCollector : IBreakableForEach<int>
+        struct SleepingBodyCollector<TFilter> : IBreakableForEach<int> where TFilter : struct, IStaticChangeAwakeningFilter
         {
+            Bodies bodies;
             BroadPhase broadPhase;
             BufferPool pool;
-            public QuickList<BodyHandle> SleepingBodyHandles;
+            public QuickList<int> SleepingSets;
+            public TFilter Filter;
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public SleepingBodyCollector(BroadPhase broadPhase, BufferPool pool)
+            public SleepingBodyCollector(Bodies bodies, BroadPhase broadPhase, BufferPool pool, ref TFilter filter)
             {
-                this.pool = pool;
+                this.bodies = bodies;
                 this.broadPhase = broadPhase;
-                SleepingBodyHandles = new QuickList<BodyHandle>(32, pool);
+                this.pool = pool;
+                SleepingSets = new QuickList<int>(32, pool);
+                Filter = filter;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose()
             {
-                SleepingBodyHandles.Dispose(pool);
+                SleepingSets.Dispose(pool);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -230,7 +233,8 @@ namespace BepuPhysics
                 ref var leaf = ref broadPhase.staticLeaves[leafIndex];
                 if (leaf.Mobility != CollidableMobility.Static)
                 {
-                    SleepingBodyHandles.Add(leaf.BodyHandle, pool);
+                    if (Filter.ShouldAwaken(bodies[leaf.BodyHandle]))
+                        SleepingSets.Add(bodies.HandleToLocation[leaf.BodyHandle.Value].SetIndex, pool);
                 }
                 return true;
             }
@@ -240,13 +244,11 @@ namespace BepuPhysics
         {
             if (filter.AllowAwakening)
             {
-                var collector = new SleepingBodyCollector(broadPhase, pool);
+                var collector = new SleepingBodyCollector<TFilter>(bodies, broadPhase, pool, ref filter);
                 broadPhase.StaticTree.GetOverlaps(bounds, ref collector);
-                for (int i = 0; i < collector.SleepingBodyHandles.Count; ++i)
-                {
-                    if (filter.ShouldAwaken(bodies[collector.SleepingBodyHandles[i]]))
-                        awakener.AwakenBody(collector.SleepingBodyHandles[i]);
-                }
+                awakener.AwakenSets(ref collector.SleepingSets);
+                //Just in case the filter did some internal mutation, preserve the changes.
+                filter = collector.Filter;
                 collector.Dispose();
             }
         }
