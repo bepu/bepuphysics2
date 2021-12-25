@@ -8,7 +8,7 @@ The library tends to use the latest C# language features. At the time of writing
 
 `BepuPhysics.csproj` uses T4 templates for code generation in a few places. If changes are made to the templates, you'll need a build pipeline that can process them (like Visual Studio). The repository contains the original generated .cs files, so if no changes are made, the templates do not need to be evaluated.
 
-The libraries target .NET 5.
+The libraries target .NET 6.
 
 ## Demos
 

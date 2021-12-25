@@ -3,9 +3,9 @@
 
 This is the repo for the bepuphysics v2 library, a complete rewrite of the C# 3d rigid body physics engine [BEPUphysics v1](https://github.com/bepu/bepuphysics1).
 
-The BepuPhysics and BepuUtilities libraries target .NET 5 and should work on any supported platform. The demos target .NET 6.0 and use DX11 by default. There is also an [OpenGL version of the demos](https://github.com/bepu/bepuphysics2/tree/master/Demos.GL) for other platforms that you can run from the command line in the repository root using `dotnet run --project Demos.GL/Demos.csproj -c Release`.
+The BepuPhysics and BepuUtilities libraries target .NET 6 and should work on any supported platform. The demos use DX11 by default. There is also an [OpenGL version of the demos](https://github.com/bepu/bepuphysics2/tree/master/Demos.GL) for other platforms that you can run from the command line in the repository root using `dotnet run --project Demos.GL/Demos.csproj -c Release`.
 
-The physics engine heavily uses System.Numerics.Vectors types, so to get good performance, you'll need a compiler which can consume those types (like RyuJIT).
+The physics engine heavily uses `System.Numerics.Vectors` types, so to get good performance, you'll need a compiler which can consume those types (like RyuJIT).
 
 To build the source, you'll need a recent version of Visual Studio with the .NET desktop development workload installed. Demos.sln references all relevant projects. For more information, see [Building](Documentation/Building.md).
 
