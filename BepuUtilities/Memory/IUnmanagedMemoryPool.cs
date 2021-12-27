@@ -1,7 +1,7 @@
 ﻿namespace BepuUtilities.Memory
 {
     /// <summary>
-    /// Defines a type that is capable of pooling blocks of unmanaged memory.
+    /// Defines a type that is capable of rapidly serving requests for allocation and deallocation of unmanaged memory.
     /// </summary>
     public interface IUnmanagedMemoryPool
     {

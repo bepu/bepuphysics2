@@ -14,92 +14,9 @@ namespace BepuUtilities.Memory
     /// <remarks>This currently works by allocating large managed arrays and pinning them under the assumption that they'll end up in the large object heap.</remarks>
     public class BufferPool : IUnmanagedMemoryPool, IDisposable
     {
-        unsafe struct Block
+        unsafe struct PowerPool
         {
-            public byte[] Array;
-            public GCHandle Handle;
-            public byte* Pointer;
-
-            public Block(int blockSize)
-            {
-                //While the runtime does have some alignment guarantees, we hedge against the possibility that the runtime could change (or another runtime is in use),
-                //or that the runtime isn't aligning to a size sufficiently large for wide SIMD types, or some type expects cache line size alignment.
-                //I suspect that the combination of the jit's tendency to use unaligned instructions regardless and modern processors' performance on unaligned instructions
-                //will make this *almost* irrelevant, but it costs roughly nothing.
-                //Suballocations from the block will always occur on pow2 boundaries, so the only way for a suballocation to violate this alignment is if an individual 
-                //suballocation is smaller than the alignment- in which case it doesn't require the alignment to be that wide. Also, since the alignment and 
-                //suballocations are both pow2 sized, they won't drift out of sync.
-                //We pick 128 bytes to allow alignment with cache line pairs: https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-optimization-manual.pdf#page=162
-                const int allocationAlignment = 128;
-                Array = new byte[blockSize + allocationAlignment];
-                Handle = GCHandle.Alloc(Array, GCHandleType.Pinned);
-                Pointer = (byte*)Handle.AddrOfPinnedObject();
-                var mask = allocationAlignment - 1;
-                var offset = (uint)Pointer & mask;
-                Pointer += allocationAlignment - offset;
-            }
-
-
-            public byte* Allocate(int indexInBlock, int suballocationSize)
-            {
-                Debug.Assert(Allocated);
-                Debug.Assert(Pinned);
-                Debug.Assert(indexInBlock >= 0 && indexInBlock * suballocationSize < Array.Length);
-                return Pointer + indexInBlock * suballocationSize;
-            }
-
-            public bool Allocated
-            {
-                get
-                {
-                    return Array != null;
-                }
-            }
-
-            public bool Pinned
-            {
-                get
-                {
-                    return Array != null && Handle.IsAllocated;
-                }
-                set
-                {
-
-                    Debug.Assert(Array != null);
-                    if (value)
-                    {
-                        Debug.Assert(!Handle.IsAllocated);
-                        Handle = GCHandle.Alloc(Array);
-                        Pointer = (byte*)Handle.AddrOfPinnedObject();
-                    }
-                    else
-                    {
-                        Debug.Assert(Handle.IsAllocated);
-                        Handle.Free();
-                        Pointer = null;
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Unpins and drops the reference to the underlying array.
-            /// </summary>
-            public void Clear()
-            {
-                Debug.Assert(Array != null);
-                //It's not guaranteed that the array is actually pinned if we support unpinning.
-                if (Handle.IsAllocated)
-                {
-                    Pinned = false;
-                }
-                Array = null;
-            }
-
-        }
-
-        struct PowerPool
-        {
-            public Block[] Blocks;
+            public byte*[] Blocks;
             /// <summary>
             /// Pool of slots available to this power level.
             /// </summary>
@@ -130,7 +47,7 @@ namespace BepuUtilities.Memory
                 SuballocationsPerBlock = BlockSize / SuballocationSize;
                 SuballocationsPerBlockShift = SpanHelper.GetContainingPowerOf2(SuballocationsPerBlock);
                 SuballocationsPerBlockMask = (1 << SuballocationsPerBlockShift) - 1;
-                Blocks = new Block[1];
+                Blocks = new byte*[1];
                 BlockCount = 0;
 
 #if DEBUG
@@ -141,16 +58,42 @@ namespace BepuUtilities.Memory
 #endif
             }
 
+            void Resize(int newSize)
+            {
+                var newBlocks = new byte*[newSize];
+                Array.Copy(Blocks, newBlocks, Blocks.Length);
+                Blocks = newBlocks;
+            }
+
+            void AllocateBlock(int blockIndex)
+            {
+#if DEBUG
+                for (int i = 0; i < blockIndex; ++i)
+                {
+                    Debug.Assert(Blocks[i] != null, "If we are allocating a block, all previous blocks should be allocated already.");
+                }
+#endif
+                Debug.Assert(Blocks[blockIndex] == null);
+                //Suballocations from the block will always occur on pow2 boundaries, so the only way for a suballocation to violate this alignment is if an individual 
+                //suballocation is smaller than the alignment- in which case it doesn't require the alignment to be that wide. Also, since the alignment and 
+                //suballocations are both pow2 sized, they won't drift out of sync.
+                //We pick 128 bytes to allow alignment with cache line pairs: https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-optimization-manual.pdf#page=162
+                Blocks[blockIndex] = (byte*)NativeMemory.AlignedAlloc((nuint)BlockSize, 128);
+                BlockCount = blockIndex + 1;
+            }
+
             public void EnsureCapacity(int capacity)
             {
                 var neededBlockCount = (int)Math.Ceiling((double)capacity / BlockSize);
                 if (BlockCount < neededBlockCount)
                 {
                     if (neededBlockCount > Blocks.Length)
-                        Array.Resize(ref Blocks, neededBlockCount);
+                    {
+                        Resize(neededBlockCount);
+                    }
                     for (int i = BlockCount; i < neededBlockCount; ++i)
                     {
-                        Blocks[i] = new Block(BlockSize);
+                        AllocateBlock(i);
                     }
                     BlockCount = neededBlockCount;
                 }
@@ -161,7 +104,7 @@ namespace BepuUtilities.Memory
             {
                 var blockIndex = slot >> SuballocationsPerBlockShift;
                 var indexInBlock = slot & SuballocationsPerBlockMask;
-                return Blocks[blockIndex].Pointer + indexInBlock * SuballocationSize;
+                return Blocks[blockIndex] + indexInBlock * SuballocationSize;
             }
 
             public unsafe void Take(out RawBuffer buffer)
@@ -170,23 +113,15 @@ namespace BepuUtilities.Memory
                 var blockIndex = slot >> SuballocationsPerBlockShift;
                 if (blockIndex >= Blocks.Length)
                 {
-                    Array.Resize(ref Blocks, 1 << SpanHelper.GetContainingPowerOf2(blockIndex + 1));
+                    Resize(1 << SpanHelper.GetContainingPowerOf2(blockIndex + 1));
                 }
                 if (blockIndex >= BlockCount)
                 {
-#if DEBUG
-                    for (int i = 0; i < blockIndex; ++i)
-                    {
-                        Debug.Assert(Blocks[i].Allocated, "If a block index is found to exceed the current block count, then every block preceding the index should be allocated.");
-                    }
-#endif
-                    BlockCount = blockIndex + 1;
-                    Debug.Assert(!Blocks[blockIndex].Allocated);
-                    Blocks[blockIndex] = new Block(BlockSize);
+                    AllocateBlock(blockIndex);
                 }
 
                 var indexInBlock = slot & SuballocationsPerBlockMask;
-                buffer = new RawBuffer(Blocks[blockIndex].Allocate(indexInBlock, SuballocationSize), SuballocationSize, (Power << IdPowerShift) | slot);
+                buffer = new RawBuffer(Blocks[blockIndex] + indexInBlock * SuballocationSize, SuballocationSize, (Power << IdPowerShift) | slot);
                 Debug.Assert(buffer.Id >= 0 && Power >= 0 && Power < 32, "Slot/power should be safely encoded in a 32 bit integer.");
 #if DEBUG
                 const int maximumOutstandingCount = 1 << 26;
@@ -217,12 +152,12 @@ namespace BepuUtilities.Memory
                   "A buffer taken from a pool should have a specific size.");
                 Debug.Assert(blockIndex >= 0 && blockIndex < BlockCount,
                     "The block pointed to by a returned buffer should actually exist within the pool.");
-                var memoryOffset = buffer.Memory - Blocks[blockIndex].Pointer;
-                Debug.Assert(memoryOffset >= 0 && memoryOffset < Blocks[blockIndex].Array.Length,
+                var memoryOffset = buffer.Memory - Blocks[blockIndex];
+                Debug.Assert(memoryOffset >= 0 && memoryOffset < BlockSize,
                     "If a raw buffer points to a given block as its source, the address should be within the block's memory region.");
-                Debug.Assert(Blocks[blockIndex].Pointer + indexInAllocatorBlock * SuballocationSize == buffer.Memory,
+                Debug.Assert(Blocks[blockIndex] + indexInAllocatorBlock * SuballocationSize == buffer.Memory,
                     "The implied address of a buffer in its block should match its actual address.");
-                Debug.Assert(buffer.Length + indexInAllocatorBlock * SuballocationSize <= Blocks[blockIndex].Array.Length,
+                Debug.Assert(buffer.Length + indexInAllocatorBlock * SuballocationSize <= BlockSize,
                     "The extent of the buffer should fit within the block.");
             }
 
@@ -262,7 +197,8 @@ namespace BepuUtilities.Memory
 #endif
                 for (int i = 0; i < BlockCount; ++i)
                 {
-                    Blocks[i].Clear();
+                    NativeMemory.AlignedFree(Blocks[i]);
+                    Blocks[i] = null;
                 }
                 Slots.Clear();
                 BlockCount = 0;
@@ -302,7 +238,6 @@ namespace BepuUtilities.Memory
         public void EnsureCapacityForPower(int byteCount, int power)
         {
             SpanHelper.ValidatePower(power);
-            ValidatePinnedState(true);
             pools[power].EnsureCapacity(byteCount);
         }
 
@@ -372,12 +307,11 @@ namespace BepuUtilities.Memory
         /// <summary>
         /// Takes a buffer large enough to contain a number of bytes given by a power, where the number of bytes is 2^power.
         /// </summary>
-        /// <param name="count">Number of bytes that should fit within the buffer as an exponent, where the number of bytes is 2^power.</param>
+        /// <param name="power">Number of bytes that should fit within the buffer as an exponent, where the number of bytes is 2^power.</param>
         /// <param name="buffer">Buffer that can hold the bytes.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void TakeForPower(int power, out RawBuffer buffer)
         {
-            ValidatePinnedState(true);
             Debug.Assert(power >= 0 && power <= SpanHelper.MaximumSpanSizePower);
             pools[power].Take(out buffer);
         }
@@ -392,14 +326,13 @@ namespace BepuUtilities.Memory
         /// <summary>
         /// Returns a buffer to the pool by id.
         /// </summary>
-        /// <param name="buffer">Buffer to return to the pool.</param>
+        /// <param name="id">Id of the buffer to return to the pool.</param>
         /// <remarks>Typed buffer pools zero out the passed-in buffer by convention.
         /// This costs very little and avoids a wide variety of bugs (either directly or by forcing fast failure). For consistency, BufferPool.Return does the same thing.
         /// This "Unsafe" overload should be used only in cases where there's a reason to bypass the clear; the naming is intended to dissuade casual use.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ReturnUnsafely(int id)
         {
-            ValidatePinnedState(true);
             DecomposeId(id, out var powerIndex, out var slotIndex);
             pools[powerIndex].Return(slotIndex);
         }
@@ -531,19 +464,6 @@ namespace BepuUtilities.Memory
             buffer.length = targetSize;
         }
 
-        [Conditional("LEAKDEBUG")]
-        void ValidatePinnedState(bool pinned)
-        {
-            for (int i = 0; i < pools.Length; ++i)
-            {
-                var pool = pools[i];
-                for (int j = 0; j < pool.BlockCount; ++j)
-                {
-                    Debug.Assert(pool.Blocks[j].Pinned == pinned, $"For this operation, all blocks must share the same pinned state of {pinned}.");
-                }
-            }
-        }
-
         [Conditional("DEBUG")]
         public void AssertEmpty()
         {
@@ -564,58 +484,6 @@ namespace BepuUtilities.Memory
                 }
             }
 #endif
-        }
-
-        /// <summary>
-        /// Gets or sets whether the BufferPool's backing resources are pinned. If no blocks are allocated internally, this returns true.
-        /// Setting this to false invalidates all outstanding pointers, and any attempt to take or return buffers while unpinned will fail (though not necessarily immediately).
-        /// The only valid operations while unpinned are setting Pinned to true and clearing the pool.
-        /// </summary>
-        public bool Pinned
-        {
-            get
-            {
-                //If no blocks exist, we just call it pinned- that's the default state.
-                bool pinned = true;
-                for (int i = 0; i < pools.Length; ++i)
-                {
-                    if (pools[i].BlockCount > 0)
-                    {
-                        pinned = pools[i].Blocks[0].Pinned;
-                        break;
-                    }
-                }
-                ValidatePinnedState(pinned);
-                return pinned;
-            }
-            set
-            {
-                void ChangePinnedState(bool pinned)
-                {
-                    for (int i = 0; i < pools.Length; ++i)
-                    {
-                        var pool = pools[i];
-                        for (int j = 0; j < pool.BlockCount; ++j)
-                        {
-                            pool.Blocks[j].Pinned = pinned;
-                        }
-                    }
-                }
-                if (value)
-                {
-                    if (!Pinned)
-                    {
-                        ChangePinnedState(true);
-                    }
-                }
-                else
-                {
-                    if (Pinned)
-                    {
-                        ChangePinnedState(false);
-                    }
-                }
-            }
         }
 
         /// <summary>
@@ -658,7 +526,7 @@ namespace BepuUtilities.Memory
             }
             //If block count is zero, pinned just returns true since that's the default. If there's a nonzero number of blocks, then they have to be explicitly unpinned
             //in order for a finalizer to be valid.
-            Debug.Assert(totalBlockCount == 0 || !Pinned, "Memory leak warning! Don't let a buffer pool die without unpinning it!");
+            Debug.Assert(totalBlockCount == 0, "Memory leak warning! Don't let a buffer pool die without clearing it!");
         }
 #endif
 
