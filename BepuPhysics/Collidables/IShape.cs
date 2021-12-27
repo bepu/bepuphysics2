@@ -130,7 +130,7 @@ namespace BepuPhysics.Collidables
         /// Memory should be assumed to be stack allocated.
         /// </summary>
         /// <param name="memory">Memory to use for internal allocations in the wide shape.</param>
-        void Initialize(in RawBuffer memory);
+        void Initialize(in Buffer<byte> memory);
 
         /// <summary>
         /// Places the specified AOS-formatted shape into the first lane of the wide 'this' reference.

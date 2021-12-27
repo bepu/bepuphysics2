@@ -47,7 +47,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             if (convexWide.InternalAllocationSize > 0)
             {
                 var memory = stackalloc byte[convexWide.InternalAllocationSize];
-                convexWide.Initialize(new RawBuffer(memory, convexWide.InternalAllocationSize));
+                convexWide.Initialize(new Buffer<byte>(memory, convexWide.InternalAllocationSize));
             }
             for (int i = 0; i < pairCount; i += Vector<float>.Count)
             {

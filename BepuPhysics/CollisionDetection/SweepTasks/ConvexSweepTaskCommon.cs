@@ -285,12 +285,12 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             if (wideA.InternalAllocationSize > 0)
             {
                 var memory = stackalloc byte[wideA.InternalAllocationSize];
-                wideA.Initialize(new RawBuffer(memory, wideA.InternalAllocationSize));
+                wideA.Initialize(new Buffer<byte>(memory, wideA.InternalAllocationSize));
             }
             if (wideB.InternalAllocationSize > 0)
             {
                 var memory = stackalloc byte[wideB.InternalAllocationSize];
-                wideB.Initialize(new RawBuffer(memory, wideB.InternalAllocationSize));
+                wideB.Initialize(new Buffer<byte>(memory, wideB.InternalAllocationSize));
             }
             wideA.Broadcast(shapeA);
             wideB.Broadcast(shapeB);

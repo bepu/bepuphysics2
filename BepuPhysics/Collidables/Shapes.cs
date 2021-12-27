@@ -12,7 +12,7 @@ namespace BepuPhysics.Collidables
 {
     public abstract class ShapeBatch
     {
-        protected RawBuffer shapesData;
+        protected Buffer<byte> shapesData;
         protected int shapeDataSize;
         /// <summary>
         /// Gets the number of shapes that the batch can currently hold without resizing.
@@ -146,7 +146,7 @@ namespace BepuPhysics.Collidables
         {
             shapeDataSize = Unsafe.SizeOf<TShape>();
             var requiredSizeInBytes = shapeCount * Unsafe.SizeOf<TShape>();
-            pool.TakeAtLeast(requiredSizeInBytes, out var newShapesData);
+            pool.TakeAtLeast<byte>(requiredSizeInBytes, out var newShapesData);
             var newShapes = newShapesData.As<TShape>();
 #if DEBUG
             //In debug mode, unused slots are kept at the default value. This helps catch misuse.

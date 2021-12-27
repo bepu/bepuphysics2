@@ -41,7 +41,7 @@ namespace BepuUtilities.Memory
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref T Get(ref RawBuffer buffer, int index)
+        public static ref T Get(ref Buffer<byte> buffer, int index)
         {
             Debug.Assert(index >= 0 && index * Unsafe.SizeOf<T>() < buffer.Length, "Index out of range.");
             return ref Get(buffer.Memory, index);
@@ -299,17 +299,15 @@ namespace BepuUtilities.Memory
         }
 
         /// <summary>
-        /// Creates an untyped buffer containing the same data as the Buffer<typeparamref name="T"/>.
+        /// Creates a typed region from the raw buffer with the largest capacity that can fit within the allocated bytes.
         /// </summary>
-        /// <returns>Untyped buffer containing the same data as the source buffer.</returns>
+        /// <typeparam name="TCast">Type of the buffer.</typeparam>
+        /// <returns>Typed buffer of maximum extent within the current buffer.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public RawBuffer AsRaw()
+        public Buffer<TCast> As<TCast>() where TCast : unmanaged
         {
-            RawBuffer buffer;
-            buffer.Memory = (byte*)Memory;
-            buffer.Length = length * Unsafe.SizeOf<T>();
-            buffer.Id = Id;
-            return buffer;
+            var count = Length * Unsafe.SizeOf<T>() / Unsafe.SizeOf<TCast>();
+            return new Buffer<TCast>(Memory, count, Id);
         }
 
         [Conditional("DEBUG")]

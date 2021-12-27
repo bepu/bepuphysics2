@@ -296,7 +296,7 @@ namespace BepuPhysics.Collidables
         public bool AllowOffsetMemoryAccess => false;
         public int InternalAllocationSize => Vector<float>.Count * Unsafe.SizeOf<ConvexHull>();
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Initialize(in RawBuffer memory)
+        public void Initialize(in Buffer<byte> memory)
         {
             Debug.Assert(memory.Length == InternalAllocationSize);
             Hulls = memory.As<ConvexHull>();

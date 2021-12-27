@@ -102,7 +102,7 @@ namespace BepuPhysics.CollisionDetection
         /// atomic setting behavior for data types no larger than the native pointer size. Further, smaller sizes actually pay a higher price in terms of increased false sharing.
         /// Choice of data type is a balancing act between the memory bandwidth of the post analysis and the frequency of false sharing.
         /// </remarks>
-        internal RawBuffer PairFreshness;
+        internal Buffer<byte> PairFreshness;
         BufferPool pool;
         int minimumPendingSize;
         int minimumPerTypeCapacity;

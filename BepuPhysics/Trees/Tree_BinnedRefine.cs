@@ -80,7 +80,7 @@ namespace BepuPhysics.Trees
             return toReturn;
 
         }
-        public static unsafe void CreateBinnedResources(BufferPool bufferPool, int maximumSubtreeCount, out RawBuffer buffer, out BinnedResources resources)
+        public static unsafe void CreateBinnedResources(BufferPool bufferPool, int maximumSubtreeCount, out Buffer<byte> buffer, out BinnedResources resources)
         {
             //TODO: This is a holdover from the pre-BufferPool tree design. It's pretty ugly. While some preallocation is useful (there's no reason to suffer the overhead of 
             //pulling things out of the BufferPool over and over and over again), the degree to which this preallocates has a negative impact on L1 cache for subtree refines.

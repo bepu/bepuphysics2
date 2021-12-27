@@ -7,7 +7,7 @@ namespace BepuPhysics.CollisionDetection
 {
     public struct UntypedList
     {
-        public RawBuffer Buffer;
+        public Buffer<byte> Buffer;
         public int Count;
         public int ByteCount;
         public int ElementSizeInBytes;
@@ -106,7 +106,7 @@ namespace BepuPhysics.CollisionDetection
                 if (newSize > Buffer.Length)
                 {
                     //This will bump up to the next allocated block size, so we don't have to worry about constant micro-resizes.
-                    pool.TakeAtLeast(newSize, out var newBuffer);
+                    pool.TakeAtLeast<byte>(newSize, out var newBuffer);
                     Unsafe.CopyBlockUnaligned(newBuffer.Memory, Buffer.Memory, (uint)Buffer.Length);
                     pool.ReturnUnsafely(Buffer.Id);
                     Buffer = newBuffer;

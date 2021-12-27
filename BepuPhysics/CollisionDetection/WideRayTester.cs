@@ -24,7 +24,7 @@ namespace BepuPhysics.CollisionDetection
             if (wide.InternalAllocationSize > 0)
             {
                 var memory = stackalloc byte[wide.InternalAllocationSize];
-                wide.Initialize(new RawBuffer(memory, wide.InternalAllocationSize));
+                wide.Initialize(new Buffer<byte>(memory, wide.InternalAllocationSize));
             }
             wide.Broadcast(shape);
             RigidPoseWide poses;

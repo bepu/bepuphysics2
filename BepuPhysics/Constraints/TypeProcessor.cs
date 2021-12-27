@@ -168,18 +168,18 @@ namespace BepuPhysics.Constraints
             ref TypeBatch typeBatch,
             int bundleStart, int localBundleStart, int bundleCount,
             int constraintStart, int localConstraintStart, int constraintCount,
-            ref int firstSortKey, ref int firstSourceIndex, ref RawBuffer bodyReferencesCache);
+            ref int firstSortKey, ref int firstSourceIndex, ref Buffer<byte> bodyReferencesCache);
 
         internal abstract void CopyToCache(
             ref TypeBatch typeBatch,
             int bundleStart, int localBundleStart, int bundleCount,
             int constraintStart, int localConstraintStart, int constraintCount,
-            ref Buffer<ConstraintHandle> indexToHandleCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache);
+            ref Buffer<ConstraintHandle> indexToHandleCache, ref Buffer<byte> prestepCache, ref Buffer<byte> accumulatedImpulsesCache);
 
         internal abstract void Regather(
             ref TypeBatch typeBatch,
             int constraintStart, int constraintCount, ref int firstSourceIndex,
-            ref Buffer<ConstraintHandle> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
+            ref Buffer<ConstraintHandle> indexToHandleCache, ref Buffer<byte> bodyReferencesCache, ref Buffer<byte> prestepCache, ref Buffer<byte> accumulatedImpulsesCache,
             ref Buffer<ConstraintLocation> handlesToConstraints);
 
         internal unsafe abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<ConstraintHandle> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
@@ -824,7 +824,7 @@ namespace BepuPhysics.Constraints
            ref TypeBatch typeBatch,
            int bundleStart, int localBundleStart, int bundleCount,
            int constraintStart, int localConstraintStart, int constraintCount,
-           ref int firstSortKey, ref int firstSourceIndex, ref RawBuffer bodyReferencesCache)
+           ref int firstSortKey, ref int firstSourceIndex, ref Buffer<byte> bodyReferencesCache)
             where TSortKeyGenerator : struct, ISortKeyGenerator<TBodyReferences>
         {
             var sortKeyGenerator = default(TSortKeyGenerator);
@@ -863,7 +863,7 @@ namespace BepuPhysics.Constraints
             ref TypeBatch typeBatch,
             int bundleStart, int localBundleStart, int bundleCount,
             int constraintStart, int localConstraintStart, int constraintCount,
-            ref Buffer<ConstraintHandle> indexToHandleCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache)
+            ref Buffer<ConstraintHandle> indexToHandleCache, ref Buffer<byte> prestepCache, ref Buffer<byte> accumulatedImpulsesCache)
         {
             typeBatch.IndexToHandle.CopyTo(constraintStart, indexToHandleCache, localConstraintStart, constraintCount);
             Unsafe.CopyBlockUnaligned(
@@ -878,7 +878,7 @@ namespace BepuPhysics.Constraints
         internal sealed override void Regather(
             ref TypeBatch typeBatch,
             int constraintStart, int constraintCount, ref int firstSourceIndex,
-            ref Buffer<ConstraintHandle> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
+            ref Buffer<ConstraintHandle> indexToHandleCache, ref Buffer<byte> bodyReferencesCache, ref Buffer<byte> prestepCache, ref Buffer<byte> accumulatedImpulsesCache,
             ref Buffer<ConstraintLocation> handlesToConstraints)
         {
             var typedBodyReferencesCache = bodyReferencesCache.As<TBodyReferences>();

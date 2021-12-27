@@ -58,12 +58,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             if (aWide.InternalAllocationSize > 0)
             {
                 var memory = stackalloc byte[aWide.InternalAllocationSize];
-                aWide.Initialize(new RawBuffer(memory, aWide.InternalAllocationSize));
+                aWide.Initialize(new Buffer<byte>(memory, aWide.InternalAllocationSize));
             }
             if (bWide.InternalAllocationSize > 0)
             {
                 var memory = stackalloc byte[bWide.InternalAllocationSize];
-                bWide.Initialize(new RawBuffer(memory, bWide.InternalAllocationSize));
+                bWide.Initialize(new Buffer<byte>(memory, bWide.InternalAllocationSize));
             }
             TManifoldWide manifoldWide;
             var defaultPairTester = default(TPairTester);

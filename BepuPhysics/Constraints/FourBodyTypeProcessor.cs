@@ -90,7 +90,7 @@ namespace BepuPhysics.Constraints
             ref TypeBatch typeBatch,
             int bundleStart, int localBundleStart, int bundleCount,
             int constraintStart, int localConstraintStart, int constraintCount,
-            ref int firstSortKey, ref int firstSourceIndex, ref RawBuffer bodyReferencesCache)
+            ref int firstSortKey, ref int firstSourceIndex, ref Buffer<byte> bodyReferencesCache)
         {
             GenerateSortKeysAndCopyReferences<FourBodySortKeyGenerator>(
                 ref typeBatch,

@@ -11,7 +11,7 @@ namespace BepuPhysics.CollisionDetection
 {
     unsafe struct UntypedBlob
     {
-        public RawBuffer Buffer;
+        public Buffer<byte> Buffer;
         public int ByteCount;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

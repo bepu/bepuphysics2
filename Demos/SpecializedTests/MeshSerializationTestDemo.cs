@@ -26,7 +26,7 @@ namespace Demos.SpecializedTests
             var freshConstructionTime = (endTime - startTime) / (double)Stopwatch.Frequency;
             Console.WriteLine($"Fresh construction time (ms): {freshConstructionTime * 1e3}");
 
-            BufferPool.Take(originalMesh.GetSerializedByteCount(), out var serializedMeshBytes);
+            BufferPool.Take<byte>(originalMesh.GetSerializedByteCount(), out var serializedMeshBytes);
             originalMesh.Serialize(serializedMeshBytes);
             startTime = Stopwatch.GetTimestamp();
             var loadedMesh = new Mesh(serializedMeshBytes, BufferPool);

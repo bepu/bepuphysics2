@@ -107,7 +107,7 @@ namespace BepuUtilities.Memory
                 return Blocks[blockIndex] + indexInBlock * SuballocationSize;
             }
 
-            public unsafe void Take(out RawBuffer buffer)
+            public unsafe void Take(out Buffer<byte> buffer)
             {
                 var slot = Slots.Take();
                 var blockIndex = slot >> SuballocationsPerBlockShift;
@@ -121,7 +121,7 @@ namespace BepuUtilities.Memory
                 }
 
                 var indexInBlock = slot & SuballocationsPerBlockMask;
-                buffer = new RawBuffer(Blocks[blockIndex] + indexInBlock * SuballocationSize, SuballocationSize, (Power << IdPowerShift) | slot);
+                buffer = new Buffer<byte>(Blocks[blockIndex] + indexInBlock * SuballocationSize, SuballocationSize, (Power << IdPowerShift) | slot);
                 Debug.Assert(buffer.Id >= 0 && Power >= 0 && Power < 32, "Slot/power should be safely encoded in a 32 bit integer.");
 #if DEBUG
                 const int maximumOutstandingCount = 1 << 26;
@@ -142,8 +142,9 @@ namespace BepuUtilities.Memory
             }
 
             [Conditional("DEBUG")]
-            internal unsafe void ValidateBufferIsContained(ref RawBuffer buffer)
+            internal unsafe void ValidateBufferIsContained<T>(ref Buffer<T> typedBuffer) where T : unmanaged
             {
+                var buffer = typedBuffer.As<byte>();
                 //There are a lot of ways to screw this up. Try to catch as many as possible!
                 var slotIndex = buffer.Id & ((1 << IdPowerShift) - 1);
                 var blockIndex = slotIndex >> SuballocationsPerBlockShift;
@@ -253,29 +254,6 @@ namespace BepuUtilities.Memory
         }
 
         /// <summary>
-        /// Takes a buffer large enough to contain a number of bytes. Capacity may be larger than requested.
-        /// </summary>
-        /// <param name="count">Desired minimum capacity of the buffer in bytes.</param>
-        /// <param name="buffer">Buffer that can hold the bytes.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void TakeAtLeast(int count, out RawBuffer buffer)
-        {
-            TakeForPower(SpanHelper.GetContainingPowerOf2(count), out buffer);
-        }
-
-        /// <summary>
-        /// Takes a buffer of the requested size from the pool.
-        /// </summary>
-        /// <param name="count">Desired capacity of the buffer in bytes.</param>
-        /// <param name="buffer">Buffer of the requested size.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Take(int count, out RawBuffer buffer)
-        {
-            TakeAtLeast(count, out buffer);
-            buffer.Length = count;
-        }
-
-        /// <summary>
         /// Takes a buffer large enough to contain a number of elements of a given type. Capacity may be larger than requested.
         /// </summary>
         /// <typeparam name="T">Type of the elements in the buffer.</typeparam>
@@ -287,7 +265,7 @@ namespace BepuUtilities.Memory
             //Avoid returning a zero length span because 1 byte / Unsafe.SizeOf<T>() happens to be zero.
             if (count == 0)
                 count = 1;
-            TakeAtLeast(count * Unsafe.SizeOf<T>(), out var rawBuffer);
+            TakeForPower(SpanHelper.GetContainingPowerOf2(count * Unsafe.SizeOf<T>()), out var rawBuffer);
             buffer = rawBuffer.As<T>();
         }
 
@@ -310,7 +288,7 @@ namespace BepuUtilities.Memory
         /// <param name="power">Number of bytes that should fit within the buffer as an exponent, where the number of bytes is 2^power.</param>
         /// <param name="buffer">Buffer that can hold the bytes.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void TakeForPower(int power, out RawBuffer buffer)
+        public void TakeForPower(int power, out Buffer<byte> buffer)
         {
             Debug.Assert(power >= 0 && power <= SpanHelper.MaximumSpanSizePower);
             pools[power].Take(out buffer);
@@ -342,7 +320,7 @@ namespace BepuUtilities.Memory
         /// </summary>
         /// <param name="buffer">Buffer to return to the pool.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Return(ref RawBuffer buffer)
+        public unsafe void Return<T>(ref Buffer<T> buffer) where T : unmanaged
         {
 #if DEBUG
             DecomposeId(buffer.Id, out var powerIndex, out var slotIndex);
@@ -351,72 +329,62 @@ namespace BepuUtilities.Memory
             ReturnUnsafely(buffer.Id);
             buffer = default;
         }
-        /// <summary>
-        /// Returns a buffer to the pool.
-        /// </summary>
-        /// <param name="buffer">Buffer to return to the pool.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Return<T>(ref Buffer<T> buffer) where T : unmanaged
-        {
-            ReturnUnsafely(buffer.Id);
-            buffer = default;
-        }
 
         //The resizes aren't particularly clever. They are more aggressive about reallocating than they need to be, but
         //the assumption is that they will be used only when it's already known that a resize is necessary.
-        /// <summary>
-        /// Resizes a buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
-        /// Final buffer size is at least as large as the target size and may be larger.
-        /// </summary>
-        /// <param name="buffer">Buffer reference to resize.</param>
-        /// <param name="targetSize">Number of bytes to resize the buffer for.</param>
-        /// <param name="copyCount">Number of bytes to copy into the new buffer from the old buffer.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ResizeToAtLeast(ref RawBuffer buffer, int targetSize, int copyCount)
-        {
-            Debug.Assert(copyCount <= buffer.Length, "Can't copy more than the capacity of the buffer.");
-            Debug.Assert(copyCount <= targetSize, "Can't copy more than the target size.");
-            //Only do anything if the new size is actually different from the current size.
-            targetSize = 1 << (SpanHelper.GetContainingPowerOf2(targetSize));
-            if (buffer.Allocated)
-            {
-                DecomposeId(buffer.Id, out var powerIndex, out var slotIndex);
-                var currentSize = 1 << powerIndex;
-                if (currentSize != targetSize || pools[powerIndex].GetStartPointerForSlot(slotIndex) != buffer.Memory)
-                {
-                    TakeAtLeast(targetSize, out var newBuffer);
-                    Buffer.MemoryCopy(buffer.Memory, newBuffer.Memory, buffer.Length, copyCount);
-                    pools[powerIndex].Return(slotIndex);
-                    buffer = newBuffer;
-                }
-                else
-                {
-                    //While the allocation size is equal to the target size, the buffer might not be.
-                    //Fortunately, if the allocation stays the same size and the buffer start is at its original location, we can skip doing any work.
-                    //(With more work, you could expand *backwards*, we just didn't bother since this is exceptionally rare anyway.
-                    //The typed codepath doesn't bother doing this at all, and that's fine.)
-                    buffer.Length = targetSize;
-                }
-            }
-            else
-            {
-                //Nothing to return or copy.
-                TakeAtLeast(targetSize, out buffer);
-            }
-        }
+        ///// <summary>
+        ///// Resizes a buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
+        ///// Final buffer size is at least as large as the target size and may be larger.
+        ///// </summary>
+        ///// <param name="buffer">Buffer reference to resize.</param>
+        ///// <param name="targetSize">Number of bytes to resize the buffer for.</param>
+        ///// <param name="copyCount">Number of bytes to copy into the new buffer from the old buffer.</param>
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //public unsafe void ResizeToAtLeast(ref Buffer<byte> buffer, int targetSize, int copyCount)
+        //{
+        //    Debug.Assert(copyCount <= buffer.Length, "Can't copy more than the capacity of the buffer.");
+        //    Debug.Assert(copyCount <= targetSize, "Can't copy more than the target size.");
+        //    //Only do anything if the new size is actually different from the current size.
+        //    targetSize = 1 << (SpanHelper.GetContainingPowerOf2(targetSize));
+        //    if (buffer.Allocated)
+        //    {
+        //        DecomposeId(buffer.Id, out var powerIndex, out var slotIndex);
+        //        var currentSize = 1 << powerIndex;
+        //        if (currentSize != targetSize || pools[powerIndex].GetStartPointerForSlot(slotIndex) != buffer.Memory)
+        //        {
+        //            TakeAtLeast(targetSize, out var newBuffer);
+        //            Buffer.MemoryCopy(buffer.Memory, newBuffer.Memory, buffer.Length, copyCount);
+        //            pools[powerIndex].Return(slotIndex);
+        //            buffer = newBuffer;
+        //        }
+        //        else
+        //        {
+        //            //While the allocation size is equal to the target size, the buffer might not be.
+        //            //Fortunately, if the allocation stays the same size and the buffer start is at its original location, we can skip doing any work.
+        //            //(With more work, you could expand *backwards*, we just didn't bother since this is exceptionally rare anyway.
+        //            //The typed codepath doesn't bother doing this at all, and that's fine.)
+        //            buffer.Length = targetSize;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        //Nothing to return or copy.
+        //        TakeAtLeast(targetSize, out buffer);
+        //    }
+        //}
 
-        /// <summary>
-        /// Resizes a buffer to the target size. Copies a subset of elements into the new buffer.
-        /// </summary>
-        /// <param name="buffer">Buffer reference to resize.</param>
-        /// <param name="targetSize">Number of bytes to resize the buffer for.</param>
-        /// <param name="copyCount">Number of bytes to copy into the new buffer from the old buffer.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Resize(ref RawBuffer buffer, int targetSize, int copyCount)
-        {
-            ResizeToAtLeast(ref buffer, targetSize, copyCount);
-            buffer.Length = targetSize;
-        }
+        ///// <summary>
+        ///// Resizes a buffer to the target size. Copies a subset of elements into the new buffer.
+        ///// </summary>
+        ///// <param name="buffer">Buffer reference to resize.</param>
+        ///// <param name="targetSize">Number of bytes to resize the buffer for.</param>
+        ///// <param name="copyCount">Number of bytes to copy into the new buffer from the old buffer.</param>
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //public unsafe void Resize(ref Buffer<byte> buffer, int targetSize, int copyCount)
+        //{
+        //    ResizeToAtLeast(ref buffer, targetSize, copyCount);
+        //    buffer.Length = targetSize;
+        //}
 
         /// <summary>
         /// Resizes a typed buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer. 

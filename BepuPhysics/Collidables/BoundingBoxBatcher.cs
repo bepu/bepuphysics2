@@ -149,7 +149,7 @@ namespace BepuPhysics
             if (shapeWide.InternalAllocationSize > 0) //TODO: Check to make sure the JIT omits the branch.
             {
                 var memory = stackalloc byte[shapeWide.InternalAllocationSize];
-                shapeWide.Initialize(new RawBuffer(memory, shapeWide.InternalAllocationSize));
+                shapeWide.Initialize(new Buffer<byte>(memory, shapeWide.InternalAllocationSize));
             }
             ref var batch = ref batches[shapeBatch.TypeId];
             var shapeIndices = batch.ShapeIndices;
