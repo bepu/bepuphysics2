@@ -3,6 +3,7 @@ using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -60,7 +61,7 @@ namespace DemoUtilities
         {
             var newCount = this.count + count;
             if (newCount > characters.Length)
-                Array.Resize(ref characters, SpanHelper.GetContainingPowerOf2(newCount));
+                Array.Resize(ref characters, (int)BitOperations.RoundUpToPowerOf2((uint)newCount));
             int end = start + count;
             for (int i = start; i < end; ++i)
             {
@@ -85,7 +86,7 @@ namespace DemoUtilities
         void Add(char character)
         {
             if (characters.Length == count)
-                Array.Resize(ref characters, SpanHelper.GetContainingPowerOf2(count * 2));
+                Array.Resize(ref characters, (int)BitOperations.RoundUpToPowerOf2((uint)count + 1));
             characters[count++] = character;
 
         }

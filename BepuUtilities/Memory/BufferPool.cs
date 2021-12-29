@@ -113,7 +113,7 @@ namespace BepuUtilities.Memory
                 var blockIndex = slot >> SuballocationsPerBlockShift;
                 if (blockIndex >= Blocks.Length)
                 {
-                    Resize(1 << SpanHelper.GetContainingPowerOf2(blockIndex + 1));
+                    Resize((int)BitOperations.RoundUpToPowerOf2((uint)(blockIndex + 1)));
                 }
                 if (blockIndex >= BlockCount)
                 {
@@ -330,62 +330,6 @@ namespace BepuUtilities.Memory
             buffer = default;
         }
 
-        //The resizes aren't particularly clever. They are more aggressive about reallocating than they need to be, but
-        //the assumption is that they will be used only when it's already known that a resize is necessary.
-        ///// <summary>
-        ///// Resizes a buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
-        ///// Final buffer size is at least as large as the target size and may be larger.
-        ///// </summary>
-        ///// <param name="buffer">Buffer reference to resize.</param>
-        ///// <param name="targetSize">Number of bytes to resize the buffer for.</param>
-        ///// <param name="copyCount">Number of bytes to copy into the new buffer from the old buffer.</param>
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //public unsafe void ResizeToAtLeast(ref Buffer<byte> buffer, int targetSize, int copyCount)
-        //{
-        //    Debug.Assert(copyCount <= buffer.Length, "Can't copy more than the capacity of the buffer.");
-        //    Debug.Assert(copyCount <= targetSize, "Can't copy more than the target size.");
-        //    //Only do anything if the new size is actually different from the current size.
-        //    targetSize = 1 << (SpanHelper.GetContainingPowerOf2(targetSize));
-        //    if (buffer.Allocated)
-        //    {
-        //        DecomposeId(buffer.Id, out var powerIndex, out var slotIndex);
-        //        var currentSize = 1 << powerIndex;
-        //        if (currentSize != targetSize || pools[powerIndex].GetStartPointerForSlot(slotIndex) != buffer.Memory)
-        //        {
-        //            TakeAtLeast(targetSize, out var newBuffer);
-        //            Buffer.MemoryCopy(buffer.Memory, newBuffer.Memory, buffer.Length, copyCount);
-        //            pools[powerIndex].Return(slotIndex);
-        //            buffer = newBuffer;
-        //        }
-        //        else
-        //        {
-        //            //While the allocation size is equal to the target size, the buffer might not be.
-        //            //Fortunately, if the allocation stays the same size and the buffer start is at its original location, we can skip doing any work.
-        //            //(With more work, you could expand *backwards*, we just didn't bother since this is exceptionally rare anyway.
-        //            //The typed codepath doesn't bother doing this at all, and that's fine.)
-        //            buffer.Length = targetSize;
-        //        }
-        //    }
-        //    else
-        //    {
-        //        //Nothing to return or copy.
-        //        TakeAtLeast(targetSize, out buffer);
-        //    }
-        //}
-
-        ///// <summary>
-        ///// Resizes a buffer to the target size. Copies a subset of elements into the new buffer.
-        ///// </summary>
-        ///// <param name="buffer">Buffer reference to resize.</param>
-        ///// <param name="targetSize">Number of bytes to resize the buffer for.</param>
-        ///// <param name="copyCount">Number of bytes to copy into the new buffer from the old buffer.</param>
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //public unsafe void Resize(ref Buffer<byte> buffer, int targetSize, int copyCount)
-        //{
-        //    ResizeToAtLeast(ref buffer, targetSize, copyCount);
-        //    buffer.Length = targetSize;
-        //}
-
         /// <summary>
         /// Resizes a typed buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer. 
         /// Final buffer size is at least as large as the target size and may be larger.
@@ -475,7 +419,7 @@ namespace BepuUtilities.Memory
         {
             if (count == 0)
                 count = 1;
-            return (1 << SpanHelper.GetContainingPowerOf2(count * Unsafe.SizeOf<T>())) / Unsafe.SizeOf<T>();
+            return ((int)BitOperations.RoundUpToPowerOf2((uint)(count * Unsafe.SizeOf<T>()))) / Unsafe.SizeOf<T>();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace BepuUtilities.Memory
 {
@@ -17,41 +17,7 @@ namespace BepuUtilities.Memory
         {
             Debug.Assert(power >= 0 && power <= MaximumSpanSizePower, $"Power must be from 0 to {MaximumSpanSizePower}, inclusive.");
         }
-        /// <summary>
-        /// Computes the largest integer N such that 2^N is less than or equal to i.
-        /// </summary>
-        /// <param name="i">Integer to compute the power of.</param>
-        /// <returns>Lowest integer N such that 2^N is less than or equal to i.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetPowerOf2(int i)
-        {
-            int log = 0;
-            if ((i & 0xFFFF0000) > 0)
-            {
-                i >>= 16;
-                log |= 16;
-            }
-            if ((i & 0xFF00) > 0)
-            {
-                i >>= 8;
-                log |= 8;
-            }
-            if ((i & 0xF0) > 0)
-            {
-                i >>= 4;
-                log |= 4;
-            }
-            if ((i & 0xC) > 0)
-            {
-                i >>= 2;
-                log |= 2;
-            }
-            if ((i & 0x2) > 0)
-            {
-                log |= 1;
-            }
-            return log;
-        }
+        
         /// <summary>
         /// Computes the lowest integer N such that 2^N >= i.
         /// </summary>
@@ -60,11 +26,9 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetContainingPowerOf2(int i)
         {
-            Debug.Assert(i >= 0 && i <= (1 << MaximumSpanSizePower), "i must be from 0 to " + ((1 << MaximumSpanSizePower) - 1) + ", inclusive.");
-            //We want the buffer which would fully contain the count, so it should be effectively Ceiling(Log(i)).
-            //Doubling the value (and subtracting one, to avoid the already-a-power-of-two case) takes care of this.
-            i = ((i > 0 ? i : 1) << 1) - 1;
-            return GetPowerOf2(i);
+            var unsigned = i == 0 ? 1u : (uint)i;
+            return 32 - BitOperations.LeadingZeroCount(unsigned - 1);
+            
         }
 
         /// <summary>

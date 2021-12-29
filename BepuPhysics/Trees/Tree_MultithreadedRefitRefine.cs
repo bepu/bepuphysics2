@@ -336,7 +336,7 @@ namespace BepuPhysics.Trees
             unsafe void Refine(int workerIndex)
             {
                 var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
-                var subtreeCountEstimate = 1 << SpanHelper.GetContainingPowerOf2(MaximumSubtrees);
+                var subtreeCountEstimate = (int)BitOperations.RoundUpToPowerOf2((uint)MaximumSubtrees);
                 var subtreeReferences = new QuickList<int>(subtreeCountEstimate, threadPool);
                 var treeletInternalNodes = new QuickList<int>(subtreeCountEstimate, threadPool);
 
