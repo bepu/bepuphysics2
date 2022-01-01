@@ -40,38 +40,6 @@ namespace BepuPhysics
             Pose.Orientation = orientation;
             Collidable = collidable;
         }
-
-        /// <summary>
-        /// Builds a new static description.
-        /// </summary>
-        /// <param name="position">Position of the static.</param>
-        /// <param name="collidable">Collidable description for the static.</param>
-        public StaticDescription(Vector3 position, CollidableDescription collidable) : this(position, Quaternion.Identity, collidable)
-        {
-        }
-
-        /// <summary>
-        /// Builds a new static description with discrete continuity.
-        /// </summary>
-        /// <param name="position">Position of the static.</param>
-        /// <param name="orientation">Orientation of the static.</param>
-        /// <param name="shapeIndex">Index of the static's shape in the simulation shapes set.</param>
-        public StaticDescription(Vector3 position, Quaternion orientation, TypedIndex shapeIndex)
-        {
-            Pose.Position = position;
-            Pose.Orientation = orientation;
-            Collidable.Continuity = ContinuousDetection.Passive;
-            Collidable.Shape = shapeIndex;
-        }
-
-        /// <summary>
-        /// Builds a new static description with discrete continuity.
-        /// </summary>
-        /// <param name="position">Position of the static.</param>
-        /// <param name="shapeIndex">Index of the static's shape in the simulation shapes set.</param>
-        public StaticDescription(Vector3 position, TypedIndex shapeIndex) : this(position, Quaternion.Identity, shapeIndex)
-        {
-        }
     }
 
 }
