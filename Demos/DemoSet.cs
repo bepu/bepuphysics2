@@ -45,6 +45,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<DancerDemo>();
             AddOption<CarDemo>();
             AddOption<ConstrainedKinematicIntegrationTest>();
             AddOption<ConstraintTestDemo>();
