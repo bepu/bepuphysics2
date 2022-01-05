@@ -5,6 +5,7 @@ using BepuPhysics.Constraints;
 using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer;
+using DemoUtilities;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -99,6 +100,34 @@ namespace Demos.Demos
             lowerFilter = new SubgroupCollisionFilter(groupIndex, limbSubgroupIndexStart + 1);
             Connect(simulation, body, upperLimb, bodyToUpperJointLocation, springSettings, ref bodyFilter, ref upperFilter);
             Connect(simulation, upperLimb, lowerLimb, upperToLowerJointLocation, springSettings, ref upperFilter, ref lowerFilter);
+            //While this demo isn't trying to make a full ragdoll, it's useful to stop the joints from doing obviously gross stuff.
+            var bodyPose = simulation.Bodies[body].Pose;
+            var upperPose = simulation.Bodies[upperLimb].Pose;
+            var lowerPose = simulation.Bodies[lowerLimb].Pose;
+            //Prevent the hip from spinning 360 degrees.
+            simulation.Solver.Add(body, upperLimb, new TwistServo
+            {
+                LocalBasisA = QuaternionEx.Concatenate(RagdollDemo.CreateBasis(new Vector3(0, -1, 0), new Vector3(0, 0, 1)), Quaternion.Conjugate(bodyPose.Orientation)),
+                LocalBasisB = QuaternionEx.Concatenate(RagdollDemo.CreateBasis(new Vector3(0, -1, 0), new Vector3(0, 0, 1)), Quaternion.Conjugate(upperPose.Orientation)),
+                ServoSettings = ServoSettings.Default,
+                SpringSettings = new SpringSettings(30, 1)
+            });
+            //Stop knee from flopping every which way.
+            simulation.Solver.Add(upperLimb, lowerLimb, new AngularHinge
+            {
+                LocalHingeAxisA = QuaternionEx.Transform(Vector3.UnitX, Quaternion.Conjugate(upperPose.Orientation)),
+                LocalHingeAxisB = QuaternionEx.Transform(Vector3.UnitX, Quaternion.Conjugate(lowerPose.Orientation)),
+                SpringSettings = new SpringSettings(30, 1)
+            });
+            //Prevent knee hyperextension.
+            var swingLimit = new SwingLimit
+            {
+                AxisLocalA = QuaternionEx.Transform(new Vector3(0, 0, 1), QuaternionEx.Conjugate(upperPose.Orientation)),
+                AxisLocalB = QuaternionEx.Transform(new Vector3(0, 1, 0), QuaternionEx.Conjugate(lowerPose.Orientation)),
+                MaximumSwingAngle = MathF.PI * 0.4f,
+                SpringSettings = new SpringSettings(15, 1),
+            };
+            simulation.Solver.Add(upperLimb, lowerLimb, swingLimit);
 
         }
 
@@ -112,6 +141,8 @@ namespace Demos.Demos
             });
         }
 
+        const float legOffsetX = 0.135f;
+        const float armOffsetX = 0.25f;
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 4, 10);
@@ -132,8 +163,8 @@ namespace Demos.Demos
             var anklePosition = kneePosition - new Vector3(0, 0.5f, 0);
             var elbowPosition = chestPosition + new Vector3(0, 0.39f, 0);
             var wristPosition = elbowPosition + new Vector3(0, 0.39f, 0);
-            var armOffset = new Vector3(0.25f, 0, 0);
-            var legOffset = new Vector3(0.135f, 0, 0);
+            var armOffset = new Vector3(armOffsetX, 0, 0);
+            var legOffset = new Vector3(legOffsetX, 0, 0);
             const int groupIndex = 0;
 
             //Build the torso and head bodies.
@@ -202,7 +233,7 @@ namespace Demos.Demos
             CreateLimb(Simulation, collisionFilters, sourceBodyHandles.Chest, sourceBodyHandles.UpperRightArm, sourceBodyHandles.LowerRightArm, chestPosition + armOffset, elbowPosition + armOffset, springSettings, groupIndex, 10);
 
             //Create controls.
-            hipsControl = new Control(Simulation, sourceBodyHandles.Hips, hipsPosition, ServoSettings.Default, new SpringSettings(30, 1));
+            hipsControl = new Control(Simulation, sourceBodyHandles.Hips, hipsPosition, ServoSettings.Default, new SpringSettings(5, 1));
             Simulation.Solver.Add(sourceBodyHandles.Hips, new OneBodyAngularServo { ServoSettings = ServoSettings.Default, SpringSettings = new SpringSettings(30, 1), TargetOrientation = Simulation.Bodies[sourceBodyHandles.Hips].Pose.Orientation });
 
             var limbServoSettings = ServoSettings.Default;
@@ -214,9 +245,57 @@ namespace Demos.Demos
 
 
             Simulation.Statics.Add(new(new Vector3(0, -10.5f, 0), Simulation.Shapes.Add(new Box(1000, 1, 1000))));
+        }
+
+        double time;
+
+        float Smoothstep(float v)
+        {
+            var v2 = v * v;
+            return 3 * v2 - 2 * v2 * v;
+        }
+
+        Vector3 CreateLegTarget(float t)
+        {
+            var z = MathF.Cos(t * MathF.Tau);
+            var zOffset = (Smoothstep(z * 0.5f + 0.5f) * 2 - 1) * 0.7f;
+            var offset = 0.5f + 0.5f * MathF.Cos(MathF.PI + t * 4 * MathF.PI);
+            var xOffset = -0.2f + 0.4f * offset;
+            var yOffset = -0.7f + 0.2f * offset;
+            return new Vector3(-xOffset - legOffsetX, yOffset, zOffset);
+        }
+        Vector3 CreateArmTarget(float t)
+        {
+            var z = MathF.Cos(t * MathF.Tau);
+            var zOffset = (Smoothstep(z * 0.5f + 0.5f) * 2 - 1);
+            var offset = 0.5f + 0.5f * MathF.Cos(MathF.PI + t * 4 * MathF.PI);
+            var xOffset = -0.2f + 0.6f * offset;
+            var yOffset = 0.9f - 0.2f * offset;
+            return new Vector3(-xOffset - armOffsetX, yOffset, zOffset);
+        }
+
+        public override void Update(Window window, Camera camera, Input input, float dt)
+        {
+            time += dt;
+            var hipsTarget = new Vector3(0, 0, 3 * (float)Math.Sin(time / 4));
+            hipsControl.UpdateTarget(Simulation, hipsTarget);
+            const float stepDuration = 3;
+            var scaledTime = time / stepDuration;
+            var t = (float)(scaledTime - Math.Floor(scaledTime));
+            var tOffset = (t + 0.5f) % 1;
+            var leftFootLocalTarget = CreateLegTarget(t);
+            var rightFootLocalTarget = CreateLegTarget(tOffset);
+            rightFootLocalTarget.X *= -1;
+            leftFootControl.UpdateTarget(Simulation, hipsTarget + leftFootLocalTarget);
+            rightFootControl.UpdateTarget(Simulation, hipsTarget + rightFootLocalTarget);
 
 
-
+            var leftArmLocalTarget = CreateArmTarget(tOffset);
+            var rightArmLocalTarget = CreateArmTarget(t);
+            rightArmLocalTarget.X *= -1;
+            leftHandControl.UpdateTarget(Simulation, hipsTarget + leftArmLocalTarget);
+            rightHandControl.UpdateTarget(Simulation, hipsTarget + rightArmLocalTarget);
+            base.Update(window, camera, input, dt);
         }
     }
 }
