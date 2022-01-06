@@ -538,6 +538,20 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Gets the description of a body by handle.
+        /// </summary>
+        /// <param name="handle">Handle of the body to look up.</param>
+        /// <returns>Description of the body.</returns>
+        public BodyDescription GetDescription(BodyHandle handle)
+        {
+            ValidateExistingHandle(handle);
+            ref var location = ref HandleToLocation[handle.Value];
+            ref var set = ref Sets[location.SetIndex];
+            set.GetDescription(location.Index, out var description);
+            return description;
+        }
+
+        /// <summary>
         /// Gets a reference to a body by its handle.
         /// </summary>
         /// <param name="handle">Handle of the body to grab a reference of.</param>

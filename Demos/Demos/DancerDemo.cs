@@ -3,17 +3,22 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
+using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Demos.Demos
 {
     public class DancerDemo : Demo
     {
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
         struct DollBodyHandles
         {
             public BodyHandle Hips;
@@ -28,6 +33,11 @@ namespace Demos.Demos
             public BodyHandle LowerLeftArm;
             public BodyHandle UpperRightArm;
             public BodyHandle LowerRightArm;
+
+            internal static unsafe Buffer<BodyHandle> AsBuffer(DollBodyHandles* sourceBodyHandles)
+            {
+                return new Buffer<BodyHandle>(sourceBodyHandles, 12);
+            }
         }
 
         struct Dancer
@@ -245,8 +255,47 @@ namespace Demos.Demos
 
 
             Simulation.Statics.Add(new(new Vector3(0, -10.5f, 0), Simulation.Shapes.Add(new Box(1000, 1, 1000))));
+
+
+            //All the background dancers read different historical motion states so that they're not just all doing the exact same thing.
+            //Keep the states in a queue. Each batch of 12 motion states is the state for a single frame.
+            motionHistory = new QuickQueue<MotionState>(historyLength * 12, BufferPool);
+
+            dancers = new Dancer[16];
+            static BodyHandle CreateCopyForDancer(Simulation sourceSimulation, BodyHandle sourceHandle, TypedIndex shapeIndexInTargetSimulation, Simulation targetSimulation)
+            {
+                var description = sourceSimulation.Bodies.GetDescription(sourceHandle);
+                description.Collidable.Shape = shapeIndexInTargetSimulation;
+                description.LocalInertia = default;
+                return targetSimulation.Bodies.Add(description);
+            }
+
+            for (int i = 0; i < dancers.Length; ++i)
+            {
+                ref var dancer = ref dancers[i];
+                dancer.Simulation = Simulation.Create(new BufferPool(), new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(default), new SolveDescription(1, 4));
+                dancer.BodyHandles.Hips = CreateCopyForDancer(Simulation, sourceBodyHandles.Hips, dancer.Simulation.Shapes.Add(hipShape), dancer.Simulation);
+                dancer.BodyHandles.Abdomen = CreateCopyForDancer(Simulation, sourceBodyHandles.Abdomen, dancer.Simulation.Shapes.Add(abdomenShape), dancer.Simulation);
+                dancer.BodyHandles.Chest = CreateCopyForDancer(Simulation, sourceBodyHandles.Chest, dancer.Simulation.Shapes.Add(chestShape), dancer.Simulation);
+                dancer.BodyHandles.Head = CreateCopyForDancer(Simulation, sourceBodyHandles.Head, dancer.Simulation.Shapes.Add(headShape), dancer.Simulation);
+
+                var upperLegShapeInTarget = dancer.Simulation.Shapes.Add(upperLegShape);
+                var lowerLegShapeInTarget = dancer.Simulation.Shapes.Add(lowerLegShape);
+                dancer.BodyHandles.UpperLeftLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperLeftLeg, upperLegShapeInTarget, dancer.Simulation);
+                dancer.BodyHandles.LowerLeftLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerLeftLeg, lowerLegShapeInTarget, dancer.Simulation);
+                dancer.BodyHandles.UpperRightLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightLeg, upperLegShapeInTarget, dancer.Simulation);
+                dancer.BodyHandles.LowerRightLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightLeg, lowerLegShapeInTarget, dancer.Simulation);
+
+                var upperArmShapeInTarget = dancer.Simulation.Shapes.Add(upperArmShape);
+                var lowerArmShapeInTarget = dancer.Simulation.Shapes.Add(lowerArmShape);
+                dancer.BodyHandles.UpperLeftArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperLeftArm, upperArmShapeInTarget, dancer.Simulation);
+                dancer.BodyHandles.LowerLeftArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerLeftArm, lowerArmShapeInTarget, dancer.Simulation);
+                dancer.BodyHandles.UpperRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightArm, upperArmShapeInTarget, dancer.Simulation);
+                dancer.BodyHandles.LowerRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightArm, lowerArmShapeInTarget, dancer.Simulation);
+            }
         }
 
+        const int historyLength = 256;
         double time;
 
         float Smoothstep(float v)
@@ -274,12 +323,14 @@ namespace Demos.Demos
             return new Vector3(-xOffset - armOffsetX, yOffset, zOffset);
         }
 
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        QuickQueue<MotionState> motionHistory;
+
+        public unsafe override void Update(Window window, Camera camera, Input input, float dt)
         {
             time += dt;
             var hipsTarget = new Vector3(0, 0, 3 * (float)Math.Sin(time / 4));
             hipsControl.UpdateTarget(Simulation, hipsTarget);
-            const float stepDuration = 3;
+            const float stepDuration = 1.5f;
             var scaledTime = time / stepDuration;
             var t = (float)(scaledTime - Math.Floor(scaledTime));
             var tOffset = (t + 0.5f) % 1;
@@ -295,7 +346,41 @@ namespace Demos.Demos
             rightArmLocalTarget.X *= -1;
             leftHandControl.UpdateTarget(Simulation, hipsTarget + leftArmLocalTarget);
             rightHandControl.UpdateTarget(Simulation, hipsTarget + rightArmLocalTarget);
+
+            //Record the latest motion state from the source dancer.
+            var sourceHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref sourceBodyHandles));
+            if (motionHistory.Count == historyLength)
+                for (int i = 0; i < sourceHandleBuffer.Length; ++i)
+                    motionHistory.Dequeue();
+
+            for (int i = 0; i < sourceHandleBuffer.Length; ++i)
+            {
+                motionHistory.EnqueueUnsafely(Simulation.Bodies[sourceHandleBuffer[i]].MotionState);
+            }
+
+            //Copy historical motion states to the dancers.
+            for (int i = 0; i < dancers.Length; ++i)
+            {
+                ref var dancer = ref dancers[i];
+                var historicalStateStartIndex = motionHistory.Count - sourceHandleBuffer.Length * (i * 4 + 1);
+                if (historicalStateStartIndex < 0)
+                    historicalStateStartIndex = 0;
+                var targetHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref dancer.BodyHandles));
+                for (int j = 0; j < sourceHandleBuffer.Length; ++j)
+                {
+                    dancer.Simulation.Bodies[targetHandleBuffer[j]].MotionState = motionHistory[historicalStateStartIndex + j];
+                }
+            }
             base.Update(window, camera, input, dt);
+        }
+
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        {
+            for (int i = 0; i < dancers.Length; ++i)
+            {
+                renderer.Shapes.AddInstances(dancers[i].Simulation);
+            }
+            base.Render(renderer, camera, input, text, font);
         }
     }
 }
