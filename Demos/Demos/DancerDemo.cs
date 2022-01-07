@@ -156,30 +156,40 @@ namespace Demos.Demos
         const float legOffsetX = 0.135f;
         const float armOffsetX = 0.25f;
 
+        static (int columnIndex, int rowIndex) GetRowAndColumnForDancer(int dancerIndex)
+        {
+            var rowIndex = dancerIndex / dancerGridWidth;
+            return (dancerIndex - rowIndex * dancerGridWidth, rowIndex);
+        }
 
         QuickQueue<MotionState> motionHistory;
         static Vector3 GetOffsetForDancer(int i)
         {
             const float spacing = 2;
-            return new Vector3(dancerCount * spacing / -2 + (i + 0.5f) * spacing, 0, -5);
+            var (columnIndex, rowIndex) = GetRowAndColumnForDancer(i);
+            return new Vector3(dancerGridWidth * spacing / -2 + (columnIndex + 0.5f) * spacing, 0, -2 + rowIndex * -spacing);
         }
 
-        static BodyHandle[,] CreateBodyGrid(Vector3 position, int widthInNodes, int lengthInNodes, float spacing, float bodyRadius, float massPerBody,
+        static BodyHandle[,] CreateBodyGrid(Vector3 position, int widthInNodes, float spacing, float bodyRadius, float massPerBody,
             int instanceId, Simulation simulation, CollidableProperty<ClothCollisionFilter> filters)
         {
             var description = BodyDescription.CreateDynamic(QuaternionEx.Identity, new BodyInertia { InverseMass = 1f / massPerBody }, simulation.Shapes.Add(new Sphere(bodyRadius)), 0.01f);
-            BodyHandle[,] handles = new BodyHandle[lengthInNodes, widthInNodes];
+            BodyHandle[,] handles = new BodyHandle[widthInNodes, widthInNodes];
             var armHoleCenter = new Vector2(armOffsetX + 0.05f, 0);
-            var armHoleRadius = 0.05f;
+            var armHoleRadius = 0.07f;
             var armHoleRadiusSquared = armHoleRadius * armHoleRadius;
-            for (int rowIndex = 0; rowIndex < lengthInNodes; ++rowIndex)
+            var halfWidth = widthInNodes * spacing / 2;
+            var halfWidthSquared = halfWidth * halfWidth;
+            var halfWidthOffset = new Vector2(halfWidth);
+            for (int rowIndex = 0; rowIndex < widthInNodes; ++rowIndex)
             {
                 for (int columnIndex = 0; columnIndex < widthInNodes; ++columnIndex)
                 {
-                    Vector2 horizontalPosition = new(columnIndex * spacing - widthInNodes * spacing / 2f, rowIndex * spacing - lengthInNodes * spacing / 2);
-                    var distance0 = Vector2.DistanceSquared(horizontalPosition, armHoleCenter);
-                    var distance1 = Vector2.DistanceSquared(horizontalPosition, -armHoleCenter);
-                    if (distance0 < armHoleRadiusSquared || distance1 < armHoleRadiusSquared)
+                    var horizontalPosition = new Vector2(columnIndex, rowIndex) * spacing - halfWidthOffset;
+                    var distanceSquared0 = Vector2.DistanceSquared(horizontalPosition, armHoleCenter);
+                    var distanceSquared1 = Vector2.DistanceSquared(horizontalPosition, -armHoleCenter);
+                    var centerDistanceSquared = horizontalPosition.LengthSquared();
+                    if (distanceSquared0 < armHoleRadiusSquared || distanceSquared1 < armHoleRadiusSquared || centerDistanceSquared > halfWidthSquared)
                     {
                         //Too close to an arm, don't create any bodies here.
                         handles[rowIndex, columnIndex] = new BodyHandle { Value = -1 };
@@ -260,7 +270,7 @@ namespace Demos.Demos
 
         static void TailorDress(Simulation simulation, CollidableProperty<ClothCollisionFilter> filters, int dancerIndex)
         {
-            var bodies = CreateBodyGrid(new Vector3(0, 0.8f, 0) + GetOffsetForDancer(dancerIndex), 20, 20, 0.1f, 0.05f, 0.01f, dancerIndex, simulation, filters);
+            var bodies = CreateBodyGrid(new Vector3(0, 0.8f, 0) + GetOffsetForDancer(dancerIndex), 40, 0.05f, 0.025f, 0.01f, dancerIndex, simulation, filters);
             CreateDistanceConstraints(bodies, new SpringSettings(30, 1), simulation);
         }
         public unsafe override void Initialize(ContentArchive content, Camera camera)
@@ -395,7 +405,7 @@ namespace Demos.Demos
                         FrictionCoefficient = .4f,
                         MaximumRecoveryVelocity = 20
                     }
-                }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(3, 3));
+                }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
                 dancer.BodyHandles.Hips = CreateCopyForDancer(Simulation, sourceBodyHandles.Hips, dancer.Simulation.Shapes.Add(hipShape), dancer.Simulation, i);
                 dancer.BodyHandles.Abdomen = CreateCopyForDancer(Simulation, sourceBodyHandles.Abdomen, dancer.Simulation.Shapes.Add(abdomenShape), dancer.Simulation, i);
                 dancer.BodyHandles.Chest = CreateCopyForDancer(Simulation, sourceBodyHandles.Chest, dancer.Simulation.Shapes.Add(chestShape), dancer.Simulation, i);
@@ -419,7 +429,9 @@ namespace Demos.Demos
             }
         }
 
-        const int dancerCount = 128;
+        const int dancerGridWidth = 6;
+        const int dancerGridLength = 6;
+        const int dancerCount = dancerGridWidth * dancerGridLength;
         const int historyLength = 256;
         double time;
 
@@ -447,14 +459,35 @@ namespace Demos.Demos
             var yOffset = 0.9f - 0.2f * offset;
             return new Vector3(-xOffset - armOffsetX, yOffset, zOffset);
         }
-
+        unsafe void ExecuteDancer(int dancerIndex)
+        {
+            //Copy historical motion states to the dancers.
+            ref var dancer = ref dancers[dancerIndex];
+            var sourceHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref sourceBodyHandles));
+            //Delay is greater for the dancers that are further away, plus a little randomized component to desynchronize them.
+            var (columnIndex, rowIndex) = GetRowAndColumnForDancer(dancerIndex);
+            var offsetX = columnIndex - (dancerGridWidth / 2 - 0.5f);
+            var distanceFromMainDancer = (int)MathF.Sqrt(offsetX * offsetX + rowIndex * rowIndex);
+            var historicalStateStartIndex = motionHistory.Count - sourceHandleBuffer.Length * (distanceFromMainDancer * 8 + 1 + (HashHelper.Rehash(dancerIndex) & 0xF));
+            if (historicalStateStartIndex < 0)
+                historicalStateStartIndex = 0;
+            var targetHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref dancer.BodyHandles));
+            for (int j = 0; j < sourceHandleBuffer.Length; ++j)
+            {
+                ref var targetMotionState = ref dancer.Simulation.Bodies[targetHandleBuffer[j]].MotionState;
+                targetMotionState = motionHistory[historicalStateStartIndex + j];
+                targetMotionState.Pose.Position += GetOffsetForDancer(dancerIndex);
+            }
+            //Update the simulation for the dancer.
+            dancer.Simulation.Timestep(1 / 60f);
+        }
 
         public unsafe override void Update(Window window, Camera camera, Input input, float dt)
         {
             time += 1 / 60f;
             var hipsTarget = new Vector3(0, 0, 3 * (float)Math.Sin(time / 4));
             hipsControl.UpdateTarget(Simulation, hipsTarget);
-            const float stepDuration = 2.5f;
+            const float stepDuration = 3.5f;
             var scaledTime = time / stepDuration;
             var t = (float)(scaledTime - Math.Floor(scaledTime));
             var tOffset = (t + 0.5f) % 1;
@@ -488,27 +521,6 @@ namespace Demos.Demos
             Console.WriteLine($"Time (ms): {executionTime * 1000}");
             Console.WriteLine($"Time per dancer, amortized (us): {executionTime * 1e6 / dancers.Length}");
             base.Update(window, camera, input, dt);
-        }
-
-        unsafe void ExecuteDancer(int dancerIndex)
-        {
-            //Copy historical motion states to the dancers.
-            ref var dancer = ref dancers[dancerIndex];
-            var sourceHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref sourceBodyHandles));
-            //Delay is greater for the dancers that are further away, plus a little randomized component to desynchronize them.
-            var distanceFromMiddle = Math.Abs(dancerIndex - dancerCount / 2);
-            var historicalStateStartIndex = motionHistory.Count - sourceHandleBuffer.Length * (distanceFromMiddle * 4 + 1 + (HashHelper.Rehash(dancerIndex) & 0xF));
-            if (historicalStateStartIndex < 0)
-                historicalStateStartIndex = 0;
-            var targetHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref dancer.BodyHandles));
-            for (int j = 0; j < sourceHandleBuffer.Length; ++j)
-            {
-                ref var targetMotionState = ref dancer.Simulation.Bodies[targetHandleBuffer[j]].MotionState;
-                targetMotionState = motionHistory[historicalStateStartIndex + j];
-                targetMotionState.Pose.Position += GetOffsetForDancer(dancerIndex);
-            }
-            //Update the simulation for the dancer.
-            dancer.Simulation.Timestep(1 / 60f);
         }
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
