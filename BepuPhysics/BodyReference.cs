@@ -450,5 +450,14 @@ namespace BepuPhysics
             PoseIntegration.RotateInverseInertia(state.Inertia.Local.InverseInertiaTensor, state.Motion.Pose.Orientation, out var inverseInertia);
             ApplyAngularImpulse(angularImpulse, inverseInertia, ref state.Motion.Velocity.Angular);
         }
+
+        /// <summary>
+        /// Implicitly converts a <see cref="BodyReference"/> to the <see cref="BodyHandle"/> that the body reference was created from.
+        /// </summary>
+        /// <param name="reference">Body reference to extract the handle from.</param>
+        public static implicit operator BodyHandle(BodyReference reference)
+        {
+            return reference.Handle;
+        }
     }
 }

@@ -36,7 +36,7 @@ namespace Demos.Demos
             if (a.instanceId != b.instanceId)
                 return true;
             //Disallow collisions between vertices which are near each other. We measure distance as max(abs(ax - bx), abs(ay - by), abs(az - bz)).
-            const int minimumDistance = 1;
+            const int minimumDistance = 2;
             var differenceX = a.x - b.x;
             if (differenceX < -minimumDistance || differenceX > minimumDistance)
                 return true;
@@ -51,9 +51,16 @@ namespace Demos.Demos
     struct ClothCallbacks : INarrowPhaseCallbacks
     {
         public CollidableProperty<ClothCollisionFilter> Filters;
+        public PairMaterialProperties Material;
         public void Initialize(Simulation simulation)
         {
             Filters.Initialize(simulation);
+            if (Material.SpringSettings.AngularFrequency == 0 && Material.SpringSettings.TwiceDampingRatio == 0)
+            {
+                Material.SpringSettings = new SpringSettings(30, 1);
+                Material.FrictionCoefficient = 0.25f;
+                Material.MaximumRecoveryVelocity = 2f;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -75,9 +82,7 @@ namespace Demos.Demos
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            pairMaterial.FrictionCoefficient = 0.25f;
-            pairMaterial.MaximumRecoveryVelocity = 2f;
-            pairMaterial.SpringSettings = new SpringSettings(30, 1);
+            pairMaterial = Material;
             return true;
         }
 
@@ -132,10 +137,10 @@ namespace Demos.Demos
                     var bHandle = bodyHandles[rowIndex + 1, columnIndex];
                     var cHandle = bodyHandles[rowIndex, columnIndex + 1];
                     var dHandle = bodyHandles[rowIndex + 1, columnIndex + 1];
-                    var a = new BodyReference(aHandle, Simulation.Bodies);
-                    var b = new BodyReference(bHandle, Simulation.Bodies);
-                    var c = new BodyReference(cHandle, Simulation.Bodies);
-                    var d = new BodyReference(dHandle, Simulation.Bodies);
+                    var a = Simulation.Bodies[aHandle];
+                    var b = Simulation.Bodies[bHandle];
+                    var c = Simulation.Bodies[cHandle];
+                    var d = Simulation.Bodies[dHandle];
                     //Not worried about kinematics here- we create at most one row of kinematics in this demo. These are three body constraints that operate in a local quad, so 
                     //there's no way for them to all be kinematic.
                     Simulation.Solver.Add(aHandle, bHandle, cHandle, new AreaConstraint(a.Pose.Position, b.Pose.Position, c.Pose.Position, springSettings));
@@ -147,8 +152,8 @@ namespace Demos.Demos
         {
             void CreateConstraintBetweenBodies(BodyHandle aHandle, BodyHandle bHandle)
             {
-                var a = new BodyReference(aHandle, Simulation.Bodies);
-                var b = new BodyReference(bHandle, Simulation.Bodies);
+                var a = Simulation.Bodies[aHandle];
+                var b = Simulation.Bodies[bHandle];
                 //Don't create constraints between two kinematic bodies.
                 if (a.LocalInertia.InverseMass > 0 || b.LocalInertia.InverseMass > 0)
                 {
