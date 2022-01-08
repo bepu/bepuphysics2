@@ -53,6 +53,13 @@ namespace Demos.Demos
         ParallelLooper looper;
         Dancer[] dancers;
 
+        const float legOffsetX = 0.135f;
+        const float armOffsetX = 0.25f;
+        const int dancerGridWidth = 6;
+        const int dancerGridLength = 6;
+        const int dancerCount = dancerGridWidth * dancerGridLength;
+        const int historyLength = 256;
+
 
         struct Control
         {
@@ -153,8 +160,6 @@ namespace Demos.Demos
             });
         }
 
-        const float legOffsetX = 0.135f;
-        const float armOffsetX = 0.25f;
 
         static (int columnIndex, int rowIndex) GetRowAndColumnForDancer(int dancerIndex)
         {
@@ -175,7 +180,7 @@ namespace Demos.Demos
         {
             var description = BodyDescription.CreateDynamic(QuaternionEx.Identity, new BodyInertia { InverseMass = 1f / massPerBody }, simulation.Shapes.Add(new Sphere(bodyRadius)), 0.01f);
             BodyHandle[,] handles = new BodyHandle[widthInNodes, widthInNodes];
-            var armHoleCenter = new Vector2(armOffsetX + 0.05f, 0);
+            var armHoleCenter = new Vector2(armOffsetX, 0);
             var armHoleRadius = 0.07f;
             var armHoleRadiusSquared = armHoleRadius * armHoleRadius;
             var halfWidth = widthInNodes * spacing / 2;
@@ -191,7 +196,7 @@ namespace Demos.Demos
                     var centerDistanceSquared = horizontalPosition.LengthSquared();
                     if (distanceSquared0 < armHoleRadiusSquared || distanceSquared1 < armHoleRadiusSquared || centerDistanceSquared > halfWidthSquared)
                     {
-                        //Too close to an arm, don't create any bodies here.
+                        //Too close to an arm or too far from the center, don't create any bodies here.
                         handles[rowIndex, columnIndex] = new BodyHandle { Value = -1 };
                     }
                     else
@@ -205,31 +210,6 @@ namespace Demos.Demos
                 }
             }
             return handles;
-        }
-
-        static void CreateAreaConstraints(BodyHandle[,] bodyHandles, SpringSettings springSettings, Simulation simulation)
-        {
-            for (int rowIndex = 0; rowIndex < bodyHandles.GetLength(0) - 1; ++rowIndex)
-            {
-                for (int columnIndex = 0; columnIndex < bodyHandles.GetLength(1) - 1; ++columnIndex)
-                {
-                    var aHandle = bodyHandles[rowIndex, columnIndex];
-                    var bHandle = bodyHandles[rowIndex + 1, columnIndex];
-                    var cHandle = bodyHandles[rowIndex, columnIndex + 1];
-                    var dHandle = bodyHandles[rowIndex + 1, columnIndex + 1];
-                    //Only create a constraint if bodies on all sides of the quad actually exist.
-                    //In this demo, we use -1 in the body handle slot to represent 'no body'.
-                    if (aHandle.Value >= 0 && bHandle.Value >= 0 && cHandle.Value >= 0 && dHandle.Value >= 0)
-                    {
-                        var a = simulation.Bodies[aHandle];
-                        var b = simulation.Bodies[bHandle];
-                        var c = simulation.Bodies[cHandle];
-                        var d = simulation.Bodies[dHandle];
-                        simulation.Solver.Add(aHandle, bHandle, cHandle, new AreaConstraint(a.Pose.Position, b.Pose.Position, c.Pose.Position, springSettings));
-                        simulation.Solver.Add(bHandle, cHandle, dHandle, new AreaConstraint(b.Pose.Position, c.Pose.Position, d.Pose.Position, springSettings));
-                    }
-                }
-            }
         }
         static void CreateDistanceConstraints(BodyHandle[,] bodyHandles, SpringSettings springSettings, Simulation simulation)
         {
@@ -268,10 +248,30 @@ namespace Demos.Demos
             }
         }
 
+        static float GetDistanceFromMainDancer(int dancerIndex)
+        {
+            var (columnIndex, rowIndex) = GetRowAndColumnForDancer(dancerIndex);
+            var offsetX = columnIndex - (dancerGridWidth / 2 - 0.5f);
+            return MathF.Sqrt(offsetX * offsetX + rowIndex * rowIndex);
+        }
+
         static void TailorDress(Simulation simulation, CollidableProperty<ClothCollisionFilter> filters, int dancerIndex)
         {
-            var bodies = CreateBodyGrid(new Vector3(0, 0.8f, 0) + GetOffsetForDancer(dancerIndex), 40, 0.05f, 0.025f, 0.01f, dancerIndex, simulation, filters);
-            CreateDistanceConstraints(bodies, new SpringSettings(30, 1), simulation);
+            //The demo uses lower resolution grids on dancers further away from the main dancer.
+            //This is a sorta-example of level of detail. In a 'real' use case, you'd probably want to transition between levels of detail dynamically as the camera moved around.
+            //That's a little trickier, but doable. Going low to high, for example, requires creating bodies at interpolated positions between existing bodies, while going to a lower level of detail removes them.
+            var distanceFromMainDancer = GetDistanceFromMainDancer(dancerIndex);
+            var levelOfDetail = Math.Min(2, MathF.Ceiling(MathF.Log2(MathF.Max(1, distanceFromMainDancer / 2))));
+            var targetDressDiameter = 2.2f;
+            var fullDetailWidthInBodies = 40;
+            float spacingAtFullDetail = targetDressDiameter / fullDetailWidthInBodies;
+            float bodyRadiusAtFullDetail = spacingAtFullDetail / 1.5f;
+            var scale = MathF.Pow(2, levelOfDetail);
+            var widthInBodies = (int)MathF.Ceiling(fullDetailWidthInBodies / scale);
+            var spacing = spacingAtFullDetail * scale;
+            var bodyRadius = bodyRadiusAtFullDetail * MathF.Pow(2, MathF.Max(0, levelOfDetail - 1));
+            var bodies = CreateBodyGrid(new Vector3(0, 0.8f, 0) + GetOffsetForDancer(dancerIndex), widthInBodies, spacing, bodyRadius, 0.01f, dancerIndex, simulation, filters);
+            CreateDistanceConstraints(bodies, new SpringSettings(60, 1), simulation);
         }
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
@@ -429,11 +429,25 @@ namespace Demos.Demos
             }
         }
 
-        const int dancerGridWidth = 6;
-        const int dancerGridLength = 6;
-        const int dancerCount = dancerGridWidth * dancerGridLength;
-        const int historyLength = 256;
-        double time;
+        unsafe void ExecuteDancer(int dancerIndex)
+        {
+            //Copy historical motion states to the dancers.
+            ref var dancer = ref dancers[dancerIndex];
+            var sourceHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref sourceBodyHandles));
+            //Delay is greater for the dancers that are further away, plus a little randomized component to desynchronize them.
+            var historicalStateStartIndex = motionHistory.Count - sourceHandleBuffer.Length * ((int)GetDistanceFromMainDancer(dancerIndex) * 8 + 1 + (HashHelper.Rehash(dancerIndex) & 0xF));
+            if (historicalStateStartIndex < 0)
+                historicalStateStartIndex = 0;
+            var targetHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref dancer.BodyHandles));
+            for (int j = 0; j < sourceHandleBuffer.Length; ++j)
+            {
+                ref var targetMotionState = ref dancer.Simulation.Bodies[targetHandleBuffer[j]].MotionState;
+                targetMotionState = motionHistory[historicalStateStartIndex + j];
+                targetMotionState.Pose.Position += GetOffsetForDancer(dancerIndex);
+            }
+            //Update the simulation for the dancer.
+            dancer.Simulation.Timestep(1 / 60f);
+        }
 
         float Smoothstep(float v)
         {
@@ -459,29 +473,8 @@ namespace Demos.Demos
             var yOffset = 0.9f - 0.2f * offset;
             return new Vector3(-xOffset - armOffsetX, yOffset, zOffset);
         }
-        unsafe void ExecuteDancer(int dancerIndex)
-        {
-            //Copy historical motion states to the dancers.
-            ref var dancer = ref dancers[dancerIndex];
-            var sourceHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref sourceBodyHandles));
-            //Delay is greater for the dancers that are further away, plus a little randomized component to desynchronize them.
-            var (columnIndex, rowIndex) = GetRowAndColumnForDancer(dancerIndex);
-            var offsetX = columnIndex - (dancerGridWidth / 2 - 0.5f);
-            var distanceFromMainDancer = (int)MathF.Sqrt(offsetX * offsetX + rowIndex * rowIndex);
-            var historicalStateStartIndex = motionHistory.Count - sourceHandleBuffer.Length * (distanceFromMainDancer * 8 + 1 + (HashHelper.Rehash(dancerIndex) & 0xF));
-            if (historicalStateStartIndex < 0)
-                historicalStateStartIndex = 0;
-            var targetHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref dancer.BodyHandles));
-            for (int j = 0; j < sourceHandleBuffer.Length; ++j)
-            {
-                ref var targetMotionState = ref dancer.Simulation.Bodies[targetHandleBuffer[j]].MotionState;
-                targetMotionState = motionHistory[historicalStateStartIndex + j];
-                targetMotionState.Pose.Position += GetOffsetForDancer(dancerIndex);
-            }
-            //Update the simulation for the dancer.
-            dancer.Simulation.Timestep(1 / 60f);
-        }
 
+        double time;
         public unsafe override void Update(Window window, Camera camera, Input input, float dt)
         {
             time += 1 / 60f;
@@ -530,6 +523,17 @@ namespace Demos.Demos
                 renderer.Shapes.AddInstances(dancers[i].Simulation);
             }
             base.Render(renderer, camera, input, text, font);
+        }
+        protected override void OnDispose()
+        {
+            //While the main simulation and pool is disposed by the Demo.cs Dispose function, the dancers have their own pools and need to be cleared.
+            //Note that we don't bother disposing the simulation here- all resources in the simulation were taken from the associated pool, and the simulation will not be used anymore.
+            //We can just clear the buffer pool and let the GC eat the simulation.
+            for (int i = 0; i < dancers.Length; ++i)
+            {
+                dancers[i].Simulation.BufferPool.Clear();
+            }
+            base.OnDispose();
         }
     }
 }

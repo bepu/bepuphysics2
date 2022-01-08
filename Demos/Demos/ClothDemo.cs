@@ -36,7 +36,7 @@ namespace Demos.Demos
             if (a.instanceId != b.instanceId)
                 return true;
             //Disallow collisions between vertices which are near each other. We measure distance as max(abs(ax - bx), abs(ay - by), abs(az - bz)).
-            const int minimumDistance = 2;
+            const int minimumDistance = 3;
             var differenceX = a.x - b.x;
             if (differenceX < -minimumDistance || differenceX > minimumDistance)
                 return true;
