@@ -145,6 +145,8 @@ namespace DemoTests
             Test<OneBodyAngularMotor>(pool, random, 1);
             Test<OneBodyLinearServo>(pool, random, 1);
             Test<OneBodyLinearMotor>(pool, random, 1);
+            Test<AngularAxisGearMotor>(pool, random, 2);
+            Test<CenterDistanceLimit>(pool, random, 2);
 
             pool.Clear();
         }

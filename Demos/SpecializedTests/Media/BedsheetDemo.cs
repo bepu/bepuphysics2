@@ -71,7 +71,10 @@ namespace Demos.Demos
                 //Don't create constraints between two kinematic bodies.
                 if (a.LocalInertia.InverseMass > 0 || b.LocalInertia.InverseMass > 0)
                 {
-                    Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceConstraint(Vector3.Distance(a.Pose.Position, b.Pose.Position), springSettings));
+                    //Note the use of a limit; the distance is allowed to go smaller.
+                    //This helps stop the cloth from having unnatural rigidity.
+                    var distance = Vector3.Distance(a.Pose.Position, b.Pose.Position);
+                    Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceLimit(distance * 0.015f, distance, springSettings));
                 }
             }
             for (int rowIndex = 0; rowIndex < bodyHandles.GetLength(0); ++rowIndex)

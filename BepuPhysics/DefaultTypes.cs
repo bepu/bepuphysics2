@@ -46,6 +46,7 @@ namespace BepuPhysics
             solver.Register<BallSocketMotor>();
             solver.Register<BallSocketServo>();
             solver.Register<AngularAxisGearMotor>();
+            solver.Register<CenterDistanceLimit>();
 
             solver.Register<Contact1OneBody>();
             solver.Register<Contact2OneBody>();

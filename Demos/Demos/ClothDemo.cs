@@ -157,7 +157,10 @@ namespace Demos.Demos
                 //Don't create constraints between two kinematic bodies.
                 if (a.LocalInertia.InverseMass > 0 || b.LocalInertia.InverseMass > 0)
                 {
-                    Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceConstraint(Vector3.Distance(a.Pose.Position, b.Pose.Position), springSettings));
+                    //Note the use of a limit; the distance is allowed to go smaller.
+                    //This helps stop the cloth from having unnatural rigidity.
+                    var distance = Vector3.Distance(a.Pose.Position, b.Pose.Position);
+                    Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceLimit(distance * 0.015f, distance, springSettings));
                 }
             }
             for (int rowIndex = 0; rowIndex < bodyHandles.GetLength(0); ++rowIndex)
@@ -223,15 +226,15 @@ namespace Demos.Demos
             {
                 var position = new Vector3(-50, 40, 0);
                 var handles = CreateBodyGrid(position, initialRotation, 10, 30, 1f, 0.65f, 1, clothInstanceId++, filters, KinematicTopCorners);
-                CreateDistanceConstraints(handles, new SpringSettings(3, 1));
+                CreateDistanceConstraints(handles, new SpringSettings(5, 1));
                 rolloverInfo.Add(position + new Vector3(5, 2, 0), "Soft distance constraints only, no area constraints");
             }
             {
                 var position = new Vector3(-30, 40, 0);
                 var handles = CreateBodyGrid(position, initialRotation, 10, 30, 1f, 0.65f, 1, clothInstanceId++, filters, KinematicTopCorners);
-                CreateDistanceConstraints(handles, new SpringSettings(3, 1));
+                CreateDistanceConstraints(handles, new SpringSettings(5, 1));
                 CreateAreaConstraints(handles, new SpringSettings(30, 1));
-                rolloverInfo.Add(position + new Vector3(5, 2, 0), "Soft distance constraints with area constraints (note narrowing)");
+                rolloverInfo.Add(position + new Vector3(5, 2, 0), "Soft distance constraints with area constraints");
             }
 
 

@@ -69,13 +69,14 @@ namespace BepuPhysics.Constraints
     public struct CenterDistanceConstraintFunctions : ITwoBodyConstraintFunctions<CenterDistancePrestepData, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ApplyImpulse(in Vector3Wide jacobianA, in Vector<float> inverseMassA, in Vector<float> inverseMassB, in Vector<float> impulse, ref BodyVelocityWide a, ref BodyVelocityWide b)
+        public static void ApplyImpulse(in Vector3Wide jacobianA, in Vector<float> inverseMassA, in Vector<float> inverseMassB, in Vector<float> impulse, ref BodyVelocityWide a, ref BodyVelocityWide b)
         {
             Vector3Wide.Scale(jacobianA, impulse * inverseMassA, out var changeA);
             Vector3Wide.Scale(jacobianA, impulse * inverseMassB, out var negatedChangeB);
             Vector3Wide.Add(a.Linear, changeA, out a.Linear);
             Vector3Wide.Subtract(b.Linear, negatedChangeB, out b.Linear);
         }
+
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
