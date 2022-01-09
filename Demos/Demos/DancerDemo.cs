@@ -55,8 +55,8 @@ namespace Demos.Demos
 
         const float legOffsetX = 0.135f;
         const float armOffsetX = 0.25f;
-        const int dancerGridWidth = 6;
-        const int dancerGridLength = 6;
+        const int dancerGridWidth = 16;
+        const int dancerGridLength = 16;
         const int dancerCount = dancerGridWidth * dancerGridLength;
         const int historyLength = 256;
 
@@ -221,7 +221,10 @@ namespace Demos.Demos
                 {
                     var a = simulation.Bodies[aHandle];
                     var b = simulation.Bodies[bHandle];
-                    simulation.Solver.Add(aHandle, bHandle, new CenterDistanceConstraint(Vector3.Distance(a.Pose.Position, b.Pose.Position), springSettings));
+                    //Note the use of a limit; the distance is allowed to go smaller.
+                    //This helps stop the cloth from having unnatural rigidity.
+                    var distance = Vector3.Distance(a.Pose.Position, b.Pose.Position);
+                    simulation.Solver.Add(aHandle, bHandle, new CenterDistanceLimit(distance * 0.15f, distance, springSettings));
                 }
             }
             for (int rowIndex = 0; rowIndex < bodyHandles.GetLength(0); ++rowIndex)
@@ -255,21 +258,18 @@ namespace Demos.Demos
             return MathF.Sqrt(offsetX * offsetX + rowIndex * rowIndex);
         }
 
-        static void TailorDress(Simulation simulation, CollidableProperty<ClothCollisionFilter> filters, int dancerIndex)
+        static void TailorDress(Simulation simulation, CollidableProperty<ClothCollisionFilter> filters, int dancerIndex, float levelOfDetail)
         {
             //The demo uses lower resolution grids on dancers further away from the main dancer.
             //This is a sorta-example of level of detail. In a 'real' use case, you'd probably want to transition between levels of detail dynamically as the camera moved around.
             //That's a little trickier, but doable. Going low to high, for example, requires creating bodies at interpolated positions between existing bodies, while going to a lower level of detail removes them.
-            var distanceFromMainDancer = GetDistanceFromMainDancer(dancerIndex);
-            var levelOfDetail = Math.Min(2, MathF.Ceiling(MathF.Log2(MathF.Max(1, distanceFromMainDancer / 2))));
-            var targetDressDiameter = 2.2f;
-            var fullDetailWidthInBodies = 40;
+            var targetDressDiameter = 2.6f;
+            var fullDetailWidthInBodies = 35;
             float spacingAtFullDetail = targetDressDiameter / fullDetailWidthInBodies;
-            float bodyRadiusAtFullDetail = spacingAtFullDetail / 1.5f;
+            float bodyRadius = spacingAtFullDetail / 1.75f;
             var scale = MathF.Pow(2, levelOfDetail);
             var widthInBodies = (int)MathF.Ceiling(fullDetailWidthInBodies / scale);
             var spacing = spacingAtFullDetail * scale;
-            var bodyRadius = bodyRadiusAtFullDetail * MathF.Pow(2, MathF.Max(0, levelOfDetail - 1));
             var bodies = CreateBodyGrid(new Vector3(0, 0.8f, 0) + GetOffsetForDancer(dancerIndex), widthInBodies, spacing, bodyRadius, 0.01f, dancerIndex, simulation, filters);
             CreateDistanceConstraints(bodies, new SpringSettings(60, 1), simulation);
         }
@@ -383,49 +383,51 @@ namespace Demos.Demos
             motionHistory = new QuickQueue<MotionState>(historyLength * 12, BufferPool);
 
             dancers = new Dancer[dancerCount];
-            static BodyHandle CreateCopyForDancer(Simulation sourceSimulation, BodyHandle sourceHandle, TypedIndex shapeIndexInTargetSimulation, Simulation targetSimulation, int dancerIndex)
+            static BodyHandle CreateCopyForDancer(Simulation sourceSimulation, BodyHandle sourceHandle, TypedIndex shapeIndexInTargetSimulation, Simulation targetSimulation, int dancerIndex, CollidableProperty<ClothCollisionFilter> filters)
             {
                 var description = sourceSimulation.Bodies.GetDescription(sourceHandle);
                 description.Pose.Position += GetOffsetForDancer(dancerIndex);
                 description.Collidable.Shape = shapeIndexInTargetSimulation;
                 description.LocalInertia = default;
-                return targetSimulation.Bodies.Add(description);
+                var handle = targetSimulation.Bodies.Add(description);
+                //Kinematic bodies collide with all cloth, so give it a -1 instance id.
+                filters.Allocate(handle) = new ClothCollisionFilter(0, 0, -1);
+                return handle;
             }
 
             for (int i = 0; i < dancers.Length; ++i)
             {
                 ref var dancer = ref dancers[i];
                 var dancerFilters = new CollidableProperty<ClothCollisionFilter>();
-                dancer.Simulation = Simulation.Create(new BufferPool(), new ClothCallbacks
-                {
-                    Filters = dancerFilters,
-                    Material = new PairMaterialProperties
-                    {
-                        SpringSettings = new SpringSettings(120, 1),
-                        FrictionCoefficient = .4f,
-                        MaximumRecoveryVelocity = 20
-                    }
-                }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
-                dancer.BodyHandles.Hips = CreateCopyForDancer(Simulation, sourceBodyHandles.Hips, dancer.Simulation.Shapes.Add(hipShape), dancer.Simulation, i);
-                dancer.BodyHandles.Abdomen = CreateCopyForDancer(Simulation, sourceBodyHandles.Abdomen, dancer.Simulation.Shapes.Add(abdomenShape), dancer.Simulation, i);
-                dancer.BodyHandles.Chest = CreateCopyForDancer(Simulation, sourceBodyHandles.Chest, dancer.Simulation.Shapes.Add(chestShape), dancer.Simulation, i);
-                dancer.BodyHandles.Head = CreateCopyForDancer(Simulation, sourceBodyHandles.Head, dancer.Simulation.Shapes.Add(headShape), dancer.Simulation, i);
+                //Distance from the main dancer is used to select clothing level of detail. This isn't dynamic based on camera motion, but shows the general idea.
+                //Since we don't have to worry about transitions, the level of detail is a continuous value here.
+                //If the required detail goes low enough, note that this demo disables cloth self collision to save some extra time.
+                //The ClothCallbacks specify a minimum distance required for self collision, and low detail (higher 'level of detail' values) results in MaxValue minimum distance.
+                var distanceFromMainDancer = GetDistanceFromMainDancer(i);
+                var levelOfDetail = MathF.Max(0f, MathF.Min(1.5f, MathF.Log2(MathF.Max(1, distanceFromMainDancer) - 0.8f)));
+                dancer.Simulation = Simulation.Create(new BufferPool(),
+                    new ClothCallbacks(dancerFilters, new PairMaterialProperties(0.4f, 20, new SpringSettings(120, 1)), levelOfDetail <= 0.5f ? 3 : int.MaxValue),
+                    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+                dancer.BodyHandles.Hips = CreateCopyForDancer(Simulation, sourceBodyHandles.Hips, dancer.Simulation.Shapes.Add(hipShape), dancer.Simulation, i, dancerFilters);
+                dancer.BodyHandles.Abdomen = CreateCopyForDancer(Simulation, sourceBodyHandles.Abdomen, dancer.Simulation.Shapes.Add(abdomenShape), dancer.Simulation, i, dancerFilters);
+                dancer.BodyHandles.Chest = CreateCopyForDancer(Simulation, sourceBodyHandles.Chest, dancer.Simulation.Shapes.Add(chestShape), dancer.Simulation, i, dancerFilters);
+                dancer.BodyHandles.Head = CreateCopyForDancer(Simulation, sourceBodyHandles.Head, dancer.Simulation.Shapes.Add(headShape), dancer.Simulation, i, dancerFilters);
 
                 var upperLegShapeInTarget = dancer.Simulation.Shapes.Add(upperLegShape);
                 var lowerLegShapeInTarget = dancer.Simulation.Shapes.Add(lowerLegShape);
-                dancer.BodyHandles.UpperLeftLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperLeftLeg, upperLegShapeInTarget, dancer.Simulation, i);
-                dancer.BodyHandles.LowerLeftLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerLeftLeg, lowerLegShapeInTarget, dancer.Simulation, i);
-                dancer.BodyHandles.UpperRightLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightLeg, upperLegShapeInTarget, dancer.Simulation, i);
-                dancer.BodyHandles.LowerRightLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightLeg, lowerLegShapeInTarget, dancer.Simulation, i);
+                dancer.BodyHandles.UpperLeftLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperLeftLeg, upperLegShapeInTarget, dancer.Simulation, i, dancerFilters);
+                dancer.BodyHandles.LowerLeftLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerLeftLeg, lowerLegShapeInTarget, dancer.Simulation, i, dancerFilters);
+                dancer.BodyHandles.UpperRightLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightLeg, upperLegShapeInTarget, dancer.Simulation, i, dancerFilters);
+                dancer.BodyHandles.LowerRightLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightLeg, lowerLegShapeInTarget, dancer.Simulation, i, dancerFilters);
 
                 var upperArmShapeInTarget = dancer.Simulation.Shapes.Add(upperArmShape);
                 var lowerArmShapeInTarget = dancer.Simulation.Shapes.Add(lowerArmShape);
-                dancer.BodyHandles.UpperLeftArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperLeftArm, upperArmShapeInTarget, dancer.Simulation, i);
-                dancer.BodyHandles.LowerLeftArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerLeftArm, lowerArmShapeInTarget, dancer.Simulation, i);
-                dancer.BodyHandles.UpperRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightArm, upperArmShapeInTarget, dancer.Simulation, i);
-                dancer.BodyHandles.LowerRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightArm, lowerArmShapeInTarget, dancer.Simulation, i);
+                dancer.BodyHandles.UpperLeftArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperLeftArm, upperArmShapeInTarget, dancer.Simulation, i, dancerFilters);
+                dancer.BodyHandles.LowerLeftArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerLeftArm, lowerArmShapeInTarget, dancer.Simulation, i, dancerFilters);
+                dancer.BodyHandles.UpperRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightArm, upperArmShapeInTarget, dancer.Simulation, i, dancerFilters);
+                dancer.BodyHandles.LowerRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightArm, lowerArmShapeInTarget, dancer.Simulation, i, dancerFilters);
 
-                TailorDress(dancer.Simulation, dancerFilters, i);
+                TailorDress(dancer.Simulation, dancerFilters, i, levelOfDetail);
             }
         }
 
@@ -521,6 +523,7 @@ namespace Demos.Demos
             for (int i = 0; i < dancers.Length; ++i)
             {
                 renderer.Shapes.AddInstances(dancers[i].Simulation);
+                renderer.Lines.Extract(dancers[i].Simulation.Bodies, dancers[i].Simulation.Solver, dancers[i].Simulation.BroadPhase, true, false, false);
             }
             base.Render(renderer, camera, input, text, font);
         }

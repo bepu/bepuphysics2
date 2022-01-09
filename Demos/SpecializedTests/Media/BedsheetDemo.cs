@@ -74,7 +74,7 @@ namespace Demos.Demos
                     //Note the use of a limit; the distance is allowed to go smaller.
                     //This helps stop the cloth from having unnatural rigidity.
                     var distance = Vector3.Distance(a.Pose.Position, b.Pose.Position);
-                    Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceLimit(distance * 0.015f, distance, springSettings));
+                    Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceLimit(distance * 0.15f, distance, springSettings));
                 }
             }
             for (int rowIndex = 0; rowIndex < bodyHandles.GetLength(0); ++rowIndex)
@@ -110,7 +110,7 @@ namespace Demos.Demos
             camera.Pitch = MathF.PI * 0.1f;
 
             var filters = new CollidableProperty<ClothCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new ClothCallbacks() { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -50, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new ClothCallbacks(filters), new DemoPoseIntegratorCallbacks(new Vector3(0, -50, 0)), new SolveDescription(1, 4));
             rolloverInfo = new RolloverInfo();
 
             bool FullyDynamic(int rowIndex, int columnIndex, int width, int height)

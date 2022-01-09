@@ -31,12 +31,11 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Test(in ClothCollisionFilter a, in ClothCollisionFilter b)
+        public static bool Test(ClothCollisionFilter a, ClothCollisionFilter b, int minimumDistance)
         {
             if (a.instanceId != b.instanceId)
                 return true;
             //Disallow collisions between vertices which are near each other. We measure distance as max(abs(ax - bx), abs(ay - by), abs(az - bz)).
-            const int minimumDistance = 3;
             var differenceX = a.x - b.x;
             if (differenceX < -minimumDistance || differenceX > minimumDistance)
                 return true;
@@ -52,15 +51,25 @@ namespace Demos.Demos
     {
         public CollidableProperty<ClothCollisionFilter> Filters;
         public PairMaterialProperties Material;
+        /// <summary>
+        /// Minimum manhattan distance in cloth nodes required for two cloth nodes to collide. Stops adjacent cloth nodes from generating contacts and interfering with clothy behavior.
+        /// </summary>
+        public int MinimumDistanceForSelfCollisions;
+
+        public ClothCallbacks(CollidableProperty<ClothCollisionFilter> filters, PairMaterialProperties material, int minimumDistanceForSelfCollisions = 3)
+        {
+            Filters = filters;
+            Material = material;
+            MinimumDistanceForSelfCollisions = minimumDistanceForSelfCollisions;
+        }
+        public ClothCallbacks(CollidableProperty<ClothCollisionFilter> filters, int minimumDistanceForSelfCollisions = 3)
+            : this(filters, new PairMaterialProperties { SpringSettings = new SpringSettings(30, 1), FrictionCoefficient = 0.25f, MaximumRecoveryVelocity = 2f })
+        {
+        }
+
         public void Initialize(Simulation simulation)
         {
             Filters.Initialize(simulation);
-            if (Material.SpringSettings.AngularFrequency == 0 && Material.SpringSettings.TwiceDampingRatio == 0)
-            {
-                Material.SpringSettings = new SpringSettings(30, 1);
-                Material.FrictionCoefficient = 0.25f;
-                Material.MaximumRecoveryVelocity = 2f;
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -68,7 +77,7 @@ namespace Demos.Demos
         {
             if (a.Mobility != CollidableMobility.Static && b.Mobility != CollidableMobility.Static)
             {
-                return ClothCollisionFilter.Test(Filters[a.BodyHandle], Filters[b.BodyHandle]);
+                return ClothCollisionFilter.Test(Filters[a.BodyHandle], Filters[b.BodyHandle], MinimumDistanceForSelfCollisions);
             }
             return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
         }
@@ -160,7 +169,7 @@ namespace Demos.Demos
                     //Note the use of a limit; the distance is allowed to go smaller.
                     //This helps stop the cloth from having unnatural rigidity.
                     var distance = Vector3.Distance(a.Pose.Position, b.Pose.Position);
-                    Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceLimit(distance * 0.015f, distance, springSettings));
+                    Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceLimit(distance * 0.15f, distance, springSettings));
                 }
             }
             for (int rowIndex = 0; rowIndex < bodyHandles.GetLength(0); ++rowIndex)
@@ -196,7 +205,7 @@ namespace Demos.Demos
             camera.Pitch = 0;
 
             var filters = new CollidableProperty<ClothCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new ClothCallbacks() { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new ClothCallbacks(filters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
             rolloverInfo = new RolloverInfo();
 
             bool KinematicTopCorners(int rowIndex, int columnIndex, int width, int height)
