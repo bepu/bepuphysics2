@@ -20,7 +20,7 @@ namespace Demos.Demos
     public class DancerDemo : Demo
     {
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
-        struct DollBodyHandles
+        struct DancerBodyHandles
         {
             public BodyHandle Hips;
             public BodyHandle Abdomen;
@@ -35,7 +35,7 @@ namespace Demos.Demos
             public BodyHandle UpperRightArm;
             public BodyHandle LowerRightArm;
 
-            internal static unsafe Buffer<BodyHandle> AsBuffer(DollBodyHandles* sourceBodyHandles)
+            internal static unsafe Buffer<BodyHandle> AsBuffer(DancerBodyHandles* sourceBodyHandles)
             {
                 return new Buffer<BodyHandle>(sourceBodyHandles, 12);
             }
@@ -46,10 +46,10 @@ namespace Demos.Demos
             //Each dancer has its own simulation. The goal is to show a common use case for cosmetic physics- single threaded simulations that don't interact with the main simulation, running in parallel with other simulations.
             public Simulation Simulation;
             //The body handles are cached in each simulation so the source states can be mapped onto each dancer.
-            public DollBodyHandles BodyHandles;
+            public DancerBodyHandles BodyHandles;
         }
 
-        DollBodyHandles sourceBodyHandles;
+        DancerBodyHandles sourceBodyHandles;
         ParallelLooper looper;
         Dancer[] dancers;
 
@@ -175,13 +175,13 @@ namespace Demos.Demos
             return new Vector3(dancerGridWidth * spacing / -2 + (columnIndex + 0.5f) * spacing, 0, -2 + rowIndex * -spacing);
         }
 
-        static BodyHandle[,] CreateBodyGrid(Vector3 position, int widthInNodes, float spacing, float bodyRadius, float massPerBody,
+        static BodyHandle[,] CreateDressBodyGrid(Vector3 position, int widthInNodes, float spacing, float bodyRadius, float massPerBody,
             int instanceId, Simulation simulation, CollidableProperty<ClothCollisionFilter> filters)
         {
             var description = BodyDescription.CreateDynamic(QuaternionEx.Identity, new BodyInertia { InverseMass = 1f / massPerBody }, simulation.Shapes.Add(new Sphere(bodyRadius)), 0.01f);
             BodyHandle[,] handles = new BodyHandle[widthInNodes, widthInNodes];
-            var armHoleCenter = new Vector2(armOffsetX, 0);
-            var armHoleRadius = 0.07f;
+            var armHoleCenter = new Vector2(armOffsetX + 0.065f, 0);
+            var armHoleRadius = 0.095f;
             var armHoleRadiusSquared = armHoleRadius * armHoleRadius;
             var halfWidth = widthInNodes * spacing / 2;
             var halfWidthSquared = halfWidth * halfWidth;
@@ -258,7 +258,7 @@ namespace Demos.Demos
             return MathF.Sqrt(offsetX * offsetX + rowIndex * rowIndex);
         }
 
-        static void TailorDress(Simulation simulation, CollidableProperty<ClothCollisionFilter> filters, int dancerIndex, float levelOfDetail)
+        static void TailorDress(Simulation simulation, CollidableProperty<ClothCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, float levelOfDetail)
         {
             //The demo uses lower resolution grids on dancers further away from the main dancer.
             //This is a sorta-example of level of detail. In a 'real' use case, you'd probably want to transition between levels of detail dynamically as the camera moved around.
@@ -270,7 +270,42 @@ namespace Demos.Demos
             var scale = MathF.Pow(2, levelOfDetail);
             var widthInBodies = (int)MathF.Ceiling(fullDetailWidthInBodies / scale);
             var spacing = spacingAtFullDetail * scale;
-            var bodies = CreateBodyGrid(new Vector3(0, 0.8f, 0) + GetOffsetForDancer(dancerIndex), widthInBodies, spacing, bodyRadius, 0.01f, dancerIndex, simulation, filters);
+            var chest = simulation.Bodies[bodyHandles.Chest];
+            ref var chestShape = ref simulation.Shapes.GetShape<Capsule>(chest.Collidable.Shape.Index);
+            var topOfChestHeight = chest.Pose.Position.Y + chestShape.Radius + bodyRadius;
+            var bodies = CreateDressBodyGrid(new Vector3(0, topOfChestHeight, 0) + GetOffsetForDancer(dancerIndex), widthInBodies, spacing, bodyRadius, 0.01f, dancerIndex, simulation, filters);
+            //Create constraints that bind the cloth bodies closest to the chest, to the chest. This keeps the dress from sliding around.
+            //In the higher resolution simulations, the arm holes and cloth bodies can actually handle it with no help, but for lower levels of detail it can be useful.
+            //Also, it's very common to want to control how cloth sticks to a character. You could extend this approach to, for example, keep cloth near the body at the waist like a belt.
+            //This demo uses constraints to attach a subset of the cloth bodies to the chest.
+            //You could also either treat the bodies as kinematic and have them follow the body, or attach any constraints that would have involved the cloth body to the body instead.
+            //Using constraints gives you more options in configuration- the attachment doesn't have to be perfectly rigid.
+            //For the purposes of this demo, it's also simpler to just use some more constraints.
+            var midpoint = (widthInBodies * 0.5f - 0.5f);
+            var zRange = (chestShape.Radius * 0.65f) / spacing;
+            var xRange = (chestShape.Radius * 0.5f + chestShape.HalfLength) / spacing;
+            var minX = (int)MathF.Ceiling(midpoint - xRange);
+            var maxX = (int)(midpoint + xRange);
+            var minZ = (int)MathF.Ceiling(midpoint - zRange);
+            var maxZ = (int)(midpoint + zRange);
+            for (int z = minZ; z <= maxZ; ++z)
+            {
+                for (int x = minX; x <= maxX; ++x)
+                {
+                    var clothNodeHandle = bodies[z, x];
+                    //When creating bodies, we set handles for bodies that don't exist to -1.
+                    if (clothNodeHandle.Value >= 0)
+                    {
+                        var clothNodeBody = simulation.Bodies[clothNodeHandle];
+                        simulation.Solver.Add(chest.Handle, clothNodeBody.Handle,
+                            new BallSocket
+                            {
+                                LocalOffsetA = QuaternionEx.Transform(clothNodeBody.Pose.Position - chest.Pose.Position, Quaternion.Conjugate(chest.Pose.Orientation)),
+                                SpringSettings = new SpringSettings(30, 1)
+                            });
+                    }
+                }
+            }
             CreateDistanceConstraints(bodies, new SpringSettings(60, 1), simulation);
         }
         public unsafe override void Initialize(ContentArchive content, Camera camera)
@@ -438,7 +473,7 @@ namespace Demos.Demos
                 dancer.BodyHandles.UpperRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightArm, upperArmShapeInTarget, dancer.Simulation, i, dancerFilters);
                 dancer.BodyHandles.LowerRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightArm, lowerArmShapeInTarget, dancer.Simulation, i, dancerFilters);
 
-                TailorDress(dancer.Simulation, dancerFilters, i, levelOfDetail);
+                TailorDress(dancer.Simulation, dancerFilters, dancer.BodyHandles, i, levelOfDetail);
                 dancerBodyCount += dancer.Simulation.Bodies.ActiveSet.Count;
                 dancerConstraintCount += dancer.Simulation.Solver.CountConstraints();
             }
@@ -450,12 +485,12 @@ namespace Demos.Demos
         {
             //Copy historical motion states to the dancers.
             ref var dancer = ref dancers[dancerIndex];
-            var sourceHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref sourceBodyHandles));
+            var sourceHandleBuffer = DancerBodyHandles.AsBuffer((DancerBodyHandles*)Unsafe.AsPointer(ref sourceBodyHandles));
             //Delay is greater for the dancers that are further away, plus a little randomized component to desynchronize them.
             var historicalStateStartIndex = motionHistory.Count - sourceHandleBuffer.Length * ((int)GetDistanceFromMainDancer(dancerIndex) * 8 + 1 + (HashHelper.Rehash(dancerIndex) & 0xF));
             if (historicalStateStartIndex < 0)
                 historicalStateStartIndex = 0;
-            var targetHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref dancer.BodyHandles));
+            var targetHandleBuffer = DancerBodyHandles.AsBuffer((DancerBodyHandles*)Unsafe.AsPointer(ref dancer.BodyHandles));
             for (int j = 0; j < sourceHandleBuffer.Length; ++j)
             {
                 ref var targetMotionState = ref dancer.Simulation.Bodies[targetHandleBuffer[j]].MotionState;
@@ -516,7 +551,7 @@ namespace Demos.Demos
             rightHandControl.UpdateTarget(Simulation, hipsTarget + rightArmLocalTarget);
 
             //Record the latest motion state from the source dancer.
-            var sourceHandleBuffer = DollBodyHandles.AsBuffer((DollBodyHandles*)Unsafe.AsPointer(ref sourceBodyHandles));
+            var sourceHandleBuffer = DancerBodyHandles.AsBuffer((DancerBodyHandles*)Unsafe.AsPointer(ref sourceBodyHandles));
             if (motionHistory.Count == historyLength * sourceHandleBuffer.Length)
                 for (int i = 0; i < sourceHandleBuffer.Length; ++i)
                     motionHistory.Dequeue();
