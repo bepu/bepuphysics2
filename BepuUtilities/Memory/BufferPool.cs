@@ -215,9 +215,7 @@ namespace BepuUtilities.Memory
         /// </summary>
         /// <param name="minimumBlockAllocationSize">Minimum size of individual block allocations. Must be a power of 2.
         /// Pools with single allocations larger than the minimum will use the minimum value necessary to hold one element.
-        /// Buffers will be suballocated from blocks.
-        /// Use a value larger than the large object heap cutoff (85000 bytes as of this writing in the microsoft runtime)
-        /// to avoid interfering with generational garbage collection.</param>
+        /// Buffers will be suballocated from blocks.</param>
         /// <param name="expectedPooledResourceCount">Number of suballocations to preallocate reference space for.
         /// This does not preallocate actual blocks, just the space to hold references that are waiting in the pool.</param>
         public BufferPool(int minimumBlockAllocationSize = 131072, int expectedPooledResourceCount = 16)

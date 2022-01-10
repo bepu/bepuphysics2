@@ -401,13 +401,24 @@ namespace Demos.Demos
                 var dancerFilters = new CollidableProperty<ClothCollisionFilter>();
                 //Distance from the main dancer is used to select clothing level of detail. This isn't dynamic based on camera motion, but shows the general idea.
                 //Since we don't have to worry about transitions, the level of detail is a continuous value here.
-                //If the required detail goes low enough, note that this demo disables cloth self collision to save some extra time.
-                //The ClothCallbacks specify a minimum distance required for self collision, and low detail (higher 'level of detail' values) results in MaxValue minimum distance.
                 var distanceFromMainDancer = GetDistanceFromMainDancer(i);
                 var levelOfDetail = MathF.Max(0f, MathF.Min(1.5f, MathF.Log2(MathF.Max(1, distanceFromMainDancer) - 0.8f)));
-                dancer.Simulation = Simulation.Create(new BufferPool(),
+                //Note that we use a smaller allocation block size for dancer simulations.
+                //This demo is creating a *lot* of buffer pools just because that's the simplest way to keep things thread safe.
+                //If you wanted to reduce the amount of pool-induced memory overhead, you could consider sharing buffer pools between multiple simulations
+                //and making sure those simulations never run on multiple threads at the same time to avoid allocation related race conditions.
+                //Depending on the simulation, it could also be worth having multiple characters simulated in the same simulation even if you don't care about their interactions.
+                //For example, if you wanted to train a motorized ragdoll using reinforcement learning, it is likely that having multiple ragdolls in each simulation would improve hardware utilization.
+                //All narrow phase collision tests and constraint solves are vectorized over multiple pairs; having only one ragdoll would likely leave many bundles partially filled.
+                //In this demo, occupancy is less of a concern since there are a decent number of constraints associated with a single dancer.
+                dancer.Simulation = Simulation.Create(new BufferPool(16384),
+                    //If the required detail goes low enough, note that this demo disables cloth self collision to save some extra time.
+                    //The ClothCallbacks specify a minimum distance required for self collision, and low detail (higher 'level of detail' values) results in MaxValue minimum distance.
                     new ClothCallbacks(dancerFilters, new PairMaterialProperties(0.4f, 20, new SpringSettings(120, 1)), levelOfDetail <= 0.5f ? 3 : int.MaxValue),
-                    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+                    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4),
+                    //To save some memory, initialize the dancer simulations with smaller starting sizes. For the higher level of detail simulations this could require some resizing. 
+                    //More precise estimates could be made without too much work, but the demo will keep it simple.
+                    initialAllocationSizes: new SimulationAllocationSizes(128, 1, 1, 8, 512, 64, 8));
                 dancer.BodyHandles.Hips = CreateCopyForDancer(Simulation, sourceBodyHandles.Hips, dancer.Simulation.Shapes.Add(hipShape), dancer.Simulation, i, dancerFilters);
                 dancer.BodyHandles.Abdomen = CreateCopyForDancer(Simulation, sourceBodyHandles.Abdomen, dancer.Simulation.Shapes.Add(abdomenShape), dancer.Simulation, i, dancerFilters);
                 dancer.BodyHandles.Chest = CreateCopyForDancer(Simulation, sourceBodyHandles.Chest, dancer.Simulation.Shapes.Add(chestShape), dancer.Simulation, i, dancerFilters);
@@ -428,8 +439,12 @@ namespace Demos.Demos
                 dancer.BodyHandles.LowerRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightArm, lowerArmShapeInTarget, dancer.Simulation, i, dancerFilters);
 
                 TailorDress(dancer.Simulation, dancerFilters, i, levelOfDetail);
+                dancerBodyCount += dancer.Simulation.Bodies.ActiveSet.Count;
+                dancerConstraintCount += dancer.Simulation.Solver.CountConstraints();
             }
         }
+        int dancerBodyCount;
+        int dancerConstraintCount;
 
         unsafe void ExecuteDancer(int dancerIndex)
         {
@@ -477,6 +492,7 @@ namespace Demos.Demos
         }
 
         double time;
+        double executionTime;
         public unsafe override void Update(Window window, Camera camera, Input input, float dt)
         {
             time += 1 / 60f;
@@ -512,9 +528,7 @@ namespace Demos.Demos
             var startTime = Stopwatch.GetTimestamp();
             looper.For(0, dancers.Length, ExecuteDancer);
             var endTime = Stopwatch.GetTimestamp();
-            var executionTime = (endTime - startTime) / (double)Stopwatch.Frequency;
-            Console.WriteLine($"Time (ms): {executionTime * 1000}");
-            Console.WriteLine($"Time per dancer, amortized (us): {executionTime * 1e6 / dancers.Length}");
+            executionTime = (endTime - startTime) / (double)Stopwatch.Frequency;
             base.Update(window, camera, input, dt);
         }
 
@@ -525,6 +539,17 @@ namespace Demos.Demos
                 renderer.Shapes.AddInstances(dancers[i].Simulation);
                 renderer.Lines.Extract(dancers[i].Simulation.Bodies, dancers[i].Simulation.Solver, dancers[i].Simulation.BroadPhase, true, false, false);
             }
+
+            var resolution = renderer.Surface.Resolution;
+            renderer.TextBatcher.Write(text.Clear().Append("Cosmetic simulations, like cloth, often don't need to be in a game's main simulation."), new Vector2(16, resolution.Y - 144), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Every background dancer in this demo has its own simulation. All dancers can be easily updated in parallel."), new Vector2(16, resolution.Y - 128), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Dancers further from the main dancer use sparser cloth and disable self collision for extra performance."), new Vector2(16, resolution.Y - 112), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Dancer count: ").Append(dancers.Length), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Total cloth body count: ").Append(dancerBodyCount), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Total cloth constraint count: ").Append(dancerConstraintCount), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Total dancer execution time (ms): ").Append(executionTime * 1000, 2), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Amortized execution time per dancer (us): ").Append(executionTime * 1e6 / dancers.Length, 1), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
+
             base.Render(renderer, camera, input, text, font);
         }
         protected override void OnDispose()
