@@ -334,7 +334,7 @@ namespace Demos.Demos.Tanks
                 ref var explosion = ref explosions[i];
                 var pose = new RigidPose(explosion.Position);
                 //The age is measured in frames, so it's not framerate independent. That's fine for a demo.
-                renderer.Shapes.AddShape(new Sphere(explosion.Scale * (0.25f + MathF.Sqrt(explosion.Age))), Simulation.Shapes, ref pose, explosion.Color);
+                renderer.Shapes.AddShape(new Sphere(explosion.Scale * (0.25f + MathF.Sqrt(explosion.Age))), Simulation.Shapes, pose, explosion.Color);
                 if (explosion.Age > 5)
                 {
                     explosions.FastRemoveAt(i);

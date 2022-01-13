@@ -111,7 +111,7 @@ namespace DemoRenderer.Constraints
 
         public bool Enabled { get; set; } = true;
 
-        Action<int> executeJobDelegate;
+        LooperAction executeJobDelegate;
 
         ref TypeLineExtractor AllocateSlot(int typeId)
         {
@@ -172,7 +172,7 @@ namespace DemoRenderer.Constraints
         Bodies bodies;
         Solver solver;
         QuickList<LineInstance> targetLines;
-        private void ExecuteJob(int jobIndex)
+        private void ExecuteJob(int jobIndex, int workerIndex)
         {
             ref var job = ref jobs[jobIndex];
             ref var typeBatch = ref solver.Sets[job.SetIndex].Batches[job.BatchIndex].TypeBatches[job.TypeBatchIndex];

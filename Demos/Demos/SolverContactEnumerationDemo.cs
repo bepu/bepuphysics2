@@ -250,7 +250,7 @@ namespace Demos.Demos
                     RigidPose contactVisualPose;
                     contactVisualPose.Position = contactPosition + contact.Normal * contactVisualShape.HalfLength;
                     QuaternionEx.CreateFromRotationMatrix(basisPose, out contactVisualPose.Orientation);
-                    renderer.Shapes.AddShape(contactVisualShape, Simulation.Shapes, ref contactVisualPose, contact.Depth < 0 ? new Vector3(0, 0, 1) : new Vector3(0, 1, 0));
+                    renderer.Shapes.AddShape(contactVisualShape, Simulation.Shapes, contactVisualPose, contact.Depth < 0 ? new Vector3(0, 0, 1) : new Vector3(0, 1, 0));
                 }
             }
             renderer.TextBatcher.Write(text.Clear().Append("Sensor manifold constraint count: ").Append(extractor.ConstraintContacts.Count).Append(", contact count: ").Append(sensorContactCount), new Vector2(32, 32), 20, Vector3.One, font);

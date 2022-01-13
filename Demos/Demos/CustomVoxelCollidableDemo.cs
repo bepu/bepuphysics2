@@ -451,7 +451,7 @@ namespace Demos.Demos
                 var localPose = (voxels.VoxelIndices[i] + new Vector3(0.5f) * voxels.VoxelSize);
                 Compound.GetRotatedChildPose(localPose, voxelsPose.Orientation, out var childPose);
                 childPose.Position += voxelsPose.Position;
-                renderer.Shapes.AddShape(shapeDataPointer, Box.Id, Simulation.Shapes, ref childPose, new Vector3(0.8f, 0.2f, 0.2f));
+                renderer.Shapes.AddShape(shapeDataPointer, Box.Id, Simulation.Shapes, childPose, new Vector3(0.8f, 0.2f, 0.2f));
             }
             base.Render(renderer, camera, input, text, font);
         }

@@ -7,31 +7,59 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using SharpDX.Direct3D11;
 using System;
+using System.Diagnostics;
 
 namespace DemoRenderer.ShapeDrawing
 {
+    public struct ShapeCache
+    {
+        internal QuickList<SphereInstance> Spheres;
+        internal QuickList<CapsuleInstance> Capsules;
+        internal QuickList<CylinderInstance> Cylinders;
+        internal QuickList<BoxInstance> Boxes;
+        internal QuickList<TriangleInstance> Triangles;
+        internal QuickList<MeshInstance> Meshes;
+
+        public ShapeCache(int initialCapacityPerShapeType, BufferPool pool)
+        {
+            Spheres = new QuickList<SphereInstance>(initialCapacityPerShapeType, pool);
+            Capsules = new QuickList<CapsuleInstance>(initialCapacityPerShapeType, pool);
+            Cylinders = new QuickList<CylinderInstance>(initialCapacityPerShapeType, pool);
+            Boxes = new QuickList<BoxInstance>(initialCapacityPerShapeType, pool);
+            Triangles = new QuickList<TriangleInstance>(initialCapacityPerShapeType, pool);
+            Meshes = new QuickList<MeshInstance>(initialCapacityPerShapeType, pool);
+        }
+        public void Clear()
+        {
+            Spheres.Count = 0;
+            Capsules.Count = 0;
+            Cylinders.Count = 0;
+            Boxes.Count = 0;
+            Triangles.Count = 0;
+            Meshes.Count = 0;
+        }
+        public void Dispose(BufferPool pool)
+        {
+            Spheres.Dispose(pool);
+            Capsules.Dispose(pool);
+            Cylinders.Dispose(pool);
+            Boxes.Dispose(pool);
+            Triangles.Dispose(pool);
+            Meshes.Dispose(pool);
+        }
+    }
+
     public class ShapesExtractor : IDisposable
     {
-        //For now, we only have spheres. Later, once other shapes exist, this will be responsible for bucketing the different shape types and when necessary caching shape models.
-        internal QuickList<SphereInstance> spheres;
-        internal QuickList<CapsuleInstance> capsules;
-        internal QuickList<CylinderInstance> cylinders;
-        internal QuickList<BoxInstance> boxes;
-        internal QuickList<TriangleInstance> triangles;
-        internal QuickList<MeshInstance> meshes;
 
         BufferPool pool;
+        public ShapeCache ShapeCache;
         public MeshCache MeshCache;
 
         ParallelLooper looper;
         public ShapesExtractor(Device device, ParallelLooper looper, BufferPool pool, int initialCapacityPerShapeType = 1024)
         {
-            spheres = new QuickList<SphereInstance>(initialCapacityPerShapeType, pool);
-            capsules = new QuickList<CapsuleInstance>(initialCapacityPerShapeType, pool);
-            cylinders = new QuickList<CylinderInstance>(initialCapacityPerShapeType, pool);
-            boxes = new QuickList<BoxInstance>(initialCapacityPerShapeType, pool);
-            triangles = new QuickList<TriangleInstance>(initialCapacityPerShapeType, pool);
-            meshes = new QuickList<MeshInstance>(initialCapacityPerShapeType, pool);
+            ShapeCache = new ShapeCache(initialCapacityPerShapeType, pool);
             this.MeshCache = new MeshCache(device, pool);
             this.pool = pool;
             this.looper = looper;
@@ -39,26 +67,21 @@ namespace DemoRenderer.ShapeDrawing
 
         public void ClearInstances()
         {
-            spheres.Count = 0;
-            capsules.Count = 0;
-            cylinders.Count = 0;
-            boxes.Count = 0;
-            triangles.Count = 0;
-            meshes.Count = 0;
+            ShapeCache.Clear();
         }
 
-        private unsafe void AddCompoundChildren(ref Buffer<CompoundChild> children, Shapes shapes, in RigidPose pose, in Vector3 color)
+        private unsafe void AddCompoundChildren(ref Buffer<CompoundChild> children, Shapes shapes, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, BufferPool pool)
         {
             for (int i = 0; i < children.Length; ++i)
             {
                 ref var child = ref children[i];
                 Compound.GetWorldPose(child.LocalPose, pose, out var childPose);
-                AddShape(shapes, child.ShapeIndex, ref childPose, color);
+                AddShape(shapes, child.ShapeIndex, childPose, color, ref shapeCache, pool);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void AddShape(void* shapeData, int shapeType, Shapes shapes, ref RigidPose pose, in Vector3 color)
+        unsafe void AddShape(void* shapeData, int shapeType, Shapes shapes, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, BufferPool pool)
         {
             //TODO: This should likely be swapped over to a registration-based virtualized table approach to more easily support custom shape extractors-
             //generic terrain windows and examples like voxel grids would benefit.
@@ -71,7 +94,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.Radius = Unsafe.AsRef<Sphere>(shapeData).Radius;
                         Helpers.PackOrientation(pose.Orientation, out instance.PackedOrientation);
                         instance.PackedColor = Helpers.PackColor(color);
-                        spheres.Add(instance, pool);
+                        shapeCache.Spheres.Add(instance, pool);
                     }
                     break;
                 case Capsule.Id:
@@ -81,9 +104,9 @@ namespace DemoRenderer.ShapeDrawing
                         ref var capsule = ref Unsafe.AsRef<Capsule>(shapeData);
                         instance.Radius = capsule.Radius;
                         instance.HalfLength = capsule.HalfLength;
-                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.PackedOrientation = Helpers.PackOrientationU64(pose.Orientation);
                         instance.PackedColor = Helpers.PackColor(color);
-                        capsules.Add(instance, pool);
+                        shapeCache.Capsules.Add(instance, pool);
                     }
                     break;
                 case Box.Id:
@@ -96,7 +119,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.HalfWidth = box.HalfWidth;
                         instance.HalfHeight = box.HalfHeight;
                         instance.HalfLength = box.HalfLength;
-                        boxes.Add(instance, pool);
+                        shapeCache.Boxes.Add(instance, pool);
                     }
                     break;
                 case Triangle.Id:
@@ -107,11 +130,11 @@ namespace DemoRenderer.ShapeDrawing
                         instance.PackedColor = Helpers.PackColor(color);
                         instance.B = triangle.B;
                         instance.C = triangle.C;
-                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.PackedOrientation = Helpers.PackOrientationU64(pose.Orientation);
                         instance.X = pose.Position.X;
                         instance.Y = pose.Position.Y;
                         instance.Z = pose.Position.Z;
-                        triangles.Add(instance, pool);
+                        shapeCache.Triangles.Add(instance, pool);
                     }
                     break;
                 case Cylinder.Id:
@@ -121,9 +144,9 @@ namespace DemoRenderer.ShapeDrawing
                         ref var cylinder = ref Unsafe.AsRef<Cylinder>(shapeData);
                         instance.Radius = cylinder.Radius;
                         instance.HalfLength = cylinder.HalfLength;
-                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.PackedOrientation = Helpers.PackOrientationU64(pose.Orientation);
                         instance.PackedColor = Helpers.PackColor(color);
-                        cylinders.Add(instance, pool);
+                        shapeCache.Cylinders.Add(instance, pool);
                     }
                     break;
                 case ConvexHull.Id:
@@ -132,11 +155,17 @@ namespace DemoRenderer.ShapeDrawing
                         MeshInstance instance;
                         instance.Position = pose.Position;
                         instance.PackedColor = Helpers.PackColor(color);
-                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.PackedOrientation = Helpers.PackOrientationU64(pose.Orientation);
                         instance.Scale = Vector3.One;
                         //Memory can be reused, so we slightly reduce the probability of a bad reuse by taking the first 64 bits of data into the hash.
                         var id = (ulong)hull.Points.Memory ^ (ulong)hull.Points.Length ^ (*(ulong*)hull.Points.Memory);
-                        if (!MeshCache.TryGetExistingMesh(id, out instance.VertexStart, out var vertices))
+                        bool meshExisted;
+                        Buffer<Vector3> vertices;
+                        lock (MeshCache)
+                        {
+                            meshExisted = MeshCache.TryGetExistingMesh(id, out instance.VertexStart, out vertices);
+                        }
+                        if (!meshExisted)
                         {
                             int triangleCount = 0;
                             for (int i = 0; i < hull.FaceToVertexIndicesStart.Length; ++i)
@@ -145,7 +174,10 @@ namespace DemoRenderer.ShapeDrawing
                                 triangleCount += faceVertexIndices.Length - 2;
                             }
                             instance.VertexCount = triangleCount * 3;
-                            MeshCache.Allocate(id, instance.VertexCount, out instance.VertexStart, out vertices);
+                            lock (MeshCache)
+                            {
+                                MeshCache.Allocate(id, instance.VertexCount, out instance.VertexStart, out vertices);
+                            }
                             //This is a fresh allocation, so we need to upload vertex data.
                             int targetVertexIndex = 0;
                             for (int i = 0; i < hull.FaceToVertexIndicesStart.Length; ++i)
@@ -167,17 +199,17 @@ namespace DemoRenderer.ShapeDrawing
                         {
                             instance.VertexCount = vertices.Length;
                         }
-                        meshes.Add(instance, pool);
+                        shapeCache.Meshes.Add(instance, pool);
                     }
                     break;
                 case Compound.Id:
                     {
-                        AddCompoundChildren(ref Unsafe.AsRef<Compound>(shapeData).Children, shapes, pose, color);
+                        AddCompoundChildren(ref Unsafe.AsRef<Compound>(shapeData).Children, shapes, pose, color, ref shapeCache, pool);
                     }
                     break;
                 case BigCompound.Id:
                     {
-                        AddCompoundChildren(ref Unsafe.AsRef<BigCompound>(shapeData).Children, shapes, pose, color);
+                        AddCompoundChildren(ref Unsafe.AsRef<BigCompound>(shapeData).Children, shapes, pose, color, ref shapeCache, pool);
                     }
                     break;
                 case Mesh.Id:
@@ -186,12 +218,18 @@ namespace DemoRenderer.ShapeDrawing
                         MeshInstance instance;
                         instance.Position = pose.Position;
                         instance.PackedColor = Helpers.PackColor(color);
-                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.PackedOrientation = Helpers.PackOrientationU64(pose.Orientation);
                         instance.Scale = mesh.Scale;
                         //Memory can be reused, so we slightly reduce the probability of a bad reuse by taking the first 64 bits of data into the hash.
                         var id = (ulong)mesh.Triangles.Memory ^ (ulong)mesh.Triangles.Length ^ (*(ulong*)mesh.Triangles.Memory); ;
                         instance.VertexCount = mesh.Triangles.Length * 3;
-                        if (MeshCache.Allocate(id, instance.VertexCount, out instance.VertexStart, out var vertices))
+                        bool newAllocation;
+                        Buffer<Vector3> vertices;
+                        lock (MeshCache)
+                        {
+                            newAllocation = MeshCache.Allocate(id, instance.VertexCount, out instance.VertexStart, out vertices);
+                        }
+                        if (newAllocation)
                         {
                             //This is a fresh allocation, so we need to upload vertex data.
                             for (int i = 0; i < mesh.Triangles.Length; ++i)
@@ -204,31 +242,45 @@ namespace DemoRenderer.ShapeDrawing
                                 vertices[baseVertexIndex + 2] = triangle.B;
                             }
                         }
-                        meshes.Add(instance, pool);
+                        shapeCache.Meshes.Add(instance, pool);
                     }
                     break;
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void AddShape(void* shapeData, int shapeType, Shapes shapes, RigidPose pose, Vector3 color)
+        {
+            AddShape(shapeData, shapeType, shapes, pose, color, ref ShapeCache, pool);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void AddShape(Shapes shapes, TypedIndex shapeIndex, ref RigidPose pose, in Vector3 color)
+        unsafe void AddShape(Shapes shapes, TypedIndex shapeIndex, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, BufferPool pool)
         {
             if (shapeIndex.Exists)
             {
                 shapes[shapeIndex.Type].GetShapeData(shapeIndex.Index, out var shapeData, out _);
-                AddShape(shapeData, shapeIndex.Type, shapes, ref pose, color);
+                AddShape(shapeData, shapeIndex.Type, shapes, pose, color, ref shapeCache, pool);
+            }
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void AddShape(Shapes shapes, TypedIndex shapeIndex, RigidPose pose, Vector3 color)
+        {
+            if (shapeIndex.Exists)
+            {
+                shapes[shapeIndex.Type].GetShapeData(shapeIndex.Index, out var shapeData, out _);
+                AddShape(shapeData, shapeIndex.Type, shapes, pose, color, ref ShapeCache, pool);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void AddShape<TShape>(TShape shape, Shapes shapes, ref RigidPose pose, in Vector3 color) where TShape : IShape
+        public unsafe void AddShape<TShape>(TShape shape, Shapes shapes, RigidPose pose, Vector3 color) where TShape : IShape
         {
-            AddShape(Unsafe.AsPointer(ref shape), shape.TypeId, shapes, ref pose, color);
+            AddShape(Unsafe.AsPointer(ref shape), shape.TypeId, shapes, pose, color, ref ShapeCache, pool);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void AddBodyShape(Shapes shapes, Bodies bodies, int setIndex, int indexInSet)
+        void AddBodyShape(Shapes shapes, Bodies bodies, int setIndex, int indexInSet, ref ShapeCache shapeCache, BufferPool pool)
         {
             ref var set = ref bodies.Sets[setIndex];
             var handle = set.IndexToHandle[indexInSet];
@@ -268,11 +320,11 @@ namespace DemoRenderer.ShapeDrawing
                 color *= sleepTint;
             }
 
-            AddShape(shapes, set.Collidables[indexInSet].Shape, ref state.Motion.Pose, color);
+            AddShape(shapes, set.Collidables[indexInSet].Shape, state.Motion.Pose, color, ref shapeCache, pool);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void AddStaticShape(Shapes shapes, Statics statics, int index)
+        void AddStaticShape(Shapes shapes, Statics statics, int index, ref ShapeCache shapeCache, BufferPool pool)
         {
             var handle = statics.IndexToHandle[index];
             //Statics don't have any activity states. Just some simple variation on a central static color.
@@ -281,10 +333,141 @@ namespace DemoRenderer.ShapeDrawing
             var staticVariationSpan = new Vector3(0.07f, 0.07f, 0.03f);
             var color = staticBase + staticVariationSpan * colorVariation;
             ref var collidable = ref statics[index];
-            AddShape(shapes, collidable.Shape, ref collidable.Pose, color);
+            AddShape(shapes, collidable.Shape, collidable.Pose, color, ref shapeCache, pool);
         }
 
-        public void AddInstances(Simulation simulation, IThreadDispatcher threadDispatcher = null)
+        struct Job
+        {
+            public int SimulationIndex;
+            //If the job is about statics, the set index will be -1.
+            public int SetIndex;
+            public int StartIndex;
+            public int Count;
+        }
+        QuickList<Job> jobs;
+        //The extractor can operate over one or multiple simulations. We cache them locally for threads to access.
+        Simulation[] simulations;
+        Simulation simulation;
+        Buffer<ShapeCache> workerCaches;
+
+        void PrepareForMultithreadedExecution(IThreadDispatcher threadDispatcher)
+        {
+            jobs = new QuickList<Job>(128, pool);
+            looper.Dispatcher = threadDispatcher;
+            pool.Take(threadDispatcher.ThreadCount, out workerCaches);
+            for (int i = 0; i < workerCaches.Length; ++i)
+            {
+                workerCaches[i] = new ShapeCache(128, threadDispatcher.GetThreadMemoryPool(i));
+            }
+        }
+
+        void EndMultithreadedExecution()
+        {
+            jobs.Dispose(pool);
+            for (int i = 0; i < workerCaches.Length; ++i)
+            {
+                workerCaches[i].Dispose(looper.Dispatcher.GetThreadMemoryPool(i));
+            }
+            looper.Dispatcher = null;
+            pool.Return(ref workerCaches);
+        }
+
+        static void CreateJobs(Simulation simulation, int simulationIndex, ref QuickList<Job> jobs, BufferPool pool)
+        {
+            const int targetBodiesPerJob = 1024;
+            for (int setIndex = 0; setIndex < simulation.Bodies.Sets.Length; ++setIndex)
+            {
+                ref var set = ref simulation.Bodies.Sets[setIndex];
+                if (set.Allocated && set.Count > 0) //active set can be allocated and have no bodies in it.
+                {
+                    var jobCount = (set.Count + targetBodiesPerJob - 1) / targetBodiesPerJob;
+                    var bodiesPerJob = set.Count / jobCount;
+                    var remainder = set.Count - bodiesPerJob * jobCount;
+                    var previousEnd = 0;
+                    for (int j = 0; j < jobCount; ++j)
+                    {
+                        var count = j < remainder ? bodiesPerJob + 1 : bodiesPerJob;
+                        jobs.Allocate(pool) = new Job { SimulationIndex = simulationIndex, SetIndex = setIndex, Count = count, StartIndex = previousEnd };
+                        previousEnd += count;
+                    }
+                }
+            }
+            {
+                if (simulation.Statics.Count > 0)
+                {
+                    var jobCount = (simulation.Statics.Count + targetBodiesPerJob - 1) / targetBodiesPerJob;
+                    var bodiesPerJob = simulation.Statics.Count / jobCount;
+                    var remainder = simulation.Statics.Count - bodiesPerJob * jobCount;
+                    var previousEnd = 0;
+                    for (int j = 0; j < jobCount; ++j)
+                    {
+                        var count = j < remainder ? bodiesPerJob + 1 : bodiesPerJob;
+                        jobs.Allocate(pool) = new Job { SimulationIndex = simulationIndex, SetIndex = -1, Count = count, StartIndex = previousEnd };
+                        previousEnd += count;
+                    }
+                }
+            }
+        }
+
+        void AddShapesForJob(int jobIndex, int workerIndex)
+        {
+            var job = jobs[jobIndex];
+            var simulation = simulations == null ? this.simulation : this.simulations[job.SimulationIndex];
+            var pool = looper.Dispatcher.GetThreadMemoryPool(workerIndex);
+
+            if (job.SetIndex >= 0)
+            {
+                ref var set = ref simulation.Bodies.Sets[job.SetIndex];
+                var endIndex = job.StartIndex + job.Count;
+                Debug.Assert(endIndex <= set.Count);
+                for (int bodyIndex = job.StartIndex; bodyIndex < endIndex; ++bodyIndex)
+                {
+                    AddBodyShape(simulation.Shapes, simulation.Bodies, job.SetIndex, bodyIndex, ref workerCaches[workerIndex], pool);
+                }
+            }
+            else
+            {
+                //It's a static.
+                var endIndex = job.StartIndex + job.Count;
+                Debug.Assert(endIndex <= simulation.Statics.Count);
+                for (int staticIndex = job.StartIndex; staticIndex < endIndex; ++staticIndex)
+                {
+                    AddStaticShape(simulation.Shapes, simulation.Statics, staticIndex, ref workerCaches[workerIndex], pool);
+                }
+            }
+        }
+
+        object workerShapeMergeLocker = new object();
+
+        void CopyWorkerCacheToMainCache<TShape>(ref QuickList<TShape> workerCache, ref QuickList<TShape> mainCache) where TShape : unmanaged
+        {
+            if (workerCache.Count > 0)
+            {
+                int copyStartLocation;
+                lock (workerShapeMergeLocker)
+                {
+                    var newCount = mainCache.Count + workerCache.Count;
+                    mainCache.EnsureCapacity(newCount, pool);
+                    copyStartLocation = mainCache.Count;
+                    mainCache.Count = newCount;
+                }
+                workerCache.Span.CopyTo(0, mainCache.Span, copyStartLocation, workerCache.Count);
+            }
+        }
+
+        void WorkerDone(int workerIndex)
+        {
+            //This fires when a worker finishes its work. We should copy the results into the main buffer.
+            ref var workerCache = ref workerCaches[workerIndex];
+            CopyWorkerCacheToMainCache(ref workerCache.Spheres, ref ShapeCache.Spheres);
+            CopyWorkerCacheToMainCache(ref workerCache.Capsules, ref ShapeCache.Capsules);
+            CopyWorkerCacheToMainCache(ref workerCache.Boxes, ref ShapeCache.Boxes);
+            CopyWorkerCacheToMainCache(ref workerCache.Cylinders, ref ShapeCache.Cylinders);
+            CopyWorkerCacheToMainCache(ref workerCache.Triangles, ref ShapeCache.Triangles);
+            CopyWorkerCacheToMainCache(ref workerCache.Meshes, ref ShapeCache.Meshes);
+        }
+
+        void AddShapesSequentially(Simulation simulation)
         {
             for (int i = 0; i < simulation.Bodies.Sets.Length; ++i)
             {
@@ -293,25 +476,61 @@ namespace DemoRenderer.ShapeDrawing
                 {
                     for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
                     {
-                        AddBodyShape(simulation.Shapes, simulation.Bodies, i, bodyIndex);
+                        AddBodyShape(simulation.Shapes, simulation.Bodies, i, bodyIndex, ref ShapeCache, pool);
                     }
                 }
             }
             for (int i = 0; i < simulation.Statics.Count; ++i)
             {
-                AddStaticShape(simulation.Shapes, simulation.Statics, i);
+                AddStaticShape(simulation.Shapes, simulation.Statics, i, ref ShapeCache, pool);
+            }
+        }
+
+
+        public void AddInstances(Simulation[] simulations, IThreadDispatcher threadDispatcher = null)
+        {
+            if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
+            {
+                this.simulations = simulations;
+                PrepareForMultithreadedExecution(threadDispatcher);
+                for (int simulationIndex = 0; simulationIndex < simulations.Length; ++simulationIndex)
+                {
+                    CreateJobs(simulations[simulationIndex], simulationIndex, ref jobs, pool);
+                }
+                looper.For(0, jobs.Count, AddShapesForJob, WorkerDone);
+                EndMultithreadedExecution();
+                this.simulations = default;
+            }
+            else
+            {
+                for (int simulationIndex = 0; simulationIndex < simulations.Length; ++simulationIndex)
+                {
+                    AddShapesSequentially(simulations[simulationIndex]);
+                }
+            }
+        }
+
+        public void AddInstances(Simulation simulation, IThreadDispatcher threadDispatcher = null)
+        {
+            if (threadDispatcher != null)
+            {
+                this.simulation = simulation;
+                PrepareForMultithreadedExecution(threadDispatcher);
+                CreateJobs(simulation, 0, ref jobs, pool);
+                looper.For(0, jobs.Count, AddShapesForJob, WorkerDone);
+                EndMultithreadedExecution();
+                this.simulation = null;
+            }
+            else
+            {
+                AddShapesSequentially(simulation);
             }
         }
 
         public void Dispose()
         {
+            ShapeCache.Dispose(pool);
             MeshCache.Dispose();
-            spheres.Dispose(pool);
-            capsules.Dispose(pool);
-            cylinders.Dispose(pool);
-            boxes.Dispose(pool);
-            triangles.Dispose(pool);
-            meshes.Dispose(pool);
         }
     }
 }

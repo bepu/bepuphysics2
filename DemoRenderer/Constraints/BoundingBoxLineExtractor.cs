@@ -28,7 +28,7 @@ namespace DemoRenderer.Constraints
         }
 
         BufferPool pool;
-        Action<int> workDelegate;
+        LooperAction workDelegate;
         public BoundingBoxLineExtractor(BufferPool pool)
         {
             this.pool = pool;
@@ -62,7 +62,7 @@ namespace DemoRenderer.Constraints
         {
             WriteBoundsLines(min, max, Helpers.PackColor(color), Helpers.PackColor(backgroundColor), ref targetLines);
         }
-        private unsafe void Work(int jobIndex)
+        private unsafe void Work(int jobIndex, int workerIndex)
         {
             ref var job = ref jobs[jobIndex];
             var end = job.LeafStart + job.LeafCount;

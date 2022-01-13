@@ -250,7 +250,7 @@ namespace Demos.Demos
             for (int i = 0; i < queries.Count; ++i)
             {
                 ref var query = ref queries[i];
-                renderer.Shapes.AddShape(query.Box, Simulation.Shapes, ref query.Pose, queryWasTouched[i] ? new Vector3(0, 1, 0) : new Vector3(1, 0, 0));
+                renderer.Shapes.AddShape(query.Box, Simulation.Shapes, query.Pose, queryWasTouched[i] ? new Vector3(0, 1, 0) : new Vector3(1, 0, 0));
             }
 
             BufferPool.Return(ref queryWasTouched);

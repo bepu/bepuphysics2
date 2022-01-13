@@ -146,7 +146,7 @@ namespace DemoRenderer
         /// <param name="color">RGB color to pack.</param>
         /// <returns>Color packed into 32 bits.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint PackColor(in Vector3 color)
+        public static uint PackColor(Vector3 color)
         {
             const uint RScale = (1 << 11) - 1;
             const uint GScale = (1 << 11) - 1;
@@ -184,7 +184,7 @@ namespace DemoRenderer
         /// <param name="color">RGBA color to pack.</param>
         /// <returns>Color packed into 32 bits.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint PackColor(in Vector4 color)
+        public static uint PackColor(Vector4 color)
         {
             var scaledColor = Vector4.Max(Vector4.Zero, Vector4.Min(Vector4.One, color)) * 255;
             return (uint)scaledColor.X | ((uint)scaledColor.Y << 8) | ((uint)scaledColor.Z << 16) | ((uint)scaledColor.W << 24);
@@ -211,7 +211,7 @@ namespace DemoRenderer
         /// <param name="source">Orientation to pack.</param>
         /// <param name="packed">W-less packed orientation, with remaining components negated to guarantee that the reconstructed positive W component is valid.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void PackOrientation(in Quaternion source, out Vector3 packed)
+        public static void PackOrientation(Quaternion source, out Vector3 packed)
         {
             packed = new Vector3(source.X, source.Y, source.Z);
             if (source.W < 0)
@@ -238,7 +238,7 @@ namespace DemoRenderer
         /// <param name="source">Orientation to pack.</param>
         /// <param name="packed">Packed orientation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static ulong PackOrientationU64(ref Quaternion source)
+        public unsafe static ulong PackOrientationU64(Quaternion source)
         {
             //This isn't exactly a clever packing, but with 64 bits, cleverness isn't required.
             ref var vectorSource = ref Unsafe.As<float, Vector4>(ref source.X);

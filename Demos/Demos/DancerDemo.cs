@@ -43,15 +43,17 @@ namespace Demos.Demos
 
         struct Dancer
         {
-            //Each dancer has its own simulation. The goal is to show a common use case for cosmetic physics- single threaded simulations that don't interact with the main simulation, running in parallel with other simulations.
             public Simulation Simulation;
-            //The body handles are cached in each simulation so the source states can be mapped onto each dancer.
             public DancerBodyHandles BodyHandles;
         }
 
         DancerBodyHandles sourceBodyHandles;
         ParallelLooper looper;
-        Dancer[] dancers;
+        //Each dancer has its own simulation. The goal is to show a common use case for cosmetic physics- single threaded simulations that don't interact with the main simulation, running in parallel with other simulations.
+        //(The simulations and handles are kept separate just because the simulations are handed over as a group to the renderer to draw stuff.)
+        Simulation[] dancerSimulations;
+        //The body handles are cached in each simulation so the source states can be mapped onto each dancer.
+        DancerBodyHandles[] dancerHandles;
 
         const float legOffsetX = 0.135f;
         const float armOffsetX = 0.25f;
@@ -417,7 +419,8 @@ namespace Demos.Demos
             //Keep the states in a queue. Each batch of 12 motion states is the state for a single frame.
             motionHistory = new QuickQueue<MotionState>(historyLength * 12, BufferPool);
 
-            dancers = new Dancer[dancerCount];
+            dancerHandles = new DancerBodyHandles[dancerCount];
+            dancerSimulations = new Simulation[dancerCount];
             static BodyHandle CreateCopyForDancer(Simulation sourceSimulation, BodyHandle sourceHandle, TypedIndex shapeIndexInTargetSimulation, Simulation targetSimulation, int dancerIndex, CollidableProperty<ClothCollisionFilter> filters)
             {
                 var description = sourceSimulation.Bodies.GetDescription(sourceHandle);
@@ -430,9 +433,9 @@ namespace Demos.Demos
                 return handle;
             }
 
-            for (int i = 0; i < dancers.Length; ++i)
+            for (int i = 0; i < dancerHandles.Length; ++i)
             {
-                ref var dancer = ref dancers[i];
+                ref var dancer = ref dancerHandles[i];
                 var dancerFilters = new CollidableProperty<ClothCollisionFilter>();
                 //Distance from the main dancer is used to select clothing level of detail. This isn't dynamic based on camera motion, but shows the general idea.
                 //Since we don't have to worry about transitions, the level of detail is a continuous value here.
@@ -446,7 +449,7 @@ namespace Demos.Demos
                 //For example, if you wanted to train a motorized ragdoll using reinforcement learning, it is likely that having multiple ragdolls in each simulation would improve hardware utilization.
                 //All narrow phase collision tests and constraint solves are vectorized over multiple pairs; having only one ragdoll would likely leave many bundles partially filled.
                 //In this demo, occupancy is less of a concern since there are a decent number of constraints associated with a single dancer.
-                dancer.Simulation = Simulation.Create(new BufferPool(16384),
+                var dancerSimulation = Simulation.Create(new BufferPool(16384),
                     //If the required detail goes low enough, note that this demo disables cloth self collision to save some extra time.
                     //The ClothCallbacks specify a minimum distance required for self collision, and low detail (higher 'level of detail' values) results in MaxValue minimum distance.
                     new ClothCallbacks(dancerFilters, new PairMaterialProperties(0.4f, 20, new SpringSettings(120, 1)), levelOfDetail <= 0.5f ? 3 : int.MaxValue),
@@ -454,51 +457,53 @@ namespace Demos.Demos
                     //To save some memory, initialize the dancer simulations with smaller starting sizes. For the higher level of detail simulations this could require some resizing. 
                     //More precise estimates could be made without too much work, but the demo will keep it simple.
                     initialAllocationSizes: new SimulationAllocationSizes(128, 1, 1, 8, 512, 64, 8));
-                dancer.BodyHandles.Hips = CreateCopyForDancer(Simulation, sourceBodyHandles.Hips, dancer.Simulation.Shapes.Add(hipShape), dancer.Simulation, i, dancerFilters);
-                dancer.BodyHandles.Abdomen = CreateCopyForDancer(Simulation, sourceBodyHandles.Abdomen, dancer.Simulation.Shapes.Add(abdomenShape), dancer.Simulation, i, dancerFilters);
-                dancer.BodyHandles.Chest = CreateCopyForDancer(Simulation, sourceBodyHandles.Chest, dancer.Simulation.Shapes.Add(chestShape), dancer.Simulation, i, dancerFilters);
-                dancer.BodyHandles.Head = CreateCopyForDancer(Simulation, sourceBodyHandles.Head, dancer.Simulation.Shapes.Add(headShape), dancer.Simulation, i, dancerFilters);
+                dancer.Hips = CreateCopyForDancer(Simulation, sourceBodyHandles.Hips, dancerSimulation.Shapes.Add(hipShape), dancerSimulation, i, dancerFilters);
+                dancer.Abdomen = CreateCopyForDancer(Simulation, sourceBodyHandles.Abdomen, dancerSimulation.Shapes.Add(abdomenShape), dancerSimulation, i, dancerFilters);
+                dancer.Chest = CreateCopyForDancer(Simulation, sourceBodyHandles.Chest, dancerSimulation.Shapes.Add(chestShape), dancerSimulation, i, dancerFilters);
+                dancer.Head = CreateCopyForDancer(Simulation, sourceBodyHandles.Head, dancerSimulation.Shapes.Add(headShape), dancerSimulation, i, dancerFilters);
 
-                var upperLegShapeInTarget = dancer.Simulation.Shapes.Add(upperLegShape);
-                var lowerLegShapeInTarget = dancer.Simulation.Shapes.Add(lowerLegShape);
-                dancer.BodyHandles.UpperLeftLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperLeftLeg, upperLegShapeInTarget, dancer.Simulation, i, dancerFilters);
-                dancer.BodyHandles.LowerLeftLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerLeftLeg, lowerLegShapeInTarget, dancer.Simulation, i, dancerFilters);
-                dancer.BodyHandles.UpperRightLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightLeg, upperLegShapeInTarget, dancer.Simulation, i, dancerFilters);
-                dancer.BodyHandles.LowerRightLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightLeg, lowerLegShapeInTarget, dancer.Simulation, i, dancerFilters);
+                var upperLegShapeInTarget = dancerSimulation.Shapes.Add(upperLegShape);
+                var lowerLegShapeInTarget = dancerSimulation.Shapes.Add(lowerLegShape);
+                dancer.UpperLeftLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperLeftLeg, upperLegShapeInTarget, dancerSimulation, i, dancerFilters);
+                dancer.LowerLeftLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerLeftLeg, lowerLegShapeInTarget, dancerSimulation, i, dancerFilters);
+                dancer.UpperRightLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightLeg, upperLegShapeInTarget, dancerSimulation, i, dancerFilters);
+                dancer.LowerRightLeg = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightLeg, lowerLegShapeInTarget, dancerSimulation, i, dancerFilters);
 
-                var upperArmShapeInTarget = dancer.Simulation.Shapes.Add(upperArmShape);
-                var lowerArmShapeInTarget = dancer.Simulation.Shapes.Add(lowerArmShape);
-                dancer.BodyHandles.UpperLeftArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperLeftArm, upperArmShapeInTarget, dancer.Simulation, i, dancerFilters);
-                dancer.BodyHandles.LowerLeftArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerLeftArm, lowerArmShapeInTarget, dancer.Simulation, i, dancerFilters);
-                dancer.BodyHandles.UpperRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightArm, upperArmShapeInTarget, dancer.Simulation, i, dancerFilters);
-                dancer.BodyHandles.LowerRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightArm, lowerArmShapeInTarget, dancer.Simulation, i, dancerFilters);
+                var upperArmShapeInTarget = dancerSimulation.Shapes.Add(upperArmShape);
+                var lowerArmShapeInTarget = dancerSimulation.Shapes.Add(lowerArmShape);
+                dancer.UpperLeftArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperLeftArm, upperArmShapeInTarget, dancerSimulation, i, dancerFilters);
+                dancer.LowerLeftArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerLeftArm, lowerArmShapeInTarget, dancerSimulation, i, dancerFilters);
+                dancer.UpperRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.UpperRightArm, upperArmShapeInTarget, dancerSimulation, i, dancerFilters);
+                dancer.LowerRightArm = CreateCopyForDancer(Simulation, sourceBodyHandles.LowerRightArm, lowerArmShapeInTarget, dancerSimulation, i, dancerFilters);
 
-                TailorDress(dancer.Simulation, dancerFilters, dancer.BodyHandles, i, levelOfDetail);
-                dancerBodyCount += dancer.Simulation.Bodies.ActiveSet.Count;
-                dancerConstraintCount += dancer.Simulation.Solver.CountConstraints();
+                TailorDress(dancerSimulation, dancerFilters, dancer, i, levelOfDetail);
+                dancerBodyCount += dancerSimulation.Bodies.ActiveSet.Count;
+                dancerConstraintCount += dancerSimulation.Solver.CountConstraints();
+                dancerSimulations[i] = dancerSimulation;
             }
         }
         int dancerBodyCount;
         int dancerConstraintCount;
 
-        unsafe void ExecuteDancer(int dancerIndex)
+        unsafe void ExecuteDancer(int dancerIndex, int workerIndex)
         {
             //Copy historical motion states to the dancers.
-            ref var dancer = ref dancers[dancerIndex];
+            ref var dancerHandles = ref this.dancerHandles[dancerIndex];
+            var dancerSimulation = dancerSimulations[dancerIndex];
             var sourceHandleBuffer = DancerBodyHandles.AsBuffer((DancerBodyHandles*)Unsafe.AsPointer(ref sourceBodyHandles));
             //Delay is greater for the dancers that are further away, plus a little randomized component to desynchronize them.
             var historicalStateStartIndex = motionHistory.Count - sourceHandleBuffer.Length * ((int)GetDistanceFromMainDancer(dancerIndex) * 8 + 1 + (HashHelper.Rehash(dancerIndex) & 0xF));
             if (historicalStateStartIndex < 0)
                 historicalStateStartIndex = 0;
-            var targetHandleBuffer = DancerBodyHandles.AsBuffer((DancerBodyHandles*)Unsafe.AsPointer(ref dancer.BodyHandles));
+            var targetHandleBuffer = DancerBodyHandles.AsBuffer((DancerBodyHandles*)Unsafe.AsPointer(ref dancerHandles));
             for (int j = 0; j < sourceHandleBuffer.Length; ++j)
             {
-                ref var targetMotionState = ref dancer.Simulation.Bodies[targetHandleBuffer[j]].MotionState;
+                ref var targetMotionState = ref dancerSimulation.Bodies[targetHandleBuffer[j]].MotionState;
                 targetMotionState = motionHistory[historicalStateStartIndex + j];
                 targetMotionState.Pose.Position += GetOffsetForDancer(dancerIndex);
             }
             //Update the simulation for the dancer.
-            dancer.Simulation.Timestep(1 / 60f);
+            dancerSimulation.Timestep(1 / 60f);
         }
 
         float Smoothstep(float v)
@@ -561,7 +566,7 @@ namespace Demos.Demos
                 motionHistory.EnqueueUnsafely(Simulation.Bodies[sourceHandleBuffer[i]].MotionState);
             }
             var startTime = Stopwatch.GetTimestamp();
-            looper.For(0, dancers.Length, ExecuteDancer);
+            looper.For(0, dancerHandles.Length, ExecuteDancer);
             var endTime = Stopwatch.GetTimestamp();
             executionTime = (endTime - startTime) / (double)Stopwatch.Frequency;
             base.Update(window, camera, input, dt);
@@ -569,21 +574,21 @@ namespace Demos.Demos
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
-            for (int i = 0; i < dancers.Length; ++i)
+            renderer.Shapes.AddInstances(dancerSimulations, ThreadDispatcher);
+            for (int i = 0; i < dancerHandles.Length; ++i)
             {
-                renderer.Shapes.AddInstances(dancers[i].Simulation);
-                renderer.Lines.Extract(dancers[i].Simulation.Bodies, dancers[i].Simulation.Solver, dancers[i].Simulation.BroadPhase, true, false, false);
+                renderer.Lines.Extract(dancerSimulations[i].Bodies, dancerSimulations[i].Solver, dancerSimulations[i].BroadPhase, true, false, false);
             }
 
             var resolution = renderer.Surface.Resolution;
             renderer.TextBatcher.Write(text.Clear().Append("Cosmetic simulations, like cloth, often don't need to be in a game's main simulation."), new Vector2(16, resolution.Y - 144), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Every background dancer in this demo has its own simulation. All dancers can be easily updated in parallel."), new Vector2(16, resolution.Y - 128), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Dancers further from the main dancer use sparser cloth and disable self collision for extra performance."), new Vector2(16, resolution.Y - 112), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("Dancer count: ").Append(dancers.Length), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Dancer count: ").Append(dancerHandles.Length), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Total cloth body count: ").Append(dancerBodyCount), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Total cloth constraint count: ").Append(dancerConstraintCount), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Total dancer execution time (ms): ").Append(executionTime * 1000, 2), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("Amortized execution time per dancer (us): ").Append(executionTime * 1e6 / dancers.Length, 1), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Amortized execution time per dancer (us): ").Append(executionTime * 1e6 / dancerHandles.Length, 1), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
 
             base.Render(renderer, camera, input, text, font);
         }
@@ -592,9 +597,9 @@ namespace Demos.Demos
             //While the main simulation and pool is disposed by the Demo.cs Dispose function, the dancers have their own pools and need to be cleared.
             //Note that we don't bother disposing the simulation here- all resources in the simulation were taken from the associated pool, and the simulation will not be used anymore.
             //We can just clear the buffer pool and let the GC eat the simulation.
-            for (int i = 0; i < dancers.Length; ++i)
+            for (int i = 0; i < dancerSimulations.Length; ++i)
             {
-                dancers[i].Simulation.BufferPool.Clear();
+                dancerSimulations[i].BufferPool.Clear();
             }
             base.OnDispose();
         }

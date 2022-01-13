@@ -110,7 +110,7 @@ namespace Demos.Demos
 
         }
 
-        void DrawShape<TShape>(ref TShape shape, ref RigidPose pose, in Vector3 color, Shapes shapes, Renderer renderer)
+        void DrawShape<TShape>(ref TShape shape, in RigidPose pose, in Vector3 color, Shapes shapes, Renderer renderer)
             where TShape : struct, IShape
         {
             if (typeof(TShape) == typeof(Triangle))
@@ -122,22 +122,22 @@ namespace Demos.Demos
                 flippedTriangle.C = triangle.C;
                 flippedTriangle.A = triangle.B;
                 flippedTriangle.B = triangle.A;
-                renderer.Shapes.AddShape(triangle, shapes, ref pose, color);
-                renderer.Shapes.AddShape(flippedTriangle, shapes, ref pose, color);
+                renderer.Shapes.AddShape(triangle, shapes, pose, color);
+                renderer.Shapes.AddShape(flippedTriangle, shapes, pose, color);
             }
             else
             {
-                renderer.Shapes.AddShape(shape, shapes, ref pose, color);
+                renderer.Shapes.AddShape(shape, shapes, pose, color);
             }
         }
 
-        unsafe void DrawSweep<TShape>(TShape shape, ref RigidPose pose, in BodyVelocity velocity, int steps,
+        unsafe void DrawSweep<TShape>(TShape shape, in RigidPose pose, in BodyVelocity velocity, int steps,
             float t, Renderer renderer, in Vector3 color)
             where TShape : struct, IShape
         {
             if (steps == 1)
             {
-                DrawShape(ref shape, ref pose, color, Simulation.Shapes, renderer);
+                DrawShape(ref shape, pose, color, Simulation.Shapes, renderer);
             }
             else
             {
@@ -148,7 +148,7 @@ namespace Demos.Demos
                     var stepT = stepProgression * t;
                     PoseIntegration.Integrate(pose, velocity, stepT, out var stepPose);
                     var stepColor = color * (0.2f + 0.8f * stepProgression);
-                    DrawShape(ref shape, ref stepPose, stepColor, Simulation.Shapes, renderer);
+                    DrawShape(ref shape, stepPose, stepColor, Simulation.Shapes, renderer);
                 }
             }
         }
@@ -185,8 +185,8 @@ namespace Demos.Demos
 
             var stepCount = (intersected && t1 > 0) || !intersected ? 100 : 1;
             var visualizedT = intersected ? t1 : maximumT;
-            DrawSweep(a, ref poseA, velocityA, stepCount, visualizedT, renderer, colorA);
-            DrawSweep(b, ref poseB, velocityB, stepCount, visualizedT, renderer, colorB);
+            DrawSweep(a, poseA, velocityA, stepCount, visualizedT, renderer, colorA);
+            DrawSweep(b, poseB, velocityB, stepCount, visualizedT, renderer, colorB);
 
             if (intersected && t1 > 0)
             {
@@ -378,7 +378,7 @@ namespace Demos.Demos
                 var initialPose = new RigidPose { Position = sweepOrigin, Orientation = Quaternion.Identity };
                 var sweepVelocity = new BodyVelocity { Linear = sweepDirection };
                 Simulation.Sweep(shape, initialPose, sweepVelocity, 10, BufferPool, ref hitHandler);
-                DrawSweep(shape, ref initialPose, sweepVelocity, 20, hitHandler.T, renderer,
+                DrawSweep(shape, initialPose, sweepVelocity, 20, hitHandler.T, renderer,
                     hitHandler.T < float.MaxValue ? new Vector3(0.25f, 1, 0.25f) : new Vector3(1, 0.25f, 0.25f));
 
                 if (hitHandler.T < float.MaxValue && hitHandler.T > 0)

@@ -194,7 +194,7 @@ namespace Demos.Demos
             {
                 var boxShape = new Box(256, 1, 256);
                 var groundShapeIndex = Simulation.Shapes.Add(boxShape);
-                var groundDescription = new StaticDescription(default, groundShapeIndex);
+                var groundDescription = new StaticDescription(RigidPose.Identity, groundShapeIndex);
                 Simulation.Statics.Add(groundDescription);
             }
             const int planeWidth = 48;

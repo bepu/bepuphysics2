@@ -753,7 +753,7 @@ namespace Demos.Demos
                 ref var particle = ref particles[i];
                 var radius = particle.Age * (particle.Age * (0.135f - 2.7f * particle.Age) + 1.35f);
                 var pose = new RigidPose(particle.Position);
-                renderer.Shapes.AddShape(new Sphere(radius), Simulation.Shapes, ref pose, new Vector3(0, 1, 0));
+                renderer.Shapes.AddShape(new Sphere(radius), Simulation.Shapes, pose, new Vector3(0, 1, 0));
             }
             base.Render(renderer, camera, input, text, font);
         }
