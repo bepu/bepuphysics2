@@ -14,27 +14,15 @@ namespace DemoRenderer.Constraints
 {
     public class BoundingBoxLineExtractor
     {
-        const int jobsPerThread = 4;
-        QuickList<ThreadJob> jobs;
-        BroadPhase broadPhase;
-        int masterLinesCount;
-        Buffer<LineInstance> masterLinesSpan;
-
-        struct ThreadJob
+        internal struct ThreadJob
         {
+            public int SimulationIndex;
             public int LeafStart;
             public int LeafCount;
+            public int TargetLineStart;
             public bool CoversActiveCollidables;
         }
 
-        BufferPool pool;
-        LooperAction workDelegate;
-        public BoundingBoxLineExtractor(BufferPool pool)
-        {
-            this.pool = pool;
-            jobs = new QuickList<ThreadJob>(Environment.ProcessorCount * jobsPerThread, pool);
-            workDelegate = Work;
-        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteBoundsLines(in Vector3 min, in Vector3 max, uint packedColor, uint packedBackgroundColor, ref LineInstance targetLines)
         {
@@ -62,12 +50,10 @@ namespace DemoRenderer.Constraints
         {
             WriteBoundsLines(min, max, Helpers.PackColor(color), Helpers.PackColor(backgroundColor), ref targetLines);
         }
-        private unsafe void Work(int jobIndex, int workerIndex)
+        internal unsafe void ExecuteJob(Buffer<LineInstance> lines, Simulation simulation, ThreadJob job)
         {
-            ref var job = ref jobs[jobIndex];
             var end = job.LeafStart + job.LeafCount;
             var lineCount = 12 * job.LeafCount;
-            var masterStart = Interlocked.Add(ref masterLinesCount, lineCount) - lineCount;
             var color = new Vector3(0, 1, 0);
             var backgroundColor = new Vector3(0, 0, 0);
             if (!job.CoversActiveCollidables)
@@ -84,18 +70,17 @@ namespace DemoRenderer.Constraints
 
                 Vector3* min, max;
                 if (job.CoversActiveCollidables)
-                    broadPhase.GetActiveBoundsPointers(broadPhaseIndex, out min, out max);
+                    simulation.BroadPhase.GetActiveBoundsPointers(broadPhaseIndex, out min, out max);
                 else
-                    broadPhase.GetStaticBoundsPointers(broadPhaseIndex, out min, out max);
-                var outputStartIndex = masterStart + i * 12;
-                WriteBoundsLines(*min, *max, packedColor, packedBackgroundColor, ref masterLinesSpan[outputStartIndex]);
+                    simulation.BroadPhase.GetStaticBoundsPointers(broadPhaseIndex, out min, out max);
+                var outputStartIndex = job.TargetLineStart + i * 12;
+                WriteBoundsLines(*min, *max, packedColor, packedBackgroundColor, ref lines[outputStartIndex]);
             }
         }
 
-
-        void CreateJobsForTree(in Tree tree, bool active, ref QuickList<ThreadJob> jobs)
+        void CreateJobsForTree(in Tree tree, bool active, int simulationIndex, ref QuickList<ThreadJob> jobs, ref int newLinesCount, ref int nextStart, BufferPool pool)
         {
-            var maximumJobCount = jobsPerThread * Environment.ProcessorCount;
+            var maximumJobCount = 4 * Environment.ProcessorCount;
             var possibleLeavesPerJob = tree.LeafCount / maximumJobCount;
             var remainder = tree.LeafCount - possibleLeavesPerJob * maximumJobCount;
             int jobbedLeafCount = 0;
@@ -106,34 +91,30 @@ namespace DemoRenderer.Constraints
                 if (jobLeafCount > 0)
                 {
                     ref var job = ref jobs.AllocateUnsafely();
+                    job.SimulationIndex = simulationIndex;
                     job.LeafCount = jobLeafCount;
                     job.LeafStart = jobbedLeafCount;
                     job.CoversActiveCollidables = active;
+                    job.TargetLineStart = nextStart;
                     jobbedLeafCount += jobLeafCount;
+                    newLinesCount += jobLeafCount * 12;
+                    nextStart += jobLeafCount * 12;
                 }
                 else
                     break;
             }
         }
 
-        internal unsafe void AddInstances(BroadPhase broadPhase, ref QuickList<LineInstance> lines, ParallelLooper looper, BufferPool pool)
+        internal unsafe void CreateJobs(Simulation simulation, int simulationIndex, ref QuickList<LineInstance> lines, ref QuickList<ThreadJob> jobs, BufferPool pool)
         {
             //For now, we only pull the bounding boxes of objects that are active.
-            lines.EnsureCapacity(lines.Count + 12 * (broadPhase.ActiveTree.LeafCount + broadPhase.StaticTree.LeafCount), pool);
-            CreateJobsForTree(broadPhase.ActiveTree, true, ref jobs);
-            CreateJobsForTree(broadPhase.StaticTree, false, ref jobs);
-            masterLinesSpan = lines.Span;
-            masterLinesCount = lines.Count;
-            this.broadPhase = broadPhase;
-            looper.For(0, jobs.Count, workDelegate);
-            lines.Count = masterLinesCount;
-            this.broadPhase = null;
-            jobs.Count = 0;
+            lines.EnsureCapacity(lines.Count + 12 * (simulation.BroadPhase.ActiveTree.LeafCount + simulation.BroadPhase.StaticTree.LeafCount), pool);
+            int newLinesCount = 0;
+            int nextStart = lines.Count;
+            CreateJobsForTree(simulation.BroadPhase.ActiveTree, true, simulationIndex, ref jobs, ref newLinesCount, ref nextStart, pool);
+            CreateJobsForTree(simulation.BroadPhase.StaticTree, false, simulationIndex, ref jobs, ref newLinesCount, ref nextStart, pool);
+            lines.Allocate(newLinesCount, pool);
         }
 
-        public void Dispose()
-        {
-            jobs.Dispose(pool);
-        }
     }
 }

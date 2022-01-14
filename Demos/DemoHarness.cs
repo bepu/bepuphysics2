@@ -309,7 +309,7 @@ namespace Demos
             }
             timeSamples.RecordFrame(demo.Simulation);
         }
-        
+
         TextBuilder uiText = new TextBuilder(128);
         public void Render(Renderer renderer)
         {
@@ -407,7 +407,10 @@ namespace Demos
             }
             grabber.Draw(renderer.Lines, loop.Camera, loop.Input.MouseLocked, controls.Grab.IsDown(loop.Input), loop.Window.GetNormalizedMousePosition(loop.Input.MousePosition));
             renderer.Shapes.AddInstances(demo.Simulation, demo.ThreadDispatcher);
-            renderer.Lines.Extract(demo.Simulation.Bodies, demo.Simulation.Solver, demo.Simulation.BroadPhase, showConstraints, showContacts, showBoundingBoxes, demo.ThreadDispatcher);
+            renderer.Lines.ShowConstraints = showConstraints;
+            renderer.Lines.ShowContacts = showContacts;
+            renderer.Lines.ShowBoundingBoxes = showBoundingBoxes;
+            renderer.Lines.Extract(demo.Simulation, demo.ThreadDispatcher);
         }
 
         bool disposed;

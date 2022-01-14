@@ -185,6 +185,43 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Counts the number of constraints in a particular type batch.
+        /// </summary>
+        /// <param name="setIndex">Index of the set containing the type batch.</param>
+        /// <param name="batchIndex">Index of the batch containing the type batch.</param>
+        /// <param name="typeBatchIndex">Index of the type batch within the batch.</param>
+        /// <returns>Number of constraints in the type batch.</returns>
+        /// <remarks>This handles whether the type batch is in the fallback batch or not. Active fallback batches are not guaranteed to have contiguous constraints, so the <see cref="TypeBatch.ConstraintCount"/> value is an upper bound and there may be gaps.</remarks>
+        public int CountConstraintsInTypeBatch(int setIndex, int batchIndex, int typeBatchIndex)
+        {
+            Debug.Assert(setIndex >= 0 && setIndex < Sets.Length && Sets[setIndex].Allocated && batchIndex >= 0 && batchIndex < Sets[setIndex].Batches.Count && typeBatchIndex >= 0 && typeBatchIndex < Sets[setIndex].Batches[batchIndex].TypeBatches.Count,
+                "Set index, batch index, and type batch index must point at an existing type batch.");
+            ref var set = ref Sets[setIndex];
+            ref var batch = ref set.Batches[batchIndex];
+            ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+            if (setIndex == 0 && batchIndex > FallbackBatchThreshold)
+            {
+                //Sequential fallback batches in the active set currently store constraints noncontiguously to guarantee that each bundle does not share any body references.
+                //Counting constraints requires skipping over any empty slots.
+
+                var constraintCount = typeBatch.ConstraintCount;
+                var indexToHandle = typeBatch.IndexToHandle;
+                int count = 0;
+                for (int i = 0; i < constraintCount; ++i)
+                {
+                    //Empty slots are marked with a -1 in the index to handles mapping (and in body references).
+                    if (indexToHandle[i].Value >= 0)
+                        ++count;
+                }
+                return count;
+            }
+            else
+            {
+                return typeBatch.ConstraintCount;
+            }
+        }
+
+        /// <summary>
         /// Gets the total number of constraints across all sets, batches, and types. Requires enumerating
         /// all type batches; this can be expensive.
         /// </summary>

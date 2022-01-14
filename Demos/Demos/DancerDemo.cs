@@ -575,10 +575,7 @@ namespace Demos.Demos
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             renderer.Shapes.AddInstances(dancerSimulations, ThreadDispatcher);
-            for (int i = 0; i < dancerHandles.Length; ++i)
-            {
-                renderer.Lines.Extract(dancerSimulations[i].Bodies, dancerSimulations[i].Solver, dancerSimulations[i].BroadPhase, true, false, false);
-            }
+            renderer.Lines.Extract(dancerSimulations, ThreadDispatcher);
 
             var resolution = renderer.Surface.Resolution;
             renderer.TextBatcher.Write(text.Clear().Append("Cosmetic simulations, like cloth, often don't need to be in a game's main simulation."), new Vector2(16, resolution.Y - 144), 16, Vector3.One, font);
