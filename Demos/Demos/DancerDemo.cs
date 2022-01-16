@@ -266,7 +266,7 @@ namespace Demos.Demos
             //This is a sorta-example of level of detail. In a 'real' use case, you'd probably want to transition between levels of detail dynamically as the camera moved around.
             //That's a little trickier, but doable. Going low to high, for example, requires creating bodies at interpolated positions between existing bodies, while going to a lower level of detail removes them.
             var targetDressDiameter = 2.6f;
-            var fullDetailWidthInBodies = 35;
+            var fullDetailWidthInBodies = 29;
             float spacingAtFullDetail = targetDressDiameter / fullDetailWidthInBodies;
             float bodyRadius = spacingAtFullDetail / 1.75f;
             var scale = MathF.Pow(2, levelOfDetail);
@@ -312,7 +312,7 @@ namespace Demos.Demos
         }
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(0, 4, 10);
+            camera.Position = new Vector3(0, 2, 10);
             camera.Yaw = 0;
             camera.Pitch = 0;
 
