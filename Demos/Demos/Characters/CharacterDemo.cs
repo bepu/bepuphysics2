@@ -197,7 +197,6 @@ namespace Demos.Demos.Characters
 
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            const float simulationDt = 1 / 60f;
             if (input.WasPushed(Key.C))
             {
                 if (characterActive)
@@ -213,10 +212,10 @@ namespace Demos.Demos.Characters
             if (characterActive)
             {
                 //Console.WriteLine($"Supported: {characters.GetCharacterByBodyHandle(character.BodyHandle).Supported}");
-                character.UpdateCharacterGoals(input, camera, simulationDt);
+                character.UpdateCharacterGoals(input, camera, TimestepDuration);
             }
             //Using a fixed time per update to match the demos simulation update rate.
-            time += 1 / 60f;
+            time += TimestepDuration;
             for (int i = 0; i < movingPlatforms.Length; ++i)
             {
                 movingPlatforms[i].Update(Simulation, time);

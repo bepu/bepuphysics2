@@ -432,7 +432,7 @@ namespace Demos
                 frameCount = 0;
             if (shouldRotate)
             {
-                rotation += (MathF.PI * 1e-2f * (1 / 60f)) % (2 * MathF.PI);
+                rotation += (MathF.PI * 1e-2f * (TimestepDuration)) % (2 * MathF.PI);
             }
             if (shouldCycle)
             {

@@ -199,7 +199,7 @@ namespace Demos.Demos
             base.Update(window, camera, input, dt);
 
             if (!input.WasDown(OpenTK.Input.Key.P))
-                animationT = (animationT + 1 / 60f) % (128);
+                animationT = (animationT + TimestepDuration) % (128);
         }
 
         float animationT;

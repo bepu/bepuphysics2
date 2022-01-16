@@ -128,7 +128,7 @@ namespace Demos.SpecializedTests.Media
                 }
                 if (characterActive)
                 {
-                    character.UpdateCharacterGoals(input, camera, 1 / 60f);
+                    character.UpdateCharacterGoals(input, camera, Demo.TimestepDuration);
                 }
 
                 if (input.WasPushed(Key.Z))

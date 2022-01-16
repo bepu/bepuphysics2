@@ -98,7 +98,7 @@ namespace Demos.Demos
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
             var bigBall = new BodyReference(bigBallHandle, Simulation.Bodies);
-            timeAccumulator += 1 / 60f;
+            timeAccumulator += TimestepDuration;
             if (timeAccumulator > MathF.PI * 128)
                 timeAccumulator -= MathF.PI * 128;
             if (!bigBall.Awake)

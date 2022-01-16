@@ -47,7 +47,7 @@ namespace Demos.Demos
     }
 
 
-    struct ClothCallbacks : INarrowPhaseCallbacks
+    struct ClothCallbacks : INarrowPhaseCallbacks, Dancers.IDancerNarrowPhaseCallbacks<ClothCallbacks, ClothCollisionFilter> //"IDancerNarrowPhaseCallbacks" just means this is a INarrowPhaseCallbacks usable with the DemoDancers.
     {
         public CollidableProperty<ClothCollisionFilter> Filters;
         public PairMaterialProperties Material;
@@ -62,8 +62,12 @@ namespace Demos.Demos
             Material = material;
             MinimumDistanceForSelfCollisions = minimumDistanceForSelfCollisions;
         }
+        ClothCallbacks Dancers.IDancerNarrowPhaseCallbacks<ClothCallbacks, ClothCollisionFilter>.Create(CollidableProperty<ClothCollisionFilter> filters, PairMaterialProperties pairMaterialProperties, int minimumDistanceForSelfCollisions)
+        {
+            return new ClothCallbacks(filters, pairMaterialProperties, minimumDistanceForSelfCollisions);
+        }
         public ClothCallbacks(CollidableProperty<ClothCollisionFilter> filters, int minimumDistanceForSelfCollisions = 3)
-            : this(filters, new PairMaterialProperties { SpringSettings = new SpringSettings(30, 1), FrictionCoefficient = 0.25f, MaximumRecoveryVelocity = 2f })
+            : this(filters, new PairMaterialProperties { SpringSettings = new SpringSettings(30, 1), FrictionCoefficient = 0.25f, MaximumRecoveryVelocity = 2f }, minimumDistanceForSelfCollisions)
         {
         }
 

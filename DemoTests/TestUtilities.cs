@@ -34,7 +34,7 @@ namespace DemoTests
             demo.Initialize(content, new DemoRenderer.Camera(1, 1, 1, 1));
             for (int i = 0; i < frameCount; ++i)
             {
-                demo.Update(null, null, null, 1 / 60f);
+                demo.Update(null, null, null, Demo.TimestepDuration);
             }
             long hash = 0;
 

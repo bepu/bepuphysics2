@@ -143,7 +143,7 @@ namespace Demos.Demos.Cars
                 playerControlActive = !playerControlActive;
             //For control purposes, we'll match the fixed update rate of the simulation. Could decouple it- this dt isn't
             //vulnerable to the same instabilities as the simulation itself with variable durations.
-            const float controlDt = 1 / 60f;
+            const float controlDt = TimestepDuration;
             if (playerControlActive)
             {
                 float steeringSum = 0;

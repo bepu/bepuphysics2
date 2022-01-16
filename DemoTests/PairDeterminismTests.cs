@@ -69,7 +69,7 @@ namespace DemoTests
         static void ComputeCollisions(CollisionTaskRegistry registry, Shapes shapes, BufferPool pool,
             ref Manifolds manifolds, CollidableDescription a, CollidableDescription b, ref Buffer<RigidPose> posesA, ref Buffer<RigidPose> posesB, Buffer<int> remapIndices, int pairCount, Random random)
         {
-            const float dt = 1 / 60f;
+            const float dt = Demo.TimestepDuration;
             var callbacks = new BatcherCallbacks { Pool = pool, Manifolds = manifolds };
             var batcher = new CollisionBatcher<BatcherCallbacks>(pool, shapes, registry, dt, callbacks);
             int flushInterval = random.Next(Math.Max(1, pairCount / 5), pairCount);

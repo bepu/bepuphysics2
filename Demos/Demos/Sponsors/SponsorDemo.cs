@@ -228,17 +228,16 @@ namespace Demos.Demos.Sponsors
         double simulationTime;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            const float simulationDt = 1 / 60f;
-            Simulation.Timestep(simulationDt, ThreadDispatcher);
+            Simulation.Timestep(TimestepDuration, ThreadDispatcher);
             for (int i = 0; i < newts.Count; ++i)
             {
-                newts[i].Update(Simulation, simulationTime, 0, newtArenaMin, newtArenaMax, random, 1f / simulationDt);
+                newts[i].Update(Simulation, simulationTime, 0, newtArenaMin, newtArenaMax, random, 1f / TimestepDuration);
             }
             for (int i = 0; i < characterAIs.Count; ++i)
             {
                 characterAIs[i].Update(characterControllers, Simulation, ref newts, newtArenaMin, newtArenaMax, random);
             }
-            simulationTime += simulationDt;
+            simulationTime += TimestepDuration;
             realTime += dt;
         }
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
