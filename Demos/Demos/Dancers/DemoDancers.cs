@@ -21,10 +21,6 @@ namespace Demos.Demos.Dancers
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     public struct DancerBodyHandles
     {
-        public BodyHandle Hips;
-        public BodyHandle Abdomen;
-        public BodyHandle Chest;
-        public BodyHandle Head;
         public BodyHandle UpperLeftLeg;
         public BodyHandle LowerLeftLeg;
         public BodyHandle UpperRightLeg;
@@ -33,6 +29,10 @@ namespace Demos.Demos.Dancers
         public BodyHandle LowerLeftArm;
         public BodyHandle UpperRightArm;
         public BodyHandle LowerRightArm;
+        public BodyHandle Hips;
+        public BodyHandle Abdomen;
+        public BodyHandle Chest;
+        public BodyHandle Head;
 
         internal static unsafe Buffer<BodyHandle> AsBuffer(DancerBodyHandles* sourceBodyHandles)
         {
@@ -92,10 +92,9 @@ namespace Demos.Demos.Dancers
 
         public const float LegOffsetX = 0.135f;
         public const float ArmOffsetX = 0.25f;
-        public const int DancerGridWidth = 16;
-        public const int DancerGridLength = 16;
-        public const int DancerCount = DancerGridWidth * DancerGridLength;
         public const int HistoryLength = 256;
+        public int DancerGridWidth = 16;
+        public int DancerGridLength = 16;
 
 
         DancerControl hipsControl;
@@ -104,13 +103,15 @@ namespace Demos.Demos.Dancers
         DancerControl leftHandControl;
         DancerControl rightHandControl;
 
-        public delegate void DressUpDancer<TCollisionFilter>(Simulation simulation, CollidableProperty<TCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, float levelOfDetail) where TCollisionFilter : unmanaged;
-        public DemoDancers Initialize<TNarrowPhaseCallbacks, TCollisionFilter>(Simulation mainSimulation, CollidableProperty<SubgroupCollisionFilter> mainCollisionFilters, IThreadDispatcher threadDispatcher, BufferPool pool,
+        public delegate void DressUpDancer<TCollisionFilter>(Simulation simulation, CollidableProperty<TCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, int dancerGridWidth, float levelOfDetail) where TCollisionFilter : unmanaged;
+        public DemoDancers Initialize<TNarrowPhaseCallbacks, TCollisionFilter>(int dancerGridWidth, int dancerGridLength, Simulation mainSimulation, CollidableProperty<SubgroupCollisionFilter> mainCollisionFilters, IThreadDispatcher threadDispatcher, BufferPool pool,
             DressUpDancer<TCollisionFilter> dressUpDancer, TCollisionFilter filterForDancerBodies)
             where TNarrowPhaseCallbacks : struct, INarrowPhaseCallbacks, IDancerNarrowPhaseCallbacks<TNarrowPhaseCallbacks, TCollisionFilter>
             where TCollisionFilter : unmanaged
         {
             looper = new ParallelLooper() { Dispatcher = threadDispatcher };
+            this.DancerGridWidth = dancerGridWidth;
+            this.DancerGridLength = dancerGridLength;
 
             var hipsPosition = new Vector3(0, 0, 0);
             var abdomenPosition = hipsPosition + new Vector3(0, 0.25f, 0);
@@ -209,14 +210,15 @@ namespace Demos.Demos.Dancers
             //Keep the states in a queue. Each batch of 12 motion states is the state for a single frame.
             MotionHistory = new QuickQueue<MotionState>(HistoryLength * 12, pool);
 
-            Handles = new DancerBodyHandles[DancerCount];
-            Simulations = new Simulation[DancerCount];
-            static BodyHandle CreateCopyForDancer(Simulation sourceSimulation, BodyHandle sourceHandle, TypedIndex shapeIndexInTargetSimulation, Simulation targetSimulation, int dancerIndex, CollidableProperty<TCollisionFilter> filters, TCollisionFilter bodyFilter)
+            Handles = new DancerBodyHandles[dancerGridWidth * dancerGridLength];
+            Simulations = new Simulation[dancerGridWidth * dancerGridLength];
+            static BodyHandle CreateCopyForDancer(Simulation sourceSimulation, BodyHandle sourceHandle, TypedIndex shapeIndexInTargetSimulation, Simulation targetSimulation, int dancerIndex, int dancerGridWidth, CollidableProperty<TCollisionFilter> filters, TCollisionFilter bodyFilter)
             {
                 var description = sourceSimulation.Bodies.GetDescription(sourceHandle);
-                description.Pose.Position += GetOffsetForDancer(dancerIndex);
+                description.Pose.Position += GetOffsetForDancer(dancerIndex, dancerGridWidth);
                 description.Collidable.Shape = shapeIndexInTargetSimulation;
                 description.LocalInertia = default;
+                description.Activity.SleepThreshold = -1;
                 var handle = targetSimulation.Bodies.Add(description);
                 filters.Allocate(handle) = bodyFilter;
                 return handle;
@@ -228,7 +230,7 @@ namespace Demos.Demos.Dancers
                 var dancerFilters = new CollidableProperty<TCollisionFilter>();
                 //Distance from the main dancer is used to select clothing level of detail. This isn't dynamic based on camera motion, but shows the general idea.
                 //Since we don't have to worry about transitions, the level of detail is a continuous value here.
-                var distanceFromMainDancer = GetDistanceFromMainDancer(i);
+                var distanceFromMainDancer = GetDistanceFromMainDancer(i, dancerGridWidth);
                 var levelOfDetail = MathF.Max(0f, MathF.Min(1.5f, MathF.Log2(MathF.Max(1, distanceFromMainDancer) - 0.8f)));
                 //Note that we use a smaller allocation block size for dancer simulations.
                 //This demo is creating a *lot* of buffer pools just because that's the simplest way to keep things thread safe.
@@ -247,26 +249,26 @@ namespace Demos.Demos.Dancers
                     //To save some memory, initialize the dancer simulations with smaller starting sizes. For the higher level of detail simulations this could require some resizing. 
                     //More precise estimates could be made without too much work, but the demo will keep it simple.
                     initialAllocationSizes: new SimulationAllocationSizes(128, 1, 1, 8, 512, 64, 8));
-                dancer.Hips = CreateCopyForDancer(mainSimulation, SourceBodyHandles.Hips, dancerSimulation.Shapes.Add(hipShape), dancerSimulation, i, dancerFilters, filterForDancerBodies);
-                dancer.Abdomen = CreateCopyForDancer(mainSimulation, SourceBodyHandles.Abdomen, dancerSimulation.Shapes.Add(abdomenShape), dancerSimulation, i, dancerFilters, filterForDancerBodies);
-                dancer.Chest = CreateCopyForDancer(mainSimulation, SourceBodyHandles.Chest, dancerSimulation.Shapes.Add(chestShape), dancerSimulation, i, dancerFilters, filterForDancerBodies);
-                dancer.Head = CreateCopyForDancer(mainSimulation, SourceBodyHandles.Head, dancerSimulation.Shapes.Add(headShape), dancerSimulation, i, dancerFilters, filterForDancerBodies);
+                dancer.Hips = CreateCopyForDancer(mainSimulation, SourceBodyHandles.Hips, dancerSimulation.Shapes.Add(hipShape), dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
+                dancer.Abdomen = CreateCopyForDancer(mainSimulation, SourceBodyHandles.Abdomen, dancerSimulation.Shapes.Add(abdomenShape), dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
+                dancer.Chest = CreateCopyForDancer(mainSimulation, SourceBodyHandles.Chest, dancerSimulation.Shapes.Add(chestShape), dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
+                dancer.Head = CreateCopyForDancer(mainSimulation, SourceBodyHandles.Head, dancerSimulation.Shapes.Add(headShape), dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
 
                 var upperLegShapeInTarget = dancerSimulation.Shapes.Add(upperLegShape);
                 var lowerLegShapeInTarget = dancerSimulation.Shapes.Add(lowerLegShape);
-                dancer.UpperLeftLeg = CreateCopyForDancer(mainSimulation, SourceBodyHandles.UpperLeftLeg, upperLegShapeInTarget, dancerSimulation, i, dancerFilters, filterForDancerBodies);
-                dancer.LowerLeftLeg = CreateCopyForDancer(mainSimulation, SourceBodyHandles.LowerLeftLeg, lowerLegShapeInTarget, dancerSimulation, i, dancerFilters, filterForDancerBodies);
-                dancer.UpperRightLeg = CreateCopyForDancer(mainSimulation, SourceBodyHandles.UpperRightLeg, upperLegShapeInTarget, dancerSimulation, i, dancerFilters, filterForDancerBodies);
-                dancer.LowerRightLeg = CreateCopyForDancer(mainSimulation, SourceBodyHandles.LowerRightLeg, lowerLegShapeInTarget, dancerSimulation, i, dancerFilters, filterForDancerBodies);
+                dancer.UpperLeftLeg = CreateCopyForDancer(mainSimulation, SourceBodyHandles.UpperLeftLeg, upperLegShapeInTarget, dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
+                dancer.LowerLeftLeg = CreateCopyForDancer(mainSimulation, SourceBodyHandles.LowerLeftLeg, lowerLegShapeInTarget, dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
+                dancer.UpperRightLeg = CreateCopyForDancer(mainSimulation, SourceBodyHandles.UpperRightLeg, upperLegShapeInTarget, dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
+                dancer.LowerRightLeg = CreateCopyForDancer(mainSimulation, SourceBodyHandles.LowerRightLeg, lowerLegShapeInTarget, dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
 
                 var upperArmShapeInTarget = dancerSimulation.Shapes.Add(upperArmShape);
                 var lowerArmShapeInTarget = dancerSimulation.Shapes.Add(lowerArmShape);
-                dancer.UpperLeftArm = CreateCopyForDancer(mainSimulation, SourceBodyHandles.UpperLeftArm, upperArmShapeInTarget, dancerSimulation, i, dancerFilters, filterForDancerBodies);
-                dancer.LowerLeftArm = CreateCopyForDancer(mainSimulation, SourceBodyHandles.LowerLeftArm, lowerArmShapeInTarget, dancerSimulation, i, dancerFilters, filterForDancerBodies);
-                dancer.UpperRightArm = CreateCopyForDancer(mainSimulation, SourceBodyHandles.UpperRightArm, upperArmShapeInTarget, dancerSimulation, i, dancerFilters, filterForDancerBodies);
-                dancer.LowerRightArm = CreateCopyForDancer(mainSimulation, SourceBodyHandles.LowerRightArm, lowerArmShapeInTarget, dancerSimulation, i, dancerFilters, filterForDancerBodies);
+                dancer.UpperLeftArm = CreateCopyForDancer(mainSimulation, SourceBodyHandles.UpperLeftArm, upperArmShapeInTarget, dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
+                dancer.LowerLeftArm = CreateCopyForDancer(mainSimulation, SourceBodyHandles.LowerLeftArm, lowerArmShapeInTarget, dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
+                dancer.UpperRightArm = CreateCopyForDancer(mainSimulation, SourceBodyHandles.UpperRightArm, upperArmShapeInTarget, dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
+                dancer.LowerRightArm = CreateCopyForDancer(mainSimulation, SourceBodyHandles.LowerRightArm, lowerArmShapeInTarget, dancerSimulation, i, dancerGridWidth, dancerFilters, filterForDancerBodies);
 
-                dressUpDancer(dancerSimulation, dancerFilters, dancer, i, levelOfDetail);
+                dressUpDancer(dancerSimulation, dancerFilters, dancer, i, dancerGridWidth, levelOfDetail);
                 BodyCount += dancerSimulation.Bodies.ActiveSet.Count;
                 ConstraintCount += dancerSimulation.Solver.CountConstraints();
                 Simulations[i] = dancerSimulation;
@@ -345,24 +347,24 @@ namespace Demos.Demos.Dancers
         }
 
 
-        static (int columnIndex, int rowIndex) GetRowAndColumnForDancer(int dancerIndex)
+        static (int columnIndex, int rowIndex) GetRowAndColumnForDancer(int dancerIndex, int dancerGridWidth)
         {
-            var rowIndex = dancerIndex / DancerGridWidth;
-            return (dancerIndex - rowIndex * DancerGridWidth, rowIndex);
+            var rowIndex = dancerIndex / dancerGridWidth;
+            return (dancerIndex - rowIndex * dancerGridWidth, rowIndex);
         }
 
         public QuickQueue<MotionState> MotionHistory;
-        public static Vector3 GetOffsetForDancer(int i)
+        public static Vector3 GetOffsetForDancer(int i, int dancerGridWidth)
         {
             const float spacing = 2;
-            var (columnIndex, rowIndex) = GetRowAndColumnForDancer(i);
-            return new Vector3(DancerGridWidth * spacing / -2 + (columnIndex + 0.5f) * spacing, 0, -2 + rowIndex * -spacing);
+            var (columnIndex, rowIndex) = GetRowAndColumnForDancer(i, dancerGridWidth);
+            return new Vector3(dancerGridWidth * spacing / -2 + (columnIndex + 0.5f) * spacing, 0, -2 + rowIndex * -spacing);
         }
 
-        public static float GetDistanceFromMainDancer(int dancerIndex)
+        public static float GetDistanceFromMainDancer(int dancerIndex, int dancerGridWidth)
         {
-            var (columnIndex, rowIndex) = GetRowAndColumnForDancer(dancerIndex);
-            var offsetX = columnIndex - (DancerGridWidth / 2 - 0.5f);
+            var (columnIndex, rowIndex) = GetRowAndColumnForDancer(dancerIndex, dancerGridWidth);
+            var offsetX = columnIndex - (dancerGridWidth / 2 - 0.5f);
             return MathF.Sqrt(offsetX * offsetX + rowIndex * rowIndex);
         }
 
@@ -397,7 +399,7 @@ namespace Demos.Demos.Dancers
             var dancerSimulation = Simulations[dancerIndex];
             var sourceHandleBuffer = DancerBodyHandles.AsBuffer((DancerBodyHandles*)Unsafe.AsPointer(ref SourceBodyHandles));
             //Delay is greater for the dancers that are further away, plus a little randomized component to desynchronize them.
-            var historicalStateStartIndex = MotionHistory.Count - sourceHandleBuffer.Length * ((int)GetDistanceFromMainDancer(dancerIndex) * 8 + 1 + (HashHelper.Rehash(dancerIndex) & 0xF));
+            var historicalStateStartIndex = MotionHistory.Count - sourceHandleBuffer.Length * ((int)GetDistanceFromMainDancer(dancerIndex, DancerGridWidth) * 8 + 1 + (HashHelper.Rehash(dancerIndex) & 0xF));
             if (historicalStateStartIndex < 0)
                 historicalStateStartIndex = 0;
             var targetHandleBuffer = DancerBodyHandles.AsBuffer((DancerBodyHandles*)Unsafe.AsPointer(ref dancerHandles));
@@ -405,7 +407,7 @@ namespace Demos.Demos.Dancers
             {
                 ref var targetMotionState = ref dancerSimulation.Bodies[targetHandleBuffer[j]].MotionState;
                 targetMotionState = MotionHistory[historicalStateStartIndex + j];
-                targetMotionState.Pose.Position += GetOffsetForDancer(dancerIndex);
+                targetMotionState.Pose.Position += GetOffsetForDancer(dancerIndex, DancerGridWidth);
             }
             //Update the simulation for the dancer.
             dancerSimulation.Timestep(Demo.TimestepDuration);

@@ -16,6 +16,7 @@ namespace Demos.Demos.Dancers
 {
     /// <summary>
     /// A bunch of background dancers struggle to keep up with the masterful purple prancer while wearing dresses made of out of balls connected by constraints.
+    /// Combined with the <see cref="DemoDancers"/> implementation, this provides a starting point for cosmetic cloth attached to characters. 
     /// </summary>
     public class DancerDemo : Demo
     {
@@ -99,7 +100,7 @@ namespace Demos.Demos.Dancers
         }
 
 
-        static void TailorDress(Simulation simulation, CollidableProperty<ClothCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, float levelOfDetail)
+        static void TailorDress(Simulation simulation, CollidableProperty<ClothCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, int dancerGridWidth, float levelOfDetail)
         {
             //The demo uses lower resolution grids on dancers further away from the main dancer.
             //This is a sorta-example of level of detail. In a 'real' use case, you'd probably want to transition between levels of detail dynamically as the camera moved around.
@@ -114,7 +115,7 @@ namespace Demos.Demos.Dancers
             var chest = simulation.Bodies[bodyHandles.Chest];
             ref var chestShape = ref simulation.Shapes.GetShape<Capsule>(chest.Collidable.Shape.Index);
             var topOfChestHeight = chest.Pose.Position.Y + chestShape.Radius + bodyRadius;
-            var bodies = CreateDressBodyGrid(new Vector3(0, topOfChestHeight, 0) + DemoDancers.GetOffsetForDancer(dancerIndex), widthInBodies, spacing, bodyRadius, 0.01f, dancerIndex, simulation, filters);
+            var bodies = CreateDressBodyGrid(new Vector3(0, topOfChestHeight, 0) + DemoDancers.GetOffsetForDancer(dancerIndex, dancerGridWidth), widthInBodies, spacing, bodyRadius, 0.01f, dancerIndex, simulation, filters);
             //Create constraints that bind the cloth bodies closest to the chest, to the chest. This keeps the dress from sliding around.
             //In the higher resolution simulations, the arm holes and cloth bodies can actually handle it with no help, but for lower levels of detail it can be useful.
             //Also, it's very common to want to control how cloth sticks to a character. You could extend this approach to, for example, keep cloth near the body at the waist like a belt.
@@ -161,7 +162,7 @@ namespace Demos.Demos.Dancers
             //Note very high damping on the main ragdoll simulation; makes it easier to pose.
             Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = collisionFilters }, new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0), 0, 0), new SolveDescription(8, 1));
 
-            dancers = new DemoDancers().Initialize<ClothCallbacks, ClothCollisionFilter>(Simulation, collisionFilters, ThreadDispatcher, BufferPool, TailorDress, new ClothCollisionFilter(0, 0, -1));
+            dancers = new DemoDancers().Initialize<ClothCallbacks, ClothCollisionFilter>(16, 16, Simulation, collisionFilters, ThreadDispatcher, BufferPool, TailorDress, new ClothCollisionFilter(0, 0, -1));
 
         }
         public unsafe override void Update(Window window, Camera camera, Input input, float dt)

@@ -526,12 +526,33 @@ namespace Demos.Demos
     }
 
 
-    struct DeformableCallbacks : INarrowPhaseCallbacks
+    struct DeformableCallbacks : INarrowPhaseCallbacks, Dancers.IDancerNarrowPhaseCallbacks<DeformableCallbacks, DeformableCollisionFilter> //"IDancerNarrowPhaseCallbacks" just means this is a INarrowPhaseCallbacks usable with the DemoDancers.
     {
         public CollidableProperty<DeformableCollisionFilter> Filters;
+        public PairMaterialProperties Material;
+        /// <summary>
+        /// Minimum manhattan distance in cloth nodes required for two cloth nodes to collide. Stops adjacent cloth nodes from generating contacts and interfering with clothy behavior.
+        /// </summary>
+        public int MinimumDistanceForSelfCollisions;
         public void Initialize(Simulation simulation)
         {
             Filters.Initialize(simulation);
+        }
+
+        public DeformableCallbacks(CollidableProperty<DeformableCollisionFilter> filters, PairMaterialProperties material, int minimumDistanceForSelfCollisions = 3)
+        {
+            Filters = filters;
+            Material = material;
+            MinimumDistanceForSelfCollisions = minimumDistanceForSelfCollisions;
+        }
+        public DeformableCallbacks(CollidableProperty<DeformableCollisionFilter> filters, int minimumDistanceForSelfCollisions = 3)
+            :this(filters, new PairMaterialProperties(1, 2, new SpringSettings(30, 1)), minimumDistanceForSelfCollisions)
+        {
+        }
+        //This slightly awkward factory is just here for the dancer demos.
+        DeformableCallbacks Dancers.IDancerNarrowPhaseCallbacks<DeformableCallbacks, DeformableCollisionFilter>.Create(CollidableProperty<DeformableCollisionFilter> filters, PairMaterialProperties pairMaterialProperties, int minimumDistanceForSelfCollisions)
+        {
+            return new DeformableCallbacks(filters, pairMaterialProperties, minimumDistanceForSelfCollisions);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -698,7 +719,7 @@ namespace Demos.Demos
             edges.Dispose(pool);
         }
 
-       
+
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-5f, 5.5f, 5f);
@@ -706,7 +727,7 @@ namespace Demos.Demos
             camera.Pitch = MathHelper.Pi * 0.15f;
 
             var filters = new CollidableProperty<DeformableCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks(filters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(1, 4));
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
             float cellSize = 0.1f;

@@ -303,7 +303,7 @@ namespace Demos
                 input.MouseLocked = false;
             }
             ++frameCount;
-            if (!controls.SlowTimesteps.IsDown(input) || frameCount % 20 == 0)
+            if (!controls.SlowTimesteps.IsDown(input) || frameCount % 120 == 0)
             {
                 demo.Update(window, camera, input, dt);
             }
