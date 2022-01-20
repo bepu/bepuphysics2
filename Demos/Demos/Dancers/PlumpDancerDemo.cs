@@ -69,6 +69,7 @@ namespace Demos.Demos.Dancers
             {
                 testCapsules[i] = CreateTestCapsule(simulation, handlesBuffer[i]);
             }
+            var center = (gridMinimum + gridMaximum) * 0.5f;
 
             for (int x = 0; x < axisSizeInBodies.X; ++x)
             {
@@ -91,7 +92,7 @@ namespace Demos.Demos.Dancers
                         }
                         nearestHandles[x, y, z] = handlesBuffer[minimumIndex];
 
-                        var maximumDistanceForCreatingNodes = bodyRadius * 3;
+                        var maximumDistanceForCreatingNodes = MathF.Max(0.1f, 0.8f - 1.5f * Vector3.Distance(position, center));
                         if (minimumDistance < bodyRadius)
                         {
                             //Intersecting; don't create a body. -2 for this demo marks the body as intersecting, so we can disambiguate it from slots that are just empty due to being too far away.
@@ -114,12 +115,6 @@ namespace Demos.Demos.Dancers
                             var nearestHandle = handlesBuffer[minimumIndex];
                             var nearestPose = simulation.Bodies[nearestHandle].Pose;
                             var conjugate = Quaternion.Conjugate(nearestPose.Orientation);
-                            //simulation.Solver.Add(nearestHandle, handle, new Weld
-                            //{
-                            //    LocalOffset = QuaternionEx.Transform(position - nearestPose.Position, conjugate),
-                            //    LocalOrientation = conjugate,
-                            //    SpringSettings = new SpringSettings(2, 1)
-                            //});
 
                         }
                     }
@@ -137,11 +132,11 @@ namespace Demos.Demos.Dancers
                         if (handle.Value >= 0)
                         {
                             var needsAnchor =
-                                (x != 0 && handles[x - 1, y, z].Value == -2) || 
+                                (x != 0 && handles[x - 1, y, z].Value == -2) ||
                                 (x != handles.GetLength(0) - 1 && handles[x + 1, y, z].Value == -2) ||
-                                (y != 0 && handles[x, y - 1, z].Value == -2) || 
+                                (y != 0 && handles[x, y - 1, z].Value == -2) ||
                                 (y != handles.GetLength(1) - 1 && handles[x, y + 1, z].Value == -2) ||
-                                (z != 0 && handles[x, y, z - 1].Value == -2) || 
+                                (z != 0 && handles[x, y, z - 1].Value == -2) ||
                                 (z != handles.GetLength(2) - 1 && handles[x, y, z + 1].Value == -2);
                             var source = simulation.Bodies[handle];
                             if (needsAnchor)
@@ -153,7 +148,7 @@ namespace Demos.Demos.Dancers
                                 {
                                     LocalOffset = QuaternionEx.Transform(source.Pose.Position - nearestPose.Position, conjugate),
                                     LocalOrientation = conjugate,
-                                    SpringSettings = new SpringSettings(5, 1)
+                                    SpringSettings = new SpringSettings(6, 0.4f)
                                 });
                             }
                             var needsCollidable =
@@ -170,7 +165,7 @@ namespace Demos.Demos.Dancers
                                 if (targetHandle.Value >= 0)
                                 {
                                     var target = simulation.Bodies[targetHandle];
-                                    simulation.Solver.Add(source.Handle, targetHandle, new Weld { LocalOffset = target.Pose.Position - source.Pose.Position, LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(5, 1) });
+                                    simulation.Solver.Add(source.Handle, targetHandle, new Weld { LocalOffset = target.Pose.Position - source.Pose.Position, LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(6, 0.4f) });
                                 }
                             }
                             if (x < handles.GetLength(0) - 1)
@@ -198,19 +193,17 @@ namespace Demos.Demos.Dancers
             //The demo uses lower resolution grids on dancers further away from the main dancer.
             //This is a sorta-example of level of detail. In a 'real' use case, you'd probably want to transition between levels of detail dynamically as the camera moved around.
             //That's a little trickier, but doable. Going low to high, for example, requires creating bodies at interpolated positions between existing bodies, while going to a lower level of detail removes them.
-            var targetDressDiameter = 2.6f;
-            var fullDetailWidthInBodies = 29;
-            float spacingAtFullDetail = targetDressDiameter / fullDetailWidthInBodies;
-            float bodyRadius = spacingAtFullDetail / 1.75f;
+            levelOfDetail = MathF.Max(0f, MathF.Min(0.8f, levelOfDetail));
+            var suitSize = new Vector3(1, 1f, 1);
+            var fullDetailAxisBodyCounts = new Int3 { X = 23, Y = 23, Z = 23 };
             var scale = MathF.Pow(2, levelOfDetail);
-            var widthInBodies = (int)MathF.Ceiling(fullDetailWidthInBodies / scale);
-            var spacing = spacingAtFullDetail * scale;
+            var axisBodyCounts = new Int3 { X = (int)MathF.Ceiling(fullDetailAxisBodyCounts.X / scale), Y = (int)MathF.Ceiling(fullDetailAxisBodyCounts.Y / scale), Z = (int)MathF.Ceiling(fullDetailAxisBodyCounts.Z / scale) };
+            var bodyRadius = MathF.Min(suitSize.X / axisBodyCounts.X, MathF.Min(suitSize.Y / axisBodyCounts.Y, suitSize.Z / axisBodyCounts.Z));
+
             var chest = simulation.Bodies[bodyHandles.Chest];
             ref var chestShape = ref simulation.Shapes.GetShape<Capsule>(chest.Collidable.Shape.Index);
-            var topOfChestHeight = chest.Pose.Position.Y + chestShape.Radius + bodyRadius;
-            var axisBodyCounts = new Int3 { X = 15, Y = 15, Z = 15 };
+            var topOfChestHeight = chest.Pose.Position.Y + chestShape.Radius;
             var topOfChestPosition = new Vector3(0, topOfChestHeight, 0) + DemoDancers.GetOffsetForDancer(dancerIndex, dancerGridWidth);
-            var suitSize = new Vector3(1, 1f, 1);
             var suitMinimum = topOfChestPosition - suitSize * new Vector3(0.5f, 1f, 0.5f);
             var suitMaximum = suitMinimum + suitSize;
             CreateBodyGrid(bodyHandles, axisBodyCounts, suitMinimum, suitMaximum, bodyRadius, 0.01f, dancerIndex, simulation, filters);
@@ -227,7 +220,8 @@ namespace Demos.Demos.Dancers
             //Note very high damping on the main ragdoll simulation; makes it easier to pose.
             Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = collisionFilters }, new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0), 0, 0), new SolveDescription(8, 1));
 
-            dancers = new DemoDancers().Initialize<DeformableCallbacks, DeformableCollisionFilter>(8, 8, Simulation, collisionFilters, ThreadDispatcher, BufferPool, CreateFatSuit, new DeformableCollisionFilter(0, 0, 0, -1));
+            //Note that, because the constraints in the fat suit are quite soft, we can get away with extremely minimal solving time. There's one substep with one velocity iteration.
+            dancers = new DemoDancers().Initialize<DeformableCallbacks, DeformableCollisionFilter>(8, 8, Simulation, collisionFilters, ThreadDispatcher, BufferPool, new SolveDescription(1, 1), CreateFatSuit, new DeformableCollisionFilter(0, 0, 0, -1));
 
         }
         public unsafe override void Update(Window window, Camera camera, Input input, float dt)
@@ -242,12 +236,12 @@ namespace Demos.Demos.Dancers
             renderer.Lines.Extract(dancers.Simulations, ThreadDispatcher);
 
             var resolution = renderer.Surface.Resolution;
-            renderer.TextBatcher.Write(text.Clear().Append("Cosmetic simulations, like cloth, often don't need to be in a game's main simulation."), new Vector2(16, resolution.Y - 144), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Cosmetic simulations, like character blubber, often don't need to be in a game's main simulation."), new Vector2(16, resolution.Y - 144), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Every background dancer in this demo has its own simulation. All dancers can be easily updated in parallel."), new Vector2(16, resolution.Y - 128), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("Dancers further from the main dancer use sparser cloth and disable self collision for extra performance."), new Vector2(16, resolution.Y - 112), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Dancers further from the main dancer use sparser body grids and disable self collision for extra performance."), new Vector2(16, resolution.Y - 112), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Dancer count: ").Append(dancers.Handles.Length), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("Total cloth body count: ").Append(dancers.BodyCount), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("Total cloth constraint count: ").Append(dancers.ConstraintCount), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Total deformable body count: ").Append(dancers.BodyCount), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Total deformable constraint count: ").Append(dancers.ConstraintCount), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Total dancer execution time (ms): ").Append(dancers.ExecutionTime * 1000, 2), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Amortized execution time per dancer (us): ").Append(dancers.ExecutionTime * 1e6 / dancers.Handles.Length, 1), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
 

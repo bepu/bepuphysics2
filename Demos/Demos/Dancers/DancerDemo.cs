@@ -105,6 +105,7 @@ namespace Demos.Demos.Dancers
             //The demo uses lower resolution grids on dancers further away from the main dancer.
             //This is a sorta-example of level of detail. In a 'real' use case, you'd probably want to transition between levels of detail dynamically as the camera moved around.
             //That's a little trickier, but doable. Going low to high, for example, requires creating bodies at interpolated positions between existing bodies, while going to a lower level of detail removes them.
+            levelOfDetail = MathF.Max(0f, MathF.Min(1.5f, levelOfDetail));
             var targetDressDiameter = 2.6f;
             var fullDetailWidthInBodies = 29;
             float spacingAtFullDetail = targetDressDiameter / fullDetailWidthInBodies;
@@ -162,7 +163,7 @@ namespace Demos.Demos.Dancers
             //Note very high damping on the main ragdoll simulation; makes it easier to pose.
             Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = collisionFilters }, new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0), 0, 0), new SolveDescription(8, 1));
 
-            dancers = new DemoDancers().Initialize<ClothCallbacks, ClothCollisionFilter>(16, 16, Simulation, collisionFilters, ThreadDispatcher, BufferPool, TailorDress, new ClothCollisionFilter(0, 0, -1));
+            dancers = new DemoDancers().Initialize<ClothCallbacks, ClothCollisionFilter>(16, 16, Simulation, collisionFilters, ThreadDispatcher, BufferPool, new SolveDescription(1, 4), TailorDress, new ClothCollisionFilter(0, 0, -1));
 
         }
         public unsafe override void Update(Window window, Camera camera, Input input, float dt)

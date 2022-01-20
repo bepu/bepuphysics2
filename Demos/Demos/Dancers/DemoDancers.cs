@@ -104,8 +104,9 @@ namespace Demos.Demos.Dancers
         DancerControl rightHandControl;
 
         public delegate void DressUpDancer<TCollisionFilter>(Simulation simulation, CollidableProperty<TCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, int dancerGridWidth, float levelOfDetail) where TCollisionFilter : unmanaged;
-        public DemoDancers Initialize<TNarrowPhaseCallbacks, TCollisionFilter>(int dancerGridWidth, int dancerGridLength, Simulation mainSimulation, CollidableProperty<SubgroupCollisionFilter> mainCollisionFilters, IThreadDispatcher threadDispatcher, BufferPool pool,
-            DressUpDancer<TCollisionFilter> dressUpDancer, TCollisionFilter filterForDancerBodies)
+        public DemoDancers Initialize<TNarrowPhaseCallbacks, TCollisionFilter>(
+            int dancerGridWidth, int dancerGridLength, Simulation mainSimulation, CollidableProperty<SubgroupCollisionFilter> mainCollisionFilters,
+            IThreadDispatcher threadDispatcher, BufferPool pool, SolveDescription dancerSolveDescription, DressUpDancer<TCollisionFilter> dressUpDancer, TCollisionFilter filterForDancerBodies)
             where TNarrowPhaseCallbacks : struct, INarrowPhaseCallbacks, IDancerNarrowPhaseCallbacks<TNarrowPhaseCallbacks, TCollisionFilter>
             where TCollisionFilter : unmanaged
         {
@@ -231,7 +232,7 @@ namespace Demos.Demos.Dancers
                 //Distance from the main dancer is used to select clothing level of detail. This isn't dynamic based on camera motion, but shows the general idea.
                 //Since we don't have to worry about transitions, the level of detail is a continuous value here.
                 var distanceFromMainDancer = GetDistanceFromMainDancer(i, dancerGridWidth);
-                var levelOfDetail = MathF.Max(0f, MathF.Min(1.5f, MathF.Log2(MathF.Max(1, distanceFromMainDancer) - 0.8f)));
+                var levelOfDetail = MathF.Log2(MathF.Max(1, distanceFromMainDancer) - 0.8f);
                 //Note that we use a smaller allocation block size for dancer simulations.
                 //This demo is creating a *lot* of buffer pools just because that's the simplest way to keep things thread safe.
                 //If you wanted to reduce the amount of pool-induced memory overhead, you could consider sharing buffer pools between multiple simulations
@@ -245,7 +246,7 @@ namespace Demos.Demos.Dancers
                 //The ClothCallbacks specify a minimum distance required for self collision, and low detail (higher 'level of detail' values) results in MaxValue minimum distance.
                 var narrowPhaseCallbacks = default(TNarrowPhaseCallbacks).Create(dancerFilters, new PairMaterialProperties(0.4f, 20, new SpringSettings(120, 1)), levelOfDetail <= 0.5f ? 3 : int.MaxValue);
                 var dancerSimulation = Simulation.Create(new BufferPool(16384), narrowPhaseCallbacks,
-                    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4),
+                    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), dancerSolveDescription,
                     //To save some memory, initialize the dancer simulations with smaller starting sizes. For the higher level of detail simulations this could require some resizing. 
                     //More precise estimates could be made without too much work, but the demo will keep it simple.
                     initialAllocationSizes: new SimulationAllocationSizes(128, 1, 1, 8, 512, 64, 8));
