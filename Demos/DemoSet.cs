@@ -49,11 +49,7 @@ namespace Demos
             AddOption<PlumpDancerDemo>();
             AddOption<DancerDemo>();
             AddOption<CarDemo>();
-            AddOption<ConstrainedKinematicIntegrationTest>();
-            AddOption<ConstraintTestDemo>();
             AddOption<RagdollTubeDemo>();
-            AddOption<FountainStressTestDemo>();
-            AddOption<RopeTwistDemo>();
             AddOption<NewtDemo>();
             AddOption<CharacterDemo>();
             AddOption<TankDemo>();
@@ -67,6 +63,7 @@ namespace Demos
             AddOption<BlockChainDemo>();
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();
+            AddOption<RopeTwistDemo>();
             AddOption<RopeStabilityDemo>();
             AddOption<SubsteppingDemo>();
             AddOption<ContactEventsDemo>();

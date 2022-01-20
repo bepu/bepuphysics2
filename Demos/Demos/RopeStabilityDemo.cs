@@ -31,7 +31,9 @@ namespace Demos.Demos
             {
                 //Make the uppermost block kinematic to hold up the rest of the chain.
                 Activity = .01f,
-                Collidable = ropeShapeIndex,
+                //Note the use of a limited speculative margin. The demo is intentionally showing an unstable configuration (naive 100:1).
+                //Allowing unlimited speculative margins can cause the instability to feed on itself and explode into NaNville.
+                Collidable = new CollidableDescription(ropeShapeIndex, 0.1f),
             };
             for (int linkIndex = 0; linkIndex < bodyCount + 1; ++linkIndex)
             {
@@ -84,20 +86,17 @@ namespace Demos.Demos
             camera.Pitch = 0;
 
             //Most of this demo is concerned with working around behavioral issues without making significant changes to the simulation configuration.
-            //If you are willing to change the simulation configuration, a lot of the following tricks are completely unnecessary. For example, try using one of the solver substepping timesteppers.
-            //The following takes 4 pose integration/solver substeps per main timestep- effectively sharing collision detection and other bookkeeping over multiple frames.
-            //Note that the number of solver velocity iterations is dropped to 1, so each solver substep is less expensive than a regular solver execution too.
+            //If you are willing to change the simulation configuration, a lot of the following tricks are completely unnecessary.
+            //For example, try using substepping in the solver by passing "new SolveDescription(1, 4)". It'll use 4 substeps with one velocity iteration per step.
+            //That effectively shares collision detection and other bookkeeping over multiple solver 'frames'. See the Substepping.md documentation for more information.
+            //Note that the number of solver velocity iterations is dropped to 1, so each solver substep is less expensive.
             //We can get away with that because increasing the update rate is by far the most powerful way to stabilize a simulation.
-            //In fact, in particularly difficult simulations, increasing the update rate, removing other stabilizing workarounds, and reducing solver iteration counts can actually be *faster*.
-            //In this simulation, using 4 substeps with 1 velocity iteration each costs about 25% more than the non-substepping version with 8 velocity iterations. Not too bad for the quality increase.
-            //Also note that both of these simulation configurations are using a higher than demo-usual contact stiffness. That's just so that you can wrap the rope around the nearby capsule.
-            //In a simulation with lots of stacking, high contact stiffness would require substepping or a higher update rate for stability.
-            //Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1) }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new EmbeddedSubsteppingTimestepper2(4), 1);
+            //For most simulations, 1 substep with 8 velocity iterations is about as expensive as 4 substeps with 1 velocity iteration per.
+            //So, even though you can avoid the need for these kinds of hacks, it's good to know that they exist should you find yourself in a circumstance where higher update rates/substepping aren't viable.
 
-            //So, even though you can avoid the need for these kinds of hacks, it's good to know that they exist should you find yourself in a circumstance where substepping isn't viable.
-            Simulation = Simulation.Create(BufferPool,
-                new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1), FrictionCoefficient = 1f, MaximumRecoveryVelocity = 2f },
-                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            //Also note that both of these simulation configurations are using a higher than demo-usual contact stiffness. That's just so that you can wrap the rope around the nearby capsule.
+            //In a simulation with lots of stacking, high contact stiffness would require substepping or a higher solve rate for stability.
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1), 20), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             rolloverInfo = new RolloverInfo();
             var smallWreckingBall = new Sphere(1);
@@ -266,6 +265,12 @@ namespace Demos.Demos
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             rolloverInfo.Render(renderer, camera, input, text, font);
+
+            var bottomY = renderer.Surface.Resolution.Y;
+            renderer.TextBatcher.Write(text.Clear().Append("Heavy objects depending on light objects through constraints can lead to instability at slow solver update rates."), new Vector2(16, bottomY - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("You could just increase the solver rate by calling Timestep more often or using substepping (see SubsteppingDemo), but this demo shows some alternatives."), new Vector2(16, bottomY - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Even with a poor simulation configuration, decent body/constraint configuration can still support extreme mass ratios."), new Vector2(16, bottomY - 16), 16, Vector3.One, font);
+
             base.Render(renderer, camera, input, text, font);
         }
 
