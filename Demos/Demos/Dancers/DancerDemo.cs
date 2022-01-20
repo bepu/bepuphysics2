@@ -160,8 +160,7 @@ namespace Demos.Demos.Dancers
             camera.Pitch = 0;
 
             var collisionFilters = new CollidableProperty<SubgroupCollisionFilter>();
-            //Note very high damping on the main ragdoll simulation; makes it easier to pose.
-            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = collisionFilters }, new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0), 0, 0), new SolveDescription(8, 1));
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = collisionFilters }, new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)), new SolveDescription(8, 1));
 
             dancers = new DemoDancers().Initialize<ClothCallbacks, ClothCollisionFilter>(16, 16, Simulation, collisionFilters, ThreadDispatcher, BufferPool, new SolveDescription(1, 4), TailorDress, new ClothCollisionFilter(0, 0, -1));
 
