@@ -235,7 +235,7 @@ namespace Demos.Demos.Characters
         }
                
 
-        public void WarmStart2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(dynamic) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>ref <#=prefix#>CharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA<#if(dynamic) {#>, ref BodyVelocityWide velocityB<#}#>)
+        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(dynamic) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>ref <#=prefix#>CharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA<#if(dynamic) {#>, ref BodyVelocityWide velocityB<#}#>)
         {            
             ComputeJacobians(prestep.OffsetFromCharacter, <#if (dynamic) {#>prestep.OffsetFromSupport, <#}#>prestep.SurfaceBasis,
                 out var basis, out var horizontalAngularJacobianA, <#if (dynamic) {#>out var horizontalAngularJacobianB, <#}#>out var verticalAngularJacobianA<#if (dynamic) {#>, out var verticalAngularJacobianB<#}#>);
@@ -243,7 +243,7 @@ namespace Demos.Demos.Characters
             ApplyVerticalImpulse(basis, verticalAngularJacobianA, <#if (dynamic) {#>verticalAngularJacobianB, <#}#>accumulatedImpulses.Vertical, inertiaA, <#if (dynamic) {#>inertiaB, <#}#>ref velocityA<#if (dynamic) {#>, ref velocityB<#}#>);
         }
         
-        public void Solve2(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(dynamic) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>float dt, float inverseDt, ref <#=prefix#>CharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA<#if(dynamic) {#>, ref BodyVelocityWide velocityB<#}#>)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(dynamic) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>float dt, float inverseDt, ref <#=prefix#>CharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA<#if(dynamic) {#>, ref BodyVelocityWide velocityB<#}#>)
         {            
             //The motion constraint is split into two parts: the horizontal constraint, and the vertical constraint.
             //The horizontal constraint acts almost exactly like the TangentFriction, but we'll duplicate some of the logic to keep this implementation self-contained.
