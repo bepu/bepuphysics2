@@ -321,7 +321,7 @@ namespace BepuPhysics.Constraints.Contact
             PenetrationLimitOneBody.Solve(inertiaA, prestep.Normal, prestep.Contact0.OffsetA, prestep.Contact0.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
             //If there's only one contact, then the contact patch as determined by contact distance would be zero.
             //That can cause some subtle behavioral issues sometimes, so we approximate lever arm with the contact depth, assuming that the contact surface area will increase as the depth increases.
-            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * accumulatedImpulses.Penetration0 * prestep.Contact0.Depth;
+            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * accumulatedImpulses.Penetration0 * Vector.Max(Vector<float>.Zero, prestep.Contact0.Depth);
             TwistFrictionOneBody.Solve(prestep.Normal, inertiaA, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }               
     }
@@ -964,7 +964,7 @@ namespace BepuPhysics.Constraints.Contact
             PenetrationLimit.Solve(inertiaA, inertiaB, prestep.Normal, prestep.Contact0.OffsetA, prestep.Contact0.OffsetA - prestep.OffsetB, prestep.Contact0.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
             //If there's only one contact, then the contact patch as determined by contact distance would be zero.
             //That can cause some subtle behavioral issues sometimes, so we approximate lever arm with the contact depth, assuming that the contact surface area will increase as the depth increases.
-            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * accumulatedImpulses.Penetration0 * prestep.Contact0.Depth;
+            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * accumulatedImpulses.Penetration0 * Vector.Max(Vector<float>.Zero, prestep.Contact0.Depth);
             TwistFriction.Solve(prestep.Normal, inertiaA, inertiaB, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }               
     }

@@ -275,7 +275,7 @@ for (int i = 0; i < contactCount; ++i)
 <#if (contactCount == 1) {#>
             //If there's only one contact, then the contact patch as determined by contact distance would be zero.
             //That can cause some subtle behavioral issues sometimes, so we approximate lever arm with the contact depth, assuming that the contact surface area will increase as the depth increases.
-            var maximumTwistImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * accumulatedImpulses.Penetration0 * prestep.Contact0.Depth;
+            var maximumTwistImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * accumulatedImpulses.Penetration0 * Vector.Max(Vector<float>.Zero, prestep.Contact0.Depth);
 <#} else {#>
             var maximumTwistImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * (
 <#for (int i = 0; i < contactCount; ++i) {#>

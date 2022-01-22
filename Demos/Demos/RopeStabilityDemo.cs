@@ -29,14 +29,12 @@ namespace Demos.Demos
             //Build the links.
             var bodyDescription = new BodyDescription
             {
-                //Make the uppermost block kinematic to hold up the rest of the chain.
                 Activity = .01f,
-                //Note the use of a limited speculative margin. The demo is intentionally showing an unstable configuration (naive 100:1).
-                //Allowing unlimited speculative margins can cause the instability to feed on itself and explode into NaNville.
-                Collidable = new CollidableDescription(ropeShapeIndex, 0.1f),
+                Collidable = ropeShapeIndex
             };
             for (int linkIndex = 0; linkIndex < bodyCount + 1; ++linkIndex)
             {
+                //Make the uppermost block kinematic to hold up the rest of the chain.
                 bodyDescription.LocalInertia = linkIndex == 0 ? new BodyInertia() : ropeInertia;
                 bodyDescription.Pose = start - new Vector3(0, linkIndex * (bodySpacing + 2 * bodySize), 0);
                 handles[linkIndex] = simulation.Bodies.Add(bodyDescription);

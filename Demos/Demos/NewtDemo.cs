@@ -2,6 +2,7 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuPhysics.Constraints.Contact;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
@@ -546,7 +547,7 @@ namespace Demos.Demos
             MinimumDistanceForSelfCollisions = minimumDistanceForSelfCollisions;
         }
         public DeformableCallbacks(CollidableProperty<DeformableCollisionFilter> filters, int minimumDistanceForSelfCollisions = 3)
-            :this(filters, new PairMaterialProperties(1, 2, new SpringSettings(30, 1)), minimumDistanceForSelfCollisions)
+            : this(filters, new PairMaterialProperties(1, 2, new SpringSettings(30, 1)), minimumDistanceForSelfCollisions)
         {
         }
         //This slightly awkward factory is just here for the dancer demos.
@@ -574,9 +575,7 @@ namespace Demos.Demos
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            pairMaterial.FrictionCoefficient = 1;
-            pairMaterial.MaximumRecoveryVelocity = 2f;
-            pairMaterial.SpringSettings = new SpringSettings(30, 1);
+            pairMaterial = Material;
             return true;
         }
 
@@ -681,7 +680,6 @@ namespace Demos.Demos
             var vertexShape = new Sphere(cellSize * 0.7f);
             var massPerVertex = density * (cellSize * cellSize * cellSize);
             var vertexInertia = vertexShape.ComputeInertia(massPerVertex);
-            //vertexInertia.InverseInertiaTensor = default;
             var vertexShapeIndex = simulation.Shapes.Add(vertexShape);
             for (int i = 0; i < vertices.Length; ++i)
             {
@@ -703,17 +701,16 @@ namespace Demos.Demos
                         LocalOrientation = Quaternion.Identity,
                         SpringSettings = weldSpringiness
                     });
-                //simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
-                //    new CenterDistanceConstraint(offset.Length(), weldSpringiness));
-                //simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
-                //    new BallSocket { LocalOffsetA = offset * 0.5f, LocalOffsetB = offset * -0.5f, SpringSettings = weldSpringiness });
             }
-            //for (int i = 0; i < tetrahedraVertexIndices.Length; ++i)
-            //{
-            //    ref var tetrahedron = ref tetrahedraVertexIndices[i];
-            //    simulation.Solver.Add(vertexHandles[tetrahedron.A], vertexHandles[tetrahedron.B], vertexHandles[tetrahedron.C], vertexHandles[tetrahedron.D],
-            //        new VolumeConstraint(vertices[tetrahedron.A], vertices[tetrahedron.B], vertices[tetrahedron.C], vertices[tetrahedron.D], volumeSpringiness));
-            //}
+            //Volume constraints add a fairly subtle effect, especially when dealing with already stiff weld constraints.
+            //They're included here as an example, but you'll notice in the PlumpDancerDemo that there are no volume constraints.
+            //There, we're primarily concerned about scaling up simulations to many characters, so adding tons of additional constraints for minimal behavioral difference doesn't make sense.
+            for (int i = 0; i < tetrahedraVertexIndices.Length; ++i)
+            {
+                ref var tetrahedron = ref tetrahedraVertexIndices[i];
+                simulation.Solver.Add(vertexHandles[tetrahedron.A], vertexHandles[tetrahedron.B], vertexHandles[tetrahedron.C], vertexHandles[tetrahedron.D],
+                    new VolumeConstraint(vertices[tetrahedron.A], vertices[tetrahedron.B], vertices[tetrahedron.C], vertices[tetrahedron.D], volumeSpringiness));
+            }
 
             pool.Return(ref vertexEdgeCounts);
             edges.Dispose(pool);
@@ -727,7 +724,7 @@ namespace Demos.Demos
             camera.Pitch = MathHelper.Pi * 0.15f;
 
             var filters = new CollidableProperty<DeformableCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks(filters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks(filters, new PairMaterialProperties(1f, 2f, new SpringSettings(30, 1))), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(1, 4));
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
             float cellSize = 0.1f;
@@ -735,37 +732,25 @@ namespace Demos.Demos
                 out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
             var weldSpringiness = new SpringSettings(30f, 1f);
             var volumeSpringiness = new SpringSettings(30f, 1);
-            //int terboTotal = 0;
-            //var terboShape = new Box(0.5f, 0.5f, 3);
-            //terboShape.ComputeInertia(1, out var terboInertia);
-            //var bodyDescription = BodyDescription.CreateDynamic(new RigidPose(new Vector3(0, 10, 0)), new BodyVelocity(default, new Vector3(1, 2, 3)), terboInertia, new CollidableDescription(Simulation.Shapes.Add(terboShape), 0.1f), new BodyActivityDescription(-1));
 
-            for (int i = 0; i < 40; ++i)
+            for (int i = 0; i < 8; ++i)
             {
-                //CreateDeformable(Simulation, new Vector3(i * 3, 5 + i * 1.5f, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
-                CreateDeformable(Simulation, new Vector3(i * 3, 5 + cellSize * 2f + i * 0f, 0), Quaternion.Identity, 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
-
-                //for (int terbo = 0; terbo < 17; ++terbo)
-                //{
-                //    bodyDescription.Pose.Position = new Vector3((terboTotal++) * 6, 10, 3);
-                //    Simulation.Bodies.Add(bodyDescription);
-                //}
+                CreateDeformable(Simulation, new Vector3(i * 3, 5 + i * 1.5f, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
             }
             //Console.WriteLine($"body count: {Simulation.Bodies.ActiveSet.Count}");
             //Console.WriteLine($"constraint count: {Simulation.Solver.CountConstraints()}");
-            //Simulation.Bodies.GetBodyReference(new BodyHandle(55)).Pose.Position += new Vector3(10, 5, 0);
 
             BufferPool.Return(ref vertices);
             vertexSpatialIndices.Dispose(BufferPool);
             BufferPool.Return(ref cellVertexIndices);
             BufferPool.Return(ref tetrahedraVertexIndices);
 
-            //Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
+            //Drop something heavy on one of the newts. The newt probably won't mind.
+            Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), Simulation.Shapes.Add(new Box(1500, 1, 1500))));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), Simulation.Shapes.Add(new Sphere(3))));
 
         }
-
     }
 }
