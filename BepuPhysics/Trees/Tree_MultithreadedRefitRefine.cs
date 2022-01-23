@@ -32,25 +32,20 @@ namespace BepuPhysics.Trees
             int MaximumSubtrees;
             Action<int> RefineAction;
 
-            QuickList<int> CacheOptimizeStarts;
-            int PerWorkerCacheOptimizeCount;
-            Action<int> CacheOptimizeAction;
-
             IThreadDispatcher threadDispatcher;
 
             public RefitAndRefineMultithreadedContext()
             {
                 RefitAndMarkAction = RefitAndMark;
                 RefineAction = Refine;
-                CacheOptimizeAction = CacheOptimize;
             }
 
             public unsafe void RefitAndRefine(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher, int frameIndex,
-                float refineAggressivenessScale = 1, float cacheOptimizeAggressivenessScale = 1)
+                float refineAggressivenessScale = 1)
             {
                 if (tree.leafCount <= 2)
                 {
-                    //If there are 2 or less leaves, then refit/refine/cache optimize doesn't do anything at all.
+                    //If there are 2 or less leaves, then refit/refine doesn't do anything at all.
                     //(The root node has no parent, so it does not have a bounding box, and the SAH won't change no matter how we swap the children of the root.)
                     //Avoiding this case also gives the other codepath a guarantee that it will be working with nodes with two children.
                     return;
@@ -126,39 +121,6 @@ namespace BepuPhysics.Trees
                     Tree.Metanodes[RefinementTargets[i]].RefineFlag = 0;
                 }
 
-                //To multithread this, give each worker a contiguous chunk of nodes. You want to do the biggest chunks possible to chain decent cache behavior as far as possible.
-                //Note that more cache optimization is required with more threads, since spreading it out more slightly lessens its effectiveness.
-                var cacheOptimizeCount = Tree.GetCacheOptimizeTuning(MaximumSubtrees, RefitCostChange, (Math.Max(1, threadDispatcher.ThreadCount * 0.25f)) * cacheOptimizeAggressivenessScale);
-
-                var cacheOptimizationTasks = threadDispatcher.ThreadCount;
-                PerWorkerCacheOptimizeCount = cacheOptimizeCount / cacheOptimizationTasks;
-                var startIndex = (int)(((long)frameIndex * PerWorkerCacheOptimizeCount) % Tree.nodeCount);
-                CacheOptimizeStarts = new QuickList<int>(cacheOptimizationTasks, pool);
-                CacheOptimizeStarts.AddUnsafely(startIndex);
-
-                var optimizationSpacing = Tree.nodeCount / threadDispatcher.ThreadCount;
-                var optimizationSpacingWithExtra = optimizationSpacing + 1;
-                var optimizationRemainder = Tree.nodeCount - optimizationSpacing * threadDispatcher.ThreadCount;
-
-                for (int i = 1; i < cacheOptimizationTasks; ++i)
-                {
-                    if (optimizationRemainder > 0)
-                    {
-                        startIndex += optimizationSpacingWithExtra;
-                        --optimizationRemainder;
-                    }
-                    else
-                    {
-                        startIndex += optimizationSpacing;
-                    }
-                    if (startIndex >= Tree.nodeCount)
-                        startIndex -= Tree.nodeCount;
-                    Debug.Assert(startIndex >= 0 && startIndex < Tree.nodeCount);
-                    CacheOptimizeStarts.AddUnsafely(startIndex);
-                }
-
-                threadDispatcher.DispatchWorkers(CacheOptimizeAction, CacheOptimizeStarts.Count);
-
                 for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
                 {
                     //Note the use of the thread memory pool. Each thread allocated their own memory for the list since resizes were possible.
@@ -167,7 +129,6 @@ namespace BepuPhysics.Trees
                 pool.Return(ref RefinementCandidates);
                 RefitNodes.Dispose(pool);
                 RefinementTargets.Dispose(pool);
-                CacheOptimizeStarts.Dispose(pool);
                 Tree = default;
                 this.threadDispatcher = null;
             }
@@ -354,19 +315,6 @@ namespace BepuPhysics.Trees
                 treeletInternalNodes.Dispose(threadPool);
                 threadPool.Return(ref buffer);
 
-
-            }
-
-            void CacheOptimize(int workerIndex)
-            {
-                var startIndex = CacheOptimizeStarts[workerIndex];
-
-                //We could wrap around. But we could also not do that because it doesn't really matter!
-                var end = Math.Min(Tree.nodeCount, startIndex + PerWorkerCacheOptimizeCount);
-                for (int i = startIndex; i < end; ++i)
-                {
-                    Tree.IncrementalCacheOptimizeThreadSafe(i);
-                }
 
             }
         }
