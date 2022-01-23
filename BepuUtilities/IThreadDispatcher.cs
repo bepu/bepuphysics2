@@ -27,8 +27,9 @@ namespace BepuUtilities
         /// <summary>
         /// Dispatches all the available workers.
         /// </summary>
-        /// <param name="loopBody">Delegate to be invoked on for every worker.</param>
-        void DispatchWorkers(Action<int> workerBody);
+        /// <param name="workerBody">Delegate to be invoked on every worker.</param>
+        /// <param name="maximumWorkerCount">Maximum number of workers to dispatch.</param>
+        void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue);
 
         /// <summary>
         /// Gets the memory pool associated with a given worker index. It is guaranteed that no other workers will share the same pool for the duration of the worker's execution.

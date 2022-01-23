@@ -819,6 +819,7 @@ namespace BepuPhysics
             //Warm start.
             var preambleClaimCount = incrementalBlocks.Count + substepContext.KinematicIntegrationBlocks.Length;
             int claimStart = preambleClaimCount;
+            int highestJobCountInSolve = 0;
             for (int batchIndex = 0; batchIndex < stagesPerIteration; ++batchIndex)
             {
                 var stageIndex = targetStageIndex++;
@@ -826,6 +827,7 @@ namespace BepuPhysics
                 var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
                 substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.WarmStart, batchIndex);
                 claimStart += workBlocksInBatch;
+                highestJobCountInSolve = Math.Max(highestJobCountInSolve, workBlocksInBatch);
             }
             for (int iterationIndex = 0; iterationIndex < substepContext.HighestVelocityIterationCount; ++iterationIndex)
             {
@@ -838,6 +840,7 @@ namespace BepuPhysics
                     var workBlocksInBatch = substepContext.ConstraintBatchBoundaries[batchIndex] - batchStart;
                     substepContext.Stages[stageIndex] = new(claims.Slice(claimStart, workBlocksInBatch), batchStart, SolverStageType.Solve, batchIndex);
                     claimStart += workBlocksInBatch;
+                    highestJobCountInSolve = Math.Max(highestJobCountInSolve, workBlocksInBatch);
                 }
             }
 
@@ -867,7 +870,7 @@ namespace BepuPhysics
             if (ActiveSet.Batches.Count > 0)
             {
                 //workDelegate(0);
-                threadDispatcher.DispatchWorkers(workDelegate);
+                threadDispatcher.DispatchWorkers(workDelegate, highestJobCountInSolve);
             }
 
             //pool.Take<int>(syncCount, out var availableCountPerSync);
@@ -1241,7 +1244,7 @@ namespace BepuPhysics
                         //    ref var job = ref integrationResponsibilityPrepassJobs[i];
                         //    jobAlignedIntegrationResponsibilities[i] = ComputeIntegrationResponsibilitiesForConstraintRegion(job.batch, job.typeBatch, job.start, job.end);
                         //}
-                        threadDispatcher.DispatchWorkers(constraintIntegrationResponsibilitiesWorker);
+                        threadDispatcher.DispatchWorkers(constraintIntegrationResponsibilitiesWorker, integrationResponsibilityPrepassJobs.Count);
 
                         //Coarse batch integration responsibilities start uninitialized. Possible to have multiple jobs per type batch in multithreaded case, so we need to init to merge.
                         for (int i = 1; i < ActiveSet.Batches.Count; ++i)

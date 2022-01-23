@@ -488,7 +488,7 @@ namespace Demos.Demos.Characters
                 }
 
                 boundingBoxExpansionJobIndex = -1;
-                threadDispatcher.DispatchWorkers(expandBoundingBoxesWorker);
+                threadDispatcher.DispatchWorkers(expandBoundingBoxesWorker, boundingBoxExpansionJobs.Length);
                 pool.Return(ref boundingBoxExpansionJobs);
 
             }
@@ -784,7 +784,7 @@ namespace Demos.Demos.Characters
                         previousEnd = job.ExclusiveEnd;
                     }
                     analysisJobIndex = -1;
-                    threadDispatcher.DispatchWorkers(analyzeContactsWorker);
+                    threadDispatcher.DispatchWorkers(analyzeContactsWorker, analysisJobCount);
                     pool.Return(ref jobs);
                 }
             }

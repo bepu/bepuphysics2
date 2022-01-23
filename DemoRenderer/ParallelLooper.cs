@@ -20,13 +20,17 @@ namespace DemoRenderer
     public delegate void LooperWorkerDone(int workerIndex);
 
     /// <summary>
-    /// Simple multithreaded for loop provider built on an IThreadDispatcher. Performs an atomic operation for every object in the loop, so pre-chunking the works into jobs is important.
+    /// Simple multithreaded for loop provider built on an <see cref="IThreadDispatcher"/>. Performs an atomic operation for every object in the loop, so pre-chunking the works into jobs is important.
     /// </summary>
     /// <remarks>This helps avoid some unnecessary allocations associated with the TPL implementation. While a little garbage from the renderer in the demos isn't exactly a catastrophe,
     /// having zero allocations under normal execution makes it easier to notice when the physics simulation itself is allocating inappropriately.</remarks>
     public class ParallelLooper
     {
         Action<int> dispatcherWorker;
+
+        /// <summary>
+        /// Gets or sets the dispatcher used by the looper.
+        /// </summary>
         public IThreadDispatcher Dispatcher { get; set; }
 
         public ParallelLooper()
@@ -51,6 +55,13 @@ namespace DemoRenderer
         LooperAction iteration;
         LooperWorkerDone workerDone;
 
+        /// <summary>
+        /// Executes an action for each index in the given range.
+        /// </summary>
+        /// <param name="start">Inclusive start index of the execution range.</param>
+        /// <param name="exclusiveEnd">Exclusive end index of the execution range.</param>
+        /// <param name="workAction">Delegate to invoke for each index.</param>
+        /// <param name="workerDone">Delegate to invoke after all workers are done.</param>
         public void For(int start, int exclusiveEnd, LooperAction workAction, LooperWorkerDone workerDone = null)
         {
             if (Dispatcher == null)
@@ -67,7 +78,7 @@ namespace DemoRenderer
                 this.end = exclusiveEnd;
                 this.iteration = workAction;
                 this.workerDone = workerDone;
-                Dispatcher.DispatchWorkers(dispatcherWorker);
+                Dispatcher.DispatchWorkers(dispatcherWorker, exclusiveEnd - start);
                 this.iteration = null;
                 this.workerDone = workerDone;
             }

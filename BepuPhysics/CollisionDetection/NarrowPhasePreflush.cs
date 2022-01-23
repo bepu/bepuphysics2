@@ -322,7 +322,7 @@ namespace BepuPhysics.CollisionDetection
                 var originalPairCacheMappingCount = PairCache.Mapping.Count;
                 //var start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
-                threadDispatcher.DispatchWorkers(preflushWorkerLoop);
+                threadDispatcher.DispatchWorkers(preflushWorkerLoop, preflushJobs.Count);
                 //preflushWorkerLoop(0);
                 //var end = Stopwatch.GetTimestamp();
                 //Console.WriteLine($"Preflush phase 1 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
@@ -337,7 +337,7 @@ namespace BepuPhysics.CollisionDetection
                 }
                 //start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
-                threadDispatcher.DispatchWorkers(preflushWorkerLoop);
+                threadDispatcher.DispatchWorkers(preflushWorkerLoop, preflushJobs.Count);
                 //preflushWorkerLoop(0);
                 //end = Stopwatch.GetTimestamp();
                 //Console.WriteLine($"Preflush phase 2 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
@@ -361,7 +361,7 @@ namespace BepuPhysics.CollisionDetection
                 FreshnessChecker.CreateJobs(threadCount, ref preflushJobs, Pool, originalPairCacheMappingCount);
                 //start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
-                threadDispatcher.DispatchWorkers(preflushWorkerLoop);
+                threadDispatcher.DispatchWorkers(preflushWorkerLoop, preflushJobs.Count);
                 //preflushWorkerLoop(0);
                 //end = Stopwatch.GetTimestamp();
                 //Console.WriteLine($"Preflush phase 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");

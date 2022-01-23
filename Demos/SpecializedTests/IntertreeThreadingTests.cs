@@ -100,7 +100,7 @@ namespace Demos.SpecializedTests
                 handlers[i].Pairs = new List<(int a, int b)>();
             }
             context.PrepareJobs(ref treeA, ref treeB, handlers, threadDispatcher.ThreadCount);
-            threadDispatcher.DispatchWorkers(context.PairTest);
+            threadDispatcher.DispatchWorkers(context.PairTest, context.JobCount);
             context.CompleteTest();
             List<(int a, int b)> multithreadedResults = new List<(int, int)>();
             for (int i = 0; i < threadDispatcher.ThreadCount; ++i)

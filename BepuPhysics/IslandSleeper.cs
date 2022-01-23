@@ -793,7 +793,7 @@ namespace BepuPhysics
             jobIndex = -1;
             if (threadCount > 1)
             {
-                threadDispatcher.DispatchWorkers(gatherDelegate);
+                threadDispatcher.DispatchWorkers(gatherDelegate, gatheringJobs.Count);
             }
             else
             {
@@ -821,7 +821,7 @@ namespace BepuPhysics
             jobIndex = -1;
             if (threadCount > 1)
             {
-                threadDispatcher.DispatchWorkers(executeRemovalWorkDelegate);
+                threadDispatcher.DispatchWorkers(executeRemovalWorkDelegate, removalJobs.Count);
             }
             else
             {
@@ -844,7 +844,7 @@ namespace BepuPhysics
             jobIndex = -1;
             if (threadCount > 1)
             {
-                threadDispatcher.DispatchWorkers(typeBatchConstraintRemovalDelegate);
+                threadDispatcher.DispatchWorkers(typeBatchConstraintRemovalDelegate, typeBatchConstraintRemovalJobCount);
                 //typeBatchConstraintRemovalDelegate(0);
             }
             else

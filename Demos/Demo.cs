@@ -5,6 +5,7 @@ using BepuPhysics;
 using System;
 using DemoRenderer.UI;
 using DemoContentLoader;
+using BepuUtilities;
 
 namespace Demos
 {

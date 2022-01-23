@@ -316,7 +316,7 @@ namespace BepuPhysics
             {
                 analysisJobIndex = -1;
                 this.threadDispatcher = threadDispatcher;
-                threadDispatcher.DispatchWorkers(analysisWorkerDelegate);
+                threadDispatcher.DispatchWorkers(analysisWorkerDelegate, analysisJobs.Count);
                 this.threadDispatcher = null;
             }
             else

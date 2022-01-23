@@ -56,7 +56,7 @@ namespace Demos.SpecializedTests
             builder.AddForKinematic(Simulation.Shapes.Add(new Box(1, 2, panelShape.Length)), new Vector3(0, tubeRadius - 1, 0), 0);
             builder.BuildKinematicCompound(out var children);
             var compound = new BigCompound(children, Simulation.Shapes, BufferPool);
-            tubeHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(tubeCenter, (default, new Vector3(0, 0, .25f)), Simulation.Shapes.Add(compound), 0f));
+            var tubeHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(tubeCenter, (default, new Vector3(0, 0, .25f)), Simulation.Shapes.Add(compound), 0f));
             filters[tubeHandle] = new SubgroupCollisionFilter(int.MaxValue);
             builder.Dispose();
 
@@ -65,18 +65,6 @@ namespace Demos.SpecializedTests
             var staticDescription = new StaticDescription(new Vector3(0, -0.5f, 0), staticShapeIndex);
             Simulation.Statics.Add(staticDescription);
         }
-
-        BodyHandle tubeHandle;
-
-        //public override void Update(Window window, Camera camera, Input input, float dt)
-        //{
-        //    base.Update(window, camera, input, dt);
-
-        //    Console.WriteLine($"Constraint count: {Simulation.Solver.CountConstraints()}");
-
-        //    Console.WriteLine($"Constraints affecting tube: {Simulation.Bodies.GetBodyReference(tubeHandle).Constraints.Count}");
-        //}
-
     }
 }
 

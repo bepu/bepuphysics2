@@ -430,7 +430,7 @@ namespace BepuPhysics
             {
                 PrepareForMultithreadedExecution(BundleIndexing.GetBundleCount(bodies.ActiveSet.Count), dt, threadDispatcher.ThreadCount);
                 this.threadDispatcher = threadDispatcher;
-                threadDispatcher.DispatchWorkers(predictBoundingBoxesWorker);
+                threadDispatcher.DispatchWorkers(predictBoundingBoxesWorker, availableJobCount);
                 //predictBoundingBoxesWorker(0);
                 this.threadDispatcher = null;
             }
@@ -704,7 +704,7 @@ namespace BepuPhysics
                 PrepareForMultithreadedExecution(BundleIndexing.GetBundleCount(bodies.ActiveSet.Count), dt, threadDispatcher.ThreadCount, substepCount);
                 this.constrainedBodies = constrainedBodies;
                 this.threadDispatcher = threadDispatcher;
-                threadDispatcher.DispatchWorkers(integrateAfterSubsteppingWorker);
+                threadDispatcher.DispatchWorkers(integrateAfterSubsteppingWorker, availableJobCount);
                 this.threadDispatcher = null;
                 this.constrainedBodies = default;
             }

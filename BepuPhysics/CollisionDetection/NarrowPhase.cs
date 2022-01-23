@@ -270,7 +270,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 flushJobIndex = -1;
                 this.threadDispatcher = threadDispatcher;
-                threadDispatcher.DispatchWorkers(flushWorkerLoop);
+                threadDispatcher.DispatchWorkers(flushWorkerLoop, flushJobs.Count);
                 //flushWorkerLoop(0);
                 this.threadDispatcher = null;
             }

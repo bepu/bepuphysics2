@@ -76,7 +76,7 @@ namespace BepuPhysics.Trees
                     pool, threadDispatcher.GetThreadMemoryPool(0));
 
                 RefitNodeIndex = -1;
-                threadDispatcher.DispatchWorkers(RefitAndMarkAction);
+                threadDispatcher.DispatchWorkers(RefitAndMarkAction, RefitNodes.Count);
                 //Condense the set of candidates into a set of targets.
                 int refinementCandidatesCount = 0;
                 for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
@@ -118,7 +118,7 @@ namespace BepuPhysics.Trees
                 }
                 RefineIndex = -1;
 
-                threadDispatcher.DispatchWorkers(RefineAction);
+                threadDispatcher.DispatchWorkers(RefineAction, RefinementTargets.Count);
                 //Note that we defer the refine flag clear until after the refinements complete. If we did it within the refine action itself, 
                 //it would introduce nondeterminism by allowing refines to progress based on their order of completion.
                 for (int i = 0; i < RefinementTargets.Count; ++i)
@@ -130,7 +130,7 @@ namespace BepuPhysics.Trees
                 //Note that more cache optimization is required with more threads, since spreading it out more slightly lessens its effectiveness.
                 var cacheOptimizeCount = Tree.GetCacheOptimizeTuning(MaximumSubtrees, RefitCostChange, (Math.Max(1, threadDispatcher.ThreadCount * 0.25f)) * cacheOptimizeAggressivenessScale);
 
-                var cacheOptimizationTasks = threadDispatcher.ThreadCount * 2;
+                var cacheOptimizationTasks = threadDispatcher.ThreadCount;
                 PerWorkerCacheOptimizeCount = cacheOptimizeCount / cacheOptimizationTasks;
                 var startIndex = (int)(((long)frameIndex * PerWorkerCacheOptimizeCount) % Tree.nodeCount);
                 CacheOptimizeStarts = new QuickList<int>(cacheOptimizationTasks, pool);
@@ -157,7 +157,7 @@ namespace BepuPhysics.Trees
                     CacheOptimizeStarts.AddUnsafely(startIndex);
                 }
 
-                threadDispatcher.DispatchWorkers(CacheOptimizeAction);
+                threadDispatcher.DispatchWorkers(CacheOptimizeAction, CacheOptimizeStarts.Count);
 
                 for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
                 {

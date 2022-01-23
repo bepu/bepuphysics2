@@ -139,25 +139,27 @@ namespace Demos.Demos.Cars
         bool playerControlActive = true;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            if (input.WasPushed(ToggleCar))
-                playerControlActive = !playerControlActive;
-            //For control purposes, we'll match the fixed update rate of the simulation. Could decouple it- this dt isn't
-            //vulnerable to the same instabilities as the simulation itself with variable durations.
-            const float controlDt = TimestepDuration;
-            if (playerControlActive)
+            if (input != null)
             {
-                float steeringSum = 0;
-                if (input.IsDown(Left))
+                if (input.WasPushed(ToggleCar))
+                    playerControlActive = !playerControlActive;
+                if (playerControlActive)
                 {
-                    steeringSum += 1;
+                    float steeringSum = 0;
+                    if (input.IsDown(Left))
+                    {
+                        steeringSum += 1;
+                    }
+                    if (input.IsDown(Right))
+                    {
+                        steeringSum -= 1;
+                    }
+                    var targetSpeedFraction = input.IsDown(Forward) ? 1f : input.IsDown(Backward) ? -1f : 0;
+                    var zoom = input.IsDown(Zoom);
+                    //For control purposes, we'll match the fixed update rate of the simulation. Could decouple it- this dt isn't
+                    //vulnerable to the same instabilities as the simulation itself with variable durations.
+                    playerController.Update(Simulation, TimestepDuration, steeringSum, targetSpeedFraction, zoom, input.IsDown(Brake) || input.IsDown(BrakeAlternate));
                 }
-                if (input.IsDown(Right))
-                {
-                    steeringSum -= 1;
-                }
-                var targetSpeedFraction = input.IsDown(Forward) ? 1f : input.IsDown(Backward) ? -1f : 0;
-                var zoom = input.IsDown(Zoom);
-                playerController.Update(Simulation, controlDt, steeringSum, targetSpeedFraction, zoom, input.IsDown(Brake) || input.IsDown(BrakeAlternate));
             }
 
             for (int i = 0; i < aiControllers.Length; ++i)
@@ -185,7 +187,7 @@ namespace Demos.Demos.Cars
                 var speedFraction = 0.25f + MathF.Min(0.75f, MathF.Max(0, 0.75f * (MathF.Abs(steeringAngle) - 0.2f) / -0.4f));
                 if (orientation.Y.Y < 0.4f)
                     speedFraction = 0;
-                ai.Controller.Update(Simulation, controlDt, steeringAngle, speedFraction, steeringAngle < 0.05f, steeringAngle > MathF.PI * 0.2f && forwardVelocity > ai.Controller.ForwardSpeed * 0.6f);
+                ai.Controller.Update(Simulation, TimestepDuration, steeringAngle, speedFraction, steeringAngle < 0.05f, steeringAngle > MathF.PI * 0.2f && forwardVelocity > ai.Controller.ForwardSpeed * 0.6f);
             }
 
             base.Update(window, camera, input, dt);

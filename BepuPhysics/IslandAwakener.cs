@@ -101,7 +101,7 @@ namespace BepuPhysics
             {
                 this.jobIndex = -1;
                 this.jobCount = phaseOneJobCount;
-                threadDispatcher.DispatchWorkers(phaseOneWorkerDelegate);
+                threadDispatcher.DispatchWorkers(phaseOneWorkerDelegate, phaseOneJobCount);
             }
             else
             {
@@ -115,7 +115,7 @@ namespace BepuPhysics
             {
                 this.jobIndex = -1;
                 this.jobCount = phaseTwoJobCount;
-                threadDispatcher.DispatchWorkers(phaseTwoWorkerDelegate);
+                threadDispatcher.DispatchWorkers(phaseTwoWorkerDelegate, phaseTwoJobCount);
             }
             else
             {
