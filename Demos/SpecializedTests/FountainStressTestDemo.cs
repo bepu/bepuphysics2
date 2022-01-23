@@ -10,7 +10,7 @@ using BepuUtilities.Collections;
 using System.Diagnostics;
 using DemoContentLoader;
 
-namespace Demos.Demos
+namespace Demos.SpecializedTests
 {
     public class FountainStressTestDemo : Demo
     {

@@ -10,7 +10,7 @@ namespace DemoTests
     {
         public static ContentArchive GetDemosContentArchive()
         {
-            using (var stream = typeof(Demos.Demos.FountainStressTestDemo).Assembly.GetManifestResourceStream("Demos.Demos.contentarchive"))
+            using (var stream = typeof(Demos.SpecializedTests.FountainStressTestDemo).Assembly.GetManifestResourceStream("Demos.Demos.contentarchive"))
             {
                 return ContentArchive.Load(stream);
             }
