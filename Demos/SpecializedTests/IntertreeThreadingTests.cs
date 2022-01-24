@@ -181,7 +181,7 @@ namespace Demos.SpecializedTests
         {
             var random = new Random(5);
             var pool = new BufferPool();
-            var threadDispatcher = new SimpleThreadDispatcher(Environment.ProcessorCount);
+            var threadDispatcher = new ThreadDispatcher(Environment.ProcessorCount);
             for (int i = 0; i < 1000; ++i)
             {
                 TestTrees(pool, threadDispatcher, random);

@@ -392,7 +392,6 @@ namespace BepuPhysics
             exclusiveEnd = start + jobSize;
             if (exclusiveEnd > maximumJobInterval)
                 exclusiveEnd = maximumJobInterval;
-            Debug.Assert(exclusiveEnd > start, "Jobs that would involve bundles beyond the body count should not be created.");
             return true;
         }
 

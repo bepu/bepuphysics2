@@ -269,7 +269,7 @@ namespace Demos
                 Interlocked.Add(ref IntersectionCount, intersectionCount);
             }
 
-            public void Execute(ref QuickList<TestRay> rays, SimpleThreadDispatcher dispatcher)
+            public void Execute(ref QuickList<TestRay> rays, IThreadDispatcher dispatcher)
             {
                 CacheBlaster.Blast();
                 for (int i = 0; i < rays.Count; ++i)

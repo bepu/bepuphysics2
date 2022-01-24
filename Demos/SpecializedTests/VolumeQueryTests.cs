@@ -154,7 +154,7 @@ namespace Demos.SpecializedTests
                 Interlocked.Add(ref IntersectionCount, intersectionCount);
             }
 
-            public void Execute(ref QuickList<BoundingBox> boxes, SimpleThreadDispatcher dispatcher)
+            public void Execute(ref QuickList<BoundingBox> boxes, IThreadDispatcher dispatcher)
             {
                 CacheBlaster.Blast();
                 JobIndex = -1;
