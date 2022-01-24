@@ -18,10 +18,10 @@ namespace BepuUtilities
         struct Worker
         {
             public Thread Thread;
+            public AutoResetEvent Signal;
         }
 
         Worker[] workers;
-        ManualResetEventSlim resetEvent;
         AutoResetEvent finished;
 
         BufferPool[] bufferPools;
@@ -30,74 +30,62 @@ namespace BepuUtilities
         /// Creates a new thread dispatcher with the given number of threads.
         /// </summary>
         /// <param name="threadCount">Number of threads to dispatch on each invocation.</param>
-        public ThreadDispatcher(int threadCount)
+        /// <param name="threadPoolBlockAllocationSize">Size of memory blocks to allocate for thread pools.</param>
+        public ThreadDispatcher(int threadCount, int threadPoolBlockAllocationSize = 16384)
         {
             this.threadCount = threadCount;
-            resetEvent = new ManualResetEventSlim(false);
             workers = new Worker[threadCount - 1];
             for (int i = 0; i < workers.Length; ++i)
             {
-                workers[i] = new Worker { Thread = new Thread(WorkerLoop) };
+                workers[i] = new Worker { Thread = new Thread(WorkerLoop), Signal = new AutoResetEvent(false) };
                 workers[i].Thread.IsBackground = true;
-                workers[i].Thread.Start(i + 1);
+                workers[i].Thread.Start((workers[i].Signal, i + 1));
             }
             finished = new AutoResetEvent(false);
             bufferPools = new BufferPool[threadCount];
             for (int i = 0; i < bufferPools.Length; ++i)
             {
-                bufferPools[i] = new BufferPool();
+                bufferPools[i] = new BufferPool(threadPoolBlockAllocationSize);
             }
         }
 
         void DispatchThread(int workerIndex)
         {
-            while (true)
+            Debug.Assert(workerBody != null);
+            workerBody(workerIndex);
+
+            if (Interlocked.Decrement(ref remainingWorkerCounter) == -1)
             {
-                var localJobIndex = Interlocked.Increment(ref jobIndex);
-                if (localJobIndex < jobCount)
-                {
-                    if (localJobIndex == jobCount - 1)
-                    {
-                        //No further jobs are available, so workers should start waiting again.
-                        resetEvent.Reset();
-                    }
-                    Debug.Assert(workerBody != null);
-                    workerBody(localJobIndex);
-                    if (Interlocked.Decrement(ref remainingJobCounter) == 0)
-                    {
-                        finished.Set();
-                    }
-                }
-                else
-                {
-                    return;
-                }
+                finished.Set();
             }
         }
 
         volatile Action<int> workerBody;
-        int jobIndex;
-        int remainingJobCounter;
-        int jobCount;
+        int remainingWorkerCounter;
 
         void WorkerLoop(object untypedSignal)
         {
-            var workerIndex = (int)untypedSignal;
+            var (signal, workerIndex) = ((AutoResetEvent, int))untypedSignal;
             while (true)
             {
-                resetEvent.Wait();
+                signal.WaitOne();
                 if (disposed)
                     return;
                 DispatchThread(workerIndex);
             }
         }
 
-        void SignalThreads(int jobCount)
+        void SignalThreads(int maximumWorkerCount)
         {
-            this.jobCount = jobCount;
-            jobIndex = -1;
-            remainingJobCounter = jobCount;
-            resetEvent.Set();
+            //Worker 0 is not signalled; it's the executing thread.
+            //So if we want 4 total executing threads, we should signal 3 workers.
+            int maximumWorkersToSignal = maximumWorkerCount - 1;
+            var workersToSignal = maximumWorkersToSignal < workers.Length ? maximumWorkersToSignal : workers.Length;
+            remainingWorkerCounter = workersToSignal;
+            for (int i = 0; i < workersToSignal; ++i)
+            {
+                workers[i].Signal.Set();
+            }
         }
 
         public void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue)
@@ -106,7 +94,7 @@ namespace BepuUtilities
             {
                 Debug.Assert(this.workerBody == null);
                 this.workerBody = workerBody;
-                SignalThreads(Math.Min(threadCount, maximumWorkerCount));
+                SignalThreads(maximumWorkerCount);
                 //Calling thread does work. No reason to spin up another worker and block this one!
                 DispatchThread(0);
                 finished.WaitOne();
@@ -136,6 +124,7 @@ namespace BepuUtilities
                 foreach (var worker in workers)
                 {
                     worker.Thread.Join();
+                    worker.Signal.Dispose();
                 }
             }
         }

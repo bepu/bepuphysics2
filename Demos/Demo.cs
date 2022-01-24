@@ -26,7 +26,7 @@ namespace Demos
         /// <summary>
         /// Gets the thread dispatcher available for use by the simulation.
         /// </summary>
-        public ThreadDispatcher7 ThreadDispatcher { get; private set; }
+        public ThreadDispatcher ThreadDispatcher { get; private set; }
 
         protected Demo()
         {
@@ -44,7 +44,7 @@ namespace Demos
 
             //It may be worth using something like hwloc or CPUID to extract extra information to reason about.
             var targetThreadCount = Math.Max(1, Environment.ProcessorCount > 4 ? Environment.ProcessorCount - 2 : Environment.ProcessorCount - 1);
-            ThreadDispatcher = new ThreadDispatcher7(targetThreadCount);
+            ThreadDispatcher = new ThreadDispatcher(targetThreadCount);
         }
 
         public virtual void LoadGraphicalContent(ContentArchive content, RenderSurface surface)
