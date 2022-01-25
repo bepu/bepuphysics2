@@ -170,7 +170,7 @@ namespace BepuPhysics.Trees
             var refineAggressiveness = Math.Max(0, costChange * refineAggressivenessScale);
             float refinePortion = Math.Min(1, refineAggressiveness * 0.25f);
 
-            var targetRefinementScale = Math.Min(nodeCount, Math.Max(2, (float)Math.Ceiling(refinementCandidatesCount * 0.03f)) + refinementCandidatesCount * refinePortion);
+            var targetRefinementScale = Math.Min(nodeCount, Math.Max(2, (float)Math.Ceiling(refinementCandidatesCount * refineAggressivenessScale * 0.03f)) + refinementCandidatesCount * refinePortion);
             //Note that the refinementCandidatesCount is used as a maximum instead of refinementCandidates + 1 for simplicity, since there's a chance
             //that the root would already be a refinementCandidate. Doesn't really have a significant effect either way.
             refinementPeriod = Math.Max(1, (int)(refinementCandidatesCount / targetRefinementScale));

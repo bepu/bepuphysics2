@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Numerics;
 using BepuPhysics.Trees;
+using System.Threading;
+using BepuUtilities.Collections;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -137,29 +139,84 @@ namespace BepuPhysics.CollisionDetection
         }
 
         int frameIndex;
+        int remainingJobCount;
+        IThreadDispatcher threadDispatcher;
+        void ExecuteRefitAndMark(int workerIndex)
+        {
+            var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
+            while (true)
+            {
+                var jobIndex = Interlocked.Decrement(ref remainingJobCount);
+                if (jobIndex < 0)
+                    break;
+                if (jobIndex < activeRefineContext.RefitNodes.Count)
+                {
+                    activeRefineContext.ExecuteRefitAndMarkJob(threadPool, workerIndex, jobIndex);
+                }
+                else
+                {
+                    jobIndex -= activeRefineContext.RefitNodes.Count;
+                    Debug.Assert(jobIndex >= 0 && jobIndex < staticRefineContext.RefitNodes.Count);
+                    staticRefineContext.ExecuteRefitAndMarkJob(threadPool, workerIndex, jobIndex);
+                }
+            }
+        }
+
+        void ExecuteRefine(int workerIndex)
+        {
+            var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
+            var maximumSubtrees = Math.Max(activeRefineContext.MaximumSubtrees, staticRefineContext.MaximumSubtrees);
+            var subtreeReferences = new QuickList<int>(maximumSubtrees, threadPool);
+            var treeletInternalNodes = new QuickList<int>(maximumSubtrees, threadPool);
+            Tree.CreateBinnedResources(threadPool, maximumSubtrees, out var buffer, out var resources);
+            while (true)
+            {
+                var jobIndex = Interlocked.Decrement(ref remainingJobCount);
+                if (jobIndex < 0)
+                    break;
+                if (jobIndex < activeRefineContext.RefinementTargets.Count)
+                {
+                    activeRefineContext.ExecuteRefineJob(ref subtreeReferences, ref treeletInternalNodes, ref resources, threadPool, jobIndex);
+                }
+                else
+                {
+                    jobIndex -= activeRefineContext.RefinementTargets.Count;
+                    Debug.Assert(jobIndex >= 0 && jobIndex < staticRefineContext.RefinementTargets.Count);
+                    staticRefineContext.ExecuteRefineJob(ref subtreeReferences, ref treeletInternalNodes, ref resources, threadPool, jobIndex);
+                }
+            }
+            subtreeReferences.Dispose(threadPool);
+            treeletInternalNodes.Dispose(threadPool);
+            threadPool.Return(ref buffer);
+        }
+
         public void Update(IThreadDispatcher threadDispatcher = null)
         {
             if (frameIndex == int.MaxValue)
                 frameIndex = 0;
             if (threadDispatcher != null)
             {
-                activeRefineContext.RefitAndRefine(ref ActiveTree, Pool, threadDispatcher, frameIndex);
+                this.threadDispatcher = threadDispatcher;
+                activeRefineContext.CreateRefitAndMarkJobs(ref ActiveTree, Pool, threadDispatcher);
+                staticRefineContext.CreateRefitAndMarkJobs(ref StaticTree, Pool, threadDispatcher);
+                remainingJobCount = activeRefineContext.RefitNodes.Count + staticRefineContext.RefitNodes.Count;
+                threadDispatcher.DispatchWorkers(ExecuteRefitAndMark, remainingJobCount);
+                activeRefineContext.CreateRefinementJobs(Pool, threadDispatcher, frameIndex, 1f);
+                //TODO: for now, the inactive/static tree is simply updated like another active tree. This is enormously inefficient compared to the ideal-
+                //by nature, static and inactive objects do not move every frame!
+                //However, the refinement system rarely generates enough work to fill modern beefy machine. Even a million objects might only be 16 refinement jobs.
+                //To really get the benefit of incremental updates, the tree needs to be reworked to output finer grained work.
+                //Since the jobs are large, reducing the refinement aggressiveness doesn't change much here.
+                staticRefineContext.CreateRefinementJobs(Pool, threadDispatcher, frameIndex, 1f);
+                remainingJobCount = activeRefineContext.RefinementTargets.Count + staticRefineContext.RefinementTargets.Count;
+                threadDispatcher.DispatchWorkers(ExecuteRefine, remainingJobCount);
+                activeRefineContext.CleanUpForRefitAndRefine(Pool);
+                staticRefineContext.CleanUpForRefitAndRefine(Pool);
+                this.threadDispatcher = null;
             }
             else
             {
                 ActiveTree.RefitAndRefine(Pool, frameIndex);
-            }
-
-            //TODO: for now, the inactive/static tree is simply updated like another active tree. This is enormously inefficient compared to the ideal-
-            //by nature, static and inactive objects do not move every frame!
-            //This should be replaced by a dedicated inactive/static refinement approach. It should also run alongside the active tree to extract more parallelism;
-            //in other words, generate jobs from both trees and dispatch over all of them together. No internal dispatch.
-            if (threadDispatcher != null)
-            {
-                staticRefineContext.RefitAndRefine(ref StaticTree, Pool, threadDispatcher, frameIndex);
-            }
-            else
-            {
                 StaticTree.RefitAndRefine(Pool, frameIndex);
             }
             ++frameIndex;

@@ -20,7 +20,7 @@ namespace BepuPhysics.Trees
             Tree Tree;
 
             int RefitNodeIndex;
-            QuickList<int> RefitNodes;
+            public QuickList<int> RefitNodes;
             float RefitCostChange;
 
             int RefinementLeafCountThreshold;
@@ -28,20 +28,20 @@ namespace BepuPhysics.Trees
             Action<int> RefitAndMarkAction;
 
             int RefineIndex;
-            QuickList<int> RefinementTargets;
-            int MaximumSubtrees;
+            public QuickList<int> RefinementTargets;
+            public int MaximumSubtrees;
             Action<int> RefineAction;
 
             IThreadDispatcher threadDispatcher;
 
             public RefitAndRefineMultithreadedContext()
             {
-                RefitAndMarkAction = RefitAndMark;
-                RefineAction = Refine;
+                RefitAndMarkAction = RefitAndMarkForWorker;
+                RefineAction = RefineForWorker;
             }
 
-            public unsafe void RefitAndRefine(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher, int frameIndex,
-                float refineAggressivenessScale = 1)
+
+            public unsafe void CreateRefitAndMarkJobs(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher)
             {
                 if (tree.leafCount <= 2)
                 {
@@ -71,7 +71,17 @@ namespace BepuPhysics.Trees
                     pool, threadDispatcher.GetThreadMemoryPool(0));
 
                 RefitNodeIndex = -1;
-                threadDispatcher.DispatchWorkers(RefitAndMarkAction, RefitNodes.Count);
+            }
+
+            public unsafe void CreateRefinementJobs(BufferPool pool, IThreadDispatcher threadDispatcher, int frameIndex, float refineAggressivenessScale = 1)
+            {
+                if (Tree.leafCount <= 2)
+                {
+                    //If there are 2 or less leaves, then refit/refine doesn't do anything at all.
+                    //(The root node has no parent, so it does not have a bounding box, and the SAH won't change no matter how we swap the children of the root.)
+                    //Avoiding this case also gives the other codepath a guarantee that it will be working with nodes with two children.
+                    return;
+                }
                 //Condense the set of candidates into a set of targets.
                 int refinementCandidatesCount = 0;
                 for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
@@ -112,8 +122,17 @@ namespace BepuPhysics.Trees
                     Tree.Metanodes[0].RefineFlag = 1;
                 }
                 RefineIndex = -1;
+            }
 
-                threadDispatcher.DispatchWorkers(RefineAction, RefinementTargets.Count);
+            public unsafe void CleanUpForRefitAndRefine(BufferPool pool)
+            {
+                if (Tree.leafCount <= 2)
+                {
+                    //If there are 2 or less leaves, then refit/refine doesn't do anything at all.
+                    //(The root node has no parent, so it does not have a bounding box, and the SAH won't change no matter how we swap the children of the root.)
+                    //Avoiding this case also gives the other codepath a guarantee that it will be working with nodes with two children.
+                    return;
+                }
                 //Note that we defer the refine flag clear until after the refinements complete. If we did it within the refine action itself, 
                 //it would introduce nondeterminism by allowing refines to progress based on their order of completion.
                 for (int i = 0; i < RefinementTargets.Count; ++i)
@@ -131,6 +150,16 @@ namespace BepuPhysics.Trees
                 RefinementTargets.Dispose(pool);
                 Tree = default;
                 this.threadDispatcher = null;
+            }
+
+            public unsafe void RefitAndRefine(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher, int frameIndex,
+                float refineAggressivenessScale = 1)
+            {
+                CreateRefitAndMarkJobs(ref tree, pool, threadDispatcher);
+                threadDispatcher.DispatchWorkers(RefitAndMarkAction, RefitNodes.Count);
+                CreateRefinementJobs(pool, threadDispatcher, frameIndex, refineAggressivenessScale);
+                threadDispatcher.DispatchWorkers(RefineAction, RefinementTargets.Count);
+                CleanUpForRefitAndRefine(pool);
             }
 
             unsafe void CollectNodesForMultithreadedRefit(int nodeIndex,
@@ -172,8 +201,119 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            unsafe void RefitAndMark(int workerIndex)
+            public unsafe void ExecuteRefitAndMarkJob(BufferPool threadPool, int workerIndex, int refitIndex)
             {
+                var nodeIndex = RefitNodes[refitIndex];
+                bool shouldUseMark;
+                if (nodeIndex < 0)
+                {
+                    //Node was already marked as a wavefront. Should proceed with a RefitAndMeasure instead of RefitAndMark.
+                    nodeIndex = Encode(nodeIndex);
+                    shouldUseMark = false;
+                }
+                else
+                {
+                    shouldUseMark = true;
+                }
+
+                ref var node = ref Tree.Nodes[nodeIndex];
+                ref var metanode = ref Tree.Metanodes[nodeIndex];
+                Debug.Assert(metanode.Parent >= 0, "The root should not be marked for refit.");
+                ref var parent = ref Tree.Nodes[metanode.Parent];
+                ref var childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
+                if (shouldUseMark)
+                {
+                    var costChange = Tree.RefitAndMark(ref childInParent, RefinementLeafCountThreshold, ref RefinementCandidates[workerIndex], threadPool);
+                    metanode.LocalCostChange = costChange;
+                }
+                else
+                {
+                    var costChange = Tree.RefitAndMeasure(ref childInParent);
+                    metanode.LocalCostChange = costChange;
+                }
+
+
+                //int foundLeafCount;
+                //Tree.Validate(RefitNodes.Elements[refitNodeIndex], node->Parent, node->IndexInParent, ref *boundingBoxInParent, out foundLeafCount);
+
+
+                //Walk up the tree.
+                node = ref parent;
+                metanode = ref Tree.Metanodes[metanode.Parent];
+                while (true)
+                {
+
+                    if (Interlocked.Decrement(ref metanode.RefineFlag) == 0)
+                    {
+                        //Compute the child contributions to this node's volume change.
+                        ref var children = ref node.A;
+                        metanode.LocalCostChange = 0;
+                        for (int i = 0; i < 2; ++i)
+                        {
+                            ref var child = ref Unsafe.Add(ref children, i);
+                            if (child.Index >= 0)
+                            {
+                                ref var childMetadata = ref Tree.Metanodes[child.Index];
+                                metanode.LocalCostChange += childMetadata.LocalCostChange;
+                                //Clear the refine flag (unioned).
+                                childMetadata.RefineFlag = 0;
+
+                            }
+                        }
+
+                        //This thread is the last thread to visit this node, so it must handle this node.
+                        //Merge all the child bounding boxes into one. 
+                        if (metanode.Parent < 0)
+                        {
+                            //Root node.
+                            //Don't bother including the root's change in volume.
+                            //Refinement can't change the root's bounds, so the fact that the world got bigger or smaller
+                            //doesn't really have any bearing on how much refinement should be done.
+                            //We do, however, need to divide by root volume so that we get the change in cost metric rather than volume.
+                            var merged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
+                            for (int i = 0; i < 2; ++i)
+                            {
+                                ref var child = ref Unsafe.Add(ref children, i);
+                                BoundingBox.CreateMerged(child.Min, child.Max, merged.Min, merged.Max, out merged.Min, out merged.Max);
+                            }
+                            var postmetric = ComputeBoundsMetric(ref merged);
+                            if (postmetric > 1e-9f)
+                                RefitCostChange = metanode.LocalCostChange / postmetric;
+                            else
+                                RefitCostChange = 0;
+                            //Clear the root's refine flag (unioned).
+                            metanode.RefineFlag = 0;
+                            break;
+                        }
+                        else
+                        {
+                            parent = ref Tree.Nodes[metanode.Parent];
+                            childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
+                            var premetric = ComputeBoundsMetric(ref childInParent.Min, ref childInParent.Max);
+                            childInParent.Min = new Vector3(float.MaxValue);
+                            childInParent.Max = new Vector3(float.MinValue);
+                            for (int i = 0; i < 2; ++i)
+                            {
+                                ref var child = ref Unsafe.Add(ref children, i);
+                                BoundingBox.CreateMerged(child.Min, child.Max, childInParent.Min, childInParent.Max, out childInParent.Min, out childInParent.Max);
+                            }
+                            var postmetric = ComputeBoundsMetric(ref childInParent.Min, ref childInParent.Max);
+                            metanode.LocalCostChange += postmetric - premetric;
+                            node = ref parent;
+                            metanode = ref Tree.Metanodes[metanode.Parent];
+                        }
+                    }
+                    else
+                    {
+                        //This thread wasn't the last to visit this node, so it should die. Some other thread will handle it later.
+                        break;
+                    }
+                }
+            }
+            public unsafe void RefitAndMarkForWorker(int workerIndex)
+            {
+                if (RefitNodes.Count == 0)
+                    return;
                 //Since resizes may occur, we have to use the thread's buffer pool.
                 //The main thread already created the refinement candidate list using the worker's pool.
                 var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
@@ -181,121 +321,23 @@ namespace BepuPhysics.Trees
                 Debug.Assert(Tree.leafCount > 2);
                 while ((refitIndex = Interlocked.Increment(ref RefitNodeIndex)) < RefitNodes.Count)
                 {
-
-                    var nodeIndex = RefitNodes[refitIndex];
-                    bool shouldUseMark;
-                    if (nodeIndex < 0)
-                    {
-                        //Node was already marked as a wavefront. Should proceed with a RefitAndMeasure instead of RefitAndMark.
-                        nodeIndex = Encode(nodeIndex);
-                        shouldUseMark = false;
-                    }
-                    else
-                    {
-                        shouldUseMark = true;
-                    }
-
-                    ref var node = ref Tree.Nodes[nodeIndex];
-                    ref var metanode = ref Tree.Metanodes[nodeIndex];
-                    Debug.Assert(metanode.Parent >= 0, "The root should not be marked for refit.");
-                    ref var parent = ref Tree.Nodes[metanode.Parent];
-                    ref var childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
-                    if (shouldUseMark)
-                    {
-                        var costChange = Tree.RefitAndMark(ref childInParent, RefinementLeafCountThreshold, ref RefinementCandidates[workerIndex], threadPool);
-                        metanode.LocalCostChange = costChange;
-                    }
-                    else
-                    {
-                        var costChange = Tree.RefitAndMeasure(ref childInParent);
-                        metanode.LocalCostChange = costChange;
-                    }
-
-
-                    //int foundLeafCount;
-                    //Tree.Validate(RefitNodes.Elements[refitNodeIndex], node->Parent, node->IndexInParent, ref *boundingBoxInParent, out foundLeafCount);
-
-
-                    //Walk up the tree.
-                    node = ref parent;
-                    metanode = ref Tree.Metanodes[metanode.Parent];
-                    while (true)
-                    {
-
-                        if (Interlocked.Decrement(ref metanode.RefineFlag) == 0)
-                        {
-                            //Compute the child contributions to this node's volume change.
-                            ref var children = ref node.A;
-                            metanode.LocalCostChange = 0;
-                            for (int i = 0; i < 2; ++i)
-                            {
-                                ref var child = ref Unsafe.Add(ref children, i);
-                                if (child.Index >= 0)
-                                {
-                                    ref var childMetadata = ref Tree.Metanodes[child.Index];
-                                    metanode.LocalCostChange += childMetadata.LocalCostChange;
-                                    //Clear the refine flag (unioned).
-                                    childMetadata.RefineFlag = 0;
-
-                                }
-                            }
-
-                            //This thread is the last thread to visit this node, so it must handle this node.
-                            //Merge all the child bounding boxes into one. 
-                            if (metanode.Parent < 0)
-                            {
-                                //Root node.
-                                //Don't bother including the root's change in volume.
-                                //Refinement can't change the root's bounds, so the fact that the world got bigger or smaller
-                                //doesn't really have any bearing on how much refinement should be done.
-                                //We do, however, need to divide by root volume so that we get the change in cost metric rather than volume.
-                                var merged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
-                                for (int i = 0; i < 2; ++i)
-                                {
-                                    ref var child = ref Unsafe.Add(ref children, i);
-                                    BoundingBox.CreateMerged(child.Min, child.Max, merged.Min, merged.Max, out merged.Min, out merged.Max);
-                                }
-                                var postmetric = ComputeBoundsMetric(ref merged);
-                                if (postmetric > 1e-9f)
-                                    RefitCostChange = metanode.LocalCostChange / postmetric;
-                                else
-                                    RefitCostChange = 0;
-                                //Clear the root's refine flag (unioned).
-                                metanode.RefineFlag = 0;
-                                break;
-                            }
-                            else
-                            {
-                                parent = ref Tree.Nodes[metanode.Parent];
-                                childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
-                                var premetric = ComputeBoundsMetric(ref childInParent.Min, ref childInParent.Max);
-                                childInParent.Min = new Vector3(float.MaxValue);
-                                childInParent.Max = new Vector3(float.MinValue);
-                                for (int i = 0; i < 2; ++i)
-                                {
-                                    ref var child = ref Unsafe.Add(ref children, i);
-                                    BoundingBox.CreateMerged(child.Min, child.Max, childInParent.Min, childInParent.Max, out childInParent.Min, out childInParent.Max);
-                                }
-                                var postmetric = ComputeBoundsMetric(ref childInParent.Min, ref childInParent.Max);
-                                metanode.LocalCostChange += postmetric - premetric;
-                                node = ref parent;
-                                metanode = ref Tree.Metanodes[metanode.Parent];
-                            }
-                        }
-                        else
-                        {
-                            //This thread wasn't the last to visit this node, so it should die. Some other thread will handle it later.
-                            break;
-                        }
-                    }
-
+                    ExecuteRefitAndMarkJob(threadPool, workerIndex, refitIndex);
                 }
 
 
             }
 
-            unsafe void Refine(int workerIndex)
+            public unsafe void ExecuteRefineJob(ref QuickList<int> subtreeReferences, ref QuickList<int> treeletInternalNodes, ref BinnedResources resources, BufferPool threadPool, int refineIndex)
             {
+                Tree.BinnedRefine(RefinementTargets[refineIndex], ref subtreeReferences, MaximumSubtrees, ref treeletInternalNodes, ref resources, threadPool);
+                subtreeReferences.Count = 0;
+                treeletInternalNodes.Count = 0;
+            }
+
+            public unsafe void RefineForWorker(int workerIndex)
+            {
+                if (RefinementTargets.Count == 0)
+                    return;
                 var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
                 var subtreeCountEstimate = (int)BitOperations.RoundUpToPowerOf2((uint)MaximumSubtrees);
                 var subtreeReferences = new QuickList<int>(subtreeCountEstimate, threadPool);
@@ -306,9 +348,7 @@ namespace BepuPhysics.Trees
                 int refineIndex;
                 while ((refineIndex = Interlocked.Increment(ref RefineIndex)) < RefinementTargets.Count)
                 {
-                    Tree.BinnedRefine(RefinementTargets[refineIndex], ref subtreeReferences, MaximumSubtrees, ref treeletInternalNodes, ref resources, threadPool);
-                    subtreeReferences.Count = 0;
-                    treeletInternalNodes.Count = 0;
+                    ExecuteRefineJob(ref subtreeReferences, ref treeletInternalNodes, ref resources, threadPool, refineIndex);
                 }
 
                 subtreeReferences.Dispose(threadPool);
