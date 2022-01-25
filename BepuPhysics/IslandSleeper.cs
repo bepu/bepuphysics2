@@ -954,6 +954,10 @@ namespace BepuPhysics
             }
             ++scheduleOffset;
 
+            //If the simulation is too small to generate parallel work, don't bother using threading. (Passing a null thread dispatcher forces a single threaded codepath.)
+            if (bodies.ActiveSet.Count < 2 / TestedFractionPerFrame)
+                threadDispatcher = null;
+
             Sleep(ref traversalStartBodyIndices, threadDispatcher, deterministic, (int)Math.Ceiling(bodies.ActiveSet.Count * TargetSleptFraction), (int)Math.Ceiling(bodies.ActiveSet.Count * TargetTraversedFraction), false);
 
             traversalStartBodyIndices.Dispose(pool);
