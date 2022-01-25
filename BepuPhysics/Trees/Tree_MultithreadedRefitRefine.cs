@@ -48,6 +48,7 @@ namespace BepuPhysics.Trees
                     //If there are 2 or less leaves, then refit/refine doesn't do anything at all.
                     //(The root node has no parent, so it does not have a bounding box, and the SAH won't change no matter how we swap the children of the root.)
                     //Avoiding this case also gives the other codepath a guarantee that it will be working with nodes with two children.
+                    RefitNodes = default;
                     return;
                 }
                 this.threadDispatcher = threadDispatcher;
@@ -80,6 +81,7 @@ namespace BepuPhysics.Trees
                     //If there are 2 or less leaves, then refit/refine doesn't do anything at all.
                     //(The root node has no parent, so it does not have a bounding box, and the SAH won't change no matter how we swap the children of the root.)
                     //Avoiding this case also gives the other codepath a guarantee that it will be working with nodes with two children.
+                    RefinementTargets = default;
                     return;
                 }
                 //Condense the set of candidates into a set of targets.
