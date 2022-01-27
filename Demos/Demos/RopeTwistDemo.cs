@@ -24,14 +24,20 @@ namespace Demos.Demos
         unsafe struct RopeNarrowPhaseCallbacks : INarrowPhaseCallbacks
         {
             public CollidableProperty<Filter> Filters;
-            public SpringSettings ContactSpringiness;
+            PairMaterialProperties Material;
+
+            public RopeNarrowPhaseCallbacks(CollidableProperty<Filter> filters, PairMaterialProperties contactMaterial)
+            {
+                Filters = filters;
+                Material = contactMaterial;
+            }
+            public RopeNarrowPhaseCallbacks(CollidableProperty<Filter> filters) : this(filters, new PairMaterialProperties(1, 2, new SpringSettings(30, 1)))
+            {
+            }
 
             public void Initialize(Simulation simulation)
             {
                 Filters.Initialize(simulation);
-                //Use a default if the springiness value wasn't initialized.
-                if (ContactSpringiness.AngularFrequency == 0 && ContactSpringiness.TwiceDampingRatio == 0)
-                    ContactSpringiness = new SpringSettings(30, 1);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -51,9 +57,7 @@ namespace Demos.Demos
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
             {
-                pairMaterial.FrictionCoefficient = 0f;
-                pairMaterial.MaximumRecoveryVelocity = 200f;
-                pairMaterial.SpringSettings = ContactSpringiness;
+                pairMaterial = Material;
                 return true;
             }
 
@@ -76,7 +80,7 @@ namespace Demos.Demos
 
             var filters = new CollidableProperty<Filter>();
             Simulation = Simulation.Create(BufferPool,
-                new RopeNarrowPhaseCallbacks { ContactSpringiness = new SpringSettings(2000, 1), Filters = filters },
+                new RopeNarrowPhaseCallbacks(filters, new PairMaterialProperties(2, float.MaxValue, new SpringSettings(2000, 1))),
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 60));
 
             for (int twistIndex = 0; twistIndex < 1; ++twistIndex)

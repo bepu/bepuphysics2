@@ -7,6 +7,8 @@ using System;
 using DemoContentLoader;
 using Demos.Demos;
 using DemoUtilities;
+using BepuPhysics.CollisionDetection;
+using BepuPhysics.Constraints;
 
 namespace Demos.SpecializedTests
 {
@@ -21,7 +23,7 @@ namespace Demos.SpecializedTests
             camera.Yaw = MathHelper.Pi;
             camera.Pitch = 0;
             var filters = new CollidableProperty<SubgroupCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks(filters, new PairMaterialProperties(2, 2, new SpringSettings(30, 1))), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
 
             int ragdollIndex = 0;
             var spacing = new Vector3(1.7f, 1.8f, 0.5f);

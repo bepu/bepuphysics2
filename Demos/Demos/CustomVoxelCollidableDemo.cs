@@ -14,6 +14,7 @@ using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using BepuPhysics.CollisionDetection.SweepTasks;
+using BepuPhysics.Constraints;
 
 namespace Demos.Demos
 {
@@ -374,7 +375,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
             //The narrow phase must be notified about the existence of the new collidable type. For every pair type we want to support, a collision task must be registered.
             //All of the default engine types are registered upon simulation creation by a call to DefaultTypes.CreateDefaultCollisionTaskRegistry.

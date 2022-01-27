@@ -95,6 +95,20 @@ namespace Demos.Demos
     struct SubgroupFilteredCallbacks : INarrowPhaseCallbacks
     {
         public CollidableProperty<SubgroupCollisionFilter> CollisionFilters;
+        public PairMaterialProperties Material;
+
+        public SubgroupFilteredCallbacks(CollidableProperty<SubgroupCollisionFilter> filters)
+        {
+            CollisionFilters = filters;
+            Material = new PairMaterialProperties(1, 2, new SpringSettings(30, 1));
+        }
+        public SubgroupFilteredCallbacks(CollidableProperty<SubgroupCollisionFilter> filters, PairMaterialProperties material)
+        {
+            CollisionFilters = filters;
+            Material = material;
+        }
+
+
         public void Initialize(Simulation simulation)
         {
             CollisionFilters.Initialize(simulation);
@@ -120,9 +134,7 @@ namespace Demos.Demos
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            pairMaterial.FrictionCoefficient = 1;
-            pairMaterial.MaximumRecoveryVelocity = 2f;
-            pairMaterial.SpringSettings = new SpringSettings(30, 1);
+            pairMaterial = Material;
             return true;
         }
 
@@ -535,7 +547,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
             var collisionFilters = new CollidableProperty<SubgroupCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = collisionFilters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks(collisionFilters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
             int ragdollIndex = 0;
             var spacing = new Vector3(2f, 3, 1);

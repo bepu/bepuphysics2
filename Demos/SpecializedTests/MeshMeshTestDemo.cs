@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text;
 using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuPhysics.Constraints;
 using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer;
@@ -21,7 +22,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(0, 8, -10);
             camera.Yaw = MathHelper.Pi;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
             DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", Vector3.One, out var mesh);
             var approximateInertia = new Box(2.5f, 1, 4).ComputeInertia(1);

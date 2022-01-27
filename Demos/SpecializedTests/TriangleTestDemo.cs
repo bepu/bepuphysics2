@@ -10,6 +10,7 @@ using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using DemoContentLoader;
+using BepuPhysics.Constraints;
 
 namespace Demos.SpecializedTests
 {
@@ -90,9 +91,7 @@ namespace Demos.SpecializedTests
                 camera.Yaw = MathF.PI;
                 camera.Pitch = 0;
 
-                Simulation = Simulation.Create(BufferPool,
-                    new DemoNarrowPhaseCallbacks() { ContactSpringiness = new BepuPhysics.Constraints.SpringSettings(30, 1), FrictionCoefficient = 1, MaximumRecoveryVelocity = 5 },
-                    new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+                Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1), 5, 1), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
 
                 //var triangleDescription = new StaticDescription
                 //{
