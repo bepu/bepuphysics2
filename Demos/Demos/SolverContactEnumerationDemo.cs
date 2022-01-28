@@ -27,7 +27,7 @@ namespace Demos.Demos
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             //Drop a pyramid on top of the sensor so there are more contacts to look at.
             var boxShape = new Box(1, 1, 1);
@@ -254,9 +254,15 @@ namespace Demos.Demos
                     renderer.Shapes.AddShape(contactVisualShape, Simulation.Shapes, contactVisualPose, contact.Depth < 0 ? new Vector3(0, 0, 1) : new Vector3(0, 1, 0));
                 }
             }
-            renderer.TextBatcher.Write(text.Clear().Append("Sensor manifold constraint count: ").Append(extractor.ConstraintContacts.Count).Append(", contact count: ").Append(sensorContactCount), new Vector2(32, 32), 20, Vector3.One, font);
 
             extractor.Dispose();
+
+            var resolution = renderer.Surface.Resolution;
+            renderer.TextBatcher.Write(text.Clear().Append("The solver stores data in an optimized array-of-structures-of-arrays format that makes it difficult to directly read."), new Vector2(16, resolution.Y - 96), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("This demo implements an ISolverContactDataExtractor that pulls data out of the solver and puts it into a simpler format."), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Pulling data this way can sometimes be more convenient than tracking contacts from INarrowPhaseCallbacks."), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Contacts associated with the large box are visualized. The size of a contact corresponds to the contact's force."), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);           
+            renderer.TextBatcher.Write(text.Clear().Append("Sensor manifold constraint count: ").Append(extractor.ConstraintContacts.Count).Append(", contact count: ").Append(sensorContactCount), new Vector2(16, resolution.Y - 20), 20, Vector3.One, font);
             base.Render(renderer, camera, input, text, font);
         }
     }
