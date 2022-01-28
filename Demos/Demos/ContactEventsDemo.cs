@@ -702,7 +702,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi;
 
             events = new ContactEvents(ThreadDispatcher, BufferPool);
-            Simulation = Simulation.Create(BufferPool, new ContactEventCallbacks(events), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new ContactEventCallbacks(events), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
             eventHandler = new EventHandler(Simulation, BufferPool);
 
             var listenedBody1 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 5, 0), 1, Simulation.Shapes, new Box(1, 2, 3)));
@@ -755,6 +755,14 @@ namespace Demos.Demos
                 var pose = new RigidPose(particle.Position);
                 renderer.Shapes.AddShape(new Sphere(radius), Simulation.Shapes, pose, new Vector3(0, 1, 0));
             }
+
+            var resolution = renderer.Surface.Resolution;
+            renderer.TextBatcher.Write(text.Clear().Append("The library does not have a built-in concept of contact events like 'contact added' and 'contact removed'."), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("The INarrowPhaseCallbacks interface exposes callbacks that can be used to create such events, though."), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("This demo shows how such events could be implemented. Green particles are spawned on contact add."), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("The full list of events supported in the demo's source:"), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("OnContactAdded, OnContactRemoved, OnStartedTouching, OnTouching, OnStoppedTouching, OnPairCreated, OnPairUpdated, and OnPairEnded."), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
+
             base.Render(renderer, camera, input, text, font);
         }
     }
