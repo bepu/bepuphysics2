@@ -46,31 +46,30 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<PlumpDancerDemo>();
-            AddOption<DancerDemo>();
             AddOption<CarDemo>();
+            AddOption<TankDemo>();
+            AddOption<CharacterDemo>();
+            AddOption<PyramidDemo>();
+            AddOption<ColosseumDemo>();
             AddOption<RagdollTubeDemo>();
             AddOption<NewtDemo>();
-            AddOption<CharacterDemo>();
-            AddOption<TankDemo>();
-            AddOption<ColosseumDemo>();
-            AddOption<PyramidDemo>();
-            AddOption<RagdollDemo>();
-            AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<ClothDemo>();
+            AddOption<DancerDemo>();
+            AddOption<PlumpDancerDemo>();
+            AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<PlanetDemo>();
             AddOption<CompoundTestDemo>();
-            AddOption<BlockChainDemo>();
-            AddOption<RayCastingDemo>();
-            AddOption<SweepDemo>();
-            AddOption<RopeTwistDemo>();
             AddOption<RopeStabilityDemo>();
             AddOption<SubsteppingDemo>();
+            AddOption<RopeTwistDemo>();
+            AddOption<BouncinessDemo>();
+            AddOption<RayCastingDemo>();
+            AddOption<SweepDemo>();
             AddOption<ContactEventsDemo>();
             AddOption<CollisionQueryDemo>();
             AddOption<SolverContactEnumerationDemo>();
             AddOption<CustomVoxelCollidableDemo>();
-            AddOption<BouncinessDemo>();
+            AddOption<BlockChainDemo>();
             AddOption<SponsorDemo>();
         }
 

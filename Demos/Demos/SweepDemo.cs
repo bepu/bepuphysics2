@@ -387,8 +387,14 @@ namespace Demos.Demos
                     DrawImpact(renderer, ref hitHandler.HitLocation, ref hitHandler.HitNormal);
                 }
             }
-        }
 
+            var bottomY = renderer.Surface.Resolution.Y;
+            renderer.TextBatcher.Write(text.Clear().Append("The library supports sweeps that include both linear and angular motion."), new Vector2(16, bottomY - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("In the foreground, sweeps are tested against the simulation."), new Vector2(16, bottomY - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("In the background, sweeps with linear and angular components between every pair of shape types are visualized."), new Vector2(16, bottomY - 16), 16, Vector3.One, font);
+
+            base.Render(renderer, camera, input, text, font);
+        }
 
 
     }

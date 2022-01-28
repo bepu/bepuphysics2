@@ -547,7 +547,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
             var collisionFilters = new CollidableProperty<SubgroupCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks(collisionFilters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks(collisionFilters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             int ragdollIndex = 0;
             var spacing = new Vector3(2f, 3, 1);

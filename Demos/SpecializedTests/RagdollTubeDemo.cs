@@ -9,6 +9,7 @@ using Demos.Demos;
 using DemoUtilities;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using DemoRenderer.UI;
 
 namespace Demos.SpecializedTests
 {
@@ -23,7 +24,10 @@ namespace Demos.SpecializedTests
             camera.Yaw = MathHelper.Pi;
             camera.Pitch = 0;
             var filters = new CollidableProperty<SubgroupCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks(filters, new PairMaterialProperties(2, 2, new SpringSettings(30, 1))), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
+            //Note the lowered material stiffness compared to many of the other demos. Ragdolls aren't made of concrete.
+            //Increasing the maximum recovery velocity helps keep deeper contacts strong, stopping objects from interpenetrating.
+            //Higher friction helps the bodies clump and flop, rather than just sliding down the slope in the tube.
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks(filters, new PairMaterialProperties(2, float.MaxValue, new SpringSettings(10, 1))), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
 
             int ragdollIndex = 0;
             var spacing = new Vector3(1.7f, 1.8f, 0.5f);
@@ -41,6 +45,10 @@ namespace Demos.SpecializedTests
                     }
                 }
             }
+
+            ragdollCount = ragdollIndex;
+            ragdollBodyCount = Simulation.Bodies.ActiveSet.Count;
+            ragdollConstraintCount = Simulation.Solver.CountConstraints();
 
             var tubeCenter = new Vector3(0, 8, 0);
             const int panelCount = 20;
@@ -66,6 +74,27 @@ namespace Demos.SpecializedTests
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             var staticDescription = new StaticDescription(new Vector3(0, -0.5f, 0), staticShapeIndex);
             Simulation.Statics.Add(staticDescription);
+
+
+        }
+        int ragdollBodyCount;
+        int ragdollConstraintCount;
+        int ragdollCount;
+
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        {
+            var resolution = renderer.Surface.Resolution;
+            renderer.TextBatcher.Write(text.Clear().Append("Ragdoll count:"), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Ragdoll body count:"), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Ragdoll constraint count:"), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Collision constraint count:"), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
+            const float xOffset = 192;
+            renderer.TextBatcher.Write(text.Clear().Append(ragdollCount), new Vector2(xOffset, resolution.Y - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append(ragdollBodyCount), new Vector2(xOffset, resolution.Y - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append(ragdollConstraintCount), new Vector2(xOffset, resolution.Y - 32), 16, Vector3.One, font);
+            var collisionConstraintCount = Simulation.Solver.CountConstraints() - ragdollConstraintCount;
+            renderer.TextBatcher.Write(text.Clear().Append(collisionConstraintCount), new Vector2(xOffset, resolution.Y - 16), 16, Vector3.One, font);
+            base.Render(renderer, camera, input, text, font);
         }
     }
 }
