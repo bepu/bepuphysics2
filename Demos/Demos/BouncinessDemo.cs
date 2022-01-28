@@ -4,6 +4,8 @@ using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using DemoContentLoader;
 using DemoRenderer;
+using DemoRenderer.UI;
+using DemoUtilities;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -95,20 +97,31 @@ namespace Demos.Demos
                 {
                     //We'll drop balls in a grid. From left to right, we increase stiffness, and from back to front (relative to the camera), we'll increase damping.
                     //Note that higher frequency values tend to result in smaller bounces even at 0 damping. This is not physically realistic; it's a byproduct of the solver timestep being too long to properly handle extremely brief contacts.
-                    //(Try increasing the substep count above to higher values and watch how the bounce gets closer and closer to equal height across frequency values.)
-
-                    //We choose a relatively high MaximumRecoveryVeloctity of 1000 so that the spring can actually push things back into the air, but be careful about assigning it to float.MaxValue.
-                    //Substepping uses an approximate contact update rather than re-running the entirety of collision detection over and over.
-                    //It can accumulate error in contact penetration depths. If using many substeps with high stiffness/low damping collisions, these small depth errors can result in very large velocities.
-                    //If you need extremely high contact spring frequencies, you may need to run collision detection more often (that is, call Simulation.Timestep more often with fewer solver substeps to compensate),
-                    //but limiting the recovery velocity will at least stop it from exploding.
+                    //(Try increasing the substep count above to higher values and watch how the bounce gets closer and closer to equal height across frequency values.
                     ballDescription.Pose.Position = new Vector3(i * 3 - 99f * 3f / 2f, 100, j * 3 - 230);
-                    collidableMaterials.Allocate(Simulation.Bodies.Add(ballDescription)) = new SimpleMaterial { FrictionCoefficient = 1, MaximumRecoveryVelocity = 1000, SpringSettings = new SpringSettings(5 + 0.25f * i, j * j / 10000f) };
+                    collidableMaterials.Allocate(Simulation.Bodies.Add(ballDescription)) = new SimpleMaterial { FrictionCoefficient = 1, MaximumRecoveryVelocity = float.MaxValue, SpringSettings = new SpringSettings(5 + 0.25f * i, j * j / 10000f) };
                 }
             }
 
             collidableMaterials.Allocate(Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15f, 0), Simulation.Shapes.Add(new Box(2500, 30, 2500))))) =
                 new SimpleMaterial { FrictionCoefficient = 1, MaximumRecoveryVelocity = 2, SpringSettings = new SpringSettings(30, 1) };
+        }
+
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        {
+            var resolution = renderer.Surface.Resolution;
+            renderer.TextBatcher.Write(text.Clear().Append("The library does not use a coefficient of restitution."), new Vector2(16, resolution.Y - 192), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Traditional implementations of restitution don't work well with speculative contacts (which are used aggressively)."), new Vector2(16, resolution.Y - 176), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("All contact constraints, however, are springs."), new Vector2(16, resolution.Y - 160), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("By modifying contact material properties, bouncy behavior can be achieved."), new Vector2(16, resolution.Y - 144), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("From left to right, the spheres have increasing spring frequency. From far to near, they have increasing damping ratio."), new Vector2(16, resolution.Y - 128), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Bounciness is dominated by damping ratio; setting it to zero minimizes energy loss on impact."), new Vector2(16, resolution.Y - 112), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Counterintuitively, increasing spring frequency can make impacts less bouncy."), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("This happens because the integration rate becomes too slow to represent the motion and it gets damped away."), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Increasing the substepping rate or using more timesteps preserves bounciness with higher frequencies."), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Note that with infinite integration rate, increasing the spring frequency does not increase bounce magnitude."), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("High frequencies just make each bounce's contact duration shorter."), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
+            base.Render(renderer, camera, input, text, font);
         }
     }
 }
