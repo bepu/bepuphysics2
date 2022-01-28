@@ -4,6 +4,8 @@ using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using DemoContentLoader;
 using DemoRenderer;
+using DemoRenderer.UI;
+using DemoUtilities;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -24,7 +26,7 @@ namespace Demos.Demos
         unsafe struct RopeNarrowPhaseCallbacks : INarrowPhaseCallbacks
         {
             public CollidableProperty<Filter> Filters;
-            PairMaterialProperties Material;
+            public PairMaterialProperties Material;
 
             public RopeNarrowPhaseCallbacks(CollidableProperty<Filter> filters, PairMaterialProperties contactMaterial)
             {
@@ -80,7 +82,7 @@ namespace Demos.Demos
 
             var filters = new CollidableProperty<Filter>();
             Simulation = Simulation.Create(BufferPool,
-                new RopeNarrowPhaseCallbacks(filters, new PairMaterialProperties(2, float.MaxValue, new SpringSettings(2000, 1))),
+                new RopeNarrowPhaseCallbacks(filters, new PairMaterialProperties(0.0f, float.MaxValue, new SpringSettings(1200, 1))),
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 60));
 
             for (int twistIndex = 0; twistIndex < 1; ++twistIndex)
@@ -109,7 +111,7 @@ namespace Demos.Demos
                     var horizontalOffset = ropeDistributionRadius * new Vector3(MathF.Sin(angle), 0, MathF.Cos(angle));
                     var ropeStartLocation = startLocation + horizontalOffset;
 
-                    var springSettings = new SpringSettings(600, 1);
+                    var springSettings = new SpringSettings(600, 100);
                     var bodyHandles = RopeStabilityDemo.BuildRopeBodies(Simulation, ropeStartLocation, ropeBodyCount, ropeBodyRadius, ropeBodySpacing, 1f, 0);
                     for (int i = 0; i < bodyHandles.Length; ++i)
                     {
@@ -156,7 +158,19 @@ namespace Demos.Demos
 
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(new Box(200, 1, 200))));
+        }
 
+
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        {
+            var resolution = renderer.Surface.Resolution;
+            renderer.TextBatcher.Write(text.Clear().Append("The ball is 10,000 times heavier than the rope bodies and the ropes use no skip connections."), new Vector2(16, resolution.Y - 112), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("This is intended as a worst case scenario simulation:"), new Vector2(16, resolution.Y - 96), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("extremely high mass ratios, extremely high stiffness, extremely difficult to parallelize, no cheats."), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("While this wouldn't be a very practical simulation for a game, it does work thanks to substepping!"), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("This demo uses 60 substeps with 1 iteration each."), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Check the SubsteppingDemo, RopeStabilityDemo, and Substepping documentation for more information."), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
+            base.Render(renderer, camera, input, text, font);
         }
     }
 }
