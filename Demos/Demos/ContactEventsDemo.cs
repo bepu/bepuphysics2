@@ -758,8 +758,8 @@ namespace Demos.Demos
 
             var resolution = renderer.Surface.Resolution;
             renderer.TextBatcher.Write(text.Clear().Append("The library does not have a built-in concept of contact events like 'contact added' and 'contact removed'."), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("The INarrowPhaseCallbacks interface exposes callbacks that can be used to create such events, though."), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("This demo shows how such events could be implemented. Green particles are spawned on contact add."), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("The INarrowPhaseCallbacks interface exposes callbacks that can be used to create such events."), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("This demo shows how events could be implemented. Green particles are spawned on contact add."), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("The full list of events supported in the demo's source:"), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("OnContactAdded, OnContactRemoved, OnStartedTouching, OnTouching, OnStoppedTouching, OnPairCreated, OnPairUpdated, and OnPairEnded."), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
 

@@ -164,7 +164,7 @@ namespace Demos.Demos
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             var resolution = renderer.Surface.Resolution;
-            renderer.TextBatcher.Write(text.Clear().Append("The ball is 10,000 times heavier than the rope bodies and the ropes use no skip connections."), new Vector2(16, resolution.Y - 112), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("The ball is 10,000 times heavier than the rope bodies, and the ropes use no skip connections."), new Vector2(16, resolution.Y - 112), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("This is intended as a worst case scenario simulation:"), new Vector2(16, resolution.Y - 96), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("extremely high mass ratios, extremely high stiffness, extremely difficult to parallelize, no cheats."), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("While this wouldn't be a very practical simulation for a game, it does work thanks to substepping!"), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
