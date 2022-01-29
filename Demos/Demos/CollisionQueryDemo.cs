@@ -256,6 +256,13 @@ namespace Demos.Demos
 
             BufferPool.Return(ref queryWasTouched);
             queries.Dispose(BufferPool);
+
+            var bottomY = renderer.Surface.Resolution.Y;
+            renderer.TextBatcher.Write(text.Clear().Append("The broad phase exposes queries to collect bodies within bounding volumes, and the CollisionBatcher can be used to perform contact generation."), new Vector2(16, bottomY - 80), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("The boxes in the floating grid represent shape queries against the simulation. Broad phase collected candidates are handed to a CollisionBatcher for testing."), new Vector2(16, bottomY - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("If positive depth contacts are detected, the box turns green."), new Vector2(16, bottomY - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("(Note that triangle backfaces do not generate contacts, so queries intersecting just the mesh from below do not turn green.)"), new Vector2(16, bottomY - 16), 16, Vector3.One, font);
+            base.Render(renderer, camera, input, text, font);
         }
     }
 }
