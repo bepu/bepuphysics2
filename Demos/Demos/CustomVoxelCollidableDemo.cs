@@ -375,7 +375,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             //The narrow phase must be notified about the existence of the new collidable type. For every pair type we want to support, a collision task must be registered.
             //All of the default engine types are registered upon simulation creation by a call to DefaultTypes.CreateDefaultCollisionTaskRegistry.
@@ -454,6 +454,12 @@ namespace Demos.Demos
                 childPose.Position += voxelsPose.Position;
                 renderer.Shapes.AddShape(shapeDataPointer, Box.Id, Simulation.Shapes, childPose, new Vector3(0.8f, 0.2f, 0.2f));
             }
+
+            var bottomY = renderer.Surface.Resolution.Y;
+            renderer.TextBatcher.Write(text.Clear().Append("Custom collidable types can be created and registered with the library."), new Vector2(16, bottomY - 80), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("This demo implements a simple voxel grid collidable."), new Vector2(16, bottomY - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("For a real game with larger scale voxel worlds, you'd want to improve the voxel representation,"), new Vector2(16, bottomY - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("but the demo shows what functions need to be implemented and how to connect them to the library."), new Vector2(16, bottomY - 16), 16, Vector3.One, font);
             base.Render(renderer, camera, input, text, font);
         }
     }
