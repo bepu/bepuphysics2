@@ -209,7 +209,7 @@ namespace Demos.Demos
             camera.Pitch = 0;
 
             var filters = new CollidableProperty<ClothCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new ClothCallbacks(filters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new ClothCallbacks(filters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
             rolloverInfo = new RolloverInfo();
 
             bool KinematicTopCorners(int rowIndex, int columnIndex, int width, int height)

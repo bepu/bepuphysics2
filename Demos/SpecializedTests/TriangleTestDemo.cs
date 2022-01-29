@@ -91,7 +91,7 @@ namespace Demos.SpecializedTests
                 camera.Yaw = MathF.PI;
                 camera.Pitch = 0;
 
-                Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1), 5, 1), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+                Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1), 5, 1), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
                 //var triangleDescription = new StaticDescription
                 //{

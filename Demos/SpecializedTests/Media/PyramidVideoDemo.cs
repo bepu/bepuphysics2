@@ -23,7 +23,7 @@ namespace Demos.Demos
             camera.Position = new Vector3(-70, 8, 318);
             camera.Yaw = MathHelper.Pi * 1f / 4;
             camera.Pitch = 0;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             var boxShape = new Box(1, 1, 1);
             var boxInertia = boxShape.ComputeInertia(1);

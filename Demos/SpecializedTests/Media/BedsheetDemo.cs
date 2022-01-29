@@ -110,7 +110,7 @@ namespace Demos.Demos
             camera.Pitch = MathF.PI * 0.1f;
 
             var filters = new CollidableProperty<ClothCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new ClothCallbacks(filters), new DemoPoseIntegratorCallbacks(new Vector3(0, -50, 0)), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new ClothCallbacks(filters), new DemoPoseIntegratorCallbacks(new Vector3(0, -50, 0)), new SolveDescription(8, 1));
             rolloverInfo = new RolloverInfo();
 
             bool FullyDynamic(int rowIndex, int columnIndex, int width, int height)

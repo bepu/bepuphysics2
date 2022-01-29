@@ -8,6 +8,7 @@ using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
+using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using System.Diagnostics;
@@ -724,7 +725,7 @@ namespace Demos.Demos
             camera.Pitch = MathHelper.Pi * 0.15f;
 
             var filters = new CollidableProperty<DeformableCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks(filters, new PairMaterialProperties(1f, 2f, new SpringSettings(30, 1))), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks(filters, new PairMaterialProperties(1f, 2f, new SpringSettings(30, 1))), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(8, 1));
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
             float cellSize = 0.1f;
@@ -751,6 +752,15 @@ namespace Demos.Demos
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), Simulation.Shapes.Add(new Box(1500, 1, 1500))));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), Simulation.Shapes.Add(new Sphere(3))));
 
+        }
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        {
+            var resolution = renderer.Surface.Resolution;
+            renderer.TextBatcher.Write(text.Clear().Append("The library does not include any special cases for deformable simulation, but standard bodies and springy constraints work well."), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Here, welds and volume constraints are used to make squishy newts. The PlumpDancerDemo is similar, but doesn't have volume constraints."), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("The difference is subtle- for example, volume constraints make the newt squish outward more when the ball falls on it."), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Note that bodies inside the newts have no collision shapes; they're unnecessary and avoiding them reduces cost."), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
+            base.Render(renderer, camera, input, text, font);
         }
     }
 }

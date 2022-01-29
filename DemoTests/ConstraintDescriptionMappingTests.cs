@@ -25,7 +25,7 @@ namespace DemoTests
         }
         static void Test<T>(BufferPool pool, Random random, int constraintTypeBodyCount) where T : unmanaged, IConstraintDescription<T>
         {
-            var simulation = Simulation.Create(pool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(), new SolveDescription(1, 4));
+            var simulation = Simulation.Create(pool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(), new SolveDescription(8, 1));
 
 
             const int bodyCount = 2048;
