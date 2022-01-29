@@ -272,6 +272,9 @@ namespace Demos.Demos
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
+            var resolution = renderer.Surface.Resolution;
+            renderer.TextBatcher.Write(text.Clear().Append("The library does not include any special cases for cloth simulation, but standard bodies and constraints work well."), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("This demo shows a few different configurations- different spring stiffnesses, and with/without area constraints."), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
             rolloverInfo.Render(renderer, camera, input, text, font);
             base.Render(renderer, camera, input, text, font);
         }

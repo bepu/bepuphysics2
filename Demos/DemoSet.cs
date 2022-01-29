@@ -49,9 +49,9 @@ namespace Demos
             AddOption<CarDemo>();
             AddOption<TankDemo>();
             AddOption<CharacterDemo>();
+            AddOption<RagdollTubeDemo>();
             AddOption<PyramidDemo>();
             AddOption<ColosseumDemo>();
-            AddOption<RagdollTubeDemo>();
             AddOption<NewtDemo>();
             AddOption<ClothDemo>();
             AddOption<DancerDemo>();

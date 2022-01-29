@@ -54,11 +54,11 @@ namespace Demos.Demos
 
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(0, 0, -300);
-            camera.Yaw = MathHelper.Pi;
-            camera.Pitch = 0;
+            camera.Position = new Vector3(110, -80, 12);
+            camera.Yaw = 0;
+            camera.Pitch = MathF.PI * -0.5f;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new PlanetaryGravityCallbacks() { PlanetCenter = new Vector3(), Gravity = 100000 }, new SolveDescription(1, 4));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new PlanetaryGravityCallbacks() { PlanetCenter = new Vector3(), Gravity = 100000 }, new SolveDescription(4, 1));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Sphere(50))));
 
@@ -66,7 +66,7 @@ namespace Demos.Demos
             var inertia = orbiter.ComputeInertia(1);
             var orbiterShapeIndex = Simulation.Shapes.Add(orbiter);
             var spacing = new Vector3(5);
-            const int length = 20;
+            const int length = 40;
             for (int i = 0; i < length; ++i)
             {
                 for (int j = 0; j < 20; ++j)
@@ -83,6 +83,13 @@ namespace Demos.Demos
 
         }
 
-
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        {
+            var bottomY = renderer.Surface.Resolution.Y;
+            renderer.TextBatcher.Write(text.Clear().Append("The library does not prescribe any particular kind of gravity."), new Vector2(16, bottomY - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("The IPoseIntegratorCallbacks provided to the simulation is responsible for telling the simulation how to integrate."), new Vector2(16, bottomY - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("In this demo, all bodies are pulled towards the center of the planet."), new Vector2(16, bottomY - 16), 16, Vector3.One, font);
+            base.Render(renderer, camera, input, text, font);
+        }
     }
 }
