@@ -58,7 +58,7 @@ namespace Demos
             AddOption<PlumpDancerDemo>();
             AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<PlanetDemo>();
-            AddOption<CompoundTestDemo>();
+            AddOption<CompoundDemo>();
             AddOption<RopeStabilityDemo>();
             AddOption<SubsteppingDemo>();
             AddOption<RopeTwistDemo>();

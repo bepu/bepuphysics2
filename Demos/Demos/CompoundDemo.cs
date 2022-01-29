@@ -6,10 +6,12 @@ using System;
 using System.Numerics;
 using DemoContentLoader;
 using BepuPhysics.Constraints;
+using DemoRenderer.UI;
+using DemoUtilities;
 
 namespace Demos.Demos
 {
-    public class CompoundTestDemo : Demo
+    public class CompoundDemo : Demo
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
@@ -207,6 +209,16 @@ namespace Demos.Demos
                             return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.01f * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
                         }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(64, 4, 32), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
+        }
+
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        {
+            var bottomY = renderer.Surface.Resolution.Y;
+            renderer.TextBatcher.Write(text.Clear().Append("There are two type of compounds built in: Compound and BigCompound."), new Vector2(16, bottomY - 80), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Compounds lack an acceleration structure, so they're good for low overhead compounds with few children."), new Vector2(16, bottomY - 64), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("BigCompounds contain an acceleration structure to keep more complex shapes fast."), new Vector2(16, bottomY - 48), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("This demo throws some different compounds together and stress tests their contact generation behavior."), new Vector2(16, bottomY - 16), 16, Vector3.One, font);
+            base.Render(renderer, camera, input, text, font);
         }
     }
 }
