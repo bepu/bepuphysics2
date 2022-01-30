@@ -113,6 +113,7 @@ namespace Demos.Demos
             //    }
             //    extractor.Reset();
             //}
+            //extractor.Dispose();
             var resolution = renderer.Surface.Resolution;
             renderer.TextBatcher.Write(text.Clear().Append("The chain fountain is sometimes called Newton's beads or the Mould Effect."), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("A stiff segmented rope gets yanked upwards and over the lip by falling segments."), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);

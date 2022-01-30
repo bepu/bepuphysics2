@@ -46,7 +46,6 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<ChainFountainDemo>();
             AddOption<CarDemo>();
             AddOption<TankDemo>();
             AddOption<CharacterDemo>();
@@ -62,6 +61,7 @@ namespace Demos
             AddOption<CompoundDemo>();
             AddOption<RopeStabilityDemo>();
             AddOption<SubsteppingDemo>();
+            AddOption<ChainFountainDemo>();
             AddOption<RopeTwistDemo>();
             AddOption<BouncinessDemo>();
             AddOption<RayCastingDemo>();
