@@ -3,12 +3,22 @@ Substepping integrates body velocities and positions and solves constraints more
 
 You can configure a simulation to use substepping by passing a `SolveDescription` to `Simulation.Create` that has more than one substep. For example, to create a simulation that uses 8 substeps and 1 velocity iteration per substep:
 ```cs
-var simulation = Simulation.Create(BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(), new SolveDescription(velocityIterationCount: 1, substepCount: 8));
+var simulation = Simulation.Create(
+    BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(), 
+    new SolveDescription(velocityIterationCount: 1, substepCount: 8));
 ```
 
 # Why use it?
 
-# Limitations
+It makes difficult constraint configurations easy for the solver. The easier things are for the solver, the faster it can go.
+
+If you have a really complex constraint graph, especially one containing high mass ratios (heavy objects depending on light objects, like a wrecking ball hanging from a rope or a tank smashing a small box) and high constraint stiffnesses, a non-substepping solver can struggle to converge to an equilibrium in a low number of velocity iterations.
+
+Further, for constraints with high stiffness (`SpringSettings` with `Frequency` values approaching or exceeding the simulation timestep frequency), even a stable equilibrium will result in damping out unrepresentable motion. A constraint that wants to oscillate at 120 hertz simply can't in a 60 hertz simulation.
+
+Substepping means running the solver and integrator multiple times for each call to `Simulation.Timestep`. If you take 8 substeps and call `Simulation.Timestep(1f / 60f)`, the solver sees 8 substeps each of length `1f / 480f`. Since the solver and integrator are running at 480 hertz, that 120 hertz constraint would be able to wiggle to its heart's content.
+
+In the above example, you could get similar solver stability out of simply calling `Simulation.Timestep(1f / 480f)` 8 times for each frame, but that would re-run collision detection 8 times too. Further, by tightly bundling execution together, the substepping solver can avoid a large amount of synchronization and memory bandwidth overhead. Overall, when it is an appropriate solution, substepping will tend to be the fastest option.
 
 # How substepping fits into a timestep
 Each call to `Simulation.Timestep(dt, ...)` simulates one frame with duration equal to `dt`. In the [`DefaultTimestepper`](../BepuPhysics/DefaultTimestepper.cs) (which, as the name implies, is the `ITimestepper` implementation used if no other is specified) executes a frame like so:
@@ -53,3 +63,4 @@ The solver exposes events that fire at the beginning and end of each substep: `S
 
 (Note that attempting to dispatch multithreaded work from the same `IThreadDispatcher` instance that dispatched the solver's workers requires that the `IThreadDispatcher` implementation is reentrant. The demos `SimpleThreadDispatcher` is not.)
 
+# Limitations
