@@ -13,74 +13,82 @@ using System.Runtime.CompilerServices;
 namespace Demos.Demos
 {
     /// <summary>
+    /// Filter for a body in a rope, used by the <see cref="RopeNarrowPhaseCallbacks"/>.
+    /// </summary>
+    struct RopeFilter
+    {
+        public short RopeIndex;
+        public short IndexInRope;
+    }
+
+    /// <summary>
+    /// Narrow phase callbacks that include collision filters designed for ropes. Adjacent bodies in a rope do not collide with each other.
+    /// </summary>
+    unsafe struct RopeNarrowPhaseCallbacks : INarrowPhaseCallbacks
+    {
+        public CollidableProperty<RopeFilter> Filters;
+        public PairMaterialProperties Material;
+        public int MinimumDistanceForCollisions;
+
+        public RopeNarrowPhaseCallbacks(CollidableProperty<RopeFilter> filters, PairMaterialProperties contactMaterial, int minimumDistanceForCollisions = 3)
+        {
+            Filters = filters;
+            Material = contactMaterial;
+            MinimumDistanceForCollisions = minimumDistanceForCollisions;
+        }
+        public RopeNarrowPhaseCallbacks(CollidableProperty<RopeFilter> filters, int minimumDistanceForCollisions = 3) : this(filters, new PairMaterialProperties(1, 2, new SpringSettings(30, 1)), minimumDistanceForCollisions)
+        {
+        }
+
+        public void Initialize(Simulation simulation)
+        {
+            Filters.Initialize(simulation);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        {
+            var aFilter = Filters[a];
+            var bFilter = Filters[b];
+            return (aFilter.RopeIndex != bFilter.RopeIndex || Math.Abs(aFilter.IndexInRope - bFilter.IndexInRope) > MinimumDistanceForCollisions) && (a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool AllowContactGeneration(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB)
+        {
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+        {
+            pairMaterial = Material;
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
+        {
+            return true;
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
+    /// <summary>
     /// Shows a bundle of ropes being tangled up by spinning weights.
     /// </summary>
     public class RopeTwistDemo : Demo
     {
-        struct Filter
-        {
-            public short RopeIndex;
-            public short IndexInRope;
-        }
-
-        unsafe struct RopeNarrowPhaseCallbacks : INarrowPhaseCallbacks
-        {
-            public CollidableProperty<Filter> Filters;
-            public PairMaterialProperties Material;
-
-            public RopeNarrowPhaseCallbacks(CollidableProperty<Filter> filters, PairMaterialProperties contactMaterial)
-            {
-                Filters = filters;
-                Material = contactMaterial;
-            }
-            public RopeNarrowPhaseCallbacks(CollidableProperty<Filter> filters) : this(filters, new PairMaterialProperties(1, 2, new SpringSettings(30, 1)))
-            {
-            }
-
-            public void Initialize(Simulation simulation)
-            {
-                Filters.Initialize(simulation);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
-            {
-                var aFilter = Filters[a];
-                var bFilter = Filters[b];
-                return (aFilter.RopeIndex != bFilter.RopeIndex || Math.Abs(aFilter.IndexInRope - bFilter.IndexInRope) > 3) && (a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool AllowContactGeneration(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB)
-            {
-                return true;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
-            {
-                pairMaterial = Material;
-                return true;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
-            {
-                return true;
-            }
-
-            public void Dispose()
-            {
-            }
-        }
-
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 20, 20);
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            var filters = new CollidableProperty<Filter>();
+            var filters = new CollidableProperty<RopeFilter>();
             Simulation = Simulation.Create(BufferPool,
                 new RopeNarrowPhaseCallbacks(filters, new PairMaterialProperties(0.0f, float.MaxValue, new SpringSettings(1200, 1))),
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 60));
@@ -102,7 +110,7 @@ namespace Demos.Demos
                 var wreckingBallBodyHandle = Simulation.Bodies.Add(description);
                 var wreckingBallBody = Simulation.Bodies[wreckingBallBodyHandle];
                 wreckingBallBody.Velocity.Angular = new Vector3(0, 20, 0);
-                filters.Allocate(wreckingBallBodyHandle) = new Filter { RopeIndex = (short)(16384 + twistIndex), IndexInRope = ropeBodyCount };
+                filters.Allocate(wreckingBallBodyHandle) = new RopeFilter { RopeIndex = (short)(16384 + twistIndex), IndexInRope = ropeBodyCount };
 
                 for (int ropeIndex = 0; ropeIndex < ropeCount; ++ropeIndex)
                 {
@@ -115,7 +123,7 @@ namespace Demos.Demos
                     var bodyHandles = RopeStabilityDemo.BuildRopeBodies(Simulation, ropeStartLocation, ropeBodyCount, ropeBodyRadius, ropeBodySpacing, 1f, 0);
                     for (int i = 0; i < bodyHandles.Length; ++i)
                     {
-                        filters.Allocate(bodyHandles[i]) = new Filter { RopeIndex = (short)ropeIndex, IndexInRope = (short)i };
+                        filters.Allocate(bodyHandles[i]) = new RopeFilter { RopeIndex = (short)ropeIndex, IndexInRope = (short)i };
                     }
 
                     bool TryCreateConstraint(int handleIndexA, int handleIndexB)
