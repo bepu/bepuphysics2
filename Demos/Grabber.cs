@@ -61,7 +61,7 @@ namespace Demos
             angularDescription = new OneBodyAngularServo
             {
                 TargetOrientation = targetOrientation,
-                ServoSettings = new ServoSettings(float.MaxValue, 0, 360 / inverseMass),
+                ServoSettings = new ServoSettings(float.MaxValue, 0, localGrabPoint.Length() * 180 / inverseMass),
                 SpringSettings = new SpringSettings(5, 2),
             };
         }
