@@ -8,7 +8,7 @@ var simulation = Simulation.Create(
     new SolveDescription(velocityIterationCount: 1, substepCount: 8));
 ```
 
-See the [SubsteppingDemo](../Demos/Demos/SubsteppingDemo.cs) for an interactive example. The [RopeTwistDemo](../Demos/Demos/RopeTwistDemo.cs), [ChainFountainDemo](../Demos/Demos/ChainFountainDemo.cs) and [BouncinessDemo](../Demos/Demos/BouncinessDemo.cs) also all use substepping.
+See the [SubsteppingDemo](../Demos/Demos/SubsteppingDemo.cs) for an interactive example. The [RopeTwistDemo](../Demos/Demos/RopeTwistDemo.cs), [ChainFountainDemo](../Demos/Demos/ChainFountainDemo.cs) and [BouncinessDemo](../Demos/Demos/BouncinessDemo.cs) also all use substepping. The [stability tips documentation](StabilityTips.md) contains some more information about tuning.
 
 # Why use it?
 It makes difficult constraint configurations easy for the solver. The easier things are for the solver, the faster it can go.

@@ -31,7 +31,7 @@ Using higher update rates can enable the simulation of otherwise impossible mass
 
 ![](images/massratiosubstepping.gif)
 
-For more examples of substepping, check out the [SubsteppingDemo](../Demos/Demos/SubsteppingDemo.cs).
+For more examples of substepping, check out the [SubsteppingDemo](../Demos/Demos/SubsteppingDemo.cs). For more information about substepping, see the [substepping documentation](Substepping.md).
 
 So, if you're encountering constraint instability, here are some general guidelines for debugging:
 1. First, try increasing the `Simulation.Timestep` update rate to a really high value (600hz or more). If the problem goes away, then it's probably related to the difficulty of the simulation and a lack of convergence and not to a configuration error.
