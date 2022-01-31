@@ -9,7 +9,6 @@ var simulation = Simulation.Create(
 ```
 
 # Why use it?
-
 It makes difficult constraint configurations easy for the solver. The easier things are for the solver, the faster it can go.
 
 If you have a really complex constraint graph, especially one containing high mass ratios (heavy objects depending on light objects, like a wrecking ball hanging from a rope or a tank smashing a small box) and high constraint stiffnesses, a non-substepping solver can struggle to converge to an equilibrium in a low number of velocity iterations.
@@ -58,9 +57,27 @@ It's also possible to update the cached guess in response to a timestep change u
 Changing the number of *velocity iterations* from frame to frame is safe. The more velocity iterations there are, the closer the solution will converge to an optimum during the substep.
 
 # Callbacks
-
 The solver exposes events that fire at the beginning and end of each substep: `SubstepStarted` and `SubstepEnded`. These events are called from worker thread 0 in the solver's thread dispatch; the dispatch does not end in between substeps to keep overhead low. 
 
 (Note that attempting to dispatch multithreaded work from the same `IThreadDispatcher` instance that dispatched the solver's workers requires that the `IThreadDispatcher` implementation is reentrant. The demos `SimpleThreadDispatcher` is not.)
 
 # Limitations
+Unfortunately, substepping isn't magic. The entire point is to avoid running other parts of the engine at the same rate as the solver, so contacts do not get fully updated for each substep. They *do* undergo an incremental update process that tries to fix up the most obvious issues (like penetration depth changes over time), but without a full collision test the contact manifolds can go out of date.
+
+This incremental update is usually fine, but out of date contacts can sometimes introduce energy. For example, an out of date contact lever arm can let a body 'fall' into another body ever so slightly, which over many substeps ends up sustaining oscillation.
+
+You can see an example of this behavior [here](https://youtu.be/70IAdC-4Sa0).
+
+To mitigate this issue, you can try:
+1. damping the relevant bodies more heavily in the integrator, 
+2. increasing the damping of contacts associated with the relevant bodies, 
+3. increasing the sleeping velocity threshold (`BodyActivityDescription.SleepThreshold` passed into the `BodyDescription`) for the relevant bodies such that they take a nap instead of wiggling,
+4. increasing the inertia of the problematic bodies to increase the period of oscillation (possibly making it easier to mitigate with sleeping/damping)
+5. avoiding shapes or situations that are likely to cause the problem,
+6. or just don't use solver substepping. You can always resort to calling `Simulation.Timestep` more frequently. It'll cost more than solver-only substepping, but it'll keep all your contact data up to date, and the library's pretty dang fast anyway. 
+
+Another far more subtle effect arises from accumulated numerical error. Even without using substepping, some slight numerical drift will occur on every frame. Even with enough velocity iterations to converge, there might still be a 1e-7 error in the relative velocity. Integrating those errors into the position over time causes drift.
+
+With sleeping enabled and reasonable simulation configuration, this is effectively invisible. However, disabling sleeping and using extreme substepping (such as effective solver rates in the tens or hundreds of thousands of hertz) can make it obvious. [See here for an example](https://youtu.be/0kkHebYnARs).
+
+[#167](https://github.com/bepu/bepuphysics2/issues/167) tracks one solution to this- friction with explicit position goals. Another option that can be implemented externally and would work for all constraint types (contact or not) is to quantize body positions. By forcing body positions onto a grid with spacing larger than the per-frame drift, the drift cannot accumulate.
