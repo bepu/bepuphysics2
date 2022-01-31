@@ -4,9 +4,11 @@ Substepping integrates body velocities and positions and solves constraints more
 You can configure a simulation to use substepping by passing a `SolveDescription` to `Simulation.Create` that has more than one substep. For example, to create a simulation that uses 8 substeps and 1 velocity iteration per substep:
 ```cs
 var simulation = Simulation.Create(
-    BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(), 
+    BufferPool, new YourNarrowPhaseCallbacks(), new YourPoseIntegratorCallbacks(), 
     new SolveDescription(velocityIterationCount: 1, substepCount: 8));
 ```
+
+See the [SubsteppingDemo](../Demos/Demos/SubsteppingDemo.cs) for an interactive example. The [RopeTwistDemo](../Demos/Demos/RopeTwistDemo.cs), [ChainFountainDemo](../Demos/Demos/ChainFountainDemo.cs) and [BouncinessDemo](../Demos/Demos/BouncinessDemo.cs) also all use substepping.
 
 # Why use it?
 It makes difficult constraint configurations easy for the solver. The easier things are for the solver, the faster it can go.
@@ -59,7 +61,7 @@ Changing the number of *velocity iterations* from frame to frame is safe. The mo
 # Callbacks
 The solver exposes events that fire at the beginning and end of each substep: `SubstepStarted` and `SubstepEnded`. These events are called from worker thread 0 in the solver's thread dispatch; the dispatch does not end in between substeps to keep overhead low. 
 
-(Note that attempting to dispatch multithreaded work from the same `IThreadDispatcher` instance that dispatched the solver's workers requires that the `IThreadDispatcher` implementation is reentrant. The demos `SimpleThreadDispatcher` is not.)
+(Note that attempting to dispatch multithreaded work from the same `IThreadDispatcher` instance that dispatched the solver's workers requires that the `IThreadDispatcher` implementation is reentrant. The `BepuUtilities.ThreadDispatcher` is not.)
 
 # Limitations
 Unfortunately, substepping isn't magic. The entire point is to avoid running other parts of the engine at the same rate as the solver, so contacts do not get fully updated for each substep. They *do* undergo an incremental update process that tries to fix up the most obvious issues (like penetration depth changes over time), but without a full collision test the contact manifolds can go out of date.
