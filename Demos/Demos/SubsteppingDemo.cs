@@ -136,7 +136,7 @@ namespace Demos.Demos
             }
             if (input.WasPushed(OpenTK.Input.Key.X))
             {
-                Simulation.Solver.SubstepCount = Math.Min(8192, Simulation.Solver.SubstepCount + substepCountChange);
+                Simulation.Solver.SubstepCount = Math.Min(512, Simulation.Solver.SubstepCount + substepCountChange);
                 AwakenAllBodies();
             }
             if (input.WasPushed(OpenTK.Input.Key.C))
@@ -146,7 +146,7 @@ namespace Demos.Demos
             }
             if (input.WasPushed(OpenTK.Input.Key.V))
             {
-                Simulation.Solver.VelocityIterationCount = Math.Min(8192, Simulation.Solver.VelocityIterationCount + iterationCountChange);
+                Simulation.Solver.VelocityIterationCount = Math.Min(512, Simulation.Solver.VelocityIterationCount + iterationCountChange);
                 AwakenAllBodies();
             }
             base.Update(window, camera, input, dt);

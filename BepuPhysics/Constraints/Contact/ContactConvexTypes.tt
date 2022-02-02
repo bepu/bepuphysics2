@@ -250,6 +250,15 @@ for (int i = 0; i < contactCount; ++i)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(bodyCount == 2) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>float dt, float inverseDt, ref Contact<#=contactCount#><#=suffix#>PrestepData prestep, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA<#if(bodyCount == 2) {#>, ref BodyVelocityWide wsvB<#}#>)
         {            
+            //Note that we solve the penetration constraints before the friction constraints. 
+            //This makes the friction constraints more authoritative, since they happen last.
+            //It's a pretty minor effect either way, but penetration constraints have error correction feedback- penetration depth.
+            //Friction is velocity only and has no error correction, so introducing error there might cause drift.
+            SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
+            var inverseDtWide = new Vector<float>(inverseDt);
+<#for (int i = 0; i < contactCount; ++i) {#>
+            PenetrationLimit<#=suffix#>.Solve(inertiaA<#=bodyCount == 2 ? ", inertiaB" : ""#>, prestep.Normal, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.Contact<#=i#>.OffsetA - prestep.OffsetB, <#}#>prestep.Contact<#=i#>.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration<#=i#>, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
+<#}#>
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
 <#if (contactCount > 1) {#>
             var premultipliedFrictionCoefficient = new Vector<float>(1f / <#=contactCount#>f) * prestep.MaterialProperties.FrictionCoefficient;
@@ -264,14 +273,6 @@ for (int i = 0; i < contactCount; ++i)
             Vector3Wide.Subtract(prestep.Contact0.OffsetA, prestep.OffsetB, out var offsetToManifoldCenterB);
 <#}#>
             TangentFriction<#=suffix#>.Solve(x, z, <#=contactCount == 1 ? "prestep.Contact0.OffsetA" : "offsetToManifoldCenterA"#><#=bodyCount == 2 ? ", offsetToManifoldCenterB" : ""#>, inertiaA<#=bodyCount == 2 ? ", inertiaB" : ""#>, maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
-            //Note that we solve the penetration constraints after the friction constraints. 
-            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-            //It's a pretty minor effect either way.
-            SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
-            var inverseDtWide = new Vector<float>(inverseDt);
-<#for (int i = 0; i < contactCount; ++i) {#>
-            PenetrationLimit<#=suffix#>.Solve(inertiaA<#=bodyCount == 2 ? ", inertiaB" : ""#>, prestep.Normal, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.Contact<#=i#>.OffsetA - prestep.OffsetB, <#}#>prestep.Contact<#=i#>.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration<#=i#>, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
-<#}#>
 <#if (contactCount == 1) {#>
             //If there's only one contact, then the contact patch as determined by contact distance would be zero.
             //That can cause some subtle behavioral issues sometimes, so we approximate lever arm with the contact depth, assuming that the contact surface area will increase as the depth increases.

@@ -149,12 +149,12 @@ namespace BepuPhysics
             Vector3Wide.Length(angularVelocity, out var speed);
             var halfAngle = speed * halfDt;
             QuaternionWide q;
-            MathHelper.Sin(halfAngle, out var s);
+            var s = MathHelper.Sin(halfAngle);
             var scale = s / speed;
             q.X = angularVelocity.X * scale;
             q.Y = angularVelocity.Y * scale;
             q.Z = angularVelocity.Z * scale;
-            MathHelper.Cos(halfAngle, out q.W);
+            q.W = MathHelper.Cos(halfAngle);
             QuaternionWide.ConcatenateWithoutOverlap(start, q, out var end);
             end = QuaternionWide.Normalize(end);
             var speedValid = Vector.GreaterThan(speed, new Vector<float>(1e-15f));
