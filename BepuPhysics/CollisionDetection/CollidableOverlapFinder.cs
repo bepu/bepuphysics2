@@ -128,11 +128,15 @@ namespace BepuPhysics.CollisionDetection
                 intertreeTestContext.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, intertreeHandlers, threadDispatcher.ThreadCount);
                 nextJobIndex = -1;
                 var totalJobCount = selfTestContext.JobCount + intertreeTestContext.JobCount;
-                //We dispatch over parts of the tree are not yet analyzed, but the job creation phase may have put some work into the batcher.
-                //If the total job count is zero, that means there's no further work to be done (implying the tree was very tiny), but we may need to flush.
                 if (totalJobCount == 0)
                 {
-                    narrowPhase.overlapWorkers[0].Batcher.Flush();
+                    //We dispatch over parts of the tree are not yet analyzed, but the job creation phase may have put some work into the batcher.
+                    //If the total job count is zero, that means there's no further work to be done (implying the tree was very tiny), but we may need to flush.
+                    //Flushing also disposes of any resources taken by the batcher.
+                    for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
+                    {
+                        narrowPhase.overlapWorkers[i].Batcher.Flush();
+                    }
                 }
                 else
                 {

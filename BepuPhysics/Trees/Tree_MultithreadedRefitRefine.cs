@@ -74,7 +74,7 @@ namespace BepuPhysics.Trees
                 RefitNodeIndex = -1;
             }
 
-            public unsafe void CreateRefinementJobs(BufferPool pool, IThreadDispatcher threadDispatcher, int frameIndex, float refineAggressivenessScale = 1)
+            public unsafe void CreateRefinementJobs(BufferPool pool, int frameIndex, float refineAggressivenessScale = 1)
             {
                 if (Tree.leafCount <= 2)
                 {
@@ -131,8 +131,6 @@ namespace BepuPhysics.Trees
                 if (Tree.leafCount <= 2)
                 {
                     //If there are 2 or less leaves, then refit/refine doesn't do anything at all.
-                    //(The root node has no parent, so it does not have a bounding box, and the SAH won't change no matter how we swap the children of the root.)
-                    //Avoiding this case also gives the other codepath a guarantee that it will be working with nodes with two children.
                     return;
                 }
                 //Note that we defer the refine flag clear until after the refinements complete. If we did it within the refine action itself, 
@@ -159,7 +157,7 @@ namespace BepuPhysics.Trees
             {
                 CreateRefitAndMarkJobs(ref tree, pool, threadDispatcher);
                 threadDispatcher.DispatchWorkers(RefitAndMarkAction, RefitNodes.Count);
-                CreateRefinementJobs(pool, threadDispatcher, frameIndex, refineAggressivenessScale);
+                CreateRefinementJobs(pool, frameIndex, refineAggressivenessScale);
                 threadDispatcher.DispatchWorkers(RefineAction, RefinementTargets.Count);
                 CleanUpForRefitAndRefine(pool);
             }
