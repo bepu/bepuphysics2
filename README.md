@@ -43,6 +43,8 @@ By user request, there's a [discord server](https://discord.gg/ssa2XpY). I'll be
 
 [Performance Tips](Documentation/PerformanceTips.md)
 
+[Substepping](Documentation/Substepping.md)
+
 [Contributing](CONTRIBUTING.md)
 
 [Upgrading from v1, concept mapping](Documentation/UpgradingFromV1.md)
