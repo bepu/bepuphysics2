@@ -68,7 +68,7 @@ Unfortunately, substepping isn't magic. The entire point is to avoid running oth
 
 This incremental update is usually fine, but out of date contacts can sometimes introduce energy. For example, an out of date contact lever arm can let a body 'fall' into another body ever so slightly, which over many substeps ends up sustaining oscillation.
 
-You can see an example of this behavior [here](https://youtu.be/70IAdC-4Sa0).
+You can see an example of this behavior [here](https://youtu.be/qMX1ZLmfrEo).
 
 To mitigate this issue, you can try:
 1. damping the relevant bodies more heavily in the integrator, 
@@ -77,9 +77,3 @@ To mitigate this issue, you can try:
 4. increasing the inertia of the problematic bodies to increase the period of oscillation (possibly making it easier to mitigate with sleeping/damping)
 5. avoiding shapes or situations that are likely to cause the problem,
 6. or just don't use solver substepping. You can always resort to calling `Simulation.Timestep` more frequently. It'll cost more than solver-only substepping, but it'll keep all your contact data up to date, and the library's pretty dang fast anyway. 
-
-Another far more subtle effect arises from accumulated numerical error. Even without using substepping, some slight numerical drift will occur on every frame. Even with enough velocity iterations to converge, there might still be a 1e-7 error in the relative velocity. Integrating those errors into the position over time causes drift.
-
-With sleeping enabled and reasonable simulation configuration, this is effectively invisible. However, disabling sleeping and using extreme substepping (such as effective solver rates in the tens or hundreds of thousands of hertz) can make it obvious. [See here for an example](https://youtu.be/0kkHebYnARs).
-
-[#167](https://github.com/bepu/bepuphysics2/issues/167) tracks one solution to this- friction with explicit position goals. Another option that can be implemented externally and would work for all constraint types (contact or not) is to quantize body positions. By forcing body positions onto a grid with spacing larger than the per-frame drift, the drift cannot accumulate.
