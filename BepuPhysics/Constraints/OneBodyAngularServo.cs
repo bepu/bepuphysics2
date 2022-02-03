@@ -86,7 +86,7 @@ namespace BepuPhysics.Constraints
             //Jacobians are just the identity matrix.
             QuaternionWide.Conjugate(orientationA, out var inverseOrientation);
             QuaternionWide.ConcatenateWithoutOverlap(inverseOrientation, prestep.TargetOrientation, out var errorRotation);
-            QuaternionWide.GetApproximateAxisAngleFromQuaternion(errorRotation, out var errorAxis, out var errorLength);
+            QuaternionWide.GetAxisAngleFromQuaternion(errorRotation, out var errorAxis, out var errorLength);
 
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
             Symmetric3x3Wide.Invert(inertiaA.InverseInertiaTensor, out var effectiveMass);

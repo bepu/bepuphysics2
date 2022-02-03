@@ -158,7 +158,7 @@ namespace BepuPhysics.Constraints
             var targetOrientationB = prestep.LocalOrientation * orientationA;
             //ConcatenateWithoutOverlap(prestep.LocalOrientation, orientationA, out var targetOrientationB);
             ConcatenateWithoutOverlap(Conjugate(targetOrientationB), orientationB, out var rotationError);
-            GetApproximateAxisAngleFromQuaternion(rotationError, out var rotationErrorAxis, out var rotationErrorLength);
+            GetAxisAngleFromQuaternion(rotationError, out var rotationErrorAxis, out var rotationErrorLength);
 
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
             var orientationBiasVelocity = rotationErrorAxis * (rotationErrorLength * positionErrorToVelocity);

@@ -124,7 +124,7 @@ namespace BepuPhysics.Constraints
             QuaternionWide.TransformWithoutOverlap(basisBX, aligningRotation, out var alignedBasisBX);
             Vector3Wide.Dot(alignedBasisBX, basisA.X, out var x);
             Vector3Wide.Dot(alignedBasisBX, basisA.Y, out var y);
-            MathHelper.ApproximateAcos(x, out var absAngle);
+            var absAngle = MathHelper.Acos(x);
             angle = Vector.ConditionalSelect(Vector.LessThan(y, Vector<float>.Zero), -absAngle, absAngle);
         }
 

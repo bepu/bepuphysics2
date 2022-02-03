@@ -49,12 +49,12 @@ namespace Demos.Demos.Tanks
             camera.Pitch = 0;
 
             bodyProperties = new CollidableProperty<TankDemoBodyProperties>();
-            //Note that this demo uses only 1 substep and 8 velocity iterations.
+            //Note that this demo uses only 1 substep and 6 velocity iterations.
             //That's partly to show that you can do such a thing, and partly because of (as of 2.4's initial release), there are situations where
             //contact data can become a little out of date during substepping, since the contact data is only updated once per frame rather than substep (apart from the depths, which are incrementally updated every substep).
             //In this demo, when using substepping, a wheel resting on another wheel from a destroyed tank can keep rocking back and forth for a long time as the error in contact offsets over substeps can introduce energy.
             //(I'd like to address this issue more directly to make substepping an unconditional win.)
-            Simulation = Simulation.Create(BufferPool, new TankCallbacks() { Properties = bodyProperties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
+            Simulation = Simulation.Create(BufferPool, new TankCallbacks() { Properties = bodyProperties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(6, 1));
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
             builder.Add(new Box(1.85f, 0.7f, 4.73f), RigidPose.Identity, 10);

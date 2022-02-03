@@ -219,13 +219,13 @@ namespace BepuUtilities
         }
 
         /// <summary>
-        /// Gets an axis and angle representation of the rotation stored in a quaternion. Angle is approximated.
+        /// Gets an axis and angle representation of the rotation stored in a quaternion.
         /// </summary>
         /// <param name="q">Quaternion to extract an axis-angle representation from.</param>
         /// <param name="axis">Axis of rotation extracted from the quaternion.</param>
-        /// <param name="angle">Approximated angle of rotation extracted from the quaternion.</param>
+        /// <param name="angle">Angle of rotation extracted from the quaternion.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetApproximateAxisAngleFromQuaternion(in QuaternionWide q, out Vector3Wide axis, out Vector<float> angle)
+        public static void GetAxisAngleFromQuaternion(in QuaternionWide q, out Vector3Wide axis, out Vector<float> angle)
         {
             var shouldNegate = Vector.LessThan(q.W, Vector<float>.Zero);
             axis.X = Vector.ConditionalSelect(shouldNegate, -q.X, q.X);
@@ -239,7 +239,7 @@ namespace BepuUtilities
             axis.X = Vector.ConditionalSelect(useFallback, Vector<float>.One, axis.X);
             axis.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, axis.Y);
             axis.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, axis.Z);
-            MathHelper.ApproximateAcos(qw, out var halfAngle);
+            var halfAngle = MathHelper.Acos(qw);
             angle = new Vector<float>(2) * halfAngle;
         }
 

@@ -102,8 +102,8 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Dot(hingeAxisBOnPlaneX, hingeAxisA, out var hbxha);
             Vector3Wide.Dot(hingeAxisBOnPlaneY, hingeAxisA, out var hbyha);
             //We could probably get away with an acos approximation of something like (1 - x) * pi/2, but we'll do just a little more work:
-            MathHelper.ApproximateAcos(hbxha, out errorAngles.X);
-            MathHelper.ApproximateAcos(hbyha, out errorAngles.Y);
+            errorAngles.X = MathHelper.Acos(hbxha);
+            errorAngles.Y = MathHelper.Acos(hbyha);
             Vector3Wide.Dot(hingeAxisBOnPlaneX, jacobianA.Y, out var hbxay);
             Vector3Wide.Dot(hingeAxisBOnPlaneY, jacobianA.X, out var hbyax);
             errorAngles.X = Vector.ConditionalSelect(Vector.LessThan(hbxay, Vector<float>.Zero), errorAngles.X, -errorAngles.X);

@@ -109,7 +109,7 @@ namespace BepuPhysics.Constraints
             QuaternionWide.Conjugate(targetOrientationB, out var inverseTarget);
             QuaternionWide.ConcatenateWithoutOverlap(inverseTarget, orientationB, out var errorRotation);
 
-            QuaternionWide.GetApproximateAxisAngleFromQuaternion(errorRotation, out var errorAxis, out var errorLength);
+            QuaternionWide.GetAxisAngleFromQuaternion(errorRotation, out var errorAxis, out var errorLength);
 
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
             Symmetric3x3Wide.Add(inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, out var unsoftenedInverseEffectiveMass);

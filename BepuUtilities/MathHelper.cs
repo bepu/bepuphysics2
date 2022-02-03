@@ -201,7 +201,6 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="x">Value to take the cosine of.</param>
         /// <returns>Approximate cosine of the input value.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float Cos(float x)
         {
             //Rational approximation over [0, pi/2], use symmetry for the rest.
@@ -229,7 +228,6 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="x">Value to take the sine of.</param>
         /// <returns>Approximate sine of the input value.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float Sin(float x)
         {
             //Similar to cos, use a rational approximation for the region of sin from [0, pi/2]. Use symmetry to cover the rest.
@@ -254,11 +252,26 @@ namespace BepuUtilities
         }
 
         /// <summary>
+        /// Computes an approximation of arccos. Inputs outside of [-1, 1] are clamped. Maximum error less than 5.17e-07.
+        /// </summary>
+        /// <param name="x">Input value to the arccos function.</param>
+        /// <returns>Result of the arccos function.</returns>
+        public static float Acos(float x)
+        {
+            var negativeInput = x < 0;
+            x = MathF.Min(1f, MathF.Abs(x));
+            //Rational approximation (scaling sqrt(1-x)) over [0, 1], use symmetry for the rest. TODO: FMA would help with precision.
+            var numerator = MathF.Sqrt(1f - x) * (62.95741097600742f + x * (69.6550664543659f + x * (17.54512349463405f + x * 0.6022076120669532f)));
+            var denominator = 40.07993264439811f + x * (49.81949855726789f + x * (15.703851745284796f + x));
+            var result = numerator / denominator;
+            return negativeInput ? Pi - result : result;
+        }
+
+        /// <summary>
         /// Computes an approximation of cosine. Maximum error a little below 8e-7 for the interval -2 * Pi to 2 * Pi. Values further from the interval near zero have gracefully degrading error.
         /// </summary>
         /// <param name="x">Values to take the cosine of.</param>
         /// <returns>Approximate cosine of the input values.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector<float> Cos(Vector<float> x)
         {
             //Rational approximation over [0, pi/2], use symmetry for the rest.
@@ -333,43 +346,20 @@ namespace BepuUtilities
             return Vector.ConditionalSelect(inSecondHalf, -result, result);
         }
 
-
         /// <summary>
-        /// Computes an approximation of arccos. Maximum error less than 6.8e-5.
+        /// Computes an approximation of arccos. Inputs outside of [-1, 1] are clamped. Maximum error less than 5.17e-07.
         /// </summary>
         /// <param name="x">Input value to the arccos function.</param>
-        /// <param name="acos">Result of the arccos function.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApproximateAcos(Vector<float> x, out Vector<float> acos)
+        /// <returns>Result of the arccos function.</returns>
+        public static Vector<float> Acos(Vector<float> x)
         {
-            //Adapted from Handbook of Mathematical Functions by Milton Abramowitz and Irene A. Stegun.
-            var negate = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), Vector<float>.One, Vector<float>.Zero);
-            x = Vector.Abs(x);
-            acos = new Vector<float>(-0.0187293f) * x + new Vector<float>(0.0742610f);
-            acos = (acos * x - new Vector<float>(0.2121144f)) * x + new Vector<float>(1.5707288f);
-            acos *= Vector.SquareRoot(Vector.Max(Vector<float>.Zero, Vector<float>.One - x));
-            acos -= new Vector<float>(2) * negate * acos;
-            acos = negate * new Vector<float>(3.14159265358979f) + acos;
-        }
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector<float> Floor(Vector<float> v)
-        {
-            if (Avx.IsSupported && Vector<float>.Count == 8)
-            {
-                return Avx.Floor(v.AsVector256()).AsVector();
-            }
-            else if (Sse41.IsSupported && Vector<float>.Count == 4)
-            {
-                return Sse41.Floor(v.AsVector128()).AsVector();
-            }
-            else
-            {
-                var intX = Vector.ConvertToInt32(v);
-                return Vector.ConvertToSingle(Vector.ConditionalSelect(Vector.LessThan(v, Vector<float>.Zero), intX - Vector<int>.One, intX));
-            }
-            //TODO: Arm!
+            var negativeInput = Vector.LessThan(x, Vector<float>.Zero);
+            x = Vector.Min(Vector<float>.One, Vector.Abs(x));
+            //Rational approximation (scaling sqrt(1-x)) over [0, 1], use symmetry for the rest. TODO: FMA would help with precision.
+            var numerator = Vector.SquareRoot(Vector<float>.One - x) * (new Vector<float>(62.95741097600742f) + x * (new Vector<float>(69.6550664543659f) + x * (new Vector<float>(17.54512349463405f) + x * 0.6022076120669532f)));
+            var denominator = new Vector<float>(40.07993264439811f) + x * (new Vector<float>(49.81949855726789f) + x * (new Vector<float>(15.703851745284796f) + x));
+            var result = numerator / denominator;
+            return Vector.ConditionalSelect(negativeInput, new Vector<float>(Pi) - result, result);
         }
 
         /// <summary>
@@ -383,7 +373,7 @@ namespace BepuUtilities
         {
             var half = new Vector<float>(0.5f);
             var x = (b - a) * new Vector<float>(1f / TwoPi) + half;
-            difference = (x - Floor(x) - half) * new Vector<float>(TwoPi);
+            difference = (x - Vector.Floor(x) - half) * new Vector<float>(TwoPi);
         }
 
 
