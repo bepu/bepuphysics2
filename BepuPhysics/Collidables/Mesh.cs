@@ -340,7 +340,7 @@ namespace BepuPhysics.Collidables
         /// Subtracts the newCenter from all points in the mesh hull.
         /// </summary>
         /// <param name="newCenter">New center that all points will be made relative to.</param>
-        public unsafe void Recenter(in Vector3 newCenter)
+        public unsafe void Recenter(Vector3 newCenter)
         {
             var scaledOffset = newCenter * inverseScale;
             for (int i = 0; i < Triangles.Length; ++i)
@@ -365,17 +365,19 @@ namespace BepuPhysics.Collidables
         /// Assumes the mesh is closed and should be treated as solid.
         /// </summary>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
-        /// <param name="inertia">Inertia tensor of the closed mesh.</param>
         /// <param name="center">Center of the closed mesh.</param>
-        public void ComputeClosedInertia(float mass, out BodyInertia inertia, out Vector3 center)
+        /// <returns>Inertia tensor of the closed mesh.</returns>
+        public BodyInertia ComputeClosedInertia(float mass, out Vector3 center)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor, out center);
             MeshInertiaHelper.GetInertiaOffset(mass, center, out var inertiaOffset);
             Symmetric3x3.Add(inertiaTensor, inertiaOffset, out var recenteredInertia);
             Recenter(center);
+            BodyInertia inertia;
             Symmetric3x3.Invert(recenteredInertia, out inertia.InverseInertiaTensor);
             inertia.InverseMass = 1f / mass;
+            return inertia;
         }
 
         /// <summary>
@@ -383,13 +385,15 @@ namespace BepuPhysics.Collidables
         /// Assumes the mesh is closed and should be treated as solid.
         /// </summary>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
-        /// <param name="inertia">Inertia of the closed mesh.</param>
-        public readonly void ComputeClosedInertia(float mass, out BodyInertia inertia)
+        /// <returns>Inertia tensor of the closed mesh.</returns>
+        public readonly BodyInertia ComputeClosedInertia(float mass)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor);
+            BodyInertia inertia;
             inertia.InverseMass = 1f / mass;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
+            return inertia;
         }
 
         /// <summary>
@@ -420,17 +424,19 @@ namespace BepuPhysics.Collidables
         /// Assumes the mesh is open and should be treated as a triangle soup.
         /// </summary>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
-        /// <param name="inertia">Inertia tensor of the closed mesh.</param>
         /// <param name="center">Center of the open mesh.</param>
-        public void ComputeOpenInertia(float mass, out BodyInertia inertia, out Vector3 center)
+        /// <returns>Inertia tensor of the closed mesh.</returns>
+        public BodyInertia ComputeOpenInertia(float mass, out Vector3 center)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeOpenInertia(ref triangleSource, mass, out var inertiaTensor, out center);
             MeshInertiaHelper.GetInertiaOffset(mass, center, out var inertiaOffset);
             Symmetric3x3.Add(inertiaTensor, inertiaOffset, out var recenteredInertia);
             Recenter(center);
+            BodyInertia inertia;
             Symmetric3x3.Invert(recenteredInertia, out inertia.InverseInertiaTensor);
             inertia.InverseMass = 1f / mass;
+            return inertia;
         }
 
         /// <summary>
@@ -438,13 +444,15 @@ namespace BepuPhysics.Collidables
         /// Assumes the mesh is open and should be treated as a triangle soup.
         /// </summary>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
-        /// <param name="inertia">Inertia of the open mesh.</param>
-        public readonly void ComputeOpenInertia(float mass, out BodyInertia inertia)
+        /// <returns>Inertia of the open mesh.</returns>
+        public readonly BodyInertia ComputeOpenInertia(float mass)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeOpenInertia(ref triangleSource, mass, out var inertiaTensor);
+            BodyInertia inertia;
             inertia.InverseMass = 1f / mass;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
+            return inertia;
         }
 
         /// <summary>

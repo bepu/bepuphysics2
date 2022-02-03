@@ -188,7 +188,7 @@ namespace Demos.SpecializedTests
             convexHull.Dispose(BufferPool);
 
             mesh = new Mesh(triangles, new Vector3(1), BufferPool);
-            mesh.ComputeClosedInertia(1, out inertia);
+            inertia = mesh.ComputeClosedInertia(1);
         }
 
         public void CreateBodyDescription(Random random, in RigidPose pose, in BodyVelocity velocity, out BodyDescription description)

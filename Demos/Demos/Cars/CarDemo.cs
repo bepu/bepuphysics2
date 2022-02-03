@@ -130,8 +130,7 @@ namespace Demos.Demos.Cars
                     return new Vector3(vertexPosition.X, height + edgeRamp, vertexPosition.Y);
 
                 }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
-                Simulation.Shapes.Add(planeMesh)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
 
 
         }

@@ -186,7 +186,7 @@ namespace Demos.SpecializedTests
 
                 DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(3), out var mesh);
                 var collidable = new CollidableDescription(Simulation.Shapes.Add(mesh), ContinuousDetection.Discrete(2f, 2f));
-                mesh.ComputeClosedInertia(1, out var newtInertia);
+                var newtInertia = mesh.ComputeClosedInertia(1);
                 for (int i = 0; i < 5; ++i)
                 {
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-20, 5 + i * 5, 0), newtInertia, collidable, -1e-2f));
