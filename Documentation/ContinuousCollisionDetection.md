@@ -36,9 +36,9 @@ For most use cases, sticking with the default is a high performance and high qua
 # What are ghost collisions?
 In the solver, a contact constraint (speculative or not) acts like a plane. As far as the solver is concerned, the contact surface has unlimited horizontal extent. This is a perfectly fine approximation when the contacts are created at a reasonable location, but it can fail when objects are moving very quickly past each other.
 
-TODO PICTURE
+<p align="center"><img src="images/ContinuousCollisionDetection/ghostCollision.png"/></p>
 
-The ball smacks into the plane created by the speculative contact, sending both the box and ball flying in unexpected directions. That's a ghost collision.
+The ball smacks into the plane created by the speculative contact, sending the ball flying off to the side. That's a ghost collision.
 
 You can mitigate ghost collisions by either using a higher `Simulation.Timestep` rate or by shrinking the maximum speculative margin on the involved bodies. To shrink the margin, instead of passing in just the shape index as your `CollidableDescription`, provide the `BodyDescription` or `StaticDescription` a full `CollidableDescription` like so:
 ```cs
@@ -47,9 +47,11 @@ Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0),
 ```
 This still uses a 'passive' continuous collision detection mode (explained in a couple of sections) like the default, but limits the speculative margin for any pairs involving this static collidable to between 0 and 1. Collision pairs with this static cannot generate speculative contacts more than 1 unit away from the surface.
 
+<p align="center"><img src="images/ContinuousCollisionDetection/smallMarginNoGhostCollision.png"/></p>
+
 Using a smaller maximum speculative margin means that you can miss high velocity non-ghost collisions, though:
 
-TODO PICTURE
+<p align="center"><img src="images/ContinuousCollisionDetection/smallMarginNoCollision.png"/></p>
 
 # What about swept continuous collision detection?
 Specifying `ContinuousDetection.Continuous` in the `CollidableDescription` means that pairs involving the collidable will use sweep-tested collision detection. That is, rather than computing contacts based on where the bodies are as of the last frame, a sweep test will determine where the bodies are likely to be *at the time of impact* during this frame. Contacts are then created at that time of impact.
