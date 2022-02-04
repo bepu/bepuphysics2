@@ -66,7 +66,9 @@ You can also speed up the search by increasing the `sweepConvergenceThreshold`. 
 
 By default, both of these values are 1e-3f. Increasing them will make the search faster, but result in larger error in the final time of impact estimate. But that's fine, because speculative margins still exist!
 
-The goal is to find a rough time *close* to the time of impact such that the speculative contacts created by narrow phase testing won't cause ghost collisions. That's a pretty forgiving problem.
+<p align="center"><img src="images/ContinuousCollisionDetection/smallMarginSweepCollision.png"/></p>
+
+In the above picture, the sweep was configured such that it left a pretty noticable error in the time of impact, but it's still well within the speculative margin. While the speculative margin would have been too small to detect contacts had the test been performed at the T = 0 location, it finds appropriate contacts at T = 0.28. The goal is to find a rough time *close* to the time of impact such that the speculative contacts created by narrow phase testing won't cause ghost collisions. That's a pretty forgiving problem.
 
 Overall, using `Continuous` will be pretty fast since it only uses sweeps when the velocity in a given pair is high enough to warrant it. Of course, when the sweep test does run, it's not completely free, so prefer the simpler modes if they do what you want. Especially for really complicated compound shapes or meshes. (And preferably, don't have really complicated dynamic compounds or meshes.)
 
