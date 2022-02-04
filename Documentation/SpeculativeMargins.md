@@ -1,13 +1,18 @@
-# What's a speculative margin?
-The maximum distance at which collision pairs generate speculative contacts.
+# What is continuous collision detection?
+Continuous collision detection is a family of techniques that try to stop bodies from tunneling into (or through) each other at high velocities. Generating normal contact constraints at discrete points in time will tend to miss such fast moving collisions or respond to them too late.
 
-Speculative contacts are contacts with negative depth. They're still solved, but they don't push back against motion unless the velocity is high enough that the involved collidables are expected to come into contact within the next frame.
+In bepuphysics2, continuous collision detection is handled mostly through speculative contacts. When those aren't sufficient, the library offers a mode that performs sweep testing to find a time of impact.
+
+See the [ContinuousCollisionDetectionDemo](../Demos/Demos/ContinuousCollisionDetectionDemo.cs) for more information about the topics covered here.
+
+# What's a speculative contact?
+Speculative contacts are contacts with negative depth. They're still solved, but they don't apply any forces unless the velocity is high enough that the involved collidables are expected to come into contact within the next frame.
+
+The speculative *margin* is the maximum distance at which a collision pair will generate speculative contacts.
+
+TODO PICTURE
 
 The ball is heading towards the ground with a high enough velocity that the velocity expanded bounding box intersects the ground's bounding box. Similarly, since the collidables are configured to have no maximum speculative margin in this example, a speculative contact is created. The solver will detect and push back the part of velocity which would result in penetration. In the next frame, the ball and ground are in contact.
-
-This is a form of continuous collision detection in the sense that it can avoid bodies tunneling through each other.
-
-See the [ContinuousCollisionDetectionDemo](../Demos/Demos/ContinuousCollisionDetectionDemo.cs) for more information.
 
 # Do I need to care about speculative margins?
 Most of the time, you don't. Consider a body or static created by just specifying the collision shape like so:
@@ -65,11 +70,7 @@ There are three continuous collision detection modes:
 
 Note that, if the maximum speculative margin is set to `float.MaxValue`, there's no difference between `Discrete` and `Passive` since the bounding box will get expanded either way.
 
-You can also set the *minimum* speculative margin to a nonzero value, though this is unlikely to be useful. The *effective* speculative margin used in a pair is based on the velocities of the bodies clamped by the minimum and maximums from each body.
-
-TODO
-
-
+You can also set the *minimum* speculative margin to a nonzero value, though this is rarely useful. The *effective* speculative margin used in a pair is based on the velocities of the bodies clamped by the minimum and maximums from each body. If bodies aren't moving, the speculative margins will tend to be very small. Setting a nonzero minimum could make sense if you expect there to be a lot of velocity introduced in the middle of a timestep (perhaps by other constraints) that make the velocity-estimated effective speculative margin insufficient. Usually, though, just leave it at zero.
 
 # Do speculative margins have any other surprising side effects?
 Speculative contacts are mostly incompatible with the traditional approach to bounciness- a coefficient of restitution which sets an opposing velocity goal along a contact normal proportional to the incoming velocity. That's why you won't find a 0 to 1 `CoefficientOfRestitution` anywhere in the library.
