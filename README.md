@@ -45,6 +45,8 @@ By user request, there's a [discord server](https://discord.gg/ssa2XpY). I'll be
 
 [Substepping](Documentation/Substepping.md)
 
+[Continuous Collision Detection](Documentation/ContinuousCollisionDetection.md)
+
 [Contributing](CONTRIBUTING.md)
 
 [Upgrading from v1, concept mapping](Documentation/UpgradingFromV1.md)

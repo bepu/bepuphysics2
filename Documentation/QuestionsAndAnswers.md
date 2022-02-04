@@ -1,17 +1,18 @@
 # Q&A
 
-### I'm seeing spikes in the time it takes to simulate a timestep, what's going on?
+## I'm seeing spikes in the time it takes to simulate a timestep, what's going on?
 
-If it quits happening a little while after application startup, it's probably JIT compilation. If it keeps happening, the operating system might be struggling with a bunch of threads competing for timeslices, resulting in stalls. In that case, try using fewer threads for the physics- leaving one free might be all it takes. See the 
-[Performance Tips](PerformanceTips.md#general) for more.
+If it quits happening a little while after application startup, it's probably JIT compilation. You could consider warming up the simulation so all the relevant codepaths are seen by the JIT ahead of time. You may also want to look into ahead of time compilation like NativeAOT.
 
-### How can I make a convex shape rotate around a point other than its volumetric center?
+If it keeps happening, and the spikes are in the range of a handful of milliseconds, the operating system might be struggling with a bunch of threads competing for timeslices, resulting in stalls. In that case, try using fewer threads for the physics- leaving one free might be all it takes. See the [Performance Tips](PerformanceTips.md#general) for more.
+
+## How can I make a convex shape rotate around a point other than its volumetric center?
 
 Other than triangles, all convex shapes are centered on their volumetric center, and there is no property in the `CollidableDescription` to offset a body's shape.
 
 However, you can create a `Compound` with just one child and give that child an offset local pose. The overhead is pretty tiny.
 
-### How do I make an object that can't be moved by outside influences, like other colliding dynamic bodies, but can still have a velocity?
+## How do I make an object that can't be moved by outside influences, like other colliding dynamic bodies, but can still have a velocity?
 
 Use a kinematic body. To create one, use `BodyDescription.CreateKinematic` or set the inverse mass and all components of the inverse inertia to zero in the `BodyDescription` passed to `Simulation.Bodies.Add`. Kinematic bodies have effectively infinite mass and cannot be moved by any force. You can still change their velocity directly, though.
 
@@ -21,7 +22,10 @@ Be careful when using kinematics- they are both unstoppable forces and immovable
 
 Also, if two kinematic bodies collide, a constraint will not be generated. Kinematics cannot respond to collisions, not even with other infinitely massive objects. They will simply continue to move along the path defined by their velocity.
 
-### I made a body with zero inverse mass and nonzero inverse inertia and the simulation exploded/crashed! Why?
+## The heck is a 'speculative margin'/'speculative contact'?
+A way of solving for predicted collisions to stop penetration and tunneling. See the [continuous collision detection documentation](ContinuousCollisionDetection.md) for more details.
+
+## I made a body with zero inverse mass and nonzero inverse inertia and the simulation exploded/crashed! Why?
 
 While dynamic bodies with zero inverse mass and nonzero inverse inertia tensors are technically allowed, they require extreme care. It is possible for constraints to be configured such that there is no solution, resulting in a division by zero. `NaN` values will propagate through the simulation and make everything explode.
 
@@ -33,7 +37,7 @@ Generally, avoid creating dynamic bodies with zero inverse mass unless you can a
 
 (You can also just use a constraint to keep an object positioned in one spot rather than setting its inverse mass to zero!)
 
-### How can I ensure that the results of a simulation are deterministic (given the same inputs, the simulation produces the same physical result) on a single machine?
+## How can I ensure that the results of a simulation are deterministic (given the same inputs, the simulation produces the same physical result) on a single machine?
 
 Take great care to ensure that every interaction with the physics simulation is reproduced in exactly the same order on each execution. This even includes the order of adds and removes!
 
@@ -43,7 +47,7 @@ Assuming that all external interactions with the engine are deterministic, the s
 
 The `Deterministic` property defaults to false. Ensuring determinism has a slight performance impact. It should be trivial for most simulations, but large and extremely chaotic simulations may take a noticeable hit.
 
-### What do I do if I want determinism across different computers?
+## What do I do if I want determinism across different computers?
 
 Hope that they happen to have exactly the same architecture so that every single instruction produces bitwise identical results. :(
 
@@ -53,9 +57,9 @@ But, in general, the only way to guarantee cross platform determinism is to avoi
 
 At the moment, BEPUphysics v2 does not support software floats or fixed math out of the box, and it would be a pretty enormous undertaking to port it all over without destroying performance.
 
-I may look into conditionally compiled alternative scalar types in the future. I can't guarantee when or if I'll get around to it, though; don't wait for me!
+I may try to get something working here in the future. I can't guarantee when or if I'll get around to it, though; don't wait for me!
 
-### I updated to the latest version of the physics library and simulations are producing different results than before, even though I set the `Simulation.Deterministic` property to true! What do?
+## I updated to the latest version of the physics library and simulations are producing different results than before, even though I set the `Simulation.Deterministic` property to true! What do?
 
 Different versions of the library are not guaranteed to produce identical simulation results. Guaranteeing cross-version determinism would constrain development to an unacceptable degree.
 
@@ -63,13 +67,13 @@ If you need determinism of results over long periods (for example, storing game 
 
 Such a drift correcting mechanism also compensates for the differences between processor architectures, so you'd gain the ability to share the replay across different hardware as a bonus.
 
-### I was trying to simulate the behavior of a spinning multitool in zero gravity and noted a CLEAR lack of the Dzhanibekov effect!
+## I was trying to simulate the behavior of a spinning multitool in zero gravity and noted a CLEAR lack of the Dzhanibekov effect!
 
 By default, angular momentum is not explicitly tracked; angular velocity will remain constant during rotation without outside impulses.
 
 Momentum-conserving angular integration can be chosen by returning a different value from the `IPoseIntegratorCallbacks.AngularIntegrationMode` property. Gyroscopes tend to work better with `ConserveMomentum`, while `ConserveMomentumWithGyroscopicTorque` is less prone to velocity drift toward lower inertia axes.
 
-## Surprises
+# Surprises
 
 Simulating real physics is slightly difficult, so corners are cut. Lots of corners. Sometimes this results in unexpected behavior. Sometimes different physics libraries cut different corners, so the unexpected behavior differs. 
 
@@ -79,7 +83,7 @@ This is a list of some things that might frustrate or raise an eyebrow (and what
 
 This list will probably change over time.
 
-### ...Where is the bounciness/restitution material property?
+## ...Where is the bounciness/restitution material property?
 
 You're not crazy- it doesn't exist! Instead, at the time of writing, there is friction, frequency, damping ratio, and maximum recovery velocity.
 
@@ -87,7 +91,7 @@ Frequency and damping ratio can achieve some of the same effects as restitution 
 
 The reason for the lack of a traditional coefficient of restitution is speculative contacts. v1 used them too, but v2 pushes their usage much further and uses them as the primary form of continuous collision detection. Most of the problems caused by speculative contacts (like ghost contacts) have been smoothed over, but the naive implementation of velocity-flip restitution simply doesn't work with speculative contacts.
 
-### Swept shape tests against the backfaces of meshes don't go through, but collisions do. What's going on?
+## Swept shape tests against the backfaces of meshes don't go through, but collisions do. What's going on?
 
 While ray and collision testing against triangles is always one sided, swept shape tests are double sided. This is pretty strange, and there isn't a secret good reason for it.
 

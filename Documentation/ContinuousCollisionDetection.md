@@ -1,7 +1,7 @@
 # What is continuous collision detection?
 Continuous collision detection is a family of techniques that try to stop bodies from tunneling into (or through) each other at high velocities. Generating normal contact constraints at discrete points in time will tend to miss such fast moving collisions or respond to them too late.
 
-TODO PICTURE
+<p align="center"><img src="images/ContinuousCollisionDetection/ccd.png"/></p>
 
 In bepuphysics2, continuous collision detection is handled mostly through speculative contacts. When those aren't sufficient, the library offers a mode that performs sweep testing to find a time of impact.
 
@@ -12,9 +12,9 @@ Speculative contacts are contacts with negative depth. They're still solved, but
 
 The speculative *margin* is the maximum distance at which a collision pair will generate speculative contacts.
 
-TODO PICTURE
+<p align="center"><img src="images/ContinuousCollisionDetection/speculativeContact.png"/></p>
 
-The ball is heading towards the ground with a high enough velocity that the velocity expanded bounding box intersects the ground's bounding box. Similarly, since the collidables are configured to have no maximum speculative margin in this example, a speculative contact is created. The solver will detect and push back the part of velocity which would result in penetration. In the next frame, the ball and ground are in contact.
+The ball is heading towards the ground with a high enough velocity that the velocity expanded bounding box intersects the ground's bounding box. Similarly, since the collidables in this picture are configured to have an unlimited speculative margin, a speculative contact is created. The solver will detect and push back the part of velocity which would result in penetration. In the next frame, the ball and ground are in contact.
 
 # Do I need to care about speculative margins?
 Most of the time, you don't. Consider a body or static created by just specifying the collision shape like so:
