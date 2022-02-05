@@ -10,6 +10,10 @@ using DemoRenderer.UI;
 
 namespace Demos.Demos
 {
+    /// <summary>
+    /// Shows how different kinds of continuous collision detection work.
+    /// See the ContinuousCollisionDetection.md documentation for more information.
+    /// </summary>
     public class ContinuousCollisionDetectionDemo : Demo
     {
         ConstraintHandle spinnerMotorDefaultA, spinnerMotorDefaultB, spinnerMotorSweepA, spinnerMotorSweepB;

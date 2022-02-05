@@ -430,6 +430,9 @@ namespace BepuPhysics.CollisionDetection
             }
 
             //Add the speculative margins, but try to obey both collidables' bounds. Note that in the case of nonoverlapping intervals, the higher min ends up used.
+            //Note that this margin *could* be kept smaller within a pair by only storing out the angular contribution to the speculative margin target
+            //and then expanding the pair by the magnitude of the relative linear velocity, rather than (effectively) the sum of each body's velocity.
+            //However, loading the velocities here isn't free. In tests, it usually came out slower than just using the more generous speculative margin.
             var speculativeMargin =
                 MathF.Max(collidableA.Continuity.MinimumSpeculativeMargin, MathF.Max(continuityB.MinimumSpeculativeMargin,
                 MathF.Min(collidableA.Continuity.MaximumSpeculativeMargin, MathF.Min(continuityB.MaximumSpeculativeMargin,

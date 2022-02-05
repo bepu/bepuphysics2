@@ -94,7 +94,7 @@ namespace Demos.Demos.Sponsors
             Add(sponsors2, @"F.", @"Content\Sponsors\tootbush.png", content, surface);
 
             //These supporters are those who gave 1000 dollars a month (or historical backers of roughly equivalent or greater total contribution).
-            Add(sponsors3, @"K. H. & F.", @"Content\Sponsors\spooky.png", content, surface);
+            Add(sponsors3, @"Neos VR", @"Content\Sponsors\spooky.png", content, surface);
 
         }
 

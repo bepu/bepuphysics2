@@ -1,6 +1,5 @@
 ﻿using BepuUtilities;
 using DemoContentLoader;
-using Demos.SpecializedTests;
 using DemoUtilities;
 using OpenTK;
 
@@ -18,7 +17,6 @@ namespace Demos
             {
                 content = ContentArchive.Load(stream);
             }
-            //DeterminismTest<FountainStressTestDemo>.Test(content, 2, 32768);
             var demo = new DemoHarness(loop, content);
             loop.Run(demo);
             loop.Dispose();
