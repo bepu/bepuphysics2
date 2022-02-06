@@ -29,9 +29,9 @@ For both the dynamic and the static, this creates a `CollidableDescription` from
 2. The maximum speculative margin is `float.MaxValue`. In other words, there's no upper limit.
 3. No sweep tests are used. Contacts are simply created from closest features.
 
-Taken together, this makes most stuff just work. Performance stays high since speculative contacts only get created if the velocity is high enough to warrant them, and high velocity collisions tend to have robust behavior since speculative contacts get generated.
+Taken together, this makes most stuff just work. Performance stays high since speculative contacts only get created if the velocity is high enough to warrant them, and high velocity collisions tend to have robust behavior since speculative contacts get generated. For most use cases, sticking with the default is a high performance and high quality option.
 
-For most use cases, sticking with the default is a high performance and high quality option.
+Sometimes, when the details of the simulation don't matter as much, it can be useful to limit the speculative margin to reduce the number of constraints that get generated. Perhaps you have a giant building that's collapsing and tens of thousands of bodies are moving rapidly in close proximity- that'll generate a lot of speculative contacts. You could probably get a noticeable speed boost by reducing the maximum margin on the building chunks to a small nonzero value with no noticeable impact on quality.
 
 # What are ghost collisions?
 In the solver, a contact constraint (speculative or not) acts like a plane. As far as the solver is concerned, the contact surface has unlimited horizontal extent. This is a perfectly fine approximation when the contacts are created at a reasonable location, but it can fail when objects are moving very quickly past each other.
