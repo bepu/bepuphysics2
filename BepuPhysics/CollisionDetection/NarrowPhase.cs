@@ -412,31 +412,27 @@ namespace BepuPhysics.CollisionDetection
             ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
             ref var stateA = ref setA.SolverStates[bodyLocationA.Index];
             ref var collidableA = ref setA.Collidables[bodyLocationA.Index];
-            ContinuousDetection continuityB;
             float speculativeMarginB;
             if (twoBodies)
             {
                 ref var bodyLocationB = ref Bodies.HandleToLocation[b.BodyHandle.Value];
                 ref var collidableB = ref Bodies.Sets[bodyLocationB.SetIndex].Collidables[bodyLocationB.Index];
-                continuityB = collidableB.Continuity;
                 speculativeMarginB = collidableB.SpeculativeMargin;
             }
             else
             {
                 //Slot B is a static.
-                ref var staticB = ref Statics.GetDirectReference(b.StaticHandle);
-                continuityB = staticB.Continuity;
                 speculativeMarginB = 0;
             }
 
-            //Add the speculative margins, but try to obey both collidables' bounds. Note that in the case of nonoverlapping intervals, the higher min ends up used.
+            //Add the speculative margins. This is conservative; the speculative margins were computed as a worst case based on the velocity of the body,
+            //then clamped by the collidable's min/max margin values. Adding them together means an unlimited margin will result in speculative contacts
+            //being generated for the pair if the velocity would bring them into contact.
+
             //Note that this margin *could* be kept smaller within a pair by only storing out the angular contribution to the speculative margin target
-            //and then expanding the pair by the magnitude of the relative linear velocity, rather than (effectively) the sum of each body's velocity.
+            //and then expanding the pair by the magnitude of the relative linear velocity.
             //However, loading the velocities here isn't free. In tests, it usually came out slower than just using the more generous speculative margin.
-            var speculativeMargin =
-                MathF.Max(collidableA.Continuity.MinimumSpeculativeMargin, MathF.Max(continuityB.MinimumSpeculativeMargin,
-                MathF.Min(collidableA.Continuity.MaximumSpeculativeMargin, MathF.Min(continuityB.MaximumSpeculativeMargin,
-                    collidableA.SpeculativeMargin + speculativeMarginB))));
+            var speculativeMargin = collidableA.SpeculativeMargin + speculativeMarginB;
 
             //By precalculating the speculative margin, we give the narrow phase callbacks the option of modifying it.
             if (!Callbacks.AllowContactGeneration(workerIndex, a, b, ref speculativeMargin))
