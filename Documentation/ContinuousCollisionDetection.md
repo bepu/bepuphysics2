@@ -56,7 +56,7 @@ Using a smaller maximum speculative margin means that you can miss high velocity
 # What about swept continuous collision detection?
 Specifying `ContinuousDetection.Continuous` in the `CollidableDescription` means that pairs involving the collidable will use sweep-tested collision detection. That is, rather than computing contacts based on where the bodies are as of the last frame, a sweep test will determine where the bodies are likely to be *at the time of impact* during this frame. Contacts are then created at that time of impact.
 
-This avoids almost all ghost collisions, since bodies passing each other at high speed will be detected as having no impact.
+This avoids almost all ghost collisions, since bodies passing each other at high speed will still be correctly detected as having no impact.
 
 Swept testing can miss *secondary* contacts that large-margin speculative contacts wouldn't, though. But you can combine both! Speculative contacts work with sweep testing; they are not mutually exclusive. To demonstrate this, consider the configuration options for the `Continuous` mode. 
 
