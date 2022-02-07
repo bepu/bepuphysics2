@@ -128,15 +128,15 @@ namespace DemoRenderer
 
             //All ray traced shapes use analytic coverage writes to get antialiasing.
             GL.Enable(EnableCap.SampleAlphaToCoverage);
-            SphereRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.spheres.Span), 0, Shapes.spheres.Count);
-            CapsuleRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.capsules.Span), 0, Shapes.capsules.Count);
-            CylinderRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.cylinders.Span), 0, Shapes.cylinders.Count);
+            SphereRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.ShapeCache.Spheres.Span), 0, Shapes.ShapeCache.Spheres.Count);
+            CapsuleRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.ShapeCache.Capsules.Span), 0, Shapes.ShapeCache.Capsules.Count);
+            CylinderRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.ShapeCache.Cylinders.Span), 0, Shapes.ShapeCache.Cylinders.Count);
 
             //Non-raytraced shapes just use regular opaque rendering.
             GL.Disable(EnableCap.SampleAlphaToCoverage);
-            BoxRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.boxes.Span), 0, Shapes.boxes.Count);
-            TriangleRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.triangles.Span), 0, Shapes.triangles.Count);
-            MeshRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.meshes.Span), 0, Shapes.meshes.Count);
+            BoxRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.ShapeCache.Boxes.Span), 0, Shapes.ShapeCache.Boxes.Count);
+            TriangleRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.ShapeCache.Triangles.Span), 0, Shapes.ShapeCache.Triangles.Count);
+            MeshRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.ShapeCache.Meshes.Span), 0, Shapes.ShapeCache.Meshes.Count);
             LineRenderer.Render(camera, Surface.Resolution, SpanConverter.AsSpan(Lines.lines.Span), 0, Lines.lines.Count);
 
             Background.Render(camera);

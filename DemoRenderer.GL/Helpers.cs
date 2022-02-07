@@ -8,6 +8,7 @@ namespace DemoRenderer
 {
     public static class Helpers
     {
+
         /// <summary>
         /// Creates an index buffer of the specified size for screenspace quads.
         /// </summary>
@@ -41,7 +42,7 @@ namespace DemoRenderer
         /// <summary>
         /// Creates an index buffer of the specified size for boxes.
         /// </summary>
-        /// <param name="boxCount">Number of boxes to create indices for.</param>
+        /// <param name="quadCount">Number of boxes to create indices for.</param>
         /// <returns>Index buffer for boxes.</returns> 
         /// <remarks>Using redundant indices for batches avoids a slow path for low triangle count instancing. This is hardware/driver specific; it may change on newer cards.</remarks>
         public static uint[] GetBoxIndices(int boxCount)
@@ -106,7 +107,7 @@ namespace DemoRenderer
         /// <param name="color">RGB color to pack.</param>
         /// <returns>Color packed into 32 bits.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint PackColor(in Vector3 color)
+        public static uint PackColor(Vector3 color)
         {
             const uint RScale = (1 << 11) - 1;
             const uint GScale = (1 << 11) - 1;
@@ -144,7 +145,7 @@ namespace DemoRenderer
         /// <param name="color">RGBA color to pack.</param>
         /// <returns>Color packed into 32 bits.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint PackColor(in Vector4 color)
+        public static uint PackColor(Vector4 color)
         {
             var scaledColor = Vector4.Max(Vector4.Zero, Vector4.Min(Vector4.One, color)) * 255;
             return (uint)scaledColor.X | ((uint)scaledColor.Y << 8) | ((uint)scaledColor.Z << 16) | ((uint)scaledColor.W << 24);
@@ -171,7 +172,7 @@ namespace DemoRenderer
         /// <param name="source">Orientation to pack.</param>
         /// <param name="packed">W-less packed orientation, with remaining components negated to guarantee that the reconstructed positive W component is valid.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void PackOrientation(in Quaternion source, out Vector3 packed)
+        public static void PackOrientation(Quaternion source, out Vector3 packed)
         {
             packed = new Vector3(source.X, source.Y, source.Z);
             if (source.W < 0)
@@ -198,13 +199,13 @@ namespace DemoRenderer
         /// <param name="source">Orientation to pack.</param>
         /// <param name="packed">Packed orientation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static ulong PackOrientationU64(ref Quaternion source)
+        public unsafe static ulong PackOrientationU64(Quaternion source)
         {
             //This isn't exactly a clever packing, but with 64 bits, cleverness isn't required.
             ref var vectorSource = ref Unsafe.As<float, Vector4>(ref source.X);
             var clamped = Vector4.Max(new Vector4(-1), Vector4.Min(new Vector4(1), vectorSource));
-            ulong packed;
-            ref var packedShorts = ref Unsafe.As<ulong, ushort>(ref *&packed);
+            Unsafe.SkipInit(out ulong packed);
+            ref var packedShorts = ref Unsafe.As<ulong, ushort>(ref packed);
             PackDuplicateZeroSNORM(clamped.X, out packedShorts);
             PackDuplicateZeroSNORM(clamped.Y, out Unsafe.Add(ref packedShorts, 1));
             PackDuplicateZeroSNORM(clamped.Z, out Unsafe.Add(ref packedShorts, 2));
@@ -216,7 +217,7 @@ namespace DemoRenderer
         static unsafe float UnpackDuplicateZeroSNORM(ushort packed)
         {
             var unpacked = (packed & ((1 << 15) - 1)) * (1f / ((1 << 15) - 1));
-            ref var reinterpreted = ref Unsafe.As<float, uint>(ref *&unpacked);
+            ref var reinterpreted = ref Unsafe.As<float, uint>(ref unpacked);
             //Set the sign bit.
             reinterpreted |= (packed & (1u << 15)) << 16;
             return unpacked;
@@ -274,6 +275,13 @@ namespace DemoRenderer
         public static void CheckForUndisposed(bool disposed, object o)
         {
             Debug.Assert(disposed, "An object of type " + o.GetType() + " was not disposed prior to finalization.");
+        }
+
+        public static void Dispose<T>(ref T disposable) where T : IDisposable
+        {
+            if (disposable != null)
+                disposable.Dispose();
+            disposable = default(T);
         }
     }
 }
