@@ -1,6 +1,7 @@
 ﻿using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 
@@ -8,9 +9,18 @@ namespace BepuPhysics.Trees
 {
     public unsafe partial struct Tree
     {
+        /// <summary>
+        /// Buffer of nodes in the tree.
+        /// </summary>
         public Buffer<Node> Nodes;
+        /// <summary>
+        /// Buffer of metanodes in the tree. Metanodes contain metadata that aren't read during most query operations but are useful for bookkeeping.
+        /// </summary>
         public Buffer<Metanode> Metanodes;
         int nodeCount;
+        /// <summary>
+        /// Gets or sets the number of nodes in the tree.
+        /// </summary>
         public int NodeCount
         {
             readonly get
@@ -23,8 +33,14 @@ namespace BepuPhysics.Trees
             }
         }
 
+        /// <summary>
+        /// Buffer of leaves in the tree.
+        /// </summary>
         public Buffer<Leaf> Leaves;
         int leafCount;
+        /// <summary>
+        /// Gets or sets the number of leaves in the tree.
+        /// </summary>
         public int LeafCount
         {
             readonly get
@@ -54,10 +70,40 @@ namespace BepuPhysics.Trees
             return leafCount++;
         }
 
+        /// <summary>
+        /// Gets bounds pointerse for a leaf in the tree.
+        /// </summary>
+        /// <param name="leafIndex">Index of the leaf in the tree.</param>
+        /// <param name="minPointer">Pointer to the minimum bounds vector in the tree.</param>
+        /// <param name="maxPointer">Pointer to the maximum bounds vector in the tree.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly void GetBoundsPointers(int leafIndex, out Vector3* minPointer, out Vector3* maxPointer)
+        {
+            var leaf = Leaves[leafIndex];
+            var nodeChild = (&Nodes.Memory[leaf.NodeIndex].A) + leaf.ChildIndex;
+            minPointer = &nodeChild->Min;
+            maxPointer = &nodeChild->Max;
+        }
+
+        /// <summary>
+        /// Applies updated bounds to the given leaf index in the tree, refitting the tree to match.
+        /// </summary>
+        /// <param name="leafIndex">Index of the leaf in the tree to update.</param>
+        /// <param name="min">New minimum bounds for the leaf.</param>
+        /// <param name="max">New maximum bounds for the leaf.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe readonly void UpdateBounds(int leafIndex, Vector3 min, Vector3 max)
+        {
+            GetBoundsPointers(leafIndex, out var minPointer, out var maxPointer);
+            *minPointer = min;
+            *maxPointer = max;
+            RefitForNodeBoundsChange(Leaves[leafIndex].NodeIndex);
+        }
 
         /// <summary>
         /// Constructs an empty tree.
         /// </summary>
+        /// <param name="pool">Buffer pool to use to allocate resources in the tree.</param>
         /// <param name="initialLeafCapacity">Initial number of leaves to allocate room for.</param>
         public unsafe Tree(BufferPool pool, int initialLeafCapacity = 4096) : this()
         {
@@ -98,7 +144,6 @@ namespace BepuPhysics.Trees
         /// <summary>
         /// Gets the number of bytes required to store the tree.
         /// </summary>
-        /// <param name="tree">Tree to measure.</param>
         /// <returns>Number of bytes required to store the tree.</returns>
         public readonly int GetSerializedByteCount()
         {
@@ -108,7 +153,6 @@ namespace BepuPhysics.Trees
         /// <summary>
         /// Writes a tree into a byte buffer.
         /// </summary>
-        /// <param name="tree">Tree to write into the buffer.</param>
         /// <param name="bytes">Buffer to hold the tree's data.</param>
         public readonly void Serialize(Span<byte> bytes)
         {

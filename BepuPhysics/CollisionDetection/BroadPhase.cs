@@ -82,39 +82,27 @@ namespace BepuPhysics.CollisionDetection
             return RemoveAt(index, ref StaticTree, ref staticLeaves, out movedLeaf);
         }
 
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetBoundsPointers(int broadPhaseIndex, ref Tree tree, out Vector3* minPointer, out Vector3* maxPointer)
-        {
-            var leaf = tree.Leaves[broadPhaseIndex];
-            var nodeChild = (&tree.Nodes.Memory[leaf.NodeIndex].A) + leaf.ChildIndex;
-            minPointer = &nodeChild->Min;
-            maxPointer = &nodeChild->Max;
-        }
+        /// <summary>
+        /// Gets pointers to the leaf's bounds stored in the broad phase's active tree.
+        /// </summary>
+        /// <param name="index">Index of the active collidable to examine.</param>
+        /// <param name="minPointer">Pointer to the minimum bounds in the tree.</param>
+        /// <param name="maxPointer">Pointer to the maximum bounds in the tree.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetActiveBoundsPointers(int index, out Vector3* minPointer, out Vector3* maxPointer)
         {
-            GetBoundsPointers(index, ref ActiveTree, out minPointer, out maxPointer);
+            ActiveTree.GetBoundsPointers(index, out minPointer, out maxPointer);
         }
+        /// <summary>
+        /// Gets pointers to the leaf's bounds stored in the broad phase's static tree.
+        /// </summary>
+        /// <param name="index">Index of the static to examine.</param>
+        /// <param name="minPointer">Pointer to the minimum bounds in the tree.</param>
+        /// <param name="maxPointer">Pointer to the maximum bounds in the tree.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetStaticBoundsPointers(int index, out Vector3* minPointer, out Vector3* maxPointer)
         {
-            GetBoundsPointers(index, ref StaticTree, out minPointer, out maxPointer);
-        }
-
-        /// <summary>
-        /// Applies updated bounds to the given leaf index in the given tree, refitting the tree to match.
-        /// </summary>
-        /// <param name="broadPhaseIndex">Index of the leaf in the tree to update.</param>
-        /// <param name="tree">Tree containing the leaf to update.</param>
-        /// <param name="min">New minimum bounds for the leaf.</param>
-        /// <param name="max">New maximum bounds for the leaf.</param>
-        public unsafe static void UpdateBounds(int broadPhaseIndex, ref Tree tree, in Vector3 min, in Vector3 max)
-        {
-            GetBoundsPointers(broadPhaseIndex, ref tree, out var minPointer, out var maxPointer);
-            *minPointer = min;
-            *maxPointer = max;
-            tree.RefitForNodeBoundsChange(tree.Leaves[broadPhaseIndex].NodeIndex);
+            StaticTree.GetBoundsPointers(index, out minPointer, out maxPointer);
         }
 
         /// <summary>
@@ -123,9 +111,10 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="broadPhaseIndex">Index of the leaf to update.</param>
         /// <param name="min">New minimum bounds for the leaf.</param>
         /// <param name="max">New maximum bounds for the leaf.</param>
-        public void UpdateActiveBounds(int broadPhaseIndex, in Vector3 min, in Vector3 max)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateActiveBounds(int broadPhaseIndex, Vector3 min, Vector3 max)
         {
-            UpdateBounds(broadPhaseIndex, ref ActiveTree, min, max);
+            ActiveTree.UpdateBounds(broadPhaseIndex, min, max);
         }
         /// <summary>
         /// Applies updated bounds to the given active leaf index, refitting the tree to match.
@@ -133,9 +122,10 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="broadPhaseIndex">Index of the leaf to update.</param>
         /// <param name="min">New minimum bounds for the leaf.</param>
         /// <param name="max">New maximum bounds for the leaf.</param>
-        public void UpdateStaticBounds(int broadPhaseIndex, in Vector3 min, in Vector3 max)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateStaticBounds(int broadPhaseIndex, Vector3 min, Vector3 max)
         {
-            UpdateBounds(broadPhaseIndex, ref StaticTree, min, max);
+            StaticTree.UpdateBounds(broadPhaseIndex, min, max);
         }
 
         int frameIndex;
