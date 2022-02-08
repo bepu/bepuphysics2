@@ -93,7 +93,7 @@ namespace Demos.Demos
             bulletDescription = BodyDescription.CreateDynamic(new Vector3(), bulletShape.ComputeInertia(.1f), Simulation.Shapes.Add(bulletShape), 0.01f);
 
             var shootiePatootieShape = new Sphere(3f);
-            shootiePatootieDescription = BodyDescription.CreateDynamic(new Vector3(), shootiePatootieShape.ComputeInertia(100), Simulation.Shapes.Add(shootiePatootieShape), 0.01f);
+            shootiePatootieDescription = BodyDescription.CreateDynamic(new Vector3(), shootiePatootieShape.ComputeInertia(100), new (Simulation.Shapes.Add(shootiePatootieShape), 0.1f), 0.01f);
         }
 
         BodyDescription bulletDescription;
