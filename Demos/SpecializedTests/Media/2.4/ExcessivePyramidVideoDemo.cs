@@ -20,7 +20,7 @@ namespace Demos.SpecializedTests.Media
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(-120, 16, 1045);
+            camera.Position = new Vector3(-120, 32, 1045);
             camera.Yaw = MathHelper.Pi * 1f / 4;
             camera.Pitch = 0;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1), frictionCoefficient: 2), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));

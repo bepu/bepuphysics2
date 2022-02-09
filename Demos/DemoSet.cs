@@ -46,10 +46,6 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<NewtTyrannyDemo>();
-            AddOption<ColosseumVideoDemo>();
-            AddOption<TankSwarmDemo>();
-            AddOption<ExcessivePyramidVideoDemo>();
             AddOption<CarDemo>();
             AddOption<TankDemo>();
             AddOption<CharacterDemo>();
