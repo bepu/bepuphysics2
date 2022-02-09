@@ -15,6 +15,7 @@ namespace DemoRenderer.Constraints
 
         BufferPool pool;
         ParallelLooper looper;
+        LooperAction executeJobAction;
 
         public bool ShowConstraints = true;
         public bool ShowContacts;
@@ -27,6 +28,8 @@ namespace DemoRenderer.Constraints
             boundingBoxes = new BoundingBoxLineExtractor();
             this.pool = pool;
             this.looper = looper;
+            executeJobAction = ExecuteJob;
+
         }
 
         Simulation[] simulations;
@@ -72,7 +75,7 @@ namespace DemoRenderer.Constraints
             }
             this.simulations = simulations;
             looper.Dispatcher = threadDispatcher;
-            looper.For(0, constraintJobs.Count + boundingBoxJobs.Count, ExecuteJob);
+            looper.For(0, constraintJobs.Count + boundingBoxJobs.Count, executeJobAction);
             looper.Dispatcher = null;
 
             if (constraintJobs.Span.Allocated)
@@ -103,7 +106,7 @@ namespace DemoRenderer.Constraints
                 boundingBoxes.CreateJobs(simulation, 0, ref lines, ref boundingBoxJobs, pool);
             }
             looper.Dispatcher = threadDispatcher;
-            looper.For(0, constraintJobs.Count + boundingBoxJobs.Count, ExecuteJob);
+            looper.For(0, constraintJobs.Count + boundingBoxJobs.Count, executeJobAction);
             looper.Dispatcher = null;
 
             if (constraintJobs.Span.Allocated)

@@ -57,12 +57,16 @@ namespace DemoRenderer.ShapeDrawing
         public MeshCache MeshCache;
 
         ParallelLooper looper;
+        LooperAction addShapesForJobAction;
+        LooperWorkerDone workerDoneAction;
         public ShapesExtractor(Device device, ParallelLooper looper, BufferPool pool, int initialCapacityPerShapeType = 1024)
         {
             ShapeCache = new ShapeCache(initialCapacityPerShapeType, pool);
             this.MeshCache = new MeshCache(device, pool);
             this.pool = pool;
             this.looper = looper;
+            addShapesForJobAction = AddShapesForJob;
+            workerDoneAction = WorkerDone;
         }
 
         public void ClearInstances()
@@ -497,7 +501,7 @@ namespace DemoRenderer.ShapeDrawing
                 {
                     CreateJobs(simulations[simulationIndex], simulationIndex, ref jobs, pool);
                 }
-                looper.For(0, jobs.Count, AddShapesForJob, WorkerDone);
+                looper.For(0, jobs.Count, addShapesForJobAction, workerDoneAction);
                 EndMultithreadedExecution();
                 this.simulations = default;
             }
@@ -517,7 +521,7 @@ namespace DemoRenderer.ShapeDrawing
                 this.simulation = simulation;
                 PrepareForMultithreadedExecution(threadDispatcher);
                 CreateJobs(simulation, 0, ref jobs, pool);
-                looper.For(0, jobs.Count, AddShapesForJob, WorkerDone);
+                looper.For(0, jobs.Count, addShapesForJobAction, workerDoneAction);
                 EndMultithreadedExecution();
                 this.simulation = null;
             }

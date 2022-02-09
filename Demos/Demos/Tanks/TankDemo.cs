@@ -344,14 +344,14 @@ namespace Demos.Demos.Tanks
 
             var textHeight = 16;
             var position = new Vector2(32, renderer.Surface.Resolution.Y - 144);
-            RenderControl(ref position, textHeight, nameof(Fire), Fire.ToString(), text, renderer.TextBatcher, font);
-            RenderControl(ref position, textHeight, nameof(Forward), Forward.ToString(), text, renderer.TextBatcher, font);
-            RenderControl(ref position, textHeight, nameof(Backward), Backward.ToString(), text, renderer.TextBatcher, font);
-            RenderControl(ref position, textHeight, nameof(Right), Right.ToString(), text, renderer.TextBatcher, font);
-            RenderControl(ref position, textHeight, nameof(Left), Left.ToString(), text, renderer.TextBatcher, font);
-            RenderControl(ref position, textHeight, nameof(Zoom), Zoom.ToString(), text, renderer.TextBatcher, font);
-            RenderControl(ref position, textHeight, nameof(Brake), Brake.ToString(), text, renderer.TextBatcher, font);
-            RenderControl(ref position, textHeight, nameof(ToggleTank), ToggleTank.ToString(), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Fire), ControlStrings.GetName(Fire), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Forward), ControlStrings.GetName(Forward), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Backward), ControlStrings.GetName(Backward), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Right), ControlStrings.GetName(Right), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Left), ControlStrings.GetName(Left), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Zoom), ControlStrings.GetName(Zoom), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Brake), ControlStrings.GetName(Brake), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(ToggleTank), ControlStrings.GetName(ToggleTank), text, renderer.TextBatcher, font);
 
             if (aiTanks.Count > 0)
                 renderer.TextBatcher.Write(text.Clear().Append("Enemy tanks remaining: ").Append(aiTanks.Count), new Vector2(32, renderer.Surface.Resolution.Y - 172), 24, new Vector3(1, 1, 1), font);

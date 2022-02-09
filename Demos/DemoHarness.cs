@@ -361,7 +361,6 @@ namespace Demos
                     controlPosition.Y += lineSpacing;
                 }
 
-                //Conveniently, enum strings are cached. Every (Key).ToString() returns the same reference for the same key, so no garbage worries.
                 WriteInstantName(nameof(controls.LockMouse), controls.LockMouse);
                 WriteHoldableName(nameof(controls.Grab), controls.Grab);
                 WriteHoldableName(nameof(controls.GrabRotate), controls.GrabRotate);

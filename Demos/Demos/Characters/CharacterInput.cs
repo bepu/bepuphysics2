@@ -157,12 +157,12 @@ namespace Demos.Demos.Characters
         }
         public void RenderControls(Vector2 position, float textHeight, TextBatcher textBatcher, TextBuilder text, Font font)
         {
-            RenderControl(ref position, textHeight, nameof(MoveForward), MoveForward.ToString(), text, textBatcher, font);
-            RenderControl(ref position, textHeight, nameof(MoveBackward), MoveBackward.ToString(), text, textBatcher, font);
-            RenderControl(ref position, textHeight, nameof(MoveRight), MoveRight.ToString(), text, textBatcher, font);
-            RenderControl(ref position, textHeight, nameof(MoveLeft), MoveLeft.ToString(), text, textBatcher, font);
-            RenderControl(ref position, textHeight, nameof(Sprint), Sprint.ToString(), text, textBatcher, font);
-            RenderControl(ref position, textHeight, nameof(Jump), Jump.ToString(), text, textBatcher, font);
+            RenderControl(ref position, textHeight, nameof(MoveForward), ControlStrings.GetName(MoveForward), text, textBatcher, font);
+            RenderControl(ref position, textHeight, nameof(MoveBackward), ControlStrings.GetName(MoveBackward), text, textBatcher, font);
+            RenderControl(ref position, textHeight, nameof(MoveRight), ControlStrings.GetName(MoveRight), text, textBatcher, font);
+            RenderControl(ref position, textHeight, nameof(MoveLeft), ControlStrings.GetName(MoveLeft), text, textBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Sprint), ControlStrings.GetName(Sprint), text, textBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Jump), ControlStrings.GetName(Jump), text, textBatcher, font);
         }
 
 
