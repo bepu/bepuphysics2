@@ -46,7 +46,7 @@ namespace BepuPhysics.CollisionDetection
         //The streaming batcher contains batches for pending work submitted by the user.
         //This pending work can be top level pairs like sphere versus sphere, but it may also be subtasks of submitted work.
         //Consider two compound bodies colliding. The pair will decompose into a set of potentially many convex subpairs.
-        Buffer<CollisionBatch> batches;
+        internal Buffer<CollisionBatch> batches;
         //These collision tasks can then call upon some of the batcher's fixed function post processing stages.
         //For example, compound collisions generate multiple convex-convex manifolds which need to be reduced and combined into a single nonconvex manifold for 
         //efficiency in constraint solving.

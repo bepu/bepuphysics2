@@ -135,7 +135,8 @@ namespace BepuUtilities.Memory
                     idsForAllocator = new HashSet<int>();
                     outstandingAllocators.Add(allocator, idsForAllocator);
                 }
-                Debug.Assert(idsForAllocator.Count < (1 << 25), "Do you actually have that many allocations for this one allocator?");
+                const int maximumReasonableOutstandingAllocationsForAllocator = 1 << 25;
+                Debug.Assert(idsForAllocator.Count < maximumReasonableOutstandingAllocationsForAllocator, "Do you actually have that many allocations for this one allocator?");
                 idsForAllocator.Add(slot);
 #endif
 #endif

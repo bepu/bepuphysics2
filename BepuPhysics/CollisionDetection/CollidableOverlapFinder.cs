@@ -103,9 +103,9 @@ namespace BepuPhysics.CollisionDetection
 
         public override void DispatchOverlaps(float dt, IThreadDispatcher threadDispatcher = null)
         {
-            narrowPhase.Prepare(dt, threadDispatcher);
-            if (threadDispatcher != null)
+            if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
             {
+                narrowPhase.Prepare(dt, threadDispatcher);
                 if (intertreeHandlers == null || intertreeHandlers.Length < threadDispatcher.ThreadCount)
                 {
                     //This initialization/resize should occur extremely rarely.
@@ -128,32 +128,34 @@ namespace BepuPhysics.CollisionDetection
                 intertreeTestContext.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, intertreeHandlers, threadDispatcher.ThreadCount);
                 nextJobIndex = -1;
                 var totalJobCount = selfTestContext.JobCount + intertreeTestContext.JobCount;
+                threadDispatcher.DispatchWorkers(workerAction, totalJobCount);
+                //We dispatch over parts of the tree are not yet analyzed, but the job creation phase may have put some work into the batcher.
+                //If the total job count is zero, that means there's no further work to be done (implying the tree was very tiny), but we may need to flush additional jobs in worker 0.
                 if (totalJobCount == 0)
+                    narrowPhase.overlapWorkers[0].Batcher.Flush();
+                //Any workers that we allocated resources for but did not end up using due to a lack of discovered jobs need to be cleaned up. Flushing disposes those resources.
+                //(this complexity could be removed if the preparation phase was aware of the job count, but that's somewhat more difficult.)
+                for (int i = Math.Max(1, totalJobCount); i < threadDispatcher.ThreadCount; ++i)
                 {
-                    //We dispatch over parts of the tree are not yet analyzed, but the job creation phase may have put some work into the batcher.
-                    //If the total job count is zero, that means there's no further work to be done (implying the tree was very tiny), but we may need to flush.
-                    //Flushing also disposes of any resources taken by the batcher.
-                    for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
-                    {
-                        narrowPhase.overlapWorkers[i].Batcher.Flush();
-                    }
+                    narrowPhase.overlapWorkers[i].Batcher.Flush();
                 }
-                else
+#if DEBUG
+                for (int i = 1; i < threadDispatcher.ThreadCount; ++i)
                 {
-                    threadDispatcher.DispatchWorkers(workerAction, totalJobCount);
+                    Debug.Assert(!narrowPhase.overlapWorkers[i].Batcher.batches.Allocated, "After execution, there should be no remaining allocated collision batchers.");
                 }
-                //workerAction(0);
+#endif
                 selfTestContext.CompleteSelfTest();
                 intertreeTestContext.CompleteTest();
             }
             else
             {
+                narrowPhase.Prepare(dt);
                 var selfTestHandler = new SelfOverlapHandler(broadPhase.activeLeaves, narrowPhase, 0);
                 broadPhase.ActiveTree.GetSelfOverlaps(ref selfTestHandler);
                 var intertreeHandler = new IntertreeOverlapHandler(broadPhase.activeLeaves, broadPhase.staticLeaves, narrowPhase, 0);
                 broadPhase.ActiveTree.GetOverlaps(ref broadPhase.StaticTree, ref intertreeHandler);
-                ref var worker = ref narrowPhase.overlapWorkers[0];
-                worker.Batcher.Flush();
+                narrowPhase.overlapWorkers[0].Batcher.Flush();
 
             }
 
