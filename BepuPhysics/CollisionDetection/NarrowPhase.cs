@@ -202,13 +202,12 @@ namespace BepuPhysics.CollisionDetection
         void FlushWorkerLoop(int workerIndex)
         {
             int jobIndex;
-            var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
             while ((jobIndex = Interlocked.Increment(ref flushJobIndex)) < flushJobs.Count)
             {
-                ExecuteFlushJob(ref flushJobs[jobIndex], threadPool);
+                ExecuteFlushJob(ref flushJobs[jobIndex]);
             }
         }
-        void ExecuteFlushJob(ref NarrowPhaseFlushJob job, BufferPool threadPool)
+        void ExecuteFlushJob(ref NarrowPhaseFlushJob job)
         {
             switch (job.Type)
             {
@@ -237,8 +236,10 @@ namespace BepuPhysics.CollisionDetection
         public void Flush(IThreadDispatcher threadDispatcher = null)
         {
             var deterministic = threadDispatcher != null && Simulation.Deterministic;
-            OnPreflush(threadDispatcher, deterministic);
             //var start = Stopwatch.GetTimestamp();
+            OnPreflush(threadDispatcher, deterministic);
+            //var end = Stopwatch.GetTimestamp();
+            //Console.WriteLine($"Preflush time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
             flushJobs = new QuickList<NarrowPhaseFlushJob>(128, Pool);
             PairCache.PrepareFlushJobs(ref flushJobs);
             var removalBatchJobCount = ConstraintRemover.CreateFlushJobs(deterministic);
@@ -263,7 +264,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 for (int i = 0; i < flushJobs.Count; ++i)
                 {
-                    ExecuteFlushJob(ref flushJobs[i], Pool);
+                    ExecuteFlushJob(ref flushJobs[i]);
                 }
             }
             else
@@ -274,8 +275,6 @@ namespace BepuPhysics.CollisionDetection
                 //flushWorkerLoop(0);
                 this.threadDispatcher = null;
             }
-            //var end = Stopwatch.GetTimestamp();
-            //Console.WriteLine($"Flush stage 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
             flushJobs.Dispose(Pool);
 
             PairCache.Postflush();

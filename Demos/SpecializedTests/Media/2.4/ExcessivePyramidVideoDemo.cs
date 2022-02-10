@@ -56,19 +56,9 @@ namespace Demos.SpecializedTests.Media
             ++frameCount;
             if (frameCount == 128 || (input != null && input.WasPushed(OpenTK.Input.Key.Z)))
             {
-                //Create the shape that we'll launch at the pyramids when the user presses a button.
                 var bulletShape = new Sphere(6);
-                //Note that the use of radius^3 for mass can produce some pretty serious mass ratios. 
-                //Observe what happens when a large ball sits on top of a few boxes with a fraction of the mass-
-                //the collision appears much squishier and less stable. For most games, if you want to maintain rigidity, you'll want to use some combination of:
-                //1) Limit the ratio of heavy object masses to light object masses when those heavy objects depend on the light objects.
-                //2) Use a shorter timestep duration and update more frequently.
-                //3) Use a greater number of solver iterations.
-                //#2 and #3 can become very expensive. In pathological cases, it can end up slower than using a quality-focused solver for the same simulation.
-                //Unfortunately, at the moment, bepuphysics v2 does not contain any alternative solvers, so if you can't afford to brute force the the problem away,
-                //the best solution is to cheat as much as possible to avoid the corner cases.
-                var bodyDescription = BodyDescription.CreateConvexDynamic(
-                    new Vector3(0, 8, -1200), new Vector3(0, 0, 230), 5000000, Simulation.Shapes, bulletShape);
+                var bodyDescription = BodyDescription.CreateDynamic(
+                    new Vector3(0, 8, -1200), new Vector3(0, 0, 230), bulletShape.ComputeInertia(5000000), new (Simulation.Shapes.Add(bulletShape), 0.1f), 0.01f);
                 Simulation.Bodies.Add(bodyDescription);
             }
             base.Update(window, camera, input, dt);

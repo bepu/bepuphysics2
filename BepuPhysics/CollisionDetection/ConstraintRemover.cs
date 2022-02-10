@@ -402,7 +402,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         QuickList<TypeBatchIndex> removedTypeBatches;
-        SpinLock removedTypeBatchLocker = new SpinLock();
+        object batchRemovalLocker = new object();
         public void RemoveConstraintsFromTypeBatch(int index)
         {
             var batch = batches.TypeBatches[index];
@@ -410,7 +410,6 @@ namespace BepuPhysics.CollisionDetection
             ref var typeBatch = ref constraintBatch.TypeBatches[batch.TypeBatch];
             var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
             ref var removals = ref batches.RemovalsForTypeBatches[index];
-            bool lockTaken = false;
             for (int i = 0; i < removals.ConstraintHandlesToRemove.Count; ++i)
             {
                 var handle = removals.ConstraintHandlesToRemove[i];
@@ -423,11 +422,12 @@ namespace BepuPhysics.CollisionDetection
                 if (typeBatch.ConstraintCount == 0)
                 {
                     //This batch-typebatch needs to be removed.
-                    //Note that we just use a spinlock here, nothing tricky- the number of typebatch/batch removals should tend to be extremely low (averaging 0),
+                    //Note that we just use a lock here, nothing tricky- the number of typebatch/batch removals should tend to be extremely low (averaging 0),
                     //so it's not worth doing a bunch of per worker accumulators and stuff.
-                    removedTypeBatchLocker.Enter(ref lockTaken);
-                    removedTypeBatches.AddUnsafely(batch);
-                    removedTypeBatchLocker.Exit();
+                    lock (batchRemovalLocker)
+                    {
+                        removedTypeBatches.AddUnsafely(batch);
+                    }
                 }
             }
         }
