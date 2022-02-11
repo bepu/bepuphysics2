@@ -304,8 +304,7 @@ namespace BepuUtilities.Collections
         /// <summary>
         /// Shrinks the internal buffers to the smallest acceptable size and releases the old buffers to the pools.
         /// </summary>
-        /// <param name="pool">Pool used for spans.</param>   
-        /// <param name="element">Element to add.</param>
+        /// <param name="pool">Pool used for spans.</param>
         public void Compact(IUnmanagedMemoryPool pool)
         {
             Validate();

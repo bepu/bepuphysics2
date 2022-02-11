@@ -89,13 +89,13 @@ namespace Demos.Demos
                             LocalOffsetA = offset * 0.5f,
                             LocalOffsetB = offset * -0.5f,
                             //Once again, the choice of high stiffness makes this potentially unstable without substepping.
-                            SpringSettings = new SpringSettings(480, 1)
+                            SpringSettings = new SpringSettings(640, 1)
                         });
                         Simulation.Solver.Add(previousLinkHandle, linkHandle, new AngularAxisMotor
                         {
                             LocalAxisA = Vector3.UnitX,
                             TargetVelocity = .25f,
-                            Settings = new MotorSettings(float.MaxValue, 0.0001f)
+                            Settings = new MotorSettings(float.MaxValue, 0.00001f)
                         });
                         previousLinkHandle = linkHandle;
                     }
