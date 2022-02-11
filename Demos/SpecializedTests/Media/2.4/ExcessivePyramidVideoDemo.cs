@@ -58,18 +58,10 @@ namespace Demos.SpecializedTests.Media
             {
                 var bulletShape = new Sphere(6);
                 var bodyDescription = BodyDescription.CreateDynamic(
-                    new Vector3(0, 8, -1200), new Vector3(0, 0, 230), bulletShape.ComputeInertia(5000000), new (Simulation.Shapes.Add(bulletShape), 0.1f), 0.01f);
+                    new Vector3(0, 8, -1200), new Vector3(0, 0, 230), bulletShape.ComputeInertia(5000000), new(Simulation.Shapes.Add(bulletShape), 0.1f), 0.01f);
                 Simulation.Bodies.Add(bodyDescription);
             }
             base.Update(window, camera, input, dt);
         }
-
-        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
-        {
-            text.Clear().Append("Press Z to launch a ball!");
-            renderer.TextBatcher.Write(text, new Vector2(20, renderer.Surface.Resolution.Y - 20), 16, new Vector3(1, 1, 1), font);
-            base.Render(renderer, camera, input, text, font);
-        }
-
     }
 }

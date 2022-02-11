@@ -11,12 +11,12 @@ using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using DemoRenderer.UI;
 
-namespace Demos.SpecializedTests
+namespace Demos.SpecializedTests.Media
 {
     /// <summary>
     /// Subjects a bunch of unfortunate ragdolls to a tumble dry cycle.
     /// </summary>
-    public class RagdollTubeDemo : Demo
+    public class RagdollTubeVideoDemo : Demo
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
@@ -33,7 +33,7 @@ namespace Demos.SpecializedTests
             var spacing = new Vector3(1.7f, 1.8f, 0.5f);
             int width = 4;
             int height = 4;
-            int length = 44;
+            int length = 120;
             var origin = -0.5f * spacing * new Vector3(width - 1, 0, length - 1) + new Vector3(0, 5f, 0);
             for (int i = 0; i < width; ++i)
             {
@@ -53,7 +53,7 @@ namespace Demos.SpecializedTests
             var tubeCenter = new Vector3(0, 8, 0);
             const int panelCount = 20;
             const float tubeRadius = 6;
-            var panelShape = new Box(MathF.PI * 2 * tubeRadius / panelCount, 1, 80);
+            var panelShape = new Box(MathF.PI * 2 * tubeRadius / panelCount, 1, 100);
             var panelShapeIndex = Simulation.Shapes.Add(panelShape);
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, panelCount + 1);
             for (int i = 0; i < panelCount; ++i)
@@ -75,6 +75,8 @@ namespace Demos.SpecializedTests
             var staticDescription = new StaticDescription(new Vector3(0, -0.5f, 0), staticShapeIndex);
             Simulation.Statics.Add(staticDescription);
 
+            DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(15, 15, 15), out var newtMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0.5f, 80), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI), Simulation.Shapes.Add(newtMesh)));
 
         }
         int ragdollBodyCount;
