@@ -101,9 +101,6 @@ namespace DemoUtilities
             Resolution = resolution;
             window.Resize += (form, args) => resized = true;
             window.Closing += OnClosing;
-
-            window.WindowBorder = WindowBorder.Resizable;
-
             WindowMode = windowMode;
 
         }
