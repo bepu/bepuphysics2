@@ -36,14 +36,14 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         var location = new Vector3(1.5f, 1.5f, 4.4f) * new Vector3(i, j, k) + new Vector3(-width * 0.5f, 0.5f, -length * 0.5f);
-                        var bodyDescription = BodyDescription.CreateDynamic((location, QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2)), localInertia, new(shapeIndex, ContinuousDetection.Discrete(50, 50)), -1);
+                        var bodyDescription = BodyDescription.CreateDynamic((location, QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2)), localInertia, new(shapeIndex, 50, 50), -1);
                         Simulation.Bodies.Add(bodyDescription);
 
                     }
                 }
             }
             var boxShape = new Box(0.5f, 0.5f, 2.5f);
-            var boxDescription = BodyDescription.CreateDynamic(new Vector3(1, -0.5f, 0), boxShape.ComputeInertia(1), new(Simulation.Shapes.Add(boxShape), ContinuousDetection.Discrete(50, 50)), -1);
+            var boxDescription = BodyDescription.CreateDynamic(new Vector3(1, -0.5f, 0), boxShape.ComputeInertia(1), new(Simulation.Shapes.Add(boxShape), 50, 50), -1);
             Simulation.Bodies.Add(boxDescription);
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), Simulation.Shapes.Add(new Box(4, 1, 4))));

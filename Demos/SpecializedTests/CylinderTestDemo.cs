@@ -174,7 +174,7 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)), new SolveDescription(8, 1));
 
             var cylinderShape = new Cylinder(1f, .2f);
-            var cylinder = BodyDescription.CreateDynamic(new Vector3(10f, 3, 0), cylinderShape.ComputeInertia(1), new(Simulation.Shapes.Add(cylinderShape), ContinuousDetection.CreatePassive(1000f, 1000f)), 0.01f);
+            var cylinder = BodyDescription.CreateDynamic(new Vector3(10f, 3, 0), cylinderShape.ComputeInertia(1), new(Simulation.Shapes.Add(cylinderShape), 1000f, 1000f, ContinuousDetection.Passive), 0.01f);
             Simulation.Bodies.Add(cylinder);
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic((new Vector3(0, -6, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Sphere(2)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic((new Vector3(7, -6, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Capsule(0.5f, 1f)));

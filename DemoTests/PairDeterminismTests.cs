@@ -78,7 +78,7 @@ namespace DemoTests
                 var index = remapIndices[i];
                 ref var poseA = ref posesA[index];
                 ref var poseB = ref posesB[index];
-                batcher.Add(a.Shape, b.Shape, poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, Math.Max(a.Continuity.MaximumSpeculativeMargin, b.Continuity.MaximumSpeculativeMargin), new PairContinuation(index));
+                batcher.Add(a.Shape, b.Shape, poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, Math.Max(a.MaximumSpeculativeMargin, b.MaximumSpeculativeMargin), new PairContinuation(index));
                 if (i % flushInterval == flushInterval - 1)
                 {
                     batcher.Flush();
@@ -239,13 +239,13 @@ namespace DemoTests
 
             var shapes = new Shapes(pool, 8);
             const float speculativeMargin = 0.1f;
-            var continuousDetection = ContinuousDetection.Discrete(speculativeMargin, speculativeMargin);
-            var sphereCollidable = new CollidableDescription(shapes.Add(sphere), continuousDetection);
-            var capsuleCollidable = new CollidableDescription(shapes.Add(capsule), continuousDetection);
-            var boxCollidable = new CollidableDescription(shapes.Add(box), continuousDetection);
-            var triangleCollidable = new CollidableDescription(shapes.Add(triangle), continuousDetection);
-            var cylinderCollidable = new CollidableDescription(shapes.Add(cylinder), continuousDetection);
-            var hullCollidable = new CollidableDescription(shapes.Add(convexHull), continuousDetection);
+            var continuousDetection = ContinuousDetection.Discrete;
+            var sphereCollidable = new CollidableDescription(shapes.Add(sphere), speculativeMargin, continuousDetection);
+            var capsuleCollidable = new CollidableDescription(shapes.Add(capsule), speculativeMargin, continuousDetection);
+            var boxCollidable = new CollidableDescription(shapes.Add(box), speculativeMargin, continuousDetection);
+            var triangleCollidable = new CollidableDescription(shapes.Add(triangle), speculativeMargin, continuousDetection);
+            var cylinderCollidable = new CollidableDescription(shapes.Add(cylinder), speculativeMargin, continuousDetection);
+            var hullCollidable = new CollidableDescription(shapes.Add(convexHull), speculativeMargin, continuousDetection);
 
 
             var compoundBuilder = new CompoundBuilder(pool, shapes, 6);

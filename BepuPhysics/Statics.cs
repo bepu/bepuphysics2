@@ -62,7 +62,6 @@ namespace BepuPhysics
         /// Continuous collision detection settings for this collidable. Includes the collision detection mode to use and tuning variables associated with those modes.
         /// </summary>
         /// <remarks>Note that statics cannot move, so there is no difference between <see cref="ContinuousDetectionMode.Discrete"/> and <see cref="ContinuousDetectionMode.Passive"/> for them.
-        /// The minimum and maximum speculative margins will still constrain the margins created for each collision pair involved in the static.
         /// Enabling <see cref="ContinuousDetectionMode.Continuous"/> will still require that pairs associated with the static use swept continuous collision detection.</remarks>
         public ContinuousDetection Continuity;
 
@@ -376,11 +375,11 @@ namespace BepuPhysics
         {
             ref var collidable = ref this[index];
             collidable.Pose = description.Pose;
-            Debug.Assert(description.Collidable.Shape.Exists, "Static collidables must have a shape. Their only purpose is colliding.");
-            collidable.Continuity = description.Collidable.Continuity;
-            collidable.Shape = description.Collidable.Shape;
+            Debug.Assert(description.Shape.Exists, "Static collidables must have a shape. Their only purpose is colliding.");
+            collidable.Continuity = description.Continuity;
+            collidable.Shape = description.Shape;
 
-            ComputeNewBoundsAndAwaken(description.Pose, description.Collidable.Shape, ref filter, out bounds);
+            ComputeNewBoundsAndAwaken(description.Pose, description.Shape, ref filter, out bounds);
         }
 
         /// <summary>
@@ -463,7 +462,7 @@ namespace BepuPhysics
         {
             ValidateExistingHandle(handle);
             var index = HandleToIndex[handle.Value];
-            Debug.Assert(description.Collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
+            Debug.Assert(description.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
             //Wake all bodies up in the old bounds AND the new bounds. Sleeping bodies that may have been resting on the old static need to be aware of the new environment.
             var broadPhaseIndex = this[index].BroadPhaseIndex;
             AwakenBodiesInExistingBounds(broadPhaseIndex, ref filter);
@@ -495,8 +494,8 @@ namespace BepuPhysics
             var index = HandleToIndex[handle.Value];
             ref var collidable = ref this[index];
             description.Pose = collidable.Pose;
-            description.Collidable.Continuity = collidable.Continuity;
-            description.Collidable.Shape = collidable.Shape;
+            description.Continuity = collidable.Continuity;
+            description.Shape = collidable.Shape;
         }
 
         /// <summary>

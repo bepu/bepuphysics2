@@ -13,19 +13,37 @@ namespace BepuPhysics
         /// </summary>
         public RigidPose Pose;
         /// <summary>
-        /// Collidable properties of the static.
+        /// Shape of the static.
         /// </summary>
-        public CollidableDescription Collidable;
+        public TypedIndex Shape;
+        /// <summary>
+        /// Continuous collision detection settings for the static.
+        /// </summary>
+        public ContinuousDetection Continuity;
 
         /// <summary>
         /// Builds a new static description.
         /// </summary>
         /// <param name="pose">Pose of the static collidable.</param>
-        /// <param name="collidable">Collidable description for the static.</param>
-        public StaticDescription(RigidPose pose, CollidableDescription collidable)
+        /// <param name="shape">Shape of the static.</param>
+        /// <param name="continuity">Continuous collision detection settings for the static.</param>
+        public StaticDescription(RigidPose pose, TypedIndex shape, ContinuousDetection continuity)
         {
             Pose = pose;
-            Collidable = collidable;
+            Shape = shape;
+            Continuity = continuity;
+        }
+
+        /// <summary>
+        /// Builds a new static description with <see cref="ContinuousDetectionMode.Discrete"/> continuity.
+        /// </summary>
+        /// <param name="pose">Pose of the static collidable.</param>
+        /// <param name="shape">Shape of the static.</param>
+        public StaticDescription(RigidPose pose, TypedIndex shape)
+        {
+            Pose = pose;
+            Shape = shape;
+            Continuity = ContinuousDetection.Discrete;
         }
 
         /// <summary>
@@ -33,12 +51,28 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="position">Position of the static.</param>
         /// <param name="orientation">Orientation of the static.</param>
-        /// <param name="collidable">Collidable description for the static.</param>
-        public StaticDescription(Vector3 position, Quaternion orientation, CollidableDescription collidable)
+        /// <param name="shape">Shape of the static.</param>
+        /// <param name="continuity">Continuous collision detection settings for the static.</param>
+        public StaticDescription(Vector3 position, Quaternion orientation, TypedIndex shape, ContinuousDetection continuity)
         {
             Pose.Position = position;
             Pose.Orientation = orientation;
-            Collidable = collidable;
+            Shape = shape;
+            Continuity = continuity;
+        }
+
+        /// <summary>
+        /// Builds a new static description with <see cref="ContinuousDetectionMode.Discrete"/> continuity.
+        /// </summary>
+        /// <param name="position">Position of the static.</param>
+        /// <param name="orientation">Orientation of the static.</param>
+        /// <param name="shape">Shape of the static.</param>
+        public StaticDescription(Vector3 position, Quaternion orientation, TypedIndex shape)
+        {
+            Pose.Position = position;
+            Pose.Orientation = orientation;
+            Shape = shape;
+            Continuity = ContinuousDetection.Discrete;
         }
     }
 

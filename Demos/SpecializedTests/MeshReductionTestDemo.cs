@@ -66,19 +66,19 @@ namespace Demos.SpecializedTests
 
             var testBox = new Box(3, 3, 3);
             var testBoxInertia = testBox.ComputeInertia(1);
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 10, 0), testBoxInertia, new(Simulation.Shapes.Add(testBox), ContinuousDetection.Discrete(10, 10)), -1));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 10, 0), testBoxInertia, new(Simulation.Shapes.Add(testBox), 10, 10, ContinuousDetection.Discrete), -1));
             var testSphere = new Sphere(.1f);
             var testSphereInertia = testSphere.ComputeInertia(1);
             //testSphereInertia.InverseInertiaTensor = default;
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(10, 10, 0), testSphereInertia, new(Simulation.Shapes.Add(testSphere), ContinuousDetection.Discrete(10, 10)), -1));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(10, 10, 0), testSphereInertia, new(Simulation.Shapes.Add(testSphere), 10, 10, ContinuousDetection.Discrete), -1));
             var testCylinder = new Cylinder(1.5f, 2f);
             var testCylinderInertia = testCylinder.ComputeInertia(1);
             //testCylinderInertia.InverseInertiaTensor = default;
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(15, 10, 0), testCylinderInertia, new(Simulation.Shapes.Add(testCylinder), ContinuousDetection.Discrete(10, 10)), -1));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(15, 10, 0), testCylinderInertia, new(Simulation.Shapes.Add(testCylinder), 10, 10, ContinuousDetection.Discrete), -1));
             var testCapsule = new Capsule(.1f, 2f);
             var testCapsuleInertia = testCapsule.ComputeInertia(1);
             //testCapsuleInertia.InverseInertiaTensor = default;
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(18, 10, 0), testCapsuleInertia, new(Simulation.Shapes.Add(testCapsule), ContinuousDetection.Discrete(10, 10)), -1));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(18, 10, 0), testCapsuleInertia, new(Simulation.Shapes.Add(testCapsule), 10, 10, ContinuousDetection.Discrete), -1));
 
             var points = new QuickList<Vector3>(8, BufferPool);
             points.AllocateUnsafely() = new Vector3(0, 0, 0);
@@ -90,7 +90,7 @@ namespace Demos.SpecializedTests
             points.AllocateUnsafely() = new Vector3(2, 2, 0);
             points.AllocateUnsafely() = new Vector3(2, 2, 2);
             var convexHull = new ConvexHull(points, BufferPool, out _);
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(23, 10, 0), convexHull.ComputeInertia(1), new(Simulation.Shapes.Add(convexHull), ContinuousDetection.Discrete(10, 10)), -1));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(23, 10, 0), convexHull.ComputeInertia(1), new(Simulation.Shapes.Add(convexHull), 10, 10, ContinuousDetection.Discrete), -1));
 
             //var sphere = new Sphere(1.5f);
             //var capsule = new Capsule(1f, 1f);

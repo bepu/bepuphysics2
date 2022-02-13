@@ -19,7 +19,7 @@ namespace Demos.Demos
         ConstraintHandle spinnerMotorDefaultA, spinnerMotorDefaultB, spinnerMotorSweepA, spinnerMotorSweepB;
         RolloverInfo rolloverInfo;
 
-        ConstraintHandle BuildSpinner(Vector3 initialPosition, float rotationSpeed, ContinuousDetection continuousDetection)
+        ConstraintHandle BuildSpinner(Vector3 initialPosition, float rotationSpeed, float maximumSpeculativeMargin, ContinuousDetection continuousDetection)
         {
             var spinnerBase = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1e-2f }, Simulation.Shapes.Add(new Box(2, 2, 2)), 0.01f));
             var bladeShape = new Box(5, 0.01f, 1);
@@ -41,7 +41,7 @@ namespace Demos.Demos
 
             //Using a restricted speculative margin by setting the maximumSpeculativeMargin to 0.2 means that collision detection won't accept distant contacts.
             //This pretty much eliminates ghost collisions, while the continuous sweep helps avoid missed collisions.
-            var spinnerBlade = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, bladeInertia, new(shapeIndex, continuousDetection), 0.01f));
+            var spinnerBlade = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, bladeInertia, new(shapeIndex, maximumSpeculativeMargin, continuousDetection), 0.01f));
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new Hinge { LocalHingeAxisA = new Vector3(0, 0, 1), LocalHingeAxisB = new Vector3(0, 0, 1), LocalOffsetB = new Vector3(0, 0, -3), SpringSettings = new SpringSettings(30, 1) });
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new AngularAxisMotor { LocalAxisA = new Vector3(0, 0, 1), Settings = new MotorSettings(10, 1e-4f), TargetVelocity = rotationSpeed });
             return Simulation.Solver.Add(spinnerBase, new OneBodyLinearServo { ServoSettings = ServoSettings.Default, SpringSettings = new SpringSettings(30, 1) });
@@ -70,7 +70,7 @@ namespace Demos.Demos
                 {
                     //The first set of boxes are forced to use very small speculative margins. They're going to tunnel into the ground, since no contacts will be created to stop it.
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-37 + 2 * j, 100 + (i + j) * 2, -30 + i * 2), new Vector3(0, -150, 0), inertia,
-                        new(shapeIndex, ContinuousDetection.Discrete(maximumSpeculativeMargin: 0.01f)), 0.01f));
+                        new(shapeIndex, 0.01f, ContinuousDetection.Discrete), 0.01f));
 
                     //The second set of boxes are not using explicit continuous collision sweeps, but have unlimited speculative margins.
                     //This configuration is the most common one you're likely to see in the demos (and use in your own applications).
@@ -93,7 +93,7 @@ namespace Demos.Demos
                     //runs to create the actual contact manifold. That provides high quality contact positions and speculative depths.
                     //If the ground that these boxes were smashing into was something like a mesh- which is infinitely thin- you may want to increase the sweep accuracy.
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(17 + 2 * j, 100 + (i + j) * 2, -30 + i * 2), new Vector3(0, -150, 0), inertia,
-                        new(shapeIndex, ContinuousDetection.Continuous(1e-3f, 1e-2f, maximumSpeculativeMargin: 0.01f)), 0.01f));
+                        new(shapeIndex, 0.01f, ContinuousDetection.Continuous(1e-3f, 1e-2f)), 0.01f));
                 }
             }
             rolloverInfo = new RolloverInfo();
@@ -104,13 +104,13 @@ namespace Demos.Demos
             //Build a couple of spinners to ram into each other to showcase angular CCD. Note that the spin speeds are slightly different- that helps avoid 
             //synchronization that makes the blades frequently miss each other, which sorta ruins a CCD demo.
             var onlySpeculativeMargin = ContinuousDetection.Passive;
-            spinnerMotorDefaultA = BuildSpinner(new Vector3(-20, 14, 0), 53, onlySpeculativeMargin);
-            spinnerMotorDefaultB = BuildSpinner(new Vector3(-10, 14, 0), 59, onlySpeculativeMargin);
+            spinnerMotorDefaultA = BuildSpinner(new Vector3(-20, 14, 0), 53, 0.2f, onlySpeculativeMargin);
+            spinnerMotorDefaultB = BuildSpinner(new Vector3(-10, 14, 0), 59, 0.2f, onlySpeculativeMargin);
             rolloverInfo.Add(new Vector3(-15, 14, -5), "Unlimited speculative margin");
 
-            var continuous = ContinuousDetection.Continuous(1e-4f, 1e-4f, maximumSpeculativeMargin: 0.2f);
-            spinnerMotorSweepA = BuildSpinner(new Vector3(10, 14, 0), 53, continuous);
-            spinnerMotorSweepB = BuildSpinner(new Vector3(20, 14, 0), 59, continuous);
+            var continuous = ContinuousDetection.Continuous(1e-4f, 1e-4f);
+            spinnerMotorSweepA = BuildSpinner(new Vector3(10, 14, 0), 53, 0.2f, continuous);
+            spinnerMotorSweepB = BuildSpinner(new Vector3(20, 14, 0), 59, 0.2f, continuous);
             rolloverInfo.Add(new Vector3(15, 14, -5), "Small margin, continuous sweep");
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5f, 0), Simulation.Shapes.Add(new Box(300, 10, 300))));

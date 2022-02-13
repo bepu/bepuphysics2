@@ -40,7 +40,7 @@ namespace Demos.Demos.Characters
             //This is effectively equivalent to giving it an infinite inertia tensor- in other words, no torque will cause it to rotate.
             bodyHandle = characters.Simulation.Bodies.Add(
                 BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f / mass },
-                new(shapeIndex, ContinuousDetection.CreatePassive(minimumSpeculativeMargin, float.MaxValue)), shape.Radius * 0.02f));
+                new(shapeIndex, minimumSpeculativeMargin, float.MaxValue, ContinuousDetection.Passive), shape.Radius * 0.02f));
             ref var character = ref characters.AllocateCharacter(bodyHandle);
             character.LocalUp = new Vector3(0, 1, 0);
             character.CosMaximumSlope = MathF.Cos(maximumSlope);

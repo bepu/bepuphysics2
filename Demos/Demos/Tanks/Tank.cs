@@ -167,7 +167,7 @@ namespace Demos.Demos.Tanks
             QuaternionEx.Transform(BarrelLocalDirection, barrelPose.Orientation, out var barrelDirection);
             var projectileHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(projectileSpawn, barrelDirection * ProjectileSpeed + barrel.Velocity.Linear, ProjectileInertia,
                 //The projectile moves pretty fast, so we'll use continuous collision detection.
-                new(ProjectileShape, ContinuousDetection.Continuous(1e-3f, 1e-3f, 0, 0.1f)), 0.01f));
+                new(ProjectileShape, 0.1f, ContinuousDetection.Continuous(1e-3f, 1e-3f)), 0.01f));
             ref var projectileProperties = ref bodyProperties.Allocate(projectileHandle);
             projectileProperties.Friction = 1f;
             //Prevent the projectile from colliding with the firing tank.

@@ -133,10 +133,12 @@ namespace BepuPhysics
             //Kinematics, though, can have their inertia updates skipped at runtime since the world inverse inertia should always be a bunch of zeroes, so we pre-zero it.
             state.Inertia.World = default;
             ref var collidable = ref Collidables[index];
-            collidable.Continuity = description.Collidable.Continuity;
             //Note that we change the shape here. If the collidable transitions from shapeless->shapeful or shapeful->shapeless, the broad phase has to be notified 
             //so that it can create/remove an entry. That's why this function isn't public.
             collidable.Shape = description.Collidable.Shape;
+            collidable.Continuity = description.Collidable.Continuity;
+            collidable.MinimumSpeculativeMargin = description.Collidable.MinimumSpeculativeMargin;
+            collidable.MaximumSpeculativeMargin = description.Collidable.MaximumSpeculativeMargin;
             //To avoid leaking undefined data, initialize the speculative margin to zero.
             //Under normal circumstances, it should not be possible for any relevant system to see an undefined speculative margin, since PredictBoundingBoxes sets the value.
             //However, corner cases like a body being added asleep and woken by the narrow phase can mean prediction does not run.
@@ -155,8 +157,10 @@ namespace BepuPhysics
             description.Velocity = state.Motion.Velocity;
             description.LocalInertia = state.Inertia.Local;
             ref var collidable = ref Collidables[index];
-            description.Collidable.Continuity = collidable.Continuity;
             description.Collidable.Shape = collidable.Shape;
+            description.Collidable.Continuity = collidable.Continuity;
+            description.Collidable.MinimumSpeculativeMargin = collidable.MinimumSpeculativeMargin;
+            description.Collidable.MaximumSpeculativeMargin = collidable.MaximumSpeculativeMargin;
             ref var activity = ref Activity[index];
             description.Activity.SleepThreshold = activity.SleepThreshold;
             description.Activity.MinimumTimestepCountUnderThreshold = activity.MinimumTimestepsUnderThreshold;

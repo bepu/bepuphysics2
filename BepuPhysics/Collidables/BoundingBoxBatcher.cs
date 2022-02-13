@@ -175,8 +175,8 @@ namespace BepuPhysics
                     var shapeIndex = shapeIndices[indexInBatch];
                     shapeWide.WriteSlot(innerIndex, shapeBatch.shapes[shapeIndex]);
                     ref var collidable = ref activeSet.Collidables[continuations[indexInBatch].BodyIndex];
-                    minimumMarginSpan[innerIndex] = collidable.Continuity.MinimumSpeculativeMargin;
-                    maximumMarginSpan[innerIndex] = collidable.Continuity.MaximumSpeculativeMargin;
+                    minimumMarginSpan[innerIndex] = collidable.MinimumSpeculativeMargin;
+                    maximumMarginSpan[innerIndex] = collidable.MaximumSpeculativeMargin;
                     allowExpansionBeyondSpeculativeMarginSpan[innerIndex] = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? -1 : 0;
                 }
 
@@ -255,7 +255,7 @@ namespace BepuPhysics
                 //It's defined by the velocity of the body, and bounded by the body's minimum and maximum.
                 var angularBoundsExpansion = BoundingBoxHelpers.GetAngularBoundsExpansion(motionState.Velocity.Angular.Length(), dt, maximumRadius, maximumAngularExpansion);
                 var speculativeMargin = motionState.Velocity.Linear.Length() * dt + angularBoundsExpansion;
-                speculativeMargin = MathF.Max(collidable.Continuity.MinimumSpeculativeMargin, MathF.Min(collidable.Continuity.MaximumSpeculativeMargin, speculativeMargin));
+                speculativeMargin = MathF.Max(collidable.MinimumSpeculativeMargin, MathF.Min(collidable.MaximumSpeculativeMargin, speculativeMargin));
                 collidable.SpeculativeMargin = speculativeMargin;
                 var maximumAllowedExpansion = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : speculativeMargin;
                 BoundingBoxHelpers.GetBoundsExpansion(motionState.Velocity.Linear, dt, angularBoundsExpansion, out var minExpansion, out var maxExpansion);

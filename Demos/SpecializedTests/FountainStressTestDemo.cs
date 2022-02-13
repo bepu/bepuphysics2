@@ -262,9 +262,9 @@ namespace Demos.SpecializedTests
             description = BodyDescription.CreateDynamic(pose, velocity, inertia, shapeIndex, 0.1f);
             switch (random.Next(3))
             {
-                case 0: description.Collidable.Continuity = ContinuousDetection.Discrete(0, 0.2f); break;
-                case 1: description.Collidable.Continuity = ContinuousDetection.Passive; break;
-                case 2: description.Collidable.Continuity = ContinuousDetection.Continuous(1e-3f, 1e-3f, maximumSpeculativeMargin: 0.2f); break;
+                case 0: description.Collidable = new CollidableDescription(shapeIndex, 0.2f); break;
+                case 1: description.Collidable = new CollidableDescription(shapeIndex); break;
+                case 2: description.Collidable = new CollidableDescription(shapeIndex, 0.2f, ContinuousDetection.Continuous(1e-3f, 1e-3f)); break;
             }
         }
 
