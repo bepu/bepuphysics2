@@ -1249,39 +1249,6 @@ namespace BepuPhysics.Constraints
             Vector3Wide.ConditionalSelect(integrationMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
             Vector3Wide.ConditionalSelect(integrationMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void IntegratePoseAndVelocity<TIntegratorCallbacks>(
-            ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, in BodyInertiaWide localInertia, float dt,
-            ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity,
-            int workerIndex,
-            out BodyInertiaWide inertia)
-            where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
-        {
-            //This is identical to the other IntegratePoseAndVelocity, but it avoids any masking because we know ahead of time that the entire bundle is integrating.
-            var dtWide = new Vector<float>(dt);
-            position += velocity.Linear * dtWide;
-            inertia.InverseMass = localInertia.InverseMass;
-            if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
-            {
-                var previousOrientation = orientation;
-                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out orientation);
-                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
-                PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia.InverseInertiaTensor, inertia.InverseInertiaTensor, ref velocity.Angular);
-            }
-            else if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
-            {
-                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out orientation);
-                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
-                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dtWide);
-            }
-            else
-            {
-                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out orientation);
-                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
-            }
-            integratorCallbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, new Vector<int>(-1), workerIndex, new Vector<float>(dt), ref velocity);
-        }
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(
@@ -1335,7 +1302,7 @@ namespace BepuPhysics.Constraints
                     //Avoid slots that are empty (-1) or slots that are kinematic. Both can be tested by checking the unsigned magnitude against the flag lower limit.
                     var integrationMask = Vector.AsVectorInt32(Vector.LessThan(Vector.AsVectorUInt32(bodyIndices), new Vector<uint>(Bodies.DynamicLimit)));
                     bodies.GatherState<AccessAll>(bodyIndices, false, out position, out orientation, out velocity, out var localInertia);
-                    IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, localInertia, dt, ref position, ref orientation, ref velocity, workerIndex, out inertia);
+                    IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, localInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
                     bodies.ScatterPose(ref position, ref orientation, bodyIndices, integrationMask);
                     bodies.ScatterInertia(ref inertia, bodyIndices, integrationMask);
                 }

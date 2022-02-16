@@ -455,6 +455,7 @@ namespace BepuPhysics
             var halfDt = bundleDt * new Vector<float>(0.5f);
 
             int* bodyIndices = stackalloc int[Vector<int>.Count];
+            var bodyIndicesSpan = new Span<int>(bodyIndices, Vector<int>.Count);
             ref var callbacks = ref Callbacks;
             var handleToLocation = bodies.HandleToLocation;
             BodyInertiaWide zeroInertia = default;
@@ -470,8 +471,8 @@ namespace BepuPhysics
 
                 var existingMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
                 var trailingMask = Vector.OnesComplement(existingMask);
-                var bodyIndicesVector = new Vector<int>(new Span<int>(bodyIndices, Vector<int>.Count));
-                bodyIndicesVector = Vector.BitwiseOr(trailingMask, bodyIndicesVector);
+                var bodyIndicesVector = Vector.BitwiseOr(trailingMask, new Vector<int>(bodyIndicesSpan));
+
                 //Slightly unfortunate sacrifice to API simplicity: 
                 //We're doing a full gather so we can use the vectorized IntegrateVelocity callback even though the amount of work we're doing is absolutely trivial.
                 //With luck, the user sets the appropriate flag on the callbacks so this is never called in the first place. (Kinematics are generally not subject to user velocity integration!)
@@ -496,6 +497,7 @@ namespace BepuPhysics
             var halfDt = bundleDt * new Vector<float>(0.5f);
 
             int* bodyIndices = stackalloc int[Vector<int>.Count];
+            var bodyIndicesSpan = new Span<int>(bodyIndices, Vector<int>.Count);
             ref var callbacks = ref Callbacks;
             var handleToLocation = bodies.HandleToLocation;
             BodyInertiaWide zeroInertia = default;
@@ -511,7 +513,7 @@ namespace BepuPhysics
 
                 var existingMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
                 var trailingMask = Vector.OnesComplement(existingMask);
-                var bodyIndicesVector = new Vector<int>(new Span<int>(bodyIndices, Vector<int>.Count));
+                var bodyIndicesVector = new Vector<int>(bodyIndicesSpan);
                 bodyIndicesVector = Vector.BitwiseOr(trailingMask, bodyIndicesVector);
                 bodies.GatherState<AccessNoInertia>(bodyIndicesVector, false, out var position, out var orientation, out var velocity, out _);
                 //Note that we integrate pose, THEN velocity. This is executing in the context of the second (or beyond) substep, which are effectively completing the previous substep's frame.
@@ -538,10 +540,10 @@ namespace BepuPhysics
             var bundleDt = new Vector<float>(dt);
             var bundleSubstepDt = new Vector<float>(substepDt);
 
-            Vector<int> unconstrainedMask;
-            Vector<int> bodyIndices;
-            int* unconstrainedMaskPointer = (int*)&unconstrainedMask;
-            int* bodyIndicesPointer = (int*)&bodyIndices;
+            int* unconstrainedMaskPointer = stackalloc int[Vector<int>.Count];
+            int* bodyIndicesPointer = stackalloc int[Vector<int>.Count];
+            var unconstrainedMaskSpan = new Span<int>(unconstrainedMaskPointer, Vector<int>.Count);
+            var bodyIndicesSpan = new Span<int>(bodyIndicesPointer, Vector<int>.Count);
             var negativeOne = new Vector<int>(-1);
             ref var callbacks = ref Callbacks;
             ref var indexToHandle = ref bodies.ActiveSet.IndexToHandle;
@@ -557,7 +559,6 @@ namespace BepuPhysics
                 //Unconstrained bodies can optionally perform a single step for the whole timestep, or do multiple steps to match the integration behavior of constrained bodies.
                 //Bodies that are constrained should only undergo one substep of pose integration.
                 bool anyBodyInBundleIsUnconstrained = false;
-                bodyIndices = negativeOne; //Initialize bundles to -1 so that inactive lanes are consistent with the active set's storage of body references (empty lanes are -1)
                 for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
                 {
                     var bodyIndex = bundleBaseIndex + innerIndex;
@@ -575,7 +576,16 @@ namespace BepuPhysics
                         anyBodyInBundleIsUnconstrained = true;
                     }
                 }
-
+                var unconstrainedMask = new Vector<int>(unconstrainedMaskSpan);
+                var bodyIndices = new Vector<int>(bodyIndicesSpan);
+                if (countInBundle < Vector<int>.Count)
+                {
+                    //Set empty body index lanes to -1 so that inactive lanes are consistent with the active set's storage of body references (empty lanes are -1)
+                    var trailingMask = BundleIndexing.CreateTrailingMaskForCountInBundle(countInBundle);
+                    bodyIndices = Vector.BitwiseOr(bodyIndices, trailingMask);
+                    //Empty slots should not be considered here; clear the mask slot.
+                    unconstrainedMask = Vector.AndNot(unconstrainedMask, trailingMask);
+                }
 
                 Vector<float> bundleEffectiveDt;
                 if (callbacks.AllowSubstepsForUnconstrainedBodies)
