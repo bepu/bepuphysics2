@@ -212,11 +212,11 @@ namespace BepuPhysics.Constraints.Contact
             {
                 ref var contact = ref Unsafe.Add(ref prestepContactStart, i);
                 ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
+                PenetrationLimitOneBody.Solve(inertiaA, contact.Normal, contact.Offset, contact.Depth,
+                    positionErrorToVelocity, effectiveMassCFMScale, prestepMaterial.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref contactImpulse.Penetration, ref wsvA);
                 Helpers.BuildOrthonormalBasis(contact.Normal, out var x, out var z);
                 var maximumTangentImpulse = prestepMaterial.FrictionCoefficient * contactImpulse.Penetration;
                 TangentFrictionOneBody.Solve(x, z, contact.Offset, inertiaA, maximumTangentImpulse, ref contactImpulse.Tangent, ref wsvA);
-                PenetrationLimitOneBody.Solve(inertiaA, contact.Normal, contact.Offset, contact.Depth,
-                    positionErrorToVelocity, effectiveMassCFMScale, prestepMaterial.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref contactImpulse.Penetration, ref wsvA);
             }
         }
 
@@ -277,11 +277,11 @@ namespace BepuPhysics.Constraints.Contact
                 ref var contact = ref Unsafe.Add(ref prestepContactStart, i);
                 ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
                 Vector3Wide.Subtract(contact.Offset, prestepOffsetB, out var contactOffsetB);
+                PenetrationLimit.Solve(inertiaA, inertiaB, contact.Normal, contact.Offset, contactOffsetB, contact.Depth,
+                    positionErrorToVelocity, effectiveMassCFMScale, prestepMaterial.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref contactImpulse.Penetration, ref wsvA, ref wsvB);
                 Helpers.BuildOrthonormalBasis(contact.Normal, out var x, out var z);
                 var maximumTangentImpulse = prestepMaterial.FrictionCoefficient * contactImpulse.Penetration;
                 TangentFriction.Solve(x, z, contact.Offset, contactOffsetB, inertiaA, inertiaB, maximumTangentImpulse, ref contactImpulse.Tangent, ref wsvA, ref wsvB);
-                PenetrationLimit.Solve(inertiaA, inertiaB, contact.Normal, contact.Offset, contactOffsetB, contact.Depth,
-                    positionErrorToVelocity, effectiveMassCFMScale, prestepMaterial.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref contactImpulse.Penetration, ref wsvA, ref wsvB);
             }
         }
 
