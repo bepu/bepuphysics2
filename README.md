@@ -49,6 +49,8 @@ By user request, there's a [discord server](https://discord.gg/ssa2XpY). I'll be
 
 [Contributing](CONTRIBUTING.md)
 
+[Change log](Documentation/changelog.md)
+
 [Upgrading from v1, concept mapping](Documentation/UpgradingFromV1.md)
 
 [Packaging and Versioning](Documentation/PackagingAndVersioning.md)
