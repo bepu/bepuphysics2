@@ -1,7 +1,7 @@
 # bepuphysics v2
 <p align="center">
-<a href="https://www.youtube.com/watch?v=sfgC_eNx9M8" target="_blank"><img src="Documentation/images/youtubeLink.png" width="475" height="267" border="0" /></a>
-<a href="https://www.youtube.com/watch?v=tjtwSq3u6Dg" target="_blank"><img src="Documentation/images/youtubeLink24.png" width="475" height="267" border="0" /></a></p>
+<a href="https://www.youtube.com/watch?v=sfgC_eNx9M8" target="_blank"><img src="Documentation/images/youtubeLink.png" width="375" height="211" border="0" /></a>
+<a href="https://www.youtube.com/watch?v=tjtwSq3u6Dg" target="_blank"><img src="Documentation/images/youtubeLink24.png" width="375" height="211" border="0" /></a></p>
 
 This is the repo for the bepuphysics v2 library, a complete rewrite of the C# 3d rigid body physics engine [BEPUphysics v1](https://github.com/bepu/bepuphysics1).
 
