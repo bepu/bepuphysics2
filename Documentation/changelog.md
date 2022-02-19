@@ -21,6 +21,7 @@ At a high level, 2.4 was a solver revamp. Data layout and access patterns were s
 15. All body state used by the solver now bundled together into `BodySet.SolverStates`. Includes pose, velocity, and inertia.
 16. Constraint type batches no longer have a 'projection' buffer; anything loaded from it is now recalculated on the fly.
 17. `RawBuffer` removed. Usages replaced with `Buffer<byte>`.
+18. `BodyProperty<T>` replaced with the more general `CollidableProperty<T>`.
 
 ## Other Changes
 
