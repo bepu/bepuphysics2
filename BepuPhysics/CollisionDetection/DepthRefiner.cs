@@ -14,6 +14,19 @@ using System.Text;
 namespace BepuPhysics.CollisionDetection
 {
 
+    /// <summary>
+    /// Incrementally refines a sample direction to approach a local minimum depth between two convex bodies.
+    /// </summary>
+    /// <remarks>
+    /// The DepthRefiner implements a Tootbird search: an incremental algorithm that takes steps towards the Tootbird.
+    /// The Tootbird is the origin projected on the support plane of the best(lowest depth) support direction observed so far.
+    /// This uses a simplex that updates with rules similar to a simplified version of GJK.The Tootbird is definitionally not inside the minkowski sum.</remarks>
+    /// <typeparam name="TShapeA">Type of the first shape.</typeparam>
+    /// <typeparam name="TShapeWideA">SIMD type of the first shape.</typeparam>
+    /// <typeparam name="TSupportFinderA">Type providing support sampling for the first shape.</typeparam>
+    /// <typeparam name="TShapeB">Type of the second shape.</typeparam>
+    /// <typeparam name="TShapeWideB">SIMD type of the second shape.</typeparam>
+    /// <typeparam name="TSupportFinderB">Type providing support sampling for the second shape.</typeparam>
     public static class DepthRefiner<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB>
         where TShapeA : IConvexShape
         where TShapeWideA : IShapeWide<TShapeA>
@@ -88,10 +101,8 @@ namespace BepuPhysics.CollisionDetection
             out Vector3Wide nextNormal)
         {
             Unsafe.SkipInit(out nextNormal);
-            //In the penetrating case, the search target is the closest point to the origin on the so-far-best bounding plane.
-            //In the separated case, it's just the origin itself.
-            //Termination conditions are based on the distance to the search target. In the penetrating case, we try to approach zero distance.
-            //The separated case makes use of the fact that the bestDepth and distance to closest point only converge when the offset and best normal align.
+            //The search target is the closest point to the origin on the so-far-best bounding plane, also known as the tootbird.
+            //(You could use the origin itself once separation is found; it would be similar to regular GJK. This implementation doesn't, but you could.)
             Vector3Wide.Scale(bestNormal, Vector.Max(Vector<float>.Zero, bestDepth), out var searchTarget);
             var terminationEpsilon = Vector.ConditionalSelect(Vector.LessThan(bestDepth, Vector<float>.Zero), convergenceThreshold - bestDepth, convergenceThreshold);
             var terminationEpsilonSquared = terminationEpsilon * terminationEpsilon;
@@ -449,10 +460,8 @@ namespace BepuPhysics.CollisionDetection
             out Vector3Wide nextNormal)
         {
             Unsafe.SkipInit(out nextNormal);
-            //In the penetrating case, the search target is the closest point to the origin on the so-far-best bounding plane.
-            //In the separated case, it's just the origin itself.
-            //Termination conditions are based on the distance to the search target. In the penetrating case, we try to approach zero distance.
-            //The separated case makes use of the fact that the bestDepth and distance to closest point only converge when the offset and best normal align.
+            //The search target is the closest point to the origin on the so-far-best bounding plane, also known as the tootbird.
+            //(You could use the origin itself once separation is found; it would be similar to regular GJK. This implementation doesn't, but you could.)
             Vector3Wide.Scale(bestNormal, Vector.Max(Vector<float>.Zero, bestDepth), out var searchTarget);
             var terminationEpsilon = Vector.ConditionalSelect(Vector.LessThan(bestDepth, Vector<float>.Zero), convergenceThreshold - bestDepth, convergenceThreshold);
             var terminationEpsilonSquared = terminationEpsilon * terminationEpsilon;
