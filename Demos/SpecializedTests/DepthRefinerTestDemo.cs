@@ -17,7 +17,6 @@
 //using DemoRenderer.Constraints;
 //using DemoRenderer.UI;
 //using DemoUtilities;
-//using Quaternion = BepuUtilities.Quaternion;
 
 //namespace Demos.SpecializedTests
 //{
@@ -33,7 +32,7 @@
 //            camera.Position = new Vector3(0, 0, 13f);
 //            camera.Yaw = 0;
 //            camera.Pitch = 0;
-//            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)));
+//            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)), new SolveDescription(8, 1));
 //            //{
 //            //    //var shapeA = new Cylinder(1f, 2f);
 //            //    //var poseA = new RigidPose(new Vector3(12, 0.5f, 12), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f));
@@ -140,7 +139,7 @@
 //                var poseA = RigidPose.Identity;
 //                Matrix3x3Wide.ReadSlot(ref localOrientationB, 0, out var orientationBNarrow);
 //                RigidPose poseB;
-//                Quaternion.CreateFromRotationMatrix(orientationBNarrow, out poseB.Orientation);
+//                poseB.Orientation = QuaternionEx.CreateFromRotationMatrix(orientationBNarrow);
 //                Vector3Wide.ReadSlot(ref localOffsetB, 0, out poseB.Position);
 //                shapeLines = MinkowskiShapeVisualizer.CreateLines<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>(
 //                    shapeA, shapeB, poseA, poseB, 65536,
@@ -150,7 +149,7 @@
 //                var aWide = default(ConvexHullWide);
 //                var memoryLength = Unsafe.SizeOf<ConvexHull>() * Vector<float>.Count;
 //                var memory = stackalloc byte[memoryLength];
-//                aWide.Initialize(new RawBuffer(memory, memoryLength));
+//                aWide.Initialize(new Buffer<byte>(memory, memoryLength));
 //                var bWide = default(TriangleWide);
 //                aWide.Broadcast(shapeA);
 //                bWide.Broadcast(shapeB);
@@ -197,8 +196,8 @@
 //                    out var depthWide, out var localNormalWide, out var witnessOnA, steps, 50);
 
 
-//                Simulation.Statics.Add(new StaticDescription(poseA.Position + new Vector3(50, 0, 0), poseA.Orientation, new CollidableDescription(Simulation.Shapes.Add(shapeA), 0.1f)));
-//                Simulation.Statics.Add(new StaticDescription(localOffsetBNarrow + new Vector3(50, 0, 0), Quaternion.Identity, new CollidableDescription(Simulation.Shapes.Add(shapeB), 0.1f)));
+//                Simulation.Statics.Add(new StaticDescription(poseA.Position + new Vector3(50, 0, 0), poseA.Orientation, Simulation.Shapes.Add(shapeA)));
+//                Simulation.Statics.Add(new StaticDescription(localOffsetBNarrow + new Vector3(50, 0, 0), Quaternion.Identity, Simulation.Shapes.Add(shapeB)));
 //            }
 
 //            //{
