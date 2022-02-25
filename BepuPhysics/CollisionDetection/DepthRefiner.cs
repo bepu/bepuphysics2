@@ -195,7 +195,7 @@ namespace BepuPhysics.CollisionDetection
 
             var relevantFeatures = Vector<int>.One;
 
-            //If this is a vertex case and the sample is right on top of the origin, immediately quit.
+            //If this is a vertex case and the sample is right on top of the target, immediately quit.
             Vector3Wide.LengthSquared(targetToA, out var targetToALengthSquared);
             terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(simplexIsAVertex, Vector.LessThan(targetToALengthSquared, terminationEpsilonSquared)));
 
@@ -558,7 +558,7 @@ namespace BepuPhysics.CollisionDetection
             simplex.C.Weight = Vector.ConditionalSelect(terminatedLanes, simplex.C.Weight, Vector<float>.Zero);
             simplex.WeightDenominator = Vector.ConditionalSelect(terminatedLanes, simplex.WeightDenominator, Vector<float>.One);
 
-            //If this is a vertex case and the sample is right on top of the origin, immediately quit.
+            //If this is a vertex case and the sample is right on top of the target, immediately quit.
             Vector3Wide.LengthSquared(targetToA, out var targetToALengthSquared);
             terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(simplexIsAVertex, Vector.LessThan(targetToALengthSquared, terminationEpsilonSquared)));
 
