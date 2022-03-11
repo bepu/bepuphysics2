@@ -21,15 +21,15 @@ namespace Demos.SpecializedTests
             //camera.Yaw = MathHelper.Pi ; 
             camera.Yaw = MathHelper.Pi * 3f / 4;
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
             Simulation.Deterministic = true;
 
             var sphere = new Sphere(1.5f);
             var capsule = new Capsule(1f, 1f);
             var box = new Box(1f, 3f, 2f);
             var cylinder = new Cylinder(1.5f, 0.3f);
-            const int pointCount = 32;
-            var points = new QuickList<Vector3>(pointCount, BufferPool);
+            var points = new QuickList<Vector3>(32, BufferPool);
+            //Boxlike point cloud.
             //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
             //points.Allocate(BufferPool) = new Vector3(0, 0, 1);
             //points.Allocate(BufferPool) = new Vector3(0, 1, 0);
@@ -38,12 +38,42 @@ namespace Demos.SpecializedTests
             //points.Allocate(BufferPool) = new Vector3(1, 0, 1);
             //points.Allocate(BufferPool) = new Vector3(1, 1, 0);
             //points.Allocate(BufferPool) = new Vector3(1, 1, 1);
-            var random = new Random(5);
-            for (int i = 0; i < pointCount; ++i)
-            {
-                points.AllocateUnsafely() = new Vector3(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
-                //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3(random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1)) * random.NextSingle();
-            }
+
+            //Rando pointcloud.
+            //var random = new Random(5);
+            //for (int i = 0; i < 32; ++i)
+            //{
+            //    points.Allocate(BufferPool) = new Vector3(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
+            //}
+
+            //Dodecahedron pointcloud.
+            points.Allocate(BufferPool) = new Vector3(-1, -1, -1);
+            points.Allocate(BufferPool) = new Vector3(-1, -1, 1);
+            points.Allocate(BufferPool) = new Vector3(-1, 1, -1);
+            points.Allocate(BufferPool) = new Vector3(-1, 1, 1);
+            points.Allocate(BufferPool) = new Vector3(1, -1, -1);
+            points.Allocate(BufferPool) = new Vector3(1, -1, 1);
+            points.Allocate(BufferPool) = new Vector3(1, 1, -1);
+            points.Allocate(BufferPool) = new Vector3(1, 1, 1);
+
+            const float goldenRatio = 1.618033988749f;
+            const float oogr = 1f / goldenRatio;
+
+            points.Allocate(BufferPool) = new Vector3(0, goldenRatio, oogr);
+            points.Allocate(BufferPool) = new Vector3(0, -goldenRatio, oogr);
+            points.Allocate(BufferPool) = new Vector3(0, goldenRatio, -oogr);
+            points.Allocate(BufferPool) = new Vector3(0, -goldenRatio, -oogr);
+
+            points.Allocate(BufferPool) = new Vector3(oogr, 0, goldenRatio);
+            points.Allocate(BufferPool) = new Vector3(oogr, 0, -goldenRatio);
+            points.Allocate(BufferPool) = new Vector3(-oogr, 0, goldenRatio);
+            points.Allocate(BufferPool) = new Vector3(-oogr, 0, -goldenRatio);
+
+            points.Allocate(BufferPool) = new Vector3(goldenRatio, oogr, 0);
+            points.Allocate(BufferPool) = new Vector3(goldenRatio, -oogr, 0);
+            points.Allocate(BufferPool) = new Vector3(-goldenRatio, oogr, 0);
+            points.Allocate(BufferPool) = new Vector3(-goldenRatio, -oogr, 0);
+
             var convexHull = new ConvexHull(points.Span.Slice(points.Count), BufferPool, out _);
             var boxInertia = box.ComputeInertia(1);
             var capsuleInertia = capsule.ComputeInertia(1);
@@ -97,6 +127,7 @@ namespace Demos.SpecializedTests
                 }
             }
 
+            //Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(500, 1, 500))));
             DemoMeshHelper.CreateDeformedPlane(128, 128, (x, y) => new Vector3(x - 64, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - 64), new Vector3(4, 1, 4), BufferPool, out var mesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
         }
