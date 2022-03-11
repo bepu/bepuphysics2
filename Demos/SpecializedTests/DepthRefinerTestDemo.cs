@@ -33,123 +33,54 @@
 //            camera.Yaw = 0;
 //            camera.Pitch = 0;
 //            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)), new SolveDescription(8, 1));
-//            //{
-//            //    //var shapeA = new Cylinder(1f, 2f);
-//            //    //var poseA = new RigidPose(new Vector3(12, 0.5f, 12), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f));
-//            //    //var shapeB = new Triangle(new Vector3(-2f, 0, -2f), new Vector3(2f, 0, -2f), new Vector3(-2f, 0, 2f));
-//            //    //var poseB = new RigidPose(new Vector3(12, 0, 12));
-//            //    var shapeA = new Cylinder(0.4f, 0.09f);
-//            //    //var poseA = new RigidPose(new Vector3(12, 0.5f, 12), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f));
-//            //    var shapeB = new Triangle(new Vector3(-0.104847f, -2.863911f, -0.8221359f), new Vector3(-0.7841263f, 1.040714f, -1.362942f), new Vector3(0.8889847f, 1.823196f, 2.185074f));
-//            //    //var poseB = new RigidPose(new Vector3(12, 0, 12));
-//            //    Matrix3x3Wide localOrientationB;
-//            //    Vector3Wide.Broadcast(new Vector3(-0.4182778f, -0.1956204f, -0.887004f), out localOrientationB.X);
-//            //    Vector3Wide.Broadcast(new Vector3(-0.8923031f, -0.09407896f, 0.4415249f), out localOrientationB.Y);
-//            //    Vector3Wide.Broadcast(new Vector3(-0.1698197f, 0.9761565f, -0.1352016f), out localOrientationB.Z);
-//            //    Vector3Wide.Broadcast(new Vector3(0.3561249f, 2.797102f, 0.4073029f), out var localOffsetB);
-
-//            //    Vector3Wide.Normalize(localOffsetB, out var initialNormal);
-//            //    //Vector3Wide.Broadcast(new Vector3(0.9673051f, 0.07194486f, -0.2431969f), out var initialNormal);
-//            //    //var initialDepth = new Vector<float>(0.007193089f);
-
-//            //    var convergenceThreshold = new Vector<float>(4e-7f);
-
-//            //    var minimumDepthThreshold = new Vector<float>(-0.1f);
-
-//            //    //var simplex = new DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.SimplexWithWitness();
-//            //    //Vector3Wide.Broadcast(new Vector3(-0.05699956f, -0.4314917f, 0.445577f), out simplex.A.Support);
-//            //    //Vector3Wide.Broadcast(new Vector3(-0.3718189f, -0.09f, 0.1474812f), out simplex.A.SupportOnA);
-//            //    //simplex.A.Exists = new Vector<int>(-1);
-
-//            //    //Vector3Wide.Broadcast(new Vector3(0.3148193f, -0.4314917f, 0.2980957f), out simplex.B.Support);
-//            //    //Vector3Wide.Broadcast(new Vector3(0f, -0.09f, 0f), out simplex.B.SupportOnA);
-//            //    //simplex.B.Exists = new Vector<int>(-1);
-
-//            //    //Vector3Wide.Broadcast(new Vector3(-1.175686f, 3.316494f, 0.7135266f), out simplex.C.Support);
-//            //    //Vector3Wide.Broadcast(new Vector3(-0.2811551f, -0.09f, -0.2845203f), out simplex.C.SupportOnA);
-//            //    //simplex.C.Exists = new Vector<int>(-1);
-
-//            //    basePosition = default;
-//            //    var poseA = RigidPose.Identity;
-//            //    Matrix3x3Wide.ReadSlot(ref localOrientationB, 0, out var orientationBNarrow);
-//            //    RigidPose poseB;
-//            //    Quaternion.CreateFromRotationMatrix(orientationBNarrow, out poseB.Orientation);
-//            //    Vector3Wide.ReadSlot(ref localOffsetB, 0, out poseB.Position);
-//            //    shapeLines = MinkowskiShapeVisualizer.CreateLines<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>(
-//            //        shapeA, shapeB, poseA, poseB, 65536,
-//            //        0.01f, new Vector3(0.4f, 0.4f, 0),
-//            //        0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
-
-//            //    var aWide = default(CylinderWide);
-//            //    var bWide = default(TriangleWide);
-//            //    aWide.Broadcast(shapeA);
-//            //    bWide.Broadcast(shapeB);
-//            //    //var worldOffsetB = poseB.Position - poseA.Position;
-//            //    //var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
-//            //    //var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
-//            //    //Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
-//            //    //Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
-//            //    var triangleSupportFinder = default(PretransformedTriangleSupportFinder);
-//            //    var cylinderSupportFinder = default(CylinderSupportFinder);
-
-//            //    //var initialNormal = Vector3.Normalize(localOffsetB);
-//            //    //Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
-//            //    steps = new List<DepthRefinerStep>();
-//            //    //DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
-//            //    //    aWide, bWide, localOffsetB, localOrientationB, ref cylinderSupportFinder, ref triangleSupportFinder, ref simplex, initialNormal, initialDepth, new Vector<int>(), convergenceThreshold, minimumDepthThreshold,
-//            //    //    out var depthWide, out var localNormalWide, out var witnessOnA, steps, 50);
-//            //    DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
-//            //        aWide, bWide, localOffsetB, localOrientationB, ref cylinderSupportFinder, ref triangleSupportFinder, initialNormal, new Vector<int>(), convergenceThreshold, minimumDepthThreshold,
-//            //        out var depthWide, out var localNormalWide, out var witnessOnA, steps, 50);
-
-//            //}
-
 //            {
-//                const int pointCount = 16;
-//                var randomizedPoints = new QuickList<Vector3>(pointCount * 2, BufferPool);
-//                var random = new Random(5);
-//                for (int i = 0; i < pointCount; ++i)
-//                {
-//                    randomizedPoints.AllocateUnsafely() = new Vector3(33 * random.NextSingle(), 1 * random.NextSingle(), 13 * random.NextSingle());
-//                }
-//                var shapeA = new ConvexHull(randomizedPoints.Span.Slice(randomizedPoints.Count), BufferPool, out var hullCenter);
+//                //var shapeA = new Cylinder(1f, 2f);
 //                //var poseA = new RigidPose(new Vector3(12, 0.5f, 12), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f));
-//                var shapeB = new Triangle(
-//                    new Vector3(7.499722f, -8.201822f, -23.06599f),
-//                    new Vector3(1.648121f, -28.36107f, 31.33404f),
-//                    new Vector3(-9.147846f, 36.56289f, -8.268051f));
-
+//                //var shapeB = new Triangle(new Vector3(-2f, 0, -2f), new Vector3(2f, 0, -2f), new Vector3(-2f, 0, 2f));
+//                //var poseB = new RigidPose(new Vector3(12, 0, 12));
+//                var shapeA = new Cylinder(0.4f, 0.09f);
+//                //var poseA = new RigidPose(new Vector3(12, 0.5f, 12), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f));
+//                var shapeB = new Triangle(new Vector3(-0.104847f, -2.863911f, -0.8221359f), new Vector3(-0.7841263f, 1.040714f, -1.362942f), new Vector3(0.8889847f, 1.823196f, 2.185074f));
 //                //var poseB = new RigidPose(new Vector3(12, 0, 12));
 //                Matrix3x3Wide localOrientationB;
-//                Vector3Wide.Broadcast(new Vector3(0.3963324f, -0.1519237f, 0.90545f), out localOrientationB.X);
-//                Vector3Wide.Broadcast(new Vector3(-0.3329513f, 0.8952942f, 0.2959588f), out localOrientationB.Y);
-//                Vector3Wide.Broadcast(new Vector3(-0.8556075f, -0.4187689f, 0.304251f), out localOrientationB.Z);
-//                var localOffsetBNarrow = new Vector3(7.41188f, -34.41978f, 7.493548f);
-//                Vector3Wide.Broadcast(localOffsetBNarrow, out var localOffsetB);
+//                Vector3Wide.Broadcast(new Vector3(-0.4182778f, -0.1956204f, -0.887004f), out localOrientationB.X);
+//                Vector3Wide.Broadcast(new Vector3(-0.8923031f, -0.09407896f, 0.4415249f), out localOrientationB.Y);
+//                Vector3Wide.Broadcast(new Vector3(-0.1698197f, 0.9761565f, -0.1352016f), out localOrientationB.Z);
+//                Vector3Wide.Broadcast(new Vector3(0.3561249f, 2.797102f, 0.4073029f), out var localOffsetB);
 
-//                //Vector3Wide.Normalize(localOffsetB, out var initialNormal);
-//                Vector3Wide.Broadcast(new Vector3(1f, 0, 0), out var initialNormal);
-//                var initialDepth = new Vector<float>(2.674457f);
+//                Vector3Wide.Normalize(localOffsetB, out var initialNormal);
+//                //Vector3Wide.Broadcast(new Vector3(0.9673051f, 0.07194486f, -0.2431969f), out var initialNormal);
+//                //var initialDepth = new Vector<float>(0.007193089f);
 
-//                var convergenceThreshold = new Vector<float>(1e-5f * 4.187582f);
+//                var convergenceThreshold = new Vector<float>(4e-7f);
 
-//                var minimumDepthThreshold = new Vector<float>(-1f);
+//                var minimumDepthThreshold = new Vector<float>(-0.1f);
+
+//                //var simplex = new DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.SimplexWithWitness();
+//                //Vector3Wide.Broadcast(new Vector3(-0.05699956f, -0.4314917f, 0.445577f), out simplex.A.Support);
+//                //Vector3Wide.Broadcast(new Vector3(-0.3718189f, -0.09f, 0.1474812f), out simplex.A.SupportOnA);
+//                //simplex.A.Exists = new Vector<int>(-1);
+
+//                //Vector3Wide.Broadcast(new Vector3(0.3148193f, -0.4314917f, 0.2980957f), out simplex.B.Support);
+//                //Vector3Wide.Broadcast(new Vector3(0f, -0.09f, 0f), out simplex.B.SupportOnA);
+//                //simplex.B.Exists = new Vector<int>(-1);
+
+//                //Vector3Wide.Broadcast(new Vector3(-1.175686f, 3.316494f, 0.7135266f), out simplex.C.Support);
+//                //Vector3Wide.Broadcast(new Vector3(-0.2811551f, -0.09f, -0.2845203f), out simplex.C.SupportOnA);
+//                //simplex.C.Exists = new Vector<int>(-1);
 
 //                basePosition = default;
 //                var poseA = RigidPose.Identity;
 //                Matrix3x3Wide.ReadSlot(ref localOrientationB, 0, out var orientationBNarrow);
 //                RigidPose poseB;
-//                poseB.Orientation = QuaternionEx.CreateFromRotationMatrix(orientationBNarrow);
+//                QuaternionEx.CreateFromRotationMatrix(orientationBNarrow, out poseB.Orientation);
 //                Vector3Wide.ReadSlot(ref localOffsetB, 0, out poseB.Position);
-//                shapeLines = MinkowskiShapeVisualizer.CreateLines<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>(
+//                shapeLines = MinkowskiShapeVisualizer.CreateLines<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>(
 //                    shapeA, shapeB, poseA, poseB, 65536,
 //                    0.01f, new Vector3(0.4f, 0.4f, 0),
 //                    0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
 
-//                var aWide = default(ConvexHullWide);
-//                var memoryLength = Unsafe.SizeOf<ConvexHull>() * Vector<float>.Count;
-//                var memory = stackalloc byte[memoryLength];
-//                aWide.Initialize(new Buffer<byte>(memory, memoryLength));
+//                var aWide = default(CylinderWide);
 //                var bWide = default(TriangleWide);
 //                aWide.Broadcast(shapeA);
 //                bWide.Broadcast(shapeB);
@@ -159,23 +90,7 @@
 //                //Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
 //                //Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
 //                var triangleSupportFinder = default(PretransformedTriangleSupportFinder);
-//                var convexHullSupportFinder = default(ConvexHullSupportFinder);
-
-
-//                DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.SimplexWithWitness simplex = default;
-//                Vector3Wide.Broadcast(new Vector3(19.4402f, -1.873452f, 1.636454f), out simplex.A.Support);
-//                Vector3Wide.Broadcast(new Vector3(17.70424f, 0.2696521f, 0.8619514f), out simplex.A.SupportOnA);
-//                simplex.A.Exists = new Vector<int>(-1);
-//                Vector3Wide.Broadcast(new Vector3(-20.94802f, 34.62053f, -9.692917f), out simplex.B.Support);
-//                Vector3Wide.Broadcast(new Vector3(-13.53614f, 0.2007419f, -2.199368f), out simplex.B.SupportOnA);
-//                simplex.B.Exists = new Vector<int>(-1);
-//                Vector3Wide.Broadcast(new Vector3(-28.44774f, 42.82235f, 13.37307f), out simplex.C.Support);
-//                Vector3Wide.Broadcast(new Vector3(-13.53614f, 0.2007419f, -2.199368f), out simplex.C.SupportOnA);
-//                simplex.C.Exists = new Vector<int>(-1);
-
-//                //Vector3Wide.Broadcast(new Vector3(-28.44774f, 42.82235f, 13.37307f), out simplex.A.Support);
-//                //Vector3Wide.Broadcast(new Vector3(-13.53614f, 0.2007419f, -2.199368f), out simplex.A.SupportOnA);
-//                //simplex.A.Exists = new Vector<int>(-1);
+//                var cylinderSupportFinder = default(CylinderSupportFinder);
 
 //                //var initialNormal = Vector3.Normalize(localOffsetB);
 //                //Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
@@ -183,22 +98,111 @@
 //                //DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
 //                //    aWide, bWide, localOffsetB, localOrientationB, ref cylinderSupportFinder, ref triangleSupportFinder, ref simplex, initialNormal, initialDepth, new Vector<int>(), convergenceThreshold, minimumDepthThreshold,
 //                //    out var depthWide, out var localNormalWide, out var witnessOnA, steps, 50);
-//                var inactiveLanes = new Vector<int>(-1);
-//                Unsafe.As<Vector<int>, int>(ref inactiveLanes) = 0;
-//                //DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
-//                //    aWide, bWide, localOffsetB, localOrientationB, ref convexHullSupportFinder, ref triangleSupportFinder, ref simplex, initialNormal, initialDepth, inactiveLanes, convergenceThreshold, minimumDepthThreshold,
-//                //    out var depthWide, out var localNormalWide, out var witnessOnA, steps, 50);
-
-
-//                //Vector3Wide.Broadcast(new Vector3(0, -1, 0), out initialNormal);
-//                DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
-//                    aWide, bWide, localOffsetB, localOrientationB, ref convexHullSupportFinder, ref triangleSupportFinder, initialNormal, inactiveLanes, convergenceThreshold, minimumDepthThreshold,
+//                DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
+//                    aWide, bWide, localOffsetB, localOrientationB, ref cylinderSupportFinder, ref triangleSupportFinder, initialNormal, new Vector<int>(), convergenceThreshold, minimumDepthThreshold,
 //                    out var depthWide, out var localNormalWide, out var witnessOnA, steps, 50);
 
-
 //                Simulation.Statics.Add(new StaticDescription(poseA.Position + new Vector3(50, 0, 0), poseA.Orientation, Simulation.Shapes.Add(shapeA)));
+//                Vector3Wide.ReadFirst(localOffsetB, out var localOffsetBNarrow);
 //                Simulation.Statics.Add(new StaticDescription(localOffsetBNarrow + new Vector3(50, 0, 0), Quaternion.Identity, Simulation.Shapes.Add(shapeB)));
+
 //            }
+
+//            //{
+//            //    const int pointCount = 16;
+//            //    var randomizedPoints = new QuickList<Vector3>(pointCount * 2, BufferPool);
+//            //    var random = new Random(5);
+//            //    for (int i = 0; i < pointCount; ++i)
+//            //    {
+//            //        randomizedPoints.AllocateUnsafely() = new Vector3(33 * random.NextSingle(), 1 * random.NextSingle(), 13 * random.NextSingle());
+//            //    }
+//            //    var shapeA = new ConvexHull(randomizedPoints.Span.Slice(randomizedPoints.Count), BufferPool, out var hullCenter);
+//            //    //var poseA = new RigidPose(new Vector3(12, 0.5f, 12), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f));
+//            //    var shapeB = new Triangle(
+//            //        new Vector3(7.499722f, -8.201822f, -23.06599f),
+//            //        new Vector3(1.648121f, -28.36107f, 31.33404f),
+//            //        new Vector3(-9.147846f, 36.56289f, -8.268051f));
+
+//            //    //var poseB = new RigidPose(new Vector3(12, 0, 12));
+//            //    Matrix3x3Wide localOrientationB;
+//            //    Vector3Wide.Broadcast(new Vector3(0.3963324f, -0.1519237f, 0.90545f), out localOrientationB.X);
+//            //    Vector3Wide.Broadcast(new Vector3(-0.3329513f, 0.8952942f, 0.2959588f), out localOrientationB.Y);
+//            //    Vector3Wide.Broadcast(new Vector3(-0.8556075f, -0.4187689f, 0.304251f), out localOrientationB.Z);
+//            //    var localOffsetBNarrow = new Vector3(7.41188f, -34.41978f, 7.493548f);
+//            //    Vector3Wide.Broadcast(localOffsetBNarrow, out var localOffsetB);
+
+//            //    //Vector3Wide.Normalize(localOffsetB, out var initialNormal);
+//            //    Vector3Wide.Broadcast(new Vector3(1f, 0, 0), out var initialNormal);
+//            //    var initialDepth = new Vector<float>(2.674457f);
+
+//            //    var convergenceThreshold = new Vector<float>(1e-5f * 4.187582f);
+
+//            //    var minimumDepthThreshold = new Vector<float>(-1f);
+
+//            //    basePosition = default;
+//            //    var poseA = RigidPose.Identity;
+//            //    Matrix3x3Wide.ReadSlot(ref localOrientationB, 0, out var orientationBNarrow);
+//            //    RigidPose poseB;
+//            //    poseB.Orientation = QuaternionEx.CreateFromRotationMatrix(orientationBNarrow);
+//            //    Vector3Wide.ReadSlot(ref localOffsetB, 0, out poseB.Position);
+//            //    shapeLines = MinkowskiShapeVisualizer.CreateLines<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>(
+//            //        shapeA, shapeB, poseA, poseB, 65536,
+//            //        0.01f, new Vector3(0.4f, 0.4f, 0),
+//            //        0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
+
+//            //    var aWide = default(ConvexHullWide);
+//            //    var memoryLength = Unsafe.SizeOf<ConvexHull>() * Vector<float>.Count;
+//            //    var memory = stackalloc byte[memoryLength];
+//            //    aWide.Initialize(new Buffer<byte>(memory, memoryLength));
+//            //    var bWide = default(TriangleWide);
+//            //    aWide.Broadcast(shapeA);
+//            //    bWide.Broadcast(shapeB);
+//            //    //var worldOffsetB = poseB.Position - poseA.Position;
+//            //    //var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
+//            //    //var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
+//            //    //Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
+//            //    //Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
+//            //    var triangleSupportFinder = default(PretransformedTriangleSupportFinder);
+//            //    var convexHullSupportFinder = default(ConvexHullSupportFinder);
+
+
+//            //    DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.SimplexWithWitness simplex = default;
+//            //    Vector3Wide.Broadcast(new Vector3(19.4402f, -1.873452f, 1.636454f), out simplex.A.Support);
+//            //    Vector3Wide.Broadcast(new Vector3(17.70424f, 0.2696521f, 0.8619514f), out simplex.A.SupportOnA);
+//            //    simplex.A.Exists = new Vector<int>(-1);
+//            //    Vector3Wide.Broadcast(new Vector3(-20.94802f, 34.62053f, -9.692917f), out simplex.B.Support);
+//            //    Vector3Wide.Broadcast(new Vector3(-13.53614f, 0.2007419f, -2.199368f), out simplex.B.SupportOnA);
+//            //    simplex.B.Exists = new Vector<int>(-1);
+//            //    Vector3Wide.Broadcast(new Vector3(-28.44774f, 42.82235f, 13.37307f), out simplex.C.Support);
+//            //    Vector3Wide.Broadcast(new Vector3(-13.53614f, 0.2007419f, -2.199368f), out simplex.C.SupportOnA);
+//            //    simplex.C.Exists = new Vector<int>(-1);
+
+//            //    //Vector3Wide.Broadcast(new Vector3(-28.44774f, 42.82235f, 13.37307f), out simplex.A.Support);
+//            //    //Vector3Wide.Broadcast(new Vector3(-13.53614f, 0.2007419f, -2.199368f), out simplex.A.SupportOnA);
+//            //    //simplex.A.Exists = new Vector<int>(-1);
+
+//            //    //var initialNormal = Vector3.Normalize(localOffsetB);
+//            //    //Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
+//            //    steps = new List<DepthRefinerStep>();
+//            //    //DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
+//            //    //    aWide, bWide, localOffsetB, localOrientationB, ref cylinderSupportFinder, ref triangleSupportFinder, ref simplex, initialNormal, initialDepth, new Vector<int>(), convergenceThreshold, minimumDepthThreshold,
+//            //    //    out var depthWide, out var localNormalWide, out var witnessOnA, steps, 50);
+//            //    var inactiveLanes = new Vector<int>(-1);
+//            //    Unsafe.As<Vector<int>, int>(ref inactiveLanes) = 0;
+//            //    //DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
+//            //    //    aWide, bWide, localOffsetB, localOrientationB, ref convexHullSupportFinder, ref triangleSupportFinder, ref simplex, initialNormal, initialDepth, inactiveLanes, convergenceThreshold, minimumDepthThreshold,
+//            //    //    out var depthWide, out var localNormalWide, out var witnessOnA, steps, 50);
+
+
+//            //    //Vector3Wide.Broadcast(new Vector3(0, -1, 0), out initialNormal);
+//            //    DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
+//            //        aWide, bWide, localOffsetB, localOrientationB, ref convexHullSupportFinder, ref triangleSupportFinder, initialNormal, inactiveLanes, convergenceThreshold, minimumDepthThreshold,
+//            //        out var depthWide, out var localNormalWide, out var witnessOnA, steps, 50);
+
+
+//            //    Simulation.Statics.Add(new StaticDescription(poseA.Position + new Vector3(50, 0, 0), poseA.Orientation, Simulation.Shapes.Add(shapeA)));
+//            //    Simulation.Statics.Add(new StaticDescription(localOffsetBNarrow + new Vector3(50, 0, 0), Quaternion.Identity, Simulation.Shapes.Add(shapeB)));
+//            //}
 
 //            //{
 //            //    var shapeA = new Capsule(0.5f, 1f);
@@ -230,12 +234,12 @@
 //            //    var aWide = default(CapsuleWide);
 //            //    var bWide = default(ConvexHullWide);
 //            //    aWide.Broadcast(shapeA);
-//            //    BufferPool.Take(bWide.InternalAllocationSize, out var memory);
+//            //    BufferPool.Take<byte>(bWide.InternalAllocationSize, out var memory);
 //            //    bWide.Initialize(memory.Slice(0, bWide.InternalAllocationSize));
 //            //    bWide.Broadcast(shapeB);
 //            //    var worldOffsetB = poseB.Position - poseA.Position;
 //            //    var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
-//            //    var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
+//            //    var localOffsetB = QuaternionEx.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
 //            //    Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
 //            //    Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
 //            //    var supportFinderA = default(CapsuleSupportFinder);
@@ -251,7 +255,7 @@
 //            //    steps.Clear();
 //            //    var worldOffsetA = poseA.Position - poseB.Position;
 //            //    var localOrientationA = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseA.Orientation, Quaternion.Conjugate(poseB.Orientation)));
-//            //    var localOffsetA = Quaternion.Transform(worldOffsetA, Quaternion.Conjugate(poseB.Orientation));
+//            //    var localOffsetA = QuaternionEx.Transform(worldOffsetA, Quaternion.Conjugate(poseB.Orientation));
 //            //    Vector3Wide.Broadcast(localOffsetA, out var localOffsetAWide);
 //            //    Matrix3x3Wide.Broadcast(localOrientationA, out var localOrientationAWide);
 //            //    Vector3Wide.Broadcast(Vector3.Normalize(localOffsetA), out var initialNormalWide2);
@@ -293,7 +297,7 @@
 //            //    //    Z = new Vector3(-0.1333926f, -0.9782246f, -0.1590062f)
 //            //    //};
 //            //    //var poseB = new RigidPose(new Vector3(-0.2570486f, 1.780561f, -1.033215f), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathF.PI * 0.35f));
-//            //    var poseB = new RigidPose(positionB, Quaternion.CreateFromRotationMatrix(localOrientationBMatrix));
+//            //    var poseB = new RigidPose(positionB, QuaternionEx.CreateFromRotationMatrix(localOrientationBMatrix));
 
 //            //    basePosition = default;
 //            //    shapeLines = MinkowskiShapeVisualizer.CreateLines<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>(
@@ -307,7 +311,7 @@
 //            //    bWide.Broadcast(shapeB);
 //            //    var worldOffsetB = poseB.Position - poseA.Position;
 //            //    var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
-//            //    var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
+//            //    var localOffsetB = QuaternionEx.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
 //            //    Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
 //            //    Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
 //            //    var supportFinder = default(CylinderSupportFinder);
@@ -357,7 +361,7 @@
 //            //    bWide.Broadcast(shapeB);
 //            //    var worldOffsetB = poseB.Position - poseA.Position;
 //            //    var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
-//            //    var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
+//            //    var localOffsetB = QuaternionEx.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
 //            //    Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
 //            //    Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
 //            //    var supportFinder = default(BoxSupportFinder);
