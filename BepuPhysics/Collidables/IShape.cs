@@ -99,8 +99,8 @@ namespace BepuPhysics.Collidables
     /// <typeparam name="TChildShape">Type of the child shapes.</typeparam>
     /// <typeparam name="TChildShapeWide">Type of the child shapes, formatted in AOSOA layout.</typeparam>
     public interface IHomogeneousCompoundShape<TChildShape, TChildShapeWide> : IShape, IBoundsQueryableCompound
-        where TChildShape : IConvexShape
-        where TChildShapeWide : IShapeWide<TChildShape>
+        where TChildShape : unmanaged, IConvexShape
+        where TChildShapeWide : unmanaged, IShapeWide<TChildShape>
     {
         void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max);
 

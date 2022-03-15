@@ -263,8 +263,8 @@ namespace BepuPhysics.Collidables
 
 
     public class HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide> : ShapeBatch<TShape> where TShape : unmanaged, IHomogeneousCompoundShape<TChildShape, TChildShapeWide>
-        where TChildShape : IConvexShape
-        where TChildShapeWide : IShapeWide<TChildShape>
+        where TChildShape : unmanaged, IConvexShape
+        where TChildShapeWide : unmanaged, IShapeWide<TChildShape>
     {
         public HomogeneousCompoundShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
         {

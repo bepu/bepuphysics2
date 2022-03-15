@@ -228,8 +228,8 @@ namespace BepuPhysics
 
         public unsafe void ExecuteHomogeneousCompoundBatch<TShape, TChildShape, TChildShapeWide>(HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide> shapeBatch)
             where TShape : unmanaged, IHomogeneousCompoundShape<TChildShape, TChildShapeWide>
-            where TChildShape : IConvexShape
-            where TChildShapeWide : IShapeWide<TChildShape>
+            where TChildShape : unmanaged, IConvexShape
+            where TChildShapeWide : unmanaged, IShapeWide<TChildShape>
         {
             ref var batch = ref batches[shapeBatch.TypeId];
             ref var activeSet = ref bodies.ActiveSet;
