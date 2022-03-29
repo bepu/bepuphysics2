@@ -12,15 +12,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public int BatchSize => 16;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ProjectOntoCap(in Vector3 capCenter, in Matrix3x3 cylinderOrientation, float inverseNDotAY, in Vector3 localNormal, in Vector3 point, out Vector2 projected)
+        static void ProjectOntoCap(Vector3 capCenter, in Matrix3x3 cylinderOrientation, float inverseLocalNormalDotAY, Vector3 localNormal, Vector3 point, out Vector2 projected)
         {
             var pointToCapCenter = capCenter - point;
-            var t = Vector3.Dot(pointToCapCenter, cylinderOrientation.Y) * inverseNDotAY;
+            var t = Vector3.Dot(pointToCapCenter, cylinderOrientation.Y) * inverseLocalNormalDotAY;
             var projectionOffsetB = localNormal * t;
-            var projectedPoint = point + projectionOffsetB;
+            var projectedPoint = point - projectionOffsetB;
             var capCenterToProjectedPoint = projectedPoint - capCenter;
-            projected.X = Vector3.Dot(capCenterToProjectedPoint, cylinderOrientation.X);
-            projected.Y = Vector3.Dot(capCenterToProjectedPoint, cylinderOrientation.Z);
+            projected = new Vector2(
+                Vector3.Dot(capCenterToProjectedPoint, cylinderOrientation.X),
+                Vector3.Dot(capCenterToProjectedPoint, cylinderOrientation.Z));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -96,7 +97,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
             var hullSupportFinder = default(ConvexHullSupportFinder);
             var cylinderSupportFinder = default(CylinderSupportFinder);
-            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
             var epsilonScale = Vector.Min(Vector.Max(a.HalfLength, a.Radius), hullEpsilonScale);
             var depthThreshold = -speculativeMargin;
@@ -120,14 +121,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(localNormal, depth, out var closestOnCylinderOffset);
             Vector3Wide.Subtract(closestOnHull, closestOnCylinderOffset, out var closestOnCylinder);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, hullLocalCylinderOrientation, out var localNormalInA);
-            var inverseNormalDotAY = Vector<float>.One / localNormalInA.Y;
+            var inverseLocalNormalDotCapNormal = Vector<float>.One / localNormalInA.Y;
             var useCap = Vector.GreaterThan(Vector.Abs(localNormalInA.Y), new Vector<float>(0.70710678118f));
-            Vector3Wide capNormal, capCenter;
-            Vector2Wide interior0, interior1, interior2, interior3;
+            Vector3Wide capCenter;
+            Vector2Wide interior0;
+            Vector2Wide interior1;
+            Vector2Wide interior2;
+            Vector2Wide interior3;
             if (Vector.LessThanAny(Vector.AndNot(useCap, inactiveLanes), Vector<int>.Zero))
             {
-                Vector3Wide.ConditionallyNegate(Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), hullLocalCylinderOrientation.Y, out capNormal);
-                Vector3Wide.Scale(capNormal, a.HalfLength, out capCenter);
+                var useBottom = Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero);
+                Vector3Wide.Scale(hullLocalCylinderOrientation.Y, Vector.ConditionalSelect(useBottom, -a.HalfLength, a.HalfLength), out capCenter);
                 Vector3Wide.Add(capCenter, localOffsetA, out capCenter);
 
                 Vector3Wide.Subtract(closestOnCylinder, localOffsetA, out var hullLocalCylinderToClosestOnCylinder);
@@ -144,7 +148,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Scale(hullLocalCylinderOrientation.Y, cylinderLocalClosestOnCylinderY, out var cylinderEdgeCenterToClosestOnCylinder);
                 Vector3Wide.Subtract(closestOnCylinder, cylinderEdgeCenterToClosestOnCylinder, out cylinderSideEdgeCenter);
             }
-
+            int maximumCandidateCount = 4;
+            for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
+            {
+                //We can create up to 2 contacts per hull edge.
+                //Note that this overestimates the number of candidates required (it doesn't narrow the vertices to one face), but that's fine since we're not zeroing anything.
+                var slotMaximumCandidateCount = b.Hulls[slotIndex].FaceVertexIndices.Length * 2;
+                if (slotMaximumCandidateCount > maximumCandidateCount)
+                    maximumCandidateCount = slotMaximumCandidateCount;
+            }
+            var candidates = stackalloc ManifoldCandidateScalar[maximumCandidateCount];
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
             var boundingPlaneEpsilon = 1e-3f * epsilonScale;
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
@@ -157,15 +170,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 if (useCap[slotIndex] < 0)
                 {
-                    //We can create up to 2 contacts per hull edge.
-                    var maximumCandidateCount = faceVertexIndices.Length * 2;
-                    var candidates = stackalloc ManifoldCandidateScalar[maximumCandidateCount];
                     var candidateCount = 0;
                     //The cap is the representative feature. Clip the hull's edges against the cap's circle, and test the cylinder's heuristically chosen 'vertices' against the hull edges for containment.
                     //Note that we work on the surface of the cap and post-project back onto the hull.
                     Vector3Wide.ReadSlot(ref capCenter, slotIndex, out var slotCapCenter);
-                    Matrix3x3Wide.ReadSlot(ref hullLocalCylinderOrientation, slotIndex, out var slotCylinderOrientation);
-                    var slotInverseNDotAY = inverseNormalDotAY[slotIndex];
+                    var slotInverseLocalNormalDotCapNormal = inverseLocalNormalDotCapNormal[slotIndex];
 
                     ref var interior0Slot = ref GatherScatter.GetOffsetInstance(ref interior0, slotIndex);
                     ref var interior1Slot = ref GatherScatter.GetOffsetInstance(ref interior1, slotIndex);
@@ -174,17 +183,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var interiorPointsX = new Vector4(interior0Slot.X[0], interior1Slot.X[0], interior2Slot.X[0], interior3Slot.X[0]);
                     var interiorPointsY = new Vector4(interior0Slot.Y[0], interior1Slot.Y[0], interior2Slot.Y[0], interior3Slot.Y[0]);
                     var slotRadius = a.Radius[slotIndex];
+                    Matrix3x3Wide.ReadSlot(ref hullLocalCylinderOrientation, slotIndex, out var slotCylinderOrientation);
 
                     var previousIndex = faceVertexIndices[faceVertexIndices.Length - 1];
                     Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var hullFaceOrigin);
-                    ProjectOntoCap(slotCapCenter, slotCylinderOrientation, slotInverseNDotAY, slotLocalNormal, hullFaceOrigin, out var previousVertex);
+                    ProjectOntoCap(slotCapCenter, slotCylinderOrientation, slotInverseLocalNormalDotCapNormal, slotLocalNormal, hullFaceOrigin, out var previousVertex);
                     var maximumInteriorContainmentDots = Vector4.Zero;
 
                     for (int i = 0; i < faceVertexIndices.Length; ++i)
                     {
                         var index = faceVertexIndices[i];
                         Vector3Wide.ReadSlot(ref hull.Points[index.BundleIndex], index.InnerIndex, out var hullVertex);
-                        ProjectOntoCap(slotCapCenter, slotCylinderOrientation, slotInverseNDotAY, slotLocalNormal, hullVertex, out var vertex);
+                        ProjectOntoCap(slotCapCenter, slotCylinderOrientation, slotInverseLocalNormalDotCapNormal, slotLocalNormal, hullVertex, out var vertex);
 
                         //Test all the cap's interior points against this edge's plane normal (which, since we've projected the vertex, is just a perp dot product).
                         var hullEdgeOffset = vertex - previousVertex;
@@ -193,6 +203,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         var hullEdgeOffsetX = new Vector4(hullEdgeOffset.X);
                         var hullEdgeOffsetY = new Vector4(hullEdgeOffset.Y);
                         var interiorPointContainmentDots = (interiorPointsX - previousStartX) * hullEdgeOffsetY - (interiorPointsY - previousStartY) * hullEdgeOffsetX;
+                        //If we're generating contacts with the bottom cap, then the visible winding of the hull is flipped and the containment signs will be negated.
+                        if (slotInverseLocalNormalDotCapNormal > 0)
+                            interiorPointContainmentDots *= -1;
                         maximumInteriorContainmentDots = Vector4.Max(interiorPointContainmentDots, maximumInteriorContainmentDots);
 
                         //Test the projected hull edge against the cap.
@@ -272,7 +285,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.ReadSlot(ref hullLocalCylinderOrientation.Z, slotIndex, out var slotCylinderFaceY);
                     Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
                     //Note that we're working on the cylinder's cap, so the parameters get flipped around. Gets pushed back onto the hull in the postpass.
-                    ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotHullFaceNormal, -slotLocalNormal, hullFaceOrigin, slotCapCenter, slotCylinderFaceX, slotCylinderFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                    ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotHullFaceNormal, -1f / Vector3.Dot(slotLocalNormal, slotHullFaceNormal), hullFaceOrigin, slotCapCenter, slotCylinderFaceX, slotCylinderFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                        slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
                 }
                 else

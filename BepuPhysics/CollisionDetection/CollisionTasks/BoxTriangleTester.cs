@@ -253,7 +253,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AddBoxVertices(in Vector3Wide a, in Vector3Wide b, in Vector3Wide ab, in Vector3Wide bc, in Vector3Wide ca, in Vector3Wide triangleNormal, in Vector3Wide contactNormal,
+        private static void AddBoxVertices(in Vector3Wide a, in Vector3Wide b, in Vector3Wide ab, in Vector3Wide bc, in Vector3Wide ca, in Vector3Wide triangleNormal, in Vector3Wide contactNormal,
             in Vector3Wide v00, in Vector3Wide v01, in Vector3Wide v10, in Vector3Wide v11,
             in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY, in Vector<int> baseFeatureId, in Vector<int> featureIdX, in Vector<int> featureIdY,
             in Vector<int> allowContacts, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
@@ -333,6 +333,238 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.Abs(triangleNormal.X) * a.HalfWidth + Vector.Abs(triangleNormal.Y) * a.HalfHeight + Vector.Abs(triangleNormal.Z) * a.HalfLength - Vector.Abs(trianglePlaneOffset);
             Select(ref depth, ref localNormal, triangleFaceDepth, calibratedTriangleNormal);
 
+            var activeLanes = BundleIndexing.CreateMaskForCountInBundle(pairCount);
+            //The following was created for MeshReduction when it demanded all contact normals be correct during separation.
+            //Other pairs don't have that requirement, and we ended modifying MeshReduction to be a little less picky.
+            //This remains for posterity because, hey, it works, and if you need it, there it is.
+            //var testVertexNormals = Vector.BitwiseAnd(activeLanes, Vector.LessThan(depth, Vector<float>.Zero));
+            //if (Vector.LessThanAny(testVertexNormals, Vector<int>.Zero))
+            //{
+            //    //At least one lane contains a separating pair. Mesh reduction relies on separating normals being minimal (or very very close to it), so test 7 candidate normals.
+            //    //First examine the 3 triangle vertices.
+            //    var negativeHalfWidth = -a.HalfWidth;
+            //    var negativeHalfHeight = -a.HalfHeight;
+            //    var negativeHalfLength = -a.HalfLength;
+            //    var boxToAX = vA.X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, vA.X));
+            //    var boxToAY = vA.Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, vA.Y));
+            //    var boxToAZ = vA.Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, vA.Z));
+            //    var boxToBX = vB.X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, vB.X));
+            //    var boxToBY = vB.Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, vB.Y));
+            //    var boxToBZ = vB.Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, vB.Z));
+            //    var boxToCX = vC.X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, vC.X));
+            //    var boxToCY = vC.Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, vC.Y));
+            //    var boxToCZ = vC.Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, vC.Z));
+
+            //    var distanceSquaredA = boxToAX * boxToAX + boxToAY * boxToAY + boxToAZ * boxToAZ;
+            //    var distanceSquaredB = boxToBX * boxToBX + boxToBY * boxToBY + boxToBZ * boxToBZ;
+            //    var distanceSquaredC = boxToCX * boxToCX + boxToCY * boxToCY + boxToCZ * boxToCZ;
+            //    var distanceSquared = Vector.Min(distanceSquaredA, Vector.Min(distanceSquaredB, distanceSquaredC));
+            //    var useA = Vector.Equals(distanceSquared, distanceSquaredA);
+            //    var useB = Vector.Equals(distanceSquared, distanceSquaredB);
+            //    var offsetX = Vector.ConditionalSelect(useA, boxToAX, Vector.ConditionalSelect(useB, boxToBX, boxToCX));
+            //    var offsetY = Vector.ConditionalSelect(useA, boxToAY, Vector.ConditionalSelect(useB, boxToBY, boxToCY));
+            //    var offsetZ = Vector.ConditionalSelect(useA, boxToAZ, Vector.ConditionalSelect(useB, boxToBZ, boxToCZ));
+
+            //    //Now examine the 4 box vertices from the best box face.
+            //    //For simplicity, we'll just compute the closest point on each edge directly:
+            //    //tClosestPointOnAB = clamp(dot(edgeOffsetAB, boxVertex - vA) / ||edgeOffsetAB||^2, 0, 1) 
+            //    //Note that: boxVertex = faceOffset +- boxEdgeOffsetX +- boxEdgeOffsetY    
+            //    //So we can split the above calculation into pieces. Leaving it scaled for succinctness:
+            //    //tClosestPointOnAB = clamp((dot(edgeOffsetAB, faceOffset) +- dot(edgeOffsetAB, boxEdgeOffsetX) +- dot(edgeOffsetAB, boxEdgeOffsetY) - dot(edgeOffsetAB, vA)) / ||edgeOffsetAB||^2, 0, 1)        
+            //    //So we can share quite a few operations across the 4 box vertices.
+            //    //Likely some better options here.
+
+            //    var absNormalX = Vector.Abs(localNormal.X);
+            //    var absNormalY = Vector.Abs(localNormal.Y);
+            //    var absNormalZ = Vector.Abs(localNormal.Z);
+            //    var useFaceX = Vector.BitwiseAnd(Vector.GreaterThan(absNormalX, absNormalY), Vector.GreaterThan(absNormalX, absNormalZ));
+            //    var useFaceY = Vector.AndNot(Vector.GreaterThan(absNormalY, absNormalZ), useFaceX);
+            //    var faceLocalNormalComponent = Vector.ConditionalSelect(useFaceX, localNormal.X, Vector.ConditionalSelect(useFaceY, localNormal.Y, localNormal.Z));
+            //    var faceOffsetMagnitude = Vector.ConditionalSelect(useFaceX, a.HalfWidth, Vector.ConditionalSelect(useFaceY, a.HalfHeight, a.HalfLength));
+            //    var xOffset = Vector.ConditionalSelect(useFaceX, a.HalfHeight, Vector.ConditionalSelect(useFaceY, a.HalfLength, a.HalfWidth));
+            //    var yOffset = Vector.ConditionalSelect(useFaceX, a.HalfLength, Vector.ConditionalSelect(useFaceY, a.HalfWidth, a.HalfHeight));
+            //    var faceOffset = Vector.ConditionalSelect(Vector.LessThan(faceLocalNormalComponent, Vector<float>.Zero), faceOffsetMagnitude, -faceOffsetMagnitude);
+
+            //    //Thanks to axis alignment, all the box component dot products squish down to component selections.
+            //    var edgeABDotFaceOffset = faceOffset * Vector.ConditionalSelect(useFaceX, ab.X, Vector.ConditionalSelect(useFaceY, ab.Y, ab.Z));
+            //    var edgeBCDotFaceOffset = faceOffset * Vector.ConditionalSelect(useFaceX, bc.X, Vector.ConditionalSelect(useFaceY, bc.Y, bc.Z));
+            //    var edgeCADotFaceOffset = faceOffset * Vector.ConditionalSelect(useFaceX, ca.X, Vector.ConditionalSelect(useFaceY, ca.Y, ca.Z));
+            //    var edgeABDotBoxEdgeX = xOffset * Vector.ConditionalSelect(useFaceX, ab.Y, Vector.ConditionalSelect(useFaceY, ab.Z, ab.X));
+            //    var edgeBCDotBoxEdgeX = xOffset * Vector.ConditionalSelect(useFaceX, bc.Y, Vector.ConditionalSelect(useFaceY, bc.Z, bc.X));
+            //    var edgeCADotBoxEdgeX = xOffset * Vector.ConditionalSelect(useFaceX, ca.Y, Vector.ConditionalSelect(useFaceY, ca.Z, ca.X));
+            //    var edgeABDotBoxEdgeY = yOffset * Vector.ConditionalSelect(useFaceX, ab.Z, Vector.ConditionalSelect(useFaceY, ab.X, ab.Y));
+            //    var edgeBCDotBoxEdgeY = yOffset * Vector.ConditionalSelect(useFaceX, bc.Z, Vector.ConditionalSelect(useFaceY, bc.X, bc.Y));
+            //    var edgeCADotBoxEdgeY = yOffset * Vector.ConditionalSelect(useFaceX, ca.Z, Vector.ConditionalSelect(useFaceY, ca.X, ca.Y));
+            //    Vector3Wide.Dot(ab, vA, out var abDotA);
+            //    Vector3Wide.Dot(bc, vB, out var bcDotB);
+            //    Vector3Wide.Dot(ca, vC, out var caDotC);
+
+            //    var inverseLengthSquaredAB = Vector<float>.One / (ab.X * ab.X + ab.Y * ab.Y + ab.Z * ab.Z);
+            //    var inverseLengthSquaredBC = Vector<float>.One / (bc.X * bc.X + bc.Y * bc.Y + bc.Z * bc.Z);
+            //    var inverseLengthSquaredCA = Vector<float>.One / (ca.X * ca.X + ca.Y * ca.Y + ca.Z * ca.Z);
+            //    var abToFaceDot = edgeABDotFaceOffset - abDotA;
+            //    var bcToFaceDot = edgeBCDotFaceOffset - bcDotB;
+            //    var caToFaceDot = edgeCADotFaceOffset - caDotC;
+            //    var tClosestOnAB00 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (abToFaceDot - edgeABDotBoxEdgeX - edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
+            //    var tClosestOnAB01 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (abToFaceDot - edgeABDotBoxEdgeX + edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
+            //    var tClosestOnAB10 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (abToFaceDot + edgeABDotBoxEdgeX - edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
+            //    var tClosestOnAB11 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (abToFaceDot + edgeABDotBoxEdgeX + edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
+            //    var tClosestOnBC00 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (bcToFaceDot - edgeBCDotBoxEdgeX - edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
+            //    var tClosestOnBC01 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (bcToFaceDot - edgeBCDotBoxEdgeX + edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
+            //    var tClosestOnBC10 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (bcToFaceDot + edgeBCDotBoxEdgeX - edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
+            //    var tClosestOnBC11 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (bcToFaceDot + edgeBCDotBoxEdgeX + edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
+            //    var tClosestOnCA00 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (caToFaceDot - edgeCADotBoxEdgeX - edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
+            //    var tClosestOnCA01 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (caToFaceDot - edgeCADotBoxEdgeX + edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
+            //    var tClosestOnCA10 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (caToFaceDot + edgeCADotBoxEdgeX - edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
+            //    var tClosestOnCA11 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (caToFaceDot + edgeCADotBoxEdgeX + edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
+
+            //    //We now have the t value of every box vertex on each triangle edge.
+            //    //Find the closest pair.
+            //    //offsetAB00 = a + ab * t00 - (faceOffset - edgeOffsetX - edgeOffsetY)
+            //    var ab00X = vA.X + ab.X * tClosestOnAB00;
+            //    var ab00Y = vA.Y + ab.Y * tClosestOnAB00;
+            //    var ab00Z = vA.Z + ab.Z * tClosestOnAB00;
+            //    var ab01X = vA.X + ab.X * tClosestOnAB01;
+            //    var ab01Y = vA.Y + ab.Y * tClosestOnAB01;
+            //    var ab01Z = vA.Z + ab.Z * tClosestOnAB01;
+            //    var ab10X = vA.X + ab.X * tClosestOnAB10;
+            //    var ab10Y = vA.Y + ab.Y * tClosestOnAB10;
+            //    var ab10Z = vA.Z + ab.Z * tClosestOnAB10;
+            //    var ab11X = vA.X + ab.X * tClosestOnAB11;
+            //    var ab11Y = vA.Y + ab.Y * tClosestOnAB11;
+            //    var ab11Z = vA.Z + ab.Z * tClosestOnAB11;
+            //    ab00X = ab00X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, ab00X));
+            //    ab00Y = ab00Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, ab00Y));
+            //    ab00Z = ab00Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, ab00Z));
+            //    ab01X = ab01X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, ab01X));
+            //    ab01Y = ab01Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, ab01Y));
+            //    ab01Z = ab01Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, ab01Z));
+            //    ab10X = ab10X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, ab10X));
+            //    ab10Y = ab10Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, ab10Y));
+            //    ab10Z = ab10Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, ab10Z));
+            //    ab11X = ab11X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, ab11X));
+            //    ab11Y = ab11Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, ab11Y));
+            //    ab11Z = ab11Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, ab11Z));
+            //    var distanceSquaredAB00 = ab00X * ab00X + ab00Y * ab00Y + ab00Z * ab00Z;
+            //    var distanceSquaredAB01 = ab01X * ab01X + ab01Y * ab01Y + ab01Z * ab01Z;
+            //    var distanceSquaredAB10 = ab10X * ab10X + ab10Y * ab10Y + ab10Z * ab10Z;
+            //    var distanceSquaredAB11 = ab11X * ab11X + ab11Y * ab11Y + ab11Z * ab11Z;
+            //    distanceSquared = Vector.Min(distanceSquared, Vector.Min(Vector.Min(distanceSquaredAB00, distanceSquaredAB01), Vector.Min(distanceSquaredAB10, distanceSquaredAB11)));
+            //    var useAB00 = Vector.Equals(distanceSquared, distanceSquaredAB00);
+            //    var useAB01 = Vector.Equals(distanceSquared, distanceSquaredAB01);
+            //    var useAB10 = Vector.Equals(distanceSquared, distanceSquaredAB10);
+            //    var useAB11 = Vector.Equals(distanceSquared, distanceSquaredAB11);
+            //    offsetX = Vector.ConditionalSelect(useAB00, ab00X, Vector.ConditionalSelect(useAB01, ab01X, Vector.ConditionalSelect(useAB10, ab10X, Vector.ConditionalSelect(useAB11, ab11X, offsetX))));
+            //    offsetY = Vector.ConditionalSelect(useAB00, ab00Y, Vector.ConditionalSelect(useAB01, ab01Y, Vector.ConditionalSelect(useAB10, ab10Y, Vector.ConditionalSelect(useAB11, ab11Y, offsetY))));
+            //    offsetZ = Vector.ConditionalSelect(useAB00, ab00Z, Vector.ConditionalSelect(useAB01, ab01Z, Vector.ConditionalSelect(useAB10, ab10Z, Vector.ConditionalSelect(useAB11, ab11Z, offsetZ))));
+
+            //    var bc00X = vB.X + bc.X * tClosestOnBC00;
+            //    var bc00Y = vB.Y + bc.Y * tClosestOnBC00;
+            //    var bc00Z = vB.Z + bc.Z * tClosestOnBC00;
+            //    var bc01X = vB.X + bc.X * tClosestOnBC01;
+            //    var bc01Y = vB.Y + bc.Y * tClosestOnBC01;
+            //    var bc01Z = vB.Z + bc.Z * tClosestOnBC01;
+            //    var bc10X = vB.X + bc.X * tClosestOnBC10;
+            //    var bc10Y = vB.Y + bc.Y * tClosestOnBC10;
+            //    var bc10Z = vB.Z + bc.Z * tClosestOnBC10;
+            //    var bc11X = vB.X + bc.X * tClosestOnBC11;
+            //    var bc11Y = vB.Y + bc.Y * tClosestOnBC11;
+            //    var bc11Z = vB.Z + bc.Z * tClosestOnBC11;
+            //    bc00X = bc00X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, bc00X));
+            //    bc00Y = bc00Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, bc00Y));
+            //    bc00Z = bc00Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, bc00Z));
+            //    bc01X = bc01X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, bc01X));
+            //    bc01Y = bc01Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, bc01Y));
+            //    bc01Z = bc01Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, bc01Z));
+            //    bc10X = bc10X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, bc10X));
+            //    bc10Y = bc10Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, bc10Y));
+            //    bc10Z = bc10Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, bc10Z));
+            //    bc11X = bc11X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, bc11X));
+            //    bc11Y = bc11Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, bc11Y));
+            //    bc11Z = bc11Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, bc11Z));
+            //    var distanceSquaredBC00 = bc00X * bc00X + bc00Y * bc00Y + bc00Z * bc00Z;
+            //    var distanceSquaredBC01 = bc01X * bc01X + bc01Y * bc01Y + bc01Z * bc01Z;
+            //    var distanceSquaredBC10 = bc10X * bc10X + bc10Y * bc10Y + bc10Z * bc10Z;
+            //    var distanceSquaredBC11 = bc11X * bc11X + bc11Y * bc11Y + bc11Z * bc11Z;
+            //    distanceSquared = Vector.Min(distanceSquared, Vector.Min(Vector.Min(distanceSquaredBC00, distanceSquaredBC01), Vector.Min(distanceSquaredBC10, distanceSquaredBC11)));
+            //    var useBC00 = Vector.Equals(distanceSquared, distanceSquaredBC00);
+            //    var useBC01 = Vector.Equals(distanceSquared, distanceSquaredBC01);
+            //    var useBC10 = Vector.Equals(distanceSquared, distanceSquaredBC10);
+            //    var useBC11 = Vector.Equals(distanceSquared, distanceSquaredBC11);
+            //    offsetX = Vector.ConditionalSelect(useBC00, bc00X, Vector.ConditionalSelect(useBC01, bc01X, Vector.ConditionalSelect(useBC10, bc10X, Vector.ConditionalSelect(useBC11, bc11X, offsetX))));
+            //    offsetY = Vector.ConditionalSelect(useBC00, bc00Y, Vector.ConditionalSelect(useBC01, bc01Y, Vector.ConditionalSelect(useBC10, bc10Y, Vector.ConditionalSelect(useBC11, bc11Y, offsetY))));
+            //    offsetZ = Vector.ConditionalSelect(useBC00, bc00Z, Vector.ConditionalSelect(useBC01, bc01Z, Vector.ConditionalSelect(useBC10, bc10Z, Vector.ConditionalSelect(useBC11, bc11Z, offsetZ))));
+
+            //    var ca00X = vC.X + ca.X * tClosestOnCA00;
+            //    var ca00Y = vC.Y + ca.Y * tClosestOnCA00;
+            //    var ca00Z = vC.Z + ca.Z * tClosestOnCA00;
+            //    var ca01X = vC.X + ca.X * tClosestOnCA01;
+            //    var ca01Y = vC.Y + ca.Y * tClosestOnCA01;
+            //    var ca01Z = vC.Z + ca.Z * tClosestOnCA01;
+            //    var ca10X = vC.X + ca.X * tClosestOnCA10;
+            //    var ca10Y = vC.Y + ca.Y * tClosestOnCA10;
+            //    var ca10Z = vC.Z + ca.Z * tClosestOnCA10;
+            //    var ca11X = vC.X + ca.X * tClosestOnCA11;
+            //    var ca11Y = vC.Y + ca.Y * tClosestOnCA11;
+            //    var ca11Z = vC.Z + ca.Z * tClosestOnCA11;
+            //    ca00X = ca00X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, ca00X));
+            //    ca00Y = ca00Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, ca00Y));
+            //    ca00Z = ca00Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, ca00Z));
+            //    ca01X = ca01X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, ca01X));
+            //    ca01Y = ca01Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, ca01Y));
+            //    ca01Z = ca01Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, ca01Z));
+            //    ca10X = ca10X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, ca10X));
+            //    ca10Y = ca10Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, ca10Y));
+            //    ca10Z = ca10Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, ca10Z));
+            //    ca11X = ca11X - Vector.Min(a.HalfWidth, Vector.Max(negativeHalfWidth, ca11X));
+            //    ca11Y = ca11Y - Vector.Min(a.HalfHeight, Vector.Max(negativeHalfHeight, ca11Y));
+            //    ca11Z = ca11Z - Vector.Min(a.HalfLength, Vector.Max(negativeHalfLength, ca11Z));
+            //    var distanceSquaredCA00 = ca00X * ca00X + ca00Y * ca00Y + ca00Z * ca00Z;
+            //    var distanceSquaredCA01 = ca01X * ca01X + ca01Y * ca01Y + ca01Z * ca01Z;
+            //    var distanceSquaredCA10 = ca10X * ca10X + ca10Y * ca10Y + ca10Z * ca10Z;
+            //    var distanceSquaredCA11 = ca11X * ca11X + ca11Y * ca11Y + ca11Z * ca11Z;
+            //    distanceSquared = Vector.Min(distanceSquared, Vector.Min(Vector.Min(distanceSquaredCA00, distanceSquaredCA01), Vector.Min(distanceSquaredCA10, distanceSquaredCA11)));
+            //    var useCA00 = Vector.Equals(distanceSquared, distanceSquaredCA00);
+            //    var useCA01 = Vector.Equals(distanceSquared, distanceSquaredCA01);
+            //    var useCA10 = Vector.Equals(distanceSquared, distanceSquaredCA10);
+            //    var useCA11 = Vector.Equals(distanceSquared, distanceSquaredCA11);
+            //    offsetX = Vector.ConditionalSelect(useCA00, ca00X, Vector.ConditionalSelect(useCA01, ca01X, Vector.ConditionalSelect(useCA10, ca10X, Vector.ConditionalSelect(useCA11, ca11X, offsetX))));
+            //    offsetY = Vector.ConditionalSelect(useCA00, ca00Y, Vector.ConditionalSelect(useCA01, ca01Y, Vector.ConditionalSelect(useCA10, ca10Y, Vector.ConditionalSelect(useCA11, ca11Y, offsetY))));
+            //    offsetZ = Vector.ConditionalSelect(useCA00, ca00Z, Vector.ConditionalSelect(useCA01, ca01Z, Vector.ConditionalSelect(useCA10, ca10Z, Vector.ConditionalSelect(useCA11, ca11Z, offsetZ))));
+
+            //    var distance = Vector.SquareRoot(distanceSquared);
+            //    var inverseDistance = new Vector<float>(-1f) / distance;
+            //    localNormalCandidate.X = offsetX * inverseDistance;
+            //    localNormalCandidate.Y = offsetY * inverseDistance;
+            //    localNormalCandidate.Z = offsetZ * inverseDistance;
+            //    Vector3Wide.Length(localNormalCandidate, out var length);
+            //    Vector3Wide.Dot(localNormalCandidate, vA, out var nVA);
+            //    Vector3Wide.Dot(localNormalCandidate, vB, out var nVB);
+            //    Vector3Wide.Dot(localNormalCandidate, vC, out var nVC);
+            //    var extremeA = Vector.Abs(localNormalCandidate.X) * a.HalfWidth + Vector.Abs(localNormalCandidate.Y) * a.HalfHeight + Vector.Abs(localNormalCandidate.Z) * a.HalfLength;
+            //    GetDepthForInterval(extremeA, nVA, nVB, nVC, out depthCandidate);
+            //    //Guard against division by zero.
+            //    depthCandidate = Vector.ConditionalSelect(Vector.GreaterThan(distanceSquared, new Vector<float>(1e-6f)), depthCandidate, new Vector<float>(float.MaxValue));
+            //    Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
+            //}
+
+
+            //If the local normal points against the triangle normal, then it's on the backside and should not collide.
+            Vector3Wide.Dot(localNormal, triangleNormal, out var normalDot);
+            var minimumDepth = -speculativeMargin;
+            Vector3Wide.LengthSquared(ab, out var abLengthSquared);
+            Vector3Wide.LengthSquared(ca, out var caLengthSquared);
+            TriangleWide.ComputeNondegenerateTriangleMask(abLengthSquared, caLengthSquared, triangleNormalLength, out var triangleEpsilonScale, out var nondegenerateMask);
+            var allowContacts = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(nondegenerateMask, Vector.GreaterThanOrEqual(normalDot, new Vector<float>(TriangleWide.BackfaceNormalDotRejectionThreshold))),
+                Vector.BitwiseAnd(Vector.GreaterThanOrEqual(depth, minimumDepth), activeLanes));
+            if (Vector.EqualsAll(allowContacts, Vector<int>.Zero))
+            {
+                //All lanes are inactive; early out.
+                manifold = default;
+                return;
+            }
+
             //At this point, we have computed the minimum depth and associated local normal.
             //We now need to compute some contact locations, their per-contact depths, and the feature ids.
 
@@ -396,12 +628,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Note that using a raw absolute epsilon would have a varying effect based on the scale of the involved shapes.
             //The minimum across the maxes is intended to avoid cases like a huge box being used as a plane, causing a massive size disparity.
             //Using its sizes as a threshold would tend to kill off perfectly valid contacts.
-            Vector3Wide.LengthSquared(ab, out var abLengthSquared);
-            Vector3Wide.LengthSquared(bc, out var bcLengthSquared);
-            Vector3Wide.LengthSquared(ca, out var caLengthSquared);
             var epsilonScale = Vector.Min(
                 Vector.Max(a.HalfWidth, Vector.Max(a.HalfHeight, a.HalfLength)),
-                Vector.SquareRoot(Vector.Max(abLengthSquared, Vector.Max(bcLengthSquared, caLengthSquared))));
+                triangleEpsilonScale);
 
             //We will be working on the surface of the triangle, but we'd still like a 2d parameterization of the surface for contact reduction.
             //So, we'll create tangent axes from the edge and edge x normal.
@@ -426,9 +655,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(negativeX, boxEdgeOffsetY, out var boxVertex01);
             Vector3Wide.Subtract(positiveX, boxEdgeOffsetY, out var boxVertex10);
             Vector3Wide.Add(positiveX, boxEdgeOffsetY, out var boxVertex11);
-            //If the local normal points against the triangle normal, then it's on the backside and should not collide.
-            Vector3Wide.Dot(localNormal, triangleNormal, out var normalDot);
-            var allowContacts = Vector.GreaterThan(normalDot, Vector<float>.Zero);
             AddBoxVertices(vA, vB, ab, bc, ca, triangleNormal, localNormal, boxVertex00, boxVertex01, boxVertex10, boxVertex11,
                 localTriangleCenter, triangleTangentX, triangleTangentY, axisIdNormal, axisIdTangentX, axisIdTangentY, allowContacts, ref candidates, ref candidateCount, pairCount);
 
@@ -438,7 +664,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 boxVertex00, boxVertex11, boxTangentX, boxTangentY, localNormal, allowContacts, ref candidates, ref candidateCount, pairCount);
 
             Vector3Wide.Subtract(boxFaceCenter, localTriangleCenter, out var faceCenterBToFaceCenterA);
-            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, boxFaceNormal, localNormal, faceCenterBToFaceCenterA, triangleTangentX, triangleTangentY, epsilonScale, -speculativeMargin, pairCount,
+            Vector3Wide.Dot(boxFaceNormal, localNormal, out var faceNormalDotNormal);
+            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, boxFaceNormal, Vector<float>.One / faceNormalDotNormal, faceCenterBToFaceCenterA, triangleTangentX, triangleTangentY, epsilonScale, minimumDepth, pairCount,
                 out var contact0, out var contact1, out var contact2, out var contact3,
                 out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 

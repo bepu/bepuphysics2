@@ -20,6 +20,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //dot(linePosition + lineDirection * t, linePosition + lineDirection * t) = radius * radius
             //dot(linePosition, linePosition) - radius * radius + t * 2 * dot(linePosition, lineDirection) + t^2 * dot(lineDirection, lineDirection) = 0
             Vector2Wide.Dot(lineDirection, lineDirection, out var a);
+            a = Vector.Max(a, new Vector<float>(2e-38f)); //Guard against division by zero.
             var inverseA = Vector<float>.One / a;
             Vector2Wide.Dot(linePosition, lineDirection, out var b);
             Vector2Wide.Dot(linePosition, linePosition, out var c);
@@ -31,10 +32,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var tBase = -b * inverseA;
             tMin = tBase - tOffset;
             tMax = tBase + tOffset;
-            //If the projected line direction is zero, just compress the interval to tBase.
-            var useFallback = Vector.LessThan(Vector.Abs(a), new Vector<float>(1e-12f));
-            tMin = Vector.ConditionalSelect(useFallback, tBase, tMin);
-            tMax = Vector.ConditionalSelect(useFallback, tBase, tMax);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -63,7 +60,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         internal static unsafe void GenerateInteriorPoints(in CylinderWide cylinder, in Vector3Wide cylinderLocalNormal, in Vector3Wide localClosestOnCylinder, out Vector2Wide interior0, out Vector2Wide interior1, out Vector2Wide interior2, out Vector2Wide interior3)
         {
             //Assume we can just use the 4 local extreme points of the cylinder at first.
-            //Then, if there is sufficient tilt, replace the closest extreme point to the extreme point with the extreme point.
+            //Then, if there is sufficient tilt, replace the closest extreme point to the deepest point with the deepest point.
             var interpolationMin = new Vector<float>(0.9999f);
             var inverseInterpolationSpan = new Vector<float>(1f / 0.00005f);
             var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(cylinderLocalNormal.Y) - interpolationMin) * inverseInterpolationSpan));
@@ -125,7 +122,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             CylinderSupportFinder cylinderSupportFinder = default;
 
             //We now have a decent estimate for the local normal and an initial simplex to work from. Refine it to a local minimum.
-            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
 
             var depthThreshold = -speculativeMargin;
             var epsilonScale = Vector.Min(Vector.Max(a.HalfWidth, Vector.Max(a.HalfHeight, a.HalfLength)), Vector.Max(b.HalfLength, b.Radius));
@@ -157,8 +154,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(useY, rA.Z, boxFaceX, out boxFaceX);
             Vector3Wide.ConditionalSelect(useX, rA.Z, rA.Y, out var boxFaceY);
             Vector3Wide.ConditionalSelect(useY, rA.X, boxFaceY, out boxFaceY);
-            var negateFace = 
-                Vector.ConditionalSelect(useX, Vector.GreaterThan(localNormalInA.X, Vector<float>.Zero), 
+            var negateFace =
+                Vector.ConditionalSelect(useX, Vector.GreaterThan(localNormalInA.X, Vector<float>.Zero),
                 Vector.ConditionalSelect(useY, Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), Vector.GreaterThan(localNormalInA.Z, Vector<float>.Zero)));
             Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceNormal);
             Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceX);
@@ -178,6 +175,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
 
             var useCap = Vector.AndNot(Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f)), inactiveLanes);
+
+            Vector3Wide.Dot(boxFaceNormal, localNormal, out var faceNormalDotLocalNormal);
+            var inverseFaceNormalDotLocalNormal = Vector<float>.One / faceNormalDotLocalNormal;
 
             if (Vector.LessThanAny(useCap, Vector<int>.Zero))
             {
@@ -249,7 +249,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 tangentBY.X = Vector<float>.Zero;
                 tangentBY.Y = Vector<float>.Zero;
                 tangentBY.Z = Vector<float>.One;
-                ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 12, boxFaceNormal, localNormal, capCenterToBoxFaceCenter, tangentBX, tangentBY, epsilonScale, depthThreshold, pairCount,
+                ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 12, boxFaceNormal, inverseFaceNormalDotLocalNormal, capCenterToBoxFaceCenter, tangentBX, tangentBY, epsilonScale, depthThreshold, pairCount,
                     out var candidate0, out var candidate1, out var candidate2, out var candidate3,
                     out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
@@ -344,17 +344,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var regularWeightX = Vector<float>.One - unrestrictWeightX;
                 var regularWeightY = Vector<float>.One - unrestrictWeightY;
                 var negativeHalfLength = -b.HalfLength;
-                var tXMin = Vector.ConditionalSelect(xInvalid, maxValue, unrestrictWeightX * negativeHalfLength + regularWeightX * Vector.Min(tX0, tX1));
-                var tXMax = Vector.ConditionalSelect(xInvalid, minValue, unrestrictWeightX * b.HalfLength + regularWeightX * Vector.Max(tX0, tX1));
-                var tYMin = Vector.ConditionalSelect(yInvalid, maxValue, unrestrictWeightY * negativeHalfLength + regularWeightY * Vector.Min(tY0, tY1));
-                var tYMax = Vector.ConditionalSelect(yInvalid, minValue, unrestrictWeightY * b.HalfLength + regularWeightY * Vector.Max(tY0, tY1));
+                var tXMin = Vector.ConditionalSelect(xInvalid, minValue, unrestrictWeightX * negativeHalfLength + regularWeightX * Vector.Min(tX0, tX1));
+                var tXMax = Vector.ConditionalSelect(xInvalid, maxValue, unrestrictWeightX * b.HalfLength + regularWeightX * Vector.Max(tX0, tX1));
+                var tYMin = Vector.ConditionalSelect(yInvalid, minValue, unrestrictWeightY * negativeHalfLength + regularWeightY * Vector.Min(tY0, tY1));
+                var tYMax = Vector.ConditionalSelect(yInvalid, maxValue, unrestrictWeightY * b.HalfLength + regularWeightY * Vector.Max(tY0, tY1));
                 //Shouldn't need to make contact generation conditional here. The closest points are guaranteed to be on these chosen features;
                 //they might just be in the same spot. We do clamp for numerical reasons.
                 var tMax = Vector.Min(Vector.Max(negativeHalfLength, Vector.Min(tXMax, tYMax)), b.HalfLength);
                 var tMin = Vector.Min(Vector.Max(negativeHalfLength, Vector.Max(tXMin, tYMin)), b.HalfLength);
 
-                Vector3Wide.Dot(boxFaceNormal, localNormal, out var faceNormalDotLocalNormal);
-                var inverseFaceNormalDotLocalNormal = Vector<float>.One / faceNormalDotLocalNormal;
                 Vector3Wide localContact0, localContact1;
                 localContact0.X = localContact1.X = closestOnB.X;
                 localContact0.Y = tMin;

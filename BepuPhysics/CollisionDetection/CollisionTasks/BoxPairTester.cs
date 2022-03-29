@@ -103,7 +103,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void AddBoxAVertex(in Vector3Wide vertex, in Vector<int> featureId, in Vector3Wide faceNormalB, in Vector3Wide contactNormal, in Vector<float> inverseContactNormalDotFaceNormalB,
             in Vector3Wide faceCenterB, in Vector3Wide faceTangentBX, in Vector3Wide faceTangentBY, in Vector<float> halfSpanBX, in Vector<float> halfSpanBY,
-            ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
+            ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount, in Vector<int> allowContacts)
         {
             //Cast a ray from the box A vertex up to the box B face along the contact normal.
             Vector3Wide.Subtract(vertex, faceCenterB, out var pointOnBToVertex);
@@ -127,16 +127,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Rather than assuming our numerical epsilon is guaranteed to always work, explicitly clamp the count. This should essentially never be needed,
             //but it is very cheap and guarantees no memory stomping with a pretty reasonable fallback.
             var belowBufferCapacity = Vector.LessThan(candidateCount, new Vector<int>(8));
-            var contactExists = Vector.BitwiseAnd(contained, belowBufferCapacity);
+            var contactExists = Vector.BitwiseAnd(allowContacts, Vector.BitwiseAnd(contained, belowBufferCapacity));
             ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, contactExists, pairCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AddBoxAVertices(in Vector3Wide faceCenterB, in Vector3Wide faceTangentBX, in Vector3Wide faceTangentBY, in Vector<float> halfSpanBX, in Vector<float> halfSpanBY,
+        private static void AddBoxAVertices(in Vector3Wide faceCenterB, in Vector3Wide faceTangentBX, in Vector3Wide faceTangentBY, in Vector<float> halfSpanBX, in Vector<float> halfSpanBY,
             in Vector3Wide faceNormalB, in Vector3Wide contactNormal,
             in Vector3Wide v00, in Vector3Wide v01, in Vector3Wide v10, in Vector3Wide v11,
             in Vector<int> f00, in Vector<int> f01, in Vector<int> f10, in Vector<int> f11,
-            ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
+            ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount, in Vector<int> allowContacts)
         {
             Vector3Wide.Dot(faceNormalB, contactNormal, out var normalDot);
 #if DEBUG
@@ -150,13 +150,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var inverseContactNormalDotFaceNormalB = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(normalDot), new Vector<float>(1e-10f)), Vector<float>.One / normalDot, new Vector<float>(float.MaxValue));
 
             AddBoxAVertex(v00, f00, faceNormalB, contactNormal, inverseContactNormalDotFaceNormalB, faceCenterB, faceTangentBX, faceTangentBY, halfSpanBX, halfSpanBY,
-                ref candidates, ref candidateCount, pairCount);
+                ref candidates, ref candidateCount, pairCount, allowContacts);
             AddBoxAVertex(v01, f01, faceNormalB, contactNormal, inverseContactNormalDotFaceNormalB, faceCenterB, faceTangentBX, faceTangentBY, halfSpanBX, halfSpanBY,
-                ref candidates, ref candidateCount, pairCount);
+                ref candidates, ref candidateCount, pairCount, allowContacts);
             AddBoxAVertex(v10, f10, faceNormalB, contactNormal, inverseContactNormalDotFaceNormalB, faceCenterB, faceTangentBX, faceTangentBY, halfSpanBX, halfSpanBY,
-                ref candidates, ref candidateCount, pairCount);
+                ref candidates, ref candidateCount, pairCount, allowContacts);
             AddBoxAVertex(v11, f11, faceNormalB, contactNormal, inverseContactNormalDotFaceNormalB, faceCenterB, faceTangentBX, faceTangentBY, halfSpanBX, halfSpanBY,
-                ref candidates, ref candidateCount, pairCount);
+                ref candidates, ref candidateCount, pairCount, allowContacts);
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -221,19 +221,23 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void AddContactsForEdge(in Vector<float> min, in ManifoldCandidate minCandidate, in Vector<float> max, in ManifoldCandidate maxCandidate, in Vector<float> halfSpanB,
-            in Vector<float> epsilon, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
+            in Vector<float> epsilon, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, in Vector<int> allowContacts, int pairCount)
         {
             //If -halfSpan<min<halfSpan && (max-min)>epsilon for an edge, use the min intersection as a contact.
             //If -halfSpan<=max<=halfSpan && max>=min, use the max intersection as a contact.
             //Note the comparisons: if the max lies on a face vertex, it is used, but if the min lies on a face vertex, it is not. This avoids redundant entries.
             var minExists = Vector.BitwiseAnd(
-                Vector.GreaterThan(max - min, epsilon),
-                Vector.LessThan(Vector.Abs(min), halfSpanB));
+                allowContacts,
+                Vector.BitwiseAnd(
+                    Vector.GreaterThan(max - min, epsilon),
+                    Vector.LessThan(Vector.Abs(min), halfSpanB)));
             ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, minCandidate, minExists, pairCount);
 
             var maxExists = Vector.BitwiseAnd(
-                Vector.GreaterThanOrEqual(max, min),
-                Vector.LessThanOrEqual(Vector.Abs(max), halfSpanB));
+                allowContacts,
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(max, min),
+                    Vector.LessThanOrEqual(Vector.Abs(max), halfSpanB)));
             ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, maxCandidate, maxExists, pairCount);
         }
 
@@ -242,7 +246,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             in Vector3Wide faceCenterB, in Vector3Wide faceTangentBX, in Vector3Wide faceTangentBY, in Vector<float> halfSpanBX, in Vector<float> halfSpanBY,
             in Vector3Wide vertexA00, in Vector3Wide vertexA11, in Vector3Wide faceTangentAX, in Vector3Wide faceTangentAY, in Vector3Wide contactNormal,
             in Vector<int> featureIdX0, in Vector<int> featureIdX1, in Vector<int> featureIdY0, in Vector<int> featureIdY1,
-            in Vector<float> epsilonScale, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
+            in Vector<float> epsilonScale, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount, in Vector<int> allowContacts)
         {
             //The critical observation here is that we are working in a contact plane defined by the contact normal- not the triangle face normal or the box face normal.
             //So, when performing clipping, we actually want to clip on the contact normal plane.
@@ -275,7 +279,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //We now have intervals for all four box B edges.
             var edgeFeatureIdOffset = new Vector<int>(64);
             var epsilon = epsilonScale * 1e-5f;
-            ManifoldCandidate min, max;
+           ManifoldCandidate min;
+            ManifoldCandidate max;
             //X0
             min.FeatureId = featureIdX0;
             min.X = minX0;
@@ -283,7 +288,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             max.FeatureId = featureIdX0 + edgeFeatureIdOffset;
             max.X = maxX0;
             max.Y = min.Y;
-            AddContactsForEdge(minX0, min, maxX0, max, halfSpanBX, epsilon, ref candidates, ref candidateCount, pairCount);
+            AddContactsForEdge(minX0, min, maxX0, max, halfSpanBX, epsilon, ref candidates, ref candidateCount, allowContacts, pairCount);
 
             //Y1
             min.FeatureId = featureIdY1;
@@ -292,8 +297,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             max.FeatureId = featureIdY1 + edgeFeatureIdOffset;
             max.X = halfSpanBX;
             max.Y = maxY1;
-            AddContactsForEdge(minY1, min, maxY1, max, halfSpanBY, epsilon, ref candidates, ref candidateCount, pairCount);
-            
+            AddContactsForEdge(minY1, min, maxY1, max, halfSpanBY, epsilon, ref candidates, ref candidateCount, allowContacts, pairCount);
+
             //X1
             min.FeatureId = featureIdX1;
             min.X = unflippedMaxX1;
@@ -301,7 +306,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             max.FeatureId = featureIdX1 + edgeFeatureIdOffset;
             max.X = unflippedMinX1;
             max.Y = halfSpanBY;
-            AddContactsForEdge(minX1, min, maxX1, max, halfSpanBX, epsilon, ref candidates, ref candidateCount, pairCount);
+            AddContactsForEdge(minX1, min, maxX1, max, halfSpanBX, epsilon, ref candidates, ref candidateCount, allowContacts, pairCount);
 
             //Y0
             min.FeatureId = featureIdY0;
@@ -310,7 +315,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             max.FeatureId = featureIdY0 + edgeFeatureIdOffset;
             max.X = min.X;
             max.Y = unflippedMinY0;
-            AddContactsForEdge(minY0, min, maxY0, max, halfSpanBY, epsilon, ref candidates, ref candidateCount, pairCount);
+            AddContactsForEdge(minY0, min, maxY0, max, halfSpanBY, epsilon, ref candidates, ref candidateCount, allowContacts, pairCount);
         }
 
 
@@ -376,6 +381,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var faceBZDepth = b.HalfLength + a.HalfWidth * absRBZ.X + a.HalfHeight * absRBZ.Y + a.HalfLength * absRBZ.Z - Vector.Abs(bLocalOffsetB.Z);
             Select(ref depth, ref localNormal, ref faceBZDepth, ref rB.Z.X, ref rB.Z.Y, ref rB.Z.Z);
 
+            var activeLanes = BundleIndexing.CreateMaskForCountInBundle(pairCount);
+            var minimumDepth = -speculativeMargin;
+            var allowContacts = Vector.BitwiseAnd(activeLanes, Vector.GreaterThanOrEqual(depth, minimumDepth));
+            if (Vector.EqualsAll(allowContacts, Vector<int>.Zero))
+            {
+                manifold.Contact0Exists = default;
+                manifold.Contact1Exists = default;
+                manifold.Contact2Exists = default;
+                manifold.Contact3Exists = default;
+                return;
+            }
             //Calibrate the normal to point from B to A, matching convention.
             Vector3Wide.Dot(localNormal, localOffsetB, out var normalDotOffsetB);
             var shouldNegateNormal = Vector.GreaterThan(normalDotOffsetB, Vector<float>.Zero);
@@ -454,7 +470,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             normalB.X = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.X, normalB.X);
             normalB.Y = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Y, normalB.Y);
             normalB.Z = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Z, normalB.Z);
- 
+
             //Note that we only allocate up to 8 candidates. It is not possible for this process to generate more than 8 (unless there are numerical problems, which we guard against).
             int byteCount = Unsafe.SizeOf<ManifoldCandidate>() * 8;
             var buffer = stackalloc byte[byteCount];
@@ -484,7 +500,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var edgeIdBY1 = axisIdBX * three + twiceAxisIdBY + axisZEdgeIdContribution;
             var candidateCount = Vector<int>.Zero;
             CreateEdgeContacts(faceCenterB, tangentBX, tangentBY, halfSpanBX, halfSpanBY, vertexA00, vertexA11, tangentAX, tangentAY, manifold.Normal,
-                edgeIdBX0, edgeIdBX1, edgeIdBY0, edgeIdBY1, epsilonScale, ref candidates, ref candidateCount, pairCount);
+                edgeIdBX0, edgeIdBX1, edgeIdBY0, edgeIdBY1, epsilonScale, ref candidates, ref candidateCount, pairCount, allowContacts);
 
             //Face A vertices
             //Vertex ids only have two states per axis, so scale id by 0 or 1 before adding. Equivalent to conditional or.          
@@ -496,11 +512,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var vertexId10 = -(axisIdAZ + axisIdAX);
             var vertexId11 = -(axisIdAZ + axisIdAX + axisIdAY);
             AddBoxAVertices(faceCenterB, tangentBX, tangentBY, halfSpanBX, halfSpanBY, normalB, manifold.Normal,
-                vertexA00, vertexA01, vertexA10, vertexA11, vertexId00, vertexId01, vertexId10, vertexId11, ref candidates, ref candidateCount, pairCount);
-                 
-            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 8, normalA, manifold.Normal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin, pairCount,
-              out var contact0, out var contact1, out var contact2, out var contact3,
-              out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
+                vertexA00, vertexA01, vertexA10, vertexA11, vertexId00, vertexId01, vertexId10, vertexId11, ref candidates, ref candidateCount, pairCount, allowContacts);
+
+            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 8, normalA, new Vector<float>(-1f) / Vector.Abs(calibrationDotA), faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, minimumDepth, pairCount,
+                out var contact0, out var contact1, out var contact2, out var contact3,
+                out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
             //Transform the contacts into the manifold.
             TransformContactToManifold(ref contact0, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA0, ref manifold.Depth0, ref manifold.FeatureId0);

@@ -32,7 +32,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
             var hullSupportFinder = default(ConvexHullSupportFinder);
-            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
             a.EstimateEpsilonScale(inactiveLanes, out var aEpsilonScale);
             b.EstimateEpsilonScale(inactiveLanes, out var bEpsilonScale);
             var epsilonScale = Vector.Min(aEpsilonScale, bEpsilonScale);
@@ -120,10 +120,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var edgeOffsetB = vertexB - previousVertexB;
                     var edgePlaneNormalB = Vector3.Cross(edgeOffsetB, slotLocalNormal);
 
-                    var latestEntryNumerator = float.MaxValue;
-                    var latestEntryDenominator = -1f;
-                    var earliestExitNumerator = float.MaxValue;
-                    var earliestExitDenominator = 1f;
+                    var latestEntry = float.MinValue;
+                    var earliestExit = float.MaxValue;
                     for (int faceVertexIndexA = 0; faceVertexIndexA < faceVertexIndicesA.Length; ++faceVertexIndexA)
                     {
                         ref var edgeA = ref cachedEdges[faceVertexIndexA];
@@ -144,28 +142,27 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
                         if (denominator < 0)
                         {
-                            if (numerator * latestEntryDenominator > latestEntryNumerator * denominator)
-                            {
-                                latestEntryNumerator = numerator;
-                                latestEntryDenominator = denominator;
-                            }
+                            //Note compare flip for denominator sign.
+                            if (numerator < latestEntry * denominator)
+                                latestEntry = numerator / denominator;
                         }
                         else if (denominator > 0)
                         {
-                            if (numerator * earliestExitDenominator < earliestExitNumerator * denominator)
-                            {
-                                earliestExitNumerator = numerator;
-                                earliestExitDenominator = denominator;
-                            }
+                            if (numerator < earliestExit * denominator)
+                                earliestExit = numerator / denominator;
+                        }
+                        else if (numerator < 0)
+                        {
+                            //The B edge is parallel and outside the edge A, so there can be no intersection.
+                            earliestExit = float.MinValue;
+                            latestEntry = float.MaxValue;
                         }
                     }
                     //We now have bounds on B's edge.
                     //Denominator signs are opposed; comparison flipped.
-                    if (earliestExitNumerator * latestEntryDenominator <= latestEntryNumerator * earliestExitDenominator)
+                    if (latestEntry <= earliestExit)
                     {
                         //This edge of B was actually contained in A's face. Add contacts for it.
-                        var latestEntry = latestEntryNumerator / latestEntryDenominator;
-                        var earliestExit = earliestExitNumerator / earliestExitDenominator;
                         latestEntry = latestEntry < 0 ? 0 : latestEntry;
                         earliestExit = earliestExit > 1 ? 1 : earliestExit;
                         //Create max contact if max >= min.
@@ -198,7 +195,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     previousVertexB = vertexB;
                 }
                 //We've now analyzed every edge of B. Check for vertices from A to add.
-                var inverseFaceNormalADotFaceNormalB = 1f / Vector3.Dot(slotLocalNormal, slotFaceNormalB);
+                var inverseLocalNormalADotFaceNormalB = 1f / Vector3.Dot(slotLocalNormal, slotFaceNormalB);
                 for (int i = 0; i < faceVertexIndicesA.Length && candidateCount < maximumCandidateCount; ++i)
                 {
                     ref var edge = ref cachedEdges[i];
@@ -208,7 +205,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         //Project it onto B's surface:
                         //vertexA - localNormal * dot(vertexA - faceOriginB, faceNormalB) / dot(localNormal, faceNormalB); 
                         var bFaceToVertexA = edge.Vertex - bFaceOrigin;
-                        var distance = Vector3.Dot(bFaceToVertexA, slotFaceNormalB) * inverseFaceNormalADotFaceNormalB;
+                        var distance = Vector3.Dot(bFaceToVertexA, slotFaceNormalB) * inverseLocalNormalADotFaceNormalB;
                         var bFaceToProjectedVertexA = bFaceToVertexA - slotLocalNormal * distance;
 
                         var newContactIndex = candidateCount++;
@@ -220,7 +217,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 }
                 Matrix3x3Wide.ReadSlot(ref rB, slotIndex, out var slotOrientationB);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
-                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, slotLocalNormal, cachedEdges[0].Vertex, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, 1f / Vector3.Dot(slotFaceNormalA, slotLocalNormal), cachedEdges[0].Vertex, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
             }
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out manifold.Normal);
         }

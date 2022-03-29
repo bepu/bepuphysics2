@@ -24,6 +24,7 @@ namespace BepuPhysics.CollisionDetection
         public Quaternion MeshOrientation;
         //This uses all of the nonconvex reduction's logic, so we just nest it.
         public NonconvexReduction Inner;
+        public unsafe Mesh* Mesh { get; set; }
 
         public void Create(int childManifoldCount, BufferPool pool)
         {
