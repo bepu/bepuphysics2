@@ -72,7 +72,7 @@ namespace BepuPhysics.Collidables
         /// <param name="scale">Scale to apply to all vertices at runtime.
         /// Note that the scale is not baked into the triangles or acceleration structure; the same set of triangles and acceleration structure can be used across multiple Mesh instances with different scales.</param>
         /// <param name="pool">Pool used to allocate acceleration structures.</param>
-        public Mesh(Buffer<Triangle> triangles, in Vector3 scale, BufferPool pool) : this()
+        public Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool) : this()
         {
             Triangles = triangles;
             Tree = new Tree(pool, triangles.Length);

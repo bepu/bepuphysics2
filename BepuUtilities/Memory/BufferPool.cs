@@ -418,6 +418,7 @@ namespace BepuUtilities.Memory
         {
             if (count == 0)
                 count = 1;
+            Debug.Assert(BitOperations.RoundUpToPowerOf2((ulong)(count * Unsafe.SizeOf<T>())) < int.MaxValue, "This function assumes that counts aren't going to overflow a signed 32 bit integer.");
             return ((int)BitOperations.RoundUpToPowerOf2((uint)(count * Unsafe.SizeOf<T>()))) / Unsafe.SizeOf<T>();
         }
 
