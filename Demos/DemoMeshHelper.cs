@@ -123,7 +123,7 @@ namespace Demos
         /// <remarks>This exists primarily as an easy example of how to work around the slow sequential default mesh building options for very large meshes, like heightmaps.
         /// It is not optimized anywhere close to as much as it could be.
         /// In the future, I'd like to give the Tree and Mesh much faster (and multithreaded) constructors that achieve quality and speed in one shot.</remarks>
-        public static Mesh CreateGiantMeshFastWithoutBounds(Buffer<Triangle> triangles, Vector3 scaling, BufferPool pool)
+        public unsafe static Mesh CreateGiantMeshFastWithoutBounds(Buffer<Triangle> triangles, Vector3 scaling, BufferPool pool)
         {
             if (triangles.Length < 128)
             {
@@ -140,15 +140,12 @@ namespace Demos
             mesh.Tree.LeafCount = triangles.Length;
             int leafCounter = 0;
             CreateDummyNodes(ref mesh.Tree, 0, triangles.Length, ref leafCounter);
-            unsafe
+            for (int i = 0; i < triangles.Length; ++i)
             {
-                for (int i = 0; i < triangles.Length; ++i)
-                {
-                    ref var t = ref triangles[i];
-                    mesh.Tree.GetBoundsPointers(i, out var min, out var max);
-                    *min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
-                    *max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
-                }
+                ref var t = ref triangles[i];
+                mesh.Tree.GetBoundsPointers(i, out var min, out var max);
+                *min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
+                *max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
             }
             return mesh;
         }
