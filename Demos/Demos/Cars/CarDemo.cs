@@ -100,7 +100,7 @@ namespace Demos.Demos.Cars
 
             for (int i = 0; i < aiCount; ++i)
             {
-                //The AI cars are very similar, except... we handicap them a little to make the player good about themselves.
+                //The AI cars are very similar, except... we handicap them a little to make the player feel good about themselves.
                 var position = min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                 var orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), random.NextSingle() * MathF.PI * 2);
                 aiControllers[i].Controller = new SimpleCarController(SimpleCar.Create(Simulation, properties, (position, orientation), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2f,
