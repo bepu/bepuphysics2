@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace BepuUtilities
-{    
+{
     /// <summary>
     /// Some helpers for indexing into vector bundles.
     /// </summary>
@@ -17,11 +17,9 @@ namespace BepuUtilities
         public static int VectorMask
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return Vector<float>.Count - 1;
-            }
+            get { return Vector<float>.Count - 1; }
         }
+
         /// <summary>
         /// <![CDATA[Gets the shift value such that x >> VectorShift divides x by Vector<float>.Count.]]>
         /// </summary>
@@ -56,6 +54,33 @@ namespace BepuUtilities
         public static int GetBundleCount(int elementCount)
         {
             return (elementCount + VectorMask) >> VectorShift;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe Vector<int> CreateTrailingMaskForCountInBundle(int countInBundle)
+        {
+            Vector<int> mask;
+            var toReturnPointer = (int*) &mask;
+            for (int i = 0; i < Vector<int>.Count; ++i)
+            {
+                toReturnPointer[i] = countInBundle <= i ? -1 : 0;
+            }
+
+            return mask;
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe Vector<int> CreateMaskForCountInBundle(int countInBundle)
+        {
+            Vector<int> mask;
+            var toReturnPointer = (int*) &mask;
+            for (int i = 0; i < Vector<int>.Count; ++i)
+            {
+                toReturnPointer[i] = countInBundle > i ? -1 : 0;
+            }
+
+            return mask;
         }
     }
 }

@@ -37,8 +37,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     pairsToTest[subpairIndex].Container = pair.B;
                 }
             }
-            
-            TriangleWide triangles = default;
+
+            TriangleWide triangles;
             nextSubpairIndex = 0;
             for (int i = 0; i < pairCount; ++i)
             {
@@ -72,7 +72,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.Length(localOffsetA, out var radiusA);
                     BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref min, ref max, radiusA, localOffsetA, localRelativeLinearVelocityA, angularVelocityA, angularVelocityB, dt,
                         maximumRadius, maximumAngularExpansion, maximumAllowedExpansion);
-                    
+
                     for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                     {
                         ref var pairToTest = ref pairsToTest[nextSubpairIndex++];
@@ -80,7 +80,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         Vector3Wide.ReadSlot(ref max, innerIndex, out pairToTest.Max);
                     }
                 }
-            }          
+            }
 
             //Doesn't matter what mesh/compound instance is used for the function; just using it as a source of the function.
             Debug.Assert(totalCompoundChildCount > 0);
