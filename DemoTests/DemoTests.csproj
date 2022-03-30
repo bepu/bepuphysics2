@@ -5,9 +5,6 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
     <LangVersion>latest</LangVersion>
-
-    <!-- This doesn't seem like it should be required, but github actions are throwing a fit about netcoreapp2.0 not being available. -->
-    <GenerateRuntimeConfigurationFiles>True</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>
 
   <ItemGroup>
