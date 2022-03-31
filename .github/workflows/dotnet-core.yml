@@ -11,7 +11,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-dotnet@v1
       with:
-        dotnet-version:
+        dotnet-version: |
           2.0.0 # Something wonky is going on; actions build expects 2.0.0.
           5.0.x
     - name: Install dependencies
