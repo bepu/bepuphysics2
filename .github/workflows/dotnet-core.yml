@@ -12,7 +12,7 @@ jobs:
     - uses: actions/setup-dotnet@v1
       with:
         dotnet-version: |
-          2.0.0 # Something wonky is going on; actions build expects 2.0.0.
+          2.0.0
           5.0.x
     - name: Install dependencies
       run: |
