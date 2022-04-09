@@ -213,55 +213,100 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
+        /// Enqueues a slot on the end of the queue, incrementing the last index.
+        /// Does not attempt to resize; this implementation assumes the underlying buffer is large enough for the new slot.
+        /// </summary>
+        /// <returns>Reference to the enqueued slot.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T EnqueueUnsafely()
+        {
+            Validate();
+            ValidateUnsafeAdd();
+            ++Count;
+            return ref Span[(LastIndex = ((LastIndex + 1) & CapacityMask))];
+        }
+
+        /// <summary>
+        /// Pushes a slot at the front of the queue, decrementing the first index.
+        /// Does not attempt to resize; this implementation assumes the underlying buffer is large enough for the new slot.
+        /// </summary>
+        /// <returns>Reference to the enqueued slot.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T EnqueueFirstUnsafely()
+        {
+            Validate();
+            ValidateUnsafeAdd();
+            ++Count;
+            return ref Span[(FirstIndex = ((FirstIndex - 1) & CapacityMask))];
+        }
+        /// <summary>
+        /// Enqueues a slot on the end of the queue, incrementing the last index.
+        /// </summary>
+        /// <param name="pool">Pool to use to resize the queue's internal buffer if necessary.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T Enqueue(IUnmanagedMemoryPool pool)
+        {
+            Validate();
+            if (Count == Span.Length)
+                Resize(Span.Length * 2, pool);
+            return ref EnqueueUnsafely();
+        }
+
+        /// <summary>
+        /// Pushes a slot at the front of the queue, decrementing the first index.
+        /// </summary>
+        /// <param name="pool">Pool to use to resize the queue's internal buffer if necessary.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T EnqueueFirst(IUnmanagedMemoryPool pool)
+        {
+            Validate();
+            if (Count == Span.Length)
+                Resize(Span.Length * 2, pool);
+            return ref EnqueueFirstUnsafely();
+        }
+
+        /// <summary>
         /// Enqueues the element to the end of the queue, incrementing the last index.
+        /// Does not attempt to resize; this implementation assumes the underlying buffer is large enough for the new slot.
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnqueueUnsafely(in T element)
         {
-            Validate();
-            ValidateUnsafeAdd();
-            Span[(LastIndex = ((LastIndex + 1) & CapacityMask))] = element;
-            ++Count;
+            EnqueueUnsafely() = element;
         }
 
         /// <summary>
         /// Enqueues the element to the start of the queue, decrementing the first index.
+        /// Does not attempt to resize; this implementation assumes the underlying buffer is large enough for the new slot.
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnqueueFirstUnsafely(in T element)
         {
-            Validate();
-            ValidateUnsafeAdd();
-            Span[(FirstIndex = ((FirstIndex - 1) & CapacityMask))] = element;
-            ++Count;
+            EnqueueFirstUnsafely() = element;
         }
-        
+
         /// <summary>
         /// Enqueues the element to the end of the queue, incrementing the last index.
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
+        /// <param name="pool">Pool to use to resize the queue's internal buffer if necessary.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Enqueue(in T element, IUnmanagedMemoryPool pool)
         {
-            Validate();
-            if (Count == Span.Length)
-                Resize(Span.Length * 2, pool);
-            EnqueueUnsafely(element);
+            Enqueue(pool) = element;
         }
 
         /// <summary>
         /// Enqueues the element to the start of the queue, decrementing the first index.
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
+        /// <param name="pool">Pool to use to resize the queue's internal buffer if necessary.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnqueueFirst(in T element, IUnmanagedMemoryPool pool)
         {
-            Validate();
-            if (Count == Span.Length)
-                Resize(Span.Length * 2, pool);
-            EnqueueFirstUnsafely(element);
+            EnqueueFirst(pool) = element;
         }
 
         /// <summary>
@@ -275,7 +320,7 @@ namespace BepuUtilities.Collections
             if (Count == 0)
                 throw new InvalidOperationException("The queue is empty.");
             var element = Span[FirstIndex];
-            DeleteFirst();
+            IncrementFirst();
             return element;
 
         }
@@ -291,9 +336,8 @@ namespace BepuUtilities.Collections
             if (Count == 0)
                 throw new InvalidOperationException("The queue is empty.");
             var element = Span[LastIndex];
-            DeleteLast();
+            DecrementLast();
             return element;
-
         }
 
         /// <summary>
@@ -308,7 +352,7 @@ namespace BepuUtilities.Collections
             if (Count > 0)
             {
                 element = Span[FirstIndex];
-                DeleteFirst();
+                IncrementFirst();
                 return true;
             }
             element = default;
@@ -328,24 +372,54 @@ namespace BepuUtilities.Collections
             if (Count > 0)
             {
                 element = Span[LastIndex];
-                DeleteLast();
+                DecrementLast();
                 return true;
             }
-            element = default(T);
+            element = default;
             return false;
-
         }
+
+        /// <summary>
+        /// Dequeues a slot from the start of the queue, incrementing the first index and returning a reference to the slot. Does not check count before attempting to dequeue.
+        /// </summary>
+        /// <returns>Reference to the slot removed from the queue.</returns>
+        /// <remarks>Be very careful with this function; it is easy to accidentally destroy your foot in sneaky ways.
+        /// Consider what happens if you call <see cref="EnqueueFirstUnsafely()"/> after this function- both functions will return references to the same slot.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void DeleteFirst()
+        public ref T DequeueUnsafely()
         {
-            Span[FirstIndex] = default(T);
+            Validate();
+            Debug.Assert(Count > 0, "Can't dequeue from an empty queue.");
+            ref var element = ref Span[FirstIndex];
+            IncrementFirst();
+            return ref element;
+        }
+
+        /// <summary>
+        /// Dequeues a slot from the end of the queue, decrementing the last index and returning a reference to the slot. Does not check count before attempting to dequeue.
+        /// </summary>
+        /// <returns>Reference to the slot removed from the queue.</returns>
+        /// <remarks>Be very careful with this function; it is easy to accidentally destroy your foot in sneaky ways.
+        /// Consider what happens if you call <see cref="EnqueueUnsafely()"/> after this function- both functions will return references to the same slot.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T DequeueLastUnsafely()
+        {
+            Validate();
+            Debug.Assert(Count > 0, "Can't dequeue from an empty queue.");
+            ref var element = ref Span[LastIndex];
+            DecrementLast();
+            return ref element;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void IncrementFirst()
+        {
             FirstIndex = (FirstIndex + 1) & CapacityMask;
             --Count;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void DeleteLast()
+        void DecrementLast()
         {
-            Span[LastIndex] = default(T);
             LastIndex = (LastIndex - 1) & CapacityMask;
             --Count;
         }
@@ -361,12 +435,12 @@ namespace BepuUtilities.Collections
             var arrayIndex = GetBackingArrayIndex(queueIndex);
             if (LastIndex == arrayIndex)
             {
-                DeleteLast();
+                DecrementLast();
                 return;
             }
             if (FirstIndex == arrayIndex)
             {
-                DeleteFirst();
+                IncrementFirst();
                 return;
             }
             //It's internal.
@@ -383,12 +457,12 @@ namespace BepuUtilities.Collections
                 (FirstIndex < LastIndex && (LastIndex - arrayIndex) < (arrayIndex - FirstIndex))) //Case 3
             {
                 Span.CopyTo(arrayIndex + 1, Span, arrayIndex, LastIndex - arrayIndex);
-                DeleteLast();
+                DecrementLast();
             }
             else
             {
                 Span.CopyTo(FirstIndex, Span, FirstIndex + 1, arrayIndex - FirstIndex);
-                DeleteFirst();
+                IncrementFirst();
             }
         }
 
@@ -420,7 +494,7 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
-        /// Clears the queue without changing any of the values in the backing array. Be careful about using this if the queue contains reference types.
+        /// Clears the queue without changing any of the values in the backing array.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void FastClear()
