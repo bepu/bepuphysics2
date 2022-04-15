@@ -14,6 +14,12 @@ The libraries target .NET 6.
 
 `Demos.sln` contains all the projects necessary to build and run the demos application. The default demo renderer uses DX11, and the content pipeline's shader compiler requires the Windows SDK. There is also a Demos.GL.sln that uses OpenGL and should run on other platforms. The demos can be run from the command line (in the repo root directory) with `dotnet run --project Demos/Demos.csproj -c Release` or `dotnet run --project Demos.GL/Demos.csproj -c Release`.
 
+The demos content pipeline uses [freetype](https://freetype.org/). On windows, the freetype.dll is included. When built elsewhere, the build will attempt to pull the dependency out of `/usr/lib`. If you try to build on windows and see an error that says:
+
+`Content build failed: Unable to load DLL 'freetype6' or one of its dependencies: The specified module could not be found. (0x8007007E)`
+
+then it's likely that freetype version used by the content builder needs the [VC++ 2013 redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=40784) to be installed.
+
 The demos applications target .NET 6.
 
 ## Build Configurations
