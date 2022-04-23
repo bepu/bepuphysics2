@@ -21,7 +21,6 @@
     <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!--<TieredCompilation>false</TieredCompilation>-->
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
