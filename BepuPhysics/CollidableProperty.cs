@@ -50,8 +50,7 @@ namespace BepuPhysics
         /// <summary>
         /// Initializes the property collection if the Bodies/Statics-less constructor was used.
         /// </summary>
-        /// <param name="bodies">Bodies collection to track.</param>
-        /// <param name="statics">Statics collection to track.</param>
+        /// <param name="simulation">Simulation whose bodies and statics will be tracked.</param>
         public void Initialize(Simulation simulation)
         {
             if (this.simulation != null)
