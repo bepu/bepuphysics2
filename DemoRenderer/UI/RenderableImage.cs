@@ -10,7 +10,7 @@ using System.Text;
 namespace DemoRenderer.UI
 {
     /// <summary>
-    /// Runtime type containing GPU-related information necessary to render a specific font type.
+    /// Convenience type bundling a GPU resident texture, its view, and a CPU side buffer for uploading to the GPU.
     /// </summary>
     public class RenderableImage : IDisposable
     {
