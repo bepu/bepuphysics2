@@ -154,7 +154,7 @@ namespace Demos.Demos
         {
             var bottomY = renderer.Surface.Resolution.Y;
             renderer.TextBatcher.Write(text.Clear().Append("The user-supplied IPoseIntegratorCallbacks.IntegrateVelocity implementation defines how body velocities change over time."), new Vector2(16, bottomY - 48), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("It's usually used to implement gravity. Here, each body's gravity is defined independently."), new Vector2(16, bottomY - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("It's commonly used for gravity. Here, each body's gravity is defined independently."), new Vector2(16, bottomY - 32), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Spheres fall slowly, boxes quickly, and capsules are in between."), new Vector2(16, bottomY - 16), 16, Vector3.One, font);
             base.Render(renderer, camera, input, text, font);
         }
