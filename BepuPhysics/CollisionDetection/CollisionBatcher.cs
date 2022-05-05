@@ -285,6 +285,9 @@ namespace BepuPhysics.CollisionDetection
                 offsetB, orientationA, orientationB, speculativeMargin, pairId);
         }
 
+        /// <summary>
+        /// Forces any remaining partial batches to execute and disposes the batcher.
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Flush()
         {
@@ -313,6 +316,12 @@ namespace BepuPhysics.CollisionDetection
             CompoundMeshReductions.Dispose(Pool);
         }
 
+        /// <summary>
+        /// Reports the result of a convex collision test to the callbacks and, if necessary, to any continuations for postprocessing.
+        /// </summary>
+        /// <remarks>Unless you're building custom compound collision pairs or adding new contact processing continuations, you can safely ignore this.</remarks>
+        /// <param name="manifold">Contacts detected for the pair.</param>
+        /// <param name="continuation">Continuation describing the pair and what to do with it.</param>
         public unsafe void ProcessConvexResult(ref ConvexContactManifold manifold, ref PairContinuation continuation)
         {
 #if DEBUG
@@ -350,6 +359,33 @@ namespace BepuPhysics.CollisionDetection
                         break;
                 }
 
+            }
+        }
+
+        /// <summary>
+        /// Submits a subpair whose testing was blocked by user callback as complete to any relevant continuations.
+        /// </summary>
+        /// <remarks>Unless you're building custom compound collision pairs or adding new contact processing continuations, you can safely ignore this.</remarks>
+        /// <param name="continuation">Continuation describing the pair and what to do with it.</param>
+        public unsafe void ProcessUntestedConvexResult(ref PairContinuation continuation)
+        {
+            switch (continuation.Type)
+            {
+                case CollisionContinuationType.NonconvexReduction:
+                    {
+                        NonconvexReductions.ContributeUntestedChildToContinuation(ref continuation, ref this);
+                    }
+                    break;
+                case CollisionContinuationType.MeshReduction:
+                    {
+                        MeshReductions.ContributeUntestedChildToContinuation(ref continuation, ref this);
+                    }
+                    break;
+                case CollisionContinuationType.CompoundMeshReduction:
+                    {
+                        CompoundMeshReductions.ContributeUntestedChildToContinuation(ref continuation, ref this);
+                    }
+                    break;
             }
         }
     }

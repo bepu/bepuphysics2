@@ -116,7 +116,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             }
                             else
                             {
-                                continuation.OnChildCompletedEmpty(ref subpairContinuation, ref batcher);
+                                batcher.ProcessUntestedConvexResult(ref subpairContinuation);
                             }
                         }
                     }

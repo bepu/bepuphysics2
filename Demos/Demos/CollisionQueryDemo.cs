@@ -225,9 +225,9 @@ namespace Demos.Demos
             var queries = new QuickList<Query>(widthInQueries * widthInQueries, BufferPool);
             var querySpacing = new Vector3(3, 0, 3);
             var basePosition = new Vector3(0, 2, 0) - new Vector3(widthInQueries - 1) * querySpacing * 0.5f;
-            for (int i = 0; i < 5; ++i)
+            for (int i = 0; i < widthInQueries; ++i)
             {
-                for (int j = 0; j < 5; ++j)
+                for (int j = 0; j < widthInQueries; ++j)
                 {
                     queries.Allocate(BufferPool) = new Query { Box = new Box(1, 1, 1), Pose = basePosition + querySpacing * new Vector3(i, 0, j) };
                 }

@@ -7,14 +7,43 @@ using System.Text;
 
 namespace BepuPhysics.CollisionDetection
 {
+    /// <summary>
+    /// Defines a type which includes information necessary to apply some form of post processing to a collision test result.
+    /// </summary>
     public interface ICollisionTestContinuation
     {
+        /// <summary>
+        /// Creates a collision test continuation with the given number of slots for subpairs.
+        /// </summary>
+        /// <param name="slots">Number of subpair slots to include in the continuation.</param>
+        /// <param name="pool">Pool to take resources from.</param>
         void Create(int slots, BufferPool pool);
 
+        /// <summary>
+        /// Handles what to do next when the child pair has finished execution and the resulting manifold is available.
+        /// </summary>
+        /// <typeparam name="TCallbacks">Type of the callbacks used in the batcher.</typeparam>
+        /// <param name="report">Continuation instance being considered.</param>
+        /// <param name="manifold">Contact manifold for the child pair.</param>
+        /// <param name="batcher">Collision batcher processing the pair.</param>
         unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
-        unsafe void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher)
+        /// <summary>
+        /// Handles what to do next when the child pair was rejected for testing, and no manifold exists.
+        /// </summary>
+        /// <typeparam name="TCallbacks">Type of the callbacks used in the batcher.</typeparam>
+        /// <param name="report">Continuation instance being considered.</param>
+        /// <param name="batcher">Collision batcher processing the pair.</param>
+        unsafe void OnUntestedChildCompleted<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
+
+        /// <summary>
+        /// Checks if the parent pair is complete and should be flushed.
+        /// </summary>
+        /// <typeparam name="TCallbacks">Type of the callbacks used in the batcher.</typeparam>
+        /// <param name="pairId">Id of the pair to attempt to flush.</param>
+        /// <param name="batcher">Collision batcher processing the pair.</param>
+        /// <returns>True if the pair was done and got flushed, false otherwise.</returns>
         unsafe bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
 
@@ -115,6 +144,19 @@ namespace BepuPhysics.CollisionDetection
         {
             ref var slot = ref Continuations[continuation.Index];
             slot.OnChildCompleted(ref continuation, ref manifold, ref batcher);
+            if (slot.TryFlush(continuation.PairId, ref batcher))
+            {
+                //The entire continuation has completed; free the slot.
+                IdPool.Return(continuation.Index, batcher.Pool);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void ContributeUntestedChildToContinuation<TCallbacks>(ref PairContinuation continuation, ref CollisionBatcher<TCallbacks> batcher)
+            where TCallbacks : struct, ICollisionCallbacks
+        {
+            ref var slot = ref Continuations[continuation.Index];
+            slot.OnUntestedChildCompleted(ref continuation, ref batcher);
             if (slot.TryFlush(continuation.PairId, ref batcher))
             {
                 //The entire continuation has completed; free the slot.
