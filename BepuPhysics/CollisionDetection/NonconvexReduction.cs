@@ -302,7 +302,7 @@ namespace BepuPhysics.CollisionDetection
 
                     //The manifold offsetB is the offset from shapeA origin to shapeB origin.
                     reducedManifold.OffsetB = sampleChild->Manifold.OffsetB - sampleChild->OffsetB + sampleChild->OffsetA;
-                    batcher.Callbacks.OnPairCompleted(pairId, ref *&reducedManifold);
+                    batcher.Callbacks.OnPairCompleted(pairId,  ref *&reducedManifold);
                 }
                 else
                 {
@@ -332,7 +332,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
+        public void OnChildCompleted<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
             Children[report.ChildIndex].Manifold.Count = 0;
             ++CompletedChildCount;

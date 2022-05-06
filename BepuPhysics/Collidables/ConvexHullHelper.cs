@@ -567,7 +567,7 @@ namespace BepuPhysics.Collidables
                     edgeToAdd.Endpoints.B = reducedFaceIndices[i];
                     edgeToAdd.FaceNormal = initialFaceNormal;
                     edgeToAdd.FaceIndex = 0;
-                    edgeFaceCounts.AddRef(ref edgeToAdd.Endpoints, 1, pool);
+                    edgeFaceCounts.Add(ref edgeToAdd.Endpoints, 1, pool);
                 }
                 //Since an actual face was found, we go ahead and output it into the face set.
                 earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
