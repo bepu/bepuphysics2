@@ -5,12 +5,13 @@ using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using System.Numerics;
 using System;
+using BepuUtilities;
 
 namespace BepuPhysics.CollisionDetection
 {
     unsafe struct UntypedBlob
     {
-        public RawBuffer Buffer;
+        public Buffer<byte> Buffer;
         public int ByteCount;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -45,7 +46,7 @@ namespace BepuPhysics.CollisionDetection
         //The streaming batcher contains batches for pending work submitted by the user.
         //This pending work can be top level pairs like sphere versus sphere, but it may also be subtasks of submitted work.
         //Consider two compound bodies colliding. The pair will decompose into a set of potentially many convex subpairs.
-        Buffer<CollisionBatch> batches;
+        internal Buffer<CollisionBatch> batches;
         //These collision tasks can then call upon some of the batcher's fixed function post processing stages.
         //For example, compound collisions generate multiple convex-convex manifolds which need to be reduced and combined into a single nonconvex manifold for 
         //efficiency in constraint solving.
@@ -210,10 +211,10 @@ namespace BepuPhysics.CollisionDetection
             AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, pairContinuation);
         }
 
-       
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, 
-            in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, 
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB,
+            in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB,
             float speculativeMargin, float maximumExpansion,
             in PairContinuation continuation)
         {
@@ -223,7 +224,7 @@ namespace BepuPhysics.CollisionDetection
             Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
             AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, velocityA, velocityB, speculativeMargin, maximumExpansion, continuation);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB,
             float speculativeMargin, in PairContinuation continuation)
@@ -284,6 +285,9 @@ namespace BepuPhysics.CollisionDetection
                 offsetB, orientationA, orientationB, speculativeMargin, pairId);
         }
 
+        /// <summary>
+        /// Forces any remaining partial batches to execute and disposes the batcher.
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Flush()
         {
@@ -312,8 +316,20 @@ namespace BepuPhysics.CollisionDetection
             CompoundMeshReductions.Dispose(Pool);
         }
 
+        /// <summary>
+        /// Reports the result of a convex collision test to the callbacks and, if necessary, to any continuations for postprocessing.
+        /// </summary>
+        /// <remarks>Unless you're building custom compound collision pairs or adding new contact processing continuations, you can safely ignore this.</remarks>
+        /// <param name="manifold">Contacts detected for the pair.</param>
+        /// <param name="continuation">Continuation describing the pair and what to do with it.</param>
         public unsafe void ProcessConvexResult(ref ConvexContactManifold manifold, ref PairContinuation continuation)
         {
+#if DEBUG
+            if (manifold.Count > 0)
+            {
+                manifold.Normal.Validate();
+            }
+#endif
             if (continuation.Type == CollisionContinuationType.Direct)
             {
                 //This result concerns a pair which had no higher level owner. Directly report the manifold result.
@@ -343,6 +359,33 @@ namespace BepuPhysics.CollisionDetection
                         break;
                 }
 
+            }
+        }
+
+        /// <summary>
+        /// Submits a subpair whose testing was blocked by user callback as complete to any relevant continuations.
+        /// </summary>
+        /// <remarks>Unless you're building custom compound collision pairs or adding new contact processing continuations, you can safely ignore this.</remarks>
+        /// <param name="continuation">Continuation describing the pair and what to do with it.</param>
+        public unsafe void ProcessConvexResult(ref PairContinuation continuation)
+        {
+            switch (continuation.Type)
+            {
+                case CollisionContinuationType.NonconvexReduction:
+                    {
+                        NonconvexReductions.ContributeUntestedChildToContinuation(ref continuation, ref this);
+                    }
+                    break;
+                case CollisionContinuationType.MeshReduction:
+                    {
+                        MeshReductions.ContributeUntestedChildToContinuation(ref continuation, ref this);
+                    }
+                    break;
+                case CollisionContinuationType.CompoundMeshReduction:
+                    {
+                        CompoundMeshReductions.ContributeUntestedChildToContinuation(ref continuation, ref this);
+                    }
+                    break;
             }
         }
     }

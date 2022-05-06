@@ -38,10 +38,9 @@ namespace BepuPhysics.CollisionDetection
             Inner.OnChildCompleted(ref report, ref manifold, ref batcher);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
+        public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
-            Inner.OnChildCompletedEmpty(ref report, ref batcher);
+            Inner.OnChildCompleted(ref report, ref batcher);
         }
         
         public unsafe bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
@@ -57,7 +56,7 @@ namespace BepuPhysics.CollisionDetection
                     ref var region = ref ChildManifoldRegions[i];
                     if (region.Count > 0)
                     {
-                        MeshReduction.ReduceManifolds(ref Triangles, ref Inner.Children, region.Start, region.Count, RequiresFlip, QueryBounds[i], meshOrientation, meshInverseOrientation, batcher.Pool);
+                        MeshReduction.ReduceManifolds(ref Triangles, ref Inner.Children, region.Start, region.Count, RequiresFlip, QueryBounds[i], meshOrientation, meshInverseOrientation, Mesh, batcher.Pool);
                     }
                 }
 

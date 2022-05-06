@@ -51,10 +51,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var pairs = batch.Buffer.As<BoundsTestedPair>();
             TOverlapFinder overlapFinder = default;
             TContinuationHandler continuationHandler = default;
-
             //We perform all necessary bounding box computations and lookups up front. This helps avoid some instruction pipeline pressure at the cost of some extra data cache requirements.
             //Because of this, you need to be careful with the batch size on this collision task.
             overlapFinder.FindLocalOverlaps(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out var overlaps);
+
             for (int pairIndex = 0; pairIndex < batch.Count; ++pairIndex)
             {
                 overlaps.GetPairOverlaps(pairIndex, out var pairOverlaps, out var subpairQueries);
@@ -116,7 +116,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             }
                             else
                             {
-                                continuation.OnChildCompletedEmpty(ref subpairContinuation, ref batcher);
+                                batcher.ProcessConvexResult(ref subpairContinuation);
                             }
                         }
                     }
