@@ -53,7 +53,7 @@ namespace Demos.SpecializedTests
 
             for (int i = prebuiltCount; i < leafCount; ++i)
             {
-                tree.Add(ref leafBounds[i], pool);
+                tree.Add(leafBounds[i], pool);
             }
             tree.Validate();
 
@@ -110,7 +110,7 @@ namespace Demos.SpecializedTests
                         var indexInRemovedList = random.Next(removedLeafHandles.Count);
                         var handleToAdd = removedLeafHandles[indexInRemovedList];
                         removedLeafHandles.FastRemoveAt(indexInRemovedList);
-                        var leafIndex = tree.Add(ref leafBounds[handleToAdd], pool);
+                        var leafIndex = tree.Add(leafBounds[handleToAdd], pool);
                         leafIndexToHandle[leafIndex] = handleToAdd;
                         handleToLeafIndex[handleToAdd] = leafIndex;
 

@@ -132,7 +132,7 @@ namespace BepuPhysics
             ref var collidable = ref set.Collidables[location.Index];
             if (collidable.Shape.Exists)
             {
-                shapes.UpdateBounds(set.SolverStates[location.Index].Motion.Pose, ref collidable.Shape, out var bodyBounds);
+                shapes.UpdateBounds(set.SolverStates[location.Index].Motion.Pose, collidable.Shape, out var bodyBounds);
                 if (location.SetIndex == 0)
                 {
                     broadPhase.UpdateActiveBounds(collidable.BroadPhaseIndex, bodyBounds.Min, bodyBounds.Max);
@@ -152,7 +152,7 @@ namespace BepuPhysics
             //Note that we have to calculate an initial bounding box for the broad phase to be able to insert it efficiently.
             //(In the event of batch adds, you'll want to use batched AABB calculations or just use cached values.)
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            shapes.UpdateBounds(pose, ref collidable.Shape, out var bodyBounds);
+            shapes.UpdateBounds(pose, collidable.Shape, out var bodyBounds);
             //Note that new body collidables are always assumed to be active.
             collidable.BroadPhaseIndex =
                 broadPhase.AddActive(

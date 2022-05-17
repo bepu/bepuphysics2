@@ -383,7 +383,7 @@ namespace BepuPhysics.Collidables
         /// <param name="shapeIndex">Index of the shape.</param>
         /// <param name="bounds">Bounding box of the specified shape with the specified pose.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateBounds(in RigidPose pose, ref TypedIndex shapeIndex, out BoundingBox bounds)
+        public void UpdateBounds(RigidPose pose, TypedIndex shapeIndex, out BoundingBox bounds)
         {
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
             batches[shapeIndex.Type].ComputeBounds(shapeIndex.Index, pose, out bounds.Min, out bounds.Max);

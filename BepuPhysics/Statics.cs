@@ -359,7 +359,7 @@ namespace BepuPhysics
         {
             var index = HandleToIndex[handle.Value];
             ref var collidable = ref this[index];
-            shapes.UpdateBounds(collidable.Pose, ref collidable.Shape, out var bodyBounds);
+            shapes.UpdateBounds(collidable.Pose, collidable.Shape, out var bodyBounds);
             broadPhase.UpdateStaticBounds(collidable.BroadPhaseIndex, bodyBounds.Min, bodyBounds.Max);
         }
 

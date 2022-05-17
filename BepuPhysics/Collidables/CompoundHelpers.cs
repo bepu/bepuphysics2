@@ -198,7 +198,6 @@ namespace BepuPhysics.Collidables
         /// Computes a center of mass and recenters child shapes relative to it. Does not reset the accumulator.
         /// </summary>
         /// <param name="children">List of children created from the accumulated set.</param>
-        /// <param name="inertia">Combined inertia of the compound.</param>
         /// <param name="center">Computed center of rotation based on the poses and weights of accumulated children.</param>
         public void BuildKinematicCompound(out Buffer<CompoundChild> children, out Vector3 center)
         {
@@ -228,8 +227,6 @@ namespace BepuPhysics.Collidables
         /// Builds a buffer of compound children from the accumulated set for a kinematic compound. Does not recenter children. Does not reset the accumulator.
         /// </summary>
         /// <param name="children">List of children created from the accumulated set.</param>
-        /// <param name="inertia">Combined inertia of the compound.</param>
-        /// <param name="center">Computed center of rotation based on the poses and weights of accumulated children.</param>
         public void BuildKinematicCompound(out Buffer<CompoundChild> children)
         {
             Pool.Take(Children.Count, out children);
