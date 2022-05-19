@@ -355,7 +355,7 @@ namespace BepuPhysics
                                     bounds.Min = *minPointer;
                                     bounds.Max = *maxPointer;
                                     var staticBroadPhaseIndexToRemove = broadPhaseIndex;
-                                    broadPhaseIndex = broadPhase.AddActive(broadPhase.staticLeaves[broadPhaseIndex], ref bounds);
+                                    broadPhaseIndex = broadPhase.AddActive(broadPhase.StaticLeaves[broadPhaseIndex], ref bounds);
 
                                     if (broadPhase.RemoveStaticAt(staticBroadPhaseIndexToRemove, out var movedLeaf))
                                     {

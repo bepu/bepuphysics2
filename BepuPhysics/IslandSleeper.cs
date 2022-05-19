@@ -365,7 +365,7 @@ namespace BepuPhysics
                         {
                             //Gather the broad phase data so that the later active set removal phase can stick it into the static broad phase structures.
                             ref var broadPhaseData = ref inactiveSetReference.BroadPhaseData[targetIndex];
-                            broadPhaseData.Reference = broadPhase.activeLeaves[sourceCollidable.BroadPhaseIndex];
+                            broadPhaseData.Reference = broadPhase.ActiveLeaves[sourceCollidable.BroadPhaseIndex];
                             broadPhase.GetActiveBoundsPointers(sourceCollidable.BroadPhaseIndex, out var minPtr, out var maxPtr);
                             broadPhaseData.Bounds.Min = *minPtr;
                             broadPhaseData.Bounds.Max = *maxPtr;

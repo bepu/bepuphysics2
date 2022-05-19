@@ -11,12 +11,30 @@ using BepuUtilities.Collections;
 
 namespace BepuPhysics.CollisionDetection
 {
+    /// <summary>
+    /// Manages scene acceleration structures for collision detection and queries.
+    /// </summary>
     public unsafe partial class BroadPhase : IDisposable
     {
-        internal Buffer<CollidableReference> activeLeaves;
-        internal Buffer<CollidableReference> staticLeaves;
+        /// <summary>
+        /// Collidable references contained within the <see cref="ActiveTree"/>. Note that values at or beyond the <see cref="ActiveTree"/>.LeafCount are not defined.
+        /// </summary>
+        public Buffer<CollidableReference> ActiveLeaves;
+        /// <summary>
+        /// Collidable references contained within the <see cref="StaticTree"/>. Note that values at or beyond <see cref="StaticTree"/>.LeafCount are not defined.
+        /// </summary>
+        public Buffer<CollidableReference> StaticLeaves;
+        /// <summary>
+        /// Pool used by the broad phase.
+        /// </summary>
         public BufferPool Pool { get; private set; }
+        /// <summary>
+        /// Tree containing wakeful bodies.
+        /// </summary>
         public Tree ActiveTree;
+        /// <summary>
+        /// Tree containing sleeping bodies and statics.
+        /// </summary>
         public Tree StaticTree;
         Tree.RefitAndRefineMultithreadedContext activeRefineContext;
         //TODO: static trees do not need to do nearly as much work as the active; this will change in the future.
@@ -29,8 +47,8 @@ namespace BepuPhysics.CollisionDetection
             Pool = pool;
             ActiveTree = new Tree(pool, initialActiveLeafCapacity);
             StaticTree = new Tree(pool, initialStaticLeafCapacity);
-            pool.TakeAtLeast(initialActiveLeafCapacity, out activeLeaves);
-            pool.TakeAtLeast(initialStaticLeafCapacity, out staticLeaves);
+            pool.TakeAtLeast(initialActiveLeafCapacity, out ActiveLeaves);
+            pool.TakeAtLeast(initialStaticLeafCapacity, out StaticLeaves);
 
             activeRefineContext = new Tree.RefitAndRefineMultithreadedContext();
             staticRefineContext = new Tree.RefitAndRefineMultithreadedContext();
@@ -66,24 +84,24 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AddActive(CollidableReference collidable, ref BoundingBox bounds)
         {
-            return Add(collidable, ref bounds, ref ActiveTree, Pool, ref activeLeaves);
+            return Add(collidable, ref bounds, ref ActiveTree, Pool, ref ActiveLeaves);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool RemoveActiveAt(int index, out CollidableReference movedLeaf)
         {
-            return RemoveAt(index, ref ActiveTree, ref activeLeaves, out movedLeaf);
+            return RemoveAt(index, ref ActiveTree, ref ActiveLeaves, out movedLeaf);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AddStatic(CollidableReference collidable, ref BoundingBox bounds)
         {
-            return Add(collidable, ref bounds, ref StaticTree, Pool, ref staticLeaves);
+            return Add(collidable, ref bounds, ref StaticTree, Pool, ref StaticLeaves);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool RemoveStaticAt(int index, out CollidableReference movedLeaf)
         {
-            return RemoveAt(index, ref StaticTree, ref staticLeaves, out movedLeaf);
+            return RemoveAt(index, ref StaticTree, ref StaticLeaves, out movedLeaf);
         }
 
         /// <summary>
@@ -252,8 +270,8 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="staticCapacity">Number of leaves to allocate space for in the static tree.</param>
         public void EnsureCapacity(int activeCapacity, int staticCapacity)
         {
-            EnsureCapacity(ref ActiveTree, ref activeLeaves, activeCapacity);
-            EnsureCapacity(ref StaticTree, ref staticLeaves, staticCapacity);
+            EnsureCapacity(ref ActiveTree, ref ActiveLeaves, activeCapacity);
+            EnsureCapacity(ref StaticTree, ref StaticLeaves, staticCapacity);
         }
 
         /// <summary>
@@ -263,8 +281,8 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="staticCapacity">Number of leaves to allocate space for in the static tree.</param>
         public void Resize(int activeCapacity, int staticCapacity)
         {
-            ResizeCapacity(ref ActiveTree, ref activeLeaves, activeCapacity);
-            ResizeCapacity(ref StaticTree, ref staticLeaves, staticCapacity);
+            ResizeCapacity(ref ActiveTree, ref ActiveLeaves, activeCapacity);
+            ResizeCapacity(ref StaticTree, ref StaticLeaves, staticCapacity);
         }
 
         /// <summary>
@@ -272,8 +290,8 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public void Dispose()
         {
-            Dispose(ref ActiveTree, ref activeLeaves);
-            Dispose(ref StaticTree, ref staticLeaves);
+            Dispose(ref ActiveTree, ref ActiveLeaves);
+            Dispose(ref StaticTree, ref StaticLeaves);
         }
 
     }

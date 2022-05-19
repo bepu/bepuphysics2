@@ -229,7 +229,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool LoopBody(int leafIndex)
             {
-                ref var leaf = ref broadPhase.staticLeaves[leafIndex];
+                ref var leaf = ref broadPhase.StaticLeaves[leafIndex];
                 if (leaf.Mobility != CollidableMobility.Static)
                 {
                     if (Filter.ShouldAwaken(bodies[leaf.BodyHandle]))

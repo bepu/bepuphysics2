@@ -152,7 +152,7 @@ namespace BepuPhysics
         [Conditional("DEBUG")]
         internal void ValidateCollidables()
         {
-            var activeShapefulBodyCount = ValidateAndCountShapefulBodies(ref Bodies.ActiveSet, ref BroadPhase.ActiveTree, ref BroadPhase.activeLeaves);
+            var activeShapefulBodyCount = ValidateAndCountShapefulBodies(ref Bodies.ActiveSet, ref BroadPhase.ActiveTree, ref BroadPhase.ActiveLeaves);
             Debug.Assert(BroadPhase.ActiveTree.LeafCount == activeShapefulBodyCount);
 
             int inactiveShapefulBodyCount = 0;
@@ -162,7 +162,7 @@ namespace BepuPhysics
                 ref var set = ref Bodies.Sets[setIndex];
                 if (set.Allocated)
                 {
-                    inactiveShapefulBodyCount += ValidateAndCountShapefulBodies(ref set, ref BroadPhase.StaticTree, ref BroadPhase.staticLeaves);
+                    inactiveShapefulBodyCount += ValidateAndCountShapefulBodies(ref set, ref BroadPhase.StaticTree, ref BroadPhase.StaticLeaves);
                 }
             }
             Debug.Assert(inactiveShapefulBodyCount + Statics.Count == BroadPhase.StaticTree.LeafCount);
@@ -172,7 +172,7 @@ namespace BepuPhysics
                 Debug.Assert(collidable.Shape.Exists, "All static collidables must have shapes. That's their only purpose.");
 
                 Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < BroadPhase.StaticTree.LeafCount);
-                ref var leaf = ref BroadPhase.staticLeaves[collidable.BroadPhaseIndex];
+                ref var leaf = ref BroadPhase.StaticLeaves[collidable.BroadPhaseIndex];
                 Debug.Assert(leaf.StaticHandle.Value == Statics.IndexToHandle[i].Value);
                 Debug.Assert(leaf.Mobility == CollidableMobility.Static);
             }
@@ -180,10 +180,10 @@ namespace BepuPhysics
             //Ensure there are no duplicates between the two broad phase trees.
             for (int i = 0; i < BroadPhase.ActiveTree.LeafCount; ++i)
             {
-                var activeLeaf = BroadPhase.activeLeaves[i];
+                var activeLeaf = BroadPhase.ActiveLeaves[i];
                 for (int j = 0; j < BroadPhase.StaticTree.LeafCount; ++j)
                 {
-                    Debug.Assert(BroadPhase.staticLeaves[j].Packed != activeLeaf.Packed);
+                    Debug.Assert(BroadPhase.StaticLeaves[j].Packed != activeLeaf.Packed);
                 }
             }
 

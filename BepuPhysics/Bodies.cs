@@ -401,11 +401,11 @@ namespace BepuPhysics
                     var mobility = currentlyKinematic ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
                     if (location.SetIndex == 0)
                     {
-                        broadPhase.activeLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
+                        broadPhase.ActiveLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
                     }
                     else
                     {
-                        broadPhase.staticLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
+                        broadPhase.StaticLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
                     }
                 }
                 ref var constraints = ref set.Constraints[location.Index];
