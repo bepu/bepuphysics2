@@ -100,6 +100,9 @@ namespace BepuPhysics.CollisionDetection
             GetBoundsPointers(index, ref StaticTree, out minPointer, out maxPointer);
         }
 
+        public Buffer<CollidableReference> GetActiveLeaves() => activeLeaves;
+        public Buffer<CollidableReference> GetStaticLeaves() => staticLeaves;
+
         /// <summary>
         /// Applies updated bounds to the given leaf index in the given tree, refitting the tree to match.
         /// </summary>
