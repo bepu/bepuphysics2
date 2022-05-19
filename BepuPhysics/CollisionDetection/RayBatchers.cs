@@ -55,8 +55,8 @@ namespace BepuPhysics.CollisionDetection
         /// This should typically be chosen as the highest value which avoids spilling data out of L2 cache.</param>
         public BroadPhaseRayBatcher(BufferPool pool, BroadPhase broadPhase, TRayTester rayTester, int batcherRayCapacity = 2048)
         {
-            activeTester = new LeafTester { Leaves = broadPhase.activeLeaves, RayTester = rayTester };
-            staticTester = new LeafTester { Leaves = broadPhase.staticLeaves, RayTester = rayTester };
+            activeTester = new LeafTester { Leaves = broadPhase.ActiveLeaves, RayTester = rayTester };
+            staticTester = new LeafTester { Leaves = broadPhase.StaticLeaves, RayTester = rayTester };
             this.broadPhase = broadPhase;
             batcher = new RayBatcher(pool, batcherRayCapacity,
                 Math.Max(8, 2 * SpanHelper.GetContainingPowerOf2(Math.Max(broadPhase.StaticTree.LeafCount, broadPhase.ActiveTree.LeafCount))));

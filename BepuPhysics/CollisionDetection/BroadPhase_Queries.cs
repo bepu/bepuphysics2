@@ -46,9 +46,9 @@ namespace BepuPhysics.CollisionDetection
             TreeRay.CreateFrom(origin, direction, maximumT, id, out var rayData, out var treeRay);
             RayLeafTester<TRayTester> tester;
             tester.LeafTester = rayTester;
-            tester.Leaves = activeLeaves;
+            tester.Leaves = ActiveLeaves;
             ActiveTree.RayCast(&treeRay, &rayData, ref tester);
-            tester.Leaves = staticLeaves;
+            tester.Leaves = StaticLeaves;
             StaticTree.RayCast(&treeRay, &rayData, ref tester);
             //The sweep tester probably relies on mutation to function; copy any mutations back to the original reference.
             rayTester = tester.LeafTester;
@@ -82,9 +82,9 @@ namespace BepuPhysics.CollisionDetection
             TreeRay.CreateFrom(origin, direction, maximumT, out var treeRay);
             SweepLeafTester<TSweepTester> tester;
             tester.LeafTester = sweepTester;
-            tester.Leaves = activeLeaves;
+            tester.Leaves = ActiveLeaves;
             ActiveTree.Sweep(expansion, origin, direction, &treeRay, ref tester);
-            tester.Leaves = staticLeaves;
+            tester.Leaves = StaticLeaves;
             StaticTree.Sweep(expansion, origin, direction, &treeRay, ref tester);
             //The sweep tester probably relies on mutation to function; copy any mutations back to the original reference.
             sweepTester = tester.LeafTester;
@@ -126,9 +126,9 @@ namespace BepuPhysics.CollisionDetection
         {
             BoxQueryEnumerator<TOverlapEnumerator> enumerator;
             enumerator.Enumerator = overlapEnumerator;
-            enumerator.Leaves = activeLeaves;
+            enumerator.Leaves = ActiveLeaves;
             ActiveTree.GetOverlaps(min, max, ref enumerator);
-            enumerator.Leaves = staticLeaves;
+            enumerator.Leaves = StaticLeaves;
             StaticTree.GetOverlaps(min, max, ref enumerator);
             //Enumeration could have mutated the enumerator; preserve those modifications.
             overlapEnumerator = enumerator.Enumerator;
@@ -144,9 +144,9 @@ namespace BepuPhysics.CollisionDetection
         {
             BoxQueryEnumerator<TOverlapEnumerator> enumerator;
             enumerator.Enumerator = overlapEnumerator;
-            enumerator.Leaves = activeLeaves;
+            enumerator.Leaves = ActiveLeaves;
             ActiveTree.GetOverlaps(boundingBox, ref enumerator);
-            enumerator.Leaves = staticLeaves;
+            enumerator.Leaves = StaticLeaves;
             StaticTree.GetOverlaps(boundingBox, ref enumerator);
             //Enumeration could have mutated the enumerator; preserve those modifications.
             overlapEnumerator = enumerator.Enumerator;

@@ -321,11 +321,11 @@ namespace BepuPhysics
                 var mobility = IsKinematic(set.LocalInertias[location.Index]) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
                 if (location.SetIndex == 0)
                 {
-                    broadPhase.activeLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
+                    broadPhase.ActiveLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
                 }
                 else
                 {
-                    broadPhase.staticLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
+                    broadPhase.StaticLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
                 }
             }
             if (newlyKinematic)
