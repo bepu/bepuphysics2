@@ -155,7 +155,7 @@ namespace Demos.Demos
                     shapeIndex.Type, queryShapeType,
                     shapeData, cachedQueryShapeData,
                     //Because we're using this as a boolean query, we use a speculative margin of 0. Don't care about negative depths.
-                    queryPose.Position - pose.Position, queryPose.Orientation, pose.Orientation, 0, new PairContinuation(queryId));
+                    queryPose.Position - pose.Position, pose.Orientation, queryPose.Orientation, 0, new PairContinuation(queryId));
             }
             broadPhaseEnumerator.References.Dispose(BufferPool);
         }
@@ -229,7 +229,11 @@ namespace Demos.Demos
             {
                 for (int j = 0; j < widthInQueries; ++j)
                 {
-                    queries.Allocate(BufferPool) = new Query { Box = new Box(1, 1, 1), Pose = basePosition + querySpacing * new Vector3(i, 0, j) };
+                    queries.Allocate(BufferPool) = new Query
+                    {
+                        Box = new Box(1, 1, 1),
+                        Pose = new RigidPose(basePosition + querySpacing * new Vector3(i, 0, j), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(i - 2.5f, 0, j - 2.5f)), i * j + 0.7457f))
+                    };
                 }
             }
             //Note that the callbacks and set are value types, so you have to be a little careful about copying.
