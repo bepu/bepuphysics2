@@ -70,23 +70,32 @@ namespace DemoRenderer
             }
             pool = new BufferPool();
             Shapes = new ShapesExtractor(Surface.Device, looper, pool);
+            Lines = new LineExtractor(pool, looper);
+            UILineBatcher = new UILineBatcher();
+            TextBatcher = new TextBatcher();
+            ImageBatcher = new ImageBatcher(pool);
+
             SphereRenderer = new RayTracedRenderer<SphereInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderSpheres.hlsl");
             CapsuleRenderer = new RayTracedRenderer<CapsuleInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderCapsules.hlsl");
             CylinderRenderer = new RayTracedRenderer<CylinderInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderCylinders.hlsl");
             BoxRenderer = new BoxRenderer(surface.Device, ShaderCache);
             TriangleRenderer = new TriangleRenderer(surface.Device, ShaderCache);
-            MeshRenderer = new MeshRenderer(surface.Device, Shapes.MeshCache, ShaderCache);
-            Lines = new LineExtractor(pool, looper);
-            LineRenderer = new LineRenderer(surface.Device, ShaderCache);
-            Background = new BackgroundRenderer(surface.Device, ShaderCache);
-            CompressToSwap = new CompressToSwap(surface.Device, ShaderCache);
 
-            ImageRenderer = new ImageRenderer(surface.Device, ShaderCache);
-            ImageBatcher = new ImageBatcher(pool);
-            GlyphRenderer = new GlyphRenderer(surface.Device, ShaderCache);
-            TextBatcher = new TextBatcher();
-            UILineRenderer = new UILineRenderer(surface.Device, ShaderCache);
-            UILineBatcher = new UILineBatcher();
+            MeshRenderer = new MeshRenderer(Shapes.MeshCache);
+            LineRenderer = new LineRenderer();
+            Background = new BackgroundRenderer();
+            CompressToSwap = new CompressToSwap(surface.Device);
+            Helpers.LoadShaders(surface.Device, ShaderCache, MeshRenderer);
+            Helpers.LoadShaders(surface.Device, ShaderCache, LineRenderer);
+            Helpers.LoadShaders(surface.Device, ShaderCache, Background);
+            Helpers.LoadShaders(surface.Device, ShaderCache, CompressToSwap);
+
+            ImageRenderer = new ImageRenderer();
+            GlyphRenderer = new GlyphRenderer();
+            UILineRenderer = new UILineRenderer();
+            Helpers.LoadShaders(surface.Device, ShaderCache, ImageRenderer);
+            Helpers.LoadShaders(surface.Device, ShaderCache, GlyphRenderer);
+            Helpers.LoadShaders(surface.Device, ShaderCache, UILineRenderer);
 
             OnResize();
             var rasterizerStateDescription = RasterizerStateDescription.Default();
@@ -200,7 +209,7 @@ namespace DemoRenderer
 
             rtv = new RenderTargetView(Surface.Device, colorBuffer);
             rtv.DebugName = "Color RTV";
-            
+
             description.SampleDescription = new SampleDescription(1, 0);
             resolvedColorBuffer = new Texture2D(Surface.Device, description);
             resolvedColorBuffer.DebugName = "Resolved Color Buffer";

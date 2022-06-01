@@ -5,6 +5,7 @@ using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using DemoRenderer.Attributes;
 
 namespace DemoRenderer.Constraints
 {
@@ -59,23 +60,24 @@ namespace DemoRenderer.Constraints
             [FieldOffset(112)]
             public Vector3 CameraPosition;
         }
+
+        const int maximumInstancesPerDraw = 16384;
+#pragma warning disable 0649
         ConstantsBuffer<VertexConstants> vertexConstants;
 
+        [InitialCapacity(maximumInstancesPerDraw)]
         StructuredBuffer<LineInstance> instances;
+        [BoxIndices(maximumInstancesPerDraw)]
         IndexBuffer indices;
 
+        [Resource(@"Constraints\RenderLines.hlsl.vshader")]
         VertexShader vertexShader;
+        [Resource(@"Constraints\RenderLines.hlsl.pshader")]
         PixelShader pixelShader;
+#pragma warning restore 0649
 
-        public LineRenderer(Device device, ShaderCache cache, int maximumInstancesPerDraw = 16384)
+        public LineRenderer()
         {
-            instances = new StructuredBuffer<LineInstance>(device, maximumInstancesPerDraw, "Line Instances");
-            indices = new IndexBuffer(Helpers.GetBoxIndices(maximumInstancesPerDraw), device, "Line Quad Indices");
-
-            vertexConstants = new ConstantsBuffer<VertexConstants>(device, debugName: "Line Renderer Vertex Constants");
-
-            vertexShader = new VertexShader(device, cache.GetShader(@"Constraints\RenderLines.hlsl.vshader"));
-            pixelShader = new PixelShader(device, cache.GetShader(@"Constraints\RenderLines.hlsl.pshader"));
         }
 
         public void Render(DeviceContext context, Camera camera, Int2 resolution, Span<LineInstance> instances, int start, int count)

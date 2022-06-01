@@ -7,6 +7,9 @@ using System.Runtime.CompilerServices;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using BepuUtilities;
+using System.Reflection;
+using DemoRenderer.Attributes;
+using DemoContentLoader;
 
 namespace DemoRenderer
 {
@@ -323,6 +326,64 @@ namespace DemoRenderer
             disposable = default(T);
         }
 
+        public static void LoadShaders(Device device, ShaderCache cache, object renderer)
+        {
+            var rendererType = renderer.GetType();
+            foreach (var field in rendererType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                var resourceAttribute = field.GetCustomAttribute<ResourceAttribute>();
+                var icAttribute = field.GetCustomAttribute<InitialCapacityAttribute>();
+                var fieldType = field.FieldType;
+                if (resourceAttribute != null)
+                {
+                    if (fieldType == typeof(VertexShader))
+                        field.SetValue(renderer, new VertexShader(device, cache.GetShader(resourceAttribute.Path)));
+                    else if (fieldType == typeof(PixelShader))
+                        field.SetValue(renderer, new PixelShader(device, cache.GetShader(resourceAttribute.Path)));
+                }
+                if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(StructuredBuffer<>))
+                {
+                    if (icAttribute != null)
+                    {
+                        field.SetValue(renderer, Activator.CreateInstance(fieldType, device, icAttribute.Value, rendererType.Name + field.Name));
+                    }
+                    else
+                    {
+
+                    }
+                }
+                if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(ConstantsBuffer<>))
+                {
+                    field.SetValue(renderer, Activator.CreateInstance(fieldType, device, true, rendererType.Name + field.Name));
+                }
+                var s1 = field.GetCustomAttribute<SamplerStateDescriptionAttribute>();
+                if (fieldType == typeof(SamplerState) && s1 != null)
+                {
+                    field.SetValue(renderer, new SamplerState(device, new SamplerStateDescription()
+                    {
+                        AddressU = s1.AddressU,
+                        AddressV = s1.AddressV,
+                        AddressW = s1.AddressW,
+                        BorderColor = s1.BorderColor,
+                        ComparisonFunction = s1.ComparisonFunction,
+                        Filter = s1.Filter,
+                        MaximumAnisotropy = s1.MaximumAnisotropy,
+                        MaximumLod = s1.MaximumLod,
+                        MinimumLod = s1.MinimumLod,
+                        MipLodBias = s1.MipLodBias,
+                    }));
+                }
+                if (fieldType == typeof(IndexBuffer))
+                {
+                    var quadIndicesAttribute = field.GetCustomAttribute<QuadIndicesAttribute>();
+                    var boxIndicesAttribute = field.GetCustomAttribute<BoxIndicesAttribute>();
+                    if (quadIndicesAttribute != null)
+                        field.SetValue(renderer, new IndexBuffer(GetQuadIndices(quadIndicesAttribute.Count), device, rendererType.Name + field.Name));
+                    if (boxIndicesAttribute != null)
+                        field.SetValue(renderer, new IndexBuffer(GetBoxIndices(boxIndicesAttribute.Count), device, rendererType.Name + field.Name));
+                }
+            }
+        }
     }
 
 

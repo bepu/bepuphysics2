@@ -1,6 +1,7 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Memory;
 using DemoContentLoader;
+using DemoRenderer.Attributes;
 using SharpDX.Direct3D11;
 using System;
 using System.Diagnostics;
@@ -46,7 +47,7 @@ namespace DemoRenderer.UI
             const float sizeScale = 65535f / 4096f;
             var scaledSize = size * sizeScale;
             var clampedSize = Vector2.Max(Vector2.Zero, Vector2.Min(new Vector2(65535f), scaledSize));
-            PackedSize = (uint)clampedSize.X | (((uint)clampedSize.Y) << 16);           
+            PackedSize = (uint)clampedSize.X | (((uint)clampedSize.Y) << 16);
             PackedColor = Helpers.PackColor(color);
         }
     }
@@ -58,27 +59,25 @@ namespace DemoRenderer.UI
             public Vector2 PackedToScreenScale;
             public Vector2 ScreenToNDCScale;
         }
+
+        const int maximumGlyphsPerDraw = 2048;
+#pragma warning disable 0649
         ConstantsBuffer<VertexConstants> vertexConstants;
 
+        [InitialCapacity(maximumGlyphsPerDraw)]
         StructuredBuffer<ImageInstance> instances;
+        [QuadIndices(maximumGlyphsPerDraw)]
         IndexBuffer indices;
 
+        [SamplerStateDescription]
         SamplerState sampler;
+        [Resource(@"UI\RenderImages.hlsl.vshader")]
         VertexShader vertexShader;
+        [Resource(@"UI\RenderImages.hlsl.pshader")]
         PixelShader pixelShader;
-        public ImageRenderer(Device device, ShaderCache cache, int maximumGlyphsPerDraw = 2048)
+#pragma warning restore 0649
+        public ImageRenderer()
         {
-            instances = new StructuredBuffer<ImageInstance>(device, maximumGlyphsPerDraw, "Image Instances");
-            indices = new IndexBuffer(Helpers.GetQuadIndices(maximumGlyphsPerDraw), device, "Image Indices");
-
-            var samplerDescription = SamplerStateDescription.Default();
-            samplerDescription.Filter = Filter.MinMagMipLinear;
-            sampler = new SamplerState(device, samplerDescription);
-
-            vertexConstants = new ConstantsBuffer<VertexConstants>(device, debugName: "Image Renderer Vertex Constants");
-
-            vertexShader = new VertexShader(device, cache.GetShader(@"UI\RenderImages.hlsl.vshader"));
-            pixelShader = new PixelShader(device, cache.GetShader(@"UI\RenderImages.hlsl.pshader"));
         }
 
         /// <summary>

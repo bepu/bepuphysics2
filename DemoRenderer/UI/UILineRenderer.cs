@@ -1,6 +1,7 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Memory;
 using DemoContentLoader;
+using DemoRenderer.Attributes;
 using SharpDX.Direct3D11;
 using System;
 using System.Diagnostics;
@@ -49,22 +50,22 @@ namespace DemoRenderer.UI
             public Vector2 PackedToScreenScale;
             public Vector2 ScreenToNDCScale;
         }
+        const int maximumLinesPerDraw = 2048;
+#pragma warning disable 0649
         ConstantsBuffer<VertexConstants> vertexConstants;
 
+        [InitialCapacity(maximumLinesPerDraw)]
         StructuredBuffer<UILineInstance> instances;
+        [QuadIndices(maximumLinesPerDraw)]
         IndexBuffer indices;
 
+        [Resource(@"UI\RenderUILines.hlsl.vshader")]
         VertexShader vertexShader;
+        [Resource(@"UI\RenderUILines.hlsl.pshader")]
         PixelShader pixelShader;
-        public UILineRenderer(Device device, ShaderCache cache, int maximumLinesPerDraw = 2048)
+#pragma warning restore 0649
+        public UILineRenderer()
         {
-            instances = new StructuredBuffer<UILineInstance>(device, maximumLinesPerDraw, "UI Line Instances");
-            indices = new IndexBuffer(Helpers.GetQuadIndices(maximumLinesPerDraw), device, "UI Line Indices");
-
-            vertexConstants = new ConstantsBuffer<VertexConstants>(device, debugName: "UI Line Renderer Vertex Constants");
-
-            vertexShader = new VertexShader(device, cache.GetShader(@"UI\RenderUILines.hlsl.vshader"));
-            pixelShader = new PixelShader(device, cache.GetShader(@"UI\RenderUILines.hlsl.pshader"));
         }
 
         public void Render(DeviceContext context, Int2 screenResolution, UILineInstance[] lines, int start, int count)

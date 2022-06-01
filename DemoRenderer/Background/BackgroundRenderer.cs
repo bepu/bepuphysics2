@@ -1,5 +1,6 @@
 ﻿using BepuUtilities;
 using DemoContentLoader;
+using DemoRenderer.Attributes;
 using SharpDX.Direct3D11;
 using System;
 using System.Numerics;
@@ -8,16 +9,15 @@ namespace DemoRenderer.Background
 {
     public class BackgroundRenderer : IDisposable
     {
+#pragma warning disable 0649
+        [Resource(@"Background\RenderBackground.hlsl.vshader")]
         VertexShader vertexShader;
+        [Resource(@"Background\RenderBackground.hlsl.pshader")]
         PixelShader pixelShader;
         ConstantsBuffer<Matrix> constants;
-        public BackgroundRenderer(Device device, ShaderCache cache)
+#pragma warning restore 0649
+        public BackgroundRenderer()
         {
-            vertexShader = new VertexShader(device, cache.GetShader(@"Background\RenderBackground.hlsl.vshader"));
-            vertexShader.DebugName = "BackgroundVS";
-            pixelShader = new PixelShader(device, cache.GetShader(@"Background\RenderBackground.hlsl.pshader"));
-            pixelShader.DebugName = "BackgroundPS";
-            constants = new ConstantsBuffer<Matrix>(device, debugName: "BackgroundRenderer Constants");
         }
 
 

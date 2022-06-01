@@ -1,6 +1,7 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using DemoContentLoader;
+using DemoRenderer.Attributes;
 using SharpDX.Direct3D11;
 using System;
 using System.Numerics;
@@ -29,22 +30,22 @@ namespace DemoRenderer.ShapeDrawing
     {
         MeshCache meshCache;
 
+        const int maximumInstancesPerDraw = 2048;
+#pragma warning disable 0649
         ConstantsBuffer<RasterizedVertexConstants> vertexConstants;
 
+        [InitialCapacity(maximumInstancesPerDraw)]
         StructuredBuffer<MeshInstance> instances;
 
+        [Resource(@"ShapeDrawing\RenderMeshes.hlsl.vshader")]
         VertexShader vertexShader;
+        [Resource(@"ShapeDrawing\RenderMeshes.hlsl.pshader")]
         PixelShader pixelShader;
+#pragma warning restore 0649
 
-        public MeshRenderer(Device device, MeshCache meshCache, ShaderCache cache, int maximumInstancesPerDraw = 2048)
+        public MeshRenderer(MeshCache meshCache)
         {
             this.meshCache = meshCache;
-            instances = new StructuredBuffer<MeshInstance>(device, maximumInstancesPerDraw, $"Mesh Instances");
-
-            vertexConstants = new ConstantsBuffer<RasterizedVertexConstants>(device, debugName: $"Mesh Renderer Vertex Constants");
-
-            vertexShader = new VertexShader(device, cache.GetShader(@"ShapeDrawing\RenderMeshes.hlsl.vshader"));
-            pixelShader = new PixelShader(device, cache.GetShader(@"ShapeDrawing\RenderMeshes.hlsl.pshader"));
         }
 
         public unsafe void Render(DeviceContext context, Camera camera, Int2 screenResolution, Span<MeshInstance> instances, int start, int count)

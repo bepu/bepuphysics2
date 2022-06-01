@@ -1,4 +1,5 @@
 ﻿using DemoContentLoader;
+using DemoRenderer.Attributes;
 using SharpDX.Direct3D11;
 using System;
 using System.Collections.Generic;
@@ -16,22 +17,21 @@ namespace DemoRenderer.PostProcessing
         /// Gets or sets the display gamma. This isn't SRGB, but it'll do.
         /// </summary>
         public float Gamma { get; set; }
+#pragma warning disable 0649
         ConstantsBuffer<float> constants; //alas, lack of root constants
+        [Resource(@"PostProcessing\CompressToSwap.hlsl.vshader")]
         VertexShader vertexShader;
+        [Resource(@"PostProcessing\CompressToSwap.hlsl.pshader")]
         PixelShader pixelShader;
-        
+#pragma warning restore 0649
+
 
         //At the moment, this is the only form of post processing in the pipeline. We'll isolate the state changes needed in here rather than outside.
         DepthStencilState depthState;
 
-        public CompressToSwap(Device device, ShaderCache cache, float gamma = 2.2f)
+        public CompressToSwap(Device device, float gamma = 2.2f)
         {
             Gamma = gamma;
-            constants = new ConstantsBuffer<float>(device, debugName: "CompressToSwap Constants");
-            vertexShader = new VertexShader(device, cache.GetShader(@"PostProcessing\CompressToSwap.hlsl.vshader"));
-            vertexShader.DebugName = "CompressToSwapVS";
-            pixelShader = new PixelShader(device, cache.GetShader(@"PostProcessing\CompressToSwap.hlsl.pshader"));
-            pixelShader.DebugName = "CompressToSwapPS";
             var depthStateDescription = DepthStencilStateDescription.Default();
             depthStateDescription.DepthWriteMask = DepthWriteMask.Zero;
             depthStateDescription.IsDepthEnabled = false;

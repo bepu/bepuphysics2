@@ -1,6 +1,7 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Memory;
 using DemoContentLoader;
+using DemoRenderer.Attributes;
 using SharpDX.Direct3D11;
 using System;
 using System.Diagnostics;
@@ -62,27 +63,24 @@ namespace DemoRenderer.UI
             public Vector2 ScreenToNDCScale;
             public Vector2 InverseAtlasResolution;
         }
+        const int maximumGlyphsPerDraw = 2048;
+#pragma warning disable 0649
         ConstantsBuffer<VertexConstants> vertexConstants;
 
+        [InitialCapacity(maximumGlyphsPerDraw)]
         StructuredBuffer<GlyphInstance> instances;
+        [QuadIndices(maximumGlyphsPerDraw)]
         IndexBuffer indices;
 
+        [SamplerStateDescription]
         SamplerState sampler;
+        [Resource(@"UI\RenderGlyphs.hlsl.vshader")]
         VertexShader vertexShader;
+        [Resource(@"UI\RenderGlyphs.hlsl.pshader")]
         PixelShader pixelShader;
-        public GlyphRenderer(Device device, ShaderCache cache, int maximumGlyphsPerDraw = 2048)
+#pragma warning restore 0649
+        public GlyphRenderer()
         {
-            instances = new StructuredBuffer<GlyphInstance>(device, maximumGlyphsPerDraw, "Glyph Instances");
-            indices = new IndexBuffer(Helpers.GetQuadIndices(maximumGlyphsPerDraw), device, "Glyph Indices");
-
-            var samplerDescription = SamplerStateDescription.Default();
-            samplerDescription.Filter = Filter.MinMagMipLinear;
-            sampler = new SamplerState(device, samplerDescription);
-
-            vertexConstants = new ConstantsBuffer<VertexConstants>(device, debugName: "Glyph Renderer Vertex Constants");
-
-            vertexShader = new VertexShader(device, cache.GetShader(@"UI\RenderGlyphs.hlsl.vshader"));
-            pixelShader = new PixelShader(device, cache.GetShader(@"UI\RenderGlyphs.hlsl.pshader"));
         }
 
         /// <summary>
