@@ -15,11 +15,11 @@ struct Instance
 
 StructuredBuffer<Instance> Instances : register(t0);
 
-PSInput VSMain(uint vertexId : SV_VertexId)
+PSInput VSMain(uint vertexId : SV_VertexId, uint instanceId : SV_InstanceID)
 {
 	//The vertex id is used to position each vertex. 
 	//Each AABB has 8 vertices; the position is based on the 3 least significant bits.
-	int instanceId = vertexId >> 3;
+	//int instanceId = vertexId >> 3;
 	PSInput output;
 	Instance instance = Instances[instanceId];
 	//Note that we move the instance location into camera local translation.

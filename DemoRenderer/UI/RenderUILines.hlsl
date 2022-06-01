@@ -35,11 +35,11 @@ struct PSInput
 	nointerpolation float3 Color : Color;
 };
 #define SampleRadius 0.70710678118
-PSInput VSMain(uint vertexId : SV_VertexId)
+PSInput VSMain(uint vertexId : SV_VertexId, uint quadIndex : SV_InstanceID)
 {
 	//The vertex id is used to position each vertex. 
 	//Each quad has 4 vertices; the position is based on the 2 least significant bits.
-	int quadIndex = vertexId >> 2;
+	//int quadIndex = vertexId >> 2;
 	ScreenLineInstance instance = Instances[quadIndex];
 	PSInput output;
 	output.Start = float2(instance.PackedStart & 0xFFFF, instance.PackedStart >> 16) * PackedToScreenScale;

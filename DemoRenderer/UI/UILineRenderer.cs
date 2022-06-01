@@ -56,7 +56,7 @@ namespace DemoRenderer.UI
 
         [InitialCapacity(maximumLinesPerDraw)]
         StructuredBuffer<UILineInstance> instances;
-        [QuadIndices(maximumLinesPerDraw)]
+        [QuadIndices(1)]
         IndexBuffer indices;
 
         [Resource(@"UI\RenderUILines.hlsl.vshader")]
@@ -90,7 +90,7 @@ namespace DemoRenderer.UI
             {
                 var batchCount = Math.Min(instances.Capacity, count);
                 instances.Update(context, lines, batchCount, start);
-                context.DrawIndexed(batchCount * 6, 0, 0);
+                context.DrawIndexedInstanced(6, batchCount, 0, 0, 0);
                 count -= batchCount;
                 start += batchCount;
             }

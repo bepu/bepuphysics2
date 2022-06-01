@@ -29,7 +29,7 @@ namespace DemoRenderer.ShapeDrawing
         public BoxRenderer(Device device, ShaderCache cache, int maximumInstancesPerDraw = 2048) 
             : base(device, cache, @"ShapeDrawing\RenderBoxes.hlsl", maximumInstancesPerDraw)
         {
-            indices = new IndexBuffer(Helpers.GetBoxIndices(maximumInstancesPerDraw), device, "Box Indices");
+            indices = new IndexBuffer(Helpers.GetBoxIndices(1), device, "Box Indices");
         }
 
         protected override void OnDrawSetup(DeviceContext context)
@@ -38,7 +38,7 @@ namespace DemoRenderer.ShapeDrawing
         }
         protected override void OnBatchDraw(DeviceContext context, int batchCount)
         {
-            context.DrawIndexed(36 * batchCount, 0, 0);
+            context.DrawIndexedInstanced(36, batchCount, 0, 0, 0);
         }
         protected override void OnDispose()
         {

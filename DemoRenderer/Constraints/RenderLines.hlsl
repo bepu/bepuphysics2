@@ -38,9 +38,9 @@ struct PSInput
 	nointerpolation float TanAnglePerPixel : TanAnglePerPixel;
 };
 #define TargetRadiusInPixels 1.0
-PSInput VSMain(uint vertexId : SV_VertexId)
+PSInput VSMain(uint vertexId : SV_VertexId, uint instanceId : SV_InstanceID)
 {
-	int instanceId = vertexId >> 3;
+	//int instanceId = vertexId >> 3;
 	LineInstance instance = Instances[instanceId];
 	PSInput output;
 

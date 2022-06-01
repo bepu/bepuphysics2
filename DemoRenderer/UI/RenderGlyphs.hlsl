@@ -45,11 +45,11 @@ struct PSInput
 
 #define SampleRadius 0.5
 
-PSInput VSMain(uint vertexId : SV_VertexId)
+PSInput VSMain(uint vertexId : SV_VertexId, uint quadIndex : SV_InstanceID)
 {
 	//The vertex id is used to position each vertex. 
 	//Each quad has 4 vertices; the position is based on the 2 least significant bits.
-	int quadIndex = vertexId >> 2;
+	//int quadIndex = vertexId >> 2;
 	GlyphInstance instance = Instances[quadIndex];
 	float2 minimum = float2(instance.PackedMinimum & 0xFFFF, instance.PackedMinimum >> 16) * PackedToScreenScale;
 	float2 horizontalAxis = float2(

@@ -61,13 +61,13 @@ namespace DemoRenderer.Constraints
             public Vector3 CameraPosition;
         }
 
-        const int maximumInstancesPerDraw = 16384;
+        const int maximumInstancesPerDraw = 2048;
 #pragma warning disable 0649
         ConstantsBuffer<VertexConstants> vertexConstants;
 
         [InitialCapacity(maximumInstancesPerDraw)]
         StructuredBuffer<LineInstance> instances;
-        [BoxIndices(maximumInstancesPerDraw)]
+        [BoxIndices(1)]
         IndexBuffer indices;
 
         [Resource(@"Constraints\RenderLines.hlsl.vshader")]
@@ -106,7 +106,7 @@ namespace DemoRenderer.Constraints
             {
                 var batchCount = Math.Min(this.instances.Capacity, count);
                 this.instances.Update(context, instances, batchCount, start);
-                context.DrawIndexed(batchCount * 36, 0, 0);
+                context.DrawIndexedInstanced(36, batchCount, 0, 0, 0);
                 count -= batchCount;
                 start += batchCount;
             }

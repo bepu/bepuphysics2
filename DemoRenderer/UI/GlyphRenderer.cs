@@ -69,7 +69,7 @@ namespace DemoRenderer.UI
 
         [InitialCapacity(maximumGlyphsPerDraw)]
         StructuredBuffer<GlyphInstance> instances;
-        [QuadIndices(maximumGlyphsPerDraw)]
+        [QuadIndices(1)]
         IndexBuffer indices;
 
         [SamplerStateDescription]
@@ -120,7 +120,7 @@ namespace DemoRenderer.UI
             {
                 var batchCount = Math.Min(instances.Capacity, count);
                 instances.Update(context, glyphs.Slice(start, batchCount));
-                context.DrawIndexed(batchCount * 6, 0, 0);
+                context.DrawIndexedInstanced(6, batchCount, 0, 0, 0);
                 count -= batchCount;
                 start += batchCount;
             }

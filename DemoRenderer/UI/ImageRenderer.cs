@@ -64,7 +64,7 @@ namespace DemoRenderer.UI
 #pragma warning disable 0649
         ConstantsBuffer<VertexConstants> vertexConstants;
 
-        [InitialCapacity(maximumGlyphsPerDraw)]
+        [InitialCapacity(1)]
         StructuredBuffer<ImageInstance> instances;
         [QuadIndices(maximumGlyphsPerDraw)]
         IndexBuffer indices;
@@ -115,7 +115,7 @@ namespace DemoRenderer.UI
             {
                 var batchCount = Math.Min(this.instances.Capacity, count);
                 this.instances.Update(context, instances.Slice(start, batchCount));
-                context.DrawIndexed(batchCount * 6, 0, 0);
+                context.DrawIndexedInstanced(6, batchCount, 0, 0, 0);
                 count -= batchCount;
                 start += batchCount;
             }

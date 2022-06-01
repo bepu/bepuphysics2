@@ -61,7 +61,7 @@ namespace DemoRenderer.ShapeDrawing
             var instanceTypeName = typeof(TInstance).Name;
             instances = new StructuredBuffer<TInstance>(device, maximumInstancesPerDraw, $"{instanceTypeName} Instances");
 
-            indices = new IndexBuffer(Helpers.GetBoxIndices(maximumInstancesPerDraw), device, $"{instanceTypeName} AABB Indices");
+            indices = new IndexBuffer(Helpers.GetBoxIndices(1), device, $"{instanceTypeName} AABB Indices");
 
             vertexConstants = new ConstantsBuffer<RayTracedVertexConstants>(device, debugName: $"{instanceTypeName} Renderer Vertex Constants");
             pixelConstants = new ConstantsBuffer<RayTracedPixelConstants>(device, debugName: $"{instanceTypeName} Renderer Pixel Constants");
@@ -109,7 +109,7 @@ namespace DemoRenderer.ShapeDrawing
             {
                 var batchCount = Math.Min(this.instances.Capacity, count);
                 this.instances.Update(context, instances, batchCount, start);
-                context.DrawIndexed(batchCount * 36, 0, 0);
+                context.DrawIndexedInstanced(36, batchCount, 0, 0, 0);
                 count -= batchCount;
                 start += batchCount;
             }
