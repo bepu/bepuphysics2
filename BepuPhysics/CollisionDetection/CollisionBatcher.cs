@@ -300,7 +300,16 @@ namespace BepuPhysics.CollisionDetection
                 {
                     typeMatrix.tasks[i].ExecuteBatch(ref batch.Pairs, ref this);
                 }
-                //Dispose of the batch and any associated buffers; since the flush is one pass, we won't be needing this again.
+            }
+            for (int i = minimumBatchIndex; i <= maximumBatchIndex; ++i)
+            {
+                //Disposal is deferred until execution is complete.
+                //Shape data could be cached in an early buffer by a task that generates child tasks.
+                //Those child tasks could refer to data cached in the parent task's shapes buffer.
+                //Deleting it would potentially explode things.
+                //(While internal uses of the collision batcher generally refer to the Simulation.Shapes collection,
+                //the collision batcher is not limited to that use case. Consider contact queries with ephemeral shapes.)
+                ref var batch = ref batches[i];
                 if (batch.Pairs.Buffer.Allocated)
                 {
                     Pool.Return(ref batch.Pairs.Buffer);

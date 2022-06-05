@@ -403,6 +403,13 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteSlot(int index, in ConvexHull source)
         {
+            Debug.Assert(
+                source.Points.Allocated && source.BoundingPlanes.Allocated && source.FaceToVertexIndicesStart.Allocated && source.FaceVertexIndices.Allocated &&
+                (uint)source.Points.Length < 100000 &&
+                (uint)source.BoundingPlanes.Length < 100000 &&
+                (uint)source.FaceToVertexIndicesStart.Length < 100000 &&
+                (uint)source.FaceVertexIndices.Length < 100000,
+                "If a convex hull has an extremely large (or negative) count on any of its buffers, it is very likely undefined trash data.");
             Hulls[index] = source;
         }
     }

@@ -63,8 +63,6 @@ namespace BepuPhysics.CollisionDetection
         /// <typeparam name="TCallbacks">Type of the callbacks used to handle results of collision tasks.</typeparam>
         /// <param name="batcher">Batcher responsible for the invocation.</param>
         /// <param name="batch">Batch of pairs to test.</param>
-        /// <param name="continuations">Continuations to invoke upon completion of a top level pair.</param>
-        /// <param name="filters">Filters to use to influence execution of the collision tasks.</param>
         public abstract void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
 
