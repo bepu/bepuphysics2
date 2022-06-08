@@ -63,9 +63,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 {
                     totalOverlapCountForPair += pairOverlaps[j].Count;
                 }
+                ref var pair = ref pairs[pairIndex];
                 if (totalOverlapCountForPair > 0)
                 {
-                    ref var pair = ref pairs[pairIndex];
                     ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, totalOverlapCountForPair, ref pairOverlaps, ref subpairQueries, pair, out var continuationIndex);
 
                     var nextContinuationChildIndex = 0;
@@ -116,10 +116,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             }
                             else
                             {
-                                batcher.ProcessUntestedConvexResult(ref subpairContinuation);
+                                batcher.ProcessUntestedSubpairConvexResult(ref subpairContinuation);
                             }
                         }
                     }
+                }
+                else
+                {
+                    batcher.ProcessEmptyResult(ref pair.Continuation);
                 }
 
 

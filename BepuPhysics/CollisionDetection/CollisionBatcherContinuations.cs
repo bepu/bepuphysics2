@@ -58,19 +58,19 @@ namespace BepuPhysics.CollisionDetection
         /// <summary>
         /// Marks a pair as requiring no further processing before being reported to the user supplied continuations.
         /// </summary>
-        Direct,
+        Direct = 0,
         /// <summary>
         /// Marks a pair as part of a set of a higher (potentially multi-manifold) pair, potentially requiring contact reduction.
         /// </summary>
-        NonconvexReduction,
+        NonconvexReduction = 1,
         /// <summary>
         /// Marks a pair as a part of a set of mesh-convex collisions, potentially requiring mesh boundary smoothing.
         /// </summary>
-        MeshReduction,
+        MeshReduction = 2,
         /// <summary>
         /// Marks a pair as a part of a set of mesh-convex collisions spawned by a mesh-compound pair, potentially requiring mesh boundary smoothing.
         /// </summary>
-        CompoundMeshReduction,
+        CompoundMeshReduction = 3,
         //TODO: We don't yet support boundary smoothing for meshes or convexes. Most likely, boundary smoothed convexes won't make it into the first release of the engine at all;
         //they're a pretty experimental feature with limited applications.
         ///// <summary>

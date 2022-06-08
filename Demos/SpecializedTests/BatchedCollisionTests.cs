@@ -67,7 +67,7 @@ namespace Demos.SpecializedTests
         {
             int count = 0;
             var callbacks = new TestCollisionCallbacks { Count = &count };
-            TestPair(ref a, ref b, ref posesA, ref posesB, ref callbacks, pool, shapes, registry, 64);
+            TestPair(ref a, ref b, ref posesA, ref posesB, ref callbacks, pool, shapes, registry, 256);
             count = 0;
             var start = Stopwatch.GetTimestamp();
             TestPair(ref a, ref b, ref posesA, ref posesB, ref callbacks, pool, shapes, registry, iterationCount);
@@ -152,7 +152,7 @@ namespace Demos.SpecializedTests
             var triangle = new Triangle(new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1));
             var cylinder = new Cylinder(0.5f, 1f);
 
-            const int pointCount = 8192;
+            const int pointCount = 64;
             var points = new QuickList<Vector3>(pointCount, pool);
             //points.Allocate(pool) = new Vector3(0, 0, 0);
             //points.Allocate(pool) = new Vector3(0, 0, 1);
@@ -168,14 +168,59 @@ namespace Demos.SpecializedTests
                 //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3(random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1, random.NextSingle() * 2 - 1)) * random.NextSingle();
             }
 
+            Shapes shapes = new Shapes(pool, 32);
             var pointsBuffer = points.Span.Slice(points.Count);
             ConvexHullHelper.CreateShape(pointsBuffer, pool, out _, out var convexHull);
 
-            var poseA = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = Quaternion.Identity };
-            var poseB = new RigidPose { Position = new Vector3(0, 1, 0), Orientation = Quaternion.Identity };
-            Shapes shapes = new Shapes(pool, 32);
+            using var compoundBuilder = new CompoundBuilder(pool, shapes, 64);
+            //COMPOUND
+            var legShape = new Box(0.2f, 1, 0.2f);
+            var legInverseInertia = legShape.ComputeInertia(1f);
+            var legShapeIndex = shapes.Add(legShape);
+            var legPose0 = new RigidPose { Position = new Vector3(-1.5f, 0, -1.5f), Orientation = Quaternion.Identity };
+            var legPose1 = new RigidPose { Position = new Vector3(-1.5f, 0, 1.5f), Orientation = Quaternion.Identity };
+            var legPose2 = new RigidPose { Position = new Vector3(1.5f, 0, -1.5f), Orientation = Quaternion.Identity };
+            var legPose3 = new RigidPose { Position = new Vector3(1.5f, 0, 1.5f), Orientation = Quaternion.Identity };
+            compoundBuilder.Add(legShapeIndex, legPose0, legInverseInertia.InverseInertiaTensor, 1);
+            compoundBuilder.Add(legShapeIndex, legPose1, legInverseInertia.InverseInertiaTensor, 1);
+            compoundBuilder.Add(legShapeIndex, legPose2, legInverseInertia.InverseInertiaTensor, 1);
+            compoundBuilder.Add(legShapeIndex, legPose3, legInverseInertia.InverseInertiaTensor, 1);
+            var tableTopPose = new RigidPose { Position = new Vector3(0, 0.6f, 0), Orientation = Quaternion.Identity };
+            var tableTopShape = new Box(3.2f, 0.2f, 3.2f);
+            compoundBuilder.Add(tableTopShape, tableTopPose, 3);
 
-            int iterationCount = 1 << 22;
+            compoundBuilder.BuildDynamicCompound(out var tableChildren, out var tableInertia, out var tableCenter);
+            compoundBuilder.Reset();
+            var compound = new Compound(tableChildren);
+
+            //BIGCOMPOUND
+            var treeCompoundBoxShape = new Box(0.5f, 1.5f, 1f);
+            var treeCompoundBoxShapeIndex = shapes.Add(treeCompoundBoxShape);
+            var childInertia = treeCompoundBoxShape.ComputeInertia(1);
+            for (int i = 0; i < 64; ++i)
+            {
+                RigidPose localPose;
+                localPose.Position = new Vector3(12, 12, 12) * (0.5f * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One);
+                float orientationLengthSquared;
+                do
+                {
+                    localPose.Orientation = new Quaternion(random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle());
+                    orientationLengthSquared = QuaternionEx.LengthSquared(ref localPose.Orientation);
+                }
+                while (orientationLengthSquared < 1e-9f);
+                QuaternionEx.Scale(localPose.Orientation, 1f / MathF.Sqrt(orientationLengthSquared), out localPose.Orientation);
+                //Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI, out localPose.Orientation);
+
+                compoundBuilder.Add(treeCompoundBoxShapeIndex, localPose, childInertia.InverseInertiaTensor, 1);
+            }
+            compoundBuilder.BuildDynamicCompound(out var children, out var inertia, out var center);
+            compoundBuilder.Reset();
+            var bigCompound = new BigCompound(children, shapes, pool);
+
+            //MESH
+            DemoMeshHelper.CreateDeformedPlane(8, 8, (x, y) => { return new Vector3(x * 2 - 8, 3 * MathF.Sin(x) * MathF.Sin(y), y * 2 - 8); }, Vector3.One, pool, out var mesh);
+
+            int iterationCount = 1 << 20;
             pool.Take<RigidPose>(iterationCount, out var posesA);
             pool.Take<RigidPose>(iterationCount, out var posesB);
             for (int i = 0; i < iterationCount; ++i)
@@ -191,21 +236,45 @@ namespace Demos.SpecializedTests
             Test(ref sphere, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref sphere, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref sphere, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref sphere, ref compound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref sphere, ref bigCompound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref sphere, ref mesh, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref capsule, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref capsule, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref capsule, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref capsule, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref capsule, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref capsule, ref compound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref capsule, ref bigCompound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref capsule, ref mesh, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref box, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref box, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref box, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref box, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref box, ref compound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref box, ref bigCompound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref box, ref mesh, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref triangle, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref triangle, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref triangle, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref triangle, ref compound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref triangle, ref bigCompound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref triangle, ref mesh, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref cylinder, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref cylinder, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref cylinder, ref compound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref cylinder, ref bigCompound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref cylinder, ref mesh, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref convexHull, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref convexHull, ref compound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref convexHull, ref bigCompound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref convexHull, ref mesh, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref compound, ref compound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref compound, ref bigCompound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref compound, ref mesh, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref bigCompound, ref bigCompound, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref bigCompound, ref mesh, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref mesh, ref mesh, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
 
 
             Test<Sphere, SphereWide, Sphere, SphereWide, SpherePairDistanceTester>(sphere, sphere, ref posesA, ref posesB, iterationCount);

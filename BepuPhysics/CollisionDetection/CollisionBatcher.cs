@@ -372,12 +372,28 @@ namespace BepuPhysics.CollisionDetection
         }
 
         /// <summary>
+        /// Reports the zero result of a convex collision test to the callbacks and, if necessary, to any continuations for postprocessing.
+        /// </summary>
+        /// <remarks>Unless you're building custom compound collision pairs or adding new contact processing continuations, you can safely ignore this.</remarks>
+        /// <param name="continuation">Continuation describing the pair and what to do with it.</param>
+        public unsafe void ProcessEmptyResult(ref PairContinuation continuation)
+        {
+            Unsafe.SkipInit(out ConvexContactManifold manifold);
+            manifold.Count = 0;
+            ProcessConvexResult(ref manifold, ref continuation);
+        }
+
+
+        /// <summary>
         /// Submits a subpair whose testing was blocked by user callback as complete to any relevant continuations.
         /// </summary>
         /// <remarks>Unless you're building custom compound collision pairs or adding new contact processing continuations, you can safely ignore this.</remarks>
         /// <param name="continuation">Continuation describing the pair and what to do with it.</param>
-        public unsafe void ProcessUntestedConvexResult(ref PairContinuation continuation)
+        public unsafe void ProcessUntestedSubpairConvexResult(ref PairContinuation continuation)
         {
+            //Note that we do not call OnChildPairCompleted. A callback is only invoked if a child is actually tested. 
+            //If a child isn't considered- because acceleration structure pruned it, or a callback said to ignore it- there is no callback report.
+            //That's different from the top level pair which should always report.
             switch (continuation.Type)
             {
                 case CollisionContinuationType.NonconvexReduction:
@@ -397,5 +413,6 @@ namespace BepuPhysics.CollisionDetection
                     break;
             }
         }
+
     }
 }

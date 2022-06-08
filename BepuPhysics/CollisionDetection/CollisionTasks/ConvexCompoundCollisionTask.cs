@@ -50,9 +50,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             {
                 ref var pairOverlaps = ref overlaps.GetOverlapsForPair(i);
                 ref var pairQuery = ref overlaps.GetQueryForPair(i);
+                ref var pair = ref pairs[i];
                 if (pairOverlaps.Count > 0)
                 {
-                    ref var pair = ref pairs[i];
                     ref var compound = ref Unsafe.AsRef<TCompound>(pair.B);
                     ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, pairOverlaps.Count, pair, pairQuery, out var continuationIndex);
 
@@ -96,10 +96,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         }
                         else
                         {
-                            batcher.ProcessUntestedConvexResult(ref subpairContinuation);
+                            batcher.ProcessUntestedSubpairConvexResult(ref subpairContinuation);
                         }
 
                     }
+                }
+                else
+                {
+                    batcher.ProcessEmptyResult(ref pair.Continuation);
                 }
             }
             overlaps.Dispose(batcher.Pool);
