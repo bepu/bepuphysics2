@@ -86,19 +86,40 @@ namespace BepuPhysics.CollisionDetection
         public int ChildA;
         public int ChildB;
         public uint Packed;
+
+        /// <summary>
+        /// Covers bits [0, 20) in the packed representation. Refers to the child pair index in a subtask generating collision task that generated this continuation.
+        /// </summary>
+        public const int ChildIndexBits = 20;
+        /// <summary>
+        /// Covers bits [20, 30) in the packed representation. Refers to the index of a subpair in a continuation processor.
+        /// Maximum number should be equal to the sum of the batch sizes subtask generating collision tasks, which as of this writing is 384, but we'll include a little buffer.
+        /// </summary>
+        public const int ContinuationIndexBits = 10;
+        /// <summary>
+        /// Covers bits [30, 32) in the packed representation. Refers to which continuation processor should be used for this subpair.
+        /// </summary>
+        public const int ContinuationTypeBits = 2;
+
+        public const int ExclusiveMaximumChildIndex = 1 << ChildIndexBits;
+        public const int ExclusiveMaximumContinuationIndex = 1 << ContinuationIndexBits;
+        public const int ExclusiveMaximumContinuationType = 1 << ContinuationTypeBits;
+
+        const int TypeShift = ChildIndexBits + ContinuationIndexBits;
+        const int IndexShift = ChildIndexBits;
+        const int IndexMask = (1 << ContinuationIndexBits) - 1;
+        const int ChildIndexMask = (1 << ChildIndexBits) - 1;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PairContinuation(int pairId, int childA, int childB, CollisionContinuationType continuationType, int continuationIndex, int continuationChildIndex)
         {
             PairId = pairId;
             ChildA = childA;
             ChildB = childB;
-            //continuationChildIndex: [0, 17]
-            //continuationIndex: [18, 27]
-            //continuationType:  [28, 31]
-            Debug.Assert(continuationIndex < (1 << 10));
-            Debug.Assert(continuationChildIndex < (1 << 18));
-            Debug.Assert((int)continuationType < (1 << 4));
-            Packed = (uint)(((int)continuationType << 28) | (continuationIndex << 18) | continuationChildIndex);
+            Debug.Assert(continuationChildIndex < ExclusiveMaximumChildIndex);
+            Debug.Assert(continuationIndex < ExclusiveMaximumContinuationIndex);
+            Debug.Assert((int)continuationType < ExclusiveMaximumContinuationType);
+            Packed = (uint)(((int)continuationType << TypeShift) | (continuationIndex << IndexShift) | continuationChildIndex);
         }
         public PairContinuation(int pairId)
         {
@@ -108,9 +129,9 @@ namespace BepuPhysics.CollisionDetection
             Packed = 0;
         }
 
-        public CollisionContinuationType Type { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (CollisionContinuationType)(Packed >> 28); } }
-        public int Index { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)((Packed >> 18) & ((1 << 10) - 1)); } }
-        public int ChildIndex { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(Packed & ((1 << 18) - 1)); } }
+        public CollisionContinuationType Type { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (CollisionContinuationType)(Packed >> TypeShift); } }
+        public int Index { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)((Packed >> IndexShift) & IndexMask); } }
+        public int ChildIndex { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(Packed & ChildIndexMask); } }
     }
 
     public struct BatcherContinuations<T> where T : unmanaged, ICollisionTestContinuation

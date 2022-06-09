@@ -39,7 +39,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         public CompoundPairCollisionTask()
         {
-            BatchSize = 32;
+            BatchSize = 16;
             ShapeTypeIndexA = default(TCompoundA).TypeId;
             ShapeTypeIndexB = default(TCompoundB).TypeId;
             SubtaskGenerator = true;
@@ -66,6 +66,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref var pair = ref pairs[pairIndex];
                 if (totalOverlapCountForPair > 0)
                 {
+                    Debug.Assert(totalOverlapCountForPair < PairContinuation.ExclusiveMaximumChildIndex, "Are there REALLY supposed to be that many overlaps? Might need to expand the packed representation if so.");
                     ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, totalOverlapCountForPair, ref pairOverlaps, ref subpairQueries, pair, out var continuationIndex);
 
                     var nextContinuationChildIndex = 0;
@@ -94,6 +95,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                 childB = originalChildIndexB;
                             }
                             var continuationChildIndex = nextContinuationChildIndex++;
+                            if (continuationChildIndex >= PairContinuation.ExclusiveMaximumChildIndex)
+                            {
+                                //If there are more overlaps than we can represent in the packed index, just ignore the surplus. This isn't wonderful, but it's better than an access violation.
+                                break;
+                            }
                             var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childA, childB,
                                 continuationHandler.CollisionContinuationType, continuationIndex, continuationChildIndex);
                             if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))

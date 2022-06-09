@@ -31,7 +31,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         public ConvexCompoundCollisionTask()
         {
-            BatchSize = 32;
+            BatchSize = 16;
             ShapeTypeIndexA = default(TConvex).TypeId;
             ShapeTypeIndexB = default(TCompound).TypeId;
             SubtaskGenerator = true;
@@ -54,6 +54,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 if (pairOverlaps.Count > 0)
                 {
                     ref var compound = ref Unsafe.AsRef<TCompound>(pair.B);
+                    //If there are more overlaps than we can represent in the packed index, just ignore the surplus. This isn't wonderful, but it's better than an access violation.
+                    Debug.Assert(pairOverlaps.Count < PairContinuation.ExclusiveMaximumChildIndex, "Are there REALLY supposed to be that many overlaps? Might need to expand the packed representation if so.");
+                    if (pairOverlaps.Count >= PairContinuation.ExclusiveMaximumChildIndex)
+                        pairOverlaps.Count = PairContinuation.ExclusiveMaximumChildIndex - 1;
                     ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, pairOverlaps.Count, pair, pairQuery, out var continuationIndex);
 
                     int nextContinuationChildIndex = 0;
