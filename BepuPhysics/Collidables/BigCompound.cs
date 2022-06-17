@@ -154,6 +154,44 @@ namespace BepuPhysics.Collidables
             return ref Children[compoundChildIndex];
         }
 
+        /// <summary>
+        /// Adds a child to the compound.
+        /// </summary>
+        /// <param name="child">Child to add to the compound.</param>
+        /// <param name="pool">Pool to use to resize the compound's children buffer if necessary.</param>
+        /// <param name="shapes">Shapes collection containing the compound's children.</param>
+        /// <remarks><para>This function keeps the <see cref="Tree"/> in a valid state, but significant changes over time may degrade the tree's quality and result in reduced collision/query performance.
+        /// If this happens, consider calling <see cref="Tree.RefitAndRefine(BufferPool, int, float)"/> with a refinementIndex that changes with each call (to prioritize different parts of the tree).
+        /// Incrementing a counter with each call would work fine. The ideal frequency of refinement depends on the kind of modifications being made, but it's likely to be rare.</para></remarks>
+        public void Add(CompoundChild child, BufferPool pool, Shapes shapes)
+        {
+            pool.Resize(ref Children, Children.Length + 1, Children.Length);
+            Children[^1] = child;
+            shapes.UpdateBounds(child.LocalPose, child.ShapeIndex, out var bounds);
+            var childIndex = Tree.Add(bounds, pool);
+            Debug.Assert(childIndex == Children.Length - 1, "Adding to a tree acts like appending to the list; a newly added element should be in the last slot to match our previous child modification.");
+        }
+
+        /// <summary>
+        /// Removes a child from the compound by index. The last child is pulled to fill the gap left by the removed child.
+        /// </summary>
+        /// <param name="childIndex">Index of the child to remove from the compound.</param>
+        /// <param name="pool">Pool to use to resize the compound's children buffer if necessary.</param>
+        /// <remarks>This function keeps the <see cref="Tree"/> in a valid state, but significant changes over time may degrade the tree's quality and result in reduced collision/query performance.
+        /// If this happens, consider calling <see cref="Tree.RefitAndRefine(BufferPool, int, float)"/> with a refinementIndex that changes with each call (to prioritize different parts of the tree).
+        /// Incrementing a counter with each call would work fine. The ideal frequency of refinement depends on the kind of modifications being made, but it's likely to be rare.</remarks>
+        public void RemoveAt(int childIndex, BufferPool pool)
+        {
+            var movedChildIndex = Tree.RemoveAt(childIndex);
+            if (movedChildIndex >= 0)
+            {
+                Children[childIndex] = Children[movedChildIndex];
+                Debug.Assert(movedChildIndex == Children.Length - 1, "The child moved by the tree is expected to be the last one; it's pulled forward to fill the gap left by the removed child.");
+            }
+            //Shrinking the buffer takes care of 'removing' the now-empty last slot.
+            pool.Resize(ref Children, Children.Length - 1, Children.Length - 1);
+        }
+
         unsafe struct Enumerator<TSubpairOverlaps> : IBreakableForEach<int> where TSubpairOverlaps : ICollisionTaskSubpairOverlaps
         {
             public BufferPool Pool;

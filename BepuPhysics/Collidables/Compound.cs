@@ -235,6 +235,34 @@ namespace BepuPhysics.Collidables
             return ref Children[compoundChildIndex];
         }
 
+        /// <summary>
+        /// Adds a child to the compound.
+        /// </summary>
+        /// <param name="child">Child to add to the compound.</param>
+        /// <param name="pool">Pool to use to resize the compound's children buffer if necessary.</param>
+        public void Add(CompoundChild child, BufferPool pool)
+        {
+            pool.Resize(ref Children, Children.Length + 1, Children.Length);
+            Children[^1] = child;
+        }
+
+        /// <summary>
+        /// Removes a child from the compound by index. The last child is pulled to fill the gap left by the removed child.
+        /// </summary>
+        /// <param name="childIndex">Index of the child to remove from the compound.</param>
+        /// <param name="pool">Pool to use to resize the compound's children buffer if necessary.</param>
+        public void RemoveAt(int childIndex, BufferPool pool)
+        {
+            var lastIndex = Children.Length - 1;
+            if (childIndex < lastIndex)
+            {
+                Children[childIndex] = Children[lastIndex];
+            }
+            //Shrinking the buffer takes care of 'removing' the now-empty last slot.
+            pool.Resize(ref Children, Children.Length - 1, Children.Length - 1);
+        }
+
+
         public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
