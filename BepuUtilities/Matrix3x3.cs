@@ -77,7 +77,7 @@ namespace BepuUtilities
         unsafe static void Transpose(M* m, M* transposed)
         {
             //A weird function! Why?
-            //1) Missing some helpful instructions for actual SIMD accelerated transposition.
+            //1) Missing some helpful instructions for actual SIMD accelerated transposition. (TODO: This is no longer the case! Could improve this!)
             //2) Difficult to get SIMD types to generate competitive codegen due to lots of componentwise access.
 
             float m12 = m->M12;

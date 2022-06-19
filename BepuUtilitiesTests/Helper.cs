@@ -9,10 +9,10 @@ namespace BEPUutilitiesTests
 {
     public static class Helper
     {
-        public static void Test(string testName, Func<int, float> function, int benchmarkIterations = 100000000)
+        public static void Test(string testName, Func<int, float> function, int benchmarkIterations = 100000000, int warmupIterations = 8192)
         {
             GC.Collect();
-            function(10);
+            function(warmupIterations);
             var start = Stopwatch.GetTimestamp();
             var accumulator = function(benchmarkIterations);
             var end = Stopwatch.GetTimestamp();

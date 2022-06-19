@@ -18,6 +18,8 @@ namespace BEPUutilitiesTests
             Matrix3x3Tests.Test();
             Console.WriteLine();
             Matrix4x4Tests.Test();
+            Console.WriteLine();
+            SymmetricTests.Test();
 
         }
 
