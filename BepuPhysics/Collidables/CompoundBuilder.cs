@@ -28,52 +28,24 @@ namespace BepuPhysics.Collidables
             /// </summary>
             public float Weight;
             /// <summary>
-            /// Inertia tensor associated with the child. If inertia is all zeroes, it is interpreted as infinite.
+            /// Inertia tensor associated with the child, including its orientation.
             /// </summary>
             public Symmetric3x3 Inertia;
         }
 
         public QuickList<Child> Children;
 
-        public CompoundBuilder(BufferPool pool, Shapes shapes, int builderCapacity)
+        /// <summary>
+        /// Creates a compound builder.
+        /// </summary>
+        /// <param name="pool">Buffer pool to allocate memory from when necessary.</param>
+        /// <param name="shapes">Shapes collection to access when constructing the compound children.</param>
+        /// <param name="initialBuilderCapacity">Number of children the compound builder can hold without resizing.</param>
+        public CompoundBuilder(BufferPool pool, Shapes shapes, int initialBuilderCapacity)
         {
             Pool = pool;
             Shapes = shapes;
-            Children = new QuickList<Child>(builderCapacity, Pool);
-        }
-
-        /// <summary>
-        /// Adds a new shape to the accumulator, creating a new shape in the shapes set. The mass used to compute the inertia tensor will be based on the given weight.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the shape to add to the accumulator and the shapes set.</typeparam>
-        /// <param name="shape">Shape to add.</param>
-        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
-        /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass and scales the inertia tensor. 
-        /// Otherwise, it is used for recentering.</param>
-        public void Add<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : unmanaged, IConvexShape
-        {
-            ref var child = ref Children.Allocate(Pool);
-            child.LocalPose = localPose;
-            child.ShapeIndex = Shapes.Add(shape);
-            child.Weight = weight;
-            var inertia = shape.ComputeInertia(weight);
-            Symmetric3x3.Invert(inertia.InverseInertiaTensor, out child.Inertia);
-        }
-
-        /// <summary>
-        /// Adds a new shape to the accumulator, creating a new shape in the shapes set. Inertia is assumed to be infinite.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the shape to add to the accumulator and the shapes set.</typeparam>
-        /// <param name="shape">Shape to add.</param>
-        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
-        /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
-        public void AddForKinematic<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : unmanaged, IConvexShape
-        {
-            ref var child = ref Children.Allocate(Pool);
-            child.LocalPose = localPose;
-            child.ShapeIndex = Shapes.Add(shape);
-            child.Weight = weight;
-            child.Inertia = default;
+            Children = new QuickList<Child>(initialBuilderCapacity, Pool);
         }
 
         /// <summary>
@@ -82,8 +54,8 @@ namespace BepuPhysics.Collidables
         /// <param name="shape">Index of the shape to add.</param>
         /// <param name="localPose">Pose of the shape in the compound's local space.</param>
         /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
-        /// <param name="inverseInertia">Inverse inertia tensor of the shape being added. This is assumed to already be scaled as desired by the weight.</param>
-        public void Add(TypedIndex shape, in RigidPose localPose, in Symmetric3x3 inverseInertia, float weight)
+        /// <param name="localInverseInertia">Inverse inertia tensor of the shape being added in its local space. This is assumed to already be scaled as desired by the weight.</param>
+        public void Add(TypedIndex shape, in RigidPose localPose, in Symmetric3x3 localInverseInertia, float weight)
         {
             Debug.Assert(Compound.ValidateChildIndex(shape, Shapes));
             ref var child = ref Children.Allocate(Pool);
@@ -92,10 +64,11 @@ namespace BepuPhysics.Collidables
             child.Weight = weight;
             //This assumes the given inertia is nonsingular. That should be a valid assumption, unless the user is trying to supply an axis-locked tensor.
             //For such a use case, it's best to just lock the axis after computing a 'normal' inertia. 
-            Debug.Assert(Symmetric3x3.Determinant(inverseInertia) > 0,
-                "Shape inertia tensors should be invertible. If making an axis-locked compound, consider locking the axis on the completed inertia. " +
+            Debug.Assert(Symmetric3x3.Determinant(localInverseInertia) > 0,
+                "Child inertia tensors should be invertible. If making an axis-locked compound, consider locking the axis on the completed inertia. " +
                 "If making a kinematic, consider using the overload which takes no inverse inertia.");
-            Symmetric3x3.Invert(inverseInertia, out child.Inertia);
+            PoseIntegration.RotateInverseInertia(localInverseInertia, localPose.Orientation, out var rotatedInverse);
+            Symmetric3x3.Invert(rotatedInverse, out child.Inertia);
         }
 
         /// <summary>
@@ -114,8 +87,40 @@ namespace BepuPhysics.Collidables
             child.Inertia = default;
         }
 
+        /// <summary>
+        /// Adds a new shape to the accumulator, creating a new shape in the shapes set. The mass used to compute the inertia tensor will be based on the given weight.
+        /// </summary>
+        /// <typeparam name="TShape">Type of the shape to add to the accumulator and the shapes set.</typeparam>
+        /// <param name="shape">Shape to add.</param>
+        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
+        /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass and scales the inertia tensor. 
+        /// Otherwise, it is used for recentering.</param>
+        public void Add<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : unmanaged, IConvexShape
+        {
+            Add(Shapes.Add(shape), localPose, shape.ComputeInertia(weight).InverseInertiaTensor, weight);
+        }
+
+        /// <summary>
+        /// Adds a new shape to the accumulator, creating a new shape in the shapes set. Inertia is assumed to be infinite.
+        /// </summary>
+        /// <typeparam name="TShape">Type of the shape to add to the accumulator and the shapes set.</typeparam>
+        /// <param name="shape">Shape to add.</param>
+        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
+        /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
+        public void AddForKinematic<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : unmanaged, IConvexShape
+        {
+            AddForKinematic(Shapes.Add(shape), localPose, weight);
+        }
+
+
+        /// <summary>
+        /// Gets the contribution to an inertia tensor of a point mass at the given offset from the center of mass.
+        /// </summary>
+        /// <param name="offset">Offset from the center of mass.</param>
+        /// <param name="mass">Mass of the point.</param>
+        /// <param name="contribution">Contribution to the inertia tensor.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetOffsetInertiaContribution(in Vector3 offset, float mass, out Symmetric3x3 contribution)
+        public static void GetOffsetInertiaContribution(Vector3 offset, float mass, out Symmetric3x3 contribution)
         {
             var innerProduct = Vector3.Dot(offset, offset);
             contribution.XX = mass * (innerProduct - offset.X * offset.X);
@@ -191,6 +196,43 @@ namespace BepuPhysics.Collidables
                 targetChild.ShapeIndex = sourceChild.ShapeIndex;
             }
             Symmetric3x3.Invert(summedInertia, out inertia.InverseInertiaTensor);
+        }
+
+        /// <summary>
+        /// Computes the uninverted inertia contribution of a child.
+        /// </summary>
+        /// <param name="pose">Pose of the child.</param>
+        /// <param name="inverseLocalInertia">Inverse inertia tensor of the child in its local space.</param>
+        /// <param name="mass">Mass of the child.</param>
+        /// <returns>Inertia contribution of the child to a compound given its relative pose.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Symmetric3x3 ComputeInertiaForChild(RigidPose pose, Symmetric3x3 inverseLocalInertia, float mass)
+        {
+            GetOffsetInertiaContribution(pose.Position, mass, out var offsetContribution);
+            //This assumes the given inertia is nonsingular. That should be a valid assumption, unless the user is trying to supply an axis-locked tensor.
+            //For such a use case, it's best to just lock the axis after computing a 'normal' inertia. 
+            Debug.Assert(Symmetric3x3.Determinant(inverseLocalInertia) > 0,
+                "Child inertia tensors should be invertible. If making an axis-locked compound, consider locking the axis on the completed inertia. " +
+                "If making a kinematic, consider using the overload which takes no inverse inertia.");
+            PoseIntegration.RotateInverseInertia(inverseLocalInertia, pose.Orientation, out var rotatedInverseInertia);
+            Symmetric3x3.Invert(rotatedInverseInertia, out var inertia);
+            Symmetric3x3.Add(offsetContribution, inertia, out inertia);
+            return inertia;
+        }
+
+        /// <summary>
+        /// Computes the inertia for a set of compound children based on their offsets and the provided inverse inertias.
+        /// </summary>
+        /// <param name="children">Children and their associated poses.</param>
+        /// <param name="inverseLocalInertias">Inverse inertias of the children, each in the child's local space. Assumed to have already been premultiplied by the mass of the child.</param>
+        /// <param name="childMasses">Masses of each child in the compound.</param>
+        public static void ComputeInertia(Span<CompoundChild> children, Span<Symmetric3x3> inverseLocalInertias, Span<float> childMasses)
+        {
+            Symmetric3x3 summedInertia = default;
+            for (int i = 0; i < children.Length; ++i)
+            {
+                summedInertia += ComputeInertiaForChild(children[i].LocalPose, inverseLocalInertias[i], childMasses[i]);
+            }
         }
 
         /// <summary>

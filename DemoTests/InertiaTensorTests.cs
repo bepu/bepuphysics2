@@ -1,5 +1,6 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
@@ -160,8 +161,45 @@ namespace DemoTests
         }
     }
 
+
     public static class InertiaTensorTests
     {
+        static bool ValuesAreSimilar(float a, float b)
+        {
+            var ratio = a / b;
+            const float ratioThreshold = 0.15f;
+            return MathF.Abs(a - b) < 3e-2f || (ratio < (1 + ratioThreshold) && ratio > 1f / (1 + ratioThreshold));
+        }
+
+        private static void CheckInertiaError(Symmetric3x3 numericalLocalInverseInertia, BodyInertia analyticInertia)
+        {
+            if (!ValuesAreSimilar(analyticInertia.InverseInertiaTensor.XX, numericalLocalInverseInertia.XX) ||
+                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.YX, numericalLocalInverseInertia.YX) ||
+                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.YY, numericalLocalInverseInertia.YY) ||
+                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZX, numericalLocalInverseInertia.ZX) ||
+                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZY, numericalLocalInverseInertia.ZY) ||
+                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZZ, numericalLocalInverseInertia.ZZ))
+            {
+                Assert.True(false, "Excessive error in numerical vs analytic inertia tensor.");
+                Console.WriteLine($"ANALYTIC INERTIA:   {analyticInertia.InverseInertiaTensor} vs ");
+                Console.WriteLine($"NUMERICAL INERTIA:  {numericalLocalInverseInertia}");
+                Symmetric3x3.Subtract(analyticInertia.InverseInertiaTensor, numericalLocalInverseInertia, out var difference);
+                Console.WriteLine($"DIFFERENCE: {difference}");
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void AccumulateSampleIntoInertia(Vector3 sampleLocation, ref Symmetric3x3 numericalLocalInertia)
+        {
+            var dd = Vector3.Dot(sampleLocation, sampleLocation);
+            numericalLocalInertia.XX += dd - sampleLocation.X * sampleLocation.X;
+            numericalLocalInertia.YX += -sampleLocation.X * sampleLocation.Y;
+            numericalLocalInertia.YY += dd - sampleLocation.Y * sampleLocation.Y;
+            numericalLocalInertia.ZX += -sampleLocation.X * sampleLocation.Z;
+            numericalLocalInertia.ZY += -sampleLocation.Y * sampleLocation.Z;
+            numericalLocalInertia.ZZ += dd - sampleLocation.Z * sampleLocation.Z;
+        }
+
         static void CheckInertia<TInertiaTester>(ref TInertiaTester tester) where TInertiaTester : IInertiaTester
         {
             tester.ComputeBounds(out var min, out var max);
@@ -183,13 +221,7 @@ namespace DemoTests
                         var sampleLocation = sampleMin + new Vector3(i, j, k) * sampleSpacing;
                         if (tester.PointIsContained(ref sampleSpacing, ref sampleLocation))
                         {
-                            var dd = Vector3.Dot(sampleLocation, sampleLocation);
-                            numericalLocalInertia.XX += dd - sampleLocation.X * sampleLocation.X;
-                            numericalLocalInertia.YX += -sampleLocation.X * sampleLocation.Y;
-                            numericalLocalInertia.YY += dd - sampleLocation.Y * sampleLocation.Y;
-                            numericalLocalInertia.ZX += -sampleLocation.X * sampleLocation.Z;
-                            numericalLocalInertia.ZY += -sampleLocation.Y * sampleLocation.Z;
-                            numericalLocalInertia.ZZ += dd - sampleLocation.Z * sampleLocation.Z;
+                            AccumulateSampleIntoInertia(sampleLocation, ref numericalLocalInertia);
                             ++containedSampleCount;
                         }
                     }
@@ -199,26 +231,96 @@ namespace DemoTests
             Symmetric3x3.Scale(numericalLocalInertia, mass / containedSampleCount, out numericalLocalInertia);
             Symmetric3x3.Invert(numericalLocalInertia, out var numericalLocalInverseInertia);
             tester.ComputeAnalyticInertia(mass, out var analyticInertia);
-            if (!ValuesAreSimilar(analyticInertia.InverseInertiaTensor.XX, numericalLocalInverseInertia.XX) ||
-                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.YX, numericalLocalInverseInertia.YX) ||
-                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.YY, numericalLocalInverseInertia.YY) ||
-                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZX, numericalLocalInverseInertia.ZX) ||
-                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZY, numericalLocalInverseInertia.ZY) ||
-                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZZ, numericalLocalInverseInertia.ZZ))
+            CheckInertiaError(numericalLocalInverseInertia, analyticInertia);
+        }
+
+        unsafe struct HitCounter : IShapeRayHitHandler
+        {
+            public int Counter;
+
+            public bool AllowTest(int childIndex)
             {
-                Assert.True(false, "Excessive error in numerical vs analytic inertia tensor.");
-                Console.WriteLine($"ANALYTIC INERTIA:   {analyticInertia.InverseInertiaTensor} vs ");
-                Console.WriteLine($"NUMERICAL INERTIA:  {numericalLocalInverseInertia}");
-                Symmetric3x3.Subtract(analyticInertia.InverseInertiaTensor, numericalLocalInverseInertia, out var difference);
-                Console.WriteLine($"DIFFERENCE: {difference}");
+                return true;
+            }
+
+            public void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex)
+            {
+                ++Counter;
             }
         }
 
-        static bool ValuesAreSimilar(float a, float b)
+
+        public static void TestCompound(Random random, BufferPool pool)
         {
-            var ratio = a / b;
-            const float ratioThreshold = 0.15f;
-            return MathF.Abs(a - b) < 3e-2f || (ratio < (1 + ratioThreshold) && ratio > 1f / (1 + ratioThreshold));
+            var shapes = new Shapes(pool, 8);
+            var treeCompoundBoxShape = new Box(0.5f, 1.5f, 1f);
+            var treeCompoundBoxShapeIndex = shapes.Add(treeCompoundBoxShape);
+            using var compoundBuilder = new CompoundBuilder(pool, shapes, 128);
+
+            //This constant value isn't meaningful- it's just here to capture mass scaling bugs in implementations.
+            var mass = (float)Math.Sqrt(11f / MathHelper.Pi);
+            const int childCount = 4;
+            var massPerChild = mass / childCount;
+            var childInertia = treeCompoundBoxShape.ComputeInertia(massPerChild);
+            for (int i = 0; i < childCount; ++i)
+            {
+                RigidPose localPose;
+                localPose.Position = new Vector3(2, 4, 2) * (0.5f * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One);
+                float orientationLengthSquared;
+                do
+                {
+                    localPose.Orientation = new Quaternion(random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle());
+                    orientationLengthSquared = QuaternionEx.LengthSquared(ref localPose.Orientation);
+                }
+                while (orientationLengthSquared < 1e-9f);
+                QuaternionEx.Scale(localPose.Orientation, 1f / MathF.Sqrt(orientationLengthSquared), out localPose.Orientation);
+                //localPose.Orientation = Quaternion.Identity;
+                //Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI, out localPose.Orientation);
+
+                compoundBuilder.Add(treeCompoundBoxShapeIndex, localPose, childInertia.InverseInertiaTensor, massPerChild);
+            }
+            compoundBuilder.BuildDynamicCompound(out var children, out var analyticInertia, out var center);
+            var compound = new Compound(children);
+
+            compound.ComputeBounds(Quaternion.Identity, shapes, out var min, out var max);
+            var span = max - min;
+            const int axisSampleCount = 128;
+            var sampleSpacing = span / axisSampleCount;
+            var sampleMin = min + sampleSpacing * 0.5f;
+            var numericalLocalInertia = new Symmetric3x3();
+
+            var pose = RigidPose.Identity;
+            var hitCounter = new HitCounter();
+            float maximumT = 0.000001f;
+
+
+            for (int i = 0; i < axisSampleCount; ++i)
+            {
+                for (int j = 0; j < axisSampleCount; ++j)
+                {
+                    for (int k = 0; k < axisSampleCount; ++k)
+                    {
+                        var sampleLocation = sampleMin + new Vector3(i, j, k) * sampleSpacing;
+                        var previousCount = hitCounter.Counter;
+                        compound.RayTest(pose, new RayData { Origin = sampleLocation, Direction = Vector3.UnitY }, ref maximumT, shapes, ref hitCounter);
+                        //If the ray hit more than one shape, then we count them all.
+                        //This matches how the analytic inertia is calculated- every shape provides its own tensor, and they're summed.
+                        //(Notably, if you wanted non-overlapping inertia, this is counterproductive!)
+                        for (int p = previousCount; p < hitCounter.Counter; ++p)
+                        {
+                            AccumulateSampleIntoInertia(sampleLocation, ref numericalLocalInertia);
+                        }
+                    }
+                }
+            }
+
+            Symmetric3x3.Scale(numericalLocalInertia, mass / hitCounter.Counter, out numericalLocalInertia);
+            Symmetric3x3.Invert(numericalLocalInertia, out var numericalLocalInverseInertia);
+            CheckInertiaError(numericalLocalInverseInertia, analyticInertia);
+
+            compound.Dispose(pool);
+            shapes.Dispose();
+
         }
 
         [Fact]
@@ -276,6 +378,11 @@ namespace DemoTests
 
                 CheckInertia(ref tester);
                 tester.Hull.Dispose(pool);
+            }
+
+            for (int i = 0; i < shapeTrials; ++i)
+            {
+                TestCompound(random, pool);
             }
             pool.Clear();
         }
