@@ -281,6 +281,15 @@ namespace DemoTests
             }
             compoundBuilder.BuildDynamicCompound(out var children, out var analyticInertia, out var center);
             var compound = new Compound(children);
+            if (random.NextDouble() < 0.5)
+            {
+                //Bit hacky. Technically two codepaths, want to cover both.
+                Span<float> childMasses = stackalloc float[childCount];
+                for (int i = 0; i < childMasses.Length; ++i)
+                    childMasses[i] = massPerChild;
+                analyticInertia = compound.ComputeInertia(childMasses, shapes, out var doubleCheckedCenter);
+                Assert.True(doubleCheckedCenter.Length() < 1e-4f, "The compound builder should have already recentered the children. Is there a disagreement in the center of mass calculation somewhere?");
+            }
 
             compound.ComputeBounds(Quaternion.Identity, shapes, out var min, out var max);
             var span = max - min;

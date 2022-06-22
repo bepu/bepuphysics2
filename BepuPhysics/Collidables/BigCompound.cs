@@ -240,6 +240,32 @@ namespace BepuPhysics.Collidables
             Tree.Sweep(min, max, sweep, maximumT, ref enumerator);
         }
 
+        /// <summary>
+        /// Computes the inertia of a compound. Does not recenter the child poses.
+        /// </summary>
+        /// <param name="childMasses">Masses of the children.</param>
+        /// <param name="shapes">Shapes collection containing the data for the compound child shapes.</param>
+        /// <returns>Inertia of the compound.</returns>
+        public BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes)
+        {
+            return CompoundBuilder.ComputeInertia(Children, childMasses, shapes);
+        }
+
+        /// <summary>
+        /// Computes the inertia of a compound. Recenters the child poses around the calculated center of mass.
+        /// </summary>
+        /// <param name="shapes">Shapes collection containing the data for the compound child shapes.</param>
+        /// <param name="childMasses">Masses of the children.</param>
+        /// <param name="centerOfMass">Calculated center of mass of the compound. Subtracted from all the compound child poses.</param>
+        /// <returns>Inertia of the compound.</returns>
+        public BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes, out Vector3 centerOfMass)
+        {
+            var bodyInertia = CompoundBuilder.ComputeInertia(Children, childMasses, shapes, out centerOfMass);
+            //Recentering moves the children around, so the tree needs to be updated.
+            Tree.Refit();
+            return bodyInertia;
+        }
+
         public void Dispose(BufferPool bufferPool)
         {
             bufferPool.Return(ref Children);

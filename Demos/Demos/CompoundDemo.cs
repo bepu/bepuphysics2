@@ -8,7 +8,6 @@ using DemoContentLoader;
 using BepuPhysics.Constraints;
 using DemoRenderer.UI;
 using DemoUtilities;
-using BepuUtilities.Memory;
 
 namespace Demos.Demos
 {

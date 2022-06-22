@@ -9,9 +9,18 @@ using BepuPhysics.CollisionDetection.CollisionTasks;
 
 namespace BepuPhysics.Collidables
 {
+    /// <summary>
+    /// Shape and pose of a child within a compound shape.
+    /// </summary>
     public struct CompoundChild
     {
+        /// <summary>
+        /// Index of the shape within whatever shape collection holds the compound's child shape data.
+        /// </summary>
         public TypedIndex ShapeIndex;
+        /// <summary>
+        /// Pose of the child in the compound's local space.
+        /// </summary>
         public RigidPose LocalPose;
     }
 
@@ -304,7 +313,29 @@ namespace BepuPhysics.Collidables
                     overlaps.Allocate(pool) = i;
                 }
             }
+        }
 
+        /// <summary>
+        /// Computes the inertia of a compound. Does not recenter the child poses.
+        /// </summary>
+        /// <param name="childMasses">Masses of the children.</param>
+        /// <param name="shapes">Shapes collection containing the data for the compound child shapes.</param>
+        /// <returns>Inertia of the compound.</returns>
+        public BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes)
+        {
+            return CompoundBuilder.ComputeInertia(Children, childMasses, shapes);
+        }
+
+        /// <summary>
+        /// Computes the inertia of a compound. Recenters the child poses around the calculated center of mass.
+        /// </summary>
+        /// <param name="shapes">Shapes collection containing the data for the compound child shapes.</param>
+        /// <param name="childMasses">Masses of the children.</param>
+        /// <param name="centerOfMass">Calculated center of mass of the compound. Subtracted from all the compound child poses.</param>
+        /// <returns>Inertia of the compound.</returns>
+        public BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes, out Vector3 centerOfMass)
+        {
+            return CompoundBuilder.ComputeInertia(Children, childMasses, shapes, out centerOfMass);
         }
 
         public void Dispose(BufferPool bufferPool)

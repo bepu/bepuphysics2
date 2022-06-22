@@ -197,8 +197,23 @@ namespace BepuPhysics.Collidables
         }
     }
 
+    /// <summary>
+    /// Defines a shape batch containing convex objects that support simple inertia calculations.
+    /// </summary>
+    /// <remarks>This interface gives compounds a way to compute inertia despite not having direct typed access to the child shapes.
+    /// It's a layer of overhead that can usually be avoided, but it's sometimes convenient to be able to just enumerate child inertias.</remarks>
+    public interface IConvexShapeBatch
+    {
+        /// <summary>
+        /// Computes the inertia of a shape.
+        /// </summary>
+        /// <param name="shapeIndex">Index of the shape to compute the inertia of.</param>
+        /// <param name="mass">Mass to use to compute the inertia.</param>
+        /// <returns>Inertia of the shape.</returns>
+        BodyInertia ComputeInertia(int shapeIndex, float mass);
+    }
 
-    public class ConvexShapeBatch<TShape, TShapeWide> : ShapeBatch<TShape>
+    public class ConvexShapeBatch<TShape, TShapeWide> : ShapeBatch<TShape>, IConvexShapeBatch
         where TShape : unmanaged, IConvexShape
         where TShapeWide : unmanaged, IShapeWide<TShape>
     {
@@ -214,6 +229,11 @@ namespace BepuPhysics.Collidables
         protected override void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool)
         {
             //And they don't have any children.
+        }
+
+        public BodyInertia ComputeInertia(int shapeIndex, float mass)
+        {
+            return shapes[shapeIndex].ComputeInertia(mass);
         }
 
         public override void ComputeBounds(ref BoundingBoxBatcher batcher)

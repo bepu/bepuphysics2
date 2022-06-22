@@ -243,7 +243,7 @@ namespace BepuPhysics.Collidables
         /// <param name="inverseLocalInertias">Inverse inertias of the children, each in the child's local space. Assumed to have already been premultiplied by the mass of the child.</param>
         /// <param name="childMasses">Masses of each child in the compound.</param>
         /// <returns><see cref="BodyInertia"/> of the compound.</returns>
-        public static BodyInertia ComputeInertia(Span<RigidPose> childPoses, Span<Symmetric3x3> inverseLocalInertias, Span<float> childMasses)
+        public static BodyInertia ComputeInverseInertia(Span<RigidPose> childPoses, Span<Symmetric3x3> inverseLocalInertias, Span<float> childMasses)
         {
             Symmetric3x3 summedInertia = default;
             float massSum = 0;
@@ -354,6 +354,48 @@ namespace BepuPhysics.Collidables
             return inertia;
         }
 
+        /// <summary>
+        /// Computes the inertia of a compound. Does not recenter the child poses.
+        /// </summary>
+        /// <param name="children">Children of the compound.</param>
+        /// <param name="shapes">Shapes collection containing the data for the compound child shapes.</param>
+        /// <param name="childMasses">Masses of the children.</param>
+        /// <returns>Inertia of the compound.</returns>
+        public static BodyInertia ComputeInertia(Span<CompoundChild> children, Span<float> childMasses, Shapes shapes)
+        {
+            Span<Symmetric3x3> localInverseInertias = stackalloc Symmetric3x3[children.Length];
+            for (int i = 0; i < children.Length; ++i)
+            {
+                ref var child = ref children[i];
+                if (shapes[child.ShapeIndex.Type] is IConvexShapeBatch batch)
+                {
+                    localInverseInertias[i] = batch.ComputeInertia(child.ShapeIndex.Index, childMasses[i]).InverseInertiaTensor;
+                }
+            }
+            return ComputeInverseInertia(children, localInverseInertias, childMasses);
+        }
+
+        /// <summary>
+        /// Computes the inertia of a compound. Recenters the child poses around the calculated center of mass.
+        /// </summary>
+        /// <param name="children">Children of the compound. Child local positions will have the calculated center of mass subtracted from them.</param>
+        /// <param name="shapes">Shapes collection containing the data for the compound child shapes.</param>
+        /// <param name="childMasses">Masses of the children.</param>
+        /// <param name="centerOfMass">Calculated center of mass of the compound. Subtracted from all the compound child poses.</param>
+        /// <returns>Inertia of the compound.</returns>
+        public static BodyInertia ComputeInertia(Span<CompoundChild> children, Span<float> childMasses, Shapes shapes, out Vector3 centerOfMass)
+        {
+            Span<Symmetric3x3> localInverseInertias = stackalloc Symmetric3x3[children.Length];
+            for (int i = 0; i < children.Length; ++i)
+            {
+                ref var child = ref children[i];
+                if (shapes[child.ShapeIndex.Type] is IConvexShapeBatch batch)
+                {
+                    localInverseInertias[i] = batch.ComputeInertia(child.ShapeIndex.Index, childMasses[i]).InverseInertiaTensor;
+                }
+            }
+            return ComputeInverseInertia(children, localInverseInertias, childMasses, out centerOfMass);
+        }
 
         /// <summary>
         /// Builds a buffer of compound children from the accumulated set for a kinematic compound.
