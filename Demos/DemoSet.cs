@@ -64,6 +64,7 @@ namespace Demos
             AddOption<SubsteppingDemo>();
             AddOption<ChainFountainDemo>();
             AddOption<RopeTwistDemo>();
+            AddOption<FrictionDemo>();
             AddOption<BouncinessDemo>();
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();

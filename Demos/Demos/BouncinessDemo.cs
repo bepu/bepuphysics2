@@ -16,8 +16,13 @@ namespace Demos.Demos
     /// Shows how to configure things to bounce in the absence of a coefficient of restitution.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// v2 does not support traditional coefficients of restitution because it conflicts with speculative contacts.
     /// All contacts are, however, springs. With a little configuration, you can give objects physically reasonable bounciness.
+    /// </para>
+    /// <para>
+    /// For a similar example of friction, see the <see cref="FrictionDemo"/>.
+    /// </para>
     /// </remarks>
     public class BouncinessDemo : Demo
     {
@@ -29,6 +34,13 @@ namespace Demos.Demos
         }
         public unsafe struct BounceCallbacks : INarrowPhaseCallbacks
         {
+            /// <summary>
+            /// Maps <see cref="CollidableReference"/> entries to their <see cref="SimpleMaterial"/>.
+            /// </summary>
+            /// <remarks>
+            /// The narrow phase callbacks need some way to get the material data for this demo, but there's no requirement that you use the <see cref="CollidableProperty{T}"/> type.
+            /// It's just a fairly convenient and simple option.
+            /// </remarks>
             public CollidableProperty<SimpleMaterial> CollidableMaterials;
 
             public void Initialize(Simulation simulation)
