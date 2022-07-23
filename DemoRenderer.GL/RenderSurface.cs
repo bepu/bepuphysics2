@@ -29,6 +29,7 @@ namespace DemoRenderer
         {
             this.window = window;
             context = new GraphicsContext(new GraphicsMode(new ColorFormat(8, 8, 8, 8), 24, 0, 4), window, 4, 6, GraphicsContextFlags.Default);
+            context.MakeCurrent(window);
             context.LoadAll();
             if (enableDeviceDebugLayer)
             {
