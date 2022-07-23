@@ -336,27 +336,39 @@ namespace BepuUtilities.Memory
         /// <typeparam name="T">Type of the buffer to resize.</typeparam>
         /// <param name="buffer">Buffer reference to resize.</param>
         /// <param name="targetSize">Number of elements to resize the buffer for.</param>
-        /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer.</param>
+        /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer. Contents of slots outside the copied range in the resized buffer are undefined.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ResizeToAtLeast<T>(ref Buffer<T> buffer, int targetSize, int copyCount) where T : unmanaged
         {
             //Only do anything if the new size is actually different from the current size.
             Debug.Assert(copyCount <= targetSize && copyCount <= buffer.Length, "Can't copy more elements than exist in the source or target buffers.");
             targetSize = GetCapacityForCount<T>(targetSize);
-            if (buffer.Length != targetSize) //Note that we don't check for allocated status- for buffers, a length of 0 is the same as being unallocated.
+            if (!buffer.Allocated)
             {
-                TakeAtLeast(targetSize, out Buffer<T> newBuffer);
-                if (buffer.Length > 0)
+                Debug.Assert(buffer.Length == 0, "If a buffer is pointing at null, then it should be default initialized and have a length of zero too.");
+                //This buffer is not allocated; just return a new one. No copying to be done.
+                TakeAtLeast(targetSize, out buffer);
+            }
+            else
+            {
+                var originalAllocatedSizeInBytes = 1 << (buffer.Id >> PowerPool.IdPowerShift);
+                var originalAllocatedSize = originalAllocatedSizeInBytes / Unsafe.SizeOf<T>();
+                Debug.Assert(originalAllocatedSize >= buffer.Length, "The original allocated capacity must be sufficient for the buffer's observed length. Did the buffer get corrupted? Is this buffer reference from uninitialized memory?");
+                if (targetSize > originalAllocatedSize)
                 {
-                    //Don't bother copying from or re-pooling empty buffers. They're uninitialized.
+                    //The original allocation isn't big enough to hold the new size; allocate a new buffer.
+                    TakeAtLeast(targetSize, out Buffer<T> newBuffer);
                     buffer.CopyTo(0, newBuffer, 0, copyCount);
                     ReturnUnsafely(buffer.Id);
+                    buffer = newBuffer;
                 }
                 else
                 {
-                    Debug.Assert(copyCount == 0, "Should not be trying to copy elements from an empty span.");
+                    //Original allocation is large enough to hold the new size; just bump the size up.
+                    //The expectation for this function is to bump up to the next power of 2, given the 'AtLeast' suffix, so just expose the full original size.
+                    //No need for copying.
+                    buffer.length = originalAllocatedSize;
                 }
-                buffer = newBuffer;
             }
         }
 

@@ -9,7 +9,6 @@ namespace BEPUutilitiesTests
             CodeGenTests.Test();
             AllocatorTests.TestChurnStability();
             QuickCollectionTests.Test();
-            //BoundingTests.Test();
             Console.WriteLine();
             AffineTests.Test();
             Console.WriteLine();
