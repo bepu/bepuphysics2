@@ -1,8 +1,11 @@
-﻿namespace BepuPhysics
+﻿using System.Runtime.InteropServices;
+
+namespace BepuPhysics
 {
     /// <summary>
     /// The common set of allocation sizes for a simulation.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public struct SimulationAllocationSizes
     {
         /// <summary>

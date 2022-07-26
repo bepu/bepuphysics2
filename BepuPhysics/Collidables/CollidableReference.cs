@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Collidables
 {
@@ -27,6 +28,7 @@ namespace BepuPhysics.Collidables
     /// <summary>
     /// Uses a bitpacked representation to refer to a body or static collidable.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential, Size = 4)]
     public struct CollidableReference : IEquatable<CollidableReference>
     {
         /// <summary>

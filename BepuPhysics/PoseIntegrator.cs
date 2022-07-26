@@ -26,15 +26,15 @@ namespace BepuPhysics
         /// <summary>
         /// Angular velocity is directly integrated and does not change as the body pose changes. Does not conserve angular momentum.
         /// </summary>
-        Nonconserving,
+        Nonconserving = 0,
         /// <summary>
         /// Approximately conserves angular momentum by updating the angular velocity according to the change in orientation. Does a decent job for gyroscopes, but angular velocities will tend to drift towards a minimal inertia axis.
         /// </summary>
-        ConserveMomentum,
+        ConserveMomentum = 1,
         /// <summary>
         /// Approximately conserves angular momentum by including an implicit gyroscopic torque. Best option for Dzhanibekov effect simulation, but applies a damping effect that can make gyroscopes less useful.
         /// </summary>
-        ConserveMomentumWithGyroscopicTorque,
+        ConserveMomentumWithGyroscopicTorque = 2,
     }
 
     /// <summary>
