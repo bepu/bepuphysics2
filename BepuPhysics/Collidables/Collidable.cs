@@ -33,6 +33,7 @@ namespace BepuPhysics.Collidables
     /// <summary>
     /// Defines how a collidable handles collisions with significant velocity.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public struct ContinuousDetection
     {
         /// <summary>

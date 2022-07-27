@@ -1,8 +1,11 @@
-﻿namespace BepuPhysics.Collidables
+﻿using System.Runtime.InteropServices;
+
+namespace BepuPhysics.Collidables
 {
     /// <summary>
     /// Describes a collidable and how it should handle continuous collision detection.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public struct CollidableDescription
     {
         /// <summary>

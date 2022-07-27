@@ -4,12 +4,14 @@ using BepuUtilities;
 using BepuUtilities.Memory;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace BepuPhysics
 {
     /// <summary>
     /// Describes the thresholds for a body going to sleep.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public struct BodyActivityDescription
     {
         /// <summary>
