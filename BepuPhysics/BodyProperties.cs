@@ -289,7 +289,7 @@ namespace BepuPhysics
     /// Note that this goes along with a change to the buffer pool's default alignment to 128 bytes.
     /// </remarks>
     [StructLayout(LayoutKind.Sequential)]
-    public struct SolverState
+    public struct BodyDynamics
     {
         /// <summary>
         /// Pose and velocity information for the body.

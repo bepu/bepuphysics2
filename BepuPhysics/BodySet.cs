@@ -38,7 +38,7 @@ namespace BepuPhysics
         /// <summary>
         /// Stores all data involved in solving constraints for a body, including pose, velocity, and inertia.
         /// </summary>
-        public Buffer<SolverState> SolverStates;
+        public Buffer<BodyDynamics> SolverStates;
 
         /// <summary>
         /// The collidables owned by each body in the set. Speculative margins, continuity settings, and shape indices can be changed directly.

@@ -17,7 +17,7 @@ namespace BepuPhysics
     {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteGatherInertia(int index, int bodyIndexInBundle, ref Buffer<SolverState> states, ref BodyInertiaWide gatheredInertias)
+        private static void WriteGatherInertia(int index, int bodyIndexInBundle, ref Buffer<BodyDynamics> states, ref BodyInertiaWide gatheredInertias)
         {
             ref var source = ref states[index].Inertia.World;
             ref var targetSlot = ref GetOffsetInstance(ref gatheredInertias, bodyIndexInBundle);
@@ -31,7 +31,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteGatherMotionState(int index, int bodyIndexInBundle, ref Buffer<SolverState> states,
+        private static void WriteGatherMotionState(int index, int bodyIndexInBundle, ref Buffer<BodyDynamics> states,
             ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
         {
             ref var state = ref states[index].Motion;
@@ -43,7 +43,7 @@ namespace BepuPhysics
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void FallbackGatherMotionState(SolverState* states, Vector<int> encodedBodyIndices, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
+        unsafe static void FallbackGatherMotionState(BodyDynamics* states, Vector<int> encodedBodyIndices, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity)
         {
             var pPositionX = (float*)Unsafe.AsPointer(ref position.X);
             var pPositionY = (float*)Unsafe.AsPointer(ref position.Y);
@@ -81,7 +81,7 @@ namespace BepuPhysics
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void FallbackGatherInertia(SolverState* states, Vector<int> encodedBodyIndices, ref BodyInertiaWide inertia, int offsetInFloats)
+        unsafe static void FallbackGatherInertia(BodyDynamics* states, Vector<int> encodedBodyIndices, ref BodyInertiaWide inertia, int offsetInFloats)
         {
             var pMass = (float*)Unsafe.AsPointer(ref inertia.InverseMass);
             var pInertiaXX = (float*)Unsafe.AsPointer(ref inertia.InverseInertiaTensor.XX);

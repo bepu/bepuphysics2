@@ -130,9 +130,9 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Gets a reference to the body's solver-relevant state, including both pose, velocity, and inertia.
+        /// Gets a reference to the body's solver-relevant state, including pose, velocity, and inertia.
         /// </summary>
-        public ref SolverState SolverState
+        public ref BodyDynamics Dynamics
         {
             [MethodImpl(MethodImplOptions.NoInlining)]
             get
