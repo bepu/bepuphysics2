@@ -3,6 +3,7 @@ using System.Diagnostics;
 using BepuUtilities.Memory;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace BepuUtilities.Collections
 {
@@ -21,6 +22,7 @@ namespace BepuUtilities.Collections
     /// it does not (and is incapable of) checking that provided memory gets returned to the same pool that it came from.
     /// </remarks>
     /// <typeparam name="T">Type of the elements in the list.</typeparam>
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
     public struct QuickList<T> where T : unmanaged
     {
         /// <summary>
