@@ -499,6 +499,17 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Gets the current description of the static referred to by a given handle.
+        /// </summary>
+        /// <param name="handle">Handle of the static to look up the description of.</param>
+        /// <returns>Gathered description of the handle-referenced static.</returns>
+        public StaticDescription GetDescription(StaticHandle handle)
+        {
+            GetDescription(handle, out var description);
+            return description;
+        }
+
+        /// <summary>
         /// Gets a reference to a static by its handle.
         /// </summary>
         /// <param name="handle">Handle of the static to grab a reference of.</param>

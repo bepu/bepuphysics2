@@ -50,6 +50,7 @@ namespace BepuPhysics
     /// <summary>
     /// Describes a body's state.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public struct BodyDescription
     {
         /// <summary>

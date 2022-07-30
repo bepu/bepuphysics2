@@ -94,6 +94,15 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Gets a description of the static.
+        /// </summary>
+        /// <returns>Description of the static.</returns>
+        public StaticDescription GetDescription()
+        {
+            return Statics.GetDescription(Handle);
+        }
+
+        /// <summary>
         /// Sets a static's properties according to a description.
         /// </summary>
         /// <param name="description">Description of the static.</param>
