@@ -38,7 +38,7 @@ namespace BepuPhysics
         /// <summary>
         /// Stores all data involved in solving constraints for a body, including pose, velocity, and inertia.
         /// </summary>
-        public Buffer<BodyDynamics> SolverStates;
+        public Buffer<BodyDynamics> DynamicsState;
 
         /// <summary>
         /// The collidables owned by each body in the set. Speculative margins, continuity settings, and shape indices can be changed directly.
@@ -90,7 +90,7 @@ namespace BepuPhysics
             {
                 movedBodyIndex = Count;
                 //Copy the memory state of the last element down.
-                SolverStates[bodyIndex] = SolverStates[movedBodyIndex];
+                DynamicsState[bodyIndex] = DynamicsState[movedBodyIndex];
                 Activity[bodyIndex] = Activity[movedBodyIndex];
                 Collidables[bodyIndex] = Collidables[movedBodyIndex];
                 //Note that the constraint list is NOT disposed before being overwritten.
@@ -125,7 +125,7 @@ namespace BepuPhysics
                 description.LocalInertia.InverseInertiaTensor.ZZ * description.LocalInertia.InverseInertiaTensor.ZZ), $"Invalid body inverse inertia tensor: {description.LocalInertia.InverseInertiaTensor}");
             Debug.Assert(!MathChecker.IsInvalid(description.LocalInertia.InverseMass) && description.LocalInertia.InverseMass >= 0, $"Invalid body inverse mass: {description.LocalInertia.InverseMass}");
 
-            ref var state = ref SolverStates[index];
+            ref var state = ref DynamicsState[index];
             state.Motion.Pose = description.Pose;
             state.Motion.Velocity = description.Velocity;
             state.Inertia.Local = description.LocalInertia;
@@ -152,7 +152,7 @@ namespace BepuPhysics
 
         public void GetDescription(int index, out BodyDescription description)
         {
-            ref var state = ref SolverStates[index];
+            ref var state = ref DynamicsState[index];
             description.Pose = state.Motion.Pose;
             description.Velocity = state.Motion.Velocity;
             description.LocalInertia = state.Inertia.Local;
@@ -235,8 +235,8 @@ namespace BepuPhysics
             //Note that we base the bundle capacities on post-resize capacity of the IndexToHandle array. This simplifies the conditions on allocation, but increases memory use.
             //You may want to change this in the future if memory use is concerning.
             targetBodyCapacity = BufferPool.GetCapacityForCount<int>(targetBodyCapacity);
-            Debug.Assert(SolverStates.Length != BufferPool.GetCapacityForCount<RigidPoseWide>(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
-            pool.ResizeToAtLeast(ref SolverStates, targetBodyCapacity, Count);
+            Debug.Assert(DynamicsState.Length != BufferPool.GetCapacityForCount<RigidPoseWide>(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
+            pool.ResizeToAtLeast(ref DynamicsState, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref IndexToHandle, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref Collidables, targetBodyCapacity, Count);
             pool.ResizeToAtLeast(ref Activity, targetBodyCapacity, Count);
@@ -258,7 +258,7 @@ namespace BepuPhysics
         /// <param name="pool">Pool to return the set's top level buffers to.</param>
         public void DisposeBuffers(BufferPool pool)
         {
-            pool.Return(ref SolverStates);
+            pool.Return(ref DynamicsState);
             pool.Return(ref IndexToHandle);
             pool.Return(ref Collidables);
             pool.Return(ref Activity);

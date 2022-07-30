@@ -409,7 +409,7 @@ namespace BepuPhysics.CollisionDetection
             var twoBodies = bMobility != CollidableMobility.Static;
             ref var bodyLocationA = ref Bodies.HandleToLocation[a.BodyHandle.Value];
             ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
-            ref var stateA = ref setA.SolverStates[bodyLocationA.Index];
+            ref var stateA = ref setA.DynamicsState[bodyLocationA.Index];
             ref var collidableA = ref setA.Collidables[bodyLocationA.Index];
             float speculativeMarginB;
             if (twoBodies)
@@ -444,7 +444,7 @@ namespace BepuPhysics.CollisionDetection
                 ref var bodyLocationB = ref Bodies.HandleToLocation[b.BodyHandle.Value];
                 Debug.Assert(bodyLocationA.SetIndex == 0 || bodyLocationB.SetIndex == 0, "One of the two bodies must be active. Otherwise, something is busted!");
                 ref var setB = ref Bodies.Sets[bodyLocationB.SetIndex];
-                ref var stateB = ref setB.SolverStates[bodyLocationB.Index];
+                ref var stateB = ref setB.DynamicsState[bodyLocationB.Index];
                 ref var collidableB = ref setB.Collidables[bodyLocationB.Index];
                 AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
                     ref collidableA.Continuity, ref collidableB.Continuity,

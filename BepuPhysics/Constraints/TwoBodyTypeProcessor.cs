@@ -178,7 +178,7 @@ namespace BepuPhysics.Constraints
             var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             Unsafe.SkipInit(out TConstraintFunctions function);
-            ref var states = ref bodies.ActiveSet.SolverStates;
+            ref var states = ref bodies.ActiveSet.DynamicsState;
             //EarlyPrefetch(WarmStartPrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref states, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
@@ -215,7 +215,7 @@ namespace BepuPhysics.Constraints
             var bodyReferencesBundles = typeBatch.BodyReferences.As<TwoBodyReferences>();
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             Unsafe.SkipInit(out TConstraintFunctions function);
-            ref var motionStates = ref bodies.ActiveSet.SolverStates;
+            ref var motionStates = ref bodies.ActiveSet.DynamicsState;
             //EarlyPrefetch(SolvePrefetchDistance, ref typeBatch, ref bodyReferencesBundles, ref motionStates, startBundle, exclusiveEndBundle);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {

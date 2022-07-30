@@ -107,7 +107,7 @@ namespace BepuPhysics.Constraints
             var bodyReferencesBundles = typeBatch.BodyReferences.As<ThreeBodyReferences>();
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
-            ref var states = ref bodies.ActiveSet.SolverStates;
+            ref var states = ref bodies.ActiveSet.DynamicsState;
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];
@@ -149,7 +149,7 @@ namespace BepuPhysics.Constraints
             var bodyReferencesBundles = typeBatch.BodyReferences.As<ThreeBodyReferences>();
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             var function = default(TConstraintFunctions);
-            ref var motionStates = ref bodies.ActiveSet.SolverStates;
+            ref var motionStates = ref bodies.ActiveSet.DynamicsState;
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];

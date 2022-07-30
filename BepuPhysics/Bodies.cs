@@ -132,7 +132,7 @@ namespace BepuPhysics
             ref var collidable = ref set.Collidables[location.Index];
             if (collidable.Shape.Exists)
             {
-                shapes.UpdateBounds(set.SolverStates[location.Index].Motion.Pose, collidable.Shape, out var bodyBounds);
+                shapes.UpdateBounds(set.DynamicsState[location.Index].Motion.Pose, collidable.Shape, out var bodyBounds);
                 if (location.SetIndex == 0)
                 {
                     broadPhase.UpdateActiveBounds(collidable.BroadPhaseIndex, bodyBounds.Min, bodyBounds.Max);
@@ -441,8 +441,8 @@ namespace BepuPhysics
             }
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
-            ref var inertiaReference = ref set.SolverStates[location.Index].Inertia;
-            ref var localInertiaReference = ref set.SolverStates[location.Index].Inertia.Local;
+            ref var inertiaReference = ref set.DynamicsState[location.Index].Inertia;
+            ref var localInertiaReference = ref set.DynamicsState[location.Index].Inertia.Local;
             var nowKinematic = IsKinematic(localInertia);
             var previouslyKinematic = IsKinematicUnsafeGCHole(ref inertiaReference.Local);
             inertiaReference.Local = localInertia;
@@ -462,7 +462,7 @@ namespace BepuPhysics
                 if (newShape.Exists)
                 {
                     //Add a collidable to the simulation for the new shape.
-                    ref var state = ref set.SolverStates[activeBodyIndex];
+                    ref var state = ref set.DynamicsState[activeBodyIndex];
                     AddCollidableToBroadPhase(handle, state.Motion.Pose, state.Inertia.Local, ref set.Collidables[activeBodyIndex]);
                 }
                 else
@@ -517,7 +517,7 @@ namespace BepuPhysics
             ref var collidable = ref set.Collidables[location.Index];
             var oldShape = collidable.Shape;
             var nowKinematic = IsKinematic(description.LocalInertia);
-            var previouslyKinematic = IsKinematicUnsafeGCHole(ref set.SolverStates[location.Index].Inertia.Local);
+            var previouslyKinematic = IsKinematicUnsafeGCHole(ref set.DynamicsState[location.Index].Inertia.Local);
             set.ApplyDescriptionByIndex(location.Index, description);
             UpdateForShapeChange(handle, location.Index, oldShape, description.Collidable.Shape);
             UpdateForKinematicStateChange(handle, ref location, ref set, previouslyKinematic, nowKinematic);
@@ -601,7 +601,7 @@ namespace BepuPhysics
                 {
                     for (int j = 0; j < set.Count; ++j)
                     {
-                        ref var state = ref set.SolverStates[j];
+                        ref var state = ref set.DynamicsState[j];
                         try
                         {
                             state.Motion.Pose.Position.Validate();
@@ -628,7 +628,7 @@ namespace BepuPhysics
             ref var set = ref ActiveSet;
             for (int j = 0; j < set.Count; ++j)
             {
-                ref var state = ref set.SolverStates[j];
+                ref var state = ref set.DynamicsState[j];
                 instance.ContributeToHash(ref hash, state.Motion.Pose.Position);
                 instance.ContributeToHash(ref hash, state.Motion.Pose.Orientation);
                 instance.ContributeToHash(ref hash, state.Motion.Velocity.Linear);

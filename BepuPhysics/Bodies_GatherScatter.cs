@@ -270,7 +270,7 @@ namespace BepuPhysics
         public unsafe void GatherState<TAccessFilter>(Vector<int> encodedBodyIndices, bool worldInertia, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
             where TAccessFilter : unmanaged, IBodyAccessFilter
         {
-            var solverStates = ActiveSet.SolverStates.Memory;
+            var solverStates = ActiveSet.DynamicsState.Memory;
             Unsafe.SkipInit(out TAccessFilter filter);
             if (Avx.IsSupported && Vector<float>.Count == 8)
             {
@@ -489,7 +489,7 @@ namespace BepuPhysics
         {
             if (Avx.IsSupported && Vector<float>.Count == 8)
             {
-                var states = ActiveSet.SolverStates.Memory;
+                var states = ActiveSet.DynamicsState.Memory;
                 {
                     var m0 = orientation.X.AsVector256();
                     var m1 = orientation.Y.AsVector256();
@@ -542,7 +542,7 @@ namespace BepuPhysics
                 {
                     if (mask[innerIndex] == 0)
                         continue;
-                    ref var pose = ref ActiveSet.SolverStates[encodedBodyIndices[innerIndex]].Motion.Pose;
+                    ref var pose = ref ActiveSet.DynamicsState[encodedBodyIndices[innerIndex]].Motion.Pose;
                     pose.Position = new Vector3(position.X[innerIndex], position.Y[innerIndex], position.Z[innerIndex]);
                     pose.Orientation = new Quaternion(orientation.X[innerIndex], orientation.Y[innerIndex], orientation.Z[innerIndex], orientation.W[innerIndex]);
 
@@ -558,7 +558,7 @@ namespace BepuPhysics
         {
             if (Avx.IsSupported && Vector<float>.Count == 8)
             {
-                var states = ActiveSet.SolverStates.Memory;
+                var states = ActiveSet.DynamicsState.Memory;
                 {
                     var m0 = inertia.InverseInertiaTensor.XX.AsVector256();
                     var m1 = inertia.InverseInertiaTensor.YX.AsVector256();
@@ -612,7 +612,7 @@ namespace BepuPhysics
                 {
                     if (mask[innerIndex] == 0)
                         continue;
-                    ref var target = ref ActiveSet.SolverStates[encodedBodyIndices[innerIndex]].Inertia.World;
+                    ref var target = ref ActiveSet.DynamicsState[encodedBodyIndices[innerIndex]].Inertia.World;
                     target.InverseInertiaTensor.XX = inertia.InverseInertiaTensor.XX[innerIndex];
                     target.InverseInertiaTensor.YX = inertia.InverseInertiaTensor.YX[innerIndex];
                     target.InverseInertiaTensor.YY = inertia.InverseInertiaTensor.YY[innerIndex];
@@ -674,7 +674,7 @@ namespace BepuPhysics
                     var o6 = Avx.Shuffle(n4, n5, 2 | (3 << 2) | (2 << 4) | (3 << 6));
 
                     var indices = (uint*)Unsafe.AsPointer(ref encodedBodyIndices);
-                    var states = ActiveSet.SolverStates.Memory;
+                    var states = ActiveSet.DynamicsState.Memory;
                     if (indices[0] < DynamicLimit) Sse.StoreAligned((float*)(states + indices[0]) + targetOffset, o0.GetLower());
                     if (indices[1] < DynamicLimit) Sse.StoreAligned((float*)(states + indices[1]) + targetOffset, o4.GetLower());
                     if (indices[2] < DynamicLimit) Sse.StoreAligned((float*)(states + indices[2]) + targetOffset, o2.GetLower());
@@ -716,7 +716,7 @@ namespace BepuPhysics
                     var o7 = Avx.Shuffle(n6, n7, 2 | (3 << 2) | (2 << 4) | (3 << 6));
 
                     var indices = (uint*)Unsafe.AsPointer(ref encodedBodyIndices);
-                    var states = ActiveSet.SolverStates.Memory;
+                    var states = ActiveSet.DynamicsState.Memory;
                     if (indices[0] < DynamicLimit) Avx.StoreAligned((float*)(states + indices[0]) + 8, Avx.Permute2x128(o0, o1, 0 | (2 << 4)));
                     if (indices[1] < DynamicLimit) Avx.StoreAligned((float*)(states + indices[1]) + 8, Avx.Permute2x128(o4, o5, 0 | (2 << 4)));
                     if (indices[2] < DynamicLimit) Avx.StoreAligned((float*)(states + indices[2]) + 8, Avx.Permute2x128(o2, o3, 0 | (2 << 4)));
@@ -748,7 +748,7 @@ namespace BepuPhysics
                     if (indices[innerIndex] >= DynamicLimit)
                         continue;
                     ref var sourceSlot = ref GetOffsetInstance(ref sourceVelocities, innerIndex);
-                    ref var target = ref ActiveSet.SolverStates[indices[innerIndex]].Motion.Velocity;
+                    ref var target = ref ActiveSet.DynamicsState[indices[innerIndex]].Motion.Velocity;
                     target.Linear = new Vector3(sourceSlot.Linear.X[0], sourceSlot.Linear.Y[0], sourceSlot.Linear.Z[0]);
                     target.Angular = new Vector3(sourceSlot.Angular.X[0], sourceSlot.Angular.Y[0], sourceSlot.Angular.Z[0]);
                 }

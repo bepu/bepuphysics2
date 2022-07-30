@@ -376,7 +376,7 @@ namespace BepuPhysics
                                         if (setIndex == 0)
                                         {
                                             //Active set references are indices.
-                                            kinematicByInertia = Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[encodedBodyReference & Bodies.BodyReferenceMask].Inertia.Local);
+                                            kinematicByInertia = Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.DynamicsState[encodedBodyReference & Bodies.BodyReferenceMask].Inertia.Local);
                                         }
                                         else
                                         {
@@ -399,7 +399,7 @@ namespace BepuPhysics
             ref var set = ref bodies.ActiveSet;
             for (int i = 0; i < set.Count; ++i)
             {
-                if (Bodies.IsKinematicUnsafeGCHole(ref set.SolverStates[i].Inertia.Local) && set.Constraints[i].Count > 0)
+                if (Bodies.IsKinematicUnsafeGCHole(ref set.DynamicsState[i].Inertia.Local) && set.Constraints[i].Count > 0)
                 {
                     var contained = ConstrainedKinematicHandles.Contains(set.IndexToHandle[i].Value);
                     if (!contained)
@@ -486,7 +486,7 @@ namespace BepuPhysics
             {
                 for (int i = 0; i < set.SequentialFallback.dynamicBodyConstraintCounts.Count; ++i)
                 {
-                    Debug.Assert(!Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[set.SequentialFallback.dynamicBodyConstraintCounts.Keys[i]].Inertia.Local),
+                    Debug.Assert(!Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.DynamicsState[set.SequentialFallback.dynamicBodyConstraintCounts.Keys[i]].Inertia.Local),
                         "All ostensibly dynamic bodies tracked by the fallback batch must actually be dynamic.");
                 }
                 for (int i = 0; i < bodies.ActiveSet.Count; ++i)
@@ -501,7 +501,7 @@ namespace BepuPhysics
                         }
                     }
                     var bodyIsInFallbackDynamicsSet = ActiveSet.SequentialFallback.dynamicBodyConstraintCounts.TryGetValue(i, out var countForBody);
-                    if (Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[i].Inertia.Local))
+                    if (Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.DynamicsState[i].Inertia.Local))
                     {
                         Debug.Assert(!bodyIsInFallbackDynamicsSet, "Kinematics should not be present in the dynamic bodies referenced by the fallback batch.");
                     }
@@ -740,7 +740,7 @@ namespace BepuPhysics
                     var handle = bodies.ActiveSet.IndexToHandle[i];
                     int expectedCount = 0;
                     int bodyReference = i;
-                    if (Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.SolverStates[i].Inertia.Local))
+                    if (Bodies.IsKinematicUnsafeGCHole(ref bodies.ActiveSet.DynamicsState[i].Inertia.Local))
                     {
                         //Kinematic bodies may appear more than once in non-fallback batches, so we have to count how many references to expect.
                         var constraints = bodies.ActiveSet.Constraints[i];
@@ -1060,7 +1060,7 @@ namespace BepuPhysics
         {
             //Kinematics do not block allocation in a batch; they are treated as read only by the solver.
             int blockingCount = 0;
-            var solverStates = bodies.ActiveSet.SolverStates;
+            var solverStates = bodies.ActiveSet.DynamicsState;
             for (int i = 0; i < bodyHandles.Length; ++i)
             {
                 var location = bodies.HandleToLocation[bodyHandles[i].Value];

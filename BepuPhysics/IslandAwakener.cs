@@ -295,12 +295,12 @@ namespace BepuPhysics
                         ref var targetSet = ref bodies.ActiveSet;
                         sourceSet.Collidables.CopyTo(job.SourceStart, targetSet.Collidables, job.TargetStart, job.Count);
                         sourceSet.Constraints.CopyTo(job.SourceStart, targetSet.Constraints, job.TargetStart, job.Count);
-                        sourceSet.SolverStates.CopyTo(job.SourceStart, targetSet.SolverStates, job.TargetStart, job.Count);
+                        sourceSet.DynamicsState.CopyTo(job.SourceStart, targetSet.DynamicsState, job.TargetStart, job.Count);
                         //This rescans the memory, but it should be still floating in cache ready to access.
                         for (int i = 0; i < job.Count; ++i)
                         {
                             var sourceBodyIndex = i + job.SourceStart;
-                            if (Bodies.IsKinematicUnsafeGCHole(ref sourceSet.SolverStates[sourceBodyIndex].Inertia.Local) && sourceSet.Constraints[sourceBodyIndex].Count > 0)
+                            if (Bodies.IsKinematicUnsafeGCHole(ref sourceSet.DynamicsState[sourceBodyIndex].Inertia.Local) && sourceSet.Constraints[sourceBodyIndex].Count > 0)
                             {
                                 bool taken = false;
                                 solver.constrainedKinematicLock.Enter(ref taken);
