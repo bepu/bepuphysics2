@@ -2,12 +2,15 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
+using System.Diagnostics;
 using System.Numerics;
+using System.Threading;
 
 namespace Demos.Demos
 {
@@ -59,6 +62,8 @@ namespace Demos.Demos
             return position;
         }
 
+        Buffer<BodyHandle> kinematics;
+
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-30, 40, -30);
@@ -86,6 +91,22 @@ namespace Demos.Demos
                 layerPosition.Y += platformsPerLayer * (ringBoxShape.Height * heightPerPlatform + ringBoxShape.Width);
             }
 
+            const int x = 64;
+            const int y = 64;
+            const int z = 64;
+            BufferPool.Take(x * y * z, out kinematics);
+            int kinematicIndex = 0;
+            for (int i = 0; i < x; ++i)
+            {
+                for (int j = 0; j < y; ++j)
+                {
+                    for (int k = 0; k < z; ++k)
+                    {
+                        kinematics[kinematicIndex++] = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(250, 10, 0) + new Vector3(i * 5, j * 5, k * 5), boxDescription.Collidable.Shape, new BodyActivityDescription(0)));
+                    }
+                }
+            }
+
             //Console.WriteLine($"box count: {Simulation.Bodies.ActiveSet.Count}");
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), Simulation.Shapes.Add(new Box(500, 1, 500))));
 
@@ -93,11 +114,12 @@ namespace Demos.Demos
             bulletDescription = BodyDescription.CreateDynamic(new Vector3(), bulletShape.ComputeInertia(.1f), Simulation.Shapes.Add(bulletShape), 0.01f);
 
             var shootiePatootieShape = new Sphere(3f);
-            shootiePatootieDescription = BodyDescription.CreateDynamic(new Vector3(), shootiePatootieShape.ComputeInertia(100), new (Simulation.Shapes.Add(shootiePatootieShape), 0.1f), 0.01f);
+            shootiePatootieDescription = BodyDescription.CreateDynamic(new Vector3(), shootiePatootieShape.ComputeInertia(100), new(Simulation.Shapes.Add(shootiePatootieShape), 0.1f), 0.01f);
         }
 
         BodyDescription bulletDescription;
         BodyDescription shootiePatootieDescription;
+        double time;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
             if (input != null)
@@ -115,6 +137,33 @@ namespace Demos.Demos
                     Simulation.Bodies.Add(shootiePatootieDescription);
                 }
             }
+            var start = Stopwatch.GetTimestamp();
+            time += dt;
+            var velocity = new Vector3((float)Math.Cos(time), 0, 0);
+            int startIndex = 0;
+            ThreadDispatcher.DispatchWorkers(workerIndex =>
+            {
+                var targetKinematicsPerWorker = kinematics.Length / ThreadDispatcher.ThreadCount;
+                var remainder = kinematics.Length - targetKinematicsPerWorker * ThreadDispatcher.ThreadCount;
+                var kinematicsForWorker = workerIndex < remainder ? targetKinematicsPerWorker + 1 : targetKinematicsPerWorker;
+                var workerEnd = Interlocked.Add(ref startIndex, kinematicsForWorker);
+                for (int i = workerEnd - kinematicsForWorker; i < workerEnd; ++i)
+                {
+                    var body = Simulation.Bodies[kinematics[i]];
+                    ref var state = ref body.Dynamics.Motion;
+                    state.Velocity.Linear = velocity;
+                }
+            });
+            //for (int i = 0; i < kinematics.Length; ++i)
+            //{
+            //    var body = Simulation.Bodies[kinematics[i]];
+            //    ref var state = ref body.SolverState.Motion;
+            //    state.Velocity.Linear = velocity;
+            //}
+            var end = Stopwatch.GetTimestamp();
+            var timeToUpdateTotal = (end - start) / (double)Stopwatch.Frequency;
+            Console.WriteLine($"Time to update (ms): {1e3 * timeToUpdateTotal}");
+            Console.WriteLine($"Time to update one box (ns): {1e9 * timeToUpdateTotal / kinematics.Length}");
             base.Update(window, camera, input, dt);
         }
 

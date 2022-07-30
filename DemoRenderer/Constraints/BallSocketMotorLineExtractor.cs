@@ -14,8 +14,8 @@ namespace DemoRenderer.Constraints
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
-            ref var poseA = ref bodies.Sets[setIndex].SolverStates[bodyIndices[0]].Motion.Pose;
-            ref var poseB = ref bodies.Sets[setIndex].SolverStates[bodyIndices[1]].Motion.Pose;
+            ref var poseA = ref bodies.Sets[setIndex].DynamicsState[bodyIndices[0]].Motion.Pose;
+            ref var poseB = ref bodies.Sets[setIndex].DynamicsState[bodyIndices[1]].Motion.Pose;
             Vector3Wide.ReadFirst(prestepBundle.LocalOffsetB, out var localOffsetB);
             QuaternionEx.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
             var anchor = poseB.Position + worldOffsetB;

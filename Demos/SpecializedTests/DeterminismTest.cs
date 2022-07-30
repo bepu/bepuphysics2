@@ -32,7 +32,7 @@ namespace Demos.SpecializedTests
                 {
                     for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
                     {
-                        motionStates.Add(set.IndexToHandle[bodyIndex].Value, set.SolverStates[bodyIndex].Motion);
+                        motionStates.Add(set.IndexToHandle[bodyIndex].Value, set.DynamicsState[bodyIndex].Motion);
                     }
                 }
             }

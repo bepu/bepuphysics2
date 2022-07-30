@@ -14,18 +14,28 @@ namespace BepuUtilities.Memory
     /// Span over an unmanaged memory region.
     /// </summary>
     /// <typeparam name="T">Type of the memory exposed by the span.</typeparam>
+    [StructLayout(LayoutKind.Sequential)]
     public unsafe struct Buffer<T> where T : unmanaged
     {
+        /// <summary>
+        /// Pointer to the beginning of the memory backing this buffer.
+        /// </summary>
         public T* Memory;
         internal int length;
         //We're primarily interested in x64, so memory + length is 12 bytes. This struct would/should get padded to 16 bytes for alignment reasons anyway, 
         //so making use of the last 4 bytes to speed up the case where the raw buffer is taken from a pool (which is basically always) is a good option.
 
         /// <summary>
-        /// Implementation specific identifier of the raw buffer set by its source. If taken from a BufferPool, Id represents the index in the power pool from which it was taken.
+        /// Implementation specific identifier of the raw buffer set by its source. If taken from a BufferPool, Id includes the index in the power pool from which it was taken.
         /// </summary>
         public int Id;
 
+        /// <summary>
+        /// Creates a new buffer.
+        /// </summary>
+        /// <param name="memory">Memory to back the buffer.</param>
+        /// <param name="length">Length of the buffer in terms of the specified type.</param>
+        /// <param name="id">Id of the buffer.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Buffer(void* memory, int length, int id = -1)
         {
@@ -34,17 +44,17 @@ namespace BepuUtilities.Memory
             Id = id;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref T Get(byte* memory, int index)
-        {
-            return ref Unsafe.Add(ref Unsafe.As<byte, T>(ref *memory), index);
-        }
-
+        /// <summary>
+        /// Gets a typed reference from a byte buffer by an index in terms of the type.
+        /// </summary>
+        /// <param name="buffer">Byte buffer to interpret.</param>
+        /// <param name="index">Index into the buffer in terms of the specified type instead of bytes.</param>
+        /// <returns>Reference to the instance at the specified index.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref T Get(ref Buffer<byte> buffer, int index)
         {
             Debug.Assert(index >= 0 && index * Unsafe.SizeOf<T>() < buffer.Length, "Index out of range.");
-            return ref Get(buffer.Memory, index);
+            return ref ((T*)buffer.Memory)[index];
         }
 
         /// <summary>
