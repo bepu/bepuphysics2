@@ -66,7 +66,6 @@ namespace BepuPhysics.Collidables
         /// the fact that its bounding box is not expanded may cause it to miss a collision even with a non-Discrete collidable.</para>
         /// <para>Note that Discrete and Passive only differ if maximum speculative margin is restricted.</para>
         /// </summary>
-        /// If using Discrete instead of Passive, this is presumably some smaller finite value to limit the number of collision pairs found during high velocity movement.</param>
         /// <returns>Detection settings for the given discrete configuration.</returns>
         public static ContinuousDetection Discrete
         {

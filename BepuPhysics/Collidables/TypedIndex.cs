@@ -4,6 +4,9 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Collidables
 {
+    /// <summary>
+    /// Represents an index with an associated type packed into a single integer.
+    /// </summary>
     public struct TypedIndex : IEquatable<TypedIndex>
     {
         /// <summary>
