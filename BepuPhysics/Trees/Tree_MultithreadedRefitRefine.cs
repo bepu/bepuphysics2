@@ -43,7 +43,7 @@ namespace BepuPhysics.Trees
 
             public unsafe void CreateRefitAndMarkJobs(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher)
             {
-                if (tree.leafCount <= 2)
+                if (tree.LeafCount <= 2)
                 {
                     //If there are 2 or less leaves, then refit/refine doesn't do anything at all.
                     //(The root node has no parent, so it does not have a bounding box, and the SAH won't change no matter how we swap the children of the root.)
@@ -65,7 +65,7 @@ namespace BepuPhysics.Trees
                     RefinementCandidates[i] = new QuickList<int>(estimatedRefinementCandidateCount, threadDispatcher.GetThreadMemoryPool(i));
                 }
 
-                int multithreadingLeafCountThreshold = Tree.leafCount / (threadDispatcher.ThreadCount * 2);
+                int multithreadingLeafCountThreshold = Tree.LeafCount / (threadDispatcher.ThreadCount * 2);
                 if (multithreadingLeafCountThreshold < RefinementLeafCountThreshold)
                     multithreadingLeafCountThreshold = RefinementLeafCountThreshold;
                 CollectNodesForMultithreadedRefit(0, multithreadingLeafCountThreshold, ref RefitNodes, RefinementLeafCountThreshold, ref RefinementCandidates[0],
@@ -76,7 +76,7 @@ namespace BepuPhysics.Trees
 
             public unsafe void CreateRefinementJobs(BufferPool pool, int frameIndex, float refineAggressivenessScale = 1)
             {
-                if (Tree.leafCount <= 2)
+                if (Tree.LeafCount <= 2)
                 {
                     //If there are 2 or less leaves, then refit/refine doesn't do anything at all.
                     //(The root node has no parent, so it does not have a bounding box, and the SAH won't change no matter how we swap the children of the root.)
@@ -128,7 +128,7 @@ namespace BepuPhysics.Trees
 
             public unsafe void CleanUpForRefitAndRefine(BufferPool pool)
             {
-                if (Tree.leafCount <= 2)
+                if (Tree.LeafCount <= 2)
                 {
                     //If there are 2 or less leaves, then refit/refine doesn't do anything at all.
                     return;
@@ -170,7 +170,7 @@ namespace BepuPhysics.Trees
                 ref var metanode = ref Tree.Metanodes[nodeIndex];
                 ref var children = ref node.A;
                 Debug.Assert(metanode.RefineFlag == 0);
-                Debug.Assert(Tree.leafCount > 2);
+                Debug.Assert(Tree.LeafCount > 2);
                 for (int i = 0; i < 2; ++i)
                 {
                     ref var child = ref Unsafe.Add(ref children, i);
@@ -318,7 +318,7 @@ namespace BepuPhysics.Trees
                 //The main thread already created the refinement candidate list using the worker's pool.
                 var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
                 int refitIndex;
-                Debug.Assert(Tree.leafCount > 2);
+                Debug.Assert(Tree.LeafCount > 2);
                 while ((refitIndex = Interlocked.Increment(ref RefitNodeIndex)) < RefitNodes.Count)
                 {
                     ExecuteRefitAndMarkJob(threadPool, workerIndex, refitIndex);

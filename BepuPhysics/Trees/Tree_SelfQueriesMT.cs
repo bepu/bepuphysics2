@@ -73,7 +73,7 @@ namespace BepuPhysics.Trees
             {
                 //If there are not multiple children, there's no need to recurse.
                 //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
-                if (tree.leafCount < 2)
+                if (tree.LeafCount < 2)
                 {
                     //We clear it out to avoid keeping any old job counts. The count property is used for scheduling, so incorrect values could break the job scheduler.
                     jobs = new QuickList<Job>();
@@ -82,13 +82,13 @@ namespace BepuPhysics.Trees
                 Debug.Assert(overlapHandlers.Length >= threadCount);
                 const float jobMultiplier = 1.5f;
                 var targetJobCount = Math.Max(1, jobMultiplier * threadCount);
-                leafThreshold = (int)(tree.leafCount / targetJobCount);
+                leafThreshold = (int)(tree.LeafCount / targetJobCount);
                 jobs = new QuickList<Job>((int)(targetJobCount * 2), Pool);
                 NextNodePair = -1;
                 this.OverlapHandlers = overlapHandlers;
                 this.Tree = tree;
                 //Collect jobs.
-                CollectJobsInNode(0, tree.leafCount, ref OverlapHandlers[0]);
+                CollectJobsInNode(0, tree.LeafCount, ref OverlapHandlers[0]);
             }
 
             /// <summary>

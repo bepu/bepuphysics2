@@ -24,7 +24,7 @@ namespace BepuPhysics.Trees
             ref var rootChildren = ref rootNode.A;
 
             var merged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(-float.MaxValue) };
-            for (int i = 0; i < leafCount; ++i)
+            for (int i = 0; i < LeafCount; ++i)
             {
                 ref var child = ref Unsafe.Add(ref rootChildren, i);
                 BoundingBox.CreateMerged(child.Min, child.Max, merged.Min, merged.Max, out merged.Min, out merged.Max);
@@ -34,10 +34,10 @@ namespace BepuPhysics.Trees
             const float leafCost = 1;
             const float internalNodeCost = 1;
 
-            if (leafCount > 2)
+            if (LeafCount > 2)
             {
                 float totalCost = 0;
-                for (int i = 0; i < nodeCount; ++i)
+                for (int i = 0; i < NodeCount; ++i)
                 {
                     ref var node = ref Nodes[i];
                     ref var children = ref node.A;
@@ -79,7 +79,7 @@ namespace BepuPhysics.Trees
             var badMaxValue = new Vector3(float.MinValue);
             var mergedMin = badMinValue; //Note- using isolated vectors instead of actual BoundingBox here to avoid a compiler bug: https://github.com/dotnet/coreclr/issues/12950
             var mergedMax = badMaxValue;
-            var childCount = Math.Min(leafCount, 2);
+            var childCount = Math.Min(LeafCount, 2);
             for (int i = 0; i < childCount; ++i)
             {
                 ref var child = ref Unsafe.Add(ref children, i);
@@ -88,8 +88,8 @@ namespace BepuPhysics.Trees
                 BoundingBox.CreateMerged(mergedMin, mergedMax, child.Min, child.Max, out mergedMin, out mergedMax);
                 if (child.Index >= 0)
                 {
-                    if (child.Index >= nodeCount)
-                        throw new Exception($"Implied existence of node {child} is outside of count {nodeCount}.");
+                    if (child.Index >= NodeCount)
+                        throw new Exception($"Implied existence of node {child} is outside of count {NodeCount}.");
                     Validate(child.Index, nodeIndex, i, ref child.Min, ref child.Max, out int childFoundLeafCount);
                     if (childFoundLeafCount != child.LeafCount)
                         throw new Exception($"Bad leaf count for child {i} of node {nodeIndex}.");
@@ -103,7 +103,7 @@ namespace BepuPhysics.Trees
                         throw new Exception($"Bad leaf count on {nodeIndex} child {i}, it's a leaf but leafCount is {child.LeafCount}.");
                     }
                     var leafIndex = Encode(child.Index);
-                    if (leafIndex < 0 || leafIndex >= leafCount)
+                    if (leafIndex < 0 || leafIndex >= LeafCount)
                         throw new Exception("Bad node-contained leaf index.");
                     if (Leaves[leafIndex].NodeIndex != nodeIndex || Leaves[leafIndex].ChildIndex != i)
                     {
@@ -111,7 +111,7 @@ namespace BepuPhysics.Trees
                     }
                 }
             }
-            if (foundLeafCount == 0 && (leafCount > 0 || expectedParentIndex >= 0))
+            if (foundLeafCount == 0 && (LeafCount > 0 || expectedParentIndex >= 0))
             {
                 //The only time foundLeafCount can be zero is if this is the root node in an empty tree.
                 throw new Exception("Bad leaf count.");
@@ -131,15 +131,15 @@ namespace BepuPhysics.Trees
 
         readonly unsafe void ValidateLeafNodeIndices()
         {
-            for (int i = 0; i < leafCount; ++i)
+            for (int i = 0; i < LeafCount; ++i)
             {
                 if (Leaves[i].NodeIndex < 0)
                 {
                     throw new Exception($"Leaf {i} has negative node index: {Leaves[i].NodeIndex}.");
                 }
-                if (Leaves[i].NodeIndex >= nodeCount)
+                if (Leaves[i].NodeIndex >= NodeCount)
                 {
-                    throw new Exception($"Leaf {i} points to a node outside the node set, {Leaves[i].NodeIndex} >= {nodeCount}.");
+                    throw new Exception($"Leaf {i} points to a node outside the node set, {Leaves[i].NodeIndex} >= {NodeCount}.");
                 }
             }
         }
@@ -148,7 +148,7 @@ namespace BepuPhysics.Trees
         {
             ValidateLeafNodeIndices();
 
-            for (int i = 0; i < leafCount; ++i)
+            for (int i = 0; i < LeafCount; ++i)
             {
                 if (Encode(Unsafe.Add(ref Nodes[Leaves[i].NodeIndex].A, Leaves[i].ChildIndex).Index) != i)
                 {
@@ -159,19 +159,19 @@ namespace BepuPhysics.Trees
 
         public readonly unsafe void Validate()
         {
-            if (nodeCount < 0)
+            if (NodeCount < 0)
             {
-                throw new Exception($"Invalid negative node count of {nodeCount}");
+                throw new Exception($"Invalid negative node count of {NodeCount}");
             }
-            else if (nodeCount > Nodes.Length)
+            else if (NodeCount > Nodes.Length)
             {
-                throw new Exception($"Invalid node count of {nodeCount}, larger than nodes array length {Nodes.Length}.");
+                throw new Exception($"Invalid node count of {NodeCount}, larger than nodes array length {Nodes.Length}.");
             }
             if (LeafCount > 0 && (Metanodes[0].Parent != -1 || Metanodes[0].IndexInParent != -1))
             {
                 throw new Exception($"Invalid parent pointers on root.");
             }
-            if ((nodeCount != 1 && leafCount < 2) || (nodeCount != LeafCount - 1 && leafCount >= 2))
+            if ((NodeCount != 1 && LeafCount < 2) || (NodeCount != LeafCount - 1 && LeafCount >= 2))
             {
                 throw new Exception($"Invalid node count versus leaf count.");
             }
@@ -179,8 +179,8 @@ namespace BepuPhysics.Trees
             var standInBounds = new BoundingBox();
 
             Validate(0, -1, -1, ref standInBounds.Min, ref standInBounds.Max, out int foundLeafCount);
-            if (foundLeafCount != leafCount)
-                throw new Exception($"{foundLeafCount} leaves found in tree, expected {leafCount}.");
+            if (foundLeafCount != LeafCount)
+                throw new Exception($"{foundLeafCount} leaves found in tree, expected {LeafCount}.");
 
             ValidateLeaves();
 
@@ -191,7 +191,7 @@ namespace BepuPhysics.Trees
             ref var children = ref node.A;
             int maximum = currentDepth;
             int nextDepth = currentDepth + 1;
-            var childCount = Math.Min(leafCount, 2);
+            var childCount = Math.Min(LeafCount, 2);
             for (int i = 0; i < childCount; ++i)
             {
                 ref var child = ref Unsafe.Add(ref children, i);
@@ -220,7 +220,7 @@ namespace BepuPhysics.Trees
             int correctlyPositionedImmediateChildren = 0;
             int immediateInternalChildren = 0;
             int expectedChildIndex = nodeIndex + 1;
-            var childCount = Math.Min(leafCount, 2);
+            var childCount = Math.Min(LeafCount, 2);
             for (int i = 0; i < childCount; ++i)
             {
                 ref var child = ref Unsafe.Add(ref children, i);
@@ -257,7 +257,7 @@ namespace BepuPhysics.Trees
 
         public readonly unsafe float MeasureCacheQuality(int nodeIndex)
         {
-            if (nodeIndex < 0 || nodeIndex >= nodeCount)
+            if (nodeIndex < 0 || nodeIndex >= NodeCount)
                 throw new ArgumentException("Measurement target index must be nonnegative and less than node count.");
             MeasureCacheQuality(nodeIndex, out int foundNodes, out float nodeScore, out int scorableNodeCount);
             return scorableNodeCount > 0 ? nodeScore / scorableNodeCount : 1;

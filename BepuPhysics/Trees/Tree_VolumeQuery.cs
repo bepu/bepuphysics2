@@ -9,8 +9,8 @@ namespace BepuPhysics.Trees
     {
         unsafe readonly void GetOverlaps<TEnumerator>(int nodeIndex, in Vector3 min, in Vector3 max, int* stack, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
-            Debug.Assert((nodeIndex >= 0 && nodeIndex < nodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < leafCount));
-            Debug.Assert(leafCount >= 2, "This implementation assumes all nodes are filled.");
+            Debug.Assert((nodeIndex >= 0 && nodeIndex < NodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < LeafCount));
+            Debug.Assert(LeafCount >= 2, "This implementation assumes all nodes are filled.");
 
             int stackEnd = 0;
             while (true)
@@ -60,14 +60,14 @@ namespace BepuPhysics.Trees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly unsafe void GetOverlaps<TEnumerator>(in Vector3 min, in Vector3 max, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
-            if (leafCount > 1)
+            if (LeafCount > 1)
             {
                 //TODO: Explicitly tracking depth in the tree during construction/refinement is practically required to guarantee correctness.
                 //While it's exceptionally rare that any tree would have more than 256 levels, the worst case of stomping stack memory is not acceptable in the long run.
                 var stack = stackalloc int[TraversalStackCapacity];
                 GetOverlaps(0, min, max, stack, ref leafEnumerator);
             }
-            else if (leafCount == 1)
+            else if (LeafCount == 1)
             {
                 Debug.Assert(Nodes[0].A.Index < 0, "If the root only has one child, it must be a leaf.");
                 if (BoundingBox.Intersects(min, max, Nodes[0].A.Min, Nodes[0].A.Max))

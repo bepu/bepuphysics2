@@ -513,7 +513,7 @@ namespace BepuPhysics.Trees
                     child.Index = subtreeIndex;
                     if (subtreeIndex >= 0)
                     {
-                        Debug.Assert(subtreeIndex >= 0 && subtreeIndex < nodeCount);
+                        Debug.Assert(subtreeIndex >= 0 && subtreeIndex < NodeCount);
                         //Subtree is an internal node. Update its parent pointers.
                         ref var metanode = ref Metanodes[subtreeIndex];
                         metanode.IndexInParent = i;

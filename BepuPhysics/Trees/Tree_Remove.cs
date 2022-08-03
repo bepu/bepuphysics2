@@ -10,18 +10,18 @@ namespace BepuPhysics.Trees
         unsafe void RemoveNodeAt(int nodeIndex)
         {
             //Note that this function is a cache scrambling influence. That's okay- the cache optimization routines will take care of it later.
-            Debug.Assert(nodeIndex < nodeCount && nodeIndex >= 0);
+            Debug.Assert(nodeIndex < NodeCount && nodeIndex >= 0);
             //We make no guarantees here about maintaining the tree's coherency after a remove.
             //That's the responsibility of whoever called RemoveAt.
-            --nodeCount;
+            --NodeCount;
             //If the node wasn't the last node in the list, it will be replaced by the last node.
-            if (nodeIndex < nodeCount)
+            if (nodeIndex < NodeCount)
             {
                 //Swap last node for removed node.
                 ref var node = ref Nodes[nodeIndex];
-                node = Nodes[nodeCount];
+                node = Nodes[NodeCount];
                 ref var metanode = ref Metanodes[nodeIndex];
-                metanode = Metanodes[nodeCount];
+                metanode = Metanodes[NodeCount];
 
                 //Update the moved node's pointers:
                 //its parent's child pointer should change, and...
@@ -73,19 +73,19 @@ namespace BepuPhysics.Trees
         /// If leafIndex pointed at the last slot in the list, then this returns -1 since no leaf was moved.</returns>
         public unsafe int RemoveAt(int leafIndex)
         {
-            if (leafIndex < 0 || leafIndex >= leafCount)
+            if (leafIndex < 0 || leafIndex >= LeafCount)
                 throw new ArgumentOutOfRangeException("Leaf index must be a valid index in the tree's leaf array.");
 
             //Cache the leaf being removed.
             var leaf = Leaves[leafIndex];
             //Delete the leaf from the leaves array.
-            --leafCount;
-            if (leafIndex < leafCount)
+            --LeafCount;
+            if (leafIndex < LeafCount)
             {
                 //The removed leaf was not the last leaf, so we should move the last leaf into its slot.
                 //This can result in a form of cache scrambling, but these leaves do not need to be referenced during high performance stages.
                 //It does somewhat reduce the performance of AABB updating, but we shouldn't bother with any form of cache optimization for this unless it becomes a proven issue.
-                ref var lastLeaf = ref Leaves[leafCount];
+                ref var lastLeaf = ref Leaves[LeafCount];
                 Leaves[leafIndex] = lastLeaf;
                 Unsafe.Add(ref Nodes[lastLeaf.NodeIndex].A, lastLeaf.ChildIndex).Index = Encode(leafIndex);
             }
@@ -144,7 +144,7 @@ namespace BepuPhysics.Trees
                 //This is the root. It cannot collapse, but if the other child is an internal node, then it will overwrite the root node.
                 //This maintains the guarantee that any tree with at least 2 leaf nodes has every single child slot filled with a node or leaf.
                 Debug.Assert(leaf.NodeIndex == 0, "Only the root should have a negative parent, so only the root should show up here.");
-                if (leafCount > 0)
+                if (LeafCount > 0)
                 {
                     //The post-removal leafCount is still positive, so there must be at least one child in the root node.
                     //If it is an internal node, then it will be promoted into the root node's slot.
@@ -187,7 +187,7 @@ namespace BepuPhysics.Trees
                 }
                 //No need to perform a RefitForRemoval here; it's the root. There is no higher bounding box.
             }
-            return leafIndex < leafCount ? leafCount : -1;
+            return leafIndex < LeafCount ? LeafCount : -1;
         }
     }
 }

@@ -25,7 +25,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             ref var compoundA = ref Unsafe.AsRef<TCompoundA>(pair.A);
             ref var compoundChildA = ref compoundA.GetChild(childIndexA);
-            Compound.GetRotatedChildPose(compoundChildA.LocalPose, pair.OrientationA, out childPoseA);
+            Compound.GetRotatedChildPose(compoundChildA.LocalPosition, compoundChildA.LocalOrientation, pair.OrientationA, out childPoseA);
             childTypeA = compoundChildA.ShapeIndex.Type;
             collisionBatcher.Shapes[childTypeA].GetShapeData(compoundChildA.ShapeIndex.Index, out childShapeDataA, out _);
         }
@@ -43,7 +43,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             childTypeB = compoundChildB.ShapeIndex.Type;
             collisionBatcher.Shapes[childTypeB].GetShapeData(compoundChildB.ShapeIndex.Index, out childShapeDataB, out _);
 
-            Compound.GetRotatedChildPose(compoundChildB.LocalPose, pair.OrientationB, out childPoseB);
+            Compound.GetRotatedChildPose(compoundChildB.LocalPosition, compoundChildB.LocalOrientation, pair.OrientationB, out childPoseB);
             if (pair.FlipMask < 0)
             {
                 continuationChild.ChildIndexA = childIndexB;

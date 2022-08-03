@@ -254,14 +254,14 @@ namespace BepuPhysics.Trees
             //The tree is built with an empty node at the root to make insertion work more easily.
             //As long as that is the case (and as long as this is not a constructor),
             //we must clear it out.
-            nodeCount = 0;
+            NodeCount = 0;
 
             //Guarantee that no resizes will occur during the build.
             if (Leaves.Length < leafBounds.Length)
             {
                 Resize(pool, leafBounds.Length);
             }
-            leafCount = leafBounds.Length;
+            LeafCount = leafBounds.Length;
 
 
             pool.TakeAtLeast<int>(leafBounds.Length, out var indexMap);

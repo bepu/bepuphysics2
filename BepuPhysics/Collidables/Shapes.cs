@@ -54,13 +54,27 @@ namespace BepuPhysics.Collidables
         }
 
         public abstract void ComputeBounds(ref BoundingBoxBatcher batcher);
-        public abstract void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max);
+        public abstract void ComputeBounds(int shapeIndex, Quaternion orientation, out Vector3 min, out Vector3 max);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ComputeBounds(int shapeIndex, Vector3 position, Quaternion orientation, out Vector3 min, out Vector3 max)
+        {
+            ComputeBounds(shapeIndex, orientation, out min, out max);
+            min += position;
+            max += position;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ComputeBounds(int shapeIndex, RigidPose pose, out Vector3 min, out Vector3 max)
+        {
+            ComputeBounds(shapeIndex, pose.Orientation, out min, out max);
+            min += pose.Position;
+            max += pose.Position;
+        }
         internal virtual void ComputeBounds(int shapeIndex, in Quaternion orientation, out float maximumRadius, out float maximumAngularExpansion, out Vector3 min, out Vector3 max)
         {
             throw new InvalidOperationException("Nonconvex shapes are not required to have a maximum radius or angular expansion implementation. This should only ever be called on convexes.");
         }
         public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
-        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose rigidPose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
         /// <summary>
         /// Gets a raw untyped pointer to a shape's data.
@@ -241,11 +255,9 @@ namespace BepuPhysics.Collidables
             batcher.ExecuteConvexBatch(this);
         }
 
-        public override void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max)
+        public override void ComputeBounds(int shapeIndex, Quaternion orientation, out Vector3 min, out Vector3 max)
         {
-            shapes[shapeIndex].ComputeBounds(pose.Orientation, out min, out max);
-            min += pose.Position;
-            max += pose.Position;
+            shapes[shapeIndex].ComputeBounds(orientation, out min, out max);
         }
 
         internal override void ComputeBounds(int shapeIndex, in Quaternion orientation, out float maximumRadius, out float angularExpansion, out Vector3 min, out Vector3 max)
@@ -306,11 +318,9 @@ namespace BepuPhysics.Collidables
             batcher.ExecuteHomogeneousCompoundBatch(this);
         }
 
-        public override void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max)
+        public override void ComputeBounds(int shapeIndex, Quaternion orientation, out Vector3 min, out Vector3 max)
         {
-            shapes[shapeIndex].ComputeBounds(pose.Orientation, out min, out max);
-            min += pose.Position;
-            max += pose.Position;
+            shapes[shapeIndex].ComputeBounds(orientation, out min, out max);
         }
         public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
         {
@@ -353,11 +363,9 @@ namespace BepuPhysics.Collidables
             batcher.ExecuteCompoundBatch(this);
         }
 
-        public override void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max)
+        public override void ComputeBounds(int shapeIndex, Quaternion orientation, out Vector3 min, out Vector3 max)
         {
-            shapes[shapeIndex].ComputeBounds(pose.Orientation, shapeBatches, out min, out max);
-            min += pose.Position;
-            max += pose.Position;
+            shapes[shapeIndex].ComputeBounds(orientation, shapeBatches, out min, out max);
         }
 
         public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
@@ -407,6 +415,19 @@ namespace BepuPhysics.Collidables
         {
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
             batches[shapeIndex.Type].ComputeBounds(shapeIndex.Index, pose, out bounds.Min, out bounds.Max);
+        }
+        /// <summary>
+        /// Computes a bounding box for a single shape.
+        /// </summary>
+        /// <param name="position">Position of the shape.</param>
+        /// <param name="orientation">Orientation of the shape.</param>
+        /// <param name="shapeIndex">Index of the shape.</param>
+        /// <param name="bounds">Bounding box of the specified shape with the specified pose.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdateBounds(Vector3 position, Quaternion orientation, TypedIndex shapeIndex, out BoundingBox bounds)
+        {
+            //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
+            batches[shapeIndex.Type].ComputeBounds(shapeIndex.Index, position, orientation, out bounds.Min, out bounds.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

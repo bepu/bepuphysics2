@@ -26,8 +26,8 @@ namespace BepuPhysics.Trees
 
         internal readonly unsafe void RayCast<TLeafTester>(int nodeIndex, TreeRay* treeRay, RayData* rayData, int* stack, ref TLeafTester leafTester) where TLeafTester : IRayLeafTester
         {
-            Debug.Assert((nodeIndex >= 0 && nodeIndex < nodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < leafCount));
-            Debug.Assert(leafCount >= 2, "This implementation assumes all nodes are filled.");
+            Debug.Assert((nodeIndex >= 0 && nodeIndex < NodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < LeafCount));
+            Debug.Assert(LeafCount >= 2, "This implementation assumes all nodes are filled.");
 
             int stackEnd = 0;
             while (true)
@@ -91,10 +91,10 @@ namespace BepuPhysics.Trees
 
         internal readonly unsafe void RayCast<TLeafTester>(TreeRay* treeRay, RayData* rayData, ref TLeafTester leafTester) where TLeafTester : IRayLeafTester
         {
-            if (leafCount == 0)
+            if (LeafCount == 0)
                 return;
 
-            if (leafCount == 1)
+            if (LeafCount == 1)
             {
                 //If the first node isn't filled, we have to use a special case.
                 if (Intersects(Nodes[0].A.Min, Nodes[0].A.Max, treeRay, out var tA))

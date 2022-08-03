@@ -52,7 +52,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             ref var compound = ref Unsafe.AsRef<TCompound>(pair.A);
             ref var compoundChild = ref compound.GetChild(childIndexA);
-            Compound.GetRotatedChildPose(compoundChild.LocalPose, pair.OrientationA, out childPoseA);
+            Compound.GetRotatedChildPose(compoundChild.LocalPosition, compoundChild.LocalOrientation, pair.OrientationA, out childPoseA);
             childTypeA = compoundChild.ShapeIndex.Type;
             collisionBatcher.Shapes[childTypeA].GetShapeData(compoundChild.ShapeIndex.Index, out childShapeDataA, out _);
         }

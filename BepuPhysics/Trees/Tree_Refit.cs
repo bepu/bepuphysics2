@@ -33,7 +33,7 @@ namespace BepuPhysics.Trees
         //That would only happen if it turns out useful for other parts of the execution, though- optimizing refits at the cost of self-tests would be a terrible idea.
         readonly unsafe void Refit(int nodeIndex, out Vector3 min, out Vector3 max)
         {
-            Debug.Assert(leafCount >= 2);
+            Debug.Assert(LeafCount >= 2);
             ref var node = ref Nodes[nodeIndex];
             ref var a = ref node.A;
             if (node.A.Index >= 0)
@@ -54,7 +54,7 @@ namespace BepuPhysics.Trees
         public unsafe readonly void Refit()
         {
             //No point in refitting a tree with no internal nodes!
-            if (leafCount <= 2)
+            if (LeafCount <= 2)
                 return;
             Refit(0, out var rootMin, out var rootMax);
         }

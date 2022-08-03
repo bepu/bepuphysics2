@@ -112,11 +112,11 @@ namespace BepuPhysics.Trees
         public unsafe int Add(BoundingBox bounds, BufferPool pool)
         {
             //The rest of the function assumes we have sufficient room. We don't want to deal with invalidated pointers mid-add.
-            if (Leaves.Length == leafCount)
+            if (Leaves.Length == LeafCount)
             {
                 //Note that, while we add 1, the underlying pool will request the next higher power of 2 in bytes that can hold it.
                 //Since we're already at capacity, that will be ~double the size.
-                Resize(pool, leafCount + 1);
+                Resize(pool, LeafCount + 1);
             }
 
             //Assumption: Index 0 is always the root if it exists, and an empty tree will have a 'root' with a child count of 0.
@@ -130,10 +130,10 @@ namespace BepuPhysics.Trees
                 ref var node = ref Nodes[nodeIndex];
                 //This is a binary tree, so the only time a node can have less than full children is when it's the root node.
                 //By convention, an empty tree still has a root node with no children, so we do have to handle this case.
-                if (leafCount < 2)
+                if (LeafCount < 2)
                 {
                     //The best slot will, at best, be tied with inserting it in a leaf node because the change in heuristic cost for filling an empty slot is zero.
-                    return InsertLeafIntoEmptySlot(ref bounds, nodeIndex, leafCount, ref node);
+                    return InsertLeafIntoEmptySlot(ref bounds, nodeIndex, LeafCount, ref node);
                 }
                 else
                 {

@@ -156,10 +156,10 @@ namespace BepuPhysics.Collidables
             {
                 ref var sourceChild = ref Children[i];
                 ref var targetChild = ref children[i];
-                targetChild.LocalPose.Position = sourceChild.LocalPose.Position - center;
-                targetChild.LocalPose.Orientation = sourceChild.LocalPose.Orientation;
+                targetChild.LocalPosition = sourceChild.LocalPose.Position - center;
+                targetChild.LocalOrientation = sourceChild.LocalPose.Orientation;
                 targetChild.ShapeIndex = sourceChild.ShapeIndex;
-                Symmetric3x3.Add(ComputeInertiaForChild(targetChild.LocalPose, sourceChild.LocalInverseInertia, sourceChild.Weight), summedInertia, out summedInertia);
+                Symmetric3x3.Add(ComputeInertiaForChild(targetChild.LocalPosition, targetChild.LocalOrientation, sourceChild.LocalInverseInertia, sourceChild.Weight), summedInertia, out summedInertia);
             }
             Symmetric3x3.Invert(summedInertia, out inertia.InverseInertiaTensor);
         }
@@ -185,9 +185,10 @@ namespace BepuPhysics.Collidables
             {
                 ref var sourceChild = ref Children[i];
                 ref var targetChild = ref children[i];
-                targetChild.LocalPose = sourceChild.LocalPose;
+                targetChild.LocalPosition = sourceChild.LocalPose.Position;
+                targetChild.LocalOrientation = sourceChild.LocalPose.Orientation;
                 targetChild.ShapeIndex = sourceChild.ShapeIndex;
-                Symmetric3x3.Add(ComputeInertiaForChild(sourceChild.LocalPose, sourceChild.LocalInverseInertia, sourceChild.Weight), summedInertia, out summedInertia);
+                Symmetric3x3.Add(ComputeInertiaForChild(sourceChild.LocalPose.Position, sourceChild.LocalPose.Orientation, sourceChild.LocalInverseInertia, sourceChild.Weight), summedInertia, out summedInertia);
             }
             Symmetric3x3.Invert(summedInertia, out inertia.InverseInertiaTensor);
         }
@@ -200,15 +201,28 @@ namespace BepuPhysics.Collidables
         /// <param name="mass">Mass of the child.</param>
         /// <returns>Inertia contribution of the child to a compound given its relative pose.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Symmetric3x3 ComputeInertiaForChild(RigidPose pose, Symmetric3x3 inverseLocalInertia, float mass)
+        public static Symmetric3x3 ComputeInertiaForChild(in RigidPose pose, Symmetric3x3 inverseLocalInertia, float mass)
         {
-            GetOffsetInertiaContribution(pose.Position, mass, out var offsetContribution);
+            return ComputeInertiaForChild(pose.Position, pose.Orientation, inverseLocalInertia, mass);
+        }
+        /// <summary>
+        /// Computes the uninverted inertia contribution of a child.
+        /// </summary>
+        /// <param name="position">Position of the child.</param>
+        /// <param name="orientation">Orientation of the child.</param>
+        /// <param name="inverseLocalInertia">Inverse inertia tensor of the child in its local space.</param>
+        /// <param name="mass">Mass of the child.</param>
+        /// <returns>Inertia contribution of the child to a compound given its relative pose.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Symmetric3x3 ComputeInertiaForChild(Vector3 position, Quaternion orientation, Symmetric3x3 inverseLocalInertia, float mass)
+        {
+            GetOffsetInertiaContribution(position, mass, out var offsetContribution);
             //This assumes the given inertia is nonsingular. That should be a valid assumption, unless the user is trying to supply an axis-locked tensor.
             //For such a use case, it's best to just lock the axis after computing a 'normal' inertia. 
             Debug.Assert(Symmetric3x3.Determinant(inverseLocalInertia) > 0,
                 "Child inertia tensors should be invertible. If making an axis-locked compound, consider locking the axis on the completed inertia. " +
                 "If making a kinematic, consider using the overload which takes no inverse inertia.");
-            PoseIntegration.RotateInverseInertia(inverseLocalInertia, pose.Orientation, out var rotatedInverseInertia);
+            PoseIntegration.RotateInverseInertia(inverseLocalInertia, orientation, out var rotatedInverseInertia);
             Symmetric3x3.Invert(rotatedInverseInertia, out var inertia);
             Symmetric3x3.Add(offsetContribution, inertia, out inertia);
             return inertia;
@@ -227,7 +241,8 @@ namespace BepuPhysics.Collidables
             float massSum = 0;
             for (int i = 0; i < children.Length; ++i)
             {
-                summedInertia += ComputeInertiaForChild(children[i].LocalPose, inverseLocalInertias[i], childMasses[i]);
+                ref var child = ref children[i];
+                summedInertia += ComputeInertiaForChild(child.LocalPosition, child.LocalOrientation, inverseLocalInertias[i], childMasses[i]);
                 massSum += childMasses[i];
             }
             BodyInertia inertia;
@@ -270,7 +285,7 @@ namespace BepuPhysics.Collidables
             float massSum = 0;
             for (int i = 0; i < children.Length; ++i)
             {
-                sum += childMasses[i] * children[i].LocalPose.Position;
+                sum += childMasses[i] * children[i].LocalPosition;
                 massSum += childMasses[i];
             }
             inverseMass = 1f / massSum;
@@ -326,8 +341,9 @@ namespace BepuPhysics.Collidables
             centerOfMass = ComputeCenterOfMass(children, childMasses, out inertia.InverseMass);
             for (int i = 0; i < children.Length; ++i)
             {
-                children[i].LocalPose.Position -= centerOfMass;
-                summedInertia += ComputeInertiaForChild(children[i].LocalPose, inverseLocalInertias[i], childMasses[i]);
+                ref var child = ref children[i];
+                child.LocalPosition -= centerOfMass;
+                summedInertia += ComputeInertiaForChild(child.LocalPosition, child.LocalOrientation, inverseLocalInertias[i], childMasses[i]);
             }
             Symmetric3x3.Invert(summedInertia, out inertia.InverseInertiaTensor);
             return inertia;
@@ -421,8 +437,8 @@ namespace BepuPhysics.Collidables
             {
                 ref var sourceChild = ref Children[i];
                 ref var targetChild = ref children[i];
-                targetChild.LocalPose.Position = sourceChild.LocalPose.Position - center;
-                targetChild.LocalPose.Orientation = sourceChild.LocalPose.Orientation;
+                targetChild.LocalPosition = sourceChild.LocalPose.Position - center;
+                targetChild.LocalOrientation = sourceChild.LocalPose.Orientation;
                 targetChild.ShapeIndex = sourceChild.ShapeIndex;
             }
         }
@@ -438,8 +454,8 @@ namespace BepuPhysics.Collidables
             {
                 ref var sourceChild = ref Children[i];
                 ref var targetChild = ref children[i];
-                targetChild.LocalPose.Position = sourceChild.LocalPose.Position;
-                targetChild.LocalPose.Orientation = sourceChild.LocalPose.Orientation;
+                targetChild.LocalPosition = sourceChild.LocalPose.Position;
+                targetChild.LocalOrientation = sourceChild.LocalPose.Orientation;
                 targetChild.ShapeIndex = sourceChild.ShapeIndex;
             }
         }

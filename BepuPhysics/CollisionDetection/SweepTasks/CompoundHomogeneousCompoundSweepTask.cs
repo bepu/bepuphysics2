@@ -47,7 +47,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                         var task = sweepTasks.GetTask(compoundChildType, Triangle.Id);
                         shapes[compoundChildType].GetShapeData(compoundChild.ShapeIndex.Index, out var compoundChildShapeData, out _);
                         if (task.Sweep(
-                            compoundChildShapeData, compoundChildType, compoundChild.LocalPose, orientationA, velocityA,
+                            compoundChildShapeData, compoundChildType, CompoundChild.AsPose(ref compoundChild), orientationA, velocityA,
                             Unsafe.AsPointer(ref childB), Triangle.Id, childPoseB, offsetB, orientationB, velocityB,
                             maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                             out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))

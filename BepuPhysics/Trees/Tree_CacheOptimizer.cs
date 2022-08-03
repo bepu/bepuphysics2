@@ -411,7 +411,7 @@ namespace BepuPhysics.Trees
         /// Will return true even if not all nodes are optimized if the reason was a target index outside of the node list bounds.</returns>
         public unsafe bool IncrementalCacheOptimizeThreadSafe(int nodeIndex)
         {
-            Debug.Assert(leafCount >= 2,
+            Debug.Assert(LeafCount >= 2,
                 "Should only use cache optimization when there are at least two leaves. Every node has to have 2 children, and optimizing a 0 or 1 leaf tree is silly anyway.");
             //Multithreaded cache optimization attempts to acquire a lock on every involved node.
             //If any lock fails, it just abandons the entire attempt.
@@ -438,7 +438,7 @@ namespace BepuPhysics.Trees
                 for (int i = 0; i < 2; ++i)
                 {
                     ref var child = ref Unsafe.Add(ref children, i);
-                    if (targetIndex >= nodeCount)
+                    if (targetIndex >= NodeCount)
                     {
                         //This attempted swap would reach beyond the allocated nodes.
                         //That means the current node is quite a bit a lower than it should be.
@@ -528,7 +528,7 @@ namespace BepuPhysics.Trees
 
         public unsafe void IncrementalCacheOptimize(int nodeIndex)
         {
-            if (leafCount <= 2)
+            if (LeafCount <= 2)
             {
                 //Don't bother cache optimizing if there are only two leaves. There's no work to be done, and it supplies a guarantee to the rest of the optimization logic
                 //so that we don't have to check per-node child counts.
@@ -547,7 +547,7 @@ namespace BepuPhysics.Trees
 
             for (int i = 0; i < 2; ++i)
             {
-                if (targetIndex >= nodeCount)
+                if (targetIndex >= NodeCount)
                 {
                     //This attempted swap would reach beyond the allocated nodes.
                     //That means the current node is quite a bit a lower than it should be.
@@ -580,7 +580,7 @@ namespace BepuPhysics.Trees
                 ref var child = ref Unsafe.Add(ref children, i);
                 if (child.Index >= 0)
                 {
-                    Debug.Assert(nextIndex >= 0 && nextIndex < nodeCount,
+                    Debug.Assert(nextIndex >= 0 && nextIndex < NodeCount,
                         "Swap target should be within the node set. If it's not, the initial node was probably not in global optimum position.");
                     if (child.Index != nextIndex)
                         SwapNodes(child.Index, nextIndex);
@@ -599,7 +599,7 @@ namespace BepuPhysics.Trees
         /// <param name="nodeIndex">Node to begin the optimization process at.</param>
         public unsafe void CacheOptimize(int nodeIndex)
         {
-            if (leafCount <= 2)
+            if (LeafCount <= 2)
             {
                 //Don't bother cache optimizing if there are only two leaves. There's no work to be done, and it supplies a guarantee to the rest of the optimization logic
                 //so that we don't have to check per-node child counts.

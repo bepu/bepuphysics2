@@ -42,7 +42,7 @@ namespace BepuPhysics.Trees
             /// <param name="threadCount">Number of threads to prepare jobs for.</param>
             public unsafe void PrepareJobs(ref Tree treeA, ref Tree treeB, TOverlapHandler[] overlapHandlers, int threadCount)
             {
-                if (treeA.leafCount == 0 || treeB.leafCount == 0)
+                if (treeA.LeafCount == 0 || treeB.LeafCount == 0)
                 {
                     //If either tree has zero leaves, no intertree test is required.
                     //Since this context has a count property for scheduling purposes that reads the jobs list, clear it to ensure no spurious jobs are executed. 
@@ -53,19 +53,19 @@ namespace BepuPhysics.Trees
                 const float jobMultiplier = 1.5f;
                 var targetJobCount = Math.Max(1, jobMultiplier * threadCount);
                 //TODO: Not a lot of thought was put into this leaf threshold for intertree. Probably better options.
-                leafThreshold = (int)((treeA.leafCount + treeB.leafCount) / targetJobCount);
+                leafThreshold = (int)((treeA.LeafCount + treeB.LeafCount) / targetJobCount);
                 jobs = new QuickList<Job>((int)(targetJobCount * 2), Pool);
                 NextNodePair = -1;
                 this.OverlapHandlers = overlapHandlers;
                 this.TreeA = treeA;
                 this.TreeB = treeB;
                 //Collect jobs.
-                if (treeA.leafCount >= 2 && treeB.leafCount >= 2)
+                if (treeA.LeafCount >= 2 && treeB.LeafCount >= 2)
                 {
                     //Both trees have complete nodes; we can use a general case.
                     GetJobsBetweenDifferentNodes(ref treeA.Nodes[0], ref treeB.Nodes[0], ref OverlapHandlers[0]);
                 }
-                else if (treeA.leafCount == 1 && treeB.leafCount >= 2)
+                else if (treeA.LeafCount == 1 && treeB.LeafCount >= 2)
                 {
                     //Tree A is degenerate; needs a special case.
                     ref var a = ref treeA.Nodes[0];
@@ -81,7 +81,7 @@ namespace BepuPhysics.Trees
                         DispatchTestForNodes(ref a.A, ref b.B, ref OverlapHandlers[0]);
                     }
                 }
-                else if (treeA.leafCount >= 2 && treeB.leafCount == 1)
+                else if (treeA.LeafCount >= 2 && treeB.LeafCount == 1)
                 {
                     //Tree B is degenerate; needs a special case.
                     ref var a = ref treeA.Nodes[0];
@@ -99,7 +99,7 @@ namespace BepuPhysics.Trees
                 }
                 else
                 {
-                    Debug.Assert(treeA.leafCount == 1 && treeB.leafCount == 1);
+                    Debug.Assert(treeA.LeafCount == 1 && treeB.LeafCount == 1);
                     if (Intersects(treeA.Nodes[0].A, treeB.Nodes[0].A))
                     {
                         DispatchTestForNodes(ref treeA.Nodes[0].A, ref treeB.Nodes[0].A, ref OverlapHandlers[0]);

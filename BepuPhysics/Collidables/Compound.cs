@@ -6,22 +6,35 @@ using System.Diagnostics;
 using BepuUtilities;
 using BepuPhysics.Trees;
 using BepuPhysics.CollisionDetection.CollisionTasks;
+using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Collidables
 {
     /// <summary>
     /// Shape and pose of a child within a compound shape.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public struct CompoundChild
     {
+        /// <summary>
+        /// Local orientation of the child in the compound.
+        /// </summary>
+        public Quaternion LocalOrientation;
+        /// <summary>
+        /// Local position of the child in the compound.
+        /// </summary>
+        public Vector3 LocalPosition;
         /// <summary>
         /// Index of the shape within whatever shape collection holds the compound's child shape data.
         /// </summary>
         public TypedIndex ShapeIndex;
+
         /// <summary>
-        /// Pose of the child in the compound's local space.
+        /// Reintreprets the 32 bytes of a compound child as a pose.
         /// </summary>
-        public RigidPose LocalPose;
+        /// <param name="child">Child to reinterpret.</param>
+        /// <returns>Reference to the child as a pose.</returns>
+        public static ref RigidPose AsPose(ref CompoundChild child) => ref Unsafe.As<CompoundChild, RigidPose>(ref child); //TODO: This could be made a little easier with UnscopedRef.
     }
 
     struct CompoundChildShapeTester : IShapeRayHitHandler
@@ -111,10 +124,20 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetRotatedChildPose(in RigidPose localPose, in Quaternion orientation, out RigidPose rotatedChildPose)
+        public static void GetRotatedChildPose(in RigidPose localPose, Quaternion orientation, out RigidPose rotatedChildPose)
         {
-            QuaternionEx.ConcatenateWithoutOverlap(localPose.Orientation, orientation, out rotatedChildPose.Orientation);
-            QuaternionEx.Transform(localPose.Position, orientation, out rotatedChildPose.Position);
+            GetRotatedChildPose(localPose.Position, localPose.Orientation, orientation, out rotatedChildPose.Position, out rotatedChildPose.Orientation);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetRotatedChildPose(Vector3 localPosition, Quaternion localOrientation, Quaternion orientation, out RigidPose rotatedChildPose)
+        {
+            GetRotatedChildPose(localPosition, localOrientation, orientation, out rotatedChildPose.Position, out rotatedChildPose.Orientation);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetRotatedChildPose(Vector3 localPosition, Quaternion localOrientation, Quaternion parentOrientation, out Vector3 rotatedPosition, out Quaternion rotatedOrientation)
+        {
+            QuaternionEx.ConcatenateWithoutOverlap(localOrientation, parentOrientation, out rotatedOrientation);
+            QuaternionEx.Transform(localPosition, parentOrientation, out rotatedPosition);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetRotatedChildPose(in RigidPoseWide localPose, in QuaternionWide orientation, out Vector3Wide childPosition, out QuaternionWide childOrientation)
@@ -139,12 +162,12 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeChildBounds(in CompoundChild child, in Quaternion orientation, Shapes shapeBatches, out Vector3 childMin, out Vector3 childMax)
         {
-            GetRotatedChildPose(child.LocalPose, orientation, out var childPose);
+            GetRotatedChildPose(child.LocalPosition, child.LocalOrientation, orientation, out var childPose);
             Debug.Assert(!shapeBatches[child.ShapeIndex.Type].Compound, "All children of a compound must be convex.");
             shapeBatches[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, childPose, out childMin, out childMax);
         }
 
-        public void ComputeBounds(in Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
+        public void ComputeBounds(Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
         {
             ComputeChildBounds(Children[0], orientation, shapeBatches, out min, out max);
             for (int i = 1; i < Children.Length; ++i)
@@ -167,7 +190,7 @@ namespace BepuPhysics.Collidables
             for (int i = 0; i < children.Length; ++i)
             {
                 ref var child = ref children[i];
-                GetRotatedChildPose(child.LocalPose, pose.Orientation, out var childPose);
+                GetRotatedChildPose(child.LocalPosition, child.LocalOrientation, pose.Orientation, out var childPose);
                 var angularContributionToChildLinear = Vector3.Cross(velocity.Angular, childPose.Position);
                 var contributionLengthSquared = angularContributionToChildLinear.LengthSquared();
                 var localPoseRadiusSquared = childPose.Position.LengthSquared();
@@ -203,7 +226,7 @@ namespace BepuPhysics.Collidables
                     CompoundChildShapeTester tester;
                     tester.T = -1;
                     tester.Normal = default;
-                    shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, child.LocalPose, localRay, ref maximumT, ref tester);
+                    shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, CompoundChild.AsPose(ref child), localRay, ref maximumT, ref tester);
                     if (tester.T >= 0)
                     {
                         Debug.Assert(maximumT >= tester.T, "Whatever generated this ray hit should have obeyed the current maximumT value.");
@@ -285,9 +308,9 @@ namespace BepuPhysics.Collidables
                 {
                     ref var child = ref compound.Children[i];
                     //TODO: This does quite a bit of work. May want to try a simple bounding sphere instead (based on a dedicated maximum radius request).
-                    shapes[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, child.LocalPose.Orientation, out _, out _, out var min, out var max);
-                    min += child.LocalPose.Position;
-                    max += child.LocalPose.Position;
+                    shapes[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, child.LocalOrientation, out _, out _, out var min, out var max);
+                    min += child.LocalPosition;
+                    max += child.LocalPosition;
                     if (BoundingBox.Intersects(min, max, pair.Min, pair.Max))
                     {
                         overlapsForPair.Allocate(pool) = i;
@@ -305,9 +328,9 @@ namespace BepuPhysics.Collidables
             for (int i = 0; i < Children.Length; ++i)
             {
                 ref var child = ref Children[i];
-                shapes[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, child.LocalPose.Orientation, out _, out _, out var childMin, out var childMax);
-                childMin = childMin + child.LocalPose.Position - expansion;
-                childMax = childMax + child.LocalPose.Position + expansion;
+                shapes[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, child.LocalOrientation, out _, out _, out var childMin, out var childMax);
+                childMin = childMin + child.LocalPosition - expansion;
+                childMax = childMax + child.LocalPosition + expansion;
                 if (Tree.Intersects(childMin, childMax, &ray, out _))
                 {
                     overlaps.Allocate(pool) = i;

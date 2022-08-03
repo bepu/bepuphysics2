@@ -7,12 +7,14 @@ using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuPhysics.Trees;
 using BepuPhysics.CollisionDetection.CollisionTasks;
+using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Collidables
 {
     /// <summary>
     /// Compound shape containing a bunch of shapes accessible through a tree acceleration structure. Useful for compounds with lots of children.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public struct BigCompound : ICompoundShape
     {
         /// <summary>
@@ -48,7 +50,7 @@ namespace BepuPhysics.Collidables
             pool.Return(ref leafBounds);
         }
 
-        public void ComputeBounds(in Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
+        public void ComputeBounds(Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
         {
             Compound.ComputeChildBounds(Children[0], orientation, shapeBatches, out min, out max);
             for (int i = 1; i < Children.Length; ++i)
@@ -95,7 +97,7 @@ namespace BepuPhysics.Collidables
                     CompoundChildShapeTester tester;
                     tester.T = -1;
                     tester.Normal = default;
-                    Shapes[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, child.LocalPose, *rayData, ref *maximumT, ref tester);
+                    Shapes[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, child.LocalPosition, child.LocalOrientation, *rayData, ref *maximumT, ref tester);
                     if (tester.T >= 0)
                     {
                         Debug.Assert(*maximumT >= tester.T, "Whatever generated this ray hit should have obeyed the current maximumT value.");
@@ -167,7 +169,7 @@ namespace BepuPhysics.Collidables
         {
             pool.Resize(ref Children, Children.Length + 1, Children.Length);
             Children[^1] = child;
-            shapes.UpdateBounds(child.LocalPose, child.ShapeIndex, out var bounds);
+            shapes.UpdateBounds(child.LocalPosition, child.LocalOrientation, child.ShapeIndex, out var bounds);
             var childIndex = Tree.Add(bounds, pool);
             Debug.Assert(childIndex == Children.Length - 1, "Adding to a tree acts like appending to the list; a newly added element should be in the last slot to match our previous child modification.");
         }

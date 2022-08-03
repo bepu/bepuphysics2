@@ -76,12 +76,12 @@ namespace BepuPhysics.Collidables
         /// Tests a ray against the shape.
         /// </summary>
         /// <param name="pose">Pose of the shape during the ray test.</param>
-        /// <param name="origin">Origin of the ray to test against the shape.</param>
+        /// <param name="origin">Origin of the ray to test against the shape relative to the shape.</param>
         /// <param name="direction">Direction of the ray to test against the shape.</param>
         /// <param name="t">Distance along the ray direction to the hit point, if any, in units of the ray direction's length. In other words, hitLocation = origin + direction * t.</param>
         /// <param name="normal">Normal of the impact surface, if any.</param>
         /// <returns>True if the ray intersected the shape, false otherwise.</returns>
-        bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal);
+        bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal);
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ namespace BepuPhysics.Collidables
         /// <param name="shapeBatches">Shape batches to look up child shape information in.</param>
         /// <param name="min">Minimum of the compound's bounding box.</param>
         /// <param name="max">Maximum of the compound's bounding box.</param>
-        void ComputeBounds(in Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max);
+        void ComputeBounds(Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max);
         /// <summary>
         /// Submits child shapes to a bounding box batcher for vectorized bounds calculation.
         /// </summary>
