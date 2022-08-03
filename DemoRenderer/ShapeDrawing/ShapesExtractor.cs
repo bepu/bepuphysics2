@@ -79,7 +79,7 @@ namespace DemoRenderer.ShapeDrawing
             for (int i = 0; i < children.Length; ++i)
             {
                 ref var child = ref children[i];
-                Compound.GetWorldPose(child.LocalPose, pose, out var childPose);
+                Compound.GetWorldPose(CompoundChild.AsPose(ref child), pose, out var childPose);
                 AddShape(shapes, child.ShapeIndex, childPose, color, ref shapeCache, pool);
             }
         }

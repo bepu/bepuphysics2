@@ -97,7 +97,7 @@ namespace BepuPhysics.Collidables
                     CompoundChildShapeTester tester;
                     tester.T = -1;
                     tester.Normal = default;
-                    Shapes[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, child.LocalPosition, child.LocalOrientation, *rayData, ref *maximumT, ref tester);
+                    Shapes[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, CompoundChild.AsPose(ref child), *rayData, ref *maximumT, ref tester);
                     if (tester.T >= 0)
                     {
                         Debug.Assert(*maximumT >= tester.T, "Whatever generated this ray hit should have obeyed the current maximumT value.");
@@ -233,7 +233,7 @@ namespace BepuPhysics.Collidables
                 Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
             }
         }
-        public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             SweepLeafTester<TOverlaps> enumerator;

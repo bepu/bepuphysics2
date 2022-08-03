@@ -80,7 +80,7 @@ namespace Demos.Demos
             return new HomogeneousCompoundShapeBatch<Voxels, Box, BoxWide>(pool, initialCapacity);
         }
 
-        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var basis);
             min = new Vector3(float.MaxValue);
@@ -226,7 +226,7 @@ namespace Demos.Demos
             }
         }
 
-        public readonly unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps
+        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             //Similar to the non-swept FindLocalOverlaps function above, this just adds the overlaps to the provided collection.
             //Some unfortunate loss of type information due to some language limitations around generic pointers- pretend the overlaps pointer has type TOverlaps*.
@@ -333,7 +333,7 @@ namespace Demos.Demos
         {
             ref var compoundA = ref Unsafe.AsRef<TCompoundA>(pair.A);
             ref var compoundChildA = ref compoundA.GetChild(childIndexA);
-            Compound.GetRotatedChildPose(compoundChildA.LocalPose, pair.OrientationA, out childPoseA);
+            Compound.GetRotatedChildPose(CompoundChild.AsPose(ref compoundChildA), pair.OrientationA, out childPoseA);
             childTypeA = compoundChildA.ShapeIndex.Type;
             collisionBatcher.Shapes[childTypeA].GetShapeData(compoundChildA.ShapeIndex.Index, out childShapeDataA, out _);
         }

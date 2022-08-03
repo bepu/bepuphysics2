@@ -243,7 +243,7 @@ namespace DemoTests
                 return true;
             }
 
-            public void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex)
+            public void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex)
             {
                 ++Counter;
             }

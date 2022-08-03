@@ -44,7 +44,7 @@ namespace BepuPhysics.Constraints
         /// <param name="springSettings">Spring frequency and damping parameters.</param>
         /// <param name="servoSettings">Servo control parameters.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public DistanceServo(in Vector3 localOffsetA, in Vector3 localOffsetB, float targetDistance, in SpringSettings springSettings, in ServoSettings servoSettings)
+        public DistanceServo(Vector3 localOffsetA, Vector3 localOffsetB, float targetDistance, in SpringSettings springSettings, in ServoSettings servoSettings)
         {
             LocalOffsetA = localOffsetA;
             LocalOffsetB = localOffsetB;
@@ -54,7 +54,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public DistanceServo(in Vector3 localOffsetA, in Vector3 localOffsetB, float targetDistance, in SpringSettings springSettings)
+        public DistanceServo(Vector3 localOffsetA, Vector3 localOffsetB, float targetDistance, in SpringSettings springSettings)
             : this(localOffsetA, localOffsetB, targetDistance, springSettings, ServoSettings.Default)
         {
         }

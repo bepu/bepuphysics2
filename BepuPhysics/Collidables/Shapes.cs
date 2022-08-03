@@ -69,7 +69,7 @@ namespace BepuPhysics.Collidables
             min += pose.Position;
             max += pose.Position;
         }
-        internal virtual void ComputeBounds(int shapeIndex, in Quaternion orientation, out float maximumRadius, out float maximumAngularExpansion, out Vector3 min, out Vector3 max)
+        internal virtual void ComputeBounds(int shapeIndex, Quaternion orientation, out float maximumRadius, out float maximumAngularExpansion, out Vector3 min, out Vector3 max)
         {
             throw new InvalidOperationException("Nonconvex shapes are not required to have a maximum radius or angular expansion implementation. This should only ever be called on convexes.");
         }
@@ -260,7 +260,7 @@ namespace BepuPhysics.Collidables
             shapes[shapeIndex].ComputeBounds(orientation, out min, out max);
         }
 
-        internal override void ComputeBounds(int shapeIndex, in Quaternion orientation, out float maximumRadius, out float angularExpansion, out Vector3 min, out Vector3 max)
+        internal override void ComputeBounds(int shapeIndex, Quaternion orientation, out float maximumRadius, out float angularExpansion, out Vector3 min, out Vector3 max)
         {
             ref var shape = ref shapes[shapeIndex];
             shape.ComputeBounds(orientation, out min, out max);

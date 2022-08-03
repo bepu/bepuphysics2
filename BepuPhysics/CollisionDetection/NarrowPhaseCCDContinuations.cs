@@ -54,7 +54,7 @@ namespace BepuPhysics.CollisionDetection
                 public float T;
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Initialize(ref CollidablePair pair, in Vector3 relativeLinearVelocity, in Vector3 angularVelocityA, in Vector3 angularVelocityB, float t)
+                public void Initialize(ref CollidablePair pair, Vector3 relativeLinearVelocity, Vector3 angularVelocityA, Vector3 angularVelocityB, float t)
                 {
                     Pair = pair;
                     AngularA = angularVelocityA;
@@ -120,7 +120,7 @@ namespace BepuPhysics.CollisionDetection
                 return new CCDContinuationIndex((int)ConstraintGeneratorType.Discrete, index);
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public CCDContinuationIndex AddContinuous(ref CollidablePair pair, in Vector3 relativeLinearVelocity, in Vector3 angularVelocityA, in Vector3 angularVelocityB, float t)
+            public CCDContinuationIndex AddContinuous(ref CollidablePair pair, Vector3 relativeLinearVelocity, Vector3 angularVelocityA, Vector3 angularVelocityB, float t)
             {
                 continuous.Allocate(pool, out var index).Initialize(ref pair, relativeLinearVelocity, angularVelocityA, angularVelocityB, t);
                 return new CCDContinuationIndex((int)ConstraintGeneratorType.Continuous, index);

@@ -32,7 +32,7 @@ namespace DemoRenderer.UI
         public uint PackedColor;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public UILineInstance(in Vector2 start, in Vector2 end, float radius, in Vector3 color, in Vector2 screenToPackedScale)
+        public UILineInstance(in Vector2 start, in Vector2 end, float radius, Vector3 color, in Vector2 screenToPackedScale)
         {
             PackedStart = (uint)(start.X * screenToPackedScale.X) | ((uint)(start.Y * screenToPackedScale.Y) << 16);
             PackedEnd = (uint)(end.X * screenToPackedScale.X) | ((uint)(end.Y * screenToPackedScale.Y) << 16);

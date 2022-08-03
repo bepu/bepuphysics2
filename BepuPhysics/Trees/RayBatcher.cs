@@ -26,7 +26,7 @@ namespace BepuPhysics.Trees
         public Vector3 InverseDirection;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFrom(in Vector3 origin, in Vector3 direction, float maximumT, out TreeRay treeRay)
+        public static void CreateFrom(Vector3 origin, Vector3 direction, float maximumT, out TreeRay treeRay)
         {
             //Note that this division has two odd properties:
             //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
@@ -40,7 +40,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFrom(in Vector3 origin, in Vector3 direction, float maximumT, int id, out RayData rayData, out TreeRay treeRay)
+        public static void CreateFrom(Vector3 origin, Vector3 direction, float maximumT, int id, out RayData rayData, out TreeRay treeRay)
         {
             rayData.Origin = origin;
             rayData.Id = id;

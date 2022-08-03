@@ -146,7 +146,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe bool ShouldBlockNormal(in TestTriangle triangle, in Vector3 meshSpaceContact, in Vector3 meshSpaceNormal)
+        private static unsafe bool ShouldBlockNormal(in TestTriangle triangle, Vector3 meshSpaceContact, Vector3 meshSpaceNormal)
         {
             //While we don't have a decent way to do truly scaling SIMD operations within the context of a single manifold vs triangle test, we can at least use 4-wide operations
             //to accelerate each individual contact test. 

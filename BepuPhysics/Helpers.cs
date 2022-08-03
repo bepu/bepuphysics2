@@ -47,7 +47,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void BuildOrthonormalBasis(in Vector3 normal, out Vector3 t1, out Vector3 t2)
+        public static void BuildOrthonormalBasis(Vector3 normal, out Vector3 t1, out Vector3 t2)
         {
             var sign = normal.Z < 0 ? -1f : 1f;
 

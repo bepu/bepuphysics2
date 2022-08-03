@@ -10,7 +10,7 @@ namespace BepuPhysics.Trees
     partial struct Tree
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static bool Intersects(in Vector3 min, in Vector3 max, TreeRay* ray, out float t)
+        public unsafe static bool Intersects(Vector3 min, Vector3 max, TreeRay* ray, out float t)
         {
             var t0 = min * ray->InverseDirection - ray->OriginOverDirection;
             var t1 = max * ray->InverseDirection - ray->OriginOverDirection;
@@ -111,7 +111,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        public readonly unsafe void RayCast<TLeafTester>(in Vector3 origin, in Vector3 direction, ref float maximumT, ref TLeafTester leafTester, int id = 0) where TLeafTester : IRayLeafTester
+        public readonly unsafe void RayCast<TLeafTester>(Vector3 origin, Vector3 direction, ref float maximumT, ref TLeafTester leafTester, int id = 0) where TLeafTester : IRayLeafTester
         {
             TreeRay.CreateFrom(origin, direction, maximumT, id, out var rayData, out var treeRay);
             RayCast(&treeRay, &rayData, ref leafTester);

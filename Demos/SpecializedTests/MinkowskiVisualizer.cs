@@ -14,7 +14,7 @@ namespace Demos.SpecializedTests
 {
     public static class SimplexVisualizer
     {
-        public static void Draw(Renderer renderer, Buffer<Vector3> simplex, in Vector3 position, in Vector3 lineColor, in Vector3 backgroundColor)
+        public static void Draw(Renderer renderer, Buffer<Vector3> simplex, Vector3 position, Vector3 lineColor, Vector3 backgroundColor)
         {
             var packedLineColor = Helpers.PackColor(lineColor);
             var packedBackgroundColor = Helpers.PackColor(backgroundColor);
@@ -60,8 +60,8 @@ namespace Demos.SpecializedTests
 
         public unsafe static Buffer<LineInstance> CreateLines<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB>(
             in TShapeA a, in TShapeB b, in RigidPose poseA, in RigidPose poseB, int sampleCount,
-            float lineLength, in Vector3 lineColor,
-            float originLength, in Vector3 originColor, in Vector3 backgroundColor, in Vector3 basePosition, BufferPool pool)
+            float lineLength, Vector3 lineColor,
+            float originLength, Vector3 originColor, Vector3 backgroundColor, Vector3 basePosition, BufferPool pool)
             where TShapeA : unmanaged, IConvexShape
             where TShapeWideA : unmanaged, IShapeWide<TShapeA>
             where TSupportFinderA : struct, ISupportFinder<TShapeA, TShapeWideA>

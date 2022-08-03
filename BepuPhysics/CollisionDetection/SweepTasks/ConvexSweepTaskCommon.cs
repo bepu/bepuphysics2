@@ -27,8 +27,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ShapeTypeIndexB = default(TShapeB).TypeId;
         }
         protected override unsafe bool PreorderedTypeSweep(
-            void* shapeDataA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            void* shapeDataA, in RigidPose localPoseA, Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, in RigidPose localPoseB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
@@ -43,8 +43,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         protected override unsafe bool PreorderedTypeSweep<TSweepFilter>(
-            void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            void* shapeDataA, Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             bool requiresFlip, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
@@ -56,7 +56,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 out t0, out t1, out hitLocation, out hitNormal);
         }
 
-        static bool GetSphereCastInterval(in Vector3 origin, in Vector3 direction, float radius, out float t0, out float t1)
+        static bool GetSphereCastInterval(Vector3 origin, Vector3 direction, float radius, out float t0, out float t1)
         {
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
             var dLength = direction.Length();
@@ -112,22 +112,22 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         interface ISweepModifier
         {
             bool GetSphereCastInterval(
-                in Vector3 offsetB, in Vector3 linearVelocityB, float maximumT, float maximumRadiusA, float maximumRadiusB,
-                in Quaternion orientationA, in Vector3 angularVelocityA, float angularSpeedA,
-                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1, out Vector3 hitNormal, out Vector3 hitLocation);
+                Vector3 offsetB, Vector3 linearVelocityB, float maximumT, float maximumRadiusA, float maximumRadiusB,
+                Quaternion orientationA, Vector3 angularVelocityA, float angularSpeedA,
+                Quaternion orientationB, Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1, out Vector3 hitNormal, out Vector3 hitLocation);
             void ConstructSamples(float t0, float t1, ref Vector3Wide linearB, ref Vector3Wide angularA, ref Vector3Wide angularB,
                 ref Vector3Wide initialOffsetB, ref QuaternionWide initialOrientationA, ref QuaternionWide initialOrientationB,
                 ref Vector<float> samples, ref Vector3Wide sampleOffsetB, ref QuaternionWide sampleOrientationA, ref QuaternionWide sampleOrientationB);
             void GetNonlinearVelocityContribution(ref Vector3Wide normal,
                 out Vector<float> velocityContributionA, out Vector<float> maximumDisplacementA,
                 out Vector<float> velocityContributionB, out Vector<float> maximumDisplacementB);
-            void AdjustHitLocation(in Quaternion initialOrientationA, in BodyVelocity velocityA, float t0, ref Vector3 hitLocation);
+            void AdjustHitLocation(Quaternion initialOrientationA, in BodyVelocity velocityA, float t0, ref Vector3 hitLocation);
         }
 
         struct UnoffsetSweep : ISweepModifier
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void AdjustHitLocation(in Quaternion initialOrientationA, in BodyVelocity velocityA, float t0, ref Vector3 hitLocation)
+            public void AdjustHitLocation(Quaternion initialOrientationA, in BodyVelocity velocityA, float t0, ref Vector3 hitLocation)
             {
                 hitLocation += t0 * velocityA.Linear;
             }
@@ -150,9 +150,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool GetSphereCastInterval(
-                in Vector3 offsetB, in Vector3 linearVelocityB, float maximumT, float maximumRadiusA, float maximumRadiusB,
-                in Quaternion orientationA, in Vector3 angularVelocityA, float angularSpeedA,
-                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1, out Vector3 hitNormal, out Vector3 hitLocation)
+                Vector3 offsetB, Vector3 linearVelocityB, float maximumT, float maximumRadiusA, float maximumRadiusB,
+                Quaternion orientationA, Vector3 angularVelocityA, float angularSpeedA,
+                Quaternion orientationB, Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1, out Vector3 hitNormal, out Vector3 hitLocation)
             {
                 var hit = ConvexPairSweepTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>.GetSphereCastInterval(offsetB, linearVelocityB, maximumRadiusA + maximumRadiusB, out t0, out t1);
                 hitLocation = offsetB + linearVelocityB * t0;
@@ -184,7 +184,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             public Vector3 AngularVelocityDirectionB;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void AdjustHitLocation(in Quaternion initialOrientationA, in BodyVelocity velocityA, float t0, ref Vector3 hitLocation)
+            public void AdjustHitLocation(Quaternion initialOrientationA, in BodyVelocity velocityA, float t0, ref Vector3 hitLocation)
             {
                 PoseIntegration.Integrate(new RigidPose { Orientation = initialOrientationA }, velocityA, t0, out var integratedPose);
                 QuaternionEx.Transform(LocalPoseA.Position, integratedPose.Orientation, out var childOffset);
@@ -218,9 +218,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool GetSphereCastInterval(
-                in Vector3 offsetB, in Vector3 linearVelocityB, float maximumT, float maximumRadiusA, float maximumRadiusB,
-                in Quaternion orientationA, in Vector3 angularVelocityA, float angularSpeedA,
-                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1, out Vector3 hitNormal, out Vector3 hitLocation)
+                Vector3 offsetB, Vector3 linearVelocityB, float maximumT, float maximumRadiusA, float maximumRadiusB,
+                Quaternion orientationA, Vector3 angularVelocityA, float angularSpeedA,
+                Quaternion orientationB, Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1, out Vector3 hitNormal, out Vector3 hitLocation)
             {
                 //The tangent velocity magnitude doesn't change over the course of the sweep. Compute and cache it as an upper bound on the contribution from the offset.
                 QuaternionEx.TransformWithoutOverlap(LocalPoseA.Position, orientationA, out var rA);
@@ -269,8 +269,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         static unsafe bool Sweep<TSweepModifier>(
-            void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
+            void* shapeDataA, Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB,
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             ref TSweepModifier sweepModifier,
             out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)

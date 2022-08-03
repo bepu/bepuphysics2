@@ -35,7 +35,7 @@ namespace BepuUtilities
         /// Constructs a new affine transform.
         ///</summary>
         ///<param name="translation">Translation to use in the transform.</param>
-        public AffineTransform(in Vector3 translation)
+        public AffineTransform(Vector3 translation)
         {
             LinearTransform = Matrix3x3.Identity;
             Translation = translation;
@@ -46,7 +46,7 @@ namespace BepuUtilities
         ///</summary>
         ///<param name="orientation">Orientation to use as the linear transform.</param>
         ///<param name="translation">Translation to use in the transform.</param>
-        public AffineTransform(in Quaternion orientation, in Vector3 translation)
+        public AffineTransform(Quaternion orientation, Vector3 translation)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out LinearTransform);
             Translation = translation;
@@ -58,7 +58,7 @@ namespace BepuUtilities
         ///<param name="scaling">Scaling to apply in the linear transform.</param>
         ///<param name="orientation">Orientation to apply in the linear transform.</param>
         ///<param name="translation">Translation to apply.</param>
-        public AffineTransform(in Vector3 scaling, in Quaternion orientation, in Vector3 translation)
+        public AffineTransform(Vector3 scaling, Quaternion orientation, Vector3 translation)
         {
             //Create an SRT transform.
             Matrix3x3.CreateScale(scaling, out LinearTransform);
@@ -72,7 +72,7 @@ namespace BepuUtilities
         ///</summary>
         ///<param name="linearTransform">The linear transform component.</param>
         ///<param name="translation">Translation component of the transform.</param>
-        public AffineTransform(in Matrix3x3 linearTransform, in Vector3 translation)
+        public AffineTransform(in Matrix3x3 linearTransform, Vector3 translation)
         {
             LinearTransform = linearTransform;
             Translation = translation;
@@ -86,7 +86,7 @@ namespace BepuUtilities
         ///<param name="transform">Transform to apply.</param>
         ///<param name="transformed">Transformed position.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(in Vector3 position, in AffineTransform transform, out Vector3 transformed)
+        public static void Transform(Vector3 position, in AffineTransform transform, out Vector3 transformed)
         {
             Matrix3x3.Transform(position, transform.LinearTransform, out transformed);
             transformed += transform.Translation;

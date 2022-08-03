@@ -64,9 +64,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void InsertContact(in Vector3 slotSideEdgeCenter, in Vector3 slotCylinderEdgeAxis, float t,
-            in Vector3 hullFaceOrigin, in Vector3 slotHullFaceNormal, float inverseDepthDenominator,
-            in Matrix3x3 slotHullOrientation, in Vector3 slotOffsetB, int featureId,
+        static void InsertContact(Vector3 slotSideEdgeCenter, Vector3 slotCylinderEdgeAxis, float t,
+            Vector3 hullFaceOrigin, Vector3 slotHullFaceNormal, float inverseDepthDenominator,
+            in Matrix3x3 slotHullOrientation, Vector3 slotOffsetB, int featureId,
             ref Vector3Wide contactOffsetAWide, ref Vector<float> contactDepthWide, ref Vector<int> contactFeatureIdWide, ref Vector<int> contactExistsWide)
         {
             //Create max contact.

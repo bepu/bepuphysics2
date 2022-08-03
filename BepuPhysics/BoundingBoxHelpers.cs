@@ -151,7 +151,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetBoundsExpansion(in Vector3 linearVelocity, in Vector3 angularVelocity, float dt,
+        public static void GetBoundsExpansion(Vector3 linearVelocity, Vector3 angularVelocity, float dt,
             float maximumRadius, float maximumAngularExpansion, float maximumAllowedExpansion, out Vector3 minExpansion, out Vector3 maxExpansion)
         {
             var linearDisplacement = linearVelocity * dt;
@@ -166,7 +166,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ExpandBoundingBox(ref Vector3 min, ref Vector3 max, in Vector3 linearVelocity, in Vector3 angularVelocity, float dt,
+        public static void ExpandBoundingBox(ref Vector3 min, ref Vector3 max, Vector3 linearVelocity, Vector3 angularVelocity, float dt,
         float maximumRadius, float maximumAngularExpansion, float maximumAllowedExpansion)
         {
             GetBoundsExpansion(linearVelocity, angularVelocity, dt, maximumRadius, maximumAngularExpansion, maximumAllowedExpansion, out var minExpansion, out var maxExpansion);
@@ -220,7 +220,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void ExpandBoundingBox(in Vector3 expansion, ref Vector3 min, ref Vector3 max)
+        public unsafe static void ExpandBoundingBox(Vector3 expansion, ref Vector3 min, ref Vector3 max)
         {
             var minExpansion = Vector3.Min(default, expansion);
             var maxExpansion = Vector3.Max(default, expansion);
@@ -231,8 +231,8 @@ namespace BepuPhysics
         /// <summary>
         /// Computes the bounding box of a child shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
         /// </summary>
-        public static unsafe void GetLocalBoundingBoxForSweep(TypedIndex shapeIndex, Shapes shapes, in RigidPose shapePoseLocalToA, in Quaternion orientationA, in BodyVelocity velocityA,
-            in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
+        public static unsafe void GetLocalBoundingBoxForSweep(TypedIndex shapeIndex, Shapes shapes, in RigidPose shapePoseLocalToA, Quaternion orientationA, in BodyVelocity velocityA,
+            Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
         {
             //TODO: For any significant amount of B angular velocity, the resulting bounding boxes can be enormous in local space.
             //You should strongly consider heuristically choosing a world space path. For tree-based compounds, this would require a dedicated slow world space traversal.
@@ -261,8 +261,8 @@ namespace BepuPhysics
         /// <summary>
         /// Computes the bounding box of shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
         /// </summary>
-        public static unsafe void GetLocalBoundingBoxForSweep<TConvex>(ref TConvex shape, in Quaternion orientationA, in BodyVelocity velocityA,
-            in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max) where TConvex : struct, IConvexShape
+        public static unsafe void GetLocalBoundingBoxForSweep<TConvex>(ref TConvex shape, Quaternion orientationA, in BodyVelocity velocityA,
+            Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max) where TConvex : struct, IConvexShape
         {
             //TODO: For any significant amount of B angular velocity, the resulting bounding boxes can be enormous in local space.
             //You should strongly consider heuristically choosing a world space path. For tree-based compounds, this would require a dedicated slow world space traversal.

@@ -167,7 +167,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.WriteFirst(source.C * scale, ref target.C);
         }
 
-        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var r);
             min = new Vector3(float.MaxValue);
@@ -294,7 +294,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public readonly unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             var scaledMin = min * inverseScale;

@@ -10,7 +10,7 @@ namespace Demos
 {
     public static class DemoMeshHelper
     {
-        public static void LoadModel(ContentArchive content, BufferPool pool, string contentName, in Vector3 scaling, out Mesh mesh)
+        public static void LoadModel(ContentArchive content, BufferPool pool, string contentName, Vector3 scaling, out Mesh mesh)
         {
             var meshContent = content.Load<MeshContent>(contentName);
             pool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);
@@ -21,7 +21,7 @@ namespace Demos
             mesh = new Mesh(triangles, scaling, pool);
         }
 
-        public static void CreateFan(int triangleCount, float radius, in Vector3 scaling, BufferPool pool, out Mesh mesh)
+        public static void CreateFan(int triangleCount, float radius, Vector3 scaling, BufferPool pool, out Mesh mesh)
         {
             var anglePerTriangle = 2 * MathF.PI / triangleCount;
             pool.Take<Triangle>(triangleCount, out var triangles);

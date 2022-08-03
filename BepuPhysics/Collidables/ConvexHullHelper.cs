@@ -240,7 +240,7 @@ namespace BepuPhysics.Collidables
             return bestIndex;
         }
 
-        static void ReduceFace(ref QuickList<int> faceVertexIndices, in Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<bool> allowVertex, ref QuickList<int> reducedIndices)
+        static void ReduceFace(ref QuickList<int> faceVertexIndices, Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<bool> allowVertex, ref QuickList<int> reducedIndices)
         {
             Debug.Assert(facePoints.Count == 0 && reducedIndices.Count == 0 && facePoints.Span.Length >= faceVertexIndices.Count && reducedIndices.Span.Length >= faceVertexIndices.Count);
             for (int i = faceVertexIndices.Count - 1; i >= 0; --i)
@@ -397,7 +397,7 @@ namespace BepuPhysics.Collidables
         //    public Vector3 BasisX;
         //    public Vector3 BasisY;
 
-        //    public DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, in Vector3 faceNormal, in Vector3 basisX, in Vector3 basisY)
+        //    public DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, Vector3 faceNormal, Vector3 basisX, Vector3 basisY)
         //    {
         //        SourceEdge = sourceEdge;
         //        FaceNormal = faceNormal;

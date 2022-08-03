@@ -49,7 +49,7 @@ namespace Demos.Demos.Tanks
         /// <param name="brakeLeft">Whether the left tread should brake.</param>
         /// <param name="brakeRight">Whether the right tread should brake.</param>
         /// <param name="aimDirection">Direction that the tank's barrel should point.</param>
-        public void UpdateMovementAndAim(Simulation simulation, float leftTargetSpeedFraction, float rightTargetSpeedFraction, bool zoom, bool brakeLeft, bool brakeRight, in Vector3 aimDirection)
+        public void UpdateMovementAndAim(Simulation simulation, float leftTargetSpeedFraction, float rightTargetSpeedFraction, bool zoom, bool brakeLeft, bool brakeRight, Vector3 aimDirection)
         {
             var leftTargetSpeed = brakeLeft ? 0 : leftTargetSpeedFraction * Speed;
             var rightTargetSpeed = brakeRight ? 0 : rightTargetSpeedFraction * Speed;

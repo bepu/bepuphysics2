@@ -32,7 +32,7 @@ namespace BepuPhysics.Constraints
         /// <param name="d">Initial position of the fourth body.</param>
         /// <param name="springSettings">Spring settings to apply to the volume constraint.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public VolumeConstraint(in Vector3 a, in Vector3 b, in Vector3 c, in Vector3 d, SpringSettings springSettings)
+        public VolumeConstraint(Vector3 a, Vector3 b, Vector3 c, Vector3 d, SpringSettings springSettings)
         {
             TargetScaledVolume = Vector3.Dot(Vector3.Cross(b - a, c - a), d - a);
             SpringSettings = springSettings;

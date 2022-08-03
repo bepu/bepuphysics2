@@ -44,7 +44,7 @@ namespace BepuPhysics.Constraints
         /// <param name="maximumDistance">Maximum distance permitted between the point on A and the point on B.</param>
         /// <param name="springSettings">Spring frequency and damping parameters.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public DistanceLimit(in Vector3 localOffsetA, in Vector3 localOffsetB, float minimumDistance, float maximumDistance, in SpringSettings springSettings)
+        public DistanceLimit(Vector3 localOffsetA, Vector3 localOffsetB, float minimumDistance, float maximumDistance, in SpringSettings springSettings)
         {
             LocalOffsetA = localOffsetA;
             LocalOffsetB = localOffsetB;

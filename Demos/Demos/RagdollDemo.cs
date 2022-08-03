@@ -181,7 +181,7 @@ namespace Demos.Demos
             orientation = crossLength > 1e-8f ? QuaternionEx.CreateFromAxisAngle(cross / crossLength, (float)Math.Asin(crossLength)) : Quaternion.Identity;
         }
 
-        public static Quaternion CreateBasis(in Vector3 z, in Vector3 x)
+        public static Quaternion CreateBasis(Vector3 z, Vector3 x)
         {
             //For ease of use, don't assume that x is perpendicular to z, nor that either input is normalized.
             Matrix3x3 basis;

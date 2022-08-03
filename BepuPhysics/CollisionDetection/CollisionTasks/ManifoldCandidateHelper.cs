@@ -288,8 +288,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe static void PlaceCandidateInSlot(in ManifoldCandidateScalar candidate, int contactIndex,
-            in Vector3 faceCenterB, in Vector3 faceBX, in Vector3 faceBY, float depth,
-            in Matrix3x3 orientationB, in Vector3 offsetB, ref Convex4ContactManifoldWide manifoldSlot)
+            Vector3 faceCenterB, Vector3 faceBX, Vector3 faceBY, float depth,
+            in Matrix3x3 orientationB, Vector3 offsetB, ref Convex4ContactManifoldWide manifoldSlot)
         {
             var localPosition = candidate.X * faceBX + candidate.Y * faceBY + faceCenterB;
             Matrix3x3.Transform(localPosition, orientationB, out var position);
@@ -314,8 +314,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         public unsafe static void Reduce(ManifoldCandidateScalar* candidates, int candidateCount,
-            in Vector3 faceNormalA, float inverseFaceNormalADotLocalNormal, in Vector3 faceCenterA, in Vector3 faceCenterB, in Vector3 tangentBX, in Vector3 tangentBY,
-            float epsilonScale, float minimumDepth, in Matrix3x3 rotationToWorld, in Vector3 worldOffsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
+            Vector3 faceNormalA, float inverseFaceNormalADotLocalNormal, Vector3 faceCenterA, Vector3 faceCenterB, Vector3 tangentBX, Vector3 tangentBY,
+            float epsilonScale, float minimumDepth, in Matrix3x3 rotationToWorld, Vector3 worldOffsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
         {
             if (candidateCount == 0)
             {

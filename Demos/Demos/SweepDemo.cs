@@ -111,7 +111,7 @@ namespace Demos.Demos
 
         }
 
-        void DrawShape<TShape>(ref TShape shape, in RigidPose pose, in Vector3 color, Shapes shapes, Renderer renderer)
+        void DrawShape<TShape>(ref TShape shape, in RigidPose pose, Vector3 color, Shapes shapes, Renderer renderer)
             where TShape : struct, IShape
         {
             if (typeof(TShape) == typeof(Triangle))
@@ -133,7 +133,7 @@ namespace Demos.Demos
         }
 
         unsafe void DrawSweep<TShape>(TShape shape, in RigidPose pose, in BodyVelocity velocity, int steps,
-            float t, Renderer renderer, in Vector3 color)
+            float t, Renderer renderer, Vector3 color)
             where TShape : struct, IShape
         {
             if (steps == 1)
@@ -225,7 +225,7 @@ namespace Demos.Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnHit(ref float maximumT, float t, in Vector3 hitLocation, in Vector3 hitNormal, CollidableReference collidable)
+            public void OnHit(ref float maximumT, float t, Vector3 hitLocation, Vector3 hitNormal, CollidableReference collidable)
             {
                 //Changing the maximum T value prevents the traversal from visiting any leaf nodes more distant than that later in the traversal.
                 //It is effectively an optimization that you can use if you only care about the time of first impact.
@@ -249,7 +249,7 @@ namespace Demos.Demos
             }
         }
 
-        void StandardTestSweep<TA, TB>(in TA a, in TB b, ref Vector3 position, in Quaternion initialOrientationA, in Quaternion initialOrientationB, Renderer renderer)
+        void StandardTestSweep<TA, TB>(in TA a, in TB b, ref Vector3 position, Quaternion initialOrientationA, Quaternion initialOrientationB, Renderer renderer)
             where TA : struct, IShape where TB : struct, IShape
         {
             TestSweep(

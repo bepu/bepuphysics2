@@ -197,7 +197,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to use as the transformation.</param>
         /// <param name="result">Product of the transformation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(in Vector3 v, in Matrix3x3 m, out Vector3 result)
+        public static void Transform(Vector3 v, in Matrix3x3 m, out Vector3 result)
         {
             var x = new Vector3(v.X);
             var y = new Vector3(v.Y);
@@ -212,7 +212,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to use as the transformation transpose.</param>
         /// <param name="result">Product of the transformation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformTranspose(in Vector3 v, in Matrix3x3 m, out Vector3 result)
+        public static void TransformTranspose(Vector3 v, in Matrix3x3 m, out Vector3 result)
         {
             result = new Vector3(
                 Vector3.Dot(v, m.X),
@@ -303,7 +303,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromQuaternion(in Quaternion quaternion, out Matrix3x3 result)
+        public static void CreateFromQuaternion(Quaternion quaternion, out Matrix3x3 result)
         {
             float qX2 = quaternion.X + quaternion.X;
             float qY2 = quaternion.Y + quaternion.Y;
@@ -337,7 +337,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Matrix3x3 CreateFromQuaternion(in Quaternion quaternion)
+        public static Matrix3x3 CreateFromQuaternion(Quaternion quaternion)
         {
             CreateFromQuaternion(quaternion, out var toReturn);
             return toReturn;
@@ -350,7 +350,7 @@ namespace BepuUtilities
         /// <param name="scale">Scale to represent.</param>
         /// <param name="linearTransform">Matrix representing a scale.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateScale(in Vector3 scale, out Matrix3x3 linearTransform)
+        public static void CreateScale(Vector3 scale, out Matrix3x3 linearTransform)
         {
             linearTransform.X = new Vector3(scale.X, 0, 0);
             linearTransform.Y = new Vector3(0, scale.Y, 0);
@@ -364,7 +364,7 @@ namespace BepuUtilities
         /// <param name="angle">Angle of the rotation.</param>
         /// <param name="result">Resulting rotation matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromAxisAngle(in Vector3 axis, float angle, out Matrix3x3 result)
+        public static void CreateFromAxisAngle(Vector3 axis, float angle, out Matrix3x3 result)
         {
             //TODO: Could be better simdified.
             float xx = axis.X * axis.X;
@@ -401,7 +401,7 @@ namespace BepuUtilities
         /// <param name="angle">Angle of the rotation.</param>
         /// <returns>Resulting rotation matrix.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Matrix3x3 CreateFromAxisAngle(in Vector3 axis, float angle)
+        public static Matrix3x3 CreateFromAxisAngle(Vector3 axis, float angle)
         {
             CreateFromAxisAngle(axis, angle, out var result);
             return result;
@@ -414,7 +414,7 @@ namespace BepuUtilities
         /// <param name="v">Vector to build the skew symmetric matrix from.</param>
         /// <param name="result">Skew symmetric matrix representing the cross product.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateCrossProduct(in Vector3 v, out Matrix3x3 result)
+        public static void CreateCrossProduct(Vector3 v, out Matrix3x3 result)
         {
             result.X.X = 0f;
             result.X.Y = -v.Z;

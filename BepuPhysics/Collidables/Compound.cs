@@ -51,7 +51,7 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
-        public void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex)
+        public void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex)
         {
             Debug.Assert(childIndex == 0, "Compounds can contain only convexes, so the child index is always zero.");
             T = t;
@@ -160,7 +160,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeChildBounds(in CompoundChild child, in Quaternion orientation, Shapes shapeBatches, out Vector3 childMin, out Vector3 childMax)
+        public static void ComputeChildBounds(in CompoundChild child, Quaternion orientation, Shapes shapeBatches, out Vector3 childMin, out Vector3 childMax)
         {
             GetRotatedChildPose(child.LocalPosition, child.LocalOrientation, orientation, out var childPose);
             Debug.Assert(!shapeBatches[child.ShapeIndex.Type].Compound, "All children of a compound must be convex.");
@@ -319,7 +319,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlapsPointer)
+        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlapsPointer)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             Tree.ConvertBoxToCentroidWithExtent(min, max, out var sweepOrigin, out var expansion);

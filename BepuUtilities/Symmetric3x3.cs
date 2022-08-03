@@ -491,7 +491,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to interpret as symmetric transform.</param>
         /// <param name="result">Result of transforming the vector by the given symmetric matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformWithoutOverlap(in Vector3 v, in Symmetric3x3 m, out Vector3 result)
+        public static void TransformWithoutOverlap(Vector3 v, in Symmetric3x3 m, out Vector3 result)
         {
             result.X = v.X * m.XX + v.Y * m.YX + v.Z * m.ZX;
             result.Y = v.X * m.YX + v.Y * m.YY + v.Z * m.ZY;

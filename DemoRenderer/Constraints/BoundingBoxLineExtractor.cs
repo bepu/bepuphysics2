@@ -24,7 +24,7 @@ namespace DemoRenderer.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBoundsLines(in Vector3 min, in Vector3 max, uint packedColor, uint packedBackgroundColor, ref LineInstance targetLines)
+        public static void WriteBoundsLines(Vector3 min, Vector3 max, uint packedColor, uint packedBackgroundColor, ref LineInstance targetLines)
         {
             var v001 = new Vector3(min.X, min.Y, max.Z);
             var v010 = new Vector3(min.X, max.Y, min.Z);
@@ -46,7 +46,7 @@ namespace DemoRenderer.Constraints
             Unsafe.Add(ref targetLines, 11) = new LineInstance(v110, max, packedColor, packedBackgroundColor);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBoundsLines(in Vector3 min, in Vector3 max, in Vector3 color, in Vector3 backgroundColor, ref LineInstance targetLines)
+        public static void WriteBoundsLines(Vector3 min, Vector3 max, Vector3 color, Vector3 backgroundColor, ref LineInstance targetLines)
         {
             WriteBoundsLines(min, max, Helpers.PackColor(color), Helpers.PackColor(backgroundColor), ref targetLines);
         }

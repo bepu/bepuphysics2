@@ -38,7 +38,7 @@ namespace Demos.SpecializedTests.Media
         Random random = new Random(5);
         int ragdollIndex = 0;
 
-        BodyVelocity GetRandomizedVelocity(in Vector3 linearVelocity)
+        BodyVelocity GetRandomizedVelocity(Vector3 linearVelocity)
         {
             return new BodyVelocity { Linear = linearVelocity, Angular = new Vector3(-20) + 40 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) };
         }

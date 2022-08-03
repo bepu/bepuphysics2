@@ -63,7 +63,7 @@ namespace Demos.SpecializedTests
             pointOutsideTriangle += pose.Position;
         }
 
-        void TestRay(in Triangle triangle, in RigidPose pose, in Vector3 rayOrigin, in Vector3 rayDirection, bool expectedImpact, in Vector3 pointOnTrianglePlane)
+        void TestRay(in Triangle triangle, in RigidPose pose, Vector3 rayOrigin, Vector3 rayDirection, bool expectedImpact, Vector3 pointOnTrianglePlane)
         {
             var hit = triangle.RayTest(pose, rayOrigin, rayDirection, out var t, out var normal);
 

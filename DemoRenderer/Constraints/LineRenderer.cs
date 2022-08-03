@@ -24,7 +24,7 @@ namespace DemoRenderer.Constraints
         public uint PackedColor;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public LineInstance(in Vector3 start, in Vector3 end, in Vector3 color, in Vector3 backgroundColor)
+        public LineInstance(Vector3 start, Vector3 end, Vector3 color, Vector3 backgroundColor)
         {
             Start = start;
             PackedBackgroundColor = Helpers.PackColor(backgroundColor);
@@ -32,7 +32,7 @@ namespace DemoRenderer.Constraints
             PackedColor = Helpers.PackColor(color);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public LineInstance(in Vector3 start, in Vector3 end, uint packedColor, uint packedBackgroundColor)
+        public LineInstance(Vector3 start, Vector3 end, uint packedColor, uint packedBackgroundColor)
         {
             Start = start;
             PackedBackgroundColor = packedBackgroundColor;

@@ -60,7 +60,7 @@ namespace BepuUtilities
         /// <param name="b">Second bounding box to test.</param>
         /// <returns>Whether the bounding boxes intersected.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Intersects(in Vector3 minA, in Vector3 maxA, in Vector3 minB, in Vector3 maxB)
+        public static bool Intersects(Vector3 minA, Vector3 maxA, Vector3 minB, Vector3 maxB)
         {
             return maxA.X >= minB.X & maxA.Y >= minB.Y & maxA.Z >= minB.Z &
                    maxB.X >= minA.X & maxB.Y >= minA.Y & maxB.Z >= minA.Z;
@@ -89,7 +89,7 @@ namespace BepuUtilities
         /// <param name="min">Minimum of the merged bounding box.</param>
         /// <param name="max">Maximum of the merged bounding box.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateMerged(in Vector3 minA, in Vector3 maxA, in Vector3 minB, in Vector3 maxB, out Vector3 min, out Vector3 max)
+        public static void CreateMerged(Vector3 minA, Vector3 maxA, Vector3 minB, Vector3 maxB, out Vector3 min, out Vector3 max)
         {
             min = Vector3.Min(minA, minB);
             max = Vector3.Max(maxA, maxB);

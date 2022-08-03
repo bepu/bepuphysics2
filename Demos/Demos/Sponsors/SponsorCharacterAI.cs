@@ -13,7 +13,7 @@ namespace Demos.Demos.Sponsors
     {
         BodyHandle bodyHandle;
         Vector2 targetLocation;
-        public SponsorCharacterAI(CharacterControllers characters, in CollidableDescription characterCollidable, in Vector3 initialPosition, in Vector2 targetLocation)
+        public SponsorCharacterAI(CharacterControllers characters, in CollidableDescription characterCollidable, Vector3 initialPosition, in Vector2 targetLocation)
         {
             bodyHandle = characters.Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f }, characterCollidable, -1f));
 

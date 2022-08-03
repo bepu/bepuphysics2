@@ -272,7 +272,7 @@ namespace DemoRenderer
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GetScreenLocation(in Vector3 position, in Matrix viewProjection, in Vector2 resolution, out Vector2 screenLocation)
+        public static bool GetScreenLocation(Vector3 position, in Matrix viewProjection, in Vector2 resolution, out Vector2 screenLocation)
         {
             Matrix.Transform(new Vector4(position, 1), viewProjection, out var projected);
             projected /= projected.W;
@@ -305,7 +305,7 @@ namespace DemoRenderer
         /// <param name="linear">Linear input to apply the curve to.</param>
         /// <param name="srgb">Transformed value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ToSRGB(in Vector3 linear, out Vector3 srgb)
+        public static void ToSRGB(Vector3 linear, out Vector3 srgb)
         {
             srgb = new Vector3(ToSRGB(linear.X), ToSRGB(linear.Y), ToSRGB(linear.Z));
         }

@@ -137,7 +137,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             QuaternionWide.Broadcast(orientation, out var orientationWide);
             ComputeBounds(orientationWide, out min, out max);
@@ -198,7 +198,7 @@ namespace BepuPhysics.Collidables
             return new ConvexHullShapeBatch(pool, initialCapacity);
         }
 
-        public readonly bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
         {
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             var shapeToRay = origin - pose.Position;

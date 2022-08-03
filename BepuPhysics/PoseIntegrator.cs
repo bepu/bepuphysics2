@@ -100,7 +100,7 @@ namespace BepuPhysics
     public static class PoseIntegration
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void RotateInverseInertia(in Symmetric3x3 localInverseInertiaTensor, in Quaternion orientation, out Symmetric3x3 rotatedInverseInertiaTensor)
+        public static void RotateInverseInertia(in Symmetric3x3 localInverseInertiaTensor, Quaternion orientation, out Symmetric3x3 rotatedInverseInertiaTensor)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var orientationMatrix);
             //I^-1 = RT * Ilocal^-1 * R 
@@ -111,7 +111,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Integrate(in Vector3 position, in Vector3 linearVelocity, float dt, out Vector3 integratedPosition)
+        public static void Integrate(Vector3 position, Vector3 linearVelocity, float dt, out Vector3 integratedPosition)
         {
             position.Validate();
             linearVelocity.Validate();
@@ -120,7 +120,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Integrate(in Quaternion orientation, in Vector3 angularVelocity, float dt, out Quaternion integratedOrientation)
+        public static void Integrate(Quaternion orientation, Vector3 angularVelocity, float dt, out Quaternion integratedOrientation)
         {
             orientation.ValidateOrientation();
             angularVelocity.Validate();

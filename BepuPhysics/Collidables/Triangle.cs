@@ -31,7 +31,7 @@ namespace BepuPhysics.Collidables
         /// <param name="a">First vertex of the triangle in local space.</param>
         /// <param name="b">Second vertex of the triangle in local space.</param>
         /// <param name="c">Third vertex of the triangle in local space.</param>
-        public Triangle(in Vector3 a, in Vector3 b, in Vector3 c)
+        public Triangle(Vector3 a, Vector3 b, Vector3 c)
         {
             A = a;
             B = b;
@@ -39,7 +39,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var basis);
             Matrix3x3.Transform(A, basis, out var worldA);
@@ -57,7 +57,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool RayTest(in Vector3 a, in Vector3 b, in Vector3 c, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        public static bool RayTest(Vector3 a, Vector3 b, Vector3 c, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
         {
             //Note that this assumes clockwise-in-right-hand winding. Rays coming from the opposite direction pass through; triangles are one sided.
             var ab = b - a;
@@ -95,7 +95,7 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
-        public readonly bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
         {
             var offset = origin - pose.Position;
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);

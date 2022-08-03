@@ -108,7 +108,7 @@ namespace Demos.Demos.Tanks
         /// <param name="simulation">Simulation containing the tank.</param>
         /// <param name="aimDirection">Direction to aim in.</param>
         /// <returns>Swivel and pitch angles to point in the given direction.</returns>
-        public readonly (float targetSwivelAngle, float targetPitchAngle) ComputeTurretAngles(Simulation simulation, in Vector3 aimDirection)
+        public readonly (float targetSwivelAngle, float targetPitchAngle) ComputeTurretAngles(Simulation simulation, Vector3 aimDirection)
         {
             //Decompose the aim direction into target angles for the turret and barrel servos.
             //First, we need to compute the frame of reference and transform the aim direction into the tank's local space.
@@ -182,8 +182,8 @@ namespace Demos.Demos.Tanks
         }
 
         static BodyHandle CreateWheel(Simulation simulation, CollidableProperty<TankDemoBodyProperties> properties, in RigidPose tankPose, in RigidPose bodyLocalPose,
-            TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, BodyHandle bodyHandle, ref SubgroupCollisionFilter bodyFilter, in Vector3 bodyToWheelSuspension, float suspensionLength,
-            in SpringSettings suspensionSettings, in Quaternion localWheelOrientation,
+            TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, BodyHandle bodyHandle, ref SubgroupCollisionFilter bodyFilter, Vector3 bodyToWheelSuspension, float suspensionLength,
+            in SpringSettings suspensionSettings, Quaternion localWheelOrientation,
             ref QuickList<BodyHandle> wheelHandles, ref QuickList<ConstraintHandle> constraints, ref QuickList<ConstraintHandle> motors)
         {
             RigidPose wheelPose;

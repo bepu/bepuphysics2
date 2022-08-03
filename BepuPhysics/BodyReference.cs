@@ -352,7 +352,7 @@ namespace BepuPhysics
         /// <param name="impulse">Impulse to apply to the body.</param>
         /// <param name="impulseOffset">World space offset from the center of the body to apply the impulse at.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(in Vector3 impulse, in Vector3 impulseOffset, ref BodyInertia localInertia, ref RigidPose pose, ref BodyVelocity velocity)
+        public static void ApplyImpulse(Vector3 impulse, Vector3 impulseOffset, ref BodyInertia localInertia, ref RigidPose pose, ref BodyVelocity velocity)
         {
             PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out var inverseInertiaTensor);
             ApplyLinearImpulse(impulse, localInertia.InverseMass, ref velocity.Linear);
@@ -367,7 +367,7 @@ namespace BepuPhysics
         /// <param name="impulse">Impulse to apply to the body.</param>
         /// <param name="impulseOffset">World space offset from the center of the body to apply the impulse at.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(in BodySet set, int index, in Vector3 impulse, in Vector3 impulseOffset)
+        public static void ApplyImpulse(in BodySet set, int index, Vector3 impulse, Vector3 impulseOffset)
         {
             ref var state = ref set.DynamicsState[index];
             ApplyImpulse(impulse, impulseOffset, ref state.Inertia.Local, ref state.Motion.Pose, ref state.Motion.Velocity);
@@ -380,7 +380,7 @@ namespace BepuPhysics
         /// <param name="inverseInertiaTensor">Inverse inertia tensor to transform the impulse with.</param>
         /// <param name="angularVelocity">Angular velocity to be modified.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyAngularImpulse(in Vector3 angularImpulse, in Symmetric3x3 inverseInertiaTensor, ref Vector3 angularVelocity)
+        public static void ApplyAngularImpulse(Vector3 angularImpulse, in Symmetric3x3 inverseInertiaTensor, ref Vector3 angularVelocity)
         {
             Symmetric3x3.TransformWithoutOverlap(angularImpulse, inverseInertiaTensor, out var angularVelocityChange);
             angularVelocity += angularVelocityChange;
@@ -393,7 +393,7 @@ namespace BepuPhysics
         /// <param name="inverseMass">Inverse mass to transform the impulse with.</param>
         /// <param name="linearVelocity">Linear velocity to be modified.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyLinearImpulse(in Vector3 impulse, float inverseMass, ref Vector3 linearVelocity)
+        public static void ApplyLinearImpulse(Vector3 impulse, float inverseMass, ref Vector3 linearVelocity)
         {
             linearVelocity += impulse * inverseMass;
         }
@@ -405,7 +405,7 @@ namespace BepuPhysics
         /// <param name="impulse">Impulse to apply to the body.</param>
         /// <param name="impulseOffset">World space offset to apply the impulse at.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ApplyImpulse(in Vector3 impulse, in Vector3 impulseOffset)
+        public void ApplyImpulse(Vector3 impulse, Vector3 impulseOffset)
         {
             ref var location = ref MemoryLocation;
             ApplyImpulse(Bodies.Sets[location.SetIndex], location.Index, impulse, impulseOffset);
@@ -416,7 +416,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="impulse">Impulse to apply to the velocity.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ApplyLinearImpulse(in Vector3 impulse)
+        public void ApplyLinearImpulse(Vector3 impulse)
         {
             ref var location = ref MemoryLocation;
             ref var set = ref Bodies.Sets[location.SetIndex];
@@ -430,7 +430,7 @@ namespace BepuPhysics
         /// <param name="offset">Offset from the body's center to </param>
         /// <param name="velocity">Effective velocity of the point if it were attached to the body.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetVelocityForOffset(in Vector3 offset, out Vector3 velocity)
+        public void GetVelocityForOffset(Vector3 offset, out Vector3 velocity)
         {
             velocity = Velocity.Linear + Vector3.Cross(Velocity.Angular, offset);
         }
@@ -440,7 +440,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="angularImpulse">Impulse to apply to the velocity.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ApplyAngularImpulse(in Vector3 angularImpulse)
+        public void ApplyAngularImpulse(Vector3 angularImpulse)
         {
             ref var location = ref MemoryLocation;
             ref var set = ref Bodies.Sets[location.SetIndex];

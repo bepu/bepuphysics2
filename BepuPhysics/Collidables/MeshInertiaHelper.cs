@@ -27,7 +27,7 @@ namespace BepuPhysics.Collidables
     /// </summary>
     public static class MeshInertiaHelper
     {
-        public static void ComputeTetrahedronContribution(in Vector3 a, in Vector3 b, in Vector3 c, float mass, out Symmetric3x3 inertiaTensor)
+        public static void ComputeTetrahedronContribution(Vector3 a, Vector3 b, Vector3 c, float mass, out Symmetric3x3 inertiaTensor)
         {
             //Computing the inertia of a tetrahedron requires integrating across its volume.
             //While it's possible to do so directly given arbitrary plane equations, it's more convenient to integrate over a normalized tetrahedron with coordinates 
@@ -109,7 +109,7 @@ namespace BepuPhysics.Collidables
         /// <param name="c">Third vertex of the tetrahedron.</param>
         /// <returns>Volume of the tetrahedron.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float ComputeTetrahedronVolume(in Vector3 a, in Vector3 b, in Vector3 c)
+        public static float ComputeTetrahedronVolume(Vector3 a, Vector3 b, Vector3 c)
         {
             return (1f / 6f) * Vector3.Dot(Vector3.Cross(b, a), c);
         }
@@ -122,7 +122,7 @@ namespace BepuPhysics.Collidables
         /// <param name="c">Third vertex of the tetrahedron.</param>
         /// <param name="volume">Volume of the tetrahedron.</param>
         /// <param name="inertiaTensor">Inertia tensor of this tetrahedron assuming a density of 1.</param>
-        public static void ComputeTetrahedronContribution(in Vector3 a, in Vector3 b, in Vector3 c, out float volume, out Symmetric3x3 inertiaTensor)
+        public static void ComputeTetrahedronContribution(Vector3 a, Vector3 b, Vector3 c, out float volume, out Symmetric3x3 inertiaTensor)
         {
             volume = ComputeTetrahedronVolume(a, b, c);
             ComputeTetrahedronContribution(a, b, c, volume, out inertiaTensor);
@@ -205,7 +205,7 @@ namespace BepuPhysics.Collidables
         /// <param name="c">Third vertex in the triangle.</param>
         /// <param name="mass">Mass of the triangle.</param>
         /// <param name="inertiaTensor">Inertia tensor of the triangle.</param>
-        public static void ComputeTriangleContribution(in Vector3 a, in Vector3 b, in Vector3 c, float mass, out Symmetric3x3 inertiaTensor)
+        public static void ComputeTriangleContribution(Vector3 a, Vector3 b, Vector3 c, float mass, out Symmetric3x3 inertiaTensor)
         {
             //This follows the same logic as the tetrahedral inertia tensor calculation, but the transform is different.
             //There are only two dimensions of interest, but if we wanted to express it as a 3x3 linear transform:
@@ -254,7 +254,7 @@ namespace BepuPhysics.Collidables
         /// <param name="b">Second vertex in the triangle.</param>
         /// <param name="c">Third vertex in the triangle.</param>
         /// <returns>Area of the triangle.</returns>
-        public static float ComputeTriangleArea(in Vector3 a, in Vector3 b, in Vector3 c)
+        public static float ComputeTriangleArea(Vector3 a, Vector3 b, Vector3 c)
         {
             return 0.5f * Vector3.Cross(b - a, c - a).Length(); //Not exactly fast, but again, we're assuming performance is irrelevant for the mesh inertia helper.
         }
@@ -267,7 +267,7 @@ namespace BepuPhysics.Collidables
         /// <param name="c">Third vertex in the triangle.</param>
         /// <param name="area">Area of the triangle.</param>
         /// <param name="inertiaTensor">Inertia tensor of the triangle assuming that the density is 1.</param>
-        public static void ComputeTriangleContribution(in Vector3 a, in Vector3 b, in Vector3 c, out float area, out Symmetric3x3 inertiaTensor)
+        public static void ComputeTriangleContribution(Vector3 a, Vector3 b, Vector3 c, out float area, out Symmetric3x3 inertiaTensor)
         {
             area = ComputeTriangleArea(a, b, c);
             ComputeTriangleContribution(a, b, c, area, out inertiaTensor);
@@ -344,7 +344,7 @@ namespace BepuPhysics.Collidables
         /// <param name="mass">Mass associated with the inertia tensor being moved.</param>
         /// <param name="offset">Offset from the current inertia frame of reference to the new frame of reference.</param>
         /// <param name="inertiaOffset">Modification to add to the inertia tensor to move it into the new reference frame.</param>
-        public static void GetInertiaOffset(float mass, in Vector3 offset, out Symmetric3x3 inertiaOffset)
+        public static void GetInertiaOffset(float mass, Vector3 offset, out Symmetric3x3 inertiaOffset)
         {
             //Just the parallel axis theorem.
             var squared = offset * offset;

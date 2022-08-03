@@ -30,14 +30,14 @@ namespace BepuPhysics.CollisionDetection
         public int ShapeTypeIndexB { get; protected set; }
 
         protected abstract unsafe bool PreorderedTypeSweep(
-            void* shapeDataA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            void* shapeDataA, in RigidPose localPoseA, Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, in RigidPose localPoseB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal);
 
         public unsafe bool Sweep(
-            void* shapeDataA, int shapeTypeA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            void* shapeDataA, int shapeTypeA, in RigidPose localPoseA, Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
@@ -66,15 +66,15 @@ namespace BepuPhysics.CollisionDetection
         }
 
         protected abstract unsafe bool PreorderedTypeSweep<TSweepFilter>(
-            void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
+            void* shapeDataA, Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB,
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
             where TSweepFilter : ISweepFilter;
 
         public unsafe bool Sweep<TSweepFilter>(
-            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
+            void* shapeDataA, int shapeTypeA, Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB,
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
             where TSweepFilter : ISweepFilter

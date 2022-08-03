@@ -38,7 +38,7 @@ namespace Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, CollidableReference collidable, int childIndex)
+            public void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, CollidableReference collidable, int childIndex)
             {
                 //We are only interested in the earliest hit. This callback is executing within the traversal, so modifying maximumT informs the traversal
                 //that it can skip any AABBs which are more distant than the new maximumT.
@@ -49,7 +49,7 @@ namespace Demos
             }
         }
 
-        readonly void CreateMotorDescription(in Vector3 target, float inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularServo angularDescription)
+        readonly void CreateMotorDescription(Vector3 target, float inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularServo angularDescription)
         {
             linearDescription = new OneBodyLinearServo
             {
@@ -66,7 +66,7 @@ namespace Demos
             };
         }
 
-        public void Update(Simulation simulation, Camera camera, bool mouseLocked, bool shouldGrab, in Quaternion rotation, in Vector2 normalizedMousePosition)
+        public void Update(Simulation simulation, Camera camera, bool mouseLocked, bool shouldGrab, Quaternion rotation, in Vector2 normalizedMousePosition)
         {
             //On the off chance some demo modifies the kinematic state, treat that as a grab terminator.
             var bodyExists = body.Exists && !body.Kinematic;

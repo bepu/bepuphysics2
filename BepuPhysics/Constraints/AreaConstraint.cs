@@ -31,7 +31,7 @@ namespace BepuPhysics.Constraints
         /// <param name="c">Initial position of the third body.</param>
         /// <param name="springSettings">Spring settings to apply to the volume constraint.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public AreaConstraint(in Vector3 a, in Vector3 b, in Vector3 c, SpringSettings springSettings)
+        public AreaConstraint(Vector3 a, Vector3 b, Vector3 c, SpringSettings springSettings)
         {
             TargetScaledArea = Vector3.Cross(b - a, c - a).Length();
             SpringSettings = springSettings;

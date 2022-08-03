@@ -173,7 +173,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(in Vector3 v, in Matrix m, out Vector4 result)
+        public static void Transform(Vector3 v, in Matrix m, out Vector4 result)
         {
             var x = new Vector4(v.X);
             var y = new Vector4(v.Y);
@@ -228,7 +228,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromAxisAngle(in Vector3 axis, float angle, out Matrix result)
+        public static void CreateFromAxisAngle(Vector3 axis, float angle, out Matrix result)
         {
             //TODO: Could be better simdified.
             float xx = axis.X * axis.X;
@@ -263,7 +263,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Matrix CreateFromAxisAngle(in Vector3 axis, float angle)
+        public static Matrix CreateFromAxisAngle(Vector3 axis, float angle)
         {
             CreateFromAxisAngle(axis, angle, out Matrix result);
             return result;
@@ -271,7 +271,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromQuaternion(in Quaternion quaternion, out Matrix result)
+        public static void CreateFromQuaternion(Quaternion quaternion, out Matrix result)
         {
             float qX2 = quaternion.X + quaternion.X;
             float qY2 = quaternion.Y + quaternion.Y;
@@ -313,7 +313,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Matrix CreateFromQuaternion(in Quaternion quaternion)
+        public static Matrix CreateFromQuaternion(Quaternion quaternion)
         {
             CreateFromQuaternion(quaternion, out Matrix toReturn);
             return toReturn;
@@ -533,7 +533,7 @@ namespace BepuUtilities
         /// <param name="target">Target of the camera.</param>
         /// <param name="upVector">Up vector of the camera.</param>
         /// <param name="viewMatrix">Look at matrix.</param>
-        public static void CreateLookAt(in Vector3 position, in Vector3 target, in Vector3 upVector, out Matrix viewMatrix)
+        public static void CreateLookAt(Vector3 position, Vector3 target, Vector3 upVector, out Matrix viewMatrix)
         {
             Vector3 forward = target - position;
             CreateView(position, forward, upVector, out viewMatrix);
@@ -546,7 +546,7 @@ namespace BepuUtilities
         /// <param name="target">Target of the camera.</param>
         /// <param name="upVector">Up vector of the camera.</param>
         /// <returns>Look at matrix.</returns>
-        public static Matrix CreateLookAt(in Vector3 position, in Vector3 target, in Vector3 upVector)
+        public static Matrix CreateLookAt(Vector3 position, Vector3 target, Vector3 upVector)
         {
             CreateView(position, target - position, upVector, out Matrix lookAt);
             return lookAt;
@@ -560,7 +560,7 @@ namespace BepuUtilities
         /// <param name="forward">Forward direction of the camera.</param>
         /// <param name="upVector">Up vector of the camera.</param>
         /// <param name="viewMatrix">Look at matrix.</param>
-        public static void CreateView(in Vector3 position, in Vector3 forward, in Vector3 upVector, out Matrix viewMatrix)
+        public static void CreateView(Vector3 position, Vector3 forward, Vector3 upVector, out Matrix viewMatrix)
         {
             float length = forward.Length();
             var z = forward / -length;
@@ -585,7 +585,7 @@ namespace BepuUtilities
         /// <param name="forward">Forward direction of the camera.</param>
         /// <param name="upVector">Up vector of the camera.</param>
         /// <returns>Look at matrix.</returns>
-        public static Matrix CreateView(in Vector3 position, in Vector3 forward, in Vector3 upVector)
+        public static Matrix CreateView(Vector3 position, Vector3 forward, Vector3 upVector)
         {
             Matrix lookat;
             CreateView(position, forward, upVector, out lookat);
@@ -601,7 +601,7 @@ namespace BepuUtilities
         /// <param name="position">Position of the transform.</param>
         /// <param name="world">4x4 matrix representing the combined transform.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateRigid(in Matrix3x3 rotation, in Vector3 position, out Matrix world)
+        public static void CreateRigid(in Matrix3x3 rotation, Vector3 position, out Matrix world)
         {
             world.X = new Vector4(rotation.X, 0);
             world.Y = new Vector4(rotation.Y, 0);
@@ -616,7 +616,7 @@ namespace BepuUtilities
         /// <param name="position">Position of the transform.</param>
         /// <param name="world">4x4 matrix representing the combined transform.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateRigid(in Quaternion rotation, in Vector3 position, out Matrix world)
+        public static void CreateRigid(Quaternion rotation, Vector3 position, out Matrix world)
         {
             Matrix3x3.CreateFromQuaternion(rotation, out var rotationMatrix);
             world.X = new Vector4(rotationMatrix.X, 0);

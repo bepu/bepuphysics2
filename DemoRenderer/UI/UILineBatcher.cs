@@ -30,7 +30,7 @@ namespace DemoRenderer.UI
             lines = new UILineInstance[initialCapacity];
         }
 
-        public void Draw(in Vector2 start, in Vector2 end, float radius, in Vector3 color)
+        public void Draw(in Vector2 start, in Vector2 end, float radius, Vector3 color)
         {
             if (LineCount == lines.Length)
             {

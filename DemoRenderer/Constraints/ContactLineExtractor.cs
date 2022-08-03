@@ -10,7 +10,7 @@ namespace DemoRenderer.Constraints
     public static class ContactLines
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void BuildOrthonormalBasis(in Vector3 normal, out Vector3 t1, out Vector3 t2)
+        public static void BuildOrthonormalBasis(Vector3 normal, out Vector3 t1, out Vector3 t2)
         {
             //No frisvad or friends here- just want a simple and consistent basis with only one singularity.
             //Could be faster if needed.
@@ -26,7 +26,7 @@ namespace DemoRenderer.Constraints
         }
 
         public static void Add(in RigidPose poseA, ref Vector3Wide offsetAWide, ref Vector3Wide normalWide, ref Vector<float> depthWide,
-            in Vector3 tint, ref QuickList<LineInstance> lines)
+            Vector3 tint, ref QuickList<LineInstance> lines)
         {
             Vector3Wide.ReadFirst(offsetAWide, out var offsetA);
             Vector3Wide.ReadFirst(normalWide, out var normal);

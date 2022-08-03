@@ -50,7 +50,7 @@ namespace BepuPhysics.Collidables
         /// <param name="orientation">Orientation of the shape to use when computing the bounding box.</param>
         /// <param name="min">Minimum corner of the bounding box.</param>
         /// <param name="max">Maximum corner of the bounding box.</param>
-        void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max);
+        void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max);
 
         /// <summary>
         /// Computes information about how the bounding box should be expanded in response to angular velocity.
@@ -162,7 +162,7 @@ namespace BepuPhysics.Collidables
         /// <param name="orientation">Orientation of the compound.</param>
         /// <param name="min">Minimum of the compound's bounding box.</param>
         /// <param name="max">Maximum of the compound's bounding box.</param>
-        void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max);
+        void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max);
 
         /// <summary>
         /// Tests a ray against the shape.

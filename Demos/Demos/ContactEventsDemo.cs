@@ -57,7 +57,7 @@ namespace Demos.Demos
         /// <param name="contactIndex">Index of the new contact in the contact manifold.</param>
         /// <param name="workerIndex">Index of the worker thread that fired this event.</param>
         void OnContactAdded<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold,
-            in Vector3 contactOffset, in Vector3 contactNormal, float depth, int featureId, int contactIndex, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
+            Vector3 contactOffset, Vector3 contactNormal, float depth, int featureId, int contactIndex, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
         {
         }
 
@@ -667,7 +667,7 @@ namespace Demos.Demos
             }
 
             public void OnContactAdded<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold,
-                in Vector3 contactOffset, in Vector3 contactNormal, float depth, int featureId, int contactIndex, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
+                Vector3 contactOffset, Vector3 contactNormal, float depth, int featureId, int contactIndex, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 //Simply ignore any particles beyond the allocated space.
                 var index = Interlocked.Increment(ref Particles.Count) - 1;

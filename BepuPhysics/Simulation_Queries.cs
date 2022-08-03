@@ -26,7 +26,7 @@ namespace BepuPhysics
         /// <param name="t">Distance along the ray to the impact in units of ray direction length. In other words, hitLocation = ray.Origin + ray.Direction * t.</param>
         /// <param name="normal">Surface normal at the hit location.</param>
         /// <param name="childIndex">Index of the hit child. For convex shapes or other types that don't have multiple children, this is always zero.</param>
-        void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex);
+        void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex);
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ namespace BepuPhysics
         /// <param name="normal">Surface normal at the hit location.</param>
         /// <param name="collidable">Collidable hit by the ray.</param>
         /// <param name="childIndex">Index of the hit child. For convex shapes or other types that don't have multiple children, this is always zero.</param>
-        void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, CollidableReference collidable, int childIndex);
+        void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, CollidableReference collidable, int childIndex);
     }
 
     /// <summary>
@@ -85,7 +85,7 @@ namespace BepuPhysics
         /// <param name="hitLocation">Location of the first hit detected by the sweep.</param>
         /// <param name="hitNormal">Surface normal at the hit location.</param>
         /// <param name="collidable">Collidable hit by the traversal.</param>
-        void OnHit(ref float maximumT, float t, in Vector3 hitLocation, in Vector3 hitNormal, CollidableReference collidable);
+        void OnHit(ref float maximumT, float t, Vector3 hitLocation, Vector3 hitNormal, CollidableReference collidable);
         /// <summary>
         /// Called when a sweep test detects a hit at T = 0, meaning that no location or normal can be computed.
         /// </summary>
@@ -109,7 +109,7 @@ namespace BepuPhysics
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex)
+            public void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex)
             {
                 HitHandler.OnRayHit(ray, ref maximumT, t, normal, Collidable, childIndex);
             }
@@ -160,7 +160,7 @@ namespace BepuPhysics
         /// <param name="maximumT">Maximum length of the ray traversal in units of the direction's length.</param>
         /// <param name="hitHandler">callbacks to execute on ray-object intersections.</param>
         /// <param name="id">User specified id of the ray.</param>
-        public unsafe void RayCast<THitHandler>(in Vector3 origin, in Vector3 direction, float maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
+        public unsafe void RayCast<THitHandler>(Vector3 origin, Vector3 direction, float maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
         {
             RayHitDispatcher<THitHandler> dispatcher;
             dispatcher.ShapeHitHandler.HitHandler = hitHandler;

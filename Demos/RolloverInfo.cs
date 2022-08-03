@@ -26,7 +26,7 @@ namespace Demos
             descriptions = new List<RolloverDescription>();
         }
 
-        public void Add(in Vector3 position, string description, float previewOffset = -1.2f, string previewText = "Info...")
+        public void Add(Vector3 position, string description, float previewOffset = -1.2f, string previewText = "Info...")
         {
             this.descriptions.Add(new RolloverDescription { Position = position, Description = description, PreviewOffset = previewOffset, Preview = previewText });
         }

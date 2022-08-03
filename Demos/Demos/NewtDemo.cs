@@ -667,7 +667,7 @@ namespace Demos.Demos
             return 6;
         }
 
-        internal unsafe static void CreateDeformable(Simulation simulation, in Vector3 position, in Quaternion orientation, float density, float cellSize, in SpringSettings weldSpringiness, in SpringSettings volumeSpringiness, int instanceId, CollidableProperty<DeformableCollisionFilter> filters,
+        internal unsafe static void CreateDeformable(Simulation simulation, Vector3 position, Quaternion orientation, float density, float cellSize, in SpringSettings weldSpringiness, in SpringSettings volumeSpringiness, int instanceId, CollidableProperty<DeformableCollisionFilter> filters,
             ref Buffer<Vector3> vertices, ref CellSet vertexSpatialIndices, ref Buffer<CellVertexIndices> cellVertexIndices, ref Buffer<TetrahedronVertices> tetrahedraVertexIndices)
         {
             var pool = simulation.BufferPool;

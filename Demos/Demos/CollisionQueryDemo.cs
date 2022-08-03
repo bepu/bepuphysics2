@@ -140,7 +140,7 @@ namespace Demos.Demos
         /// <param name="queryPose">Pose of the query shape.</param>
         /// <param name="queryId">Id to use to refer to this query when the collision batcher finishes processing it.</param>
         /// <param name="batcher">Batcher to add the query's tests to.</param>
-        public unsafe void AddQueryToBatch(int queryShapeType, void* queryShapeData, int queryShapeSize, in Vector3 queryBoundsMin, in Vector3 queryBoundsMax, in RigidPose queryPose, int queryId, ref CollisionBatcher<BatcherCallbacks> batcher)
+        public unsafe void AddQueryToBatch(int queryShapeType, void* queryShapeData, int queryShapeSize, Vector3 queryBoundsMin, Vector3 queryBoundsMax, in RigidPose queryPose, int queryId, ref CollisionBatcher<BatcherCallbacks> batcher)
         {
             var broadPhaseEnumerator = new BroadPhaseOverlapEnumerator { Pool = BufferPool, References = new QuickList<CollidableReference>(16, BufferPool) };
             Simulation.BroadPhase.GetOverlaps(queryBoundsMin, queryBoundsMax, ref broadPhaseEnumerator);

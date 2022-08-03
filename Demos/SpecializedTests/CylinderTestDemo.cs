@@ -13,7 +13,7 @@ namespace Demos.SpecializedTests
 {
     public class CylinderTestDemo : Demo
     {
-        private static void BruteForceSearch(in Vector3 lineOrigin, in Vector3 lineDirection, float halfLength, in Cylinder cylinder, out float closestT, out float closestDistanceSquared, out float errorMargin)
+        private static void BruteForceSearch(Vector3 lineOrigin, Vector3 lineDirection, float halfLength, in Cylinder cylinder, out float closestT, out float closestDistanceSquared, out float errorMargin)
         {
             const int sampleCount = 1 << 20;
             var inverseSampleCount = 1.0 / (sampleCount - 1);

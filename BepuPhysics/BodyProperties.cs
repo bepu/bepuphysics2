@@ -138,7 +138,7 @@ namespace BepuPhysics
         /// <param name="pose">Pose to transform the vector with.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(in Vector3 v, in RigidPose pose, out Vector3 result)
+        public static void Transform(Vector3 v, in RigidPose pose, out Vector3 result)
         {
             QuaternionEx.TransformWithoutOverlap(v, pose.Orientation, out var rotated);
             result = rotated + pose.Position;
@@ -150,7 +150,7 @@ namespace BepuPhysics
         /// <param name="pose">Pose to invert and transform the vector with.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformByInverse(in Vector3 v, in RigidPose pose, out Vector3 result)
+        public static void TransformByInverse(Vector3 v, in RigidPose pose, out Vector3 result)
         {
             var translated = v - pose.Position;
             QuaternionEx.Conjugate(pose.Orientation, out var conjugate);

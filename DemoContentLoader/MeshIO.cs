@@ -30,7 +30,7 @@ namespace DemoContentLoader
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Write(BinaryWriter writer, in Vector3 v)
+        public static void Write(BinaryWriter writer, Vector3 v)
         {
             writer.Write(v.X);
             writer.Write(v.Y);

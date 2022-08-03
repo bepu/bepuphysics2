@@ -47,7 +47,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             QuaternionEx.TransformUnitY(orientation, out var segmentOffset);
             max = Vector3.Abs(HalfLength * segmentOffset) + new Vector3(Radius);
@@ -55,7 +55,7 @@ namespace BepuPhysics.Collidables
         }
 
 
-        public readonly bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
         {
             //It's convenient to work in local space, so pull the ray into the capsule's local space.
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);

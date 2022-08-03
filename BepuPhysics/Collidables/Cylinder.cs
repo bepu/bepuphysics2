@@ -45,7 +45,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             //The bounding box is composed of the contribution from the axis line segment and the disc cap.
             //The bounding box of the disc cap can be found by sampling the extreme point in each of the three directions:
@@ -73,7 +73,7 @@ namespace BepuPhysics.Collidables
         }
 
 
-        public readonly bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
         {
             //It's convenient to work in local space, so pull the ray into the cylinder's local space.
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);

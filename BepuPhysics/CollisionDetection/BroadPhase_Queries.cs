@@ -41,7 +41,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="maximumT">Maximum length of the ray traversal in units of the direction's length.</param>
         /// <param name="rayTester">Callback to execute on ray-leaf bounding box intersections.</param>
         /// <param name="id">User specified id of the ray.</param>
-        public unsafe void RayCast<TRayTester>(in Vector3 origin, in Vector3 direction, float maximumT, ref TRayTester rayTester, int id = 0) where TRayTester : IBroadPhaseRayTester
+        public unsafe void RayCast<TRayTester>(Vector3 origin, Vector3 direction, float maximumT, ref TRayTester rayTester, int id = 0) where TRayTester : IBroadPhaseRayTester
         {
             TreeRay.CreateFrom(origin, direction, maximumT, id, out var rayData, out var treeRay);
             RayLeafTester<TRayTester> tester;
@@ -76,7 +76,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="direction">Direction along which to sweep the bounding box.</param>
         /// <param name="maximumT">Maximum length of the sweep in units of the direction's length.</param>
         /// <param name="sweepTester">Callback to execute on sweep-leaf bounding box intersections.</param>
-        public unsafe void Sweep<TSweepTester>(in Vector3 min, in Vector3 max, in Vector3 direction, float maximumT, ref TSweepTester sweepTester) where TSweepTester : IBroadPhaseSweepTester
+        public unsafe void Sweep<TSweepTester>(Vector3 min, Vector3 max, Vector3 direction, float maximumT, ref TSweepTester sweepTester) where TSweepTester : IBroadPhaseSweepTester
         {
             Tree.ConvertBoxToCentroidWithExtent(min, max, out var origin, out var expansion);
             TreeRay.CreateFrom(origin, direction, maximumT, out var treeRay);
@@ -98,7 +98,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="direction">Direction along which to sweep the bounding box.</param>
         /// <param name="maximumT">Maximum length of the sweep in units of the direction's length.</param>
         /// <param name="sweepTester">Callback to execute on sweep-leaf bounding box intersections.</param>
-        public unsafe void Sweep<TSweepTester>(in BoundingBox boundingBox, in Vector3 direction, float maximumT, ref TSweepTester sweepTester) where TSweepTester : IBroadPhaseSweepTester
+        public unsafe void Sweep<TSweepTester>(in BoundingBox boundingBox, Vector3 direction, float maximumT, ref TSweepTester sweepTester) where TSweepTester : IBroadPhaseSweepTester
         {
             Sweep(boundingBox.Min, boundingBox.Max, direction, maximumT, ref sweepTester);
         }
@@ -122,7 +122,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="min">Minimum bounds of the query box.</param>
         /// <param name="max">Maximum bounds of the query box.</param>
         /// <param name="overlapEnumerator">Enumerator to call for overlaps.</param>
-        public unsafe void GetOverlaps<TOverlapEnumerator>(in Vector3 min, in Vector3 max, ref TOverlapEnumerator overlapEnumerator) where TOverlapEnumerator : IBreakableForEach<CollidableReference>
+        public unsafe void GetOverlaps<TOverlapEnumerator>(Vector3 min, Vector3 max, ref TOverlapEnumerator overlapEnumerator) where TOverlapEnumerator : IBreakableForEach<CollidableReference>
         {
             BoxQueryEnumerator<TOverlapEnumerator> enumerator;
             enumerator.Enumerator = overlapEnumerator;
