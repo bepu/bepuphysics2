@@ -42,6 +42,10 @@ namespace BepuPhysics.Constraints
         /// Gets the type of the type batch which contains described constraints.
         /// </summary>
         Type TypeProcessorType  { get; }
+        /// <summary>
+        /// Creates a type processor for this constraint type.
+        /// </summary>
+        TypeProcessor CreateTypeProcessor();
     }
 
     /// <summary>

@@ -47,6 +47,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(AreaConstraintTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new AreaConstraintTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

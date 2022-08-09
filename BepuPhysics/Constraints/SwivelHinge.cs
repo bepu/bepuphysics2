@@ -44,6 +44,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(SwivelHingeTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new SwivelHingeTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

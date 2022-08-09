@@ -48,6 +48,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(VolumeConstraintTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new VolumeConstraintTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

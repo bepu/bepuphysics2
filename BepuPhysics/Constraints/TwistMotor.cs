@@ -40,6 +40,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(TwistMotorTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new TwistMotorTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

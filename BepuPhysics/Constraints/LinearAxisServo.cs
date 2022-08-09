@@ -48,6 +48,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(LinearAxisServoTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new LinearAxisServoTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

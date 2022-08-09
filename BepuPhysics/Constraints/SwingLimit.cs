@@ -45,6 +45,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(SwingLimitTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new SwingLimitTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

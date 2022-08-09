@@ -44,6 +44,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(LinearAxisMotorTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new LinearAxisMotorTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

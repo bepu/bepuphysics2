@@ -38,6 +38,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(AngularAxisGearMotorTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new AngularAxisGearMotorTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

@@ -36,6 +36,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(AngularHingeTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new AngularHingeTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

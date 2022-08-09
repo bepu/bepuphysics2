@@ -40,6 +40,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(CenterDistanceTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new CenterDistanceTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

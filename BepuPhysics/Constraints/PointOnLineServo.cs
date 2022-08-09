@@ -44,6 +44,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(PointOnLineServoTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new PointOnLineServoTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

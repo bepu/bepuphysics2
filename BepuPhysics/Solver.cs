@@ -294,7 +294,7 @@ namespace BepuPhysics
         /// <remarks><see cref="DefaultTypes.RegisterDefaults(Solver, NarrowPhase)"/> is called during simuation creation and registers all the built in types. Calling <see cref="Register"/> manually is only necessary if custom types are used.</remarks>
         public void Register<TDescription>() where TDescription : unmanaged, IConstraintDescription<TDescription>
         {
-            var description = default(TDescription);
+            Unsafe.SkipInit(out TDescription description);
             Debug.Assert(description.ConstraintTypeId >= 0, "Constraint type ids should never be negative. They're used for array indexing.");
             if (TypeProcessors == null || description.ConstraintTypeId >= TypeProcessors.Length)
             {
@@ -304,13 +304,13 @@ namespace BepuPhysics
             }
             if (TypeProcessors[description.ConstraintTypeId] == null)
             {
-                var processor = (TypeProcessor)Activator.CreateInstance(description.TypeProcessorType);
+                var processor = description.CreateTypeProcessor();
                 TypeProcessors[description.ConstraintTypeId] = processor;
                 processor.Initialize(description.ConstraintTypeId);
             }
-            else if (TypeProcessors[description.ConstraintTypeId].GetType() != description.TypeProcessorType)
+            else
             {
-                throw new ArgumentException(
+                Debug.Assert(TypeProcessors[description.ConstraintTypeId].GetType() == description.TypeProcessorType,                  
                     $"Type processor {TypeProcessors[description.ConstraintTypeId].GetType().Name} has already been registered for this description's type id " +
                     $"({typeof(TDescription).Name}, {default(TDescription).ConstraintTypeId}). " +
                     $"Cannot register two types with the same type id.");

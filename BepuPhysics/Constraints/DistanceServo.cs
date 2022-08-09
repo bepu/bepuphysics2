@@ -69,6 +69,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(DistanceServoTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new DistanceServoTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

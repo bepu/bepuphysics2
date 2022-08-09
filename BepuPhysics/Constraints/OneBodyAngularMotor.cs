@@ -32,6 +32,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(OneBodyAngularMotorTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new OneBodyAngularMotorTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

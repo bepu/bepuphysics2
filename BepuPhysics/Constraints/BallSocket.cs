@@ -36,6 +36,7 @@ namespace BepuPhysics.Constraints
         }
 
         public readonly Type TypeProcessorType => typeof(BallSocketTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new BallSocketTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

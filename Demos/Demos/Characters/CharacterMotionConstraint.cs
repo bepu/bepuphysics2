@@ -67,7 +67,11 @@ namespace Demos.Demos.Characters
         /// <summary>
         /// Gets the TypeProcessor type that is associated with this description.
         /// </summary>
-        public readonly Type TypeProcessorType => typeof(StaticCharacterMotionTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(StaticCharacterMotionTypeProcessor);    
+        /// <summary>
+        /// Creates a type processor for this constraint type.
+        /// </summary>
+        public readonly TypeProcessor CreateTypeProcessor() => new StaticCharacterMotionTypeProcessor();
 
         //Note that these mapping functions use a "GetOffsetInstance" function. Each CharacterMotionPrestep is a bundle of multiple constraints;
         //by grabbing an offset instance, we're selecting a specific slot in the bundle to modify. For simplicity and to guarantee consistency of field strides,
@@ -336,7 +340,11 @@ namespace Demos.Demos.Characters
         /// <summary>
         /// Gets the TypeProcessor type that is associated with this description.
         /// </summary>
-        public readonly Type TypeProcessorType => typeof(DynamicCharacterMotionTypeProcessor);
+        public readonly Type TypeProcessorType => typeof(DynamicCharacterMotionTypeProcessor);    
+        /// <summary>
+        /// Creates a type processor for this constraint type.
+        /// </summary>
+        public readonly TypeProcessor CreateTypeProcessor() => new DynamicCharacterMotionTypeProcessor();
 
         //Note that these mapping functions use a "GetOffsetInstance" function. Each CharacterMotionPrestep is a bundle of multiple constraints;
         //by grabbing an offset instance, we're selecting a specific slot in the bundle to modify. For simplicity and to guarantee consistency of field strides,

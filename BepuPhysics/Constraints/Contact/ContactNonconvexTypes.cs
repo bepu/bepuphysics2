@@ -49,8 +49,9 @@ namespace BepuPhysics.Constraints.Contact
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact2NonconvexTypeProcessor.BatchTypeId;
         }
-
+        
         public readonly Type TypeProcessorType => typeof(Contact2NonconvexTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new Contact2NonconvexTypeProcessor();
 
     }
 
@@ -151,8 +152,9 @@ namespace BepuPhysics.Constraints.Contact
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact2NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
-
+        
         public readonly Type TypeProcessorType => typeof(Contact2NonconvexOneBodyTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new Contact2NonconvexOneBodyTypeProcessor();
 
     }
 
@@ -236,8 +238,9 @@ namespace BepuPhysics.Constraints.Contact
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact3NonconvexTypeProcessor.BatchTypeId;
         }
-
+        
         public readonly Type TypeProcessorType => typeof(Contact3NonconvexTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new Contact3NonconvexTypeProcessor();
 
     }
 
@@ -341,8 +344,9 @@ namespace BepuPhysics.Constraints.Contact
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact3NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
-
+        
         public readonly Type TypeProcessorType => typeof(Contact3NonconvexOneBodyTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new Contact3NonconvexOneBodyTypeProcessor();
 
     }
 
@@ -428,8 +432,9 @@ namespace BepuPhysics.Constraints.Contact
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact4NonconvexTypeProcessor.BatchTypeId;
         }
-
+        
         public readonly Type TypeProcessorType => typeof(Contact4NonconvexTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new Contact4NonconvexTypeProcessor();
 
     }
 
@@ -536,8 +541,9 @@ namespace BepuPhysics.Constraints.Contact
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact4NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
-
+        
         public readonly Type TypeProcessorType => typeof(Contact4NonconvexOneBodyTypeProcessor);
+        public readonly TypeProcessor CreateTypeProcessor() => new Contact4NonconvexOneBodyTypeProcessor();
 
     }
 
