@@ -105,7 +105,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     edge.EdgePlaneNormal = Vector3.Cross(slotLocalNormal, edge.Vertex - previousVertexA);
                     previousVertexA = edge.Vertex;
                 }
-                var maximumCandidateCount = faceVertexIndicesB.Length * 2; //Two contacts per edge.
+                //The number of possible edge intersections is no more than two per edge on either shape due to convexity.
+                //Vertex-face contacts could number as high as the number of vertices in either face.
+                var maximumCandidateCount = Math.Max(Math.Max(faceVertexIndicesA.Length, faceVertexIndicesB.Length), Math.Min(faceVertexIndicesA.Length * 2, faceVertexIndicesB.Length * 2));
                 var candidates = stackalloc ManifoldCandidateScalar[maximumCandidateCount];
                 var candidateCount = 0;
                 var previousIndexB = faceVertexIndicesB[faceVertexIndicesB.Length - 1];

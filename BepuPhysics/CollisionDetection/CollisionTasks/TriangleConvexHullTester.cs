@@ -201,6 +201,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             var inverseTriangleNormalDotLocalNormal = Vector<float>.One / triangleNormalDotLocalNormal;
 
+            //Maximum number of edge-related contacts is 6. Maximum number of triangle vertex contacts is 3. Maximum number of hull vertex contacts is whatever the largest face is.
             int maximumContactCount = Math.Max(6, maximumFaceVertexCount);
             var candidates = stackalloc ManifoldCandidateScalar[maximumContactCount];
             //To find the contact manifold, we'll clip the triangle edges against the hull face as usual, but we're dealing with potentially
@@ -363,7 +364,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     candidate.FeatureId = 0;
 
                 }
-                if (latestEntryAB < earliestExitAB && latestEntryAB > 0 && candidateCount < 6)
+                if (latestEntryAB < earliestExitAB && latestEntryAB > 0 && candidateCount < maximumContactCount)
                 {
                     //Create min contact.
                     var point = slotTriangleAB * latestEntryAB; //Note triangle A is origin for surface basis.
@@ -384,7 +385,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     candidate.FeatureId = 2;
 
                 }
-                if (latestEntryBC < earliestExitBC && latestEntryBC > 0 && candidateCount < 6)
+                if (latestEntryBC < earliestExitBC && latestEntryBC > 0 && candidateCount < maximumContactCount)
                 {
                     //Create min contact.
                     var point = slotTriangleBC * latestEntryBC + slotTriangleAB;
@@ -405,7 +406,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     candidate.FeatureId = 4;
 
                 }
-                if (latestEntryCA < earliestExitCA && latestEntryCA > 0 && candidateCount < 6)
+                if (latestEntryCA < earliestExitCA && latestEntryCA > 0 && candidateCount < maximumContactCount)
                 {
                     //Create min contact.
                     var point = slotTriangleCA * latestEntryCA - slotTriangleCA;
