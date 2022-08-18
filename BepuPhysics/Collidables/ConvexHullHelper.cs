@@ -208,7 +208,7 @@ namespace BepuPhysics.Collidables
                 {
                     Debug.Assert(candidateY <= 0,
                         "Previous edge should include any collinear points, so this edge should not see any further collinear points beyond its start." +
-                        "If you run into this, it implies you've found some content that violates the convex huller's assumptions, and I'd appreciate it if you reported it on github.com/bepu/bepuphysics2/issues!" + 
+                        "If you run into this, it implies you've found some content that violates the convex huller's assumptions, and I'd appreciate it if you reported it on github.com/bepu/bepuphysics2/issues!" +
                         "A .obj or other simple demos-compatible reproduction case would help me fix it.");
                     continue;
                 }
@@ -546,7 +546,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
-            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-6f;
+            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-4f;
             var planeEpsilon = new Vector<float>(planeEpsilonNarrow);
             var rawFaceVertexIndices = new QuickList<int>(pointBundles.Length * Vector<float>.Count, pool);
             var initialSourceEdge = new EdgeEndpoints { A = initialIndex, B = initialIndex };
