@@ -4,6 +4,7 @@ using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -101,7 +102,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Dot(basisX, toCandidate, out x);
             //If x is negative, that means some numerical issue has resulted in a point beyond the bounding plane that generated this face request.
             //We'll treat it as if it's on the plane.
-            x = Vector.Max(Vector<float>.Zero, x);
+            //x = Vector.Max(Vector<float>.Zero, x);
             Vector3Wide.Dot(basisY, toCandidate, out y);
             var bestY = y;
             var bestX = x;
@@ -109,31 +110,40 @@ namespace BepuPhysics.Collidables
             var edgeIndexA = new Vector<int>(sourceEdgeEndpoints.A);
             var edgeIndexB = new Vector<int>(sourceEdgeEndpoints.B);
             var pointCountBundle = new Vector<int>(pointCount);
-            //Note that any slot that would have been considered coplanar with the edge triggering this test is ignored by the plane epsilon.
+            ////Note that any slot that would have been considered coplanar with the edge triggering this test is ignored by the plane epsilon.
+            //var ignoreSlot = Vector.BitwiseOr(
+            //    Vector.BitwiseOr(Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle), Vector.LessThan(bestX, planeEpsilon)),
+            //    Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
             var ignoreSlot = Vector.BitwiseOr(
-                Vector.BitwiseOr(Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle), Vector.LessThan(bestX, planeEpsilon)),
+                Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle),
                 Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
             bestX = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestX);
             bestY = Vector.ConditionalSelect(ignoreSlot, new Vector<float>(float.MinValue), bestY);
+            var bestIndices = indexOffsets;
             for (int i = 1; i < pointBundles.Length; ++i)
             {
                 Vector3Wide.Subtract(pointBundles[i], basisOrigin, out toCandidate);
                 x = ref projectedOnX[i];
                 y = ref projectedOnY[i];
                 Vector3Wide.Dot(basisX, toCandidate, out x);
-                x = Vector.Max(Vector<float>.Zero, x); //Same as earlier- protect against numerical error finding points beyond the bounding plane.
+                //x = Vector.Max(Vector<float>.Zero, x); //Same as earlier- protect against numerical error finding points beyond the bounding plane.
                 Vector3Wide.Dot(basisY, toCandidate, out y);
 
                 var candidateIndices = indexOffsets + new Vector<int>(i << BundleIndexing.VectorShift);
+                //ignoreSlot = Vector.BitwiseOr(
+                //    Vector.BitwiseOr(Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle), Vector.LessThan(x, planeEpsilon)),
+                //    Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
                 ignoreSlot = Vector.BitwiseOr(
-                    Vector.BitwiseOr(Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle), Vector.LessThan(x, planeEpsilon)),
+                    Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle),
                     Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
                 var useCandidate = Vector.AndNot(Vector.GreaterThan(y * bestX, bestY * x), ignoreSlot);
                 bestY = Vector.ConditionalSelect(useCandidate, y, bestY);
                 bestX = Vector.ConditionalSelect(useCandidate, x, bestX);
+                bestIndices = Vector.ConditionalSelect(useCandidate, candidateIndices, bestIndices);
             }
             var bestYNarrow = bestY[0];
             var bestXNarrow = bestX[0];
+            var bestIndexNarrow = bestIndices[0];
             for (int i = 1; i < Vector<float>.Count; ++i)
             {
                 var candidateNumerator = bestY[i];
@@ -142,6 +152,7 @@ namespace BepuPhysics.Collidables
                 {
                     bestYNarrow = candidateNumerator;
                     bestXNarrow = candidateDenominator;
+                    bestIndexNarrow = bestIndices[i];
                 }
             }
             //We now have the best index, but there may have been multiple vertices on the same plane. Capture all of them at once by doing a second pass over the results.
@@ -151,9 +162,40 @@ namespace BepuPhysics.Collidables
             //Rotate the offset to point outward.
             var projectedPlaneNormalNarrow = Vector2.Normalize(new Vector2(-bestYNarrow, bestXNarrow));
             Vector2Wide.Broadcast(projectedPlaneNormalNarrow, out var projectedPlaneNormal);
+            Vector3Wide.ReadFirst(basisX, out var basisXNarrow);
+            Vector3Wide.ReadFirst(basisY, out var basisYNarrow);
+            faceNormal = basisXNarrow * projectedPlaneNormalNarrow.X + basisYNarrow * projectedPlaneNormalNarrow.Y;
+
+            //if (sourceEdgeEndpoints.A != sourceEdgeEndpoints.B)
+            //{
+            //    BundleIndexing.GetBundleIndices(sourceEdgeEndpoints.A, out var bundleA, out var innerA);
+            //    BundleIndexing.GetBundleIndices(sourceEdgeEndpoints.B, out var bundleB, out var innerB);
+            //    BundleIndexing.GetBundleIndices(bestIndexNarrow, out var bundleC, out var innerC);
+            //    Vector3Wide.ReadSlot(ref pointBundles[bundleA], innerA, out var a);
+            //    Vector3Wide.ReadSlot(ref pointBundles[bundleB], innerB, out var b);
+            //    Vector3Wide.ReadSlot(ref pointBundles[bundleC], innerC, out var c);
+            //    var faceNormalFromCross = Vector3.Normalize(Vector3.Cross(c - a, b - a));
+            //    var testDot = Vector3.Dot(faceNormalFromCross, faceNormal);
+            //    var faceNormalError = faceNormal - faceNormalFromCross;
+            //    faceNormal = faceNormalFromCross;
+            //}
+
+            Vector3Wide.Broadcast(faceNormal, out var faceNormalWide);
             for (int i = 0; i < pointBundles.Length; ++i)
             {
                 var dot = projectedOnX[i] * projectedPlaneNormal.X + projectedOnY[i] * projectedPlaneNormal.Y;
+                //var dot2 = Vector3Wide.Dot(pointBundles[i] - basisOrigin, faceNormalWide);
+                //var error = dot2 - dot;
+                //if (Vector.GreaterThanAny(Vector.Abs(error), planeEpsilon))
+                //{
+                //    for (int j = 0; j < Vector<float>.Count; ++j)
+                //    {
+                //        if (MathF.Abs(error[j]) > planeEpsilon[j])
+                //        {
+                //            Console.WriteLine($"error: {error[j]}");
+                //        }
+                //    }
+                //}
                 var coplanar = Vector.LessThanOrEqual(Vector.Abs(dot), planeEpsilon);
                 if (Vector.LessThanAny(coplanar, Vector<int>.Zero))
                 {
@@ -170,9 +212,9 @@ namespace BepuPhysics.Collidables
                     }
                 }
             }
-            Vector3Wide.ReadFirst(basisX, out var basisXNarrow);
-            Vector3Wide.ReadFirst(basisY, out var basisYNarrow);
-            faceNormal = basisXNarrow * projectedPlaneNormalNarrow.X + basisYNarrow * projectedPlaneNormalNarrow.Y;
+            //Vector3Wide.ReadFirst(basisX, out var basisXNarrow);
+            //Vector3Wide.ReadFirst(basisY, out var basisYNarrow);
+            //faceNormal = basisXNarrow * projectedPlaneNormalNarrow.X + basisYNarrow * projectedPlaneNormalNarrow.Y;
         }
 
 
@@ -387,57 +429,47 @@ namespace BepuPhysics.Collidables
             public int FaceIndex;
         }
 
-        //public struct DebugStep
-        //{
-        //    public EdgeEndpoints SourceEdge;
-        //    public List<int> Raw;
-        //    public List<int> Reduced;
-        //    public bool[] AllowVertex;
-        //    public Vector3 FaceNormal;
-        //    public Vector3 BasisX;
-        //    public Vector3 BasisY;
+        public struct DebugStep
+        {
+            public EdgeEndpoints SourceEdge;
+            public List<int> Raw;
+            public List<int> Reduced;
+            public bool[] AllowVertex;
+            public Vector3 FaceNormal;
+            public Vector3 BasisX;
+            public Vector3 BasisY;
 
-        //    public DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, Vector3 faceNormal, Vector3 basisX, Vector3 basisY)
-        //    {
-        //        SourceEdge = sourceEdge;
-        //        FaceNormal = faceNormal;
-        //        BasisX = basisX;
-        //        BasisY = basisY;
-        //        Raw = new List<int>();
-        //        for (int i = 0; i < raw.Count; ++i)
-        //        {
-        //            Raw.Add(raw[i]);
-        //        }
-        //        Reduced = default;
-        //        AllowVertex = default;
-        //    }
+            public DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, Vector3 faceNormal, Vector3 basisX, Vector3 basisY)
+            {
+                SourceEdge = sourceEdge;
+                FaceNormal = faceNormal;
+                BasisX = basisX;
+                BasisY = basisY;
+                Raw = new List<int>();
+                for (int i = 0; i < raw.Count; ++i)
+                {
+                    Raw.Add(raw[i]);
+                }
+                Reduced = default;
+                AllowVertex = default;
+            }
 
-        //    public void AddReduced(ref QuickList<int> reduced, ref Buffer<bool> allowVertex)
-        //    {
-        //        Reduced = new List<int>();
-        //        for (int i = 0; i < reduced.Count; ++i)
-        //        {
-        //            Reduced.Add(reduced[i]);
-        //        }
-        //        AllowVertex = new bool[allowVertex.Length];
-        //        for (int i = 0; i < allowVertex.Length; ++i)
-        //        {
-        //            AllowVertex[i] = allowVertex[i];
-        //        }
-        //    }
+            public void AddReduced(ref QuickList<int> reduced, ref Buffer<bool> allowVertex)
+            {
+                Reduced = new List<int>();
+                for (int i = 0; i < reduced.Count; ++i)
+                {
+                    Reduced.Add(reduced[i]);
+                }
+                AllowVertex = new bool[allowVertex.Length];
+                for (int i = 0; i < allowVertex.Length; ++i)
+                {
+                    AllowVertex[i] = allowVertex[i];
+                }
+            }
 
 
-        //}
-        ///// <summary>
-        ///// Computes the convex hull of a set of points.
-        ///// </summary>
-        ///// <param name="points">Point set to compute the convex hull of.</param>
-        ///// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
-        ///// <param name="hullData">Convex hull of the input point set.</param>
-        //public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
-        //{
-        //    ComputeHull(points, pool, out hullData, out _);
-        //}
+        }
         /// <summary>
         /// Computes the convex hull of a set of points.
         /// </summary>
@@ -446,10 +478,20 @@ namespace BepuPhysics.Collidables
         /// <param name="hullData">Convex hull of the input point set.</param>
         public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
         {
+            ComputeHull(points, pool, out hullData, out _);
+        }
+        /// <summary>
+        /// Computes the convex hull of a set of points.
+        /// </summary>
+        /// <param name="points">Point set to compute the convex hull of.</param>
+        /// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
+        /// <param name="hullData">Convex hull of the input point set.</param>
+        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData, out List<DebugStep> steps)
+        {
+            steps = new List<DebugStep>();
             if (points.Length <= 0)
             {
                 hullData = default;
-                //steps = new List<DebugStep>();
                 return;
             }
             if (points.Length <= 3)
@@ -475,7 +517,6 @@ namespace BepuPhysics.Collidables
                     hullData.FaceStartIndices = default;
                     hullData.FaceVertexIndices = default;
                 }
-                //steps = new List<DebugStep>();
                 return;
             }
             var pointBundleCount = BundleIndexing.GetBundleCount(points.Length);
@@ -537,7 +578,6 @@ namespace BepuPhysics.Collidables
                 hullData.OriginalVertexMapping[0] = 0;
                 hullData.FaceStartIndices = default;
                 hullData.FaceVertexIndices = default;
-                //steps = new List<DebugStep>();
                 pool.Return(ref pointBundles);
                 return;
             }
@@ -546,7 +586,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
-            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-4f;
+            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-2f;
             var planeEpsilon = new Vector<float>(planeEpsilonNarrow);
             var rawFaceVertexIndices = new QuickList<int>(pointBundles.Length * Vector<float>.Count, pool);
             var initialSourceEdge = new EdgeEndpoints { A = initialIndex, B = initialIndex };
@@ -562,12 +602,11 @@ namespace BepuPhysics.Collidables
 
             Vector3Wide.ReadFirst(initialBasisX, out var debugInitialBasisX);
             Vector3Wide.ReadFirst(initialBasisY, out var debugInitialBasisY);
-            //steps = new List<DebugStep>();
-            //var step = new DebugStep(initialSourceEdge, ref rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY);
+            var step = new DebugStep(initialSourceEdge, ref rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY);
 
             ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
-            //step.AddReduced(ref reducedFaceIndices, ref allowVertex);
-            //steps.Add(step);
+            step.AddReduced(ref reducedFaceIndices, ref allowVertex);
+            steps.Add(step);
 
             var earlyFaceIndices = new QuickList<int>(points.Length, pool);
             var earlyFaceStartIndices = new QuickList<int>(points.Length, pool);
@@ -631,7 +670,7 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Broadcast(edgeA, out var basisOrigin);
                 rawFaceVertexIndices.Count = 0;
                 FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, points.Length, ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
-                //step = new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY);
+                step = new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY);
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
                 ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
@@ -640,8 +679,8 @@ namespace BepuPhysics.Collidables
                     //Degenerate face found; don't bother creating work for it.
                     continue;
                 }
-                //step.AddReduced(ref reducedFaceIndices, ref allowVertex);
-                //steps.Add(step);
+                step.AddReduced(ref reducedFaceIndices, ref allowVertex);
+                steps.Add(step);
 
                 var newFaceIndex = earlyFaceStartIndices.Count;
                 earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
@@ -658,8 +697,8 @@ namespace BepuPhysics.Collidables
                     if (edgeFaceCounts.GetTableIndices(ref nextEdgeToTest.Endpoints, out var tableIndex, out var elementIndex))
                     {
                         ref var edgeFaceCount = ref edgeFaceCounts.Values[elementIndex];
-                        //Debug.Assert(edgeFaceCount == 1, 
-                        //    "While we let execution continue, this is an error condition and implies overlapping triangles are being generated." + 
+                        //Debug.Assert(edgeFaceCount == 1,
+                        //    "While we let execution continue, this is an error condition and implies overlapping triangles are being generated." +
                         //    "This tends to happen when there are many near-coplanar vertices, so numerical tolerances across different faces cannot consistently agree.");
                         ++edgeFaceCount;
                     }
