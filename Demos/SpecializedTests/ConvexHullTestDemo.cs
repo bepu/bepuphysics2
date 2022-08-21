@@ -426,6 +426,7 @@ namespace Demos.SpecializedTests
             {
                 var pose = new RigidPose(renderOffset);
                 var oldStep = debugSteps[i];
+                var color = oldStep.Merge ? new Vector3(0.5f, 0f, 1f) : new Vector3(1, 0, 1);
                 for (int j = 2; j < oldStep.Reduced.Count; ++j)
                 {
                     renderer.Shapes.AddShape(new Triangle
@@ -433,8 +434,7 @@ namespace Demos.SpecializedTests
                         A = points[oldStep.Reduced[0]] * scale,
                         B = points[oldStep.Reduced[j]] * scale,
                         C = points[oldStep.Reduced[j - 1]] * scale
-                    }, Simulation.Shapes, pose, new Vector3(1, 0, 1));
-
+                    }, Simulation.Shapes, pose, color);
                 }
             }
             var edgeMidpoint = renderOffset + (points[step.SourceEdge.A] + points[step.SourceEdge.B]) * scale * 0.5f;
