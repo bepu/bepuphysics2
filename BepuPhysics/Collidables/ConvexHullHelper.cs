@@ -2,6 +2,7 @@
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -422,6 +423,35 @@ namespace BepuPhysics.Collidables
                 return $"({A}, {B})";
             }
         }
+
+        /// <summary>
+        /// Tracks the faces associated with a detected surface edge. 
+        /// During hull calculation, surface edges that have only one face associated with them should have an outstanding entry in the edges to visit set.
+        /// Surface edges can never validly have more than two faces associated with them. Two means that an edge is 'complete', or should be.
+        /// Detecting a third edge implies an error condition. By tracking *which* faces were associated with an edge, we can attempt to fix the error.
+        /// This type of error tends to occur when there is a numerical disagreement about what vertices are coplanar with a face.
+        /// One iteration could find what it thinks is a complete face, and a later iteration ends up finding more vertices *including* the ones already contained in the previous face.
+        /// That's a recipe for excessive edge faces, but it's also a direct indicator that we should merge the involved faces for being close enough to coplanar that the error happened in the first place.
+        /// </summary>
+        struct EdgeFaceIndices
+        {
+            public int FaceA;
+            public int FaceB;
+            public bool Complete => FaceA >= 0 && FaceB >= 0;
+
+            public EdgeFaceIndices(int initialFaceIndex)
+            {
+                FaceA = initialFaceIndex;
+                FaceB = -1;
+            }
+        }
+
+        struct EarlyFace
+        {
+            public QuickList<int> VertexIndices;
+            public Vector3 Normal;
+        }
+
         struct EdgeToTest
         {
             public EdgeEndpoints Endpoints;
@@ -480,6 +510,14 @@ namespace BepuPhysics.Collidables
         {
             ComputeHull(points, pool, out hullData, out _);
         }
+
+        static void AddFace(ref QuickList<EarlyFace> faces, BufferPool pool, Vector3 normal, QuickList<int> vertexIndices)
+        {
+            ref var face = ref faces.Allocate(pool);
+            face = new EarlyFace { Normal = normal, VertexIndices = new QuickList<int>(vertexIndices.Count, pool) };
+            face.VertexIndices.AddRangeUnsafely(vertexIndices);
+        }
+
         /// <summary>
         /// Computes the convex hull of a set of points.
         /// </summary>
@@ -586,7 +624,8 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
-            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-2f;
+            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-6f;
+            var normalCoplanarityEpsilon = 1f - 1e-5f;
             var planeEpsilon = new Vector<float>(planeEpsilonNarrow);
             var rawFaceVertexIndices = new QuickList<int>(pointBundles.Length * Vector<float>.Count, pool);
             var initialSourceEdge = new EdgeEndpoints { A = initialIndex, B = initialIndex };
@@ -608,11 +647,11 @@ namespace BepuPhysics.Collidables
             step.AddReduced(ref reducedFaceIndices, ref allowVertex);
             steps.Add(step);
 
-            var earlyFaceIndices = new QuickList<int>(points.Length, pool);
-            var earlyFaceStartIndices = new QuickList<int>(points.Length, pool);
+            var faces = new QuickList<EarlyFace>(points.Length, pool);
 
             var edgesToTest = new QuickList<EdgeToTest>(points.Length, pool);
-            var edgeFaceCounts = new QuickDictionary<EdgeEndpoints, int, EdgeEndpoints>(points.Length, pool);
+            var facesForEdges = new QuickDictionary<EdgeEndpoints, EdgeFaceIndices, EdgeEndpoints>(points.Length, pool);
+            var facesNeedingMerge = new QuickList<int>(32, pool);
             if (reducedFaceIndices.Count >= 3)
             {
                 //The initial face search found an actual face! That's a bit surprising since we didn't start from an edge offset, but rather an arbitrary direction.
@@ -624,11 +663,10 @@ namespace BepuPhysics.Collidables
                     edgeToAdd.Endpoints.B = reducedFaceIndices[i];
                     edgeToAdd.FaceNormal = initialFaceNormal;
                     edgeToAdd.FaceIndex = 0;
-                    edgeFaceCounts.Add(ref edgeToAdd.Endpoints, 1, pool);
+                    facesForEdges.Add(ref edgeToAdd.Endpoints, new EdgeFaceIndices(0), pool);
                 }
                 //Since an actual face was found, we go ahead and output it into the face set.
-                earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
-                earlyFaceIndices.AddRange(reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
+                AddFace(ref faces, pool, initialFaceNormal, reducedFaceIndices);
             }
             else
             {
@@ -647,12 +685,13 @@ namespace BepuPhysics.Collidables
                     Helpers.Swap(ref edgeToAdd.Endpoints.A, ref edgeToAdd.Endpoints.B);
             }
 
+
             while (edgesToTest.Count > 0)
             {
                 edgesToTest.Pop(out var edgeToTest);
                 //Make sure the new edge hasn't already been filled by another traversal.
-                var faceCountIndex = edgeFaceCounts.IndexOf(edgeToTest.Endpoints);
-                if (faceCountIndex >= 0 && edgeFaceCounts.Values[faceCountIndex] >= 2)
+                var faceCountIndex = facesForEdges.IndexOf(edgeToTest.Endpoints);
+                if (faceCountIndex >= 0 && facesForEdges.Values[faceCountIndex].Complete)
                     continue;
 
                 ref var edgeA = ref points[edgeToTest.Endpoints.A];
@@ -670,10 +709,11 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Broadcast(edgeA, out var basisOrigin);
                 rawFaceVertexIndices.Count = 0;
                 FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, points.Length, ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
-                step = new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY);
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
+                facesNeedingMerge.Count = 0;
                 ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
+                step = new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY);
                 if (reducedFaceIndices.Count < 3)
                 {
                     //Degenerate face found; don't bother creating work for it.
@@ -682,11 +722,79 @@ namespace BepuPhysics.Collidables
                 step.AddReduced(ref reducedFaceIndices, ref allowVertex);
                 steps.Add(step);
 
-                var newFaceIndex = earlyFaceStartIndices.Count;
-                earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
-                earlyFaceIndices.AddRange(reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
 
-                edgeFaceCounts.EnsureCapacity(edgeFaceCounts.Count + reducedFaceIndices.Count, pool);
+                var newFaceIndex = faces.Count;
+
+                //This implementation bites the bullet pretty hard on numerical problems. They most frequently arise from near coplanar vertices.
+                //It's possible that two iterations see different subsets of 'coplanar' vertices, either causing two faces with near equal normal or
+                //even causing an edge to have more than two faces associated with it.
+                //Before making any modifications to the existing data, iterate over all the edges in the current face to check for any such edges.
+                var previousEndpointIndex = reducedFaceIndices.Count - 1;
+                for (int i = 0; i < reducedFaceIndices.Count; ++i)
+                {
+                    EdgeEndpoints edgeEndpoints;
+                    edgeEndpoints.A = previousEndpointIndex;
+                    edgeEndpoints.B = reducedFaceIndices[i];
+                    previousEndpointIndex = edgeEndpoints.B;
+                    if (facesForEdges.GetTableIndices(ref edgeEndpoints, out var tableIndex, out var elementIndex))
+                    {
+                        //There is already at least one face associated with this edge. Do we need to merge?
+                        ref var edgeFaces = ref facesForEdges.Values[elementIndex];
+                        Debug.Assert(edgeFaces.FaceA >= 0);
+                        var aDot = Vector3.Dot(faces[edgeFaces.FaceA].Normal, faceNormal);
+                        if (edgeFaces.FaceB >= 0)
+                        {
+                            //The edge already has two faces associated with it. This is definitely a numerical error; separate coplanar faces were generated.
+                            //We *must* merge at least one pair of faces.
+                            //Note that technically both faces can end up being included, even though we've already tested A and B;
+                            //the new face could be a bridge that's close enough to both, even if they were barely too far from each other.
+                            var bDot = Vector3.Dot(faces[edgeFaces.FaceB].Normal, faceNormal);
+                            if (aDot >= normalCoplanarityEpsilon && bDot >= normalCoplanarityEpsilon)
+                            {
+                                facesNeedingMerge.Allocate(pool) = edgeFaces.FaceA;
+                                facesNeedingMerge.Allocate(pool) = edgeFaces.FaceB;
+                            }
+                            else
+                            {
+                                //If both aren't merge candidates, then just pick the one that's closer.
+                                facesNeedingMerge.Allocate(pool) = aDot > bDot ? edgeFaces.FaceA : edgeFaces.FaceB;
+                            }
+                        }
+                        else
+                        {
+                            //Only one face already present. Check if it's coplanar.
+                            if (aDot >= normalCoplanarityEpsilon)
+                                facesNeedingMerge.Allocate(pool) = edgeFaces.FaceA;
+                        }
+                    }
+                }
+
+                if (facesNeedingMerge.Count > 0)
+                {
+                    //The new face should not be added! Instead, we should merge its vertices into an existing face.
+                    //Remove any duplicates. If we had perfect numerical precision, duplicates would be impossible, but... this whole thing is because we don't have perfect numerical precision.
+                    for (int i = facesNeedingMerge.Count - 1; i >= 0; --i)
+                    {
+                        for (int j = i - 1; j >= 0; --j)
+                        {
+                            if (facesNeedingMerge[j] == facesNeedingMerge[i])
+                            {
+                                facesNeedingMerge.FastRemoveAt(i);
+                            }
+                        }
+                    }
+                    var mergeTargetIndex = facesNeedingMerge[0];
+
+                    //Remove all faces other than the merge target.
+
+
+                }
+                else
+                {
+                    //Didn't need to perform a merge; add the face.
+                    AddFace(ref faces, pool, faceNormal, reducedFaceIndices);
+                }
+                facesForEdges.EnsureCapacity(facesForEdges.Count + reducedFaceIndices.Count, pool);
                 for (int i = 0; i < reducedFaceIndices.Count; ++i)
                 {
                     EdgeToTest nextEdgeToTest;
@@ -694,28 +802,28 @@ namespace BepuPhysics.Collidables
                     nextEdgeToTest.Endpoints.B = reducedFaceIndices[i];
                     nextEdgeToTest.FaceNormal = faceNormal;
                     nextEdgeToTest.FaceIndex = newFaceIndex;
-                    if (edgeFaceCounts.GetTableIndices(ref nextEdgeToTest.Endpoints, out var tableIndex, out var elementIndex))
+                    if (facesForEdges.GetTableIndices(ref nextEdgeToTest.Endpoints, out var tableIndex, out var elementIndex))
                     {
-                        ref var edgeFaceCount = ref edgeFaceCounts.Values[elementIndex];
-                        //Debug.Assert(edgeFaceCount == 1,
-                        //    "While we let execution continue, this is an error condition and implies overlapping triangles are being generated." +
-                        //    "This tends to happen when there are many near-coplanar vertices, so numerical tolerances across different faces cannot consistently agree.");
-                        ++edgeFaceCount;
+                        ref var edgeFaceCount = ref facesForEdges.Values[elementIndex];
+                        Debug.Assert(edgeFaceCount.FaceB == -1,
+                            "While we let execution continue, this is an error condition and implies overlapping triangles are being generated." +
+                            "This tends to happen when there are many near-coplanar vertices, so numerical tolerances across different faces cannot consistently agree.");
+                        edgeFaceCount.FaceB = newFaceIndex;
                     }
                     else
                     {
                         //This edge is not yet claimed by any edge. Claim it for the new face and add the edge for further testing.
-                        edgeFaceCounts.Keys[edgeFaceCounts.Count] = nextEdgeToTest.Endpoints;
-                        edgeFaceCounts.Values[edgeFaceCounts.Count] = 1;
+                        facesForEdges.Keys[facesForEdges.Count] = nextEdgeToTest.Endpoints;
+                        facesForEdges.Values[facesForEdges.Count] = new EdgeFaceIndices(newFaceIndex);
                         //Use the encoding- all indices are offset by 1 since 0 represents 'empty'.
-                        edgeFaceCounts.Table[tableIndex] = ++edgeFaceCounts.Count;
+                        facesForEdges.Table[tableIndex] = ++facesForEdges.Count;
                         edgesToTest.Allocate(pool) = nextEdgeToTest;
                     }
                 }
             }
 
             edgesToTest.Dispose(pool);
-            edgeFaceCounts.Dispose(pool);
+            facesForEdges.Dispose(pool);
             facePoints.Dispose(pool);
             reducedFaceIndices.Dispose(pool);
             rawFaceVertexIndices.Dispose(pool);
@@ -725,23 +833,28 @@ namespace BepuPhysics.Collidables
             pool.Return(ref pointBundles);
 
             //Create a reduced hull point set from the face vertex references.
-            pool.Take(earlyFaceStartIndices.Count, out hullData.FaceStartIndices);
-            pool.Take(earlyFaceIndices.Count, out hullData.FaceVertexIndices);
-            earlyFaceStartIndices.Span.CopyTo(0, hullData.FaceStartIndices, 0, earlyFaceStartIndices.Count);
+            int totalIndexCount = 0;
+            for (int i = 0; i < faces.Count; ++i)
+            {
+                totalIndexCount += faces[i].VertexIndices.Count;
+            }
+            pool.Take(faces.Count, out hullData.FaceStartIndices);
+            pool.Take(totalIndexCount, out hullData.FaceVertexIndices);
+            var nextStartIndex = 0;
             pool.Take<int>(points.Length, out var originalToHullIndexMapping);
             var hullToOriginalIndexMapping = new QuickList<int>(points.Length, pool);
             for (int i = 0; i < points.Length; ++i)
             {
                 originalToHullIndexMapping[i] = -1;
             }
-            for (int i = 0; i < earlyFaceStartIndices.Count; ++i)
+            for (int i = 0; i < faces.Count; ++i)
             {
-                var start = earlyFaceStartIndices[i];
-                var nextIndex = i + 1;
-                var end = earlyFaceStartIndices.Count == nextIndex ? earlyFaceIndices.Count : earlyFaceStartIndices[nextIndex];
-                for (int j = start; j < end; ++j)
+                var source = faces[i].VertexIndices;
+                hullData.FaceStartIndices[i] = nextStartIndex;
+                //source.Span.CopyTo(0, hullData.FaceVertexIndices, nextStartIndex, source.Count);
+                for (int j = 0; j < source.Count; ++j)
                 {
-                    var originalVertexIndex = earlyFaceIndices[j];
+                    var originalVertexIndex = source[j];
                     ref var originalToHull = ref originalToHullIndexMapping[originalVertexIndex];
                     if (originalToHull < 0)
                     {
@@ -749,8 +862,9 @@ namespace BepuPhysics.Collidables
                         originalToHull = hullToOriginalIndexMapping.Count;
                         hullToOriginalIndexMapping.AllocateUnsafely() = originalVertexIndex;
                     }
-                    hullData.FaceVertexIndices[j] = originalToHull;
+                    hullData.FaceVertexIndices[nextStartIndex + j] = originalToHull;
                 }
+                nextStartIndex += source.Count;
             }
 
             pool.Take(hullToOriginalIndexMapping.Count, out hullData.OriginalVertexMapping);
@@ -758,8 +872,12 @@ namespace BepuPhysics.Collidables
 
             pool.Return(ref originalToHullIndexMapping);
             hullToOriginalIndexMapping.Dispose(pool);
-            earlyFaceIndices.Dispose(pool);
-            earlyFaceStartIndices.Dispose(pool);
+            for (int i = 0; i < faces.Count; ++i)
+            {
+                faces[i].VertexIndices.Dispose(pool);
+            }
+            faces.Dispose(pool);
+            facesNeedingMerge.Dispose(pool);
         }
 
         /// <summary>
