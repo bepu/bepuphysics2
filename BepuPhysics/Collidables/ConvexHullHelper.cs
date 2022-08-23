@@ -748,7 +748,7 @@ namespace BepuPhysics.Collidables
                     Helpers.Swap(ref edgeToAdd.Endpoints.A, ref edgeToAdd.Endpoints.B);
             }
 
-            int facesDeleted = 0;
+            int facesDeletedCount = 0;
 
             while (edgesToTest.Count > 0)
             {
@@ -775,7 +775,6 @@ namespace BepuPhysics.Collidables
                 FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, points.Length, ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
-                facesNeedingMerge.Count = 0;
                 ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
                 if (reducedFaceIndices.Count < 3)
                 {
@@ -783,138 +782,155 @@ namespace BepuPhysics.Collidables
                     //Degenerate face found; don't bother creating work for it.
                     continue;
                 }
+                var faceCountPriorToAdd = faces.Count;
+                var targetFaceIndex = faceCountPriorToAdd;
 
-                var newFaceIndex = faces.Count;
-
-                //This implementation bites the bullet pretty hard on numerical problems. They most frequently arise from near coplanar vertices.
-                //It's possible that two iterations see different subsets of 'coplanar' vertices, either causing two faces with near equal normal or
-                //even causing an edge to have more than two faces associated with it.
-                //Before making any modifications to the existing data, iterate over all the edges in the current face to check for any such edges.
-                var previousEndpointIndex = reducedFaceIndices.Count - 1;
-                for (int i = 0; i < reducedFaceIndices.Count; ++i)
+                while (true)
                 {
-                    EdgeEndpoints edgeEndpoints;
-                    edgeEndpoints.A = previousEndpointIndex;
-                    edgeEndpoints.B = reducedFaceIndices[i];
-                    previousEndpointIndex = edgeEndpoints.B;
-                    if (facesForEdges.GetTableIndices(ref edgeEndpoints, out var tableIndex, out var elementIndex))
+                    //This implementation bites the bullet pretty hard on numerical problems. They most frequently arise from near coplanar vertices.
+                    //It's possible that two iterations see different subsets of 'coplanar' vertices, either causing two faces with near equal normal or
+                    //even causing an edge to have more than two faces associated with it.
+                    //Before making any modifications to the existing data, iterate over all the edges in the current face to check for any such edges.
+
+                    //While the usual flow here will be to reduce the vertices we just found and accept the result immediately,
+                    //it's possible for the just-detected face to end up coplanar with an existing face because of numerical issues that prevented detecting the whole face earlier.
+                    //Rather than using more precise math, we detect the failure and merge faces after the fact.
+                    //Unfortunately, this can happen recursively! Merging two redundant faces could reveal a third face that also needs to be merged.
+                    //This is uncommon, but it needs to be covered.
+                    //So, we just stick everything into a while loop and let it iterate until it's done.
+                    //The good news is that the merging process won't loop forever- every merge results in a face that is at least as large as any contributor, and any internal points
+                    //that get reduced out of consideration are marked with allowVertex[whateverInteriorPointIndex] = false.
+                    var previousEndpointIndex = reducedFaceIndices.Count - 1;
+                    facesNeedingMerge.Count = 0;
+                    for (int i = 0; i < reducedFaceIndices.Count; ++i)
                     {
-                        //There is already at least one face associated with this edge. Do we need to merge?
-                        ref var edgeFaces = ref facesForEdges.Values[elementIndex];
-                        Debug.Assert(edgeFaces.FaceA >= 0);
-                        var aDot = Vector3.Dot(faces[edgeFaces.FaceA].Normal, faceNormal);
-                        if (edgeFaces.FaceB >= 0)
+                        EdgeEndpoints edgeEndpoints;
+                        edgeEndpoints.A = previousEndpointIndex;
+                        edgeEndpoints.B = reducedFaceIndices[i];
+                        previousEndpointIndex = edgeEndpoints.B;
+                        if (facesForEdges.GetTableIndices(ref edgeEndpoints, out var tableIndex, out var elementIndex))
                         {
-                            //The edge already has two faces associated with it. This is definitely a numerical error; separate coplanar faces were generated.
-                            //We *must* merge at least one pair of faces.
-                            //Note that technically both faces can end up being included, even though we've already tested A and B;
-                            //the new face could be a bridge that's close enough to both, even if they were barely too far from each other.
-                            var bDot = Vector3.Dot(faces[edgeFaces.FaceB].Normal, faceNormal);
-                            if (aDot >= normalCoplanarityEpsilon && bDot >= normalCoplanarityEpsilon)
+                            //There is already at least one face associated with this edge. Do we need to merge?
+                            ref var edgeFaces = ref facesForEdges.Values[elementIndex];
+                            Debug.Assert(edgeFaces.FaceA >= 0);
+                            var aDot = Vector3.Dot(faces[edgeFaces.FaceA].Normal, faceNormal);
+                            if (edgeFaces.FaceB >= 0)
                             {
-                                facesNeedingMerge.Allocate(pool) = edgeFaces.FaceA;
-                                facesNeedingMerge.Allocate(pool) = edgeFaces.FaceB;
+                                //The edge already has two faces associated with it. This is definitely a numerical error; separate coplanar faces were generated.
+                                //We *must* merge at least one pair of faces.
+                                //Note that technically both faces can end up being included, even though we've already tested A and B;
+                                //the new face could be a bridge that's close enough to both, even if they were barely too far from each other.
+                                var bDot = Vector3.Dot(faces[edgeFaces.FaceB].Normal, faceNormal);
+                                if (aDot >= normalCoplanarityEpsilon && bDot >= normalCoplanarityEpsilon)
+                                {
+                                    facesNeedingMerge.Allocate(pool) = edgeFaces.FaceA;
+                                    facesNeedingMerge.Allocate(pool) = edgeFaces.FaceB;
+                                }
+                                else
+                                {
+                                    //If both aren't merge candidates, then just pick the one that's closer.
+                                    facesNeedingMerge.Allocate(pool) = aDot > bDot ? edgeFaces.FaceA : edgeFaces.FaceB;
+                                }
                             }
                             else
                             {
-                                //If both aren't merge candidates, then just pick the one that's closer.
-                                facesNeedingMerge.Allocate(pool) = aDot > bDot ? edgeFaces.FaceA : edgeFaces.FaceB;
+                                //Only one face already present. Check if it's coplanar.
+                                if (aDot >= normalCoplanarityEpsilon)
+                                    facesNeedingMerge.Allocate(pool) = edgeFaces.FaceA;
                             }
                         }
-                        else
-                        {
-                            //Only one face already present. Check if it's coplanar.
-                            if (aDot >= normalCoplanarityEpsilon)
-                                facesNeedingMerge.Allocate(pool) = edgeFaces.FaceA;
-                        }
                     }
-                }
 
-                if (facesNeedingMerge.Count > 0)
-                {
-                    //The new face should not be added! Instead, we should merge its vertices into an existing face.
-                    //Remove any duplicates. If we had perfect numerical precision, duplicates would be impossible, but... this whole thing is because we don't have perfect numerical precision.
-                    for (int i = facesNeedingMerge.Count - 1; i >= 0; --i)
+                    if (facesNeedingMerge.Count > 0)
                     {
-                        for (int j = i - 1; j >= 0; --j)
+                        //The new face should not be added! Instead, we should merge its vertices into an existing face.
+                        //Remove any duplicates. If we had perfect numerical precision, duplicates would be impossible, but... this whole thing is because we don't have perfect numerical precision.
+                        for (int i = facesNeedingMerge.Count - 1; i >= 0; --i)
                         {
-                            if (facesNeedingMerge[j] == facesNeedingMerge[i])
+                            for (int j = i - 1; j >= 0; --j)
                             {
-                                facesNeedingMerge.FastRemoveAt(i);
+                                if (facesNeedingMerge[j] == facesNeedingMerge[i])
+                                {
+                                    facesNeedingMerge.FastRemoveAt(i);
+                                }
                             }
                         }
-                    }
-                    var mergeTargetIndex = facesNeedingMerge[0];
+                        targetFaceIndex = facesNeedingMerge[0];
 
-                    ref var targetFace = ref faces[mergeTargetIndex];
-                    //Accumulate all the vertices present in the candidate face and any other faces being merged together.
-                    mergedIndices.Count = 0;
-                    mergedIndices.AddRange(targetFace.VertexIndices, pool);
-                    for (int j = 0; j < reducedFaceIndices.Count; ++j)
-                    {
-                        if (!mergedIndices.Contains(reducedFaceIndices[j]))
+                        ref var targetFace = ref faces[targetFaceIndex];
+                        //Accumulate all the vertices present in the candidate face and any other faces being merged together.
+                        mergedIndices.Count = 0;
+                        mergedIndices.AddRange(targetFace.VertexIndices, pool);
+                        for (int j = 0; j < reducedFaceIndices.Count; ++j)
                         {
-                            mergedIndices.Allocate(pool) = reducedFaceIndices[j];
-                        }
-                    }
-                    for (int i = 1; i < facesNeedingMerge.Count; ++i)
-                    {
-                        ref var sourceFace = ref faces[facesNeedingMerge[i]];
-                        for (int j = 0; j < sourceFace.VertexIndices.Count; ++j)
-                        {
-                            if (!mergedIndices.Contains(sourceFace.VertexIndices[j]))
+                            if (!mergedIndices.Contains(reducedFaceIndices[j]))
                             {
-                                mergedIndices.Allocate(pool) = sourceFace.VertexIndices[j];
+                                mergedIndices.Allocate(pool) = reducedFaceIndices[j];
                             }
                         }
-                        //Mark the face as deleted, but defer the vertex disposal for simplicity.
-                        sourceFace.Deleted = true;
+                        for (int i = 1; i < facesNeedingMerge.Count; ++i)
+                        {
+                            ref var sourceFace = ref faces[facesNeedingMerge[i]];
+                            for (int j = 0; j < sourceFace.VertexIndices.Count; ++j)
+                            {
+                                if (!mergedIndices.Contains(sourceFace.VertexIndices[j]))
+                                {
+                                    mergedIndices.Allocate(pool) = sourceFace.VertexIndices[j];
+                                }
+                            }
+                            //Mark the face as deleted, but defer the vertex disposal for simplicity.
+                            sourceFace.Deleted = true;
+                        }
+                        //For every edge of any face we're merging, remove the face from the edge lists.
+                        for (int i = 0; i < facesNeedingMerge.Count; ++i)
+                        {
+                            var faceIndex = facesNeedingMerge[i];
+                            ref var faceToRemove = ref faces[faceIndex];
+                            var previousIndex = faceToRemove.VertexIndices[faceToRemove.VertexIndices.Count - 1];
+                            for (int j = 0; j < faceToRemove.VertexIndices.Count; ++j)
+                            {
+                                RemoveFaceFromEdge(previousIndex, faceToRemove.VertexIndices[j], faceIndex, ref facesForEdges);
+                                previousIndex = faceToRemove.VertexIndices[j];
+                            }
+                            //Remove any references to this face in the edges to test.
+                            int removedEdgesToTestCount = 0;
+                            for (int j = 0; j < edgesToTest.Count; ++j)
+                            {
+                                if (edgesToTest[j].FaceIndex == faceIndex)
+                                {
+                                    ++removedEdgesToTestCount;
+                                }
+                                else if (removedEdgesToTestCount > 0)
+                                {
+                                    //Scoot edges to test back.
+                                    edgesToTest[j - removedEdgesToTestCount] = edgesToTest[j];
+                                }
+                            }
+                            edgesToTest.Count -= removedEdgesToTestCount;
+                        }
+                        //Re-reduce the merged vertices to get the new face vertices.
+                        facePoints.Count = 0;
+                        targetFace.VertexIndices.Count = 0;
+                        reducedFaceIndices.Count = 0;
+                        ReduceFace(ref mergedIndices, targetFace.Normal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
+                        targetFace.VertexIndices.Count = reducedFaceIndices.Count;
+                        reducedFaceIndices.Span.CopyTo(0, targetFace.VertexIndices.Span, 0, reducedFaceIndices.Count);
+                        //Note that we do *not* add the face back to the edges yet; it'll go through another loop iteration to check for any more overlaps.
+                        //Note that we do *not* remove deleted faces from the faces list. That would break all the face indices that we've accumulated.
+                        //Instead, we'll leave the the empty face there and deal with remapping stuff at the end once all faces have been processed.
+                        facesDeletedCount += facesNeedingMerge.Count - 1;
                     }
-                    //For every edge of any face we're merging, remove the face from the edge lists.
-                    for (int i = 0; i < facesNeedingMerge.Count; ++i)
+                    else
                     {
-                        var faceIndex = facesNeedingMerge[i];
-                        ref var faceToRemove = ref faces[faceIndex];
-                        var previousIndex = faceToRemove.VertexIndices[faceToRemove.VertexIndices.Count - 1];
-                        for (int j = 0; j < faceToRemove.VertexIndices.Count; ++j)
-                        {
-                            RemoveFaceFromEdge(previousIndex, faceToRemove.VertexIndices[j], faceIndex, ref facesForEdges);
-                            previousIndex = faceToRemove.VertexIndices[j];
-                        }
-                        //Remove any references to this face in the edges to test.
-                        int removedEdgesToTestCount = 0;
-                        for (int j = 0; j < edgesToTest.Count; ++j)
-                        {
-                            if (edgesToTest[j].FaceIndex == faceIndex)
-                            {
-                                ++removedEdgesToTestCount;
-                            }
-                            else if (removedEdgesToTestCount > 0)
-                            {
-                                //Scoot edges to test back.
-                                edgesToTest[j - removedEdgesToTestCount] = edgesToTest[j];
-                            }
-                        }
-                        edgesToTest.Count -= removedEdgesToTestCount;
+                        //No more merging required.
+                        //Note that we only add the face to the faces set if we *haven't* merged into an existing face.
+                        if (targetFaceIndex == faceCountPriorToAdd)
+                            AddFace(ref faces, pool, faceNormal, reducedFaceIndices);
+                        //But given that we've removed face references from edges, those need to get added back regardless.
+                        AddFaceToEdgesAndTestList(pool, ref reducedFaceIndices, ref edgesToTest, ref facesForEdges, faceNormal, targetFaceIndex);
+                        steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertex, faceCountPriorToAdd == targetFaceIndex));
+                        break;
                     }
-                    //Re-reduce the merged vertices to get the new face vertices.
-                    facePoints.Count = 0;
-                    targetFace.VertexIndices.Count = 0;
-                    ReduceFace(ref mergedIndices, targetFace.Normal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref targetFace.VertexIndices);
-
-                    AddFaceToEdgesAndTestList(pool, ref targetFace.VertexIndices, ref edgesToTest, ref facesForEdges, targetFace.Normal, mergeTargetIndex);
-                    steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref targetFace.VertexIndices, ref allowVertex, true));
-
-                    //Note that we do *not* remove deleted faces from the faces list. That would break all the face indices that we've accumulated.
-                    //Instead, we'll leave the the empty face there and deal with remapping stuff at the end once all faces have been processed.
-                    facesDeleted += facesNeedingMerge.Count - 1;
-                }
-                else
-                {
-                    //Didn't need to perform a merge; add the face.
-                    AddFace(ref faces, pool, faceNormal, reducedFaceIndices);
-                    AddFaceToEdgesAndTestList(pool, ref reducedFaceIndices, ref edgesToTest, ref facesForEdges, faceNormal, newFaceIndex);
-                    steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertex));
                 }
             }
 
@@ -928,7 +944,27 @@ namespace BepuPhysics.Collidables
             pool.Return(ref projectedOnY);
             pool.Return(ref pointBundles);
 
-            Debug.Assert(facesDeleted == 0, "You still need to handle the case where faces were deleted!");
+            if (facesDeletedCount > 0)
+            {
+                //During execution, some faces were found to be coplanar and got merged. To avoid breaking face index references during execution, we left those triangles in place.
+                //Now, though, we need to get rid of any faces that are marked deleted!
+                int shift = 0;
+                for (int i = 0; i < faces.Count; ++i)
+                {
+                    if (faces[i].Deleted)
+                    {
+                        //Removing the face from the list, so we gotta dispose it now rather than later.
+                        faces[i].VertexIndices.Dispose(pool);
+                        ++shift;
+                    }
+                    else if (shift > 0)
+                    {
+                        faces[i - shift] = faces[i];
+                    }
+                }
+                Debug.Assert(facesDeletedCount == shift);
+                faces.Count -= facesDeletedCount;
+            }
 
             //Create a reduced hull point set from the face vertex references.
             int totalIndexCount = 0;
