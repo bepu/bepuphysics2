@@ -477,7 +477,7 @@ namespace BepuPhysics.Collidables
             //2. it's an orphaned internal edge that should not be tested.
         }
 
-        struct EarlyFace
+        internal struct EarlyFace
         {
             public QuickList<int> VertexIndices;
             public bool Deleted;
@@ -500,9 +500,12 @@ namespace BepuPhysics.Collidables
             public Vector3 FaceNormal;
             public Vector3 BasisX;
             public Vector3 BasisY;
-            public bool Merge;
+            public int MergeTarget;
+            public List<int> FaceStarts;
+            public List<int> FaceIndices;
+            public bool[] FaceDeleted;
 
-            public DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, Vector3 faceNormal, Vector3 basisX, Vector3 basisY, ref QuickList<int> reduced, ref Buffer<bool> allowVertex, bool merge = false)
+            internal DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, Vector3 faceNormal, Vector3 basisX, Vector3 basisY, ref QuickList<int> reduced, ref Buffer<bool> allowVertex, ref QuickList<EarlyFace> faces, int mergeTarget = -1)
             {
                 SourceEdge = sourceEdge;
                 FaceNormal = faceNormal;
@@ -523,7 +526,18 @@ namespace BepuPhysics.Collidables
                 {
                     AllowVertex[i] = allowVertex[i];
                 }
-                Merge = merge;
+                MergeTarget = mergeTarget;
+                FaceStarts = new List<int>(faces.Count);
+                FaceIndices = new List<int>();
+                FaceDeleted = new bool[faces.Count];
+                for (int i = 0; i < faces.Count; ++i)
+                {
+                    ref var face = ref faces[i];
+                    FaceStarts.Add(FaceIndices.Count);
+                    for (int j = 0; j < face.VertexIndices.Count; ++j)
+                        FaceIndices.Add(face.VertexIndices[j]);
+                    FaceDeleted[i] = face.Deleted;
+                }
             }
         }
         /// <summary>
@@ -705,12 +719,7 @@ namespace BepuPhysics.Collidables
 
             ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
 
-            Vector3Wide.ReadFirst(initialBasisX, out var debugInitialBasisX);
-            Vector3Wide.ReadFirst(initialBasisY, out var debugInitialBasisY);
-            steps.Add(new DebugStep(initialSourceEdge, ref rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY, ref reducedFaceIndices, ref allowVertex));
-
             var faces = new QuickList<EarlyFace>(points.Length, pool);
-
             var edgesToTest = new QuickList<EdgeToTest>(points.Length, pool);
             var facesForEdges = new QuickDictionary<EdgeEndpoints, EdgeFaceIndices, EdgeEndpoints>(points.Length, pool);
             var facesNeedingMerge = new QuickList<int>(32, pool);
@@ -747,6 +756,9 @@ namespace BepuPhysics.Collidables
                 if (Vector3.Dot(basisX, edgeToAdd.FaceNormal) > 0)
                     Helpers.Swap(ref edgeToAdd.Endpoints.A, ref edgeToAdd.Endpoints.B);
             }
+            Vector3Wide.ReadFirst(initialBasisX, out var debugInitialBasisX);
+            Vector3Wide.ReadFirst(initialBasisY, out var debugInitialBasisY);
+            steps.Add(new DebugStep(initialSourceEdge, ref rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY, ref reducedFaceIndices, ref allowVertex, ref faces));
 
             int facesDeletedCount = 0;
 
@@ -778,7 +790,7 @@ namespace BepuPhysics.Collidables
                 ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
                 if (reducedFaceIndices.Count < 3)
                 {
-                    steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertex));
+                    steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertex, ref faces));
                     //Degenerate face found; don't bother creating work for it.
                     continue;
                 }
@@ -910,11 +922,8 @@ namespace BepuPhysics.Collidables
                         }
                         //Re-reduce the merged vertices to get the new face vertices.
                         facePoints.Count = 0;
-                        targetFace.VertexIndices.Count = 0;
                         reducedFaceIndices.Count = 0;
                         ReduceFace(ref mergedIndices, targetFace.Normal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
-                        targetFace.VertexIndices.Count = reducedFaceIndices.Count;
-                        reducedFaceIndices.Span.CopyTo(0, targetFace.VertexIndices.Span, 0, reducedFaceIndices.Count);
                         //Note that we do *not* add the face back to the edges yet; it'll go through another loop iteration to check for any more overlaps.
                         //Note that we do *not* remove deleted faces from the faces list. That would break all the face indices that we've accumulated.
                         //Instead, we'll leave the the empty face there and deal with remapping stuff at the end once all faces have been processed.
@@ -925,10 +934,18 @@ namespace BepuPhysics.Collidables
                         //No more merging required.
                         //Note that we only add the face to the faces set if we *haven't* merged into an existing face.
                         if (targetFaceIndex == faceCountPriorToAdd)
+                        {
                             AddFace(ref faces, pool, faceNormal, reducedFaceIndices);
+                        }
+                        else
+                        {
+                            //Update the merge targeted face's vertices with the final result.
+                            faces[targetFaceIndex].VertexIndices.Count = reducedFaceIndices.Count;
+                            reducedFaceIndices.Span.CopyTo(0, faces[targetFaceIndex].VertexIndices.Span, 0, reducedFaceIndices.Count);
+                        }
                         //But given that we've removed face references from edges, those need to get added back regardless.
                         AddFaceToEdgesAndTestList(pool, ref reducedFaceIndices, ref edgesToTest, ref facesForEdges, faceNormal, targetFaceIndex);
-                        steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertex, faceCountPriorToAdd == targetFaceIndex));
+                        steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertex, ref faces, faceCountPriorToAdd != targetFaceIndex ? targetFaceIndex : -1));
                         break;
                     }
                 }

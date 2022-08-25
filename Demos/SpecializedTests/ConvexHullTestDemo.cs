@@ -397,9 +397,14 @@ namespace Demos.SpecializedTests
             {
                 stepIndex = Math.Min(stepIndex + 1, debugSteps.Count - 1);
             }
+            if (input.WasPushed(OpenTK.Input.Key.P))
+            {
+                showWireframe = !showWireframe;
+            }
             base.Update(window, camera, input, dt);
         }
 
+        bool showWireframe;
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             var step = debugSteps[stepIndex];
@@ -422,19 +427,42 @@ namespace Demos.SpecializedTests
                 var pose = new RigidPose(renderOffset + points[step.Reduced[i]] * scale);
                 renderer.Shapes.AddShape(new Box(0.25f, 0.25f, 0.6f), Simulation.Shapes, pose, new Vector3(0, 1, 0));
             }
-            for (int i = 0; i <= stepIndex; ++i)
+
             {
                 var pose = new RigidPose(renderOffset);
-                var oldStep = debugSteps[i];
-                var color = oldStep.Merge ? new Vector3(0.5f, 0f, 1f) : new Vector3(1, 0, 1);
-                for (int j = 2; j < oldStep.Reduced.Count; ++j)
+                for (int i = 0; i < step.FaceStarts.Count; ++i)
                 {
-                    renderer.Shapes.AddShape(new Triangle
+                    if (!step.FaceDeleted[i])
                     {
-                        A = points[oldStep.Reduced[0]] * scale,
-                        B = points[oldStep.Reduced[j]] * scale,
-                        C = points[oldStep.Reduced[j - 1]] * scale
-                    }, Simulation.Shapes, pose, color);
+                        var faceStart = step.FaceStarts[i];
+                        var faceEnd = i + 1 < step.FaceStarts.Count ? step.FaceStarts[i + 1] : step.FaceIndices.Count;
+                        var count = faceEnd - faceStart;
+                        var color = step.MergeTarget == i ? new Vector3(0.25f, 0.25f, 1f) : new Vector3(1, 0, 1);
+                        if (showWireframe)
+                        {
+                            var previousIndex = faceEnd - 1;
+                            for (int q = faceStart; q < faceEnd; ++q)
+                            {
+                                var a = points[step.FaceIndices[q]] * scale + pose.Position;
+                                var b = points[step.FaceIndices[previousIndex]] * scale + pose.Position;
+                                previousIndex = q;
+                                renderer.Lines.Allocate() = new LineInstance(a, b, color, Vector3.Zero);
+                            }
+                        }
+                        else
+                        {
+                            var ugh = step.MergeTarget == i ? new Vector3(-1, 0, 0) : new Vector3();
+                            for (int k = faceStart + 2; k < faceEnd; ++k)
+                            {
+                                renderer.Shapes.AddShape(new Triangle
+                                {
+                                    A = points[step.FaceIndices[faceStart]] * scale + ugh,
+                                    B = points[step.FaceIndices[k]] * scale + ugh,
+                                    C = points[step.FaceIndices[k - 1]] * scale + ugh
+                                }, Simulation.Shapes, pose, color);
+                            }
+                        }
+                    }
                 }
             }
             var edgeMidpoint = renderOffset + (points[step.SourceEdge.A] + points[step.SourceEdge.B]) * scale * 0.5f;
