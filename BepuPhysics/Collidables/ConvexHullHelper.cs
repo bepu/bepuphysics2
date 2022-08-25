@@ -501,11 +501,12 @@ namespace BepuPhysics.Collidables
             public Vector3 BasisX;
             public Vector3 BasisY;
             public int MergeTarget;
+            public int ModifiedFaceIndex;
             public List<int> FaceStarts;
             public List<int> FaceIndices;
             public bool[] FaceDeleted;
 
-            internal DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, Vector3 faceNormal, Vector3 basisX, Vector3 basisY, ref QuickList<int> reduced, ref Buffer<bool> allowVertex, ref QuickList<EarlyFace> faces, int mergeTarget = -1)
+            internal DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, Vector3 faceNormal, Vector3 basisX, Vector3 basisY, ref QuickList<int> reduced, ref Buffer<bool> allowVertex, ref QuickList<EarlyFace> faces, int modifiedFaceIndex, int mergeTarget = -1)
             {
                 SourceEdge = sourceEdge;
                 FaceNormal = faceNormal;
@@ -527,6 +528,7 @@ namespace BepuPhysics.Collidables
                     AllowVertex[i] = allowVertex[i];
                 }
                 MergeTarget = mergeTarget;
+                ModifiedFaceIndex = modifiedFaceIndex;
                 FaceStarts = new List<int>(faces.Count);
                 FaceIndices = new List<int>();
                 FaceDeleted = new bool[faces.Count];
@@ -758,7 +760,7 @@ namespace BepuPhysics.Collidables
             }
             Vector3Wide.ReadFirst(initialBasisX, out var debugInitialBasisX);
             Vector3Wide.ReadFirst(initialBasisY, out var debugInitialBasisY);
-            steps.Add(new DebugStep(initialSourceEdge, ref rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY, ref reducedFaceIndices, ref allowVertex, ref faces));
+            steps.Add(new DebugStep(initialSourceEdge, ref rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY, ref reducedFaceIndices, ref allowVertex, ref faces, reducedFaceIndices.Count >= 3 ? 0 : -1));
 
             int facesDeletedCount = 0;
 
@@ -790,7 +792,7 @@ namespace BepuPhysics.Collidables
                 ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
                 if (reducedFaceIndices.Count < 3)
                 {
-                    steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertex, ref faces));
+                    steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertex, ref faces, -1));
                     //Degenerate face found; don't bother creating work for it.
                     continue;
                 }
@@ -945,7 +947,7 @@ namespace BepuPhysics.Collidables
                         }
                         //But given that we've removed face references from edges, those need to get added back regardless.
                         AddFaceToEdgesAndTestList(pool, ref reducedFaceIndices, ref edgesToTest, ref facesForEdges, faceNormal, targetFaceIndex);
-                        steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertex, ref faces, faceCountPriorToAdd != targetFaceIndex ? targetFaceIndex : -1));
+                        steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertex, ref faces, targetFaceIndex, faceCountPriorToAdd != targetFaceIndex ? targetFaceIndex : -1));
                         break;
                     }
                 }
@@ -960,6 +962,19 @@ namespace BepuPhysics.Collidables
             pool.Return(ref projectedOnX);
             pool.Return(ref projectedOnY);
             pool.Return(ref pointBundles);
+
+            for (int i = 0; i < faces.Count; ++i)
+            {
+                for (int j = i + 1; j < faces.Count; ++j)
+                {
+                    var dot = Vector3.Dot(faces[i].Normal, faces[j].Normal);
+                    var bothFacesExist = !faces[i].Deleted && !faces[j].Deleted;
+                    if (dot >= normalCoplanarityEpsilon && bothFacesExist)
+                    {
+                        Console.WriteLine($"Dot {dot} on faces {i} and {j}");
+                    }
+                }
+            }
 
             if (facesDeletedCount > 0)
             {

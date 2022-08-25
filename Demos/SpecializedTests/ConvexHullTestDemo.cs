@@ -437,7 +437,7 @@ namespace Demos.SpecializedTests
                         var faceStart = step.FaceStarts[i];
                         var faceEnd = i + 1 < step.FaceStarts.Count ? step.FaceStarts[i + 1] : step.FaceIndices.Count;
                         var count = faceEnd - faceStart;
-                        var color = step.MergeTarget == i ? new Vector3(0.25f, 0.25f, 1f) : new Vector3(1, 0, 1);
+                        var color = step.MergeTarget == i ? new Vector3(0.25f, 0.25f, 1f) : step.ModifiedFaceIndex == i ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1);
                         if (showWireframe)
                         {
                             var previousIndex = faceEnd - 1;
@@ -469,7 +469,7 @@ namespace Demos.SpecializedTests
             renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisX * scale * 0.5f, new Vector3(1, 1, 0), new Vector3());
             renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisY * scale * 0.5f, new Vector3(0, 1, 0), new Vector3());
             renderer.TextBatcher.Write(
-                text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count),
+                text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count).Append(", modified face index: ").Append(step.ModifiedFaceIndex),
                 new Vector2(32, renderer.Surface.Resolution.Y - 140), 20, new Vector3(1), font);
             base.Render(renderer, camera, input, text, font);
         }
