@@ -1,5 +1,6 @@
 ﻿using BepuUtilities.Collections;
 using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
@@ -66,6 +67,15 @@ namespace BepuUtilities
         public bool Equals(ref Int2 a, ref Int2 b)
         {
             return a.X == b.X && a.Y == b.Y;
+        }
+
+        public static implicit operator Vector2(Int2 value)
+        {
+            return new Vector2(value.X, value.Y);
+        }
+        public static explicit operator Int2(Vector2 value)
+        {
+            return new Int2((int)value.X, (int)value.Y);
         }
     }
 }
