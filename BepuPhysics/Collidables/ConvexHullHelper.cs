@@ -713,7 +713,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
-            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-6f;
+            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-5f;
             var normalCoplanarityEpsilon = 1f - 1e-5f;
             var planeEpsilon = new Vector<float>(planeEpsilonNarrow);
             var rawFaceVertexIndices = new QuickList<int>(pointBundles.Length * Vector<float>.Count, pool);

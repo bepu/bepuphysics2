@@ -263,8 +263,9 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
 
-            var hullPoints = CreateRandomConvexHullPoints();
+            //var hullPoints = CreateRandomConvexHullPoints();
             //var hullPoints = CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f));
+            var hullPoints = CreateTestConvexHull();
             var hullShape = new ConvexHull(hullPoints, BufferPool, out _);
             float largestError = 0;
             for (int i = 0; i < hullShape.FaceToVertexIndicesStart.Length; ++i)
@@ -405,11 +406,16 @@ namespace Demos.SpecializedTests
             {
                 showDeleted = !showDeleted;
             }
+            if (input.WasPushed(OpenTK.Input.Key.Y))
+            {
+                showVertexIndices = !showVertexIndices;
+            }
             base.Update(window, camera, input, dt);
         }
 
         bool showWireframe;
         bool showDeleted;
+        bool showVertexIndices;
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             var step = debugSteps[stepIndex];
@@ -472,14 +478,29 @@ namespace Demos.SpecializedTests
                     }
                 }
             }
+
+            if (showVertexIndices)
+            {
+                for (int i = 0; i < points.Length; ++i)
+                {
+                    if (DemoRenderer.Helpers.GetScreenLocation(points[i] * scale + renderOffset, camera.ViewProjection, renderer.Surface.Resolution, out var location))
+                    {
+                        renderer.TextBatcher.Write(text.Clear().Append(i), location, 10, new Vector3(1), font);
+                    }
+                }
+            }
+
             var edgeMidpoint = renderOffset + (points[step.SourceEdge.A] + points[step.SourceEdge.B]) * scale * 0.5f;
             renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisX * scale * 0.5f, new Vector3(1, 1, 0), new Vector3());
             renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisY * scale * 0.5f, new Vector3(0, 1, 0), new Vector3());
             renderer.TextBatcher.Write(
                 text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count),
                 new Vector2(32, renderer.Surface.Resolution.Y - 140), 20, new Vector3(1), font);
-            renderer.TextBatcher.Write(text.Clear().Append($"Show wireframe: P ").Append(showWireframe ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 120), 20, new Vector3(1), font);
-            renderer.TextBatcher.Write(text.Clear().Append($"Show deleted: U ").Append(showDeleted ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append("Show wireframe: P ").Append(showWireframe ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 120), 20, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append("Show deleted: U ").Append(showDeleted ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append("Show vertex indices: Y ").Append(showVertexIndices ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
+
+
             base.Render(renderer, camera, input, text, font);
         }
     }
