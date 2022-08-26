@@ -401,10 +401,15 @@ namespace Demos.SpecializedTests
             {
                 showWireframe = !showWireframe;
             }
+            if (input.WasPushed(OpenTK.Input.Key.U))
+            {
+                showDeleted = !showDeleted;
+            }
             base.Update(window, camera, input, dt);
         }
 
         bool showWireframe;
+        bool showDeleted;
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             var step = debugSteps[stepIndex];
@@ -432,33 +437,35 @@ namespace Demos.SpecializedTests
                 var pose = new RigidPose(renderOffset);
                 for (int i = 0; i < step.FaceStarts.Count; ++i)
                 {
-                    if (!step.FaceDeleted[i])
+                    if (showDeleted || !step.FaceDeleted[i])
                     {
                         var faceStart = step.FaceStarts[i];
                         var faceEnd = i + 1 < step.FaceStarts.Count ? step.FaceStarts[i + 1] : step.FaceIndices.Count;
                         var count = faceEnd - faceStart;
-                        var color = step.MergeTarget == i ? new Vector3(0.25f, 0.25f, 1f) : step.ModifiedFaceIndex == i ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1);
+                        var color = step.FaceDeleted[i] ? new Vector3(0.25f, 0.25f, 0.25f) : step.FaceIndex == i ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1);
+                        var deletionInducedScale = step.FaceDeleted[i] ? new Vector3(1.1f) : new Vector3(1f);
+
+                        var offset = step.FaceDeleted[i] ? step.FaceNormals[i] * 0.25f : new Vector3();
                         if (showWireframe)
                         {
                             var previousIndex = faceEnd - 1;
                             for (int q = faceStart; q < faceEnd; ++q)
                             {
-                                var a = points[step.FaceIndices[q]] * scale + pose.Position;
-                                var b = points[step.FaceIndices[previousIndex]] * scale + pose.Position;
+                                var a = points[step.FaceIndices[q]] * scale + pose.Position + offset;
+                                var b = points[step.FaceIndices[previousIndex]] * scale + pose.Position + offset;
                                 previousIndex = q;
                                 renderer.Lines.Allocate() = new LineInstance(a, b, color, Vector3.Zero);
                             }
                         }
                         else
                         {
-                            var ugh = step.MergeTarget == i ? new Vector3(-1, 0, 0) : new Vector3();
                             for (int k = faceStart + 2; k < faceEnd; ++k)
                             {
                                 renderer.Shapes.AddShape(new Triangle
                                 {
-                                    A = points[step.FaceIndices[faceStart]] * scale + ugh,
-                                    B = points[step.FaceIndices[k]] * scale + ugh,
-                                    C = points[step.FaceIndices[k - 1]] * scale + ugh
+                                    A = points[step.FaceIndices[faceStart]] * scale + offset,
+                                    B = points[step.FaceIndices[k]] * scale + offset,
+                                    C = points[step.FaceIndices[k - 1]] * scale + offset
                                 }, Simulation.Shapes, pose, color);
                             }
                         }
@@ -469,8 +476,10 @@ namespace Demos.SpecializedTests
             renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisX * scale * 0.5f, new Vector3(1, 1, 0), new Vector3());
             renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisY * scale * 0.5f, new Vector3(0, 1, 0), new Vector3());
             renderer.TextBatcher.Write(
-                text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count).Append(", modified face index: ").Append(step.ModifiedFaceIndex),
+                text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count),
                 new Vector2(32, renderer.Surface.Resolution.Y - 140), 20, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append($"Show wireframe: P ").Append(showWireframe ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 120), 20, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append($"Show deleted: U ").Append(showDeleted ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
             base.Render(renderer, camera, input, text, font);
         }
     }
