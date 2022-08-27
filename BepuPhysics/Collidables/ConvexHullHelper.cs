@@ -103,8 +103,8 @@ namespace BepuPhysics.Collidables
             ref var y = ref projectedOnY[0];
             Vector3Wide.Dot(basisX, toCandidate, out x);
             //If x is negative, that means some numerical issue has resulted in a point beyond the bounding plane that generated this face request.
-            //We'll treat it as if it's on the plane.
-            //x = Vector.Max(Vector<float>.Zero, x);
+            //We'll treat it as if it's on the plane. (The reason we bother with this clamp is the sign assumption built into our angle comparison, detailed above.)
+            x = Vector.Max(Vector<float>.Zero, x);
             Vector3Wide.Dot(basisY, toCandidate, out y);
             var bestY = y;
             var bestX = x;
@@ -112,12 +112,10 @@ namespace BepuPhysics.Collidables
             var edgeIndexA = new Vector<int>(sourceEdgeEndpoints.A);
             var edgeIndexB = new Vector<int>(sourceEdgeEndpoints.B);
             var pointCountBundle = new Vector<int>(pointCount);
-            ////Note that any slot that would have been considered coplanar with the edge triggering this test is ignored by the plane epsilon.
-            //var ignoreSlot = Vector.BitwiseOr(
-            //    Vector.BitwiseOr(Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle), Vector.LessThan(bestX, planeEpsilon)),
-            //    Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
+            //Note that any slot that would have been coplanar with the generating face *and* behind the edge (that is, a vertex almost certainly associated with the generating face) is ignored.
+            //Without this condition, it's possible for numerical cycles to occur where a face finds itself over and over again.
             var ignoreSlot = Vector.BitwiseOr(
-                Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle),
+                Vector.BitwiseOr(Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle), Vector.BitwiseAnd(Vector.LessThanOrEqual(bestX, planeEpsilon), Vector.LessThanOrEqual(bestY, planeEpsilon))),
                 Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
             bestX = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestX);
             bestY = Vector.ConditionalSelect(ignoreSlot, new Vector<float>(float.MinValue), bestY);
@@ -128,15 +126,12 @@ namespace BepuPhysics.Collidables
                 x = ref projectedOnX[i];
                 y = ref projectedOnY[i];
                 Vector3Wide.Dot(basisX, toCandidate, out x);
-                //x = Vector.Max(Vector<float>.Zero, x); //Same as earlier- protect against numerical error finding points beyond the bounding plane.
+                x = Vector.Max(Vector<float>.Zero, x); //Same as earlier- protect against numerical error finding points beyond the bounding plane.
                 Vector3Wide.Dot(basisY, toCandidate, out y);
 
                 var candidateIndices = indexOffsets + new Vector<int>(i << BundleIndexing.VectorShift);
-                //ignoreSlot = Vector.BitwiseOr(
-                //    Vector.BitwiseOr(Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle), Vector.LessThan(x, planeEpsilon)),
-                //    Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
                 ignoreSlot = Vector.BitwiseOr(
-                    Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle),
+                    Vector.BitwiseOr(Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle), Vector.BitwiseAnd(Vector.LessThanOrEqual(x, planeEpsilon), Vector.LessThanOrEqual(y, planeEpsilon))),
                     Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
                 var useCandidate = Vector.AndNot(Vector.GreaterThan(y * bestX, bestY * x), ignoreSlot);
                 bestY = Vector.ConditionalSelect(useCandidate, y, bestY);
