@@ -460,16 +460,18 @@ namespace BepuPhysics.Collidables
             Debug.Assert(faceIndex == facesForEdge.FaceA || faceIndex == facesForEdge.FaceB, "If you're trying to remove a face index from the edge, it better be in the edge!");
             if (facesForEdge.FaceA == faceIndex)
             {
-                if (facesForEdge.FaceB == -1)
-                {
-                    //This edge is no longer going to have any faces associated with it. 
-                    facesForEdges.FastRemove(ref edge);
-                }
                 facesForEdge.FaceA = facesForEdge.FaceB;
                 facesForEdge.FaceB = -1;
+                if (facesForEdge.FaceA == -1)
+                {
+                    //This edge no longer has any faces associated with it. 
+                    facesForEdges.FastRemove(ref edge);
+                }
             }
-            facesForEdge.FaceB = -1;
-
+            else
+            {
+                facesForEdge.FaceB = -1;
+            }
             //Note that we do *not* add the edge back into the 'edges to test' list when transitioning from 2 faces to 1 face for the edge.
             //This function is invoked when an edge is being deleted because it's related to a deleted face.
             //There are two possible outcomes:
@@ -823,13 +825,14 @@ namespace BepuPhysics.Collidables
                     //The good news is that the merging process won't loop forever- every merge results in a face that is at least as large as any contributor, and any internal points
                     //that get reduced out of consideration are marked with allowVertex[whateverInteriorPointIndex] = false.
                     int previousFaceMergeCount = facesNeedingMerge.Count;
-                    var previousEndpointIndex = reducedFaceIndices.Count - 1;
+                    var previousEndpointIndex = reducedFaceIndices[reducedFaceIndices.Count - 1];
                     for (int i = 0; i < reducedFaceIndices.Count; ++i)
                     {
                         EdgeEndpoints edgeEndpoints;
                         edgeEndpoints.A = previousEndpointIndex;
                         edgeEndpoints.B = reducedFaceIndices[i];
                         previousEndpointIndex = edgeEndpoints.B;
+
                         if (facesForEdges.GetTableIndices(ref edgeEndpoints, out var tableIndex, out var elementIndex))
                         {
                             //There is already at least one face associated with this edge. Do we need to merge?

@@ -71,7 +71,7 @@ namespace Demos.SpecializedTests
             return points;
         }
 
-        //A couple of point sets from PEEL.
+        //A couple of test point sets from PEEL: https://github.com/Pierre-Terdiman/PEEL_PhysX_Edition
         unsafe Buffer<Vector3> CreateTestConvexHull()
         {
             BufferPool.Take<Vector3>(50, out var vertices);
@@ -264,8 +264,8 @@ namespace Demos.SpecializedTests
 
 
             //var hullPoints = CreateRandomConvexHullPoints();
-            //var hullPoints = CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f));
-            var hullPoints = CreateTestConvexHull();
+            var hullPoints = CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f));
+            //var hullPoints = CreateTestConvexHull2();
             var hullShape = new ConvexHull(hullPoints, BufferPool, out _);
             float largestError = 0;
             for (int i = 0; i < hullShape.FaceToVertexIndicesStart.Length; ++i)
