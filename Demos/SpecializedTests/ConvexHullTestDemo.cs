@@ -251,6 +251,35 @@ namespace Demos.SpecializedTests
             return vertices;
         }
 
+
+        unsafe Buffer<Vector3> CreateTestConvexHull3()
+        {
+            BufferPool.Take<Vector3>(22, out var vertices);
+            vertices[0] = new Vector3(-0.103558f, 1.000000f, -0.490575f);
+            vertices[1] = new Vector3(0.266493f, 0.659794f, -0.363751f);
+            vertices[2] = new Vector3(-0.245774f, 0.762636f, -0.615304f);
+            vertices[3] = new Vector3(0.164688f, -0.777634f, -0.365919f);
+            vertices[4] = new Vector3(0.503268f, -0.846406f, -0.131286f);
+            vertices[5] = new Vector3(0.171066f, -0.931723f, -0.140738f);
+            vertices[6] = new Vector3(-0.247963f, -0.738059f, -0.413146f);
+            vertices[7] = new Vector3(-0.319203f, -0.260078f, -0.609331f);
+            vertices[8] = new Vector3(0.469624f, -0.747848f, -0.286486f);
+            vertices[9] = new Vector3(0.398526f, -0.238233f, -0.435281f);
+            vertices[10] = new Vector3(0.448274f, 0.295416f, -0.246327f);
+            vertices[11] = new Vector3(-0.245774f, 0.762636f, 0.596521f);
+            vertices[12] = new Vector3(0.266493f, 0.659794f, 0.344974f);
+            vertices[13] = new Vector3(-0.103558f, 1.000000f, 0.471792f);
+            vertices[14] = new Vector3(0.171066f, -0.931723f, 0.121961f);
+            vertices[15] = new Vector3(0.503268f, -0.846406f, 0.112509f);
+            vertices[16] = new Vector3(0.164688f, -0.777634f, 0.347137f);
+            vertices[17] = new Vector3(-0.319203f, -0.260078f, 0.590548f);
+            vertices[18] = new Vector3(-0.247963f, -0.738059f, 0.394364f);
+            vertices[19] = new Vector3(0.469624f, -0.747848f, 0.267709f);
+            vertices[20] = new Vector3(0.398526f, -0.238233f, 0.416498f);
+            vertices[21] = new Vector3(0.448274f, 0.295411f, 0.227550f);
+            return vertices;
+        }
+
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, -2.5f, 10);
@@ -262,7 +291,7 @@ namespace Demos.SpecializedTests
 
             var hullPoints = CreateRandomConvexHullPoints();
             //var hullPoints = CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f));
-            //var hullPoints = CreateTestConvexHull();
+            //var hullPoints = CreateTestConvexHull3();
             var hullShape = new ConvexHull(hullPoints, BufferPool, out _);
             float largestError = 0;
             for (int i = 0; i < hullShape.FaceToVertexIndicesStart.Length; ++i)
@@ -362,6 +391,13 @@ namespace Demos.SpecializedTests
                 }
             }
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), Simulation.Shapes.Add(new Box(1000, 1, 1000))));
+
+            Random random = new Random(5);
+            DemoMeshHelper.CreateDeformedPlane(64, 64, (x, y) => new Vector3(
+                x + 8, 
+                2f * MathF.Sin(x * 0.125f) * MathF.Sin(y * 0.125f) + 0.1f * random.NextSingle() - 3,
+                y - 8), new Vector3(1, 1, 1), BufferPool, out var mesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
         }
 
         void TestConvexHullCreation()
