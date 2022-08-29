@@ -9,9 +9,8 @@ using System.Runtime.InteropServices;
 namespace BepuUtilities.Memory
 {
     /// <summary>
-    /// Unmanaged memory pool that creates pinned blocks of memory for use in spans.
+    /// Unmanaged memory pool that suballocates from memory blocks pulled from the native heap.
     /// </summary>
-    /// <remarks>This currently works by allocating large managed arrays and pinning them under the assumption that they'll end up in the large object heap.</remarks>
     public class BufferPool : IUnmanagedMemoryPool, IDisposable
     {
         unsafe struct PowerPool
@@ -250,6 +249,21 @@ namespace BepuUtilities.Memory
         {
             SpanHelper.ValidatePower(power);
             return pools[power].BlockCount * pools[power].BlockSize;
+        }
+
+        /// <summary>
+        /// Computes the total number of bytes allocated from native memory in this buffer pool.
+        /// Includes allocated memory regardless of whether it currently has outstanding references.
+        /// </summary>
+        /// <returns>Total number of bytes allocated from native memory in this buffer pool.</returns>
+        public ulong GetTotalAllocatedByteCount()
+        {
+            ulong sum = 0;
+            for (int i = 0; i < pools.Length; ++i)
+            {
+                sum += (ulong)pools[i].BlockCount * (ulong)pools[i].BlockSize;
+            }
+            return sum;
         }
 
         /// <summary>
