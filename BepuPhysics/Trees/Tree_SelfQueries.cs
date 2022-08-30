@@ -1,6 +1,12 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics.CollisionDetection.CollisionTasks;
+using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
+using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Trees
 {
@@ -145,6 +151,298 @@ namespace BepuPhysics.Trees
                 return;
 
             GetOverlapsInNode(ref Nodes[0], ref results);
+        }
+
+        struct StackEntry
+        {
+            public int A;
+            public int B;
+        }
+
+        unsafe void GetOverlapsWithLeaf<TOverlapHandler>(ref TOverlapHandler results, NodeChild leaf, int nodeToTest, ref QuickList<int> stack, BufferPool pool) where TOverlapHandler : IOverlapHandler
+        {
+            var leafIndex = Encode(leaf.Index);
+            Debug.Assert(stack.Count == 0);
+            while (true)
+            {
+                ref var node = ref Nodes[nodeToTest];
+                var a = Intersects(leaf, node.A);
+                var b = Intersects(leaf, node.B);
+                var aIsInternal = node.A.Index >= 0;
+                var bIsInternal = node.B.Index >= 0;
+                var intersectedInternalA = a && aIsInternal;
+                var intersectedInternalB = b && bIsInternal;
+                if (intersectedInternalA && intersectedInternalB)
+                {
+                    nodeToTest = node.A.Index;
+                    stack.Allocate(pool) = node.B.Index;
+                }
+                else
+                {
+                    if (a && !aIsInternal)
+                    {
+                        results.Handle(leafIndex, Encode(node.A.Index));
+                    }
+                    if (b && !bIsInternal)
+                    {
+                        results.Handle(leafIndex, Encode(node.B.Index));
+                    }
+                    if (intersectedInternalA || intersectedInternalB)
+                    {
+                        nodeToTest = intersectedInternalA ? node.A.Index : node.B.Index;
+                    }
+                    else
+                    {
+                        //The current traversal step doesn't offer a next step; pull from the stack.
+                        if (!stack.TryPop(out nodeToTest))
+                        {
+                            //Nothing left to test against this leaf! Done!
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
+        {
+            //If there are less than two leaves, there can't be any overlap.
+            //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
+            if (LeafCount < 2)
+                return;
+
+            QuickList<StackEntry> stack = new(Math.Min(1024, Math.Max(0, NodeCount / 4)), pool);
+            QuickList<int> leafStack = new(Math.Min(512, Math.Max(0, NodeCount / 16)), pool);
+            StackEntry nextTest = default;
+
+            while (true)
+            {
+                if (nextTest.A == nextTest.B)
+                {
+                    //Self test.
+                    //Possible sources of further stack entries in a self test:
+                    //1) Child A and B are both internal and their bounds intersect.
+                    //2) Child A is internal.
+                    //3) Child B is internal.
+                    //We can also spawn leaf-subtree tests if:
+                    //1) Child A and B have intersecting bounds, and only one of them is a leaf.
+                    //We can spawn direct leaf tests if:
+                    //1) Child A and B have intersecting bounds, and both are leaves.
+                    //Note that we never need to push an entry with differing A and B indices to the stack *from a self test*. There can only be one such entry created from any self test, and it's always visited next.
+                    //Non-self tests will generate *only* results with differing A and B indices.
+                    ref var node = ref Nodes[nextTest.A];
+                    var abIntersect = Intersects(node.A, node.B);
+                    var aIsInternal = node.A.Index >= 0;
+                    var bIsInternal = node.B.Index >= 0;
+                    if (abIntersect && aIsInternal && bIsInternal)
+                    {
+                        //Both children internal and their bounds intersect.
+                        //Their intersection should be the next visited.
+                        nextTest.A = node.A.Index;
+                        nextTest.B = node.B.Index;
+
+                        //The two child self tests get pushed to the stack.
+                        ref var stackA = ref stack.Allocate(pool);
+                        stackA.A = node.A.Index;
+                        stackA.B = node.A.Index;
+                        ref var stackB = ref stack.Allocate(pool);
+                        stackB.A = node.B.Index;
+                        stackB.B = node.B.Index;
+                    }
+                    else
+                    {
+                        if (abIntersect)
+                        {
+                            Debug.Assert(!aIsInternal || !bIsInternal, "Just in case you shuffle logic around in the future: this clause assumes at least one leaf.");
+                            //The children have overlapping bounds, but at least one is a leaf.
+                            //Note that this path cannot generate any stack entries.
+                            //At least one child is a leaf, so there is at most one self-test.
+                            //The a-b test involves at least one leaf as well, which means it will use the GetOverlapsWithLeaf path.
+                            //So the one possible self-test will be put into the nextTest.
+                            if (aIsInternal || bIsInternal)
+                            {
+                                //One's a leaf, one's internal.
+                                if (aIsInternal)
+                                {
+                                    nextTest.A = node.A.Index;
+                                    nextTest.B = node.A.Index;
+                                    GetOverlapsWithLeaf(ref results, node.B, node.A.Index, ref leafStack, pool);
+                                }
+                                else
+                                {
+                                    nextTest.A = node.B.Index;
+                                    nextTest.B = node.B.Index;
+                                    GetOverlapsWithLeaf(ref results, node.A, node.B.Index, ref leafStack, pool);
+                                }
+                            }
+                            else
+                            {
+                                //Both children are leaves. They have overlapping bounds, so...
+                                results.Handle(Encode(node.A.Index), Encode(node.B.Index));
+
+                                //If both children are leaves, then there's no other source for the next visit, so pop.
+                                if (!stack.TryPop(out nextTest))
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            //No a-b test, but possibly self tests.
+                            if (aIsInternal && bIsInternal)
+                            {
+                                nextTest.A = node.A.Index;
+                                nextTest.B = node.A.Index;
+                                ref var stackB = ref stack.Allocate(pool);
+                                stackB.A = node.B.Index;
+                                stackB.B = node.B.Index;
+                            }
+                            else if (aIsInternal || bIsInternal)
+                            {
+                                var nextSelfTestIndex = aIsInternal ? node.A.Index : node.B.Index;
+                                nextTest.A = nextSelfTestIndex;
+                                nextTest.B = nextSelfTestIndex;
+                            }
+                            else
+                            {
+                                //There was no A-B test and both children are leaves. No new tests available, so grab from the stack.
+                                if (!stack.TryPop(out nextTest))
+                                    break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    //Not a self test!
+                    //Possible sources of stack entry:
+                    //1) AA intersection, both internal
+                    //2) AB intersection, both internal
+                    //3) BA intersection, both internal
+                    //4) BB intersection, both internal
+                    ref var n0 = ref Nodes[nextTest.A];
+                    ref var n1 = ref Nodes[nextTest.B];
+                    var aaIntersects = Intersects(n0.A, n1.A);
+                    var abIntersects = Intersects(n0.A, n1.B);
+                    var baIntersects = Intersects(n0.B, n1.A);
+                    var bbIntersects = Intersects(n0.B, n1.B);
+                    var n0AIsInternal = n0.A.Index >= 0;
+                    var n0BIsInternal = n0.B.Index >= 0;
+                    var n1AIsInternal = n1.A.Index >= 0;
+                    var n1BIsInternal = n1.B.Index >= 0;
+                    //The first test which generates a stack candidate gets the nextTest; the rest get pushed to the stack.
+                    int previousStackGeneratorCount = 0;
+                    if (aaIntersects)
+                    {
+                        if (n0AIsInternal && n1AIsInternal)
+                        {
+                            ++previousStackGeneratorCount;
+                            nextTest.A = n0.A.Index;
+                            nextTest.B = n1.A.Index;
+                        }
+                        else
+                        {
+                            //At least one is a leaf.
+                            if (n0AIsInternal)
+                                GetOverlapsWithLeaf(ref results, n1.A, n0.A.Index, ref leafStack, pool);
+                            else if (n1AIsInternal)
+                                GetOverlapsWithLeaf(ref results, n0.A, n1.A.Index, ref leafStack, pool);
+                            else //Both are leaves.
+                                results.Handle(Encode(n0.A.Index), Encode(n1.A.Index));
+                        }
+                    }
+                    if (abIntersects)
+                    {
+                        if (n0AIsInternal && n1BIsInternal)
+                        {
+                            if (previousStackGeneratorCount++ == 0)
+                            {
+                                nextTest.A = n0.A.Index;
+                                nextTest.B = n1.B.Index;
+                            }
+                            else
+                            {
+                                ref var stackEntry = ref stack.Allocate(pool);
+                                stackEntry.A = n0.A.Index;
+                                stackEntry.B = n1.B.Index;
+                            }
+                        }
+                        else
+                        {
+                            //At least one is a leaf.
+                            if (n0AIsInternal)
+                                GetOverlapsWithLeaf(ref results, n1.B, n0.A.Index, ref leafStack, pool);
+                            else if (n1BIsInternal)
+                                GetOverlapsWithLeaf(ref results, n0.A, n1.B.Index, ref leafStack, pool);
+                            else //Both are leaves.
+                                results.Handle(Encode(n0.A.Index), Encode(n1.B.Index));
+                        }
+                    }
+                    if (baIntersects)
+                    {
+                        if (n0BIsInternal && n1AIsInternal)
+                        {
+                            if (previousStackGeneratorCount++ == 0)
+                            {
+                                nextTest.A = n0.B.Index;
+                                nextTest.B = n1.A.Index;
+                            }
+                            else
+                            {
+                                ref var stackEntry = ref stack.Allocate(pool);
+                                stackEntry.A = n0.B.Index;
+                                stackEntry.B = n1.A.Index;
+                            }
+                        }
+                        else
+                        {
+                            //At least one is a leaf.
+                            if (n0BIsInternal)
+                                GetOverlapsWithLeaf(ref results, n1.A, n0.B.Index, ref leafStack, pool);
+                            else if (n1AIsInternal)
+                                GetOverlapsWithLeaf(ref results, n0.B, n1.A.Index, ref leafStack, pool);
+                            else //Both are leaves.
+                                results.Handle(Encode(n0.B.Index), Encode(n1.A.Index));
+                        }
+                    }
+                    if (bbIntersects)
+                    {
+                        if (n0BIsInternal && n1BIsInternal)
+                        {
+                            if (previousStackGeneratorCount++ == 0)
+                            {
+                                nextTest.A = n0.B.Index;
+                                nextTest.B = n1.B.Index;
+                            }
+                            else
+                            {
+                                ref var stackEntry = ref stack.Allocate(pool);
+                                stackEntry.A = n0.B.Index;
+                                stackEntry.B = n1.B.Index;
+                            }
+                        }
+                        else
+                        {
+                            //At least one is a leaf.
+                            if (n0BIsInternal)
+                                GetOverlapsWithLeaf(ref results, n1.B, n0.B.Index, ref leafStack, pool);
+                            else if (n1BIsInternal)
+                                GetOverlapsWithLeaf(ref results, n0.B, n1.B.Index, ref leafStack, pool);
+                            else //Both are leaves.
+                                results.Handle(Encode(n0.B.Index), Encode(n1.B.Index));
+                        }
+                    }
+                    if (previousStackGeneratorCount == 0)
+                    {
+                        //None of the candidates generated a next step, so grab from the stack.
+                        if (!stack.TryPop(out nextTest))
+                            break;
+                    }
+                }
+
+            }
+            leafStack.Dispose(pool);
+            stack.Dispose(pool);
+
         }
 
     }
