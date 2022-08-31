@@ -7,6 +7,8 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace BepuPhysics.Trees
 {
@@ -86,11 +88,43 @@ namespace BepuPhysics.Trees
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool Intersects(in NodeChild a, in NodeChild b)
-        {
-            return BoundingBox.Intersects(a.Min, a.Max, b.Min, b.Max);
-        }
+
+        ///// <summary>
+        ///// Intersects two node children. 
+        ///// The referenced node children must not be in unpinned managed memory.
+        ///// </summary>
+        ///// <param name="childA">First child to compare.</param>
+        ///// <param name="childB">Second child to compare.</param>
+        ///// <returns>True if the children overlap, false otherwise.</returns>
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //unsafe static bool Intersects(in NodeChild childA, in NodeChild childB)
+        //{
+        //    return BoundingBox.Intersects(childA, childB);
+        //    //if (Vector256.IsHardwareAccelerated && Avx.IsSupported)
+        //    //{
+        //    //    var a = Vector256.LoadUnsafe(ref Unsafe.AsRef(childA.Min.X));
+        //    //    var b = Vector256.LoadUnsafe(ref Unsafe.AsRef(childB.Min.X));
+        //    //    var min = Avx.Permute2x128(a, b, (0) | (2 << 4)); //(aMin, aMax) (bMin, bMax) -> (aMin, bMin)
+        //    //    var max = Avx.Permute2x128(a, b, (3) | (1 << 4)); //(aMin, aMax) (bMin, bMax) -> (bMax, aMax)
+        //    //    var noIntersection = Vector256.LessThan(max, min);
+        //    //    return (Vector256.ExtractMostSignificantBits(noIntersection) & 0b1110111) == 0;
+        //    //}
+        //    //else
+        //    //if (Vector128.IsHardwareAccelerated)
+        //    //{
+        //    //    //THIS IS A POTENTIAL GC HOLE IF CHILDREN ARE PASSED FROM UNPINNED MANAGED MEMORY
+        //    //    var aMin = Vector128.LoadUnsafe(ref Unsafe.AsRef(childA.Min.X));
+        //    //    var aMax = Vector128.LoadUnsafe(ref Unsafe.AsRef(childA.Max.X));
+        //    //    var bMin = Vector128.LoadUnsafe(ref Unsafe.AsRef(childB.Min.X));
+        //    //    var bMax = Vector128.LoadUnsafe(ref Unsafe.AsRef(childB.Max.X));
+        //    //    var noIntersectionOnAxes = Vector128.LessThan(aMax, bMin) | Vector128.LessThan(bMax, aMin);
+        //    //    return (Vector128.ExtractMostSignificantBits(noIntersectionOnAxes) & 0b111) == 0;
+        //    //}
+        //    //else
+        //    {
+        //        return BoundingBox.Intersects(childA.Min, childA.Max, childB.Min, childB.Max);
+        //    }
+        //}
 
         unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(ref Node a, ref Node b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
@@ -99,10 +133,10 @@ namespace BepuPhysics.Trees
             ref var ab = ref a.B;
             ref var ba = ref b.A;
             ref var bb = ref b.B;
-            var aaIntersects = Intersects(aa, ba);
-            var abIntersects = Intersects(aa, bb);
-            var baIntersects = Intersects(ab, ba);
-            var bbIntersects = Intersects(ab, bb);
+            var aaIntersects = BoundingBox.IntersectsUnsafe(aa, ba);
+            var abIntersects = BoundingBox.IntersectsUnsafe(aa, bb);
+            var baIntersects = BoundingBox.IntersectsUnsafe(ab, ba);
+            var bbIntersects = BoundingBox.IntersectsUnsafe(ab, bb);
 
             if (aaIntersects)
             {
@@ -128,7 +162,7 @@ namespace BepuPhysics.Trees
             ref var a = ref node.A;
             ref var b = ref node.B;
 
-            var ab = Intersects(a, b);
+            var ab = BoundingBox.IntersectsUnsafe(a, b);
 
             if (a.Index >= 0)
                 GetOverlapsInNode(ref Nodes[a.Index], ref results);
@@ -166,8 +200,8 @@ namespace BepuPhysics.Trees
             while (true)
             {
                 ref var node = ref Nodes[nodeToTest];
-                var a = Intersects(leaf, node.A);
-                var b = Intersects(leaf, node.B);
+                var a = BoundingBox.IntersectsUnsafe(leaf, node.A);
+                var b = BoundingBox.IntersectsUnsafe(leaf, node.B);
                 var aIsInternal = node.A.Index >= 0;
                 var bIsInternal = node.B.Index >= 0;
                 var intersectedInternalA = a && aIsInternal;
@@ -231,7 +265,7 @@ namespace BepuPhysics.Trees
                     //Note that we never need to push an entry with differing A and B indices to the stack *from a self test*. There can only be one such entry created from any self test, and it's always visited next.
                     //Non-self tests will generate *only* results with differing A and B indices.
                     ref var node = ref Nodes[nextTest.A];
-                    var abIntersect = Intersects(node.A, node.B);
+                    var abIntersect = BoundingBox.IntersectsUnsafe(node.A, node.B);
                     var aIsInternal = node.A.Index >= 0;
                     var bIsInternal = node.B.Index >= 0;
                     if (abIntersect && aIsInternal && bIsInternal)
@@ -321,10 +355,10 @@ namespace BepuPhysics.Trees
                     //4) BB intersection, both internal
                     ref var n0 = ref Nodes[nextTest.A];
                     ref var n1 = ref Nodes[nextTest.B];
-                    var aaIntersects = Intersects(n0.A, n1.A);
-                    var abIntersects = Intersects(n0.A, n1.B);
-                    var baIntersects = Intersects(n0.B, n1.A);
-                    var bbIntersects = Intersects(n0.B, n1.B);
+                    var aaIntersects = BoundingBox.IntersectsUnsafe(n0.A, n1.A);
+                    var abIntersects = BoundingBox.IntersectsUnsafe(n0.A, n1.B);
+                    var baIntersects = BoundingBox.IntersectsUnsafe(n0.B, n1.A);
+                    var bbIntersects = BoundingBox.IntersectsUnsafe(n0.B, n1.B);
                     var n0AIsInternal = n0.A.Index >= 0;
                     var n0BIsInternal = n0.B.Index >= 0;
                     var n1AIsInternal = n1.A.Index >= 0;

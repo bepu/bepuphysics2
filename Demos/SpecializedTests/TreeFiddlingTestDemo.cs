@@ -48,22 +48,23 @@ namespace Demos.SpecializedTests
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
             int testCount = 1000;
-            var overlapHandler0 = new OverlapHandler();
-            var startTime0 = Stopwatch.GetTimestamp();
+            var overlapHandlerNew = new OverlapHandler();
+            var startTimeNew = Stopwatch.GetTimestamp();
             for (int i = 0; i < testCount; ++i)
-                mesh.Tree.GetSelfOverlaps(ref overlapHandler0);
-            var endTime0 = Stopwatch.GetTimestamp();
-            var overlapHandler1 = new OverlapHandler();
-            var startTime1 = Stopwatch.GetTimestamp();
+                mesh.Tree.GetSelfOverlaps2(ref overlapHandlerNew, BufferPool);
+            var endTimeNew = Stopwatch.GetTimestamp();
+
+            var overlapHandlerOld = new OverlapHandler();
+            var startTimeOld = Stopwatch.GetTimestamp();
             for (int i = 0; i < testCount; ++i)
-                mesh.Tree.GetSelfOverlaps2(ref overlapHandler1, BufferPool);
-            var endTime1 = Stopwatch.GetTimestamp();
+                mesh.Tree.GetSelfOverlaps(ref overlapHandlerOld);
+            var endTimeOld = Stopwatch.GetTimestamp();
 
-            Console.WriteLine($"Original time per execution (ms): {(endTime0 - startTime0) * 1e3 / Stopwatch.Frequency}");
-            Console.WriteLine($"Revamped time per execution (ms): {(endTime1 - startTime1) * 1e3 / Stopwatch.Frequency}");
+            Console.WriteLine($"Revamped time per execution (ms): {(endTimeNew - startTimeNew) * 1e3 / (testCount * Stopwatch.Frequency)}");
+            Console.WriteLine($"Original time per execution (ms): {(endTimeOld - startTimeOld) * 1e3 / (testCount * Stopwatch.Frequency)}");
 
-            Console.WriteLine($"Original count: {overlapHandler0.OverlapCount}, sum {overlapHandler0.OverlapSum}, hash {overlapHandler0.OverlapHash}");
-            Console.WriteLine($"Revamped count: {overlapHandler1.OverlapCount}, sum {overlapHandler1.OverlapSum}, hash {overlapHandler1.OverlapHash}");
+            Console.WriteLine($"Revamped count: {overlapHandlerNew.OverlapCount}, sum {overlapHandlerNew.OverlapSum}, hash {overlapHandlerNew.OverlapHash}");
+            Console.WriteLine($"Original count: {overlapHandlerOld.OverlapCount}, sum {overlapHandlerOld.OverlapSum}, hash {overlapHandlerOld.OverlapHash}");
         }
 
 

@@ -70,8 +70,8 @@ namespace BepuPhysics.Trees
                     //Tree A is degenerate; needs a special case.
                     ref var a = ref treeA.Nodes[0];
                     ref var b = ref treeB.Nodes[0];
-                    var aaIntersects = Intersects(a.A, b.A);
-                    var abIntersects = Intersects(a.A, b.B);
+                    var aaIntersects = BoundingBox.IntersectsUnsafe(a.A, b.A);
+                    var abIntersects = BoundingBox.IntersectsUnsafe(a.A, b.B);
                     if (aaIntersects)
                     {
                         DispatchTestForNodes(ref a.A, ref b.A, ref OverlapHandlers[0]);
@@ -86,8 +86,8 @@ namespace BepuPhysics.Trees
                     //Tree B is degenerate; needs a special case.
                     ref var a = ref treeA.Nodes[0];
                     ref var b = ref treeB.Nodes[0];
-                    var aaIntersects = Intersects(a.A, b.A);
-                    var baIntersects = Intersects(a.B, b.A);
+                    var aaIntersects = BoundingBox.IntersectsUnsafe(a.A, b.A);
+                    var baIntersects = BoundingBox.IntersectsUnsafe(a.B, b.A);
                     if (aaIntersects)
                     {
                         DispatchTestForNodes(ref a.A, ref b.A, ref OverlapHandlers[0]);
@@ -100,7 +100,7 @@ namespace BepuPhysics.Trees
                 else
                 {
                     Debug.Assert(treeA.LeafCount == 1 && treeB.LeafCount == 1);
-                    if (Intersects(treeA.Nodes[0].A, treeB.Nodes[0].A))
+                    if (BoundingBox.IntersectsUnsafe(treeA.Nodes[0].A, treeB.Nodes[0].A))
                     {
                         DispatchTestForNodes(ref treeA.Nodes[0].A, ref treeB.Nodes[0].A, ref OverlapHandlers[0]);
                     }
@@ -251,10 +251,10 @@ namespace BepuPhysics.Trees
                 ref var ab = ref a.B;
                 ref var ba = ref b.A;
                 ref var bb = ref b.B;
-                var aaIntersects = Intersects(aa, ba);
-                var abIntersects = Intersects(aa, bb);
-                var baIntersects = Intersects(ab, ba);
-                var bbIntersects = Intersects(ab, bb);
+                var aaIntersects = BoundingBox.IntersectsUnsafe(aa, ba);
+                var abIntersects = BoundingBox.IntersectsUnsafe(aa, bb);
+                var baIntersects = BoundingBox.IntersectsUnsafe(ab, ba);
+                var bbIntersects = BoundingBox.IntersectsUnsafe(ab, bb);
 
                 if (aaIntersects)
                 {

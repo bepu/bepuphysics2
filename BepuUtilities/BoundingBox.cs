@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 
 namespace BepuUtilities
@@ -12,7 +15,7 @@ namespace BepuUtilities
     /// Provides XNA-like axis-aligned bounding box functionality.
     /// </summary>
     //NOTE: The explicit size avoids https://github.com/dotnet/coreclr/issues/12950
-    [StructLayout(LayoutKind.Explicit, Size = 32)] 
+    [StructLayout(LayoutKind.Explicit, Size = 32)]
     public struct BoundingBox
     {
         /// <summary>
@@ -39,6 +42,50 @@ namespace BepuUtilities
             this.Max = max;
         }
 
+        /// <summary>
+        /// Checks if two structures with memory layouts equivalent to the <see cref="BoundingBox"/> intersect.
+        /// The referenced values must not be in unpinned managed memory.
+        /// </summary>
+        /// <param name="childA">First child to compare.</param>
+        /// <param name="childB">Second child to compare.</param>
+        /// <returns>True if the children overlap, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static bool IntersectsUnsafe<TA, TB>(in TA childA, in TB childB) where TA : unmanaged where TB : unmanaged
+        {
+            //This is a weird function. We're directly interpreting the memory of an incoming type as a vector where we assume the min/max layout matches the BoundingBox.
+            //Happens to be convenient!
+            Debug.Assert(Unsafe.SizeOf<TA>() == 32 && Unsafe.SizeOf<TB>() == 32);
+            //AVX codepath is not helpful in my tests.
+            //if (Vector256.IsHardwareAccelerated && Avx.IsSupported)
+            //{
+            //    var a = Vector256.LoadUnsafe(ref Unsafe.As<TA, float>(ref Unsafe.AsRef(childA)));
+            //    var b = Vector256.LoadUnsafe(ref Unsafe.As<TB, float>(ref Unsafe.AsRef(childB)));
+            //    var min = Avx.Permute2x128(a, b, (0) | (2 << 4)); //(aMin, aMax) (bMin, bMax) -> (aMin, bMin)
+            //    var max = Avx.Permute2x128(a, b, (3) | (1 << 4)); //(aMin, aMax) (bMin, bMax) -> (bMax, aMax)
+            //    var noIntersection = Vector256.LessThan(max, min);
+            //    return (Vector256.ExtractMostSignificantBits(noIntersection) & 0b1110111) == 0;
+            //}
+            //else
+            if (Vector128.IsHardwareAccelerated)
+            {
+                //THIS IS A POTENTIAL GC HOLE IF CHILDREN ARE PASSED FROM UNPINNED MANAGED MEMORY
+                ref var a = ref Unsafe.As<TA, float>(ref Unsafe.AsRef(childA));
+                ref var b = ref Unsafe.As<TB, float>(ref Unsafe.AsRef(childB));
+                var aMin = Vector128.LoadUnsafe(ref a);
+                var aMax = Vector128.LoadUnsafe(ref Unsafe.Add(ref a, 4));
+                var bMin = Vector128.LoadUnsafe(ref b);
+                var bMax = Vector128.LoadUnsafe(ref Unsafe.Add(ref b, 4));
+                var noIntersectionOnAxes = Vector128.LessThan(aMax, bMin) | Vector128.LessThan(bMax, aMin);
+                return (Vector128.ExtractMostSignificantBits(noIntersectionOnAxes) & 0b111) == 0;
+            }
+            else
+            {
+                var a = (float*)Unsafe.AsPointer(ref Unsafe.AsRef(childA));
+                var b = (float*)Unsafe.AsPointer(ref Unsafe.AsRef(childB));
+                return a[4] >= b[0] & a[5] >= b[1] & a[6] >= b[2] &
+                       b[4] >= a[0] & b[5] >= a[1] & b[6] >= a[2];
+            }
+        }
 
         /// <summary>
         /// Determines if a bounding box intersects another bounding box.
@@ -46,22 +93,30 @@ namespace BepuUtilities
         /// <param name="a">First bounding box to test.</param>
         /// <param name="b">Second bounding box to test.</param>
         /// <returns>Whether the bounding boxes intersected.</returns>
+        /// <remarks>When possible, prefer using the <see cref="IntersectsUnsafe{TA, TB}(in TA, in TB)"/> variant for slightly better performance.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Intersects(in BoundingBox a, in BoundingBox b)
+        public unsafe static bool Intersects(BoundingBox a, BoundingBox b)
         {
-            return Intersects(a.Min, a.Max, b.Min, b.Max);
+            return IntersectsUnsafe(a, b);
         }
-        //TODO: At some point in the past, intersection was found to be faster with non-short circuiting operators.
-        //While that does make some sense (the branches aren't really valuable relative to their cost), it's still questionable enough that it should be reevaluated on a modern compiler. 
+
         /// <summary>
         /// Determines if a bounding box intersects another bounding box.
         /// </summary>
-        /// <param name="a">First bounding box to test.</param>
-        /// <param name="b">Second bounding box to test.</param>
+        /// <param name="minA">Minimum bounds of bounding box A.</param>
+        /// <param name="maxA">Maximum bounds of bounding box A.</param>
+        /// <param name="minB">Minimum bounds of bounding box B.</param>
+        /// <param name="maxB">Maximum bounds of bounding box B.</param>
         /// <returns>Whether the bounding boxes intersected.</returns>
+        /// <remarks>When possible, prefer using the <see cref="IntersectsUnsafe{TA, TB}(in TA, in TB)"/> variant for slightly better performance.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Intersects(Vector3 minA, Vector3 maxA, Vector3 minB, Vector3 maxB)
         {
+            if (Vector128.IsHardwareAccelerated)
+            {
+                var noIntersectionOnAxes = Vector128.LessThan(maxA.AsVector128(), minB.AsVector128()) | Vector128.LessThan(maxB.AsVector128(), minA.AsVector128());
+                return (Vector128.ExtractMostSignificantBits(noIntersectionOnAxes) & 0b111) == 0;
+            }
             return maxA.X >= minB.X & maxA.Y >= minB.Y & maxA.Z >= minB.Z &
                    maxB.X >= minA.X & maxB.Y >= minA.Y & maxB.Z >= minA.Z;
         }
@@ -142,14 +197,14 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="points">Points to enclose with a bounding box.</param>
         /// <returns>Bounding box which contains the list of points.</returns>
-        public static BoundingBox CreateFromPoints(IList<Vector3> points)
+        public static BoundingBox CreateFromPoints(ReadOnlySpan<Vector3> points)
         {
             BoundingBox aabb;
-            if (points.Count == 0)
+            if (points.Length == 0)
                 throw new Exception("Cannot construct a bounding box from an empty list.");
             aabb.Min = points[0];
             aabb.Max = aabb.Min;
-            for (int i = points.Count - 1; i >= 1; i--)
+            for (int i = points.Length - 1; i >= 1; i--)
             {
                 aabb.Min = Vector3.Min(points[i], aabb.Min);
                 aabb.Max = Vector3.Max(points[i], aabb.Max);
@@ -179,7 +234,7 @@ namespace BepuUtilities
         /// <returns>String representation of the bounding box.</returns>
         public override string ToString()
         {
-            return $"({Min.ToString()}, {Max.ToString()})";
+            return $"({Min}, {Max})";
         }
 
     }

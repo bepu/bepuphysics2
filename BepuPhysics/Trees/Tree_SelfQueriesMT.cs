@@ -229,10 +229,10 @@ namespace BepuPhysics.Trees
                 ref var ab = ref a.B;
                 ref var ba = ref b.A;
                 ref var bb = ref b.B;
-                var aaIntersects = Intersects(aa, ba);
-                var abIntersects = Intersects(aa, bb);
-                var baIntersects = Intersects(ab, ba);
-                var bbIntersects = Intersects(ab, bb);
+                var aaIntersects = BoundingBox.IntersectsUnsafe(aa, ba);
+                var abIntersects = BoundingBox.IntersectsUnsafe(aa, bb);
+                var baIntersects = BoundingBox.IntersectsUnsafe(ab, ba);
+                var bbIntersects = BoundingBox.IntersectsUnsafe(ab, bb);
 
                 if (aaIntersects)
                 {
@@ -265,7 +265,7 @@ namespace BepuPhysics.Trees
                 ref var a = ref node.A;
                 ref var b = ref node.B;
 
-                var ab = Intersects(a, b);
+                var ab = BoundingBox.IntersectsUnsafe(a, b);
 
                 if (a.Index >= 0)
                     CollectJobsInNode(a.Index, a.LeafCount, ref results);
