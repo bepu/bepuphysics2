@@ -1,10 +1,12 @@
 ﻿using BepuPhysics.CollisionDetection.CollisionTasks;
+using BepuPhysics.Constraints.Contact;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Numerics;
+using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
@@ -88,44 +90,6 @@ namespace BepuPhysics.Trees
             }
         }
 
-
-        ///// <summary>
-        ///// Intersects two node children. 
-        ///// The referenced node children must not be in unpinned managed memory.
-        ///// </summary>
-        ///// <param name="childA">First child to compare.</param>
-        ///// <param name="childB">Second child to compare.</param>
-        ///// <returns>True if the children overlap, false otherwise.</returns>
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //unsafe static bool Intersects(in NodeChild childA, in NodeChild childB)
-        //{
-        //    return BoundingBox.Intersects(childA, childB);
-        //    //if (Vector256.IsHardwareAccelerated && Avx.IsSupported)
-        //    //{
-        //    //    var a = Vector256.LoadUnsafe(ref Unsafe.AsRef(childA.Min.X));
-        //    //    var b = Vector256.LoadUnsafe(ref Unsafe.AsRef(childB.Min.X));
-        //    //    var min = Avx.Permute2x128(a, b, (0) | (2 << 4)); //(aMin, aMax) (bMin, bMax) -> (aMin, bMin)
-        //    //    var max = Avx.Permute2x128(a, b, (3) | (1 << 4)); //(aMin, aMax) (bMin, bMax) -> (bMax, aMax)
-        //    //    var noIntersection = Vector256.LessThan(max, min);
-        //    //    return (Vector256.ExtractMostSignificantBits(noIntersection) & 0b1110111) == 0;
-        //    //}
-        //    //else
-        //    //if (Vector128.IsHardwareAccelerated)
-        //    //{
-        //    //    //THIS IS A POTENTIAL GC HOLE IF CHILDREN ARE PASSED FROM UNPINNED MANAGED MEMORY
-        //    //    var aMin = Vector128.LoadUnsafe(ref Unsafe.AsRef(childA.Min.X));
-        //    //    var aMax = Vector128.LoadUnsafe(ref Unsafe.AsRef(childA.Max.X));
-        //    //    var bMin = Vector128.LoadUnsafe(ref Unsafe.AsRef(childB.Min.X));
-        //    //    var bMax = Vector128.LoadUnsafe(ref Unsafe.AsRef(childB.Max.X));
-        //    //    var noIntersectionOnAxes = Vector128.LessThan(aMax, bMin) | Vector128.LessThan(bMax, aMin);
-        //    //    return (Vector128.ExtractMostSignificantBits(noIntersectionOnAxes) & 0b111) == 0;
-        //    //}
-        //    //else
-        //    {
-        //        return BoundingBox.Intersects(childA.Min, childA.Max, childB.Min, childB.Max);
-        //    }
-        //}
-
         unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(ref Node a, ref Node b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             //There are no shared children, so test them all.
@@ -193,7 +157,7 @@ namespace BepuPhysics.Trees
             public int B;
         }
 
-        unsafe void GetOverlapsWithLeaf<TOverlapHandler>(ref TOverlapHandler results, NodeChild leaf, int nodeToTest, ref QuickList<int> stack, BufferPool pool) where TOverlapHandler : IOverlapHandler
+        unsafe void GetOverlapsWithLeaf<TOverlapHandler>(ref TOverlapHandler results, NodeChild leaf, int nodeToTest, ref QuickList<int> stack) where TOverlapHandler : IOverlapHandler
         {
             var leafIndex = Encode(leaf.Index);
             Debug.Assert(stack.Count == 0);
@@ -209,7 +173,7 @@ namespace BepuPhysics.Trees
                 if (intersectedInternalA && intersectedInternalB)
                 {
                     nodeToTest = node.A.Index;
-                    stack.Allocate(pool) = node.B.Index;
+                    stack.AllocateUnsafely() = node.B.Index;
                 }
                 else
                 {
@@ -245,8 +209,8 @@ namespace BepuPhysics.Trees
             if (LeafCount < 2)
                 return;
 
-            QuickList<StackEntry> stack = new(Math.Min(1024, Math.Max(0, NodeCount / 4)), pool);
-            QuickList<int> leafStack = new(Math.Min(512, Math.Max(0, NodeCount / 16)), pool);
+            QuickList<StackEntry> stack = new(NodeCount, pool);
+            QuickList<int> leafStack = new(NodeCount, pool);
             StackEntry nextTest = default;
 
             while (true)
@@ -276,10 +240,10 @@ namespace BepuPhysics.Trees
                         nextTest.B = node.B.Index;
 
                         //The two child self tests get pushed to the stack.
-                        ref var stackA = ref stack.Allocate(pool);
+                        ref var stackA = ref stack.AllocateUnsafely();
                         stackA.A = node.A.Index;
                         stackA.B = node.A.Index;
-                        ref var stackB = ref stack.Allocate(pool);
+                        ref var stackB = ref stack.AllocateUnsafely();
                         stackB.A = node.B.Index;
                         stackB.B = node.B.Index;
                     }
@@ -300,13 +264,13 @@ namespace BepuPhysics.Trees
                                 {
                                     nextTest.A = node.A.Index;
                                     nextTest.B = node.A.Index;
-                                    GetOverlapsWithLeaf(ref results, node.B, node.A.Index, ref leafStack, pool);
+                                    GetOverlapsWithLeaf(ref results, node.B, node.A.Index, ref leafStack);
                                 }
                                 else
                                 {
                                     nextTest.A = node.B.Index;
                                     nextTest.B = node.B.Index;
-                                    GetOverlapsWithLeaf(ref results, node.A, node.B.Index, ref leafStack, pool);
+                                    GetOverlapsWithLeaf(ref results, node.A, node.B.Index, ref leafStack);
                                 }
                             }
                             else
@@ -326,7 +290,7 @@ namespace BepuPhysics.Trees
                             {
                                 nextTest.A = node.A.Index;
                                 nextTest.B = node.A.Index;
-                                ref var stackB = ref stack.Allocate(pool);
+                                ref var stackB = ref stack.AllocateUnsafely();
                                 stackB.A = node.B.Index;
                                 stackB.B = node.B.Index;
                             }
@@ -377,9 +341,9 @@ namespace BepuPhysics.Trees
                         {
                             //At least one is a leaf.
                             if (n0AIsInternal)
-                                GetOverlapsWithLeaf(ref results, n1.A, n0.A.Index, ref leafStack, pool);
+                                GetOverlapsWithLeaf(ref results, n1.A, n0.A.Index, ref leafStack);
                             else if (n1AIsInternal)
-                                GetOverlapsWithLeaf(ref results, n0.A, n1.A.Index, ref leafStack, pool);
+                                GetOverlapsWithLeaf(ref results, n0.A, n1.A.Index, ref leafStack);
                             else //Both are leaves.
                                 results.Handle(Encode(n0.A.Index), Encode(n1.A.Index));
                         }
@@ -395,7 +359,7 @@ namespace BepuPhysics.Trees
                             }
                             else
                             {
-                                ref var stackEntry = ref stack.Allocate(pool);
+                                ref var stackEntry = ref stack.AllocateUnsafely();
                                 stackEntry.A = n0.A.Index;
                                 stackEntry.B = n1.B.Index;
                             }
@@ -404,9 +368,9 @@ namespace BepuPhysics.Trees
                         {
                             //At least one is a leaf.
                             if (n0AIsInternal)
-                                GetOverlapsWithLeaf(ref results, n1.B, n0.A.Index, ref leafStack, pool);
+                                GetOverlapsWithLeaf(ref results, n1.B, n0.A.Index, ref leafStack);
                             else if (n1BIsInternal)
-                                GetOverlapsWithLeaf(ref results, n0.A, n1.B.Index, ref leafStack, pool);
+                                GetOverlapsWithLeaf(ref results, n0.A, n1.B.Index, ref leafStack);
                             else //Both are leaves.
                                 results.Handle(Encode(n0.A.Index), Encode(n1.B.Index));
                         }
@@ -422,7 +386,7 @@ namespace BepuPhysics.Trees
                             }
                             else
                             {
-                                ref var stackEntry = ref stack.Allocate(pool);
+                                ref var stackEntry = ref stack.AllocateUnsafely();
                                 stackEntry.A = n0.B.Index;
                                 stackEntry.B = n1.A.Index;
                             }
@@ -431,9 +395,9 @@ namespace BepuPhysics.Trees
                         {
                             //At least one is a leaf.
                             if (n0BIsInternal)
-                                GetOverlapsWithLeaf(ref results, n1.A, n0.B.Index, ref leafStack, pool);
+                                GetOverlapsWithLeaf(ref results, n1.A, n0.B.Index, ref leafStack);
                             else if (n1AIsInternal)
-                                GetOverlapsWithLeaf(ref results, n0.B, n1.A.Index, ref leafStack, pool);
+                                GetOverlapsWithLeaf(ref results, n0.B, n1.A.Index, ref leafStack);
                             else //Both are leaves.
                                 results.Handle(Encode(n0.B.Index), Encode(n1.A.Index));
                         }
@@ -449,7 +413,7 @@ namespace BepuPhysics.Trees
                             }
                             else
                             {
-                                ref var stackEntry = ref stack.Allocate(pool);
+                                ref var stackEntry = ref stack.AllocateUnsafely();
                                 stackEntry.A = n0.B.Index;
                                 stackEntry.B = n1.B.Index;
                             }
@@ -458,9 +422,9 @@ namespace BepuPhysics.Trees
                         {
                             //At least one is a leaf.
                             if (n0BIsInternal)
-                                GetOverlapsWithLeaf(ref results, n1.B, n0.B.Index, ref leafStack, pool);
+                                GetOverlapsWithLeaf(ref results, n1.B, n0.B.Index, ref leafStack);
                             else if (n1BIsInternal)
-                                GetOverlapsWithLeaf(ref results, n0.B, n1.B.Index, ref leafStack, pool);
+                                GetOverlapsWithLeaf(ref results, n0.B, n1.B.Index, ref leafStack);
                             else //Both are leaves.
                                 results.Handle(Encode(n0.B.Index), Encode(n1.B.Index));
                         }
@@ -477,6 +441,264 @@ namespace BepuPhysics.Trees
             leafStack.Dispose(pool);
             stack.Dispose(pool);
 
+        }
+
+        struct LeafNodeStackEntry
+        {
+            public uint EncodedLeafParentIndex;
+            public int NodeIndex;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public LeafNodeStackEntry(int leafParentIndex, bool leafChildIsB, int nodeIndex)
+            {
+                EncodedLeafParentIndex = (uint)leafParentIndex;
+                if (leafChildIsB)
+                    EncodedLeafParentIndex |= 1u << 31;
+                NodeIndex = nodeIndex;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ref NodeChild GetChild(ref Tree tree)
+            {
+                var parentNodeIndex = EncodedLeafParentIndex & 0x7FFF_FFFF;
+                var leafIsChildB = EncodedLeafParentIndex >= 0x8000_0000;
+                ref var parent = ref tree.Nodes[parentNodeIndex];
+                return ref leafIsChildB ? ref parent.B : ref parent.A;
+            }
+        }
+
+
+        public unsafe void GetSelfOverlapsContiguousPrepass<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
+        {
+            //If there are less than two leaves, there can't be any overlap.
+            //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
+            if (LeafCount < 2)
+                return;
+
+            //A recursive self test will at some point visit all nodes with certainty. Instead of framing it as a recursive test at all, do a prepass that's just a contiguous iteration.
+            QuickList<StackEntry> crossoverStack = new(NodeCount, pool);
+            QuickList<LeafNodeStackEntry> leafNodeStack = new(NodeCount, pool);
+            for (int i = 0; i < NodeCount; ++i)
+            {
+                ref var node = ref Nodes[i];
+                var a = node.A.Index;
+                var b = node.B.Index;
+                var aIsInternal = a >= 0;
+                var bIsInternal = b >= 0;
+                if (aIsInternal && bIsInternal)
+                {
+                    if (BoundingBox.IntersectsUnsafe(node.A, node.B))
+                    {
+                        ref var stackEntry = ref crossoverStack.AllocateUnsafely();
+                        stackEntry.A = a;
+                        stackEntry.B = b;
+                    }
+                }
+                else if (aIsInternal || bIsInternal)
+                {
+                    //One is a leaf, one is internal.
+                    leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(i, aIsInternal, aIsInternal ? a : b);
+                }
+                else
+                {
+                    //Both are leaves.
+                    results.Handle(Encode(a), Encode(b));
+                }
+            }
+
+            //Now, we need to complete all crossovers and leaf-node tests. Note that leaf-node tests can only generate leaf-node or leaf-leaf tests, they never produce crossovers.
+            //In contrast, crossovers can generate leaf-node tests. So do crossovers first so we'll have every leaf-node test in the stack ready to go.
+            if (crossoverStack.TryPop(out var nextCrossover))
+            {
+                while (true)
+                {
+                    //Possible sources of stack entry:
+                    //1) AA intersection, both internal
+                    //2) AB intersection, both internal
+                    //3) BA intersection, both internal
+                    //4) BB intersection, both internal
+                    var parent0 = nextCrossover.A;
+                    var parent1 = nextCrossover.B;
+                    ref var n0 = ref Nodes[parent0];
+                    ref var n1 = ref Nodes[parent1];
+                    var aaIntersects = BoundingBox.IntersectsUnsafe(n0.A, n1.A);
+                    var abIntersects = BoundingBox.IntersectsUnsafe(n0.A, n1.B);
+                    var baIntersects = BoundingBox.IntersectsUnsafe(n0.B, n1.A);
+                    var bbIntersects = BoundingBox.IntersectsUnsafe(n0.B, n1.B);
+                    var n0A = n0.A.Index;
+                    var n0B = n0.B.Index;
+                    var n1A = n1.A.Index;
+                    var n1B = n1.B.Index;
+                    var n0AIsInternal = n0A >= 0;
+                    var n0BIsInternal = n0B >= 0;
+                    var n1AIsInternal = n1A >= 0;
+                    var n1BIsInternal = n1B >= 0;
+                    //The first test which generates a stack candidate gets the nextTest; the rest get pushed to the stack.
+                    int previousStackGeneratorCount = 0;
+                    if (aaIntersects)
+                    {
+                        if (n0AIsInternal && n1AIsInternal)
+                        {
+                            ++previousStackGeneratorCount;
+                            nextCrossover.A = n0A;
+                            nextCrossover.B = n1A;
+                        }
+                        else
+                        {
+                            //At least one is a leaf.
+                            if (n0AIsInternal)
+                                leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent1, false, n0A);
+                            else if (n1AIsInternal)
+                                leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent0, false, n1A);
+                            else //Both are leaves.
+                                results.Handle(Encode(n0A), Encode(n1A));
+                        }
+                    }
+                    if (abIntersects)
+                    {
+                        if (n0AIsInternal && n1BIsInternal)
+                        {
+                            if (previousStackGeneratorCount++ == 0)
+                            {
+                                nextCrossover.A = n0A;
+                                nextCrossover.B = n1B;
+                            }
+                            else
+                            {
+                                ref var stackEntry = ref crossoverStack.AllocateUnsafely();
+                                stackEntry.A = n0A;
+                                stackEntry.B = n1B;
+                            }
+                        }
+                        else
+                        {
+                            //At least one is a leaf.
+                            if (n0AIsInternal)
+                                leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent1, true, n0A);
+                            else if (n1BIsInternal)
+                                leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent0, false, n1B);
+                            else //Both are leaves.
+                                results.Handle(Encode(n0A), Encode(n1B));
+                        }
+                    }
+                    if (baIntersects)
+                    {
+                        if (n0BIsInternal && n1AIsInternal)
+                        {
+                            if (previousStackGeneratorCount++ == 0)
+                            {
+                                nextCrossover.A = n0B;
+                                nextCrossover.B = n1A;
+                            }
+                            else
+                            {
+                                ref var stackEntry = ref crossoverStack.AllocateUnsafely();
+                                stackEntry.A = n0B;
+                                stackEntry.B = n1A;
+                            }
+                        }
+                        else
+                        {
+                            //At least one is a leaf.
+                            if (n0BIsInternal)
+                                leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent1, false, n0B);
+                            else if (n1AIsInternal)
+                                leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent0, true, n1A);
+                            else //Both are leaves.
+                                results.Handle(Encode(n0B), Encode(n1A));
+                        }
+                    }
+                    if (bbIntersects)
+                    {
+                        if (n0BIsInternal && n1BIsInternal)
+                        {
+                            if (previousStackGeneratorCount++ == 0)
+                            {
+                                nextCrossover.A = n0B;
+                                nextCrossover.B = n1B;
+                            }
+                            else
+                            {
+                                ref var stackEntry = ref crossoverStack.AllocateUnsafely();
+                                stackEntry.A = n0B;
+                                stackEntry.B = n1B;
+                            }
+                        }
+                        else
+                        {
+                            //At least one is a leaf.
+                            if (n0BIsInternal)
+                                leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent1, true, n0B);
+                            else if (n1BIsInternal)
+                                leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent0, true, n1B);
+                            else //Both are leaves.
+                                results.Handle(Encode(n0B), Encode(n1B));
+                        }
+                    }
+                    if (previousStackGeneratorCount == 0)
+                    {
+                        //None of the candidates generated a next step, so grab from the stack.
+                        if (!crossoverStack.TryPop(out nextCrossover))
+                            break;
+                    }
+                }
+            }
+            crossoverStack.Dispose(pool);
+            QuickList<int> stack = new(NodeCount, pool);
+
+            for (int i = 0; i < leafNodeStack.Count; ++i)
+            {
+                var leafNodeTarget = leafNodeStack[i];
+                ref var leafChild = ref leafNodeTarget.GetChild(ref this);
+                var leafIndex = Encode(leafChild.Index);
+                var nodeToTest = leafNodeTarget.NodeIndex;
+                Debug.Assert(stack.Count == 0);
+                while (true)
+                {
+                    //Now process all the leaf nodes!
+                    ref var node = ref Nodes[nodeToTest];
+                    var a = node.A.Index;
+                    var b = node.B.Index;
+                    var aIntersected = BoundingBox.IntersectsUnsafe(leafChild, node.A);
+                    var bIntersected = BoundingBox.IntersectsUnsafe(leafChild, node.B);
+                    var aIsInternal = a >= 0;
+                    var bIsInternal = b >= 0;
+                    var intersectedInternalA = aIntersected && aIsInternal;
+                    var intersectedInternalB = bIntersected && bIsInternal;
+                    if (intersectedInternalA && intersectedInternalB)
+                    {
+                        nodeToTest = a;
+                        stack.AllocateUnsafely() = b;
+                    }
+                    else
+                    {
+                        if (aIntersected && !aIsInternal)
+                        {
+                            results.Handle(leafIndex, Encode(a));
+                        }
+                        if (bIntersected && !bIsInternal)
+                        {
+                            results.Handle(leafIndex, Encode(b));
+                        }
+                        if (intersectedInternalA || intersectedInternalB)
+                        {
+                            nodeToTest = intersectedInternalA ? a : b;
+                        }
+                        else
+                        {
+                            //The current traversal step doesn't offer a next step; pull from the stack.
+                            if (!stack.TryPop(out nodeToTest))
+                            {
+                                //Nothing left to test against this leaf! Done!
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            leafNodeStack.Dispose(pool);
+            stack.Dispose(pool);
         }
 
     }

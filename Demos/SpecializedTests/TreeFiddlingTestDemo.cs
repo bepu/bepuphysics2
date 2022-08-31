@@ -48,6 +48,12 @@ namespace Demos.SpecializedTests
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
             int testCount = 1000;
+            var overlapHandlerPre = new OverlapHandler();
+            var startTimePre = Stopwatch.GetTimestamp();
+            for (int i = 0; i < testCount; ++i)
+                mesh.Tree.GetSelfOverlapsContiguousPrepass(ref overlapHandlerPre, BufferPool);
+            var endTimePre = Stopwatch.GetTimestamp();
+
             var overlapHandlerNew = new OverlapHandler();
             var startTimeNew = Stopwatch.GetTimestamp();
             for (int i = 0; i < testCount; ++i)
@@ -60,9 +66,11 @@ namespace Demos.SpecializedTests
                 mesh.Tree.GetSelfOverlaps(ref overlapHandlerOld);
             var endTimeOld = Stopwatch.GetTimestamp();
 
+            Console.WriteLine($"CPrepass time per execution (ms): {(endTimePre - startTimePre) * 1e3 / (testCount * Stopwatch.Frequency)}");
             Console.WriteLine($"Revamped time per execution (ms): {(endTimeNew - startTimeNew) * 1e3 / (testCount * Stopwatch.Frequency)}");
             Console.WriteLine($"Original time per execution (ms): {(endTimeOld - startTimeOld) * 1e3 / (testCount * Stopwatch.Frequency)}");
 
+            Console.WriteLine($"Revamped count: {overlapHandlerPre.OverlapCount}, sum {overlapHandlerPre.OverlapSum}, hash {overlapHandlerPre.OverlapHash}");
             Console.WriteLine($"Revamped count: {overlapHandlerNew.OverlapCount}, sum {overlapHandlerNew.OverlapSum}, hash {overlapHandlerNew.OverlapHash}");
             Console.WriteLine($"Original count: {overlapHandlerOld.OverlapCount}, sum {overlapHandlerOld.OverlapSum}, hash {overlapHandlerOld.OverlapHash}");
         }
