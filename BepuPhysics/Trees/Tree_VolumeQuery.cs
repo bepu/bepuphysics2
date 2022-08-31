@@ -7,7 +7,7 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-        unsafe readonly void GetOverlaps<TEnumerator>(int nodeIndex, Vector3 min, Vector3 max, int* stack, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
+        unsafe readonly void GetOverlaps<TEnumerator>(int nodeIndex, BoundingBox boundingBox, int* stack, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
             Debug.Assert((nodeIndex >= 0 && nodeIndex < NodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < LeafCount));
             Debug.Assert(LeafCount >= 2, "This implementation assumes all nodes are filled.");
@@ -29,8 +29,8 @@ namespace BepuPhysics.Trees
                 else
                 {
                     ref var node = ref Nodes[nodeIndex];
-                    var aIntersected = BoundingBox.Intersects(node.A.Min, node.A.Max, min, max);
-                    var bIntersected = BoundingBox.Intersects(node.B.Min, node.B.Max, min, max);
+                    var aIntersected = BoundingBox.IntersectsUnsafe(node.A, boundingBox);
+                    var bIntersected = BoundingBox.IntersectsUnsafe(node.B, boundingBox);
 
                     if (aIntersected)
                     {
@@ -58,19 +58,19 @@ namespace BepuPhysics.Trees
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly unsafe void GetOverlaps<TEnumerator>(Vector3 min, Vector3 max, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
+        public readonly unsafe void GetOverlaps<TEnumerator>(BoundingBox boundingBox, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
             if (LeafCount > 1)
             {
                 //TODO: Explicitly tracking depth in the tree during construction/refinement is practically required to guarantee correctness.
                 //While it's exceptionally rare that any tree would have more than 256 levels, the worst case of stomping stack memory is not acceptable in the long run.
                 var stack = stackalloc int[TraversalStackCapacity];
-                GetOverlaps(0, min, max, stack, ref leafEnumerator);
+                GetOverlaps(0, boundingBox, stack, ref leafEnumerator);
             }
             else if (LeafCount == 1)
             {
                 Debug.Assert(Nodes[0].A.Index < 0, "If the root only has one child, it must be a leaf.");
-                if (BoundingBox.Intersects(min, max, Nodes[0].A.Min, Nodes[0].A.Max))
+                if (BoundingBox.IntersectsUnsafe(boundingBox, Nodes[0].A))
                 {
                     leafEnumerator.LoopBody(Encode(Nodes[0].A.Index));
                 }
@@ -80,9 +80,9 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly unsafe void GetOverlaps<TEnumerator>(in BoundingBox boundingBox, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
+        public readonly unsafe void GetOverlaps<TEnumerator>(Vector3 min, Vector3 max, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
-            GetOverlaps(boundingBox.Min, boundingBox.Max, ref leafEnumerator);
+            GetOverlaps(new BoundingBox(min, max), ref leafEnumerator);
         }
 
 

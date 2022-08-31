@@ -134,7 +134,7 @@ namespace BepuPhysics.Trees
                         var leafIndex = Encode(overlap.B);
                         ref var leaf = ref TreeB.Leaves[leafIndex];
                         ref var childOwningLeaf = ref Unsafe.Add(ref TreeB.Nodes[leaf.NodeIndex].A, leaf.ChildIndex);
-                        TreeA.TestNodeAgainstLeaf(overlap.A, leafIndex, ref childOwningLeaf.Min, ref childOwningLeaf.Max, ref OverlapHandlers[workerIndex]);
+                        TreeA.TestNodeAgainstLeaf(overlap.A, leafIndex, ref childOwningLeaf, ref OverlapHandlers[workerIndex]);
                     }
                 }
                 else
@@ -143,7 +143,7 @@ namespace BepuPhysics.Trees
                     var leafIndex = Encode(overlap.A);
                     ref var leaf = ref TreeA.Leaves[leafIndex];
                     ref var childOwningLeaf = ref Unsafe.Add(ref TreeA.Nodes[leaf.NodeIndex].A, leaf.ChildIndex);
-                    TreeA.TestLeafAgainstNode(leafIndex, ref childOwningLeaf.Min, ref childOwningLeaf.Max, overlap.B, ref TreeB, ref OverlapHandlers[workerIndex]);
+                    TreeA.TestLeafAgainstNode(leafIndex, ref childOwningLeaf, overlap.B, ref TreeB, ref OverlapHandlers[workerIndex]);
 
                     //NOTE THAT WE DO NOT HANDLE THE CASE THAT BOTH A AND B ARE LEAVES HERE.
                     //The collection routine should take care of that, since it has more convenient access to bounding boxes and because a single test isn't worth an atomic increment.
@@ -164,7 +164,7 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            unsafe void DispatchTestForLeaf(ref Tree nodeOwner, int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, int nodeLeafCount, ref TOverlapHandler results)
+            unsafe void DispatchTestForLeaf(ref Tree nodeOwner, int leafIndex, ref NodeChild leafChild, int nodeIndex, int nodeLeafCount, ref TOverlapHandler results)
             {
                 if (nodeIndex < 0)
                 {
@@ -185,11 +185,11 @@ namespace BepuPhysics.Trees
                             jobs.Add(new Job { A = Encode(leafIndex), B = nodeIndex }, Pool);
                     }
                     else
-                        TestLeafAgainstNode(ref nodeOwner, leafIndex, ref leafMin, ref leafMax, nodeIndex, ref results);
+                        TestLeafAgainstNode(ref nodeOwner, leafIndex, ref leafChild, nodeIndex, ref results);
                 }
             }
 
-            unsafe void TestLeafAgainstNode(ref Tree nodeOwner, int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, ref TOverlapHandler results)
+            unsafe void TestLeafAgainstNode(ref Tree nodeOwner, int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results)
             {
                 ref var node = ref nodeOwner.Nodes[nodeIndex];
                 ref var a = ref node.A;
@@ -200,15 +200,15 @@ namespace BepuPhysics.Trees
                 //TODO: this is some pretty questionable microtuning. It's not often that the post-leaf-found recursion will be long enough to evict L1. Definitely test it.
                 var bIndex = b.Index;
                 var bLeafCount = b.LeafCount;
-                var aIntersects = BoundingBox.Intersects(leafMin, leafMax, a.Min, a.Max);
-                var bIntersects = BoundingBox.Intersects(leafMin, leafMax, b.Min, b.Max);
+                var aIntersects = BoundingBox.IntersectsUnsafe(leafChild, a);
+                var bIntersects = BoundingBox.IntersectsUnsafe(leafChild, b);
                 if (aIntersects)
                 {
-                    DispatchTestForLeaf(ref nodeOwner, leafIndex, ref leafMin, ref leafMax, a.Index, a.LeafCount, ref results);
+                    DispatchTestForLeaf(ref nodeOwner, leafIndex, ref leafChild, a.Index, a.LeafCount, ref results);
                 }
                 if (bIntersects)
                 {
-                    DispatchTestForLeaf(ref nodeOwner, leafIndex, ref leafMin, ref leafMax, bIndex, bLeafCount, ref results);
+                    DispatchTestForLeaf(ref nodeOwner, leafIndex, ref leafChild, bIndex, bLeafCount, ref results);
                 }
             }
 
@@ -228,13 +228,13 @@ namespace BepuPhysics.Trees
                     else
                     {
                         //leaf B versus node A.
-                        TestLeafAgainstNode(ref TreeA, Encode(b.Index), ref b.Min, ref b.Max, a.Index, ref results);
+                        TestLeafAgainstNode(ref TreeA, Encode(b.Index), ref b, a.Index, ref results);
                     }
                 }
                 else if (b.Index >= 0)
                 {
                     //leaf A versus node B.
-                    TestLeafAgainstNode(ref TreeB, Encode(a.Index), ref a.Min, ref a.Max, b.Index, ref results);
+                    TestLeafAgainstNode(ref TreeB, Encode(a.Index), ref a, b.Index, ref results);
                 }
                 else
                 {

@@ -308,6 +308,7 @@ namespace BepuPhysics.Collidables
                 {
                     ref var child = ref compound.Children[i];
                     //TODO: This does quite a bit of work. May want to try a simple bounding sphere instead (based on a dedicated maximum radius request).
+                    //Could also benefit from using the BoundingBox layout test, which is a little faster than 4 independent values.
                     shapes[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, child.LocalOrientation, out _, out _, out var min, out var max);
                     min += child.LocalPosition;
                     max += child.LocalPosition;

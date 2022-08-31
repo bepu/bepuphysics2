@@ -27,7 +27,7 @@ namespace BepuPhysics.Trees
 
         //Note that all of these implementations make use of a fully generic handler. It could be dumping to a list, or it could be directly processing the results- at this
         //level of abstraction we don't know or care. It's up to the user to use a handler which maximizes performance if they want it. We'll be using this in the broad phase.
-        unsafe void DispatchTestForLeaf<TOverlapHandler>(int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        unsafe void DispatchTestForLeaf<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             if (nodeIndex < 0)
             {
@@ -35,10 +35,10 @@ namespace BepuPhysics.Trees
             }
             else
             {
-                TestLeafAgainstNode(leafIndex, ref leafMin, ref leafMax, nodeIndex, ref results);
+                TestLeafAgainstNode(leafIndex, ref leafChild, nodeIndex, ref results);
             }
         }
-        unsafe void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, ref TOverlapHandler results)
+        unsafe void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results)
             where TOverlapHandler : IOverlapHandler
         {
             ref var node = ref Nodes[nodeIndex];
@@ -49,15 +49,15 @@ namespace BepuPhysics.Trees
             //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
             //TODO: this is some pretty questionable microtuning. It's not often that the post-leaf-found recursion will be long enough to evict L1. Definitely test it.
             var bIndex = b.Index;
-            var aIntersects = BoundingBox.Intersects(leafMin, leafMax, a.Min, a.Max);
-            var bIntersects = BoundingBox.Intersects(leafMin, leafMax, b.Min, b.Max);
+            var aIntersects = BoundingBox.IntersectsUnsafe(leafChild, a);
+            var bIntersects = BoundingBox.IntersectsUnsafe(leafChild, b);
             if (aIntersects)
             {
-                DispatchTestForLeaf(leafIndex, ref leafMin, ref leafMax, a.Index, ref results);
+                DispatchTestForLeaf(leafIndex, ref leafChild, a.Index, ref results);
             }
             if (bIntersects)
             {
-                DispatchTestForLeaf(leafIndex, ref leafMin, ref leafMax, bIndex, ref results);
+                DispatchTestForLeaf(leafIndex, ref leafChild, bIndex, ref results);
             }
         }
 
@@ -73,13 +73,13 @@ namespace BepuPhysics.Trees
                 else
                 {
                     //leaf B versus node A.
-                    TestLeafAgainstNode(Encode(b.Index), ref b.Min, ref b.Max, a.Index, ref results);
+                    TestLeafAgainstNode(Encode(b.Index), ref b, a.Index, ref results);
                 }
             }
             else if (b.Index >= 0)
             {
                 //leaf A versus node B.
-                TestLeafAgainstNode(Encode(a.Index), ref a.Min, ref a.Max, b.Index, ref results);
+                TestLeafAgainstNode(Encode(a.Index), ref a, b.Index, ref results);
             }
             else
             {
