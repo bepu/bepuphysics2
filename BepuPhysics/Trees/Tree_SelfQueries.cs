@@ -232,81 +232,47 @@ namespace BepuPhysics.Trees
                     var abIntersect = BoundingBox.IntersectsUnsafe(node.A, node.B);
                     var aIsInternal = node.A.Index >= 0;
                     var bIsInternal = node.B.Index >= 0;
-                    if (abIntersect && aIsInternal && bIsInternal)
+
+                    if (aIsInternal)
                     {
-                        //Both children internal and their bounds intersect.
-                        //Their intersection should be the next visited.
                         nextTest.A = node.A.Index;
+                        nextTest.B = node.A.Index;
+
+                        if (bIsInternal)
+                        {
+                            ref var stackB = ref stack.AllocateUnsafely();
+                            stackB.A = node.B.Index;
+                            stackB.B = node.B.Index;
+
+                            if (abIntersect)
+                            {
+                                ref var stackEntry = ref stack.AllocateUnsafely();
+                                stackEntry.A = node.A.Index;
+                                stackEntry.B = node.B.Index;
+                            }
+                        }
+                        else if (abIntersect)
+                        {
+                            GetOverlapsWithLeaf(ref results, node.B, node.A.Index, ref leafStack);
+                        }
+                    }
+                    else if (bIsInternal)
+                    {
+                        nextTest.A = node.B.Index;
                         nextTest.B = node.B.Index;
 
-                        //The two child self tests get pushed to the stack.
-                        ref var stackA = ref stack.AllocateUnsafely();
-                        stackA.A = node.A.Index;
-                        stackA.B = node.A.Index;
-                        ref var stackB = ref stack.AllocateUnsafely();
-                        stackB.A = node.B.Index;
-                        stackB.B = node.B.Index;
-                    }
-                    else
-                    {
                         if (abIntersect)
                         {
-                            Debug.Assert(!aIsInternal || !bIsInternal, "Just in case you shuffle logic around in the future: this clause assumes at least one leaf.");
-                            //The children have overlapping bounds, but at least one is a leaf.
-                            //Note that this path cannot generate any stack entries.
-                            //At least one child is a leaf, so there is at most one self-test.
-                            //The a-b test involves at least one leaf as well, which means it will use the GetOverlapsWithLeaf path.
-                            //So the one possible self-test will be put into the nextTest.
-                            if (aIsInternal || bIsInternal)
-                            {
-                                //One's a leaf, one's internal.
-                                if (aIsInternal)
-                                {
-                                    nextTest.A = node.A.Index;
-                                    nextTest.B = node.A.Index;
-                                    GetOverlapsWithLeaf(ref results, node.B, node.A.Index, ref leafStack);
-                                }
-                                else
-                                {
-                                    nextTest.A = node.B.Index;
-                                    nextTest.B = node.B.Index;
-                                    GetOverlapsWithLeaf(ref results, node.A, node.B.Index, ref leafStack);
-                                }
-                            }
-                            else
-                            {
-                                //Both children are leaves. They have overlapping bounds, so...
-                                results.Handle(Encode(node.A.Index), Encode(node.B.Index));
-
-                                //If both children are leaves, then there's no other source for the next visit, so pop.
-                                if (!stack.TryPop(out nextTest))
-                                    break;
-                            }
+                            GetOverlapsWithLeaf(ref results, node.A, node.B.Index, ref leafStack);
                         }
-                        else
-                        {
-                            //No a-b test, but possibly self tests.
-                            if (aIsInternal && bIsInternal)
-                            {
-                                nextTest.A = node.A.Index;
-                                nextTest.B = node.A.Index;
-                                ref var stackB = ref stack.AllocateUnsafely();
-                                stackB.A = node.B.Index;
-                                stackB.B = node.B.Index;
-                            }
-                            else if (aIsInternal || bIsInternal)
-                            {
-                                var nextSelfTestIndex = aIsInternal ? node.A.Index : node.B.Index;
-                                nextTest.A = nextSelfTestIndex;
-                                nextTest.B = nextSelfTestIndex;
-                            }
-                            else
-                            {
-                                //There was no A-B test and both children are leaves. No new tests available, so grab from the stack.
-                                if (!stack.TryPop(out nextTest))
-                                    break;
-                            }
-                        }
+                    }
+                    else if (abIntersect)
+                    {
+                        //Both children are leaves. They have overlapping bounds, so...
+                        results.Handle(Encode(node.A.Index), Encode(node.B.Index));
+                        //No new tests available, so grab from the stack.
+                        if (!stack.TryPop(out nextTest))
+                            break;
                     }
                 }
                 else
