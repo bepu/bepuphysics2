@@ -984,5 +984,308 @@ namespace BepuPhysics.Trees
             stack.Dispose(pool);
         }
 
+        public unsafe void GetSelfOverlapsPrepassWithRecursion<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
+        {
+            //If there are less than two leaves, there can't be any overlap.
+            //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
+            if (LeafCount < 2)
+                return;
+
+            var leafStack = new QuickList<int>(NodeCount, pool);
+            //A recursive self test will at some point visit all nodes with certainty. Instead of framing it as a recursive test at all, do a prepass that's just a contiguous iteration.
+            for (int i = 0; i < NodeCount; ++i)
+            {
+                ref var node = ref Nodes[i];
+                var a = node.A.Index;
+                var b = node.B.Index;
+                var aIsInternal = a >= 0;
+                var bIsInternal = b >= 0;
+                if (aIsInternal && bIsInternal)
+                {
+                    if (BoundingBox.IntersectsUnsafe(node.A, node.B))
+                    {
+                        GetOverlapsBetweenDifferentNodes(ref Nodes[a], ref Nodes[b], ref results);
+                    }
+                }
+                else if (aIsInternal || bIsInternal)
+                {
+                    //One is a leaf, one is internal.
+                    GetOverlapsWithLeaf(ref results, aIsInternal ? node.B : node.A, aIsInternal ? a : b, ref leafStack);
+                }
+                else
+                {
+                    //Both are leaves.
+                    results.Handle(Encode(a), Encode(b));
+                }
+            }
+            leafStack.Dispose(pool);
+        }
+
+
+
+
+        ref struct SelfTest<TOverlapHandler> where TOverlapHandler : IOverlapHandler
+        {
+            public Buffer<Node> Nodes;
+            public ref TOverlapHandler results;
+
+            unsafe void DispatchTestForLeaf(int leafIndex, ref NodeChild leafChild, int nodeIndex)
+            {
+                if (nodeIndex < 0)
+                {
+                    results.Handle(leafIndex, Encode(nodeIndex));
+                }
+                else
+                {
+                    TestLeafAgainstNode(leafIndex, ref leafChild, nodeIndex);
+                }
+            }
+            unsafe void TestLeafAgainstNode(int leafIndex, ref NodeChild leafChild, int nodeIndex)
+            {
+                ref var node = ref Nodes[nodeIndex];
+                ref var a = ref node.A;
+                ref var b = ref node.B;
+                //Despite recursion, leafBounds should remain in L1- it'll be used all the way down the recursion from here.
+                //However, while we likely loaded child B when we loaded child A, there's no guarantee that it will stick around.
+                //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
+                //TODO: this is some pretty questionable microtuning. It's not often that the post-leaf-found recursion will be long enough to evict L1. Definitely test it.
+                var bIndex = b.Index;
+                var aIntersects = BoundingBox.IntersectsUnsafe(leafChild, a);
+                var bIntersects = BoundingBox.IntersectsUnsafe(leafChild, b);
+                if (aIntersects)
+                {
+                    DispatchTestForLeaf(leafIndex, ref leafChild, a.Index);
+                }
+                if (bIntersects)
+                {
+                    DispatchTestForLeaf(leafIndex, ref leafChild, bIndex);
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            unsafe void DispatchTestForNodes(ref NodeChild a, ref NodeChild b)
+            {
+                if (a.Index >= 0)
+                {
+                    if (b.Index >= 0)
+                    {
+                        GetOverlapsBetweenDifferentNodes(ref Nodes[a.Index], ref Nodes[b.Index]);
+                    }
+                    else
+                    {
+                        //leaf B versus node A.
+                        TestLeafAgainstNode(Encode(b.Index), ref b, a.Index);
+                    }
+                }
+                else if (b.Index >= 0)
+                {
+                    //leaf A versus node B.
+                    TestLeafAgainstNode(Encode(a.Index), ref a, b.Index);
+                }
+                else
+                {
+                    //Two leaves.
+                    results.Handle(Encode(a.Index), Encode(b.Index));
+                }
+            }
+
+            unsafe void GetOverlapsBetweenDifferentNodes(ref Node a, ref Node b)
+            {
+                //There are no shared children, so test them all.
+                ref var aa = ref a.A;
+                ref var ab = ref a.B;
+                ref var ba = ref b.A;
+                ref var bb = ref b.B;
+                var aaIntersects = BoundingBox.IntersectsUnsafe(aa, ba);
+                var abIntersects = BoundingBox.IntersectsUnsafe(aa, bb);
+                var baIntersects = BoundingBox.IntersectsUnsafe(ab, ba);
+                var bbIntersects = BoundingBox.IntersectsUnsafe(ab, bb);
+
+                if (aaIntersects)
+                {
+                    DispatchTestForNodes(ref aa, ref ba);
+                }
+                if (abIntersects)
+                {
+                    DispatchTestForNodes(ref aa, ref bb);
+                }
+                if (baIntersects)
+                {
+                    DispatchTestForNodes(ref ab, ref ba);
+                }
+                if (bbIntersects)
+                {
+                    DispatchTestForNodes(ref ab, ref bb);
+                }
+            }
+
+            public unsafe void GetOverlapsInNode(ref Node node)
+            {
+
+                ref var a = ref node.A;
+                ref var b = ref node.B;
+
+                var ab = BoundingBox.IntersectsUnsafe(a, b);
+
+                if (a.Index >= 0)
+                    GetOverlapsInNode(ref Nodes[a.Index]);
+                if (b.Index >= 0)
+                    GetOverlapsInNode(ref Nodes[b.Index]);
+
+                //Test all different nodes.
+                if (ab)
+                {
+                    DispatchTestForNodes(ref a, ref b);
+                }
+            }
+        }
+        public unsafe void GetSelfOverlaps4<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        {
+            //If there are less than two leaves, there can't be any overlap.
+            //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
+            if (LeafCount < 2)
+                return;
+
+            SelfTest<TOverlapHandler> hmm;
+            hmm.Nodes = Nodes;
+            hmm.results = ref results;
+            hmm.GetOverlapsInNode(ref Nodes[0]);
+        }
+
+        ref struct SelfTest5<TOverlapHandler> where TOverlapHandler : IOverlapHandler
+        {
+            public Buffer<Node> Nodes;
+            public ref TOverlapHandler Results;
+            //When using a leaf-node test.
+            public int LeafIndex;
+            public ref NodeChild LeafChild;
+
+            unsafe void DispatchTestForLeaf(int nodeIndex)
+            {
+                if (nodeIndex < 0)
+                {
+                    Results.Handle(LeafIndex, Encode(nodeIndex));
+                }
+                else
+                {
+                    TestLeafAgainstNode(nodeIndex);
+                }
+            }
+            unsafe void TestLeafAgainstNode(int nodeIndex)
+            {
+                ref var node = ref Nodes[nodeIndex];
+                ref var a = ref node.A;
+                ref var b = ref node.B;
+                //Despite recursion, leafBounds should remain in L1- it'll be used all the way down the recursion from here.
+                //However, while we likely loaded child B when we loaded child A, there's no guarantee that it will stick around.
+                //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
+                //TODO: this is some pretty questionable microtuning. It's not often that the post-leaf-found recursion will be long enough to evict L1. Definitely test it.
+                var bIndex = b.Index;
+                var aIntersects = BoundingBox.IntersectsUnsafe(LeafChild, a);
+                var bIntersects = BoundingBox.IntersectsUnsafe(LeafChild, b);
+                if (aIntersects)
+                {
+                    DispatchTestForLeaf(a.Index);
+                }
+                if (bIntersects)
+                {
+                    DispatchTestForLeaf(bIndex);
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            unsafe void DispatchTestForNodes(ref NodeChild a, ref NodeChild b)
+            {
+                if (a.Index >= 0)
+                {
+                    if (b.Index >= 0)
+                    {
+                        GetOverlapsBetweenDifferentNodes(ref Nodes[a.Index], ref Nodes[b.Index]);
+                    }
+                    else
+                    {
+                        //leaf B versus node A.
+                        LeafIndex = Encode(b.Index);
+                        LeafChild = ref b;
+                        TestLeafAgainstNode(a.Index);
+                    }
+                }
+                else if (b.Index >= 0)
+                {
+                    //leaf A versus node B.
+                    LeafIndex = Encode(a.Index);
+                    LeafChild = ref a;
+                    TestLeafAgainstNode(b.Index);
+                }
+                else
+                {
+                    //Two leaves.
+                    Results.Handle(Encode(a.Index), Encode(b.Index));
+                }
+            }
+
+            unsafe void GetOverlapsBetweenDifferentNodes(ref Node a, ref Node b)
+            {
+                //There are no shared children, so test them all.
+                ref var aa = ref a.A;
+                ref var ab = ref a.B;
+                ref var ba = ref b.A;
+                ref var bb = ref b.B;
+                var aaIntersects = BoundingBox.IntersectsUnsafe(aa, ba);
+                var abIntersects = BoundingBox.IntersectsUnsafe(aa, bb);
+                var baIntersects = BoundingBox.IntersectsUnsafe(ab, ba);
+                var bbIntersects = BoundingBox.IntersectsUnsafe(ab, bb);
+
+                if (aaIntersects)
+                {
+                    DispatchTestForNodes(ref aa, ref ba);
+                }
+                if (abIntersects)
+                {
+                    DispatchTestForNodes(ref aa, ref bb);
+                }
+                if (baIntersects)
+                {
+                    DispatchTestForNodes(ref ab, ref ba);
+                }
+                if (bbIntersects)
+                {
+                    DispatchTestForNodes(ref ab, ref bb);
+                }
+            }
+
+            public unsafe void GetOverlapsInNode(ref Node node)
+            {
+
+                ref var a = ref node.A;
+                ref var b = ref node.B;
+
+                var ab = BoundingBox.IntersectsUnsafe(a, b);
+
+                if (a.Index >= 0)
+                    GetOverlapsInNode(ref Nodes[a.Index]);
+                if (b.Index >= 0)
+                    GetOverlapsInNode(ref Nodes[b.Index]);
+
+                //Test all different nodes.
+                if (ab)
+                {
+                    DispatchTestForNodes(ref a, ref b);
+                }
+            }
+        }
+        public unsafe void GetSelfOverlaps5<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        {
+            //If there are less than two leaves, there can't be any overlap.
+            //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
+            if (LeafCount < 2)
+                return;
+
+            SelfTest5<TOverlapHandler> hmm = default;
+            hmm.Nodes = Nodes;
+            hmm.Results = ref results;
+            hmm.GetOverlapsInNode(ref Nodes[0]);
+        }
+
     }
 }
