@@ -41,13 +41,13 @@ namespace Demos.SpecializedTests
             camera.Pitch = 0;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
-            var width = 128;
-            var height = 128;
+            var width = 512;
+            var height = 512;
             var scale = new Vector3(1, 1, 1);
             DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
-            int testCount = 1000;
+            int testCount = 100;
             //var overlapHandlerLoopWithRecursion = new OverlapHandler();
             //var startTimeLoopRecursion = Stopwatch.GetTimestamp();
             //for (int i = 0; i < testCount; ++i)
@@ -91,10 +91,10 @@ namespace Demos.SpecializedTests
             var overlapHandler5 = new OverlapHandler();
             var startTime5 = Stopwatch.GetTimestamp();
             for (int i = 0; i < testCount; ++i)
-                mesh.Tree.GetSelfOverlaps5(ref overlapHandler4);
+                mesh.Tree.GetSelfOverlaps5(ref overlapHandler5, BufferPool);
             var endTime5 = Stopwatch.GetTimestamp();
             Console.WriteLine($"Revamp 5 time per execution (ms): {(endTime5 - startTime5) * 1e3 / (testCount * Stopwatch.Frequency)}");
-            Console.WriteLine($"Revamp 5 count: {overlapHandler4.OverlapCount}, sum {overlapHandler4.OverlapSum}, hash {overlapHandler5.OverlapHash}");
+            Console.WriteLine($"Revamp 5 count: {overlapHandler5.OverlapCount}, sum {overlapHandler5.OverlapSum}, hash {overlapHandler5.OverlapHash}");
 
             var overlapHandlerOld = new OverlapHandler();
             var startTimeOld = Stopwatch.GetTimestamp();

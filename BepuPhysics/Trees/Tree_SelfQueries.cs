@@ -1152,44 +1152,51 @@ namespace BepuPhysics.Trees
             hmm.GetOverlapsInNode(ref Nodes[0]);
         }
 
-        ref struct SelfTest5<TOverlapHandler> where TOverlapHandler : IOverlapHandler
+        struct SelfTest5<TOverlapHandler> where TOverlapHandler : IOverlapHandler
         {
             public Buffer<Node> Nodes;
-            public ref TOverlapHandler Results;
+            public TOverlapHandler Results;
             //When using a leaf-node test.
-            public int LeafIndex;
-            public ref NodeChild LeafChild;
+            public QuickList<int> LeafStack;
 
-            unsafe void DispatchTestForLeaf(int nodeIndex)
+            unsafe void TestLeafAgainstNode(in NodeChild leafChild, int nodeToTest)
             {
-                if (nodeIndex < 0)
+                var leafIndex = Encode(leafChild.Index);
+                Debug.Assert(LeafStack.Count == 0);
+                while (true)
                 {
-                    Results.Handle(LeafIndex, Encode(nodeIndex));
-                }
-                else
-                {
-                    TestLeafAgainstNode(nodeIndex);
-                }
-            }
-            unsafe void TestLeafAgainstNode(int nodeIndex)
-            {
-                ref var node = ref Nodes[nodeIndex];
-                ref var a = ref node.A;
-                ref var b = ref node.B;
-                //Despite recursion, leafBounds should remain in L1- it'll be used all the way down the recursion from here.
-                //However, while we likely loaded child B when we loaded child A, there's no guarantee that it will stick around.
-                //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
-                //TODO: this is some pretty questionable microtuning. It's not often that the post-leaf-found recursion will be long enough to evict L1. Definitely test it.
-                var bIndex = b.Index;
-                var aIntersects = BoundingBox.IntersectsUnsafe(LeafChild, a);
-                var bIntersects = BoundingBox.IntersectsUnsafe(LeafChild, b);
-                if (aIntersects)
-                {
-                    DispatchTestForLeaf(a.Index);
-                }
-                if (bIntersects)
-                {
-                    DispatchTestForLeaf(bIndex);
+                    ref var node = ref Nodes[nodeToTest];
+                    var aIntersects = BoundingBox.IntersectsUnsafe(leafChild, node.A);
+                    var bIntersects = BoundingBox.IntersectsUnsafe(leafChild, node.B);
+                    var aIsInternal = node.A.Index >= 0;
+                    var bIsInternal = node.B.Index >= 0;
+
+                    if (aIntersects && !aIsInternal)
+                    {
+                        Results.Handle(leafIndex, Encode(node.A.Index));
+                    }
+                    if (bIntersects && !bIsInternal)
+                    {
+                        Results.Handle(leafIndex, Encode(node.B.Index));
+                    }
+
+                    if (aIntersects && aIsInternal)
+                    {
+                        nodeToTest = node.A.Index;
+                        if (bIntersects && bIsInternal)
+                        {
+                            LeafStack.AllocateUnsafely() = node.B.Index;
+                        }
+                    }
+                    else if (bIntersects && bIsInternal)
+                    {
+                        nodeToTest = node.B.Index;
+                    }
+                    else if (!LeafStack.TryPop(out nodeToTest))
+                    {
+                        //Nothing left to test against this leaf! Done!
+                        break;
+                    }
                 }
             }
 
@@ -1205,17 +1212,13 @@ namespace BepuPhysics.Trees
                     else
                     {
                         //leaf B versus node A.
-                        LeafIndex = Encode(b.Index);
-                        LeafChild = ref b;
-                        TestLeafAgainstNode(a.Index);
+                        TestLeafAgainstNode(b, a.Index);
                     }
                 }
                 else if (b.Index >= 0)
                 {
                     //leaf A versus node B.
-                    LeafIndex = Encode(a.Index);
-                    LeafChild = ref a;
-                    TestLeafAgainstNode(b.Index);
+                    TestLeafAgainstNode(a, b.Index);
                 }
                 else
                 {
@@ -1274,7 +1277,7 @@ namespace BepuPhysics.Trees
                 }
             }
         }
-        public unsafe void GetSelfOverlaps5<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        public unsafe void GetSelfOverlaps5<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
         {
             //If there are less than two leaves, there can't be any overlap.
             //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
@@ -1283,8 +1286,12 @@ namespace BepuPhysics.Trees
 
             SelfTest5<TOverlapHandler> hmm = default;
             hmm.Nodes = Nodes;
-            hmm.Results = ref results;
+            hmm.Results = results;
+            hmm.LeafStack = new QuickList<int>(NodeCount, pool);
             hmm.GetOverlapsInNode(ref Nodes[0]);
+
+            results = hmm.Results;
+            hmm.LeafStack.Dispose(pool);
         }
 
     }
