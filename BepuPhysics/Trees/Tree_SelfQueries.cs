@@ -194,6 +194,27 @@ namespace BepuPhysics.Trees
                         }
                     }
                 }
+
+                //ref var node = ref Nodes[nodeToTest];
+                //var a = BoundingBox.IntersectsUnsafe(leaf, node.A);
+                //var b = BoundingBox.IntersectsUnsafe(leaf, node.B);
+                //var aIsInternal = node.A.Index >= 0;
+                //var bIsInternal = node.B.Index >= 0;
+                //var intersectedInternalA = a && aIsInternal;
+                //var intersectedInternalB = b && bIsInternal;
+                //if (a && !aIsInternal)
+                //    results.Handle(leafIndex, Encode(node.A.Index));
+                //if (b && !bIsInternal)
+                //    results.Handle(leafIndex, Encode(node.B.Index));
+
+                //if (intersectedInternalA && intersectedInternalB)
+                //    stack.AllocateUnsafely() = node.B.Index;
+                //else if (intersectedInternalA || intersectedInternalB)
+                //    nodeToTest = intersectedInternalA ? node.A.Index : node.B.Index;
+                //else if (!stack.TryPop(out nodeToTest))
+                //    break;
+
+
             }
         }
         struct StackEntry

@@ -48,7 +48,7 @@ namespace Demos.SpecializedTests
             DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
-            //Test((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlapsPrepassWithRecursion(ref handler, BufferPool), "LRecurse");
+            Test((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlapsPrepassWithRecursion(ref handler, BufferPool), "LRecurse");
             //Test((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlapsContiguousPrepass(ref handler, BufferPool), "Prepass");
             //Test((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlaps2(ref handler, BufferPool), "Revamp 2");
             //Test((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlaps3(ref handler, BufferPool), "Revamp 3");
