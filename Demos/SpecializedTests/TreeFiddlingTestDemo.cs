@@ -42,8 +42,8 @@ namespace Demos.SpecializedTests
             camera.Pitch = 0;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
-            var width = 768;
-            var height = 768;
+            var width = 2;
+            var height = 9;
             var scale = new Vector3(1, 1, 1);
             DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
@@ -61,7 +61,7 @@ namespace Demos.SpecializedTests
             const int testCount = 16;
             for (int i = 0; i < testCount; ++i)
             {
-                var startTime = Stopwatch.GetTimestamp(); 
+                var startTime = Stopwatch.GetTimestamp();
                 function(ref overlapHandler);
                 var endTime = Stopwatch.GetTimestamp();
                 accumulatedTime += endTime - startTime;

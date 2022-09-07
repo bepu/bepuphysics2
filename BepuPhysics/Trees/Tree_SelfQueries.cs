@@ -217,34 +217,22 @@ namespace BepuPhysics.Trees
 
             }
         }
-        struct StackEntry
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static uint EncodeParentIndex(int leafParentIndex, bool childIsB)
         {
-            public int A;
-            public int B;
+            var encoded = (uint)leafParentIndex;
+            if (childIsB)
+                encoded |= 1u << 31;
+            return encoded;
         }
-
-        struct LeafNodeStackEntry
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static ref NodeChild GetLeafChild(ref Tree tree, uint encodedLeafParentIndex)
         {
-            public uint EncodedLeafParentIndex;
-            public int NodeIndex;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public LeafNodeStackEntry(int leafParentIndex, bool leafChildIsB, int nodeIndex)
-            {
-                EncodedLeafParentIndex = (uint)leafParentIndex;
-                if (leafChildIsB)
-                    EncodedLeafParentIndex |= 1u << 31;
-                NodeIndex = nodeIndex;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ref NodeChild GetChild(ref Tree tree)
-            {
-                var parentNodeIndex = EncodedLeafParentIndex & 0x7FFF_FFFF;
-                var leafIsChildB = EncodedLeafParentIndex > 0x7FFF_FFFF;
-                ref var parent = ref tree.Nodes[parentNodeIndex];
-                return ref leafIsChildB ? ref parent.B : ref parent.A;
-            }
+            var parentNodeIndex = encodedLeafParentIndex & 0x7FFF_FFFF;
+            var leafIsChildB = encodedLeafParentIndex > 0x7FFF_FFFF;
+            ref var parent = ref tree.Nodes[parentNodeIndex];
+            return ref leafIsChildB ? ref parent.B : ref parent.A;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -295,7 +283,44 @@ namespace BepuPhysics.Trees
         {
             return (
                 Vector256.GreaterThanOrEqual(maxAX, minBX) & Vector256.GreaterThanOrEqual(maxAY, minBY) & Vector256.GreaterThanOrEqual(maxAZ, minBZ) &
-                Vector256.GreaterThanOrEqual(maxBX, minAX) & Vector256.GreaterThanOrEqual(maxBY, minAY) & Vector256.GreaterThanOrEqual(maxBZ, minBZ)).As<float, int>();
+                Vector256.GreaterThanOrEqual(maxBX, minAX) & Vector256.GreaterThanOrEqual(maxBY, minAY) & Vector256.GreaterThanOrEqual(maxBZ, minAZ)).As<float, int>();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector256<int> GetLeftPackMask(Vector256<int> mask, out int count)
+        {
+            if (!Avx2.IsSupported || !Bmi2.X64.IsSupported) throw new NotSupportedException("No fallback exists! This should never be visible!");
+
+            var bitmask = Vector256.ExtractMostSignificantBits(mask);
+            //From https://stackoverflow.com/a/36951611, courtesy of Peter Cordes.
+            //pdep/pext are apparently quite slow pre-Zen3, unfortunately. This is just a proof of correctness.
+            ulong expanded_mask = Bmi2.X64.ParallelBitDeposit(bitmask, 0x0101010101010101);  // unpack each bit to a byte
+            expanded_mask *= 0xFF;    // mask |= mask<<1 | mask<<2 | ... | mask<<7;
+                                      // ABC... -> AAAAAAAABBBBBBBBCCCCCCCC...: replicate each bit to fill its byte
+
+            ulong identity_indices = 0x0706050403020100;    // the identity shuffle for vpermps, packed to one index per byte
+            ulong wanted_indices = Bmi2.X64.ParallelBitExtract(identity_indices, expanded_mask);
+
+            count = BitOperations.PopCount(bitmask);
+            return Avx2.ConvertToVector256Int32(Vector128.CreateScalarUnsafe(wanted_indices).As<ulong, byte>());
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector256<int> Encode(Vector256<int> index)
+        {
+            return Vector256<int>.AllBitsSet - index;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector256<int> Encode(Vector256<float> index)
+        {
+            return Vector256<int>.AllBitsSet - index.AsInt32();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector256<int> EncodeLeafChildBForStack(Vector256<int> parentIndex)
+        {
+            return parentIndex | Vector256.Create(1 << 31);
         }
 
         public unsafe void GetSelfOverlapsContiguousPrepass<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
@@ -306,10 +331,14 @@ namespace BepuPhysics.Trees
                 return;
 
             //A recursive self test will at some point visit all nodes with certainty. Instead of framing it as a recursive test at all, do a prepass that's just a contiguous iteration.
-            pool.Take<int>(NodeCount, out var crossoverStackA);
-            pool.Take<int>(NodeCount, out var crossoverStackB);
+            //Include a little buffer to avoid overruns by vectorized operations.
+            var stackSize = 1 + ((NodeCount + 7) / 8) * 8;
+            pool.Take<int>(stackSize, out var crossoverStackA);
+            pool.Take<int>(stackSize, out var crossoverStackB);
+            pool.Take<uint>(stackSize, out var nodeLeafStackA);
+            pool.Take<uint>(stackSize, out var nodeLeafStackB);
             int crossoverStackCount = 0;
-            QuickList<LeafNodeStackEntry> leafNodeStack = new(NodeCount, pool);
+            int nodeLeafStackCount = 0;
             for (int i = 0; i < NodeCount; ++i)
             {
                 ref var node = ref Nodes[i];
@@ -329,7 +358,9 @@ namespace BepuPhysics.Trees
                 else if (aIsInternal || bIsInternal)
                 {
                     //One is a leaf, one is internal.
-                    leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(i, aIsInternal, aIsInternal ? a : b);
+                    nodeLeafStackA[nodeLeafStackCount] = (uint)i;
+                    nodeLeafStackB[nodeLeafStackCount] = (uint)i | (1u << 31);
+                    ++nodeLeafStackCount;
                 }
                 else
                 {
@@ -346,7 +377,7 @@ namespace BepuPhysics.Trees
                 {
                     //In a given iteration, the maximum number of leaf-leaf intersections is 8 lanes * 4 child combinations per lane.
                     var toReportA = stackalloc int[32];
-                    var toReportB = stackalloc int[32];                    
+                    var toReportB = stackalloc int[32];
 
                     while (crossoverStackCount > 0)
                     {
@@ -356,6 +387,7 @@ namespace BepuPhysics.Trees
                         var startIndex = crossoverStackCount - nextLaneCount;
                         var nextCrossover0 = crossoverStackA.Memory + startIndex;
                         var nextCrossover1 = crossoverStackB.Memory + startIndex;
+                        crossoverStackCount = startIndex;
 
                         //Each crossover execution loads two nodes, each having two children, for each lane.
                         //Gather all of it and transpose it for vectorized operations.
@@ -458,16 +490,30 @@ namespace BepuPhysics.Trees
                         {
                             //At least one leaf-leaf test is reported.
                             //For each report vector, encode the indices, left pack for reported lanes, and store into the toReport buffers.
-                            var aaBitMask = Vector256.ExtractMostSignificantBits(reportAA);
-                            var reportCountAA = BitOperations.PopCount(aaBitMask);
-                            var abBitMask = Vector256.ExtractMostSignificantBits(reportBA);
-                            var reportCountAB = BitOperations.PopCount(abBitMask);
-                            var baBitMask = Vector256.ExtractMostSignificantBits(reportBA);
-                            var reportCountBA = BitOperations.PopCount(baBitMask);
-                            var bbBitMask = Vector256.ExtractMostSignificantBits(reportBB);
-                            var reportCountBB = BitOperations.PopCount(bbBitMask);
+                            //TODO: The chance that this is actually faster than brute force in the worst case seems a wee bit low given that we're *still iterating at the end*.
+                            var aaShuffle = GetLeftPackMask(reportAA, out int aaCount);
+                            var abShuffle = GetLeftPackMask(reportAB, out int abCount);
+                            var baShuffle = GetLeftPackMask(reportBA, out int baCount);
+                            var bbShuffle = GetLeftPackMask(reportBB, out int bbCount);
 
+                            var encodedN0A = Encode(n0AIndex);
+                            var encodedN0B = Encode(n0BIndex);
+                            var encodedN1A = Encode(n1AIndex);
+                            var encodedN1B = Encode(n1BIndex);
                             var reportCount = 0;
+                            Vector256.Store(Vector256.Shuffle(encodedN0A, aaShuffle), toReportA);
+                            Vector256.Store(Vector256.Shuffle(encodedN1A, aaShuffle), toReportB);
+                            reportCount += aaCount;
+                            Vector256.Store(Vector256.Shuffle(encodedN0A, abShuffle), toReportA + reportCount);
+                            Vector256.Store(Vector256.Shuffle(encodedN1B, abShuffle), toReportB + reportCount);
+                            reportCount += abCount;
+                            Vector256.Store(Vector256.Shuffle(encodedN0B, baShuffle), toReportA + reportCount);
+                            Vector256.Store(Vector256.Shuffle(encodedN1A, baShuffle), toReportB + reportCount);
+                            reportCount += baCount;
+                            Vector256.Store(Vector256.Shuffle(encodedN0B, bbShuffle), toReportA + reportCount);
+                            Vector256.Store(Vector256.Shuffle(encodedN1B, bbShuffle), toReportB + reportCount);
+                            reportCount += bbCount;
+
                             //Reporting itself is sequentialized; exposing the vectorized context to the callback is grossbad.
                             for (int i = 0; i < reportCount; ++i)
                             {
@@ -475,21 +521,37 @@ namespace BepuPhysics.Trees
                             }
                         }
 
-                        var pushNode0AVersusLeaf1A = aaIntersects & Vector256.AndNot(n0AIsInternal, n1AIsInternal);
-                        var pushNode0AVersusLeaf1B = abIntersects & Vector256.AndNot(n0AIsInternal, n1BIsInternal);
-                        var pushNode0BVersusLeaf1A = baIntersects & Vector256.AndNot(n0BIsInternal, n1AIsInternal);
-                        var pushNode0BVersusLeaf1B = bbIntersects & Vector256.AndNot(n0BIsInternal, n1BIsInternal);
-                        var pushAnyNode0VersusLeaf1 = pushNode0AVersusLeaf1A | pushNode0AVersusLeaf1B | pushNode0BVersusLeaf1A | pushNode0BVersusLeaf1B;
+                        var pushNodeLeaf0AVersus1A = aaIntersects & (n0AIsInternal ^ n1AIsInternal);
+                        var pushNodeLeaf0AVersus1B = abIntersects & (n0AIsInternal ^ n1BIsInternal);
+                        var pushNodeLeaf0BVersus1A = baIntersects & (n0BIsInternal ^ n1AIsInternal);
+                        var pushNodeLeaf0BVersus1B = bbIntersects & (n0BIsInternal ^ n1BIsInternal);
+                        var pushAnyNodeLeaf = pushNodeLeaf0AVersus1A | pushNodeLeaf0AVersus1B | pushNodeLeaf0BVersus1A | pushNodeLeaf0BVersus1B;
 
-                        var pushLeaf0AVersusNode1A = aaIntersects & Vector256.AndNot(n1AIsInternal, n0AIsInternal);
-                        var pushLeaf0AVersusNode1B = abIntersects & Vector256.AndNot(n1BIsInternal, n0AIsInternal);
-                        var pushLeaf0BVersusNode1A = baIntersects & Vector256.AndNot(n1AIsInternal, n0BIsInternal);
-                        var pushLeaf0BVersusNode1B = bbIntersects & Vector256.AndNot(n1BIsInternal, n0BIsInternal);
-                        var pushAnyLeaf0VersusNode1 = pushLeaf0AVersusNode1A | pushLeaf0AVersusNode1B | pushLeaf0BVersusNode1A | pushLeaf0BVersusNode1B;
-
-                        if (Vector256.LessThanAny(pushAnyNode0VersusLeaf1 | pushAnyLeaf0VersusNode1, Vector256<int>.Zero))
+                        if (Vector256.LessThanAny(pushAnyNodeLeaf, Vector256<int>.Zero))
                         {
                             //At least one node-leaf push is needed.
+                            var shuffle0A1A = GetLeftPackMask(pushNodeLeaf0AVersus1A, out int count0A1A);
+                            var shuffle0A1B = GetLeftPackMask(pushNodeLeaf0AVersus1B, out int count0A1B);
+                            var shuffle0B1A = GetLeftPackMask(pushNodeLeaf0BVersus1A, out int count0B1A);
+                            var shuffle0B1B = GetLeftPackMask(pushNodeLeaf0BVersus1B, out int count0B1B);
+
+                            var encodedForStack0A = Vector256.Load(nextCrossover0);
+                            var encodedForStack0B = EncodeLeafChildBForStack(encodedForStack0A);
+                            var encodedForStack1A = Vector256.Load(nextCrossover1);
+                            var encodedForStack1B = EncodeLeafChildBForStack(encodedForStack1A);
+                            Vector256.Store(Vector256.Shuffle(encodedForStack0A, shuffle0A1A), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
+                            Vector256.Store(Vector256.Shuffle(encodedForStack1A, shuffle0A1A), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
+                            nodeLeafStackCount += count0A1A;
+                            Vector256.Store(Vector256.Shuffle(encodedForStack0A, shuffle0A1B), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
+                            Vector256.Store(Vector256.Shuffle(encodedForStack1B, shuffle0A1B), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
+                            nodeLeafStackCount += count0A1B;
+                            Vector256.Store(Vector256.Shuffle(encodedForStack0B, shuffle0B1A), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
+                            Vector256.Store(Vector256.Shuffle(encodedForStack1A, shuffle0B1A), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
+                            nodeLeafStackCount += count0B1A;
+                            Vector256.Store(Vector256.Shuffle(encodedForStack0B, shuffle0B1B), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
+                            Vector256.Store(Vector256.Shuffle(encodedForStack1B, shuffle0B1B), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
+                            nodeLeafStackCount += count0B1B;
+
                         }
 
                         var aaWantsToPushCrossover = aaIntersects & n0AIsInternal & n1AIsInternal;
@@ -500,164 +562,39 @@ namespace BepuPhysics.Trees
                         if (Vector256.LessThanAny(pushAnyCrossover, Vector256<int>.Zero))
                         {
                             //At least one push for crossovers.
-                            //Similar to leaf-leaf reporting; left pack the indices and store them into the push buffers.
+                            var aaShuffle = GetLeftPackMask(aaWantsToPushCrossover, out int aaCount);
+                            var abShuffle = GetLeftPackMask(abWantsToPushCrossover, out int abCount);
+                            var baShuffle = GetLeftPackMask(baWantsToPushCrossover, out int baCount);
+                            var bbShuffle = GetLeftPackMask(bbWantsToPushCrossover, out int bbCount);
+
+                            Vector256.Store(Vector256.Shuffle(n0AIndex.AsInt32(), aaShuffle), crossoverStackA.Memory + crossoverStackCount);
+                            Vector256.Store(Vector256.Shuffle(n1AIndex.AsInt32(), aaShuffle), crossoverStackB.Memory + crossoverStackCount);
+                            crossoverStackCount += aaCount;
+                            Vector256.Store(Vector256.Shuffle(n0AIndex.AsInt32(), abShuffle), crossoverStackA.Memory + crossoverStackCount);
+                            Vector256.Store(Vector256.Shuffle(n1BIndex.AsInt32(), abShuffle), crossoverStackB.Memory + crossoverStackCount);
+                            crossoverStackCount += abCount;
+                            Vector256.Store(Vector256.Shuffle(n0BIndex.AsInt32(), baShuffle), crossoverStackA.Memory + crossoverStackCount);
+                            Vector256.Store(Vector256.Shuffle(n1AIndex.AsInt32(), baShuffle), crossoverStackB.Memory + crossoverStackCount);
+                            crossoverStackCount += baCount;
+                            Vector256.Store(Vector256.Shuffle(n0BIndex.AsInt32(), bbShuffle), crossoverStackA.Memory + crossoverStackCount);
+                            Vector256.Store(Vector256.Shuffle(n1BIndex.AsInt32(), bbShuffle), crossoverStackB.Memory + crossoverStackCount);
+                            crossoverStackCount += bbCount;
                         }
-
                     }
-
-
                 }
-                //while (true)
-                //{
-
-                //    GetOverlapsBetweenDifferentNodes(ref Nodes[nextCrossover.A], ref Nodes[nextCrossover.B], ref results);
-                //    //None of the candidates generated a next step, so grab from the stack.
-                //    if (!crossoverStack.TryPop(out nextCrossover))
-                //        break;
-
-
-
-                //    ////Possible sources of stack entry:
-                //    ////1) AA intersection, both internal
-                //    ////2) AB intersection, both internal
-                //    ////3) BA intersection, both internal
-                //    ////4) BB intersection, both internal
-                //    //var parent0 = nextCrossover.A;
-                //    //var parent1 = nextCrossover.B;
-                //    //ref var n0 = ref Nodes[parent0];
-                //    //ref var n1 = ref Nodes[parent1];
-                //    //var aaIntersects = BoundingBox.IntersectsUnsafe(n0.A, n1.A);
-                //    //var abIntersects = BoundingBox.IntersectsUnsafe(n0.A, n1.B);
-                //    //var baIntersects = BoundingBox.IntersectsUnsafe(n0.B, n1.A);
-                //    //var bbIntersects = BoundingBox.IntersectsUnsafe(n0.B, n1.B);
-                //    //var n0A = n0.A.Index;
-                //    //var n0B = n0.B.Index;
-                //    //var n1A = n1.A.Index;
-                //    //var n1B = n1.B.Index;
-                //    //var n0AIsInternal = n0A >= 0;
-                //    //var n0BIsInternal = n0B >= 0;
-                //    //var n1AIsInternal = n1A >= 0;
-                //    //var n1BIsInternal = n1B >= 0;
-                //    ////The first test which generates a stack candidate gets the nextTest; the rest get pushed to the stack.
-                //    //int previousStackGeneratorCount = 0;
-                //    //if (aaIntersects)
-                //    //{
-                //    //    if (n0AIsInternal && n1AIsInternal)
-                //    //    {
-                //    //        ++previousStackGeneratorCount;
-                //    //        nextCrossover.A = n0A;
-                //    //        nextCrossover.B = n1A;
-                //    //    }
-                //    //    else
-                //    //    {
-                //    //        //At least one is a leaf.
-                //    //        if (n0AIsInternal)
-                //    //            leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent1, false, n0A);
-                //    //        else if (n1AIsInternal)
-                //    //            leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent0, false, n1A);
-                //    //        else //Both are leaves.
-                //    //            results.Handle(Encode(n0A), Encode(n1A));
-                //    //    }
-                //    //}
-                //    //if (abIntersects)
-                //    //{
-                //    //    if (n0AIsInternal && n1BIsInternal)
-                //    //    {
-                //    //        if (previousStackGeneratorCount++ == 0)
-                //    //        {
-                //    //            nextCrossover.A = n0A;
-                //    //            nextCrossover.B = n1B;
-                //    //        }
-                //    //        else
-                //    //        {
-                //    //            ref var stackEntry = ref crossoverStack.AllocateUnsafely();
-                //    //            stackEntry.A = n0A;
-                //    //            stackEntry.B = n1B;
-                //    //        }
-                //    //    }
-                //    //    else
-                //    //    {
-                //    //        //At least one is a leaf.
-                //    //        if (n0AIsInternal)
-                //    //            leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent1, true, n0A);
-                //    //        else if (n1BIsInternal)
-                //    //            leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent0, false, n1B);
-                //    //        else //Both are leaves.
-                //    //            results.Handle(Encode(n0A), Encode(n1B));
-                //    //    }
-                //    //}
-                //    //if (baIntersects)
-                //    //{
-                //    //    if (n0BIsInternal && n1AIsInternal)
-                //    //    {
-                //    //        if (previousStackGeneratorCount++ == 0)
-                //    //        {
-                //    //            nextCrossover.A = n0B;
-                //    //            nextCrossover.B = n1A;
-                //    //        }
-                //    //        else
-                //    //        {
-                //    //            ref var stackEntry = ref crossoverStack.AllocateUnsafely();
-                //    //            stackEntry.A = n0B;
-                //    //            stackEntry.B = n1A;
-                //    //        }
-                //    //    }
-                //    //    else
-                //    //    {
-                //    //        //At least one is a leaf.
-                //    //        if (n0BIsInternal)
-                //    //            leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent1, false, n0B);
-                //    //        else if (n1AIsInternal)
-                //    //            leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent0, true, n1A);
-                //    //        else //Both are leaves.
-                //    //            results.Handle(Encode(n0B), Encode(n1A));
-                //    //    }
-                //    //}
-                //    //if (bbIntersects)
-                //    //{
-                //    //    if (n0BIsInternal && n1BIsInternal)
-                //    //    {
-                //    //        if (previousStackGeneratorCount++ == 0)
-                //    //        {
-                //    //            nextCrossover.A = n0B;
-                //    //            nextCrossover.B = n1B;
-                //    //        }
-                //    //        else
-                //    //        {
-                //    //            ref var stackEntry = ref crossoverStack.AllocateUnsafely();
-                //    //            stackEntry.A = n0B;
-                //    //            stackEntry.B = n1B;
-                //    //        }
-                //    //    }
-                //    //    else
-                //    //    {
-                //    //        //At least one is a leaf.
-                //    //        if (n0BIsInternal)
-                //    //            leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent1, true, n0B);
-                //    //        else if (n1BIsInternal)
-                //    //            leafNodeStack.AllocateUnsafely() = new LeafNodeStackEntry(parent0, true, n1B);
-                //    //        else //Both are leaves.
-                //    //            results.Handle(Encode(n0B), Encode(n1B));
-                //    //    }
-                //    //}
-                //    //if (previousStackGeneratorCount == 0)
-                //    //{
-                //    //    //None of the candidates generated a next step, so grab from the stack.
-                //    //    if (!crossoverStack.TryPop(out nextCrossover))
-                //    //        break;
-                //    //}
-                //}
             }
             pool.Return(ref crossoverStackA);
             pool.Return(ref crossoverStackB);
             QuickList<int> stack = new(NodeCount, pool);
 
-            for (int i = 0; i < leafNodeStack.Count; ++i)
+            for (int i = 0; i < nodeLeafStackCount; ++i)
             {
-                var leafNodeTarget = leafNodeStack[i];
-                ref var leafChild = ref leafNodeTarget.GetChild(ref this);
+                ref var childA = ref GetLeafChild(ref this, nodeLeafStackA[i]);
+                ref var childB = ref GetLeafChild(ref this, nodeLeafStackB[i]);
+                Debug.Assert((childA.Index < 0) ^ (childB.Index < 0), "One and only one of the two children must be a leaf.");
+                ref var leafChild = ref childA.Index < 0 ? ref childA : ref childB;
+                var nodeToTest = childA.Index < 0 ? childB.Index : childA.Index;
                 var leafIndex = Encode(leafChild.Index);
-                var nodeToTest = leafNodeTarget.NodeIndex;
                 Debug.Assert(stack.Count == 0);
                 while (true)
                 {
@@ -702,7 +639,8 @@ namespace BepuPhysics.Trees
                     }
                 }
             }
-            leafNodeStack.Dispose(pool);
+            pool.Return(ref nodeLeafStackA);
+            pool.Return(ref nodeLeafStackB);
             stack.Dispose(pool);
         }
 
