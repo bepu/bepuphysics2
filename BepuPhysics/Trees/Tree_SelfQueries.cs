@@ -283,7 +283,7 @@ namespace BepuPhysics.Trees
         {
             return (
                 Vector256.GreaterThanOrEqual(maxAX, minBX) & Vector256.GreaterThanOrEqual(maxAY, minBY) & Vector256.GreaterThanOrEqual(maxAZ, minBZ) &
-                Vector256.GreaterThanOrEqual(maxBX, minAX) & Vector256.GreaterThanOrEqual(maxBY, minAY) & Vector256.GreaterThanOrEqual(maxBZ, minAZ)).As<float, int>();
+                Vector256.GreaterThanOrEqual(maxBX, minAX) & Vector256.GreaterThanOrEqual(maxBY, minAY) & Vector256.GreaterThanOrEqual(maxBZ, minAZ)).AsInt32();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -302,7 +302,7 @@ namespace BepuPhysics.Trees
             ulong wanted_indices = Bmi2.X64.ParallelBitExtract(identity_indices, expanded_mask);
 
             count = BitOperations.PopCount(bitmask);
-            return Avx2.ConvertToVector256Int32(Vector128.CreateScalarUnsafe(wanted_indices).As<ulong, byte>());
+            return Avx2.ConvertToVector256Int32(Vector128.CreateScalarUnsafe(wanted_indices).AsByte());
 
         }
 
@@ -332,7 +332,7 @@ namespace BepuPhysics.Trees
 
             //A recursive self test will at some point visit all nodes with certainty. Instead of framing it as a recursive test at all, do a prepass that's just a contiguous iteration.
             //Include a little buffer to avoid overruns by vectorized operations.
-            var stackSize = 1 + ((NodeCount + 7) / 8) * 8;
+            var stackSize = ((NodeCount + 7) / 8 + 1) * 8;
             pool.Take<int>(stackSize, out var crossoverStackA);
             pool.Take<int>(stackSize, out var crossoverStackB);
             pool.Take<uint>(stackSize, out var nodeLeafStackA);
@@ -381,6 +381,7 @@ namespace BepuPhysics.Trees
 
                     while (crossoverStackCount > 0)
                     {
+                        //Console.WriteLine($"START iteration, crossoverStack: {crossoverStackCount}, nodeLeafStack: {nodeLeafStackCount}");
                         //Note that we do not have a 'nextCrossover' entry held over from the previous iteration. Instead, we directly yoink off the stack. Serves the same purpose.
                         //Pick the appropriate location to load from in the stack.
                         var nextLaneCount = 8 < crossoverStackCount ? 8 : crossoverStackCount;
@@ -424,7 +425,7 @@ namespace BepuPhysics.Trees
                         var n0B6 = 6 < nextLaneCount ? Vector256.Load(n0Pointer6 + 8) : Vector256<float>.AllBitsSet;
                         var n0B7 = 7 < nextLaneCount ? Vector256.Load(n0Pointer7 + 8) : Vector256<float>.AllBitsSet;
 
-                        Transpose(n0B0, n0B1, n0B2, n0B3, n0B4, n0B5, n0A6, n0B7,
+                        Transpose(n0B0, n0B1, n0B2, n0B3, n0B4, n0B5, n0B6, n0B7,
                             out var n0BMinX, out var n0BMinY, out var n0BMinZ, out var n0BIndex,
                             out var n0BMaxX, out var n0BMaxY, out var n0BMaxZ, out _);
 
@@ -476,10 +477,10 @@ namespace BepuPhysics.Trees
                             n0BMinX, n0BMinY, n0BMinZ, n0BMaxX, n0BMaxY, n0BMaxZ,
                             n1BMinX, n1BMinY, n1BMinZ, n1BMaxX, n1BMaxY, n1BMaxZ);
 
-                        var n0AIsInternal = Vector256.GreaterThanOrEqual(n0AIndex.As<float, int>(), Vector256<int>.Zero);
-                        var n0BIsInternal = Vector256.GreaterThanOrEqual(n0BIndex.As<float, int>(), Vector256<int>.Zero);
-                        var n1AIsInternal = Vector256.GreaterThanOrEqual(n1AIndex.As<float, int>(), Vector256<int>.Zero);
-                        var n1BIsInternal = Vector256.GreaterThanOrEqual(n1BIndex.As<float, int>(), Vector256<int>.Zero);
+                        var n0AIsInternal = Vector256.GreaterThanOrEqual(n0AIndex.AsInt32(), Vector256<int>.Zero);
+                        var n0BIsInternal = Vector256.GreaterThanOrEqual(n0BIndex.AsInt32(), Vector256<int>.Zero);
+                        var n1AIsInternal = Vector256.GreaterThanOrEqual(n1AIndex.AsInt32(), Vector256<int>.Zero);
+                        var n1BIsInternal = Vector256.GreaterThanOrEqual(n1BIndex.AsInt32(), Vector256<int>.Zero);
 
                         var reportAA = Vector256.AndNot(Vector256.AndNot(aaIntersects, n0AIsInternal), n1AIsInternal);
                         var reportAB = Vector256.AndNot(Vector256.AndNot(abIntersects, n0AIsInternal), n1BIsInternal);
@@ -517,8 +518,10 @@ namespace BepuPhysics.Trees
                             //Reporting itself is sequentialized; exposing the vectorized context to the callback is grossbad.
                             for (int i = 0; i < reportCount; ++i)
                             {
+                                //Console.WriteLine($"reporting: {toReportA[i]}, {toReportB[i]}");
                                 results.Handle(toReportA[i], toReportB[i]);
                             }
+                            //Console.WriteLine($"total leaf-leaf iteration: {reportCount}");
                         }
 
                         var pushNodeLeaf0AVersus1A = aaIntersects & (n0AIsInternal ^ n1AIsInternal);
@@ -552,6 +555,7 @@ namespace BepuPhysics.Trees
                             Vector256.Store(Vector256.Shuffle(encodedForStack1B, shuffle0B1B), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
                             nodeLeafStackCount += count0B1B;
 
+                            //Console.WriteLine($"nodeleaf for iteration: {count0A1A + count0A1B + count0B1A + count0B1B}, new stack count {nodeLeafStackCount}");
                         }
 
                         var aaWantsToPushCrossover = aaIntersects & n0AIsInternal & n1AIsInternal;
@@ -579,10 +583,13 @@ namespace BepuPhysics.Trees
                             Vector256.Store(Vector256.Shuffle(n0BIndex.AsInt32(), bbShuffle), crossoverStackA.Memory + crossoverStackCount);
                             Vector256.Store(Vector256.Shuffle(n1BIndex.AsInt32(), bbShuffle), crossoverStackB.Memory + crossoverStackCount);
                             crossoverStackCount += bbCount;
+
+                            //Console.WriteLine($"crossover count for iteration: {aaCount + abCount + baCount + bbCount}, new stack count {crossoverStackCount}");
                         }
                     }
                 }
             }
+            //Console.WriteLine("End crossovers");
             pool.Return(ref crossoverStackA);
             pool.Return(ref crossoverStackB);
             QuickList<int> stack = new(NodeCount, pool);
