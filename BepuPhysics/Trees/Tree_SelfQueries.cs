@@ -502,17 +502,17 @@ namespace BepuPhysics.Trees
                             var encodedN1A = Encode(n1AIndex);
                             var encodedN1B = Encode(n1BIndex);
                             var reportCount = 0;
-                            Vector256.Store(Vector256.Shuffle(encodedN0A, aaShuffle), toReportA);
-                            Vector256.Store(Vector256.Shuffle(encodedN1A, aaShuffle), toReportB);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, aaShuffle), toReportA);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, aaShuffle), toReportB);
                             reportCount += aaCount;
-                            Vector256.Store(Vector256.Shuffle(encodedN0A, abShuffle), toReportA + reportCount);
-                            Vector256.Store(Vector256.Shuffle(encodedN1B, abShuffle), toReportB + reportCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, abShuffle), toReportA + reportCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, abShuffle), toReportB + reportCount);
                             reportCount += abCount;
-                            Vector256.Store(Vector256.Shuffle(encodedN0B, baShuffle), toReportA + reportCount);
-                            Vector256.Store(Vector256.Shuffle(encodedN1A, baShuffle), toReportB + reportCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, baShuffle), toReportA + reportCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, baShuffle), toReportB + reportCount);
                             reportCount += baCount;
-                            Vector256.Store(Vector256.Shuffle(encodedN0B, bbShuffle), toReportA + reportCount);
-                            Vector256.Store(Vector256.Shuffle(encodedN1B, bbShuffle), toReportB + reportCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, bbShuffle), toReportA + reportCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, bbShuffle), toReportB + reportCount);
                             reportCount += bbCount;
 
                             //Reporting itself is sequentialized; exposing the vectorized context to the callback is grossbad.
@@ -542,17 +542,17 @@ namespace BepuPhysics.Trees
                             var encodedForStack0B = EncodeLeafChildBForStack(encodedForStack0A);
                             var encodedForStack1A = Vector256.Load(nextCrossover1);
                             var encodedForStack1B = EncodeLeafChildBForStack(encodedForStack1A);
-                            Vector256.Store(Vector256.Shuffle(encodedForStack0A, shuffle0A1A), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
-                            Vector256.Store(Vector256.Shuffle(encodedForStack1A, shuffle0A1A), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedForStack0A, shuffle0A1A), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedForStack1A, shuffle0A1A), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
                             nodeLeafStackCount += count0A1A;
-                            Vector256.Store(Vector256.Shuffle(encodedForStack0A, shuffle0A1B), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
-                            Vector256.Store(Vector256.Shuffle(encodedForStack1B, shuffle0A1B), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedForStack0A, shuffle0A1B), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedForStack1B, shuffle0A1B), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
                             nodeLeafStackCount += count0A1B;
-                            Vector256.Store(Vector256.Shuffle(encodedForStack0B, shuffle0B1A), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
-                            Vector256.Store(Vector256.Shuffle(encodedForStack1A, shuffle0B1A), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedForStack0B, shuffle0B1A), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedForStack1A, shuffle0B1A), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
                             nodeLeafStackCount += count0B1A;
-                            Vector256.Store(Vector256.Shuffle(encodedForStack0B, shuffle0B1B), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
-                            Vector256.Store(Vector256.Shuffle(encodedForStack1B, shuffle0B1B), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedForStack0B, shuffle0B1B), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedForStack1B, shuffle0B1B), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
                             nodeLeafStackCount += count0B1B;
 
                             //Console.WriteLine($"nodeleaf for iteration: {count0A1A + count0A1B + count0B1A + count0B1B}, new stack count {nodeLeafStackCount}");
@@ -571,17 +571,17 @@ namespace BepuPhysics.Trees
                             var baShuffle = GetLeftPackMask(baWantsToPushCrossover, out int baCount);
                             var bbShuffle = GetLeftPackMask(bbWantsToPushCrossover, out int bbCount);
 
-                            Vector256.Store(Vector256.Shuffle(n0AIndex.AsInt32(), aaShuffle), crossoverStackA.Memory + crossoverStackCount);
-                            Vector256.Store(Vector256.Shuffle(n1AIndex.AsInt32(), aaShuffle), crossoverStackB.Memory + crossoverStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(n0AIndex.AsInt32(), aaShuffle), crossoverStackA.Memory + crossoverStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(n1AIndex.AsInt32(), aaShuffle), crossoverStackB.Memory + crossoverStackCount);
                             crossoverStackCount += aaCount;
-                            Vector256.Store(Vector256.Shuffle(n0AIndex.AsInt32(), abShuffle), crossoverStackA.Memory + crossoverStackCount);
-                            Vector256.Store(Vector256.Shuffle(n1BIndex.AsInt32(), abShuffle), crossoverStackB.Memory + crossoverStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(n0AIndex.AsInt32(), abShuffle), crossoverStackA.Memory + crossoverStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(n1BIndex.AsInt32(), abShuffle), crossoverStackB.Memory + crossoverStackCount);
                             crossoverStackCount += abCount;
-                            Vector256.Store(Vector256.Shuffle(n0BIndex.AsInt32(), baShuffle), crossoverStackA.Memory + crossoverStackCount);
-                            Vector256.Store(Vector256.Shuffle(n1AIndex.AsInt32(), baShuffle), crossoverStackB.Memory + crossoverStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(n0BIndex.AsInt32(), baShuffle), crossoverStackA.Memory + crossoverStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(n1AIndex.AsInt32(), baShuffle), crossoverStackB.Memory + crossoverStackCount);
                             crossoverStackCount += baCount;
-                            Vector256.Store(Vector256.Shuffle(n0BIndex.AsInt32(), bbShuffle), crossoverStackA.Memory + crossoverStackCount);
-                            Vector256.Store(Vector256.Shuffle(n1BIndex.AsInt32(), bbShuffle), crossoverStackB.Memory + crossoverStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(n0BIndex.AsInt32(), bbShuffle), crossoverStackA.Memory + crossoverStackCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(n1BIndex.AsInt32(), bbShuffle), crossoverStackB.Memory + crossoverStackCount);
                             crossoverStackCount += bbCount;
 
                             //Console.WriteLine($"crossover count for iteration: {aaCount + abCount + baCount + bbCount}, new stack count {crossoverStackCount}");
