@@ -286,23 +286,87 @@ namespace BepuPhysics.Trees
                 Vector256.GreaterThanOrEqual(maxBX, minAX) & Vector256.GreaterThanOrEqual(maxBY, minAY) & Vector256.GreaterThanOrEqual(maxBZ, minAZ)).AsInt32();
         }
 
+        //public static void CreateLeftPackLookupTable8()
+        //{
+        //    var lookupTable = new byte[768 + 1]; //last write will be the last 3 bytes plus one, so add a little buffer.
+        //    for (int i = 0; i < 256; ++i)
+        //    {
+        //        var accumulator = 0;
+        //        int index = 0;
+        //        for (int j = 0; j < 8; ++j)
+        //        {
+        //            if ((i & (1 << j)) != 0)
+        //            {
+        //                accumulator |= j << (index * 3);
+        //                ++index;
+        //            }
+        //        }
+        //        Unsafe.As<byte, int>(ref lookupTable[i * 3]) = accumulator;
+        //    }
+        //    Console.WriteLine("new byte[] { ");
+        //    for (int i = 0; i < 768; ++i)
+        //    {
+        //        Console.Write($"{lookupTable[i]}, ");
+        //        if (i % 32 == 31)
+        //            Console.WriteLine();
+        //    }
+        //    Console.WriteLine("}");
+
+        //}
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector256<int> GetLeftPackMask(Vector256<int> mask, out int count)
         {
             if (!Avx2.IsSupported || !Bmi2.X64.IsSupported) throw new NotSupportedException("No fallback exists! This should never be visible!");
 
             var bitmask = Vector256.ExtractMostSignificantBits(mask);
-            //From https://stackoverflow.com/a/36951611, courtesy of Peter Cordes.
-            //pdep/pext are apparently quite slow pre-Zen3, unfortunately. This is just a proof of correctness.
-            ulong expanded_mask = Bmi2.X64.ParallelBitDeposit(bitmask, 0x0101010101010101);  // unpack each bit to a byte
-            expanded_mask *= 0xFF;    // mask |= mask<<1 | mask<<2 | ... | mask<<7;
-                                      // ABC... -> AAAAAAAABBBBBBBBCCCCCCCC...: replicate each bit to fill its byte
-
-            ulong identity_indices = 0x0706050403020100;    // the identity shuffle for vpermps, packed to one index per byte
-            ulong wanted_indices = Bmi2.X64.ParallelBitExtract(identity_indices, expanded_mask);
+            //This depends upon an optimization that preallocates the constant array in fixed memory. Bit of a turbohack that won't work on other runtimes.
+            //The lookup table includes one entry for each of the 256 possible bitmasks. Each lane requires 3 bits to define the source for a shuffle mask.
+            //3 bits, 8 lanes, 256 bitmasks means only 768 bytes.
+            ReadOnlySpan<byte> lookupTable = new byte[] {
+                0, 0, 0, 0, 0, 0, 1, 0, 0, 8, 0, 0, 2, 0, 0, 16, 0, 0, 17, 0, 0, 136, 0, 0, 3, 0, 0, 24, 0, 0, 25, 0,
+                0, 200, 0, 0, 26, 0, 0, 208, 0, 0, 209, 0, 0, 136, 6, 0, 4, 0, 0, 32, 0, 0, 33, 0, 0, 8, 1, 0, 34, 0, 0, 16,
+                1, 0, 17, 1, 0, 136, 8, 0, 35, 0, 0, 24, 1, 0, 25, 1, 0, 200, 8, 0, 26, 1, 0, 208, 8, 0, 209, 8, 0, 136, 70, 0,
+                5, 0, 0, 40, 0, 0, 41, 0, 0, 72, 1, 0, 42, 0, 0, 80, 1, 0, 81, 1, 0, 136, 10, 0, 43, 0, 0, 88, 1, 0, 89, 1,
+                0, 200, 10, 0, 90, 1, 0, 208, 10, 0, 209, 10, 0, 136, 86, 0, 44, 0, 0, 96, 1, 0, 97, 1, 0, 8, 11, 0, 98, 1, 0, 16,
+                11, 0, 17, 11, 0, 136, 88, 0, 99, 1, 0, 24, 11, 0, 25, 11, 0, 200, 88, 0, 26, 11, 0, 208, 88, 0, 209, 88, 0, 136, 198, 2,
+                6, 0, 0, 48, 0, 0, 49, 0, 0, 136, 1, 0, 50, 0, 0, 144, 1, 0, 145, 1, 0, 136, 12, 0, 51, 0, 0, 152, 1, 0, 153, 1,
+                0, 200, 12, 0, 154, 1, 0, 208, 12, 0, 209, 12, 0, 136, 102, 0, 52, 0, 0, 160, 1, 0, 161, 1, 0, 8, 13, 0, 162, 1, 0, 16,
+                13, 0, 17, 13, 0, 136, 104, 0, 163, 1, 0, 24, 13, 0, 25, 13, 0, 200, 104, 0, 26, 13, 0, 208, 104, 0, 209, 104, 0, 136, 70, 3,
+                53, 0, 0, 168, 1, 0, 169, 1, 0, 72, 13, 0, 170, 1, 0, 80, 13, 0, 81, 13, 0, 136, 106, 0, 171, 1, 0, 88, 13, 0, 89, 13,
+                0, 200, 106, 0, 90, 13, 0, 208, 106, 0, 209, 106, 0, 136, 86, 3, 172, 1, 0, 96, 13, 0, 97, 13, 0, 8, 107, 0, 98, 13, 0, 16,
+                107, 0, 17, 107, 0, 136, 88, 3, 99, 13, 0, 24, 107, 0, 25, 107, 0, 200, 88, 3, 26, 107, 0, 208, 88, 3, 209, 88, 3, 136, 198, 26,
+                7, 0, 0, 56, 0, 0, 57, 0, 0, 200, 1, 0, 58, 0, 0, 208, 1, 0, 209, 1, 0, 136, 14, 0, 59, 0, 0, 216, 1, 0, 217, 1,
+                0, 200, 14, 0, 218, 1, 0, 208, 14, 0, 209, 14, 0, 136, 118, 0, 60, 0, 0, 224, 1, 0, 225, 1, 0, 8, 15, 0, 226, 1, 0, 16,
+                15, 0, 17, 15, 0, 136, 120, 0, 227, 1, 0, 24, 15, 0, 25, 15, 0, 200, 120, 0, 26, 15, 0, 208, 120, 0, 209, 120, 0, 136, 198, 3,
+                61, 0, 0, 232, 1, 0, 233, 1, 0, 72, 15, 0, 234, 1, 0, 80, 15, 0, 81, 15, 0, 136, 122, 0, 235, 1, 0, 88, 15, 0, 89, 15,
+                0, 200, 122, 0, 90, 15, 0, 208, 122, 0, 209, 122, 0, 136, 214, 3, 236, 1, 0, 96, 15, 0, 97, 15, 0, 8, 123, 0, 98, 15, 0, 16,
+                123, 0, 17, 123, 0, 136, 216, 3, 99, 15, 0, 24, 123, 0, 25, 123, 0, 200, 216, 3, 26, 123, 0, 208, 216, 3, 209, 216, 3, 136, 198, 30,
+                62, 0, 0, 240, 1, 0, 241, 1, 0, 136, 15, 0, 242, 1, 0, 144, 15, 0, 145, 15, 0, 136, 124, 0, 243, 1, 0, 152, 15, 0, 153, 15,
+                0, 200, 124, 0, 154, 15, 0, 208, 124, 0, 209, 124, 0, 136, 230, 3, 244, 1, 0, 160, 15, 0, 161, 15, 0, 8, 125, 0, 162, 15, 0, 16,
+                125, 0, 17, 125, 0, 136, 232, 3, 163, 15, 0, 24, 125, 0, 25, 125, 0, 200, 232, 3, 26, 125, 0, 208, 232, 3, 209, 232, 3, 136, 70, 31,
+                245, 1, 0, 168, 15, 0, 169, 15, 0, 72, 125, 0, 170, 15, 0, 80, 125, 0, 81, 125, 0, 136, 234, 3, 171, 15, 0, 88, 125, 0, 89, 125,
+                0, 200, 234, 3, 90, 125, 0, 208, 234, 3, 209, 234, 3, 136, 86, 31, 172, 15, 0, 96, 125, 0, 97, 125, 0, 8, 235, 3, 98, 125, 0, 16,
+                235, 3, 17, 235, 3, 136, 88, 31, 99, 125, 0, 24, 235, 3, 25, 235, 3, 200, 88, 31, 26, 235, 3, 208, 88, 31, 209, 88, 31, 136, 198, 250 };
+            var encodedLeftPackMask = Unsafe.As<byte, int>(ref Unsafe.Add(ref Unsafe.AsRef(lookupTable[0]), bitmask * 3));
 
             count = BitOperations.PopCount(bitmask);
-            return Avx2.ConvertToVector256Int32(Vector128.CreateScalarUnsafe(wanted_indices).AsByte());
+            //Broadcast, variable shift.
+            return Avx2.ShiftRightLogicalVariable(Vector256.Create(encodedLeftPackMask), Vector256.Create(0u, 3, 6, 9, 12, 15, 18, 21));
+
+
+            //var bitmask = Vector256.ExtractMostSignificantBits(mask);
+            ////From https://stackoverflow.com/a/36951611, courtesy of Peter Cordes.
+            ////pdep/pext are apparently quite slow pre-Zen3, unfortunately. This is just a proof of correctness.
+            //ulong expanded_mask = Bmi2.X64.ParallelBitDeposit(bitmask, 0x0101010101010101);  // unpack each bit to a byte
+            //expanded_mask *= 0xFF;    // mask |= mask<<1 | mask<<2 | ... | mask<<7;
+            //                          // ABC... -> AAAAAAAABBBBBBBBCCCCCCCC...: replicate each bit to fill its byte
+
+            //ulong identity_indices = 0x0706050403020100;    // the identity shuffle for vpermps, packed to one index per byte
+            //ulong wanted_indices = Bmi2.X64.ParallelBitExtract(identity_indices, expanded_mask);
+
+            //count = BitOperations.PopCount(bitmask);
+            //return Avx2.ConvertToVector256Int32(Vector128.CreateScalarUnsafe(wanted_indices).AsByte());
 
         }
 
