@@ -227,12 +227,75 @@ namespace BepuPhysics.Trees
             return encoded;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static Vector128<int> Encode(Vector128<int> indices)
+        {
+            return Vector128<int>.AllBitsSet - indices;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static ref NodeChild GetLeafChild(ref Tree tree, uint encodedLeafParentIndex)
         {
             var parentNodeIndex = encodedLeafParentIndex & 0x7FFF_FFFF;
             var leafIsChildB = encodedLeafParentIndex > 0x7FFF_FFFF;
             ref var parent = ref tree.Nodes[parentNodeIndex];
             return ref leafIsChildB ? ref parent.B : ref parent.A;
+        }
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //static void LeftPack(Vector128<int> mask, Vector128<int> a, Vector128<int> b, out Vector128<int> packedA, out Vector128<int> packedB, out int count)
+        //{
+        //    var bitmask = Vector128.ExtractMostSignificantBits(mask);
+        //    count = BitOperations.PopCount(bitmask);
+        //    switch (bitmask)
+        //    {
+        //        //     0000 requires no shuffle.
+        //        //     0001 requires no shuffle.
+        //        case 0b0010: packedA = Vector128.Shuffle(a, Vector128.Create(1, 0, 0, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(1, 0, 0, 0)); break;
+        //        //     0011 requires no shuffle.
+        //        case 0b0100: packedA = Vector128.Shuffle(a, Vector128.Create(2, 0, 0, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(2, 0, 0, 0)); break;
+        //        case 0b0101: packedA = Vector128.Shuffle(a, Vector128.Create(0, 2, 0, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(0, 2, 0, 0)); break;
+        //        case 0b0110: packedA = Vector128.Shuffle(a, Vector128.Create(1, 2, 0, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(1, 2, 0, 0)); break;
+        //        //     0111 requires no shuffle.
+        //        case 0b1000: packedA = Vector128.Shuffle(a, Vector128.Create(3, 0, 0, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(3, 0, 0, 0)); break;
+        //        case 0b1001: packedA = Vector128.Shuffle(a, Vector128.Create(0, 3, 0, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(0, 3, 0, 0)); break;
+        //        case 0b1010: packedA = Vector128.Shuffle(a, Vector128.Create(1, 3, 0, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(1, 3, 0, 0)); break;
+        //        case 0b1011: packedA = Vector128.Shuffle(a, Vector128.Create(0, 1, 3, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(0, 1, 3, 0)); break;
+        //        case 0b1100: packedA = Vector128.Shuffle(a, Vector128.Create(2, 3, 0, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(2, 3, 0, 0)); break;
+        //        case 0b1101: packedA = Vector128.Shuffle(a, Vector128.Create(0, 2, 3, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(0, 2, 3, 0)); break;
+        //        case 0b1110: packedA = Vector128.Shuffle(a, Vector128.Create(1, 2, 3, 0)); packedB = Vector128.Shuffle(b, Vector128.Create(1, 2, 3, 0)); break;
+        //        //     1111 requires no shuffle.
+        //        default: packedA = a; packedB = b; break;
+        //    }
+
+        //}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector128<int> GetLeftPackMask(Vector128<int> mask, out int count)
+        {
+            if (!Avx2.IsSupported) throw new NotSupportedException("No fallback exists! This should never be visible!");
+
+            var bitmask = Vector128.ExtractMostSignificantBits(mask);
+            //This depends upon an optimization that preallocates the constant array in fixed memory. Bit of a turbohack that won't work on other runtimes.
+            //The lookup table includes one entry for each of the 256 possible bitmasks. Each lane requires 3 bits to define the source for a shuffle mask.
+            //3 bits, 8 lanes, 256 bitmasks means only 768 bytes.
+            ReadOnlySpan<byte> lookupTable = new byte[] {
+                //0000       0001         0010         0011         0100         0101         0110         0111
+                0b1110_0100, 0b1110_0100, 0b1110_0101, 0b1110_0100, 0b1110_0110, 0b1110_1000, 0b1110_1001, 0b1110_0100,
+                //1000       1001         1010         1011         1100         1101         1110         1111
+                0b1110_0111, 0b1110_1100, 0b1110_1101, 0b1111_0100, 0b1110_1110, 0b1111_1000, 0b1111_1001, 0b1110_0100 };
+            var encodedLeftPackMask = Unsafe.Add(ref Unsafe.AsRef(lookupTable[0]), bitmask);
+
+            count = BitOperations.PopCount(bitmask);
+            //Broadcast, variable shift.
+            return Avx2.ShiftRightLogicalVariable(Vector128.Create((int)encodedLeftPackMask), Vector128.Create(0u, 2, 4, 6));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void LeftPack(Vector128<int> mask, Vector128<int> a, Vector128<int> b, out Vector128<int> packedA, out Vector128<int> packedB, out int count)
+        {
+            var permuteMask = GetLeftPackMask(mask, out count);
+            packedA = Avx.PermuteVar(a.AsSingle(), permuteMask).AsInt32();
+            packedB = Avx.PermuteVar(b.AsSingle(), permuteMask).AsInt32();
+
         }
 
         public unsafe void GetSelfOverlapsContiguousPrepass<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
@@ -296,48 +359,43 @@ namespace BepuPhysics.Trees
                 var baIntersects = BoundingBox.IntersectsUnsafe(n0.B, n1.A);
                 var bbIntersects = BoundingBox.IntersectsUnsafe(n0.B, n1.B);
 
-                var n0AIndex = n0.A.Index;
-                var n0BIndex = n0.B.Index;
-                var n1AIndex = n1.A.Index;
-                var n1BIndex = n1.B.Index;
-                var n0AInternal = n0AIndex >= 0;
-                var n0BInternal = n0BIndex >= 0;
-                var n1AInternal = n1AIndex >= 0;
-                var n1BInternal = n1BIndex >= 0;
+                var intersects = Vector128.Create(aaIntersects ? -1 : 0, abIntersects ? -1 : 0, baIntersects ? -1 : 0, bbIntersects ? -1 : 0);
+                var indices = Vector128.Create(n0.A.Index, n0.B.Index, n1.A.Index, n1.B.Index);
+                var n0Indices = Vector128.Shuffle(indices, Vector128.Create(0, 0, 1, 1));
+                var n1Indices = Vector128.Shuffle(indices, Vector128.Create(2, 3, 2, 3));
+                var n0Internal = Vector128.GreaterThan(n0Indices, Vector128<int>.Zero);
+                var n1Internal = Vector128.GreaterThan(n1Indices, Vector128<int>.Zero);
 
-                var aaLeafLeaf = aaIntersects & !(n0AInternal | n1AInternal);
-                var abLeafLeaf = abIntersects & !(n0AInternal | n1BInternal);
-                var baLeafLeaf = baIntersects & !(n0BInternal | n1AInternal);
-                var bbLeafLeaf = bbIntersects & !(n0BInternal | n1BInternal);
+                var leafLeaf = Vector128.AndNot(Vector128.AndNot(intersects, n0Internal), n1Internal);
+                var nodeLeaf = intersects & (n0Internal ^ n1Internal);
+                var crossover = intersects & n0Internal & n1Internal;
 
-                var aaNodeLeaf = aaIntersects & (n0AInternal ^ n1AInternal);
-                var abNodeLeaf = abIntersects & (n0AInternal ^ n1BInternal);
-                var baNodeLeaf = baIntersects & (n0BInternal ^ n1AInternal);
-                var bbNodeLeaf = bbIntersects & (n0BInternal ^ n1BInternal);
+                LeftPack(leafLeaf, Encode(n0Indices), Encode(n1Indices), out var leafleafToPush0, out var leafleafToPush1, out var leafLeafCount);
+                var parentEncoded0 = Vector128.BitwiseOr(Vector128.Create(index0), Vector128.Create(0, 0, 1 << 31, 1 << 31));
+                var parentEncoded1 = Vector128.BitwiseOr(Vector128.Create(index1), Vector128.Create(0, 1 << 31, 0, 1 << 31));
+                LeftPack(nodeLeaf, parentEncoded0, parentEncoded1, out var nodeLeafToPush0, out var nodeLeafToPush1, out var nodeLeafCount);
+                LeftPack(crossover, n0Indices, n1Indices, out var crossoverToPush0, out var crossoverToPush1, out var crossoverCount);
 
-                var aaPushCrossover = aaIntersects & n0AInternal & n1AInternal;
-                var abPushCrossover = abIntersects & n0AInternal & n1BInternal;
-                var baPushCrossover = baIntersects & n0BInternal & n1AInternal;
-                var bbPushCrossover = bbIntersects & n0BInternal & n1BInternal;
+                if (leafLeafCount > 0)
+                {
+                    results.Handle(leafleafToPush0[0], leafleafToPush1[0]);
+                    if (leafLeafCount > 1) results.Handle(leafleafToPush0[1], leafleafToPush1[1]);
+                    if (leafLeafCount > 2) results.Handle(leafleafToPush0[2], leafleafToPush1[2]);
+                    if (leafLeafCount > 3) results.Handle(leafleafToPush0[3], leafleafToPush1[3]);
+                }
+                if (nodeLeafCount > 0)
+                {
+                    Vector128.Store(nodeLeafToPush0.AsUInt32(), nodeLeafStackA.Memory + nodeLeafStackCount);
+                    Vector128.Store(nodeLeafToPush1.AsUInt32(), nodeLeafStackB.Memory + nodeLeafStackCount);
+                    nodeLeafStackCount += nodeLeafCount;
+                }
+                if (crossoverCount > 0)
+                {
+                    Vector128.Store(crossoverToPush0, crossoverStackA.Memory + crossoverStackCount);
+                    Vector128.Store(crossoverToPush1, crossoverStackB.Memory + crossoverStackCount);
+                    crossoverStackCount += crossoverCount;
+                }
 
-                if (aaLeafLeaf) results.Handle(Encode(n0AIndex), Encode(n1AIndex));
-                if (abLeafLeaf) results.Handle(Encode(n0AIndex), Encode(n1BIndex));
-                if (baLeafLeaf) results.Handle(Encode(n0BIndex), Encode(n1AIndex));
-                if (bbLeafLeaf) results.Handle(Encode(n0BIndex), Encode(n1BIndex));
-
-                if (aaNodeLeaf) { nodeLeafStackA[nodeLeafStackCount] = (uint)index0; nodeLeafStackB[nodeLeafStackCount] = (uint)index1; ++nodeLeafStackCount; }
-                if (abNodeLeaf) { nodeLeafStackA[nodeLeafStackCount] = (uint)index0; nodeLeafStackB[nodeLeafStackCount] = (uint)index1 | (1u << 31); ++nodeLeafStackCount; }
-                if (baNodeLeaf) { nodeLeafStackA[nodeLeafStackCount] = (uint)index0 | (1u << 31); nodeLeafStackB[nodeLeafStackCount] = (uint)index1; ++nodeLeafStackCount; }
-                if (bbNodeLeaf) { nodeLeafStackA[nodeLeafStackCount] = (uint)index0 | (1u << 31); nodeLeafStackB[nodeLeafStackCount] = (uint)index1 | (1u << 31); ++nodeLeafStackCount; }
-
-                if (aaPushCrossover) { crossoverStackA[crossoverStackCount] = n0AIndex; crossoverStackB[crossoverStackCount] = n1AIndex; ++crossoverStackCount; }
-                if (abPushCrossover) { crossoverStackA[crossoverStackCount] = n0AIndex; crossoverStackB[crossoverStackCount] = n1BIndex; ++crossoverStackCount; }
-                if (baPushCrossover) { crossoverStackA[crossoverStackCount] = n0BIndex; crossoverStackB[crossoverStackCount] = n1AIndex; ++crossoverStackCount; }
-                if (bbPushCrossover) { crossoverStackA[crossoverStackCount] = n0BIndex; crossoverStackB[crossoverStackCount] = n1BIndex; ++crossoverStackCount; }
-
-                //var leafleafCount = (aaLeafLeaf ? 1 : 0) + (abLeafLeaf ? 1 : 0) + (baLeafLeaf ? 1 : 0) + (bbLeafLeaf ? 1 : 0);
-                //var nodeLeafCount = (aaNodeLeaf ? 1 : 0) + (abNodeLeaf ? 1 : 0) + (baNodeLeaf ? 1 : 0) + (bbNodeLeaf ? 1 : 0);
-                //var crossoverCount = (aaPushCrossover ? 1 : 0) + (abPushCrossover ? 1 : 0) + (baPushCrossover ? 1 : 0) + (bbPushCrossover ? 1 : 0);
                 //Console.WriteLine($"new stackcounts: nodeleaf {nodeLeafStackCount}, crossover {crossoverStackCount}; new leafleaf {leafleafCount}, nodeleaf {nodeLeafCount}, crossover {crossoverCount}");
             }
             //Console.WriteLine("End crossovers");
