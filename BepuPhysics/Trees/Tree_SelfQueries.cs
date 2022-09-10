@@ -481,19 +481,6 @@ namespace BepuPhysics.Trees
                             out var n0AMinX, out var n0AMinY, out var n0AMinZ, out var n0AIndex,
                             out var n0AMaxX, out var n0AMaxY, out var n0AMaxZ, out _);
 
-                        var n0B0 = Vector256.Load(n0Pointer0 + 8);
-                        var n0B1 = 1 < nextLaneCount ? Vector256.Load(n0Pointer1 + 8) : Vector256<float>.AllBitsSet;
-                        var n0B2 = 2 < nextLaneCount ? Vector256.Load(n0Pointer2 + 8) : Vector256<float>.AllBitsSet;
-                        var n0B3 = 3 < nextLaneCount ? Vector256.Load(n0Pointer3 + 8) : Vector256<float>.AllBitsSet;
-                        var n0B4 = 4 < nextLaneCount ? Vector256.Load(n0Pointer4 + 8) : Vector256<float>.AllBitsSet;
-                        var n0B5 = 5 < nextLaneCount ? Vector256.Load(n0Pointer5 + 8) : Vector256<float>.AllBitsSet;
-                        var n0B6 = 6 < nextLaneCount ? Vector256.Load(n0Pointer6 + 8) : Vector256<float>.AllBitsSet;
-                        var n0B7 = 7 < nextLaneCount ? Vector256.Load(n0Pointer7 + 8) : Vector256<float>.AllBitsSet;
-
-                        Transpose(n0B0, n0B1, n0B2, n0B3, n0B4, n0B5, n0B6, n0B7,
-                            out var n0BMinX, out var n0BMinY, out var n0BMinZ, out var n0BIndex,
-                            out var n0BMaxX, out var n0BMaxY, out var n0BMaxZ, out _);
-
                         var n1Pointer0 = (float*)(Nodes.Memory + nextCrossover1[0]);
                         var n1Pointer1 = (float*)(Nodes.Memory + nextCrossover1[1]);
                         var n1Pointer2 = (float*)(Nodes.Memory + nextCrossover1[2]);
@@ -516,6 +503,27 @@ namespace BepuPhysics.Trees
                             out var n1AMinX, out var n1AMinY, out var n1AMinZ, out var n1AIndex,
                             out var n1AMaxX, out var n1AMaxY, out var n1AMaxZ, out _);
 
+                        var aaIntersects = Intersects(
+                            n0AMinX, n0AMinY, n0AMinZ, n0AMaxX, n0AMaxY, n0AMaxZ,
+                            n1AMinX, n1AMinY, n1AMinZ, n1AMaxX, n1AMaxY, n1AMaxZ);
+
+                        var n0B0 = Vector256.Load(n0Pointer0 + 8);
+                        var n0B1 = 1 < nextLaneCount ? Vector256.Load(n0Pointer1 + 8) : Vector256<float>.AllBitsSet;
+                        var n0B2 = 2 < nextLaneCount ? Vector256.Load(n0Pointer2 + 8) : Vector256<float>.AllBitsSet;
+                        var n0B3 = 3 < nextLaneCount ? Vector256.Load(n0Pointer3 + 8) : Vector256<float>.AllBitsSet;
+                        var n0B4 = 4 < nextLaneCount ? Vector256.Load(n0Pointer4 + 8) : Vector256<float>.AllBitsSet;
+                        var n0B5 = 5 < nextLaneCount ? Vector256.Load(n0Pointer5 + 8) : Vector256<float>.AllBitsSet;
+                        var n0B6 = 6 < nextLaneCount ? Vector256.Load(n0Pointer6 + 8) : Vector256<float>.AllBitsSet;
+                        var n0B7 = 7 < nextLaneCount ? Vector256.Load(n0Pointer7 + 8) : Vector256<float>.AllBitsSet;
+
+                        Transpose(n0B0, n0B1, n0B2, n0B3, n0B4, n0B5, n0B6, n0B7,
+                            out var n0BMinX, out var n0BMinY, out var n0BMinZ, out var n0BIndex,
+                            out var n0BMaxX, out var n0BMaxY, out var n0BMaxZ, out _);
+
+                        var baIntersects = Intersects(
+                            n0BMinX, n0BMinY, n0BMinZ, n0BMaxX, n0BMaxY, n0BMaxZ,
+                            n1AMinX, n1AMinY, n1AMinZ, n1AMaxX, n1AMaxY, n1AMaxZ);
+
                         var n1B0 = Vector256.Load(n1Pointer0 + 8);
                         var n1B1 = 1 < nextLaneCount ? Vector256.Load(n1Pointer1 + 8) : Vector256<float>.AllBitsSet;
                         var n1B2 = 2 < nextLaneCount ? Vector256.Load(n1Pointer2 + 8) : Vector256<float>.AllBitsSet;
@@ -529,15 +537,9 @@ namespace BepuPhysics.Trees
                             out var n1BMinX, out var n1BMinY, out var n1BMinZ, out var n1BIndex,
                             out var n1BMaxX, out var n1BMaxY, out var n1BMaxZ, out _);
 
-                        var aaIntersects = Intersects(
-                            n0AMinX, n0AMinY, n0AMinZ, n0AMaxX, n0AMaxY, n0AMaxZ,
-                            n1AMinX, n1AMinY, n1AMinZ, n1AMaxX, n1AMaxY, n1AMaxZ);
                         var abIntersects = Intersects(
                             n0AMinX, n0AMinY, n0AMinZ, n0AMaxX, n0AMaxY, n0AMaxZ,
                             n1BMinX, n1BMinY, n1BMinZ, n1BMaxX, n1BMaxY, n1BMaxZ);
-                        var baIntersects = Intersects(
-                            n0BMinX, n0BMinY, n0BMinZ, n0BMaxX, n0BMaxY, n0BMaxZ,
-                            n1AMinX, n1AMinY, n1AMinZ, n1AMaxX, n1AMaxY, n1AMaxZ);
                         var bbIntersects = Intersects(
                             n0BMinX, n0BMinY, n0BMinZ, n0BMaxX, n0BMaxY, n0BMaxZ,
                             n1BMinX, n1BMinY, n1BMinZ, n1BMaxX, n1BMaxY, n1BMaxZ);
@@ -554,164 +556,38 @@ namespace BepuPhysics.Trees
                         var reportAnyPair = reportAA | reportAB | reportBA | reportBB;
                         if (Vector256.LessThanAny(reportAnyPair, Vector256<int>.Zero))
                         {
-                            ////At least one leaf-leaf test is reported.
-                            ////For each report vector, encode the indices, left pack for reported lanes, and store into the toReport buffers.
-                            ////TODO: The chance that this is actually faster than brute force in the worst case seems a wee bit low given that we're *still iterating at the end*.
-                            //var aaShuffle = GetLeftPackMask(reportAA, out int aaCount);
-                            //var abShuffle = GetLeftPackMask(reportAB, out int abCount);
-                            //var baShuffle = GetLeftPackMask(reportBA, out int baCount);
-                            //var bbShuffle = GetLeftPackMask(reportBB, out int bbCount);
-
-                            //var encodedN0A = Encode(n0AIndex);
-                            //var encodedN0B = Encode(n0BIndex);
-                            //var encodedN1A = Encode(n1AIndex);
-                            //var encodedN1B = Encode(n1BIndex);
-                            //var reportCount = 0;
-                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, aaShuffle), toReportA);
-                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, aaShuffle), toReportB);
-                            //reportCount += aaCount;
-                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, abShuffle), toReportA + reportCount);
-                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, abShuffle), toReportB + reportCount);
-                            //reportCount += abCount;
-                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, baShuffle), toReportA + reportCount);
-                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, baShuffle), toReportB + reportCount);
-                            //reportCount += baCount;
-                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, bbShuffle), toReportA + reportCount);
-                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, bbShuffle), toReportB + reportCount);
-                            //reportCount += bbCount;
-
-                            ////Reporting itself is sequentialized; exposing the vectorized context to the callback is grossbad.
-                            //for (int i = 0; i < reportCount; ++i)
-                            //{
-                            //    //Console.WriteLine($"reporting: {toReportA[i]}, {toReportB[i]}");
-                            //    results.Handle(toReportA[i], toReportB[i]);
-                            //}
-                            ////Console.WriteLine($"total leaf-leaf iteration: {reportCount}");
-
+                            //At least one leaf-leaf test is reported.
+                            //For each report vector, encode the indices, left pack for reported lanes, and store into the toReport buffers.
+                            var aaShuffle = GetLeftPackMask(reportAA, out int aaCount);
+                            var abShuffle = GetLeftPackMask(reportAB, out int abCount);
+                            var baShuffle = GetLeftPackMask(reportBA, out int baCount);
+                            var bbShuffle = GetLeftPackMask(reportBB, out int bbCount);
 
                             var encodedN0A = Encode(n0AIndex);
                             var encodedN0B = Encode(n0BIndex);
                             var encodedN1A = Encode(n1AIndex);
                             var encodedN1B = Encode(n1BIndex);
                             var reportCount = 0;
-                            if (Vector256.LessThanAny(reportAA, Vector256<int>.Zero))
-                            {
-                                var aaShuffle = GetLeftPackMask(reportAA, out int aaCount);
-                                Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, aaShuffle), toReportA);
-                                Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, aaShuffle), toReportB);
-                                reportCount += aaCount;
-                            }
-                            if (Vector256.LessThanAny(reportAB, Vector256<int>.Zero))
-                            {
-                                var abShuffle = GetLeftPackMask(reportAB, out int abCount);
-                                Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, abShuffle), toReportA + reportCount);
-                                Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, abShuffle), toReportB + reportCount);
-                                reportCount += abCount;
-                            }
-                            if (Vector256.LessThanAny(reportBA, Vector256<int>.Zero))
-                            {
-                                var baShuffle = GetLeftPackMask(reportBA, out int baCount);
-                                Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, baShuffle), toReportA + reportCount);
-                                Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, baShuffle), toReportB + reportCount);
-                                reportCount += baCount;
-                            }
-                            if (Vector256.LessThanAny(reportBB, Vector256<int>.Zero))
-                            {
-                                var bbShuffle = GetLeftPackMask(reportBB, out int bbCount);
-                                Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, bbShuffle), toReportA + reportCount);
-                                Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, bbShuffle), toReportB + reportCount);
-                                reportCount += bbCount;
-                            }
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, aaShuffle), toReportA);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, aaShuffle), toReportB);
+                            reportCount += aaCount;
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, abShuffle), toReportA + reportCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, abShuffle), toReportB + reportCount);
+                            reportCount += abCount;
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, baShuffle), toReportA + reportCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, baShuffle), toReportB + reportCount);
+                            reportCount += baCount;
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, bbShuffle), toReportA + reportCount);
+                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, bbShuffle), toReportB + reportCount);
+                            reportCount += bbCount;
 
-                            ////Reporting itself is sequentialized; exposing the vectorized context to the callback is grossbad.
-                            //for (int i = 0; i < reportCount; ++i)
-                            //{
-                            //    //Console.WriteLine($"reporting: {toReportA[i]}, {toReportB[i]}");
-                            //    results.Handle(toReportA[i], toReportB[i]);
-                            //}
-                            ////Console.WriteLine($"total leaf-leaf iteration: {reportCount}");
-
-                            //var encodedN0A = Encode(n0AIndex);
-                            //var encodedN0B = Encode(n0BIndex);
-                            //var encodedN1A = Encode(n1AIndex);
-                            //var encodedN1B = Encode(n1BIndex);
-                            //var shouldReportAB = shouldReport + 8;
-                            //var shouldReportBA = shouldReport + 16;
-                            //var shouldReportBB = shouldReport + 24;
-                            //Vector256.Store(reportAA, shouldReport);
-                            //Vector256.Store(reportAB, shouldReportAB);
-                            //Vector256.Store(reportBA, shouldReportBA);
-                            //Vector256.Store(reportBB, shouldReportBB);
-                            //var encodedMemoryN0B = toReportA + 8;
-                            //var encodedMemoryN1A = toReportA + 16;
-                            //var encodedMemoryN1B = toReportA + 24;
-                            //Vector256.Store(encodedN0A, toReportA);
-                            //Vector256.Store(encodedN0B, encodedMemoryN0B);
-                            //Vector256.Store(encodedN1A, encodedMemoryN1A);
-                            //Vector256.Store(encodedN1B, encodedMemoryN1B);
-                            //for (int i = 0; i < 8; ++i)
-                            //{
-                            //    if (shouldReport[i] < 0)
-                            //        results.Handle(toReportA[i], encodedMemoryN1A[i]);
-                            //    if (shouldReportAB[i] < 0)
-                            //        results.Handle(toReportA[i], encodedMemoryN1B[i]);
-                            //    if (shouldReportBA[i] < 0)
-                            //        results.Handle(encodedMemoryN0B[i], encodedMemoryN1A[i]);
-                            //    if (shouldReportBB[i] < 0)
-                            //        results.Handle(encodedMemoryN0B[i], encodedMemoryN1B[i]);
-                            //}
-
-                            //var encodedN0A = Encode(n0AIndex);
-                            //var encodedN0B = Encode(n0BIndex);
-                            //var encodedN1A = Encode(n1AIndex);
-                            //var encodedN1B = Encode(n1BIndex);
-                            //var encodedMemoryN0B = toReportA + 8;
-                            //var encodedMemoryN1A = toReportA + 16;
-                            //var encodedMemoryN1B = toReportA + 24;
-                            //Vector256.Store(encodedN0A, toReportA);
-                            //Vector256.Store(encodedN0B, encodedMemoryN0B);
-                            //Vector256.Store(encodedN1A, encodedMemoryN1A);
-                            //Vector256.Store(encodedN1B, encodedMemoryN1B);
-
-                            //if (Vector256.LessThanAny(reportAA, Vector256<int>.Zero))
-                            //{
-                            //    Vector256.Store(reportAA, shouldReport);
-                            //    for (int i = 0; i < 8; ++i)
-                            //    {
-                            //        if (shouldReport[i] < 0)
-                            //            results.Handle(toReportA[i], encodedMemoryN1A[i]);
-                            //    }
-                            //}
-                            //if (Vector256.LessThanAny(reportAB, Vector256<int>.Zero))
-                            //{
-                            //    var shouldReportAB = shouldReport + 8;
-                            //    Vector256.Store(reportAB, shouldReportAB);
-                            //    for (int i = 0; i < 8; ++i)
-                            //    {
-                            //        if (shouldReportAB[i] < 0)
-                            //            results.Handle(toReportA[i], encodedMemoryN1B[i]);
-                            //    }
-                            //}
-                            //if (Vector256.LessThanAny(reportBA, Vector256<int>.Zero))
-                            //{
-                            //    var shouldReportBA = shouldReport + 16;
-                            //    Vector256.Store(reportBA, shouldReportBA);
-                            //    for (int i = 0; i < 8; ++i)
-                            //    {
-                            //        if (shouldReportBA[i] < 0)
-                            //            results.Handle(encodedMemoryN0B[i], encodedMemoryN1A[i]);
-                            //    }
-                            //}
-                            //if (Vector256.LessThanAny(reportBB, Vector256<int>.Zero))
-                            //{
-                            //    var shouldReportBB = shouldReport + 24;
-                            //    Vector256.Store(reportBB, shouldReportBB);
-                            //    for (int i = 0; i < 8; ++i)
-                            //    {
-                            //        if (shouldReportBB[i] < 0)
-                            //            results.Handle(encodedMemoryN0B[i], encodedMemoryN1B[i]);
-                            //    }
-                            //}
+                            //Reporting itself is sequentialized; exposing the vectorized context to the callback is grossbad.
+                            for (int i = 0; i < reportCount; ++i)
+                            {
+                                //Console.WriteLine($"reporting: {toReportA[i]}, {toReportB[i]}");
+                                results.Handle(toReportA[i], toReportB[i]);
+                            }
+                            //Console.WriteLine($"total leaf-leaf iteration: {reportCount}");
                         }
 
                         var pushNodeLeaf0AVersus1A = aaIntersects & (n0AIsInternal ^ n1AIsInternal);
@@ -744,8 +620,6 @@ namespace BepuPhysics.Trees
                             Vector256.Store(Avx2.PermuteVar8x32(encodedForStack0B, shuffle0B1B), (int*)nodeLeafStackA.Memory + nodeLeafStackCount);
                             Vector256.Store(Avx2.PermuteVar8x32(encodedForStack1B, shuffle0B1B), (int*)nodeLeafStackB.Memory + nodeLeafStackCount);
                             nodeLeafStackCount += count0B1B;
-
-                            //Console.WriteLine($"nodeleaf for iteration: {count0A1A + count0A1B + count0B1A + count0B1B}, new stack count {nodeLeafStackCount}");
                         }
 
                         var aaWantsToPushCrossover = aaIntersects & n0AIsInternal & n1AIsInternal;
