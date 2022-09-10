@@ -442,6 +442,7 @@ namespace BepuPhysics.Trees
                     //In a given iteration, the maximum number of leaf-leaf intersections is 8 lanes * 4 child combinations per lane.
                     var toReportA = stackalloc int[32];
                     var toReportB = stackalloc int[32];
+                    var shouldReport = stackalloc int[32];
 
                     while (crossoverStackCount > 0)
                     {
@@ -553,39 +554,164 @@ namespace BepuPhysics.Trees
                         var reportAnyPair = reportAA | reportAB | reportBA | reportBB;
                         if (Vector256.LessThanAny(reportAnyPair, Vector256<int>.Zero))
                         {
-                            //At least one leaf-leaf test is reported.
-                            //For each report vector, encode the indices, left pack for reported lanes, and store into the toReport buffers.
-                            //TODO: The chance that this is actually faster than brute force in the worst case seems a wee bit low given that we're *still iterating at the end*.
-                            var aaShuffle = GetLeftPackMask(reportAA, out int aaCount);
-                            var abShuffle = GetLeftPackMask(reportAB, out int abCount);
-                            var baShuffle = GetLeftPackMask(reportBA, out int baCount);
-                            var bbShuffle = GetLeftPackMask(reportBB, out int bbCount);
+                            ////At least one leaf-leaf test is reported.
+                            ////For each report vector, encode the indices, left pack for reported lanes, and store into the toReport buffers.
+                            ////TODO: The chance that this is actually faster than brute force in the worst case seems a wee bit low given that we're *still iterating at the end*.
+                            //var aaShuffle = GetLeftPackMask(reportAA, out int aaCount);
+                            //var abShuffle = GetLeftPackMask(reportAB, out int abCount);
+                            //var baShuffle = GetLeftPackMask(reportBA, out int baCount);
+                            //var bbShuffle = GetLeftPackMask(reportBB, out int bbCount);
+
+                            //var encodedN0A = Encode(n0AIndex);
+                            //var encodedN0B = Encode(n0BIndex);
+                            //var encodedN1A = Encode(n1AIndex);
+                            //var encodedN1B = Encode(n1BIndex);
+                            //var reportCount = 0;
+                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, aaShuffle), toReportA);
+                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, aaShuffle), toReportB);
+                            //reportCount += aaCount;
+                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, abShuffle), toReportA + reportCount);
+                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, abShuffle), toReportB + reportCount);
+                            //reportCount += abCount;
+                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, baShuffle), toReportA + reportCount);
+                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, baShuffle), toReportB + reportCount);
+                            //reportCount += baCount;
+                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, bbShuffle), toReportA + reportCount);
+                            //Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, bbShuffle), toReportB + reportCount);
+                            //reportCount += bbCount;
+
+                            ////Reporting itself is sequentialized; exposing the vectorized context to the callback is grossbad.
+                            //for (int i = 0; i < reportCount; ++i)
+                            //{
+                            //    //Console.WriteLine($"reporting: {toReportA[i]}, {toReportB[i]}");
+                            //    results.Handle(toReportA[i], toReportB[i]);
+                            //}
+                            ////Console.WriteLine($"total leaf-leaf iteration: {reportCount}");
+
 
                             var encodedN0A = Encode(n0AIndex);
                             var encodedN0B = Encode(n0BIndex);
                             var encodedN1A = Encode(n1AIndex);
                             var encodedN1B = Encode(n1BIndex);
                             var reportCount = 0;
-                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, aaShuffle), toReportA);
-                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, aaShuffle), toReportB);
-                            reportCount += aaCount;
-                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, abShuffle), toReportA + reportCount);
-                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, abShuffle), toReportB + reportCount);
-                            reportCount += abCount;
-                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, baShuffle), toReportA + reportCount);
-                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, baShuffle), toReportB + reportCount);
-                            reportCount += baCount;
-                            Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, bbShuffle), toReportA + reportCount);
-                            Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, bbShuffle), toReportB + reportCount);
-                            reportCount += bbCount;
-
-                            //Reporting itself is sequentialized; exposing the vectorized context to the callback is grossbad.
-                            for (int i = 0; i < reportCount; ++i)
+                            if (Vector256.LessThanAny(reportAA, Vector256<int>.Zero))
                             {
-                                //Console.WriteLine($"reporting: {toReportA[i]}, {toReportB[i]}");
-                                results.Handle(toReportA[i], toReportB[i]);
+                                var aaShuffle = GetLeftPackMask(reportAA, out int aaCount);
+                                Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, aaShuffle), toReportA);
+                                Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, aaShuffle), toReportB);
+                                reportCount += aaCount;
                             }
-                            //Console.WriteLine($"total leaf-leaf iteration: {reportCount}");
+                            if (Vector256.LessThanAny(reportAB, Vector256<int>.Zero))
+                            {
+                                var abShuffle = GetLeftPackMask(reportAB, out int abCount);
+                                Vector256.Store(Avx2.PermuteVar8x32(encodedN0A, abShuffle), toReportA + reportCount);
+                                Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, abShuffle), toReportB + reportCount);
+                                reportCount += abCount;
+                            }
+                            if (Vector256.LessThanAny(reportBA, Vector256<int>.Zero))
+                            {
+                                var baShuffle = GetLeftPackMask(reportBA, out int baCount);
+                                Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, baShuffle), toReportA + reportCount);
+                                Vector256.Store(Avx2.PermuteVar8x32(encodedN1A, baShuffle), toReportB + reportCount);
+                                reportCount += baCount;
+                            }
+                            if (Vector256.LessThanAny(reportBB, Vector256<int>.Zero))
+                            {
+                                var bbShuffle = GetLeftPackMask(reportBB, out int bbCount);
+                                Vector256.Store(Avx2.PermuteVar8x32(encodedN0B, bbShuffle), toReportA + reportCount);
+                                Vector256.Store(Avx2.PermuteVar8x32(encodedN1B, bbShuffle), toReportB + reportCount);
+                                reportCount += bbCount;
+                            }
+
+                            ////Reporting itself is sequentialized; exposing the vectorized context to the callback is grossbad.
+                            //for (int i = 0; i < reportCount; ++i)
+                            //{
+                            //    //Console.WriteLine($"reporting: {toReportA[i]}, {toReportB[i]}");
+                            //    results.Handle(toReportA[i], toReportB[i]);
+                            //}
+                            ////Console.WriteLine($"total leaf-leaf iteration: {reportCount}");
+
+                            //var encodedN0A = Encode(n0AIndex);
+                            //var encodedN0B = Encode(n0BIndex);
+                            //var encodedN1A = Encode(n1AIndex);
+                            //var encodedN1B = Encode(n1BIndex);
+                            //var shouldReportAB = shouldReport + 8;
+                            //var shouldReportBA = shouldReport + 16;
+                            //var shouldReportBB = shouldReport + 24;
+                            //Vector256.Store(reportAA, shouldReport);
+                            //Vector256.Store(reportAB, shouldReportAB);
+                            //Vector256.Store(reportBA, shouldReportBA);
+                            //Vector256.Store(reportBB, shouldReportBB);
+                            //var encodedMemoryN0B = toReportA + 8;
+                            //var encodedMemoryN1A = toReportA + 16;
+                            //var encodedMemoryN1B = toReportA + 24;
+                            //Vector256.Store(encodedN0A, toReportA);
+                            //Vector256.Store(encodedN0B, encodedMemoryN0B);
+                            //Vector256.Store(encodedN1A, encodedMemoryN1A);
+                            //Vector256.Store(encodedN1B, encodedMemoryN1B);
+                            //for (int i = 0; i < 8; ++i)
+                            //{
+                            //    if (shouldReport[i] < 0)
+                            //        results.Handle(toReportA[i], encodedMemoryN1A[i]);
+                            //    if (shouldReportAB[i] < 0)
+                            //        results.Handle(toReportA[i], encodedMemoryN1B[i]);
+                            //    if (shouldReportBA[i] < 0)
+                            //        results.Handle(encodedMemoryN0B[i], encodedMemoryN1A[i]);
+                            //    if (shouldReportBB[i] < 0)
+                            //        results.Handle(encodedMemoryN0B[i], encodedMemoryN1B[i]);
+                            //}
+
+                            //var encodedN0A = Encode(n0AIndex);
+                            //var encodedN0B = Encode(n0BIndex);
+                            //var encodedN1A = Encode(n1AIndex);
+                            //var encodedN1B = Encode(n1BIndex);
+                            //var encodedMemoryN0B = toReportA + 8;
+                            //var encodedMemoryN1A = toReportA + 16;
+                            //var encodedMemoryN1B = toReportA + 24;
+                            //Vector256.Store(encodedN0A, toReportA);
+                            //Vector256.Store(encodedN0B, encodedMemoryN0B);
+                            //Vector256.Store(encodedN1A, encodedMemoryN1A);
+                            //Vector256.Store(encodedN1B, encodedMemoryN1B);
+
+                            //if (Vector256.LessThanAny(reportAA, Vector256<int>.Zero))
+                            //{
+                            //    Vector256.Store(reportAA, shouldReport);
+                            //    for (int i = 0; i < 8; ++i)
+                            //    {
+                            //        if (shouldReport[i] < 0)
+                            //            results.Handle(toReportA[i], encodedMemoryN1A[i]);
+                            //    }
+                            //}
+                            //if (Vector256.LessThanAny(reportAB, Vector256<int>.Zero))
+                            //{
+                            //    var shouldReportAB = shouldReport + 8;
+                            //    Vector256.Store(reportAB, shouldReportAB);
+                            //    for (int i = 0; i < 8; ++i)
+                            //    {
+                            //        if (shouldReportAB[i] < 0)
+                            //            results.Handle(toReportA[i], encodedMemoryN1B[i]);
+                            //    }
+                            //}
+                            //if (Vector256.LessThanAny(reportBA, Vector256<int>.Zero))
+                            //{
+                            //    var shouldReportBA = shouldReport + 16;
+                            //    Vector256.Store(reportBA, shouldReportBA);
+                            //    for (int i = 0; i < 8; ++i)
+                            //    {
+                            //        if (shouldReportBA[i] < 0)
+                            //            results.Handle(encodedMemoryN0B[i], encodedMemoryN1A[i]);
+                            //    }
+                            //}
+                            //if (Vector256.LessThanAny(reportBB, Vector256<int>.Zero))
+                            //{
+                            //    var shouldReportBB = shouldReport + 24;
+                            //    Vector256.Store(reportBB, shouldReportBB);
+                            //    for (int i = 0; i < 8; ++i)
+                            //    {
+                            //        if (shouldReportBB[i] < 0)
+                            //            results.Handle(encodedMemoryN0B[i], encodedMemoryN1B[i]);
+                            //    }
+                            //}
                         }
 
                         var pushNodeLeaf0AVersus1A = aaIntersects & (n0AIsInternal ^ n1AIsInternal);
