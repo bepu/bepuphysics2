@@ -46,11 +46,11 @@ namespace BepuUtilities
         /// Checks if two structures with memory layouts equivalent to the <see cref="BoundingBox"/> intersect.
         /// The referenced values must not be in unpinned managed memory.
         /// </summary>
-        /// <param name="childA">First child to compare.</param>
-        /// <param name="childB">Second child to compare.</param>
+        /// <param name="boundingBoxA">First bounding box to compare.</param>
+        /// <param name="boundingBoxB">Second bounding box to compare.</param>
         /// <returns>True if the children overlap, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static bool IntersectsUnsafe<TA, TB>(in TA childA, in TB childB) where TA : unmanaged where TB : unmanaged
+        public unsafe static bool IntersectsUnsafe<TA, TB>(in TA boundingBoxA, in TB boundingBoxB) where TA : unmanaged where TB : unmanaged
         {
             //This is a weird function. We're directly interpreting the memory of an incoming type as a vector where we assume the min/max layout matches the BoundingBox.
             //Happens to be convenient!
@@ -69,8 +69,8 @@ namespace BepuUtilities
             if (Vector128.IsHardwareAccelerated)
             {
                 //THIS IS A POTENTIAL GC HOLE IF CHILDREN ARE PASSED FROM UNPINNED MANAGED MEMORY
-                ref var a = ref Unsafe.As<TA, float>(ref Unsafe.AsRef(childA));
-                ref var b = ref Unsafe.As<TB, float>(ref Unsafe.AsRef(childB));
+                ref var a = ref Unsafe.As<TA, float>(ref Unsafe.AsRef(boundingBoxA));
+                ref var b = ref Unsafe.As<TB, float>(ref Unsafe.AsRef(boundingBoxB));
                 var aMin = Vector128.LoadUnsafe(ref a);
                 var aMax = Vector128.LoadUnsafe(ref Unsafe.Add(ref a, 4));
                 var bMin = Vector128.LoadUnsafe(ref b);
@@ -80,8 +80,8 @@ namespace BepuUtilities
             }
             else
             {
-                var a = (float*)Unsafe.AsPointer(ref Unsafe.AsRef(childA));
-                var b = (float*)Unsafe.AsPointer(ref Unsafe.AsRef(childB));
+                var a = (float*)Unsafe.AsPointer(ref Unsafe.AsRef(boundingBoxA));
+                var b = (float*)Unsafe.AsPointer(ref Unsafe.AsRef(boundingBoxB));
                 return a[4] >= b[0] & a[5] >= b[1] & a[6] >= b[2] &
                        b[4] >= a[0] & b[5] >= a[1] & b[6] >= a[2];
             }
