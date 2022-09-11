@@ -163,6 +163,77 @@ namespace BepuUtilities
         }
 
         /// <summary>
+        /// Merges two structures with memory layouts equivalent to the <see cref="BoundingBox"/>.
+        /// The referenced values must not be in unpinned managed memory.
+        /// Any data in the empty slots is preserved.
+        /// </summary>
+        /// <param name="boundingBoxA">First bounding box to compare.</param>
+        /// <param name="boundingBoxB">Second bounding box to compare.</param>
+        /// <param name="merged">Merged bounding box.</param>
+        /// <typeparam name="TA">Type of the first bounding box-like parameter.</typeparam>
+        /// <typeparam name="TB">Type of the second bounding box-like parameter.</typeparam>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static void CreateMergedUnsafeWithPreservation<TA, TB>(in TA boundingBoxA, in TB boundingBoxB, out TA merged) where TA : unmanaged where TB : unmanaged
+        {
+            if (Sse41.IsSupported)
+            {
+                Unsafe.SkipInit(out merged);
+                ref var resultMin = ref Unsafe.As<TA, Vector128<float>>(ref merged);
+                ref var resultMax = ref Unsafe.Add(ref Unsafe.As<TA, Vector128<float>>(ref merged), 1);
+                resultMin = Sse41.Blend(Vector128.Min(
+                    Unsafe.As<TA, Vector128<float>>(ref Unsafe.AsRef(boundingBoxA)),
+                    Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB))), resultMin, 0b111111);
+                resultMax = Sse41.Blend(Vector128.Max(
+                    Unsafe.Add(ref Unsafe.As<TA, Vector128<float>>(ref Unsafe.AsRef(boundingBoxA)), 1),
+                    Unsafe.Add(ref Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB)), 1)), resultMax, 0b111111);
+            }
+            else
+            {
+                ref var a = ref Unsafe.As<TA, BoundingBox>(ref Unsafe.AsRef(boundingBoxA));
+                ref var b = ref Unsafe.As<TB, BoundingBox>(ref Unsafe.AsRef(boundingBoxB));
+                Unsafe.SkipInit(out merged);
+                ref var result = ref Unsafe.As<TA, BoundingBox>(ref Unsafe.AsRef(merged));
+                result.Min = Vector3.Min(a.Min, b.Min);
+                result.Max = Vector3.Max(a.Max, b.Max);
+            }
+        }
+        /// <summary>
+        /// Merges two structures with memory layouts equivalent to the <see cref="BoundingBox"/>.
+        /// The referenced values must not be in unpinned managed memory.
+        /// Any data in the empty slots is not preserved.
+        /// </summary>
+        /// <param name="boundingBoxA">First bounding box to compare.</param>
+        /// <param name="boundingBoxB">Second bounding box to compare.</param>
+        /// <param name="merged">Merged bounding box.</param>
+        /// <typeparam name="TA">Type of the first bounding box-like parameter.</typeparam>
+        /// <typeparam name="TB">Type of the second bounding box-like parameter.</typeparam>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static void CreateMergedUnsafe<TA, TB>(in TA boundingBoxA, in TB boundingBoxB, out TA merged) where TA : unmanaged where TB : unmanaged
+        {
+            if (Vector128.IsHardwareAccelerated)
+            {
+                Unsafe.SkipInit(out merged);
+                ref var resultMin = ref Unsafe.As<TA, Vector128<float>>(ref merged);
+                ref var resultMax = ref Unsafe.Add(ref Unsafe.As<TA, Vector128<float>>(ref merged), 1);
+                resultMin = Vector128.Min(
+                    Unsafe.As<TA, Vector128<float>>(ref Unsafe.AsRef(boundingBoxA)),
+                    Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB)));
+                resultMax = Vector128.Max(
+                    Unsafe.Add(ref Unsafe.As<TA, Vector128<float>>(ref Unsafe.AsRef(boundingBoxA)), 1),
+                    Unsafe.Add(ref Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB)), 1));
+            }
+            else
+            {
+                ref var a = ref Unsafe.As<TA, BoundingBox>(ref Unsafe.AsRef(boundingBoxA));
+                ref var b = ref Unsafe.As<TB, BoundingBox>(ref Unsafe.AsRef(boundingBoxB));
+                Unsafe.SkipInit(out merged);
+                ref var result = ref Unsafe.As<TA, BoundingBox>(ref Unsafe.AsRef(merged));
+                result.Min = Vector3.Min(a.Min, b.Min);
+                result.Max = Vector3.Max(a.Max, b.Max);
+            }
+        }
+
+        /// <summary>
         /// Determines if a bounding box intersects a bounding sphere.
         /// </summary>
         /// <param name="boundingSphere">Sphere to test for intersection.</param>
