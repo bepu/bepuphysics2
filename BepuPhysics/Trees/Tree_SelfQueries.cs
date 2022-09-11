@@ -410,50 +410,32 @@ namespace BepuPhysics.Trees
                 ref var childB = ref GetLeafChild(ref this, nodeLeafStackB[i]);
                 Debug.Assert((childA.Index < 0) ^ (childB.Index < 0), "One and only one of the two children must be a leaf.");
                 ref var leafChild = ref childA.Index < 0 ? ref childA : ref childB;
-                var nodeToTest = childA.Index < 0 ? childB.Index : childA.Index;
+                stack.AllocateUnsafely() = childA.Index < 0 ? childB.Index : childA.Index;
                 var leafIndex = Encode(leafChild.Index);
                 Debug.Assert(stack.Count == 0);
-                while (true)
+                while (stack.TryPop(out var nodeToTest))
                 {
-                    //Now process all the leaf nodes!
                     ref var node = ref Nodes[nodeToTest];
                     var a = node.A.Index;
                     var b = node.B.Index;
                     var aIntersected = BoundingBox.IntersectsUnsafe(leafChild, node.A);
                     var bIntersected = BoundingBox.IntersectsUnsafe(leafChild, node.B);
-                    var aIsInternal = a >= 0;
-                    var bIsInternal = b >= 0;
-                    var intersectedInternalA = aIntersected && aIsInternal;
-                    var intersectedInternalB = bIntersected && bIsInternal;
-                    if (intersectedInternalA && intersectedInternalB)
+
+                    if (bIntersected)
                     {
-                        nodeToTest = a;
-                        stack.AllocateUnsafely() = b;
-                    }
-                    else
-                    {
-                        if (aIntersected && !aIsInternal)
-                        {
-                            results.Handle(leafIndex, Encode(a));
-                        }
-                        if (bIntersected && !bIsInternal)
-                        {
-                            results.Handle(leafIndex, Encode(b));
-                        }
-                        if (intersectedInternalA || intersectedInternalB)
-                        {
-                            nodeToTest = intersectedInternalA ? a : b;
-                        }
+                        if (b >= 0)
+                            stack.AllocateUnsafely() = b;
                         else
-                        {
-                            //The current traversal step doesn't offer a next step; pull from the stack.
-                            if (!stack.TryPop(out nodeToTest))
-                            {
-                                //Nothing left to test against this leaf! Done!
-                                break;
-                            }
-                        }
+                            results.Handle(leafIndex, Encode(b));
                     }
+                    if (aIntersected)
+                    {
+                        if (a >= 0)
+                            stack.AllocateUnsafely() = a;
+                        else
+                            results.Handle(leafIndex, Encode(a));
+                    }
+
                 }
             }
             pool.Return(ref nodeLeafStackA);
