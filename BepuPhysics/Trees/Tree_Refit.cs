@@ -88,51 +88,5 @@ namespace BepuPhysics.Trees
             Refit2(ref stub);
         }
 
-        readonly unsafe void Refit3(ref NodeChild childInParent, out Vector4 min, out Vector4 max)
-        {
-            Debug.Assert(LeafCount >= 2);
-            ref var node = ref Nodes[childInParent.Index];
-            ref var a = ref node.A;
-            Vector4 aMin, aMax;
-            if (node.A.Index >= 0)
-            {
-                Refit3(ref a, out aMin, out aMax);
-            }
-            else
-            {
-                aMin = Unsafe.As<Vector3, Vector4>(ref a.Min);
-                aMax = Unsafe.As<Vector3, Vector4>(ref a.Max);
-            }
-            ref var b = ref node.B;
-            Vector4 bMin, bMax;
-            if (b.Index >= 0)
-            {
-                Refit3(ref b, out bMin, out bMax);
-            }
-            else
-            {
-                bMin = Unsafe.As<Vector3, Vector4>(ref b.Min);
-                bMax = Unsafe.As<Vector3, Vector4>(ref b.Max);
-            }
-            min = Vector4.Max(aMin, bMin);
-            max = Vector4.Max(aMax, bMax);
-            childInParent.Min.AsVector128();
-            childInParent.Max.AsVector128();
-        }
-
-        /// <summary>
-        /// Updates the bounding boxes of all internal nodes in the tree.
-        /// </summary>
-        public unsafe readonly void Refit3()
-        {
-            //No point in refitting a tree with no internal nodes!
-            if (LeafCount <= 2)
-                return;
-            NodeChild stub = default;
-            Refit3(ref stub, out var min, out var max);
-        }
-
-
-
     }
 }
