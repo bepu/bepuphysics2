@@ -82,7 +82,17 @@ namespace Demos.SpecializedTests
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
             Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
-            RefitTest(() => mesh.Tree.Refit3(), "refit3", ref mesh.Tree);
+
+            QuickList<int> subtreeReferences = new QuickList<int>(mesh.Tree.LeafCount, BufferPool);
+            QuickList<int> treeletInternalNodes = new QuickList<int>(mesh.Tree.LeafCount, BufferPool);
+            Tree.CreateBinnedResources(BufferPool, mesh.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
+            BinnedTest(() =>
+            {
+                subtreeReferences.Count = 0;
+                treeletInternalNodes.Count = 0;
+                mesh.Tree.BinnedRefine(0, ref subtreeReferences, mesh.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
+            }, "Original", ref mesh.Tree);
+
             RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
             RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);
 
@@ -131,6 +141,32 @@ namespace Demos.SpecializedTests
             var sum = tree.Nodes[0].A.Min * 5 + tree.Nodes[0].A.Max * 7 + tree.Nodes[0].B.Min * 13 + tree.Nodes[0].B.Max * 17;
             var hash = Unsafe.As<float, int>(ref sum.X) * 31 + Unsafe.As<float, int>(ref sum.Y) * 37 + Unsafe.As<float, int>(ref sum.Z) * 41;
             Console.WriteLine($"{name} bounds 0 hash: {hash}, A ({tree.Nodes[0].A.Min}, {tree.Nodes[0].B.Max}), B ({tree.Nodes[0].B.Min}, {tree.Nodes[0].B.Max})");
+        }
+
+        static void BinnedTest(Action function, string name, ref Tree tree)
+        {
+            long accumulatedTime = 0;
+            const int testCount = 16;
+            for (int i = 0; i < testCount; ++i)
+            {
+                var startTime = Stopwatch.GetTimestamp();
+                function();
+                var endTime = Stopwatch.GetTimestamp();
+                accumulatedTime += endTime - startTime;
+                //overlapHandler.Set.Clear();
+                CacheBlaster.Blast();
+            }
+            Console.WriteLine($"{name} time per execution (ms): {(accumulatedTime) * 1e3 / (testCount * Stopwatch.Frequency)}");
+
+            ulong accumulator = 0;
+            for (int i = 0; i < 1000; ++i)
+            {
+                var index = (int)(((ulong)i * 941083987 + accumulator * 797003413) % (ulong)tree.NodeCount);
+                var localSum = tree.Nodes[index].A.Min * 5 + tree.Nodes[index].A.Max * 7 + tree.Nodes[index].B.Min * 13 + tree.Nodes[index].B.Max * 17;
+                var hash = Unsafe.As<float, int>(ref localSum.X) * 31 + Unsafe.As<float, int>(ref localSum.Y) * 37 + Unsafe.As<float, int>(ref localSum.Z) * 41;
+                accumulator = ((accumulator << 7) | (accumulator >> (64 - 7))) + (ulong)hash;
+            }
+            Console.WriteLine($"{name} bounds hash: {accumulator}, A ({tree.Nodes[0].A.Min}, {tree.Nodes[0].B.Max}), B ({tree.Nodes[0].B.Min}, {tree.Nodes[0].B.Max})");
         }
     }
 }
