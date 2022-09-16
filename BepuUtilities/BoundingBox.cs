@@ -28,6 +28,17 @@ namespace BepuUtilities
         /// </summary>
         [FieldOffset(16)]
         public Vector4 Max;
+
+
+        /// <summary>
+        /// Creates a string representation of the bounding box.
+        /// </summary>
+        /// <returns>String representation of the bounding box.</returns>
+        public override string ToString()
+        {
+            return $"({Unsafe.As<Vector4, Vector3>(ref Min)}, {Unsafe.As<Vector4, Vector3>(ref Max)})";
+        }
+
     }
 
     /// <summary>
