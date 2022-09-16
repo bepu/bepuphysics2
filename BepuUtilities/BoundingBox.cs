@@ -12,9 +12,27 @@ using System.Text;
 namespace BepuUtilities
 {
     /// <summary>
-    /// Provides XNA-like axis-aligned bounding box functionality.
+    /// Represents a bounding box as two <see cref="Vector4"/> values to to avoid complexity associated with a <see cref="Vector3"/>'s empty SIMD lane.
     /// </summary>
-    //NOTE: The explicit size avoids https://github.com/dotnet/coreclr/issues/12950
+    [StructLayout(LayoutKind.Explicit, Size = 32)]
+    public struct BoundingBox4
+    {
+        /// <summary>
+        /// Location with the lowest X, Y, and Z coordinates in the axis-aligned bounding box. W lane is undefined.
+        /// </summary>
+        [FieldOffset(0)]
+        public Vector4 Min;
+
+        /// <summary>
+        /// Location with the highest X, Y, and Z coordinates in the axis-aligned bounding box. W lane is undefined.
+        /// </summary>
+        [FieldOffset(16)]
+        public Vector4 Max;
+    }
+
+    /// <summary>
+    /// Provides simple axis-aligned bounding box functionality.
+    /// </summary>
     [StructLayout(LayoutKind.Explicit, Size = 32)]
     public struct BoundingBox
     {

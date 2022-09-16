@@ -83,18 +83,32 @@ namespace Demos.SpecializedTests
 
             Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
 
-            QuickList<int> subtreeReferences = new QuickList<int>(mesh.Tree.LeafCount, BufferPool);
-            QuickList<int> treeletInternalNodes = new QuickList<int>(mesh.Tree.LeafCount, BufferPool);
-            Tree.CreateBinnedResources(BufferPool, mesh.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
+            BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
+            BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
+            for (int i = 0; i < mesh.Triangles.Length; ++i)
+            {
+                ref var t = ref mesh.Triangles[i];
+                ref var bounds = ref leafBounds[i];
+                bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
+                bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
+                leafIndices[i] = i;
+            }
             BinnedTest(() =>
             {
-                subtreeReferences.Count = 0;
-                treeletInternalNodes.Count = 0;
-                mesh.Tree.BinnedRefine(0, ref subtreeReferences, mesh.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
-            }, "Original", ref mesh.Tree);
+                Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, BufferPool);
+            }, "Revamp", ref mesh.Tree);
+            //QuickList<int> subtreeReferences = new QuickList<int>(mesh.Tree.LeafCount, BufferPool);
+            //QuickList<int> treeletInternalNodes = new QuickList<int>(mesh.Tree.LeafCount, BufferPool);
+            //Tree.CreateBinnedResources(BufferPool, mesh.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
+            //BinnedTest(() =>
+            //{
+            //    subtreeReferences.Count = 0;
+            //    treeletInternalNodes.Count = 0;
+            //    mesh.Tree.BinnedRefine(0, ref subtreeReferences, mesh.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
+            //}, "Original", ref mesh.Tree);
 
-            RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
-            RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);
+            //RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
+            //RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);
 
             //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlapsContiguousPrepass(ref handler, BufferPool), mesh.Tree.LeafCount, "Prepass");
             //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlaps(ref handler), mesh.Tree.LeafCount, "Original");
