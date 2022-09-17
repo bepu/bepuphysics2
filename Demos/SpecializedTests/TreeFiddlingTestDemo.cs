@@ -15,6 +15,8 @@ using DemoRenderer;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using BepuPhysics.Collidables;
+using static System.Formats.Asn1.AsnWriter;
+using static OpenTK.Graphics.OpenGL.GL;
 
 namespace Demos.SpecializedTests
 {
@@ -68,6 +70,54 @@ namespace Demos.SpecializedTests
             }
         }
 
+        Buffer<Triangle> CreateDeformedPlaneTriangles(int width, int height, Vector3 scale)
+        {
+            Vector3 Deform(int x, int y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f);
+            BufferPool.Take<Vector3>(width * height, out var vertices);
+            for (int i = 0; i < width; ++i)
+            {
+                for (int j = 0; j < height; ++j)
+                {
+                    vertices[width * j + i] = Deform(i, j);
+                }
+            }
+
+            var quadWidth = width - 1;
+            var quadHeight = height - 1;
+            var triangleCount = quadWidth * quadHeight * 2;
+            BufferPool.Take<Triangle>(triangleCount, out var triangles);
+
+            for (int i = 0; i < quadWidth; ++i)
+            {
+                for (int j = 0; j < quadHeight; ++j)
+                {
+                    var triangleIndex = (j * quadWidth + i) * 2;
+                    ref var triangle0 = ref triangles[triangleIndex];
+                    ref var v00 = ref vertices[width * j + i];
+                    ref var v01 = ref vertices[width * j + i + 1];
+                    ref var v10 = ref vertices[width * (j + 1) + i];
+                    ref var v11 = ref vertices[width * (j + 1) + i + 1];
+                    triangle0.A = v00;
+                    triangle0.B = v01;
+                    triangle0.C = v10;
+                    ref var triangle1 = ref triangles[triangleIndex + 1];
+                    triangle1.A = v01;
+                    triangle1.B = v11;
+                    triangle1.C = v10;
+                }
+            }
+            BufferPool.Return(ref vertices);
+            //Scramble the heck out of its triangles.
+            var random = new Random(5);
+            for (int index = 0; index < triangles.Length; ++index)
+            {
+                ref var a = ref triangles[index];
+                ref var b = ref triangles[random.Next(index + 1, triangles.Length)];
+                BepuPhysics.Helpers.Swap(ref a, ref b);
+            }
+            return triangles;
+        }
+
         public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-10, 3, -10);
@@ -78,9 +128,15 @@ namespace Demos.SpecializedTests
             var width = 768;
             var height = 768;
             var scale = new Vector3(1, 1, 1);
-            DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
+
+            //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
+
+            //Create a wiggly mesh.
+            var triangles = CreateDeformedPlaneTriangles(width, height, scale);
+            var mesh = new Mesh(triangles, Vector3.One, BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
+
 
             Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
 
@@ -99,11 +155,12 @@ namespace Demos.SpecializedTests
                 Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, BufferPool);
             }, "Revamp", ref mesh.Tree);
 
-            DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh2);
 
-            QuickList<int> subtreeReferences = new QuickList<int>(mesh2.Tree.LeafCount, BufferPool);
-            QuickList<int> treeletInternalNodes = new QuickList<int>(mesh2.Tree.LeafCount, BufferPool);
-            Tree.CreateBinnedResources(BufferPool, mesh.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
+            var mesh2 = new Mesh(triangles, Vector3.One, BufferPool);
+
+            QuickList<int> subtreeReferences = new(mesh2.Tree.LeafCount, BufferPool);
+            QuickList<int> treeletInternalNodes = new(mesh2.Tree.LeafCount, BufferPool);
+            Tree.CreateBinnedResources(BufferPool, mesh2.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
             BinnedTest(() =>
             {
                 subtreeReferences.Count = 0;
@@ -185,6 +242,8 @@ namespace Demos.SpecializedTests
                 accumulator = ((accumulator << 7) | (accumulator >> (64 - 7))) + (ulong)hash;
             }
             Console.WriteLine($"{name} bounds hash: {accumulator}, A ({tree.Nodes[0].A.Min}, {tree.Nodes[0].B.Max}), B ({tree.Nodes[0].B.Min}, {tree.Nodes[0].B.Max})");
+            var sah = tree.MeasureCostMetric();
+            Console.WriteLine($"SAH: {sah}");
         }
     }
 }
