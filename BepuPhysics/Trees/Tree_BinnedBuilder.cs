@@ -35,17 +35,21 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void BuildParentNode(BoundingBox4 a, BoundingBox4 b, Buffer<Node> nodes, Buffer<int> indices, int parentNodeIndex, int aCount, int bCount, out int aIndex, out int bIndex)
+        static void BuildNode(BoundingBox4 a, BoundingBox4 b, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<int> indices, int nodeIndex, int parentNodeIndex, int childIndexInParent, int aCount, int bCount, out int aIndex, out int bIndex)
         {
-            ref var parentNode = ref nodes[0];
-            aIndex = aCount == 1 ? indices[0] : parentNodeIndex + 1;
-            bIndex = bCount == 1 ? indices[^1] : parentNodeIndex + aCount;//parentNodeIndex + 1 + (aCount - 1)
-            parentNode.A = Unsafe.As<BoundingBox4, NodeChild>(ref a);
-            parentNode.B = Unsafe.As<BoundingBox4, NodeChild>(ref b);
-            parentNode.A.Index = aIndex;
-            parentNode.A.LeafCount = aCount;
-            parentNode.B.Index = bIndex;
-            parentNode.B.LeafCount = bCount;
+            ref var metanode = ref metanodes[0];
+            metanode.Parent = parentNodeIndex;
+            metanode.IndexInParent = childIndexInParent;
+            metanode.RefineFlag = 0;
+            ref var node = ref nodes[0];
+            aIndex = aCount == 1 ? indices[0] : nodeIndex + 1;
+            bIndex = bCount == 1 ? indices[^1] : nodeIndex + aCount;//parentNodeIndex + 1 + (aCount - 1)
+            node.A = Unsafe.As<BoundingBox4, NodeChild>(ref a);
+            node.B = Unsafe.As<BoundingBox4, NodeChild>(ref b);
+            node.A.Index = aIndex;
+            node.A.LeafCount = aCount;
+            node.B.Index = bIndex;
+            node.B.LeafCount = bCount;
         }
 
         struct Bins
@@ -88,7 +92,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        static unsafe void BinnedBuilderInternal(Buffer<int> indices, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, int parentNodeIndex, in Bins bins)
+        static unsafe void BinnedBuilderInternal(Buffer<int> indices, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, in Bins bins)
         {
             var centroidMin = new Vector4(float.MaxValue);
             var centroidMax = new Vector4(float.MinValue);
@@ -102,7 +106,7 @@ namespace BepuPhysics.Trees
                 centroidMin = Vector4.Min(centroidMin, centroid);
                 centroidMax = Vector4.Max(centroidMax, centroid);
             }
-            var binCount = Math.Min(MaximumBinCount, Math.Max((int)(leafCount * 0.25f), 4));
+            var binCount = Math.Min(MaximumBinCount, Math.Max((int)(leafCount * 0.001f), 4));
             Debug.Assert(bins.BinBoundingBoxesX.Length >= binCount);
             Debug.Assert(bins.BinBoundingBoxesY.Length >= binCount);
             Debug.Assert(bins.BinBoundingBoxesZ.Length >= binCount);
@@ -136,11 +140,11 @@ namespace BepuPhysics.Trees
                     boundsB.Min = Vector4.Min(bounds.Min, boundsB.Min);
                     boundsB.Max = Vector4.Max(bounds.Max, boundsB.Max);
                 }
-                BuildParentNode(boundsA, boundsB, nodes, indices, parentNodeIndex, countA, countB, out var aIndex, out var bIndex);
+                BuildNode(boundsA, boundsB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, countA, countB, out var aIndex, out var bIndex);
                 if (countA > 1)
-                    BinnedBuilderInternal(indices.Slice(countA), boundingBoxes.Slice(countA), nodes.Slice(1, countA - 1), aIndex, bins);
+                    BinnedBuilderInternal(indices.Slice(countA), boundingBoxes.Slice(countA), nodes.Slice(1, countA - 1), metanodes.Slice(1, countA - 1), aIndex, nodeIndex, 0, bins);
                 if (countB > 1)
-                    BinnedBuilderInternal(indices.Slice(countA, countB), boundingBoxes.Slice(countA, countB), nodes.Slice(countA, countB - 1), bIndex, bins);
+                    BinnedBuilderInternal(indices.Slice(countA, countB), boundingBoxes.Slice(countA, countB), nodes.Slice(countA, countB - 1), metanodes.Slice(countA, countB - 1), bIndex, nodeIndex, 1, bins);
                 return;
             }
 
@@ -368,16 +372,16 @@ namespace BepuPhysics.Trees
 
             {
                 Debug.Assert(aCount + bCount == leafCount);
-                BuildParentNode(bestboundsA, bestboundsB, nodes, indices, parentNodeIndex, aCount, bCount, out var aIndex, out var bIndex);
+                BuildNode(bestboundsA, bestboundsB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, aCount, bCount, out var aIndex, out var bIndex);
                 if (aCount > 1)
-                    BinnedBuilderInternal(indices.Slice(aCount), boundingBoxes.Slice(aCount), nodes.Slice(1, aCount - 1), aIndex, bins);
+                    BinnedBuilderInternal(indices.Slice(aCount), boundingBoxes.Slice(aCount), nodes.Slice(1, aCount - 1), metanodes.Slice(1, aCount - 1), aIndex, nodeIndex, 0, bins);
                 if (bCount > 1)
-                    BinnedBuilderInternal(indices.Slice(aCount, bCount), boundingBoxes.Slice(aCount, bCount), nodes.Slice(aCount, bCount - 1), bIndex, bins);
+                    BinnedBuilderInternal(indices.Slice(aCount, bCount), boundingBoxes.Slice(aCount, bCount), nodes.Slice(aCount, bCount - 1), metanodes.Slice(aCount, bCount - 1), bIndex, nodeIndex, 1, bins);
             }
 
         }
 
-        public static unsafe void BinnedBuilder(Buffer<int> indices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, BufferPool pool)
+        public static unsafe void BinnedBuilder(Buffer<int> indices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, BufferPool pool)
         {
             var leafCount = indices.Length;
             Debug.Assert(boundingBoxes.Length >= leafCount, "The bounding boxes provided must cover the range of indices provided.");
@@ -413,7 +417,7 @@ namespace BepuPhysics.Trees
             bins.BinLeafCountsZ = new Buffer<int>(binLeafCountsMemory + MaximumBinCount * 2, MaximumBinCount);
 
             //While we could avoid a recursive implementation, the overhead is low compared to the per-iteration cost.
-            BinnedBuilderInternal(indices, boundingBoxes.As<BoundingBox4>(), nodes, 0, bins);
+            BinnedBuilderInternal(indices, boundingBoxes.As<BoundingBox4>(), nodes, metanodes, 0, -1, -1, bins);
         }
 
     }

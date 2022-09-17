@@ -118,6 +118,24 @@ namespace Demos.SpecializedTests
             return triangles;
         }
 
+
+        Buffer<Triangle> CreateRandomSoupTriangles(BoundingBox bounds, int triangleCount, float minimumSize, float maximumSize)
+        {
+            Random random = new Random(5);
+            BufferPool.Take<Triangle>(triangleCount, out var triangles);
+            for (int i = 0; i < triangleCount; ++i)
+            {
+                var startPoint = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * (bounds.Max - bounds.Min) + bounds.Min;
+                var uniform = random.NextSingle();
+                var size = MathF.Pow(uniform, 200) * (maximumSize - minimumSize) + minimumSize;
+                ref var triangle = ref triangles[i];
+                triangle.A = startPoint + (2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One) * size;
+                triangle.B = startPoint + (2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One) * size;
+                triangle.C = startPoint + (2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One) * size;
+            }
+            return triangles;
+        }
+
         public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-10, 3, -10);
@@ -125,20 +143,22 @@ namespace Demos.SpecializedTests
             camera.Pitch = 0;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
-            var width = 768;
-            var height = 768;
-            var scale = new Vector3(1, 1, 1);
 
+            //Create a mesh.
+            var width = 256;
+            var height = 256;
+            var scale = new Vector3(1, 1, 1);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
 
-            //Create a wiggly mesh.
-            var triangles = CreateDeformedPlaneTriangles(width, height, scale);
+            //var triangles = CreateDeformedPlaneTriangles(width, height, scale);
+            var triangles = CreateRandomSoupTriangles(new BoundingBox(new(width / -2f, scale.Y * -2, height / -2f), new(width / 2f, scale.Y * 2, height / 2f)), (width - 1) * (height - 1) * 2, 0.5f, 50f);
             var mesh = new Mesh(triangles, Vector3.One, BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
 
             Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
+            Console.WriteLine($"sweep SAH: {mesh.Tree.MeasureCostMetric()}, cache quality: {mesh.Tree.MeasureCacheQuality()}");
 
             BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
             BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
@@ -148,11 +168,11 @@ namespace Demos.SpecializedTests
                 ref var bounds = ref leafBounds[i];
                 bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
                 bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
-                leafIndices[i] = i;
+                leafIndices[i] = Tree.Encode(i);
             }
             BinnedTest(() =>
             {
-                Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, BufferPool);
+                Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, BufferPool);
             }, "Revamp", ref mesh.Tree);
 
 
@@ -166,7 +186,7 @@ namespace Demos.SpecializedTests
                 subtreeReferences.Count = 0;
                 treeletInternalNodes.Count = 0;
                 mesh2.Tree.BinnedRefine(0, ref subtreeReferences, mesh2.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
-            }, "Original", ref mesh.Tree);
+            }, "Original", ref mesh2.Tree);
 
             //RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
             //RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);
@@ -242,8 +262,7 @@ namespace Demos.SpecializedTests
                 accumulator = ((accumulator << 7) | (accumulator >> (64 - 7))) + (ulong)hash;
             }
             Console.WriteLine($"{name} bounds hash: {accumulator}, A ({tree.Nodes[0].A.Min}, {tree.Nodes[0].B.Max}), B ({tree.Nodes[0].B.Min}, {tree.Nodes[0].B.Max})");
-            var sah = tree.MeasureCostMetric();
-            Console.WriteLine($"SAH: {sah}");
+            Console.WriteLine($"SAH: {tree.MeasureCostMetric()}, cache quality: {tree.MeasureCacheQuality()}");
         }
     }
 }
