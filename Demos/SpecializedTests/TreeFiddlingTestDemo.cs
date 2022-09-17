@@ -78,8 +78,8 @@ namespace Demos.SpecializedTests
             var width = 768;
             var height = 768;
             var scale = new Vector3(1, 1, 1);
-            //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
-            DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
+            DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
+            //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
             Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
@@ -98,15 +98,18 @@ namespace Demos.SpecializedTests
             {
                 Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, BufferPool);
             }, "Revamp", ref mesh.Tree);
-            //QuickList<int> subtreeReferences = new QuickList<int>(mesh.Tree.LeafCount, BufferPool);
-            //QuickList<int> treeletInternalNodes = new QuickList<int>(mesh.Tree.LeafCount, BufferPool);
-            //Tree.CreateBinnedResources(BufferPool, mesh.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
-            //BinnedTest(() =>
-            //{
-            //    subtreeReferences.Count = 0;
-            //    treeletInternalNodes.Count = 0;
-            //    mesh.Tree.BinnedRefine(0, ref subtreeReferences, mesh.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
-            //}, "Original", ref mesh.Tree);
+
+            DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh2);
+
+            QuickList<int> subtreeReferences = new QuickList<int>(mesh2.Tree.LeafCount, BufferPool);
+            QuickList<int> treeletInternalNodes = new QuickList<int>(mesh2.Tree.LeafCount, BufferPool);
+            Tree.CreateBinnedResources(BufferPool, mesh.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
+            BinnedTest(() =>
+            {
+                subtreeReferences.Count = 0;
+                treeletInternalNodes.Count = 0;
+                mesh2.Tree.BinnedRefine(0, ref subtreeReferences, mesh2.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
+            }, "Original", ref mesh.Tree);
 
             //RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
             //RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);

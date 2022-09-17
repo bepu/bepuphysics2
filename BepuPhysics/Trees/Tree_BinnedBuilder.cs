@@ -35,17 +35,17 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void BuildParentNode(BoundingBox4 a, BoundingBox4 b, Buffer<Node> nodes, int parentNodeIndex, int firstChildCount, int secondChildCount, out int aIndex, out int bIndex)
+        static void BuildParentNode(BoundingBox4 a, BoundingBox4 b, Buffer<Node> nodes, Buffer<int> indices, int parentNodeIndex, int aCount, int bCount, out int aIndex, out int bIndex)
         {
             ref var parentNode = ref nodes[0];
-            aIndex = parentNodeIndex + 1;
-            bIndex = parentNodeIndex + firstChildCount;//parentNodeIndex + 1 + (firstChildCount - 1)
+            aIndex = aCount == 1 ? indices[0] : parentNodeIndex + 1;
+            bIndex = bCount == 1 ? indices[^1] : parentNodeIndex + aCount;//parentNodeIndex + 1 + (aCount - 1)
             parentNode.A = Unsafe.As<BoundingBox4, NodeChild>(ref a);
             parentNode.B = Unsafe.As<BoundingBox4, NodeChild>(ref b);
             parentNode.A.Index = aIndex;
-            parentNode.A.LeafCount = firstChildCount;
+            parentNode.A.LeafCount = aCount;
             parentNode.B.Index = bIndex;
-            parentNode.B.LeafCount = secondChildCount;
+            parentNode.B.LeafCount = bCount;
         }
 
         struct Bins
@@ -93,6 +93,7 @@ namespace BepuPhysics.Trees
             var centroidMin = new Vector4(float.MaxValue);
             var centroidMax = new Vector4(float.MinValue);
             var leafCount = indices.Length;
+
             for (int i = 0; i < leafCount; ++i)
             {
                 ref var box = ref boundingBoxes[i];
@@ -115,29 +116,32 @@ namespace BepuPhysics.Trees
             {
                 //This node is completely degenerate; there is no 'good' ordering of the children. Pick a split in the middle and shrug.
                 //This shouldn't happen unless something is badly wrong with the input; no point in optimizing it.
-                var midpoint = indices.Length / 2;
-                var secondCount = indices.Length - midpoint;
+                var countA = indices.Length / 2;
+                var countB = indices.Length - countA;
                 //Still have to compute the child bounding boxes, because the centroid bounds span being zero doesn't imply that the full bounds are zero.
                 BoundingBox4 boundsA, boundsB;
                 boundsA.Min = new Vector4(float.MaxValue);
                 boundsA.Max = new Vector4(float.MinValue);
                 boundsB.Min = new Vector4(float.MaxValue);
                 boundsB.Max = new Vector4(float.MinValue);
-                for (int i = 0; i < midpoint; ++i)
+                for (int i = 0; i < countA; ++i)
                 {
                     ref var bounds = ref boundingBoxes[i];
                     boundsA.Min = Vector4.Min(bounds.Min, boundsA.Min);
                     boundsA.Max = Vector4.Max(bounds.Max, boundsA.Max);
                 }
-                for (int i = midpoint; i < indices.Length; ++i)
+                for (int i = countA; i < indices.Length; ++i)
                 {
                     ref var bounds = ref boundingBoxes[i];
                     boundsB.Min = Vector4.Min(bounds.Min, boundsB.Min);
                     boundsB.Max = Vector4.Max(bounds.Max, boundsB.Max);
                 }
-                BuildParentNode(boundsA, boundsB, nodes, parentNodeIndex, midpoint, secondCount, out var aIndex, out var bIndex);
-                BinnedBuilderInternal(indices.Slice(midpoint), boundingBoxes.Slice(midpoint), nodes.Slice(1, midpoint - 1), aIndex, bins);
-                BinnedBuilderInternal(indices.Slice(midpoint, secondCount), boundingBoxes.Slice(midpoint, secondCount), nodes.Slice(midpoint, secondCount - 1), bIndex, bins);
+                BuildParentNode(boundsA, boundsB, nodes, indices, parentNodeIndex, countA, countB, out var aIndex, out var bIndex);
+                if (countA > 1)
+                    BinnedBuilderInternal(indices.Slice(countA), boundingBoxes.Slice(countA), nodes.Slice(1, countA - 1), aIndex, bins);
+                if (countB > 1)
+                    BinnedBuilderInternal(indices.Slice(countA, countB), boundingBoxes.Slice(countA, countB), nodes.Slice(countA, countB - 1), bIndex, bins);
+                return;
             }
 
             for (int i = 0; i < binCount; ++i)
@@ -279,7 +283,7 @@ namespace BepuPhysics.Trees
                 bestboundsA = bins.BinBoundingBoxesScanX[bestSplitX - 1];
                 bestboundsB = bestBoundingBoxBX;
                 //Now we have the split index between bins. Go back through and sort the indices and bounds into two halves.
-                while(aCount + bCount < leafCount)
+                while (aCount + bCount < leafCount)
                 {
                     ref var box = ref boundingBoxes[aCount];
                     var centroid = box.Min + box.Max;
@@ -363,7 +367,12 @@ namespace BepuPhysics.Trees
             }
 
             {
-                BuildParentNode(bestboundsA, bestboundsB, nodes, parentNodeIndex, leafCount - bCount, bCount, out var aIndex, out var bIndex);
+                Debug.Assert(aCount + bCount == leafCount);
+                BuildParentNode(bestboundsA, bestboundsB, nodes, indices, parentNodeIndex, aCount, bCount, out var aIndex, out var bIndex);
+                if (aCount > 1)
+                    BinnedBuilderInternal(indices.Slice(aCount), boundingBoxes.Slice(aCount), nodes.Slice(1, aCount - 1), aIndex, bins);
+                if (bCount > 1)
+                    BinnedBuilderInternal(indices.Slice(aCount, bCount), boundingBoxes.Slice(aCount, bCount), nodes.Slice(aCount, bCount - 1), bIndex, bins);
             }
 
         }
@@ -372,7 +381,7 @@ namespace BepuPhysics.Trees
         {
             var leafCount = indices.Length;
             Debug.Assert(boundingBoxes.Length >= leafCount, "The bounding boxes provided must cover the range of indices provided.");
-            Debug.Assert(nodes.Length > leafCount - 1, "The output nodes must be able to contain the nodes created for the leaves.");
+            Debug.Assert(nodes.Length >= leafCount - 1, "The output nodes must be able to contain the nodes created for the leaves.");
             if (leafCount == 0)
                 return;
             if (leafCount == 1)
