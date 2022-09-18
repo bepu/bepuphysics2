@@ -199,17 +199,17 @@ namespace Demos.SpecializedTests
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
-            var mesh2 = new Mesh(triangles, Vector3.One, BufferPool);
+            //var mesh2 = new Mesh(triangles, Vector3.One, BufferPool);
 
-            QuickList<int> subtreeReferences = new(mesh2.Tree.LeafCount, BufferPool);
-            QuickList<int> treeletInternalNodes = new(mesh2.Tree.LeafCount, BufferPool);
-            Tree.CreateBinnedResources(BufferPool, mesh2.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
-            BinnedTest(() =>
-            {
-                subtreeReferences.Count = 0;
-                treeletInternalNodes.Count = 0;
-                mesh2.Tree.BinnedRefine(0, ref subtreeReferences, mesh2.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
-            }, "Original", ref mesh2.Tree);
+            //QuickList<int> subtreeReferences = new(mesh2.Tree.LeafCount, BufferPool);
+            //QuickList<int> treeletInternalNodes = new(mesh2.Tree.LeafCount, BufferPool);
+            //Tree.CreateBinnedResources(BufferPool, mesh2.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
+            //BinnedTest(() =>
+            //{
+            //    subtreeReferences.Count = 0;
+            //    treeletInternalNodes.Count = 0;
+            //    mesh2.Tree.BinnedRefine(0, ref subtreeReferences, mesh2.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
+            //}, "Original", ref mesh2.Tree);
 
             //RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
             //RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);

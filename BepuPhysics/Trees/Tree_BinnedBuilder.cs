@@ -9,6 +9,7 @@ using System.Net;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Threading.Tasks.Sources;
 
 namespace BepuPhysics.Trees
@@ -95,24 +96,15 @@ namespace BepuPhysics.Trees
 
         struct BoundsComparerX : IComparerRef<BoundingBox4>
         {
-            public int Compare(ref BoundingBox4 a, ref BoundingBox4 b)
-            {
-                return (a.Min + a.Max).X.CompareTo((b.Min + b.Max).X);
-            }
+            public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.X + a.Max.X) > (b.Min.X + b.Max.X) ? -1 : 1;
         }
         struct BoundsComparerY : IComparerRef<BoundingBox4>
         {
-            public int Compare(ref BoundingBox4 a, ref BoundingBox4 b)
-            {
-                return (a.Min + a.Max).Y.CompareTo((b.Min + b.Max).Y);
-            }
+            public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Y + a.Max.Y) > (b.Min.Y + b.Max.Y) ? -1 : 1;
         }
         struct BoundsComparerZ : IComparerRef<BoundingBox4>
         {
-            public int Compare(ref BoundingBox4 a, ref BoundingBox4 b)
-            {
-                return (a.Min + a.Max).Z.CompareTo((b.Min + b.Max).Z);
-            }
+            public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Z + a.Max.Z) > (b.Min.Z + b.Max.Z) ? -1 : 1;
         }
         static unsafe void MicroSweepForBinnedBuilder(Vector4 centroidMin, Vector4 centroidMax, Buffer<int> indices, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Bins bins)
         {
