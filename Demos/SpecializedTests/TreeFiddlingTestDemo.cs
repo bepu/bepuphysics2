@@ -17,6 +17,7 @@ using BepuPhysics.Constraints;
 using BepuPhysics.Collidables;
 using static System.Formats.Asn1.AsnWriter;
 using static OpenTK.Graphics.OpenGL.GL;
+using System.Xml.Linq;
 
 namespace Demos.SpecializedTests
 {
@@ -109,7 +110,7 @@ namespace Demos.SpecializedTests
             BufferPool.Return(ref vertices);
             //Scramble the heck out of its triangles.
             var random = new Random(5);
-            for (int index = 0; index < triangles.Length; ++index)
+            for (int index = 0; index < triangles.Length - 1; ++index)
             {
                 ref var a = ref triangles[index];
                 ref var b = ref triangles[random.Next(index + 1, triangles.Length)];
@@ -125,13 +126,24 @@ namespace Demos.SpecializedTests
             BufferPool.Take<Triangle>(triangleCount, out var triangles);
             for (int i = 0; i < triangleCount; ++i)
             {
-                var startPoint = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * (bounds.Max - bounds.Min) + bounds.Min;
-                var uniform = random.NextSingle();
-                var size = MathF.Pow(uniform, 200) * (maximumSize - minimumSize) + minimumSize;
+                var startPoint = new Vector3(random.NextSingle() * random.NextSingle(), random.NextSingle(), random.NextSingle() * random.NextSingle()) * (bounds.Max - bounds.Min) + bounds.Min;
+                var size = new Vector3(MathF.Pow(random.NextSingle(), 200), MathF.Pow(random.NextSingle(), 200), MathF.Pow(random.NextSingle(), 200)) * (maximumSize - minimumSize) + new Vector3(minimumSize);
+
                 ref var triangle = ref triangles[i];
-                triangle.A = startPoint + (2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One) * size;
-                triangle.B = startPoint + (2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One) * size;
-                triangle.C = startPoint + (2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One) * size;
+                triangle.A = (2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One) * size;
+                triangle.B = (2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One) * size;
+                triangle.C = (2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One) * size;
+
+                if (random.NextSingle() < 0.75f)
+                {
+                    var rotation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle())), random.NextSingle() * MathF.PI * 2);
+                    triangle.A = Vector3.Transform(triangle.A, rotation);
+                    triangle.B = Vector3.Transform(triangle.B, rotation);
+                    triangle.C = Vector3.Transform(triangle.C, rotation);
+                }
+                triangle.A += startPoint;
+                triangle.B += startPoint;
+                triangle.C += startPoint;
             }
             return triangles;
         }
@@ -145,20 +157,20 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
 
             //Create a mesh.
-            var width = 256;
-            var height = 256;
+            var width = 768;
+            var height = 768;
             var scale = new Vector3(1, 1, 1);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
 
             //var triangles = CreateDeformedPlaneTriangles(width, height, scale);
-            var triangles = CreateRandomSoupTriangles(new BoundingBox(new(width / -2f, scale.Y * -2, height / -2f), new(width / 2f, scale.Y * 2, height / 2f)), (width - 1) * (height - 1) * 2, 0.5f, 50f);
+            var triangles = CreateRandomSoupTriangles(new BoundingBox(new(width / -2f, scale.Y * -2, height / -2f), new(width / 2f, scale.Y * 2, height / 2f)), (width - 1) * (height - 1) * 2, 0.5f, 100f);
             var mesh = new Mesh(triangles, Vector3.One, BufferPool);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
 
             Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
             Console.WriteLine($"sweep SAH: {mesh.Tree.MeasureCostMetric()}, cache quality: {mesh.Tree.MeasureCacheQuality()}");
+            Console.WriteLine($"sweep bounds: A ({mesh.Tree.Nodes[0].A.Min}, {mesh.Tree.Nodes[0].B.Max}), B ({mesh.Tree.Nodes[0].B.Min}, {mesh.Tree.Nodes[0].B.Max})");
 
             BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
             BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
@@ -173,8 +185,19 @@ namespace Demos.SpecializedTests
             BinnedTest(() =>
             {
                 Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, BufferPool);
+                for (int i = 0; i < mesh.Tree.NodeCount; ++i)
+                {
+                    ref var node = ref mesh.Tree.Nodes[i];
+                    ref var a = ref node.A;
+                    ref var b = ref node.B;
+                    if (a.Index < 0)
+                        mesh.Tree.Leaves[Tree.Encode(a.Index)] = new Leaf(i, 0);
+                    if (b.Index < 0)
+                        mesh.Tree.Leaves[Tree.Encode(b.Index)] = new Leaf(i, 1);
+                }
             }, "Revamp", ref mesh.Tree);
 
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
             var mesh2 = new Mesh(triangles, Vector3.One, BufferPool);
 
@@ -193,6 +216,8 @@ namespace Demos.SpecializedTests
 
             //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlapsContiguousPrepass(ref handler, BufferPool), mesh.Tree.LeafCount, "Prepass");
             //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlaps(ref handler), mesh.Tree.LeafCount, "Original");
+
+            Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 10, 0), 1, Simulation.Shapes, new Sphere(0.5f)));
         }
 
         delegate void TestFunction(ref OverlapHandler handler);
