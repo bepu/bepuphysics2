@@ -68,30 +68,19 @@ namespace BepuPhysics.Trees
             public Buffer<int> BinLeafCountsZ;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static float ComputeBoundsMetric(BoundingBox4 bounds)
         {
             return ComputeBoundsMetric(bounds.Min, bounds.Max);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static float ComputeBoundsMetric(Vector4 min, Vector4 max)
         {
             //Note that we just use the SAH. While we are primarily interested in volume queries for the purposes of collision detection, the topological difference
             //between a volume heuristic and surface area heuristic isn't huge. There is, however, one big annoying issue that volume heuristics run into:
             //all bounding boxes with one extent equal to zero have zero cost. Surface area approaches avoid this hole simply.
-            if (Vector128.IsHardwareAccelerated)
-            {
-                var span = max - min;
-                var shuffled = Vector128.Shuffle(span.AsVector128(), Vector128.Create(1, 2, 0, 0));
-                var zeroedUpper = shuffled.WithElement(3, 0);
-                return Vector128.Dot(span.AsVector128(), zeroedUpper);
-            }
-            else
-            {
-                var offset = max - min;
-                //Note that this is merely proportional to surface area. Being scaled by a constant factor is irrelevant.
-                return offset.X * offset.Y + offset.Y * offset.Z + offset.Z * offset.X;
-            }
+            var offset = max - min;
+            //Note that this is merely proportional to surface area. Being scaled by a constant factor is irrelevant.
+            return offset.X * offset.Y + offset.Y * offset.Z + offset.Z * offset.X;
+
         }
 
         struct BoundsComparerX : IComparerRef<BoundingBox4>
