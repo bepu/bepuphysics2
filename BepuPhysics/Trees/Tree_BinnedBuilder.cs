@@ -16,7 +16,7 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-        const int MaximumBinCountRevamp = 128;
+        const int MaximumBinCountRevamp = 64;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static unsafe Int4 Truncate(Vector4 v)
         {
@@ -294,7 +294,7 @@ namespace BepuPhysics.Trees
                 return;
             }
 
-            if (leafCount < 8)
+            if (leafCount <= 8)
             {
                 MicroSweepForBinnedBuilder(centroidMin, centroidMax, indices, boundingBoxes, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, bins);
                 return;
@@ -763,90 +763,21 @@ namespace BepuPhysics.Trees
                 return;
             }
 
-            if (leafCount < 8)
+            if (leafCount <= 32)
             {
                 MicroSweepForBinnedBuilderSingleAxis(centroidMin, centroidMax, indices, boundingBoxes, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, bins);
                 return;
             }
 
-            var binCount = Math.Min(MaximumBinCountRevamp, Math.Max((int)(leafCount * 0.1f), 4));
+            var useX = centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z;
+            var useY = centroidSpan.Y > centroidSpan.Z;
+
+            var binCount = Math.Min(MaximumBinCountRevamp, Math.Max((int)(leafCount * 0.1f), 16));
             Debug.Assert(bins.BinBoundingBoxes.Length >= binCount);
+
             var offsetToBinIndex = new Vector4(binCount) / centroidSpan;
             //Avoid letting NaNs into the offsetToBinIndex scale.
             offsetToBinIndex = Vector128.ConditionalSelect(axisIsDegenerate, Vector128<float>.Zero, offsetToBinIndex.AsVector128()).AsVector4();
-            BoundingBox4 bestBoundsA, bestBoundsB;
-            int aCount, bCount;
-            //Use generic specialization to avoid branching on every bin selection.
-            if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
-            {
-                var indexer = new BinIndexerX { Min = centroidMin.X, MaximumIndex = binCount - 1, Scale = offsetToBinIndex.X };
-                ComputeBinnedSplit(indices, boundingBoxes, binCount, bins, indexer, out bestBoundsA, out bestBoundsB, out aCount, out bCount);
-            }
-            else if (centroidSpan.Y > centroidSpan.Z)
-            {
-                var indexer = new BinIndexerY { Min = centroidMin.Y, MaximumIndex = binCount - 1, Scale = offsetToBinIndex.Y };
-                ComputeBinnedSplit(indices, boundingBoxes, binCount, bins, indexer, out bestBoundsA, out bestBoundsB, out aCount, out bCount);
-            }
-            else
-            {
-                var indexer = new BinIndexerZ { Min = centroidMin.Z, MaximumIndex = binCount - 1, Scale = offsetToBinIndex.Z };
-                ComputeBinnedSplit(indices, boundingBoxes, binCount, bins, indexer, out bestBoundsA, out bestBoundsB, out aCount, out bCount);
-            }
-
-
-            {
-                Debug.Assert(aCount + bCount == leafCount);
-                BuildNode(bestBoundsA, bestBoundsB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, aCount, bCount, out var aIndex, out var bIndex);
-                if (aCount > 1)
-                    BinnedBuilderInternalSingleAxis(indices.Slice(aCount), boundingBoxes.Slice(aCount), nodes.Slice(1, aCount - 1), metanodes.Slice(1, aCount - 1), aIndex, nodeIndex, 0, bins);
-                if (bCount > 1)
-                    BinnedBuilderInternalSingleAxis(indices.Slice(aCount, bCount), boundingBoxes.Slice(aCount, bCount), nodes.Slice(aCount, bCount - 1), metanodes.Slice(aCount, bCount - 1), bIndex, nodeIndex, 1, bins);
-            }
-        }
-
-        interface IBinIndexer
-        {
-            int ComputeBinIndex(Vector4 centroid);
-        }
-
-        struct BinIndexerX : IBinIndexer
-        {
-            public float Min;
-            public float Scale;
-            public float MaximumIndex;
-            public int ComputeBinIndex(Vector4 centroid)
-            {
-                return (int)MathF.Min(MaximumIndex, ((centroid.X - Min) * Scale));
-            }
-        }
-        struct BinIndexerY : IBinIndexer
-        {
-            public float Min;
-            public float Scale;
-            public float MaximumIndex;
-            public int ComputeBinIndex(Vector4 centroid)
-            {
-                return (int)MathF.Min(MaximumIndex, ((centroid.Y - Min) * Scale));
-            }
-        }
-        struct BinIndexerZ : IBinIndexer
-        {
-            public float Min;
-            public float Scale;
-            public float MaximumIndex;
-            public int ComputeBinIndex(Vector4 centroid)
-            {
-                return (int)MathF.Min(MaximumIndex, ((centroid.Z - Min) * Scale));
-            }
-        }
-
-        private static unsafe void ComputeBinnedSplit<TBinIndexer>(
-            Buffer<int> indices, Buffer<BoundingBox4> boundingBoxes, int binCount, in BinsSingleAxis bins, TBinIndexer indexer,
-            out BoundingBox4 bestboundsA, out BoundingBox4 bestboundsB, out int aCount, out int bCount)
-            where TBinIndexer : unmanaged, IBinIndexer
-        {
-            var leafCount = indices.Length;
-
 
 
             for (int i = 0; i < binCount; ++i)
@@ -862,9 +793,10 @@ namespace BepuPhysics.Trees
             {
                 ref var box = ref boundingBoxes[i];
                 var centroid = box.Min + box.Max;
-                var binIndexForLeaf = indexer.ComputeBinIndex(centroid);
+                var binIndicesForLeafContinuous = Vector4.Min(maximumBinIndex, (centroid - centroidMin) * offsetToBinIndex);
                 //Note that we don't store out any of the indices into per-bin lists here. We only *really* want two final groups for the children,
                 //and we can easily compute those by performing another scan. It requires recomputing the bin indices, but that's really not much of a concern.
+                var binIndexForLeaf = (int)(useX ? binIndicesForLeafContinuous.X : useY ? binIndicesForLeafContinuous.Y : binIndicesForLeafContinuous.Z);
                 ref var xBounds = ref bins.BinBoundingBoxes[binIndexForLeaf];
                 xBounds.Min = Vector4.Min(xBounds.Min, box.Min);
                 xBounds.Max = Vector4.Max(xBounds.Max, box.Max);
@@ -915,20 +847,20 @@ namespace BepuPhysics.Trees
             }
 
             //Choose the best SAH from all axes and split the indices/bounds into two halves for the children to operate on.
-            int splitIndex;
-            bCount = 0;
-            aCount = 0;
-            splitIndex = bestSplit;
-            bestboundsA = bins.BinBoundingBoxesScan[bestSplit - 1];
-            bestboundsB = bestBoundingBoxB;
+            var bCount = 0;
+            var aCount = 0;
+            var splitIndex = bestSplit;
+            var bestboundsA = bins.BinBoundingBoxesScan[bestSplit - 1];
+            var bestboundsB = bestBoundingBoxB;
             //Now we have the split index between bins. Go back through and sort the indices and bounds into two halves.
             while (aCount + bCount < leafCount)
             {
                 ref var box = ref boundingBoxes[aCount];
                 var centroid = box.Min + box.Max;
+                var binIndicesForLeafContinuous = Vector4.Min(maximumBinIndex, (centroid - centroidMin) * offsetToBinIndex);
                 //Note that we don't store out any of the indices into per-bin lists here. We only *really* want two final groups for the children,
                 //and we can easily compute those by performing another scan. It requires recomputing the bin indices, but that's really not much of a concern.
-                var binIndex = indexer.ComputeBinIndex(centroid);
+                var binIndex = (int)(useX ? binIndicesForLeafContinuous.X : useY ? binIndicesForLeafContinuous.Y : binIndicesForLeafContinuous.Z);
                 if (binIndex >= splitIndex)
                 {
                     //Belongs to B. Swap it.
@@ -943,6 +875,15 @@ namespace BepuPhysics.Trees
                     //Belongs to A, no movement necessary.
                     ++aCount;
                 }
+            }
+
+            {
+                Debug.Assert(aCount + bCount == leafCount);
+                BuildNode(bestboundsA, bestboundsB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, aCount, bCount, out var aIndex, out var bIndex);
+                if (aCount > 1)
+                    BinnedBuilderInternalSingleAxis(indices.Slice(aCount), boundingBoxes.Slice(aCount), nodes.Slice(1, aCount - 1), metanodes.Slice(1, aCount - 1), aIndex, nodeIndex, 0, bins);
+                if (bCount > 1)
+                    BinnedBuilderInternalSingleAxis(indices.Slice(aCount, bCount), boundingBoxes.Slice(aCount, bCount), nodes.Slice(aCount, bCount - 1), metanodes.Slice(aCount, bCount - 1), bIndex, nodeIndex, 1, bins);
             }
         }
 
