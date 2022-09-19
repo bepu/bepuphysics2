@@ -199,6 +199,21 @@ namespace Demos.SpecializedTests
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
+            BinnedTest(() =>
+            {
+                Tree.BinnedBuilderSingleAxis(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, BufferPool);
+                for (int i = 0; i < mesh.Tree.NodeCount; ++i)
+                {
+                    ref var node = ref mesh.Tree.Nodes[i];
+                    ref var a = ref node.A;
+                    ref var b = ref node.B;
+                    if (a.Index < 0)
+                        mesh.Tree.Leaves[Tree.Encode(a.Index)] = new Leaf(i, 0);
+                    if (b.Index < 0)
+                        mesh.Tree.Leaves[Tree.Encode(b.Index)] = new Leaf(i, 1);
+                }
+            }, "Revamp Single Axis", ref mesh.Tree);
+
             //var mesh2 = new Mesh(triangles, Vector3.One, BufferPool);
 
             //QuickList<int> subtreeReferences = new(mesh2.Tree.LeafCount, BufferPool);
