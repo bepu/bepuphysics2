@@ -344,29 +344,10 @@ namespace BepuPhysics.Trees
 
             //Unfortunately, unrolling has a slight benefit here.
             var maximumBinIndex = new Vector4(binCount - 1);
-            const int unrollCount = 2;
-            var unrollIterations = leafCount / unrollCount;
-            var unrollLeaves = unrollIterations * unrollCount;
 
             //Note that we don't store out any of the indices into per-bin lists here. We only *really* want two final groups for the children,
             //and we can easily compute those by performing another scan. It requires recomputing the bin indices, but that's really not much of a concern.
-            for (int i = 0; i < unrollLeaves; i += unrollCount)
-            {
-                ref var box0 = ref boundingBoxes[i];
-                ref var box1 = ref boundingBoxes[i + 1];
-                var binIndex0 = ComputeBinIndex(centroidMin, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, box0);
-                var binIndex1 = ComputeBinIndex(centroidMin, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, box1);
-                ref var xBounds0 = ref bins.BinBoundingBoxes[binIndex0];
-                ref var xBounds1 = ref bins.BinBoundingBoxes[binIndex1];
-                xBounds0.Min = Vector4.Min(xBounds0.Min, box0.Min);
-                xBounds0.Max = Vector4.Max(xBounds0.Max, box0.Max);
-                xBounds1.Min = Vector4.Min(xBounds1.Min, box1.Min);
-                xBounds1.Max = Vector4.Max(xBounds1.Max, box1.Max);
-                ++bins.BinLeafCounts[binIndex0];
-                ++bins.BinLeafCounts[binIndex1];
-            }
-
-            for (int i = unrollIterations * unrollCount; i < leafCount; ++i)
+            for (int i = 0; i < leafCount; ++i)
             {
                 ref var box = ref boundingBoxes[i];
                 var binIndex = ComputeBinIndex(centroidMin, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, box);
