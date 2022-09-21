@@ -9,6 +9,7 @@ using System.Net;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 using System.Threading.Tasks.Sources;
 
@@ -54,20 +55,6 @@ namespace BepuPhysics.Trees
             node.B.LeafCount = bCount;
         }
 
-        struct Bins
-        {
-            public Buffer<BoundingBox4> BinBoundingBoxesX;
-            public Buffer<BoundingBox4> BinBoundingBoxesY;
-            public Buffer<BoundingBox4> BinBoundingBoxesZ;
-            public Buffer<BoundingBox4> BinBoundingBoxesScanX;
-            public Buffer<BoundingBox4> BinBoundingBoxesScanY;
-            public Buffer<BoundingBox4> BinBoundingBoxesScanZ;
-
-            public Buffer<int> BinLeafCountsX;
-            public Buffer<int> BinLeafCountsY;
-            public Buffer<int> BinLeafCountsZ;
-        }
-
         internal static float ComputeBoundsMetric(BoundingBox4 bounds)
         {
             return ComputeBoundsMetric(bounds.Min, bounds.Max);
@@ -81,6 +68,12 @@ namespace BepuPhysics.Trees
             //Note that this is merely proportional to surface area. Being scaled by a constant factor is irrelevant.
             return offset.X * offset.Y + offset.Y * offset.Z + offset.Z * offset.X;
 
+        }
+        struct Bins
+        {
+            public Buffer<BoundingBox4> BinBoundingBoxes;
+            public Buffer<BoundingBox4> BinBoundingBoxesScan;
+            public Buffer<int> BinLeafCounts;
         }
 
         struct BoundsComparerX : IComparerRef<BoundingBox4>
@@ -114,7 +107,7 @@ namespace BepuPhysics.Trees
         //    max = Vector3.Max(nodes[nodeIndex].B.Max, nodes[nodeIndex].B.Max);
         //}
 
-        static unsafe void MicroSweepForBinnedBuilder(Vector4 centroidMin, Vector4 centroidMax, Buffer<int> indices, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, BinsSingleAxis bins)
+        static unsafe void MicroSweepForBinnedBuilder(Vector4 centroidMin, Vector4 centroidMax, Buffer<int> indices, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Bins bins)
         {
             //This is a very small scale sweep build.
             var leafCount = indices.Length;
@@ -242,7 +235,32 @@ namespace BepuPhysics.Trees
             }
         }
 
-        static unsafe void BinnedBuilderInternal(Buffer<int> indices, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, in BinsSingleAxis bins)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe int ComputeBinIndex(Vector4 centroidMin, bool useX, bool useY, Vector128<int> permuteMask, int axisIndex, Vector4 offsetToBinIndex, Vector4 maximumBinIndex, in BoundingBox4 box)
+        {
+            var centroid = box.Min + box.Max;
+            var binIndicesForLeafContinuous = Vector4.Min(maximumBinIndex, (centroid - centroidMin) * offsetToBinIndex);
+            //Note that we don't store out any of the indices into per-bin lists here. We only *really* want two final groups for the children,
+            //and we can easily compute those by performing another scan. It requires recomputing the bin indices, but that's really not much of a concern.
+            int binIndex;
+            //To extract the desired lane, we need to use a variable shuffle mask. At the time of writing, the Vector128 cross platform shuffle did not like variable masks.
+            if (Avx.IsSupported)
+            {
+                binIndex = (int)Vector128.ToScalar(Avx.PermuteVar(binIndicesForLeafContinuous.AsVector128(), permuteMask));
+            }
+            else if (Vector128.IsHardwareAccelerated)
+            {
+                binIndex = (int)Vector128.GetElement(binIndicesForLeafContinuous.AsVector128(), axisIndex);
+            }
+            else
+            {
+                binIndex = (int)(useX ? binIndicesForLeafContinuous.X : useY ? binIndicesForLeafContinuous.Y : binIndicesForLeafContinuous.Z);
+            }
+
+            return binIndex;
+        }
+
+        static unsafe void BinnedBuilderInternal(Buffer<int> indices, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, in Bins bins)
         {
             var centroidMin = new Vector4(float.MaxValue);
             var centroidMax = new Vector4(float.MinValue);
@@ -303,6 +321,9 @@ namespace BepuPhysics.Trees
 
             var useX = centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z;
             var useY = centroidSpan.Y > centroidSpan.Z;
+            //These will be used conditionally based on what hardware acceleration is available. Pretty minor detail.
+            var permuteMask = Vector128.Create(useX ? 0 : useY ? 1 : 2, 0, 0, 0);
+            var axisIndex = useX ? 0 : useY ? 1 : 2;
 
             var binCount = Math.Min(MaximumBinCountRevamp, Math.Max((int)(leafCount * .1f), 16));
             Debug.Assert(bins.BinBoundingBoxes.Length >= binCount);
@@ -324,15 +345,13 @@ namespace BepuPhysics.Trees
             for (int i = 0; i < leafCount; ++i)
             {
                 ref var box = ref boundingBoxes[i];
-                var centroid = box.Min + box.Max;
-                var binIndicesForLeafContinuous = Vector4.Min(maximumBinIndex, (centroid - centroidMin) * offsetToBinIndex);
+                var binIndex = ComputeBinIndex(centroidMin, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, box);
                 //Note that we don't store out any of the indices into per-bin lists here. We only *really* want two final groups for the children,
                 //and we can easily compute those by performing another scan. It requires recomputing the bin indices, but that's really not much of a concern.
-                var binIndexForLeaf = (int)(useX ? binIndicesForLeafContinuous.X : useY ? binIndicesForLeafContinuous.Y : binIndicesForLeafContinuous.Z);
-                ref var xBounds = ref bins.BinBoundingBoxes[binIndexForLeaf];
+                ref var xBounds = ref bins.BinBoundingBoxes[binIndex];
                 xBounds.Min = Vector4.Min(xBounds.Min, box.Min);
                 xBounds.Max = Vector4.Max(xBounds.Max, box.Max);
-                ++bins.BinLeafCounts[binIndexForLeaf];
+                ++bins.BinLeafCounts[binIndex];
             }
 
             //Identify the split index by examining the SAH of very split option.
@@ -388,17 +407,25 @@ namespace BepuPhysics.Trees
             while (aCount + bCount < leafCount)
             {
                 ref var box = ref boundingBoxes[aCount];
-                var centroid = box.Min + box.Max;
-                var binIndicesForLeafContinuous = Vector4.Min(maximumBinIndex, (centroid - centroidMin) * offsetToBinIndex);
-                //Note that we don't store out any of the indices into per-bin lists here. We only *really* want two final groups for the children,
-                //and we can easily compute those by performing another scan. It requires recomputing the bin indices, but that's really not much of a concern.
-                var binIndex = (int)(useX ? binIndicesForLeafContinuous.X : useY ? binIndicesForLeafContinuous.Y : binIndicesForLeafContinuous.Z);
+                var binIndex = ComputeBinIndex(centroidMin, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, box);
                 if (binIndex >= splitIndex)
                 {
                     //Belongs to B. Swap it.
                     var targetIndex = leafCount - bCount - 1;
                     Helpers.Swap(ref indices[targetIndex], ref indices[aCount]);
-                    Helpers.Swap(ref boundingBoxes[targetIndex], ref boundingBoxes[aCount]);
+                    if (Vector256.IsHardwareAccelerated)
+                    {
+                        var targetMemory = (byte*)(boundingBoxes.Memory + targetIndex);
+                        var aCountMemory = (byte*)(boundingBoxes.Memory + aCount);
+                        var targetVector = Vector256.Load(targetMemory);
+                        var aCountVector = Vector256.Load(aCountMemory);
+                        Vector256.Store(aCountVector, targetMemory);
+                        Vector256.Store(targetVector, aCountMemory);
+                    }
+                    else
+                    {
+                        Helpers.Swap(ref boundingBoxes[targetIndex], ref boundingBoxes[aCount]);
+                    }
                     ++bCount;
                     //(Note that we still need to examine what we just swapped into the slot! It may belong to B too!)
                 }
@@ -419,12 +446,6 @@ namespace BepuPhysics.Trees
             }
         }
 
-        struct BinsSingleAxis
-        {
-            public Buffer<BoundingBox4> BinBoundingBoxes;
-            public Buffer<BoundingBox4> BinBoundingBoxesScan;
-            public Buffer<int> BinLeafCounts;
-        }
         public static unsafe void BinnedBuilder(Buffer<int> indices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, BufferPool pool)
         {
             var leafCount = indices.Length;
@@ -447,7 +468,7 @@ namespace BepuPhysics.Trees
             nodes = nodes.Slice(leafCount - 1);
 
             var binBoundsMemory = stackalloc BoundingBox4[MaximumBinCountRevamp * 2];
-            BinsSingleAxis bins;
+            Bins bins;
             bins.BinBoundingBoxes = new Buffer<BoundingBox4>(binBoundsMemory, MaximumBinCountRevamp);
             bins.BinBoundingBoxesScan = new Buffer<BoundingBox4>(binBoundsMemory + MaximumBinCountRevamp, MaximumBinCountRevamp);
 

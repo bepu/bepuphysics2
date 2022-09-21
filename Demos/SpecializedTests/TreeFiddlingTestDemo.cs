@@ -182,7 +182,7 @@ namespace Demos.SpecializedTests
                 bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
                 bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
                 leafIndices[i] = Tree.Encode(i);
-            }        
+            }
 
             BinnedTest(() =>
             {
@@ -198,6 +198,7 @@ namespace Demos.SpecializedTests
                         mesh.Tree.Leaves[Tree.Encode(b.Index)] = new Leaf(i, 1);
                 }
             }, "Revamp Single Axis", ref mesh.Tree);
+
 
             //var mesh2 = new Mesh(triangles, Vector3.One, BufferPool);
 
