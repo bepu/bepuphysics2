@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
+using BepuPhysics.Constraints.Contact;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
@@ -9,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
@@ -75,6 +77,7 @@ namespace BepuPhysics.Trees
             public Buffer<BoundingBox4> BinBoundingBoxes;
             public Buffer<BoundingBox4> BinBoundingBoxesScan;
             public Buffer<int> BinLeafCounts;
+
         }
 
         struct BoundsComparerX : IComparerRef<BoundingBox4>
@@ -89,6 +92,7 @@ namespace BepuPhysics.Trees
         {
             public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Z + a.Max.Z) > (b.Min.Z + b.Max.Z) ? -1 : 1;
         }
+
 
         //static void ValidateNode(int nodeIndex, Buffer<Node> nodes, out Vector3 min, out Vector3 max)
         //{
@@ -108,6 +112,21 @@ namespace BepuPhysics.Trees
         //    max = Vector3.Max(nodes[nodeIndex].B.Max, nodes[nodeIndex].B.Max);
         //}
 
+        [StructLayout(LayoutKind.Sequential)]
+        struct BoundsSortable
+        {
+            public float Key;
+            public int Index;
+        }
+
+        struct AxisComparer : IComparerRef<BoundsSortable>
+        {
+            public int Compare(ref BoundsSortable a, ref BoundsSortable b)
+            {
+                return a.Key > b.Key ? -1 : 1;
+            }
+        }
+
         static unsafe void MicroSweepForBinnedBuilder(Vector4 centroidMin, Vector4 centroidMax, Buffer<int> indices, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Bins bins)
         {
             //This is a very small scale sweep build.
@@ -118,21 +137,74 @@ namespace BepuPhysics.Trees
                 return;
             }
             var centroidSpan = centroidMax - centroidMin;
+
+            Debug.Assert(bins.BinBoundingBoxes.Length >= leafCount);
+            //Repurpose the bins memory so we don't need to allocate any extra. The bins aren't in use right now anyway.
+            var sortables = new Buffer<BoundsSortable>(bins.BinBoundingBoxes.Memory, leafCount);
+            var boundingBoxCache = bins.BinBoundingBoxesScan;
+            var indicesCache = new Buffer<int>((int*)((BoundsSortable*)bins.BinBoundingBoxes.Memory + leafCount), leafCount);
+
+            //Store the bounds/indices into temporary memory so that we can shuffle them trivially once we're done with the sort.
+            //Doing this as a prepass means we don't have to worry about doing heavy swaps in the sort.
+            boundingBoxes.CopyTo(0, boundingBoxCache, 0, leafCount);
+            indices.CopyTo(0, indicesCache, 0, leafCount);
+            //Compute the axis centroids up front to avoid having to recompute them during a sort.
             if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
             {
-                var comparer = new BoundsComparerX();
-                QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
+                for (int i = 0; i < leafCount; ++i)
+                {
+                    ref var bounds = ref boundingBoxes[i];
+                    ref var target = ref sortables[i];
+                    target.Key = (bounds.Min + bounds.Max).X;
+                    target.Index = i;
+                }
             }
             else if (centroidSpan.Y > centroidSpan.Z)
             {
-                var comparer = new BoundsComparerY();
-                QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
+                for (int i = 0; i < leafCount; ++i)
+                {
+                    ref var bounds = ref boundingBoxes[i];
+                    ref var target = ref sortables[i];
+                    target.Key = (bounds.Min + bounds.Max).Y;
+                    target.Index = i;
+                }
             }
             else
             {
-                var comparer = new BoundsComparerZ();
-                QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
+                for (int i = 0; i < leafCount; ++i)
+                {
+                    ref var bounds = ref boundingBoxes[i];
+                    ref var target = ref sortables[i];
+                    target.Key = (bounds.Min + bounds.Max).Z;
+                    target.Index = i;
+                }
             }
+            var comparer2 = new AxisComparer();
+            QuickSort.Sort(ref sortables[0], 0, leafCount - 1, ref comparer2);
+
+            //Now that we know the target indices, copy things back.
+            for (int i =0; i < leafCount; ++i)
+            {
+                var sourceIndex = sortables[i].Index;
+                boundingBoxes[i] = boundingBoxCache[sourceIndex];
+                indices[i] = indicesCache[sourceIndex];
+            }
+
+            //if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
+            //{
+            //    var comparer = new BoundsComparerX();
+            //    QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
+            //}
+            //else if (centroidSpan.Y > centroidSpan.Z)
+            //{
+            //    var comparer = new BoundsComparerY();
+            //    QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
+            //}
+            //else
+            //{
+            //    var comparer = new BoundsComparerZ();
+            //    QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
+            //}
 
             Debug.Assert(leafCount <= MaximumBinCountRevamp, "We're reusing the bin resources under the assumption that this is only ever called when there are less leaves than maximum bins.");
             //Identify the split index by examining the SAH of very split option.
