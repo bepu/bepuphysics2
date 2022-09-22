@@ -17,7 +17,7 @@ namespace BepuUtilities.Collections
     public static class VectorizedSorts
     {
         /// <summary>
-        /// Computes the mapping from current index to sorted index for all elements in the paddedKeys. The paddedKeys buffer is not actually sorted. 
+        /// Computes the mapping from current index to ascending sorted index for all elements in the paddedKeys. The paddedKeys buffer is not actually sorted. 
         /// <para>This function requires that <see cref="Vector256.IsHardwareAccelerated"/> or <see cref="Vector128.IsHardwareAccelerated"/>.</para>
         /// </summary>
         /// <param name="paddedKeys">Padded keys to compute sorted indices for. This buffer's contents will not be mutated.
@@ -140,7 +140,7 @@ namespace BepuUtilities.Collections
 
 
         /// <summary>
-        /// Computes the mapping from current index to sorted index for all elements in the paddedKeys. The paddedKeys buffer is not actually sorted.
+        /// Computes the mapping from current index to ascending sorted index for all elements in the paddedKeys. The paddedKeys buffer is not actually sorted.
         /// <para>This function requires that <see cref="Vector256.IsHardwareAccelerated"/> or <see cref="Vector128.IsHardwareAccelerated"/>.</para>
         /// </summary>
         /// <param name="paddedKeys">Padded keys to compute sorted indices for. This buffer's contents will not be mutated.

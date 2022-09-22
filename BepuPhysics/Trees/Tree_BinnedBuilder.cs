@@ -20,7 +20,6 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-        const int MaximumBinCountRevamp = 64;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static unsafe Int4 Truncate(Vector4 v)
         {
@@ -77,6 +76,11 @@ namespace BepuPhysics.Trees
             public Buffer<BoundingBox4> BinBoundingBoxes;
             public Buffer<BoundingBox4> BinBoundingBoxesScan;
             public Buffer<int> BinLeafCounts;
+
+            public int MinimumBinCount;
+            public int MaximumBinCount;
+            public float LeafToBinMultiplier;
+            public int MicrosweepThreshold;
 
         }
 
@@ -143,7 +147,7 @@ namespace BepuPhysics.Trees
             var paddedKeyCount = ((leafCount + 7) / 8) * 8;
             Debug.Assert(Unsafe.SizeOf<BoundingBox4>() * bins.BinBoundingBoxes.Length >= (paddedKeyCount * 2 + leafCount) * Unsafe.SizeOf<int>());
             var keys = new Buffer<float>(bins.BinBoundingBoxes.Memory, paddedKeyCount);
-            var targetIndices = new Buffer<int>(keys.Memory + paddedKeyCount, leafCount);
+            var targetIndices = new Buffer<int>(keys.Memory + paddedKeyCount, paddedKeyCount);
             var indicesCache = new Buffer<int>(targetIndices.Memory + paddedKeyCount, leafCount);
             var boundingBoxCache = bins.BinBoundingBoxesScan;
 
@@ -180,8 +184,8 @@ namespace BepuPhysics.Trees
             {
                 keys[i] = float.MaxValue;
             }
-            VectorizedSorts.VectorCountingSort(keys, targetIndices);
-            //VectorizedSorts.VectorCountingSortTranspose(keys, targetIndices, leafCount);
+            //VectorizedSorts.VectorCountingSort(keys, targetIndices);
+            VectorizedSorts.VectorCountingSortTranspose(keys, targetIndices, leafCount);
 
             //Now that we know the target indices, copy things back.
             for (int i = 0; i < leafCount; ++i)
@@ -271,7 +275,7 @@ namespace BepuPhysics.Trees
             //    QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
             //}
 
-            Debug.Assert(leafCount <= MaximumBinCountRevamp, "We're reusing the bin resources under the assumption that this is only ever called when there are less leaves than maximum bins.");
+            Debug.Assert(leafCount <= bins.MaximumBinCount || leafCount < bins.MicrosweepThreshold, "We're reusing the bin resources under the assumption that this is only ever called when there are less leaves than maximum bins.");
             //Identify the split index by examining the SAH of very split option.
             //Premerge from left to right so we have a sorta-summed area table to cheaply look up all possible child A bounds as we scan.
             bins.BinBoundingBoxesScan[0] = boundingBoxes[0];
@@ -451,7 +455,7 @@ namespace BepuPhysics.Trees
                 return;
             }
 
-            if (leafCount <= 32)
+            if (leafCount <= bins.MicrosweepThreshold)
             {
                 MicroSweepForBinnedBuilder(centroidMin, centroidMax, indices, boundingBoxes, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, bins);
                 return;
@@ -463,7 +467,7 @@ namespace BepuPhysics.Trees
             var permuteMask = Vector128.Create(useX ? 0 : useY ? 1 : 2, 0, 0, 0);
             var axisIndex = useX ? 0 : useY ? 1 : 2;
 
-            var binCount = Math.Min(MaximumBinCountRevamp, Math.Max((int)(leafCount * .1f), 16));
+            var binCount = Math.Min(bins.MaximumBinCount, Math.Max((int)(leafCount * bins.LeafToBinMultiplier), bins.MinimumBinCount));
             Debug.Assert(bins.BinBoundingBoxes.Length >= binCount);
 
             var offsetToBinIndex = new Vector4(binCount) / centroidSpan;
@@ -586,7 +590,8 @@ namespace BepuPhysics.Trees
             }
         }
 
-        public static unsafe void BinnedBuilder(Buffer<int> indices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, BufferPool pool)
+        public static unsafe void BinnedBuilder(Buffer<int> indices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, BufferPool pool,
+            int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
         {
             var leafCount = indices.Length;
             Debug.Assert(boundingBoxes.Length >= leafCount, "The bounding boxes provided must cover the range of indices provided.");
@@ -607,13 +612,20 @@ namespace BepuPhysics.Trees
             boundingBoxes = boundingBoxes.Slice(indices.Length);
             nodes = nodes.Slice(leafCount - 1);
 
-            var binBoundsMemory = stackalloc BoundingBox4[MaximumBinCountRevamp * 2];
+            //The microsweep uses the same resources as the bin allocations, so expand to hold whichever is larger.
+            var allocatedBinCount = Math.Max(maximumBinCount, microsweepThreshold);
+            var binBoundsMemory = stackalloc BoundingBox4[allocatedBinCount * 2];
             Bins bins;
-            bins.BinBoundingBoxes = new Buffer<BoundingBox4>(binBoundsMemory, MaximumBinCountRevamp);
-            bins.BinBoundingBoxesScan = new Buffer<BoundingBox4>(binBoundsMemory + MaximumBinCountRevamp, MaximumBinCountRevamp);
+            bins.BinBoundingBoxes = new Buffer<BoundingBox4>(binBoundsMemory, allocatedBinCount);
+            bins.BinBoundingBoxesScan = new Buffer<BoundingBox4>(binBoundsMemory + allocatedBinCount, allocatedBinCount);
 
-            var binLeafCountsMemory = stackalloc int[MaximumBinCountRevamp];
-            bins.BinLeafCounts = new Buffer<int>(binLeafCountsMemory, MaximumBinCountRevamp);
+            var binLeafCountsMemory = stackalloc int[allocatedBinCount];
+            bins.BinLeafCounts = new Buffer<int>(binLeafCountsMemory, allocatedBinCount);
+
+            bins.MinimumBinCount = minimumBinCount;
+            bins.MaximumBinCount = maximumBinCount;
+            bins.LeafToBinMultiplier = leafToBinMultiplier;
+            bins.MicrosweepThreshold = microsweepThreshold;
 
             //While we could avoid a recursive implementation, the overhead is low compared to the per-iteration cost.
             BinnedBuilderInternal(indices, boundingBoxes.As<BoundingBox4>(), nodes, metanodes, 0, -1, -1, bins);
