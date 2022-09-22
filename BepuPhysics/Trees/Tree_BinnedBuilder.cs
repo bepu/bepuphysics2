@@ -20,24 +20,6 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static unsafe Int4 Truncate(Vector4 v)
-        {
-            Int4 discrete;
-            if (Vector128.IsHardwareAccelerated)
-            {
-                Vector128.Store(Vector128.ConvertToInt32(v.AsVector128()), (int*)&discrete);
-            }
-            else
-            {
-                discrete.X = (int)v.X;
-                discrete.Y = (int)v.Y;
-                discrete.Z = (int)v.Z;
-                discrete.W = (int)v.W;
-            }
-            return discrete;
-
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void BuildNode(BoundingBox4 a, BoundingBox4 b, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<int> indices, int nodeIndex, int parentNodeIndex, int childIndexInParent, int aCount, int bCount, out int aIndex, out int bIndex)
@@ -97,40 +79,6 @@ namespace BepuPhysics.Trees
             public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Z + a.Max.Z) > (b.Min.Z + b.Max.Z) ? -1 : 1;
         }
 
-
-        //static void ValidateNode(int nodeIndex, Buffer<Node> nodes, out Vector3 min, out Vector3 max)
-        //{
-        //    if (nodes[nodeIndex].A.Index >= 0)
-        //    {
-        //        ValidateNode(nodes[nodeIndex].A.Index, nodes, out var aMin, out var aMax);
-        //        Debug.Assert(nodes[nodeIndex].A.Min == aMin);
-        //        Debug.Assert(nodes[nodeIndex].A.Max == aMax);
-        //    }
-        //    if (nodes[nodeIndex].B.Index >= 0)
-        //    {
-        //        ValidateNode(nodes[nodeIndex].B.Index, nodes, out var bMin, out var bMax);
-        //        Debug.Assert(nodes[nodeIndex].B.Min == bMin);
-        //        Debug.Assert(nodes[nodeIndex].B.Max == bMax);
-        //    }
-        //    min = Vector3.Min(nodes[nodeIndex].A.Min, nodes[nodeIndex].A.Min);
-        //    max = Vector3.Max(nodes[nodeIndex].B.Max, nodes[nodeIndex].B.Max);
-        //}
-
-        [StructLayout(LayoutKind.Sequential)]
-        struct BoundsSortable
-        {
-            public float Key;
-            public int Index;
-        }
-
-        struct AxisComparer : IComparerRef<BoundsSortable>
-        {
-            public int Compare(ref BoundsSortable a, ref BoundsSortable b)
-            {
-                return a.Key > b.Key ? -1 : 1;
-            }
-        }
-
         static unsafe void MicroSweepForBinnedBuilder(Vector4 centroidMin, Vector4 centroidMax, Buffer<int> indices, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Bins bins)
         {
             //This is a very small scale sweep build.
@@ -142,138 +90,79 @@ namespace BepuPhysics.Trees
             }
             var centroidSpan = centroidMax - centroidMin;
 
-            //Repurpose the bins memory so we don't need to allocate any extra. The bins aren't in use right now anyway.
-            //TODO: this assumes Vector256 widths!
-            var paddedKeyCount = ((leafCount + 7) / 8) * 8;
-            Debug.Assert(Unsafe.SizeOf<BoundingBox4>() * bins.BinBoundingBoxes.Length >= (paddedKeyCount * 2 + leafCount) * Unsafe.SizeOf<int>());
-            var keys = new Buffer<float>(bins.BinBoundingBoxes.Memory, paddedKeyCount);
-            var targetIndices = new Buffer<int>(keys.Memory + paddedKeyCount, paddedKeyCount);
-            var indicesCache = new Buffer<int>(targetIndices.Memory + paddedKeyCount, leafCount);
-            var boundingBoxCache = bins.BinBoundingBoxesScan;
+            if (Vector256.IsHardwareAccelerated || Vector128.IsHardwareAccelerated)
+            {
+                //Repurpose the bins memory so we don't need to allocate any extra. The bins aren't in use right now anyway.
+                int paddedKeyCount = Vector256.IsHardwareAccelerated ? ((leafCount + 7) / 8) * 8 : ((leafCount + 3) / 4) * 4;
 
-            //Store the bounds/indices into temporary memory so that we can shuffle them trivially once we're done with the sort.
-            //Doing this as a prepass means we don't have to worry about doing heavy swaps in the sort.
-            boundingBoxes.CopyTo(0, boundingBoxCache, 0, leafCount);
-            indices.CopyTo(0, indicesCache, 0, leafCount);
-            //Compute the axis centroids up front to avoid having to recompute them during a sort.
-            if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
-            {
-                for (int i = 0; i < leafCount; ++i)
+                Debug.Assert(Unsafe.SizeOf<BoundingBox4>() * bins.BinBoundingBoxes.Length >= (paddedKeyCount * 2 + leafCount) * Unsafe.SizeOf<int>());
+                var keys = new Buffer<float>(bins.BinBoundingBoxes.Memory, paddedKeyCount);
+                var targetIndices = new Buffer<int>(keys.Memory + paddedKeyCount, paddedKeyCount);
+                var indicesCache = new Buffer<int>(targetIndices.Memory + paddedKeyCount, leafCount);
+                var boundingBoxCache = bins.BinBoundingBoxesScan;
+
+                //Store the bounds/indices into temporary memory so that we can shuffle them trivially once we're done with the sort.
+                //Doing this as a prepass means we don't have to worry about doing heavy swaps in the sort.
+                boundingBoxes.CopyTo(0, boundingBoxCache, 0, leafCount);
+                indices.CopyTo(0, indicesCache, 0, leafCount);
+                //Compute the axis centroids up front to avoid having to recompute them during a sort.
+                if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
                 {
-                    ref var bounds = ref boundingBoxes[i];
-                    keys[i] = bounds.Min.X + bounds.Max.X;
+                    for (int i = 0; i < leafCount; ++i)
+                    {
+                        ref var bounds = ref boundingBoxes[i];
+                        keys[i] = bounds.Min.X + bounds.Max.X;
+                    }
                 }
-            }
-            else if (centroidSpan.Y > centroidSpan.Z)
-            {
+                else if (centroidSpan.Y > centroidSpan.Z)
+                {
+                    for (int i = 0; i < leafCount; ++i)
+                    {
+                        ref var bounds = ref boundingBoxes[i];
+                        keys[i] = bounds.Min.Y + bounds.Max.Y;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < leafCount; ++i)
+                    {
+                        ref var bounds = ref boundingBoxes[i];
+                        keys[i] = bounds.Min.Z + bounds.Max.Z;
+                    }
+                }
+                for (int i = leafCount; i < paddedKeyCount; ++i)
+                {
+                    keys[i] = float.MaxValue;
+                }
+                VectorizedSorts.VectorCountingSort(keys, targetIndices, leafCount);
+
+                //Now that we know the target indices, copy things back.
                 for (int i = 0; i < leafCount; ++i)
                 {
-                    ref var bounds = ref boundingBoxes[i];
-                    keys[i] = bounds.Min.Y + bounds.Max.Y;
+                    var targetIndex = targetIndices[i];
+                    boundingBoxes[targetIndex] = boundingBoxCache[i];
+                    indices[targetIndex] = indicesCache[i];
                 }
             }
             else
             {
-                for (int i = 0; i < leafCount; ++i)
+                //No vectorization supported. Fall back to poopymode!
+                if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
                 {
-                    ref var bounds = ref boundingBoxes[i];
-                    keys[i] = bounds.Min.Z + bounds.Max.Z;
+                    var comparer = new BoundsComparerX();
+                    QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
+                }
+                else if (centroidSpan.Y > centroidSpan.Z)
+                {
+                    var comparer = new BoundsComparerY();
+                    QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
+                }
+                else
+                {
+                    var comparer = new BoundsComparerZ();
+                    QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
                 }
             }
-            for (int i = leafCount; i < paddedKeyCount; ++i)
-            {
-                keys[i] = float.MaxValue;
-            }
-            //VectorizedSorts.VectorCountingSort(keys, targetIndices);
-            VectorizedSorts.VectorCountingSortTranspose(keys, targetIndices, leafCount);
-
-            //Now that we know the target indices, copy things back.
-            for (int i = 0; i < leafCount; ++i)
-            {
-                var targetIndex = targetIndices[i];
-                boundingBoxes[targetIndex] = boundingBoxCache[i];
-                indices[targetIndex] = indicesCache[i];
-            }
-            //var previousValue = float.MinValue;
-            //for (int i = 0; i < leafCount; ++i)
-            //{
-            //    var centroid = boundingBoxes[i].Min + boundingBoxes[i].Max;
-            //    var axis = centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z ? centroid.X : centroidSpan.Y > centroidSpan.Z ? centroid.Y : centroid.Z;
-            //    if (axis < previousValue)
-            //        Console.WriteLine("BAD");
-            //    Console.WriteLine($"centroid {i}: {axis}");
-            //}
-
-            //-----------------
-
-            ////Repurpose the bins memory so we don't need to allocate any extra. The bins aren't in use right now anyway.
-            //var sortables = new Buffer<BoundsSortable>(bins.BinBoundingBoxes.Memory, leafCount);
-            //var boundingBoxCache = bins.BinBoundingBoxesScan;
-            //var indicesCache = new Buffer<int>((int*)((BoundsSortable*)bins.BinBoundingBoxes.Memory + leafCount), leafCount);
-
-            ////Store the bounds/indices into temporary memory so that we can shuffle them trivially once we're done with the sort.
-            ////Doing this as a prepass means we don't have to worry about doing heavy swaps in the sort.
-            //boundingBoxes.CopyTo(0, boundingBoxCache, 0, leafCount);
-            //indices.CopyTo(0, indicesCache, 0, leafCount);
-            ////Compute the axis centroids up front to avoid having to recompute them during a sort.
-            //if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
-            //{
-            //    for (int i = 0; i < leafCount; ++i)
-            //    {
-            //        ref var bounds = ref boundingBoxes[i];
-            //        ref var target = ref sortables[i];
-            //        target.Key = (bounds.Min + bounds.Max).X;
-            //        target.Index = i;
-            //    }
-            //}
-            //else if (centroidSpan.Y > centroidSpan.Z)
-            //{
-            //    for (int i = 0; i < leafCount; ++i)
-            //    {
-            //        ref var bounds = ref boundingBoxes[i];
-            //        ref var target = ref sortables[i];
-            //        target.Key = (bounds.Min + bounds.Max).Y;
-            //        target.Index = i;
-            //    }
-            //}
-            //else
-            //{
-            //    for (int i = 0; i < leafCount; ++i)
-            //    {
-            //        ref var bounds = ref boundingBoxes[i];
-            //        ref var target = ref sortables[i];
-            //        target.Key = (bounds.Min + bounds.Max).Z;
-            //        target.Index = i;
-            //    }
-            //}
-            //var comparer2 = new AxisComparer();
-            //QuickSort.Sort(ref sortables[0], 0, leafCount - 1, ref comparer2);
-
-            ////Now that we know the target indices, copy things back.
-            //for (int i = 0; i < leafCount; ++i)
-            //{
-            //    var sourceIndex = sortables[i].Index;
-            //    boundingBoxes[i] = boundingBoxCache[sourceIndex];
-            //    indices[i] = indicesCache[sourceIndex];
-            //}
-
-            //-----------------
-
-            //if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
-            //{
-            //    var comparer = new BoundsComparerX();
-            //    QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
-            //}
-            //else if (centroidSpan.Y > centroidSpan.Z)
-            //{
-            //    var comparer = new BoundsComparerY();
-            //    QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
-            //}
-            //else
-            //{
-            //    var comparer = new BoundsComparerZ();
-            //    QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, leafCount - 1, ref comparer);
-            //}
 
             Debug.Assert(leafCount <= bins.MaximumBinCount || leafCount < bins.MicrosweepThreshold, "We're reusing the bin resources under the assumption that this is only ever called when there are less leaves than maximum bins.");
             //Identify the split index by examining the SAH of very split option.
@@ -316,65 +205,33 @@ namespace BepuPhysics.Trees
 
             var aCount = bestSplit;
             var bCount = leafCount - bestSplit;
+
+            BuildNode(bestBoundsA, bestBoundsB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, aCount, bCount, out var aIndex, out var bIndex);
+            if (aCount > 1)
             {
-                //if (leafCount == 2)
-                //{
-                //    Debug.Assert(bestBoundsA.Min == boundingBoxes[0].Min);
-                //    Debug.Assert(bestBoundsA.Max == boundingBoxes[0].Max);
-                //    Debug.Assert(bestBoundsB.Min == boundingBoxes[1].Min);
-                //    Debug.Assert(bestBoundsB.Max == boundingBoxes[1].Max);
-                //}
-                //for (int i = 0; i < leafCount; ++i)
-                //{
-                //    var bounds = i < bestSplit ? bestBoundsA : bestBoundsB;
-                //    var containedA = Vector128.LessThanOrEqual(boundingBoxes[i].Max.AsVector128(), bounds.Max.AsVector128()) & Vector128.GreaterThanOrEqual(boundingBoxes[i].Min.AsVector128(), bounds.Min.AsVector128());
-                //    var mask = containedA.ExtractMostSignificantBits() & 0b111;
-                //    Debug.Assert(mask == 0b111, "All children must be contained within their parent.");
-                //}
-                //BoundingBox4 debugBoundsA = boundingBoxes[0];
-                //for (int i = 1; i < aCount; ++i)
-                //{
-                //    ref var bounds = ref boundingBoxes[i];
-                //    debugBoundsA.Min = Vector4.Min(debugBoundsA.Min, bounds.Min);
-                //    debugBoundsA.Max = Vector4.Max(debugBoundsA.Max, bounds.Max);
-                //}
-                //BoundingBox4 debugBoundsB = boundingBoxes[aCount];
-                //for (int i = aCount + 1; i < leafCount; ++i)
-                //{
-                //    ref var bounds = ref boundingBoxes[i];
-                //    debugBoundsB.Min = Vector4.Min(debugBoundsB.Min, bounds.Min);
-                //    debugBoundsB.Max = Vector4.Max(debugBoundsB.Max, bounds.Max);
-                //}
-                //Debug.Assert(bestBoundsA.Min == debugBoundsA.Min);
-                //Debug.Assert(bestBoundsA.Max == debugBoundsA.Max);
-                //Debug.Assert(bestBoundsB.Min == debugBoundsB.Min);
-                //Debug.Assert(bestBoundsB.Max == debugBoundsB.Max);
-                BuildNode(bestBoundsA, bestBoundsB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, aCount, bCount, out var aIndex, out var bIndex);
-                if (aCount > 1)
+                var aBounds = boundingBoxes.Slice(aCount);
+                BoundingBox4 centroidBoundsA = aBounds[0];
+                for (int i = 1; i < aCount; ++i)
                 {
-                    var aBounds = boundingBoxes.Slice(aCount);
-                    BoundingBox4 centroidBoundsA = aBounds[0];
-                    for (int i = 1; i < aCount; ++i)
-                    {
-                        ref var bounds = ref aBounds[i];
-                        centroidBoundsA.Min = Vector4.Min(centroidBoundsA.Min, bounds.Min);
-                        centroidBoundsA.Max = Vector4.Max(centroidBoundsA.Max, bounds.Max);
-                    }
-                    MicroSweepForBinnedBuilder(centroidBoundsA.Min, centroidBoundsA.Max, indices.Slice(aCount), aBounds, nodes.Slice(1, aCount - 1), metanodes.Slice(1, aCount - 1), aIndex, nodeIndex, 0, bins);
+                    ref var bounds = ref aBounds[i];
+                    centroidBoundsA.Min = Vector4.Min(centroidBoundsA.Min, bounds.Min);
+                    centroidBoundsA.Max = Vector4.Max(centroidBoundsA.Max, bounds.Max);
                 }
-                if (bCount > 1)
-                {
-                    var bBounds = boundingBoxes.Slice(aCount, bCount);
-                    BoundingBox4 centroidBoundsB = bBounds[0];
-                    for (int i = 0; i < bCount; ++i)
-                    {
-                        ref var bounds = ref bBounds[i];
-                        centroidBoundsB.Min = Vector4.Min(centroidBoundsB.Min, bounds.Min);
-                        centroidBoundsB.Max = Vector4.Max(centroidBoundsB.Max, bounds.Max);
-                    }
-                    MicroSweepForBinnedBuilder(centroidBoundsB.Min, centroidBoundsB.Max, indices.Slice(aCount, bCount), bBounds, nodes.Slice(aCount, bCount - 1), metanodes.Slice(aCount, bCount - 1), bIndex, nodeIndex, 1, bins);
-                }
+                MicroSweepForBinnedBuilder(centroidBoundsA.Min, centroidBoundsA.Max, indices.Slice(aCount), aBounds, nodes.Slice(1, aCount - 1), metanodes.Slice(1, aCount - 1), aIndex, nodeIndex, 0, bins);
             }
+            if (bCount > 1)
+            {
+                var bBounds = boundingBoxes.Slice(aCount, bCount);
+                BoundingBox4 centroidBoundsB = bBounds[0];
+                for (int i = 0; i < bCount; ++i)
+                {
+                    ref var bounds = ref bBounds[i];
+                    centroidBoundsB.Min = Vector4.Min(centroidBoundsB.Min, bounds.Min);
+                    centroidBoundsB.Max = Vector4.Max(centroidBoundsB.Max, bounds.Max);
+                }
+                MicroSweepForBinnedBuilder(centroidBoundsB.Min, centroidBoundsB.Max, indices.Slice(aCount, bCount), bBounds, nodes.Slice(aCount, bCount - 1), metanodes.Slice(aCount, bCount - 1), bIndex, nodeIndex, 1, bins);
+            }
+
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -614,7 +471,10 @@ namespace BepuPhysics.Trees
 
             //The microsweep uses the same resources as the bin allocations, so expand to hold whichever is larger.
             var allocatedBinCount = Math.Max(maximumBinCount, microsweepThreshold);
-            var binBoundsMemory = stackalloc BoundingBox4[allocatedBinCount * 2];
+            var binBoundsMemory = stackalloc BoundingBox4[allocatedBinCount * 2 + 1];
+            //Should be basically irrelevant, but just in case it's not on some platform, align the allocation.
+            binBoundsMemory = (BoundingBox4*)(((ulong)binBoundsMemory + 31ul) & (~31ul));
+
             Bins bins;
             bins.BinBoundingBoxes = new Buffer<BoundingBox4>(binBoundsMemory, allocatedBinCount);
             bins.BinBoundingBoxesScan = new Buffer<BoundingBox4>(binBoundsMemory + allocatedBinCount, allocatedBinCount);

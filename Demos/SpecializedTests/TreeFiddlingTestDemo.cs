@@ -157,8 +157,8 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
 
             //Create a mesh.
-            var width = 768;
-            var height = 768;
+            var width = 128;
+            var height = 16;
             var scale = new Vector3(1, 1, 1);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
@@ -200,17 +200,17 @@ namespace Demos.SpecializedTests
             }, "Revamp Single Axis", ref mesh.Tree);
 
 
-            //var mesh2 = new Mesh(triangles, Vector3.One, BufferPool);
+            var mesh2 = new Mesh(triangles, Vector3.One, BufferPool);
 
-            //QuickList<int> subtreeReferences = new(mesh2.Tree.LeafCount, BufferPool);
-            //QuickList<int> treeletInternalNodes = new(mesh2.Tree.LeafCount, BufferPool);
-            //Tree.CreateBinnedResources(BufferPool, mesh2.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
-            //BinnedTest(() =>
-            //{
-            //    subtreeReferences.Count = 0;
-            //    treeletInternalNodes.Count = 0;
-            //    mesh2.Tree.BinnedRefine(0, ref subtreeReferences, mesh2.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
-            //}, "Original", ref mesh2.Tree);
+            QuickList<int> subtreeReferences = new(mesh2.Tree.LeafCount, BufferPool);
+            QuickList<int> treeletInternalNodes = new(mesh2.Tree.LeafCount, BufferPool);
+            Tree.CreateBinnedResources(BufferPool, mesh2.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
+            BinnedTest(() =>
+            {
+                subtreeReferences.Count = 0;
+                treeletInternalNodes.Count = 0;
+                mesh2.Tree.BinnedRefine(0, ref subtreeReferences, mesh2.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
+            }, "Original", ref mesh2.Tree);
 
             //RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
             //RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);
@@ -267,7 +267,7 @@ namespace Demos.SpecializedTests
         static void BinnedTest(Action function, string name, ref Tree tree)
         {
             long accumulatedTime = 0;
-            const int testCount = 16;
+            const int testCount = 256;
             for (int i = 0; i < testCount; ++i)
             {
                 var startTime = Stopwatch.GetTimestamp();
