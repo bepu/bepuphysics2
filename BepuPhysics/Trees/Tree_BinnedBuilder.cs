@@ -141,10 +141,10 @@ namespace BepuPhysics.Trees
             //Repurpose the bins memory so we don't need to allocate any extra. The bins aren't in use right now anyway.
             //TODO: this assumes Vector256 widths!
             var paddedKeyCount = ((leafCount + 7) / 8) * 8;
-            Debug.Assert(Unsafe.SizeOf<BoundingBox4>() * bins.BinBoundingBoxes.Length >= (paddedKeyCount + 2 * leafCount) * Unsafe.SizeOf<int>());
+            Debug.Assert(Unsafe.SizeOf<BoundingBox4>() * bins.BinBoundingBoxes.Length >= (paddedKeyCount * 2 + leafCount) * Unsafe.SizeOf<int>());
             var keys = new Buffer<float>(bins.BinBoundingBoxes.Memory, paddedKeyCount);
-            var indicesCache = new Buffer<int>((int*)keys.Memory + paddedKeyCount, leafCount);
-            var targetIndices = new Buffer<int>(indicesCache.Memory + leafCount, leafCount);
+            var targetIndices = new Buffer<int>(keys.Memory + paddedKeyCount, leafCount);
+            var indicesCache = new Buffer<int>(targetIndices.Memory + paddedKeyCount, leafCount);
             var boundingBoxCache = bins.BinBoundingBoxesScan;
 
             //Store the bounds/indices into temporary memory so that we can shuffle them trivially once we're done with the sort.
@@ -181,6 +181,7 @@ namespace BepuPhysics.Trees
                 keys[i] = float.MaxValue;
             }
             VectorizedSorts.VectorCountingSort(keys, targetIndices);
+            //VectorizedSorts.VectorCountingSortTranspose(keys, targetIndices, leafCount);
 
             //Now that we know the target indices, copy things back.
             for (int i = 0; i < leafCount; ++i)
