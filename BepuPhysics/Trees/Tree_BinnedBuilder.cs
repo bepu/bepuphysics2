@@ -157,7 +157,7 @@ namespace BepuPhysics.Trees
                 for (int i = 0; i < leafCount; ++i)
                 {
                     ref var bounds = ref boundingBoxes[i];
-                    keys[i] = (bounds.Min + bounds.Max).X;
+                    keys[i] = bounds.Min.X + bounds.Max.X;
                 }
             }
             else if (centroidSpan.Y > centroidSpan.Z)
@@ -165,7 +165,7 @@ namespace BepuPhysics.Trees
                 for (int i = 0; i < leafCount; ++i)
                 {
                     ref var bounds = ref boundingBoxes[i];
-                    keys[i] = (bounds.Min + bounds.Max).Y;
+                    keys[i] = bounds.Min.Y + bounds.Max.Y;
                 }
             }
             else
@@ -173,14 +173,14 @@ namespace BepuPhysics.Trees
                 for (int i = 0; i < leafCount; ++i)
                 {
                     ref var bounds = ref boundingBoxes[i];
-                    keys[i] = (bounds.Min + bounds.Max).Z;
+                    keys[i] = bounds.Min.Z + bounds.Max.Z;
                 }
             }
             for (int i = leafCount; i < paddedKeyCount; ++i)
             {
                 keys[i] = float.MaxValue;
             }
-            SpeculativeSorts.VectorCountingSort(keys, targetIndices);
+            VectorizedSorts.VectorCountingSort(keys, targetIndices);
 
             //Now that we know the target indices, copy things back.
             for (int i = 0; i < leafCount; ++i)
