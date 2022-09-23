@@ -96,7 +96,6 @@ namespace BepuPhysics.Trees
             public Buffer<BoundingBox4> BinBoundingBoxes;
             public Buffer<BoundingBox4> BinBoundingBoxesScan;
             public Buffer<int> BinLeafCounts;
-            public Buffer<int> BinLeafCountsScan;
 
             public int MinimumBinCount;
             public int MaximumBinCount;
@@ -271,8 +270,7 @@ namespace BepuPhysics.Trees
             //Identify the split index by examining the SAH of very split option.
             //Premerge from left to right so we have a sorta-summed area table to cheaply look up all possible child A bounds as we scan.
             bins.BinBoundingBoxesScan[0] = boundingBoxes[0];
-            if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
-                bins.BinLeafCountsScan[0] = leafCounts[0];
+            int totalLeafCount = typeof(TLeafCounts) == typeof(LeafCountBuffer) ? leafCounts[0] : subtreeCount;
             for (int i = 1; i < subtreeCount; ++i)
             {
                 var previousIndex = i - 1;
@@ -282,7 +280,7 @@ namespace BepuPhysics.Trees
                 scanBounds.Min = Vector4.Min(bounds.Min, previousScanBounds.Min);
                 scanBounds.Max = Vector4.Max(bounds.Max, previousScanBounds.Max);
                 if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
-                    bins.BinLeafCountsScan[i] = leafCounts[i] + bins.BinLeafCountsScan[previousIndex];
+                    totalLeafCount += leafCounts[i];
             }
 
             float bestSAH = float.MaxValue;
@@ -292,17 +290,20 @@ namespace BepuPhysics.Trees
             BoundingBox4 accumulatedBoundingBoxB = boundingBoxes[lastSubtreeIndex];
             Unsafe.SkipInit(out BoundingBox4 bestBoundsB);
             int accumulatedLeafCountB = 1;
+            int bestLeafCountB = 0;
             for (int splitIndexCandidate = lastSubtreeIndex; splitIndexCandidate >= 1; --splitIndexCandidate)
             {
                 var previousIndex = splitIndexCandidate - 1;
                 var sahCandidate =
-                    ComputeBoundsMetric(bins.BinBoundingBoxesScan[previousIndex]) * (typeof(TLeafCounts) == typeof(UnitLeafCount) ? splitIndexCandidate : bins.BinLeafCountsScan[previousIndex]) +
+                    ComputeBoundsMetric(bins.BinBoundingBoxesScan[previousIndex]) * (totalLeafCount - accumulatedLeafCountB) +
                     ComputeBoundsMetric(accumulatedBoundingBoxB) * accumulatedLeafCountB;
                 if (sahCandidate < bestSAH)
                 {
                     bestSAH = sahCandidate;
                     bestSplit = splitIndexCandidate;
                     bestBoundsB = accumulatedBoundingBoxB;
+                    if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
+                        bestLeafCountB = accumulatedLeafCountB;
                 }
                 ref var bounds = ref boundingBoxes[previousIndex];
                 accumulatedBoundingBoxB.Min = Vector4.Min(bounds.Min, accumulatedBoundingBoxB.Min);
@@ -313,8 +314,9 @@ namespace BepuPhysics.Trees
             var bestBoundsA = bins.BinBoundingBoxesScan[bestSplit - 1];
             var subtreeCountA = bestSplit;
             var subtreeCountB = subtreeCount - bestSplit;
-            var bestLeafCountA = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountA : bins.BinLeafCountsScan[bestSplit - 1];
-            var bestLeafCountB = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountB : bins.BinLeafCountsScan[subtreeCount - 1] - bestLeafCountA;
+            var bestLeafCountA = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountA : totalLeafCount - bestLeafCountB;
+            if (typeof(TLeafCounts) == typeof(UnitLeafCount))
+                bestLeafCountB = subtreeCountB;
 
             BuildNode(bestBoundsA, bestBoundsB, bestLeafCountA, bestLeafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, out var aIndex, out var bIndex);
             if (subtreeCountA > 1)
@@ -473,8 +475,7 @@ namespace BepuPhysics.Trees
             //Identify the split index by examining the SAH of very split option.
             //Premerge from left to right so we have a sorta-summed area table to cheaply look up all possible child A bounds as we scan.
             bins.BinBoundingBoxesScan[0] = bins.BinBoundingBoxes[0];
-            if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
-                bins.BinLeafCountsScan[0] = bins.BinLeafCounts[0];
+            int totalLeafCount = typeof(TLeafCounts) == typeof(LeafCountBuffer) ? bins.BinLeafCounts[0] : subtreeCount;
             for (int i = 1; i < binCount; ++i)
             {
                 var previousIndex = i - 1;
@@ -484,7 +485,7 @@ namespace BepuPhysics.Trees
                 xScanBounds.Min = Vector4.Min(xBounds.Min, xPreviousScanBounds.Min);
                 xScanBounds.Max = Vector4.Max(xBounds.Max, xPreviousScanBounds.Max);
                 if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
-                    bins.BinLeafCountsScan[i] = bins.BinLeafCounts[i] + bins.BinLeafCountsScan[previousIndex];
+                    totalLeafCount += bins.BinLeafCounts[i];
             }
             var leftBoundsX = bins.BinBoundingBoxes[0];
             Debug.Assert(
@@ -500,19 +501,19 @@ namespace BepuPhysics.Trees
             BoundingBox4 bestBoundingBoxB;
             bestBoundingBoxB = bins.BinBoundingBoxes[lastBinIndex];
             int accumulatedLeafCountB = bins.BinLeafCounts[lastBinIndex];
-            var totalLeafCount = typeof(TLeafCounts) == typeof(LeafCountBuffer) ? bins.BinLeafCountsScan[binCount - 1] : subtreeCount;
+            int bestLeafCountB = 0;
             for (int splitIndexCandidate = lastBinIndex; splitIndexCandidate >= 1; --splitIndexCandidate)
             {
                 var previousIndex = splitIndexCandidate - 1;
-                var sahCandidate =
-                    ComputeBoundsMetric(bins.BinBoundingBoxesScan[previousIndex]) * (typeof(TLeafCounts) == typeof(UnitLeafCount) ? splitIndexCandidate : bins.BinLeafCountsScan[previousIndex]) +
-                    ComputeBoundsMetric(accumulatedBoundingBoxB) * accumulatedLeafCountB;
+                var sahCandidate = ComputeBoundsMetric(bins.BinBoundingBoxesScan[previousIndex]) * (totalLeafCount - accumulatedLeafCountB) + ComputeBoundsMetric(accumulatedBoundingBoxB) * accumulatedLeafCountB;
 
                 if (sahCandidate < bestSAH)
                 {
                     bestSAH = sahCandidate;
                     bestSplit = splitIndexCandidate;
                     bestBoundingBoxB = accumulatedBoundingBoxB;
+                    if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
+                        bestLeafCountB = accumulatedLeafCountB;
                 }
                 ref var xBounds = ref bins.BinBoundingBoxes[previousIndex];
                 accumulatedBoundingBoxB.Min = Vector4.Min(xBounds.Min, accumulatedBoundingBoxB.Min);
@@ -566,8 +567,8 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            var leafCountA = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountA : bins.BinLeafCountsScan[bestSplit - 1];
-            var leafCountB = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountB : bins.BinLeafCountsScan[binCount - 1] - leafCountA;
+            var leafCountB = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountB : bestLeafCountB;
+            var leafCountA = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountA : totalLeafCount - leafCountB;
 
             {
                 Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
@@ -617,8 +618,6 @@ namespace BepuPhysics.Trees
 
             var binLeafCountsMemory = stackalloc int[allocatedBinCount * 2];
             bins.BinLeafCounts = new Buffer<int>(binLeafCountsMemory, allocatedBinCount);
-            //This leaf count scan is actually only used when we're running a refinement but allocating an extra handful of bytes is pretty whocaresville.
-            bins.BinLeafCountsScan = new Buffer<int>(binLeafCountsMemory + allocatedBinCount, allocatedBinCount);
 
             bins.MinimumBinCount = minimumBinCount;
             bins.MaximumBinCount = maximumBinCount;

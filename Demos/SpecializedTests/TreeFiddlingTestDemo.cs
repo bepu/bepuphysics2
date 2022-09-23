@@ -157,8 +157,8 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
 
             //Create a mesh.
-            var width = 128;
-            var height = 16;
+            var width = 768;
+            var height = 768;
             var scale = new Vector3(1, 1, 1);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
@@ -267,7 +267,7 @@ namespace Demos.SpecializedTests
         static void BinnedTest(Action function, string name, ref Tree tree)
         {
             long accumulatedTime = 0;
-            const int testCount = 256;
+            const int testCount = 16;
             for (int i = 0; i < testCount; ++i)
             {
                 var startTime = Stopwatch.GetTimestamp();
