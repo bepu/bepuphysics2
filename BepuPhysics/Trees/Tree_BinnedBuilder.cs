@@ -321,7 +321,6 @@ namespace BepuPhysics.Trees
                 }
                 MicroSweepForBinnedBuilder(centroidBoundsB.Min, centroidBoundsB.Max, indices.Slice(subtreeCountA, subtreeCountB), leafCounts.Slice(subtreeCountA, subtreeCountB), bBounds, nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), bIndex, nodeIndex, 1, bins);
             }
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -331,22 +330,13 @@ namespace BepuPhysics.Trees
             var binIndicesForLeafContinuous = Vector4.Min(maximumBinIndex, (centroid - centroidMin) * offsetToBinIndex);
             //Note that we don't store out any of the indices into per-bin lists here. We only *really* want two final groups for the children,
             //and we can easily compute those by performing another scan. It requires recomputing the bin indices, but that's really not much of a concern.
-            int binIndex;
             //To extract the desired lane, we need to use a variable shuffle mask. At the time of writing, the Vector128 cross platform shuffle did not like variable masks.
             if (Avx.IsSupported)
-            {
-                binIndex = (int)Vector128.ToScalar(Avx.PermuteVar(binIndicesForLeafContinuous.AsVector128(), permuteMask));
-            }
+                return (int)Vector128.ToScalar(Avx.PermuteVar(binIndicesForLeafContinuous.AsVector128(), permuteMask));
             else if (Vector128.IsHardwareAccelerated)
-            {
-                binIndex = (int)Vector128.GetElement(binIndicesForLeafContinuous.AsVector128(), axisIndex);
-            }
+                return (int)Vector128.GetElement(binIndicesForLeafContinuous.AsVector128(), axisIndex);
             else
-            {
-                binIndex = (int)(useX ? binIndicesForLeafContinuous.X : useY ? binIndicesForLeafContinuous.Y : binIndicesForLeafContinuous.Z);
-            }
-
-            return binIndex;
+                return (int)(useX ? binIndicesForLeafContinuous.X : useY ? binIndicesForLeafContinuous.Y : binIndicesForLeafContinuous.Z);
         }
 
         static unsafe void BinnedBuilderInternal<TLeafCounts>(Buffer<int> indices, TLeafCounts leafCounts, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes,
@@ -426,7 +416,6 @@ namespace BepuPhysics.Trees
             //Avoid letting NaNs into the offsetToBinIndex scale.
             offsetToBinIndex = Vector128.ConditionalSelect(axisIsDegenerate, Vector128<float>.Zero, offsetToBinIndex.AsVector128()).AsVector4();
 
-
             for (int i = 0; i < binCount; ++i)
             {
                 ref var boxX = ref bins.BinBoundingBoxes[i];
@@ -435,11 +424,9 @@ namespace BepuPhysics.Trees
                 bins.BinLeafCounts[i] = 0;
             }
 
-            //Unfortunately, unrolling has a slight benefit here.
-            var maximumBinIndex = new Vector4(binCount - 1);
-
             //Note that we don't store out any of the indices into per-bin lists here. We only *really* want two final groups for the children,
             //and we can easily compute those by performing another scan. It requires recomputing the bin indices, but that's really not much of a concern.
+            var maximumBinIndex = new Vector4(binCount - 1);
             for (int i = 0; i < subtreeCount; ++i)
             {
                 ref var box = ref boundingBoxes[i];
@@ -544,18 +531,14 @@ namespace BepuPhysics.Trees
                     ++subtreeCountA;
                 }
             }
-
             var leafCountB = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountB : bestLeafCountB;
             var leafCountA = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountA : totalLeafCount - leafCountB;
-
-            {
-                Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
-                BuildNode(bestboundsA, bestboundsB, leafCountA, leafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, out var aIndex, out var bIndex);
-                if (subtreeCountA > 1)
-                    BinnedBuilderInternal(indices.Slice(subtreeCountA), leafCounts.Slice(0, subtreeCountA), boundingBoxes.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), aIndex, nodeIndex, 0, bins);
-                if (subtreeCountB > 1)
-                    BinnedBuilderInternal(indices.Slice(subtreeCountA, subtreeCountB), leafCounts.Slice(subtreeCountA, subtreeCountB), boundingBoxes.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), bIndex, nodeIndex, 1, bins);
-            }
+            Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
+            BuildNode(bestboundsA, bestboundsB, leafCountA, leafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, out var nodeChildIndexA, out var nodeChildIndexB);
+            if (subtreeCountA > 1)
+                BinnedBuilderInternal(indices.Slice(subtreeCountA), leafCounts.Slice(0, subtreeCountA), boundingBoxes.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), nodeChildIndexA, nodeIndex, 0, bins);
+            if (subtreeCountB > 1)
+                BinnedBuilderInternal(indices.Slice(subtreeCountA, subtreeCountB), leafCounts.Slice(subtreeCountA, subtreeCountB), boundingBoxes.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), nodeChildIndexB, nodeIndex, 1, bins);
         }
 
         public static unsafe void BinnedBuilder(Buffer<int> indices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, BufferPool pool,
@@ -594,7 +577,7 @@ namespace BepuPhysics.Trees
             bins.BinBoundingBoxes = new Buffer<BoundingBox4>(binBoundsMemory, allocatedBinCount);
             bins.BinBoundingBoxesScan = new Buffer<BoundingBox4>(binBoundsMemory + allocatedBinCount, allocatedBinCount);
 
-            var binLeafCountsMemory = stackalloc int[allocatedBinCount * 2];
+            var binLeafCountsMemory = stackalloc int[allocatedBinCount];
             bins.BinLeafCounts = new Buffer<int>(binLeafCountsMemory, allocatedBinCount);
 
             bins.MinimumBinCount = minimumBinCount;
