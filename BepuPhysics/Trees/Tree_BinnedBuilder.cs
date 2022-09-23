@@ -43,10 +43,7 @@ namespace BepuPhysics.Trees
             node.B.LeafCount = leafCountB;
         }
 
-        internal static float ComputeBoundsMetric(BoundingBox4 bounds)
-        {
-            return ComputeBoundsMetric(bounds.Min, bounds.Max);
-        }
+        internal static float ComputeBoundsMetric(BoundingBox4 bounds) => ComputeBoundsMetric(bounds.Min, bounds.Max);
         internal static float ComputeBoundsMetric(Vector4 min, Vector4 max)
         {
             //Note that we just use the SAH. While we are primarily interested in volume queries for the purposes of collision detection, the topological difference
@@ -61,10 +58,7 @@ namespace BepuPhysics.Trees
         interface ILeafCountBuffer<T> where T : unmanaged, ILeafCountBuffer<T>
         {
             int this[int index] { get; set; }
-
             T Slice(int startIndex, int count);
-
-
         }
 
         /// <summary>
@@ -73,11 +67,7 @@ namespace BepuPhysics.Trees
         struct UnitLeafCount : ILeafCountBuffer<UnitLeafCount>
         {
             public int this[int index] { get => 1; set { } }
-
-            public UnitLeafCount Slice(int startIndex, int count)
-            {
-                return this;
-            }
+            public UnitLeafCount Slice(int startIndex, int count) => this;
         }
 
         /// <summary>
@@ -87,7 +77,6 @@ namespace BepuPhysics.Trees
         {
             public Buffer<int> LeafCounts;
             public int this[int index] { get => LeafCounts[index]; set => LeafCounts[index] = value; }
-
             public LeafCountBuffer Slice(int startIndex, int count) => new() { LeafCounts = LeafCounts.Slice(startIndex, count) };
         }
 
@@ -96,26 +85,15 @@ namespace BepuPhysics.Trees
             public Buffer<BoundingBox4> BinBoundingBoxes;
             public Buffer<BoundingBox4> BinBoundingBoxesScan;
             public Buffer<int> BinLeafCounts;
-
             public int MinimumBinCount;
             public int MaximumBinCount;
             public float LeafToBinMultiplier;
             public int MicrosweepThreshold;
-
         }
 
-        struct BoundsComparerX : IComparerRef<BoundingBox4>
-        {
-            public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.X + a.Max.X) > (b.Min.X + b.Max.X) ? -1 : 1;
-        }
-        struct BoundsComparerY : IComparerRef<BoundingBox4>
-        {
-            public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Y + a.Max.Y) > (b.Min.Y + b.Max.Y) ? -1 : 1;
-        }
-        struct BoundsComparerZ : IComparerRef<BoundingBox4>
-        {
-            public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Z + a.Max.Z) > (b.Min.Z + b.Max.Z) ? -1 : 1;
-        }
+        struct BoundsComparerX : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.X + a.Max.X) > (b.Min.X + b.Max.X) ? -1 : 1; }
+        struct BoundsComparerY : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Y + a.Max.Y) > (b.Min.Y + b.Max.Y) ? -1 : 1; }
+        struct BoundsComparerZ : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Z + a.Max.Z) > (b.Min.Z + b.Max.Z) ? -1 : 1; }
 
         static unsafe void MicroSweepForBinnedBuilder<TLeafCounts>(Vector4 centroidMin, Vector4 centroidMax, Buffer<int> indices, TLeafCounts leafCounts, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Bins bins)
             where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
@@ -629,6 +607,5 @@ namespace BepuPhysics.Trees
             //While we could avoid a recursive implementation, the overhead is low compared to the per-iteration cost.
             BinnedBuilderInternal(indices, leafCounts, boundingBoxes.As<BoundingBox4>(), nodes, metanodes, 0, -1, -1, bins);
         }
-
     }
 }
