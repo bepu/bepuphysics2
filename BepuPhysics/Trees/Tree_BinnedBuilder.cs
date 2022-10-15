@@ -20,21 +20,50 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
+        struct LeavesHandledInPostPass { }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void BuildNode(
+        static void BuildNode<TLeaves>(
             BoundingBox4 a, BoundingBox4 b,
             int leafCountA, int leafCountB,
             Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<int> indices,
-            int nodeIndex, int parentNodeIndex, int childIndexInParent, int subtreeCountA, int subtreeCountB, out int aIndex, out int bIndex)
+            int nodeIndex, int parentNodeIndex, int childIndexInParent, int subtreeCountA, int subtreeCountB, ref TLeaves leaves, out int aIndex, out int bIndex)
+            where TLeaves : unmanaged
         {
+            Debug.Assert(typeof(TLeaves) == typeof(LeavesHandledInPostPass) || typeof(TLeaves) == typeof(Buffer<Leaf>), "While we didn't bother with an interface here, we assume one of two types only.");
             ref var metanode = ref metanodes[0];
             metanode.Parent = parentNodeIndex;
             metanode.IndexInParent = childIndexInParent;
             metanode.RefineFlag = 0;
             ref var node = ref nodes[0];
-            aIndex = subtreeCountA == 1 ? indices[0] : nodeIndex + 1;
-            bIndex = subtreeCountB == 1 ? indices[^1] : nodeIndex + subtreeCountA;//parentNodeIndex + 1 + (subtreeCountA - 1)
+            if (subtreeCountA == 1)
+            {
+                aIndex = indices[0];
+                if (typeof(TLeaves) == typeof(Buffer<Leaf>))
+                {
+                    Debug.Assert(aIndex < 0, "During building, any subtreeCount of 1 should imply a leaf.");
+                    //This is a leaf node, and this is a direct builder execution, so write to the leaf data.
+                    Unsafe.As<TLeaves, Buffer<Leaf>>(ref leaves)[Encode(aIndex)] = new Leaf(nodeIndex, 0);
+                }
+            }
+            else
+            {
+                aIndex = nodeIndex + 1;
+            }
+            if (subtreeCountB == 1)
+            {
+                bIndex = indices[^1];
+                if (typeof(TLeaves) == typeof(Buffer<Leaf>))
+                {
+                    Debug.Assert(bIndex < 0, "During building, any subtreeCount of 1 should imply a leaf.");
+                    //This is a leaf node, and this is a direct builder execution, so write to the leaf data.
+                    Unsafe.As<TLeaves, Buffer<Leaf>>(ref leaves)[Encode(bIndex)] = new Leaf(nodeIndex, 1);
+                }
+            }
+            else
+            {
+                bIndex = nodeIndex + subtreeCountA; //parentNodeIndex + 1 + (subtreeCountA - 1)
+            }
             node.A = Unsafe.As<BoundingBox4, NodeChild>(ref a);
             node.B = Unsafe.As<BoundingBox4, NodeChild>(ref b);
             node.A.Index = aIndex;
@@ -95,14 +124,16 @@ namespace BepuPhysics.Trees
         struct BoundsComparerY : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Y + a.Max.Y) > (b.Min.Y + b.Max.Y) ? -1 : 1; }
         struct BoundsComparerZ : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Z + a.Max.Z) > (b.Min.Z + b.Max.Z) ? -1 : 1; }
 
-        static unsafe void MicroSweepForBinnedBuilder<TLeafCounts>(Vector4 centroidMin, Vector4 centroidMax, Buffer<int> indices, TLeafCounts leafCounts, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Bins bins)
-            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+        static unsafe void MicroSweepForBinnedBuilder<TLeafCounts, TLeaves>(
+            Vector4 centroidMin, Vector4 centroidMax, Buffer<int> indices, TLeafCounts leafCounts, ref TLeaves leaves,
+            Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Bins bins)
+            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts> where TLeaves : unmanaged
         {
             //This is a very small scale sweep build.
             var subtreeCount = indices.Length;
             if (subtreeCount == 2)
             {
-                BuildNode(boundingBoxes[0], boundingBoxes[1], leafCounts[0], leafCounts[1], nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, out _, out _);
+                BuildNode(boundingBoxes[0], boundingBoxes[1], leafCounts[0], leafCounts[1], nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref leaves, out _, out _);
                 return;
             }
             var centroidSpan = centroidMax - centroidMin;
@@ -296,7 +327,7 @@ namespace BepuPhysics.Trees
             if (typeof(TLeafCounts) == typeof(UnitLeafCount))
                 bestLeafCountB = subtreeCountB;
 
-            BuildNode(bestBoundsA, bestBoundsB, bestLeafCountA, bestLeafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, out var aIndex, out var bIndex);
+            BuildNode(bestBoundsA, bestBoundsB, bestLeafCountA, bestLeafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref leaves, out var aIndex, out var bIndex);
             if (subtreeCountA > 1)
             {
                 var aBounds = boundingBoxes.Slice(subtreeCountA);
@@ -307,7 +338,7 @@ namespace BepuPhysics.Trees
                     centroidBoundsA.Min = Vector4.Min(centroidBoundsA.Min, bounds.Min);
                     centroidBoundsA.Max = Vector4.Max(centroidBoundsA.Max, bounds.Max);
                 }
-                MicroSweepForBinnedBuilder(centroidBoundsA.Min, centroidBoundsA.Max, indices.Slice(subtreeCountA), leafCounts.Slice(0, subtreeCountA), aBounds, nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), aIndex, nodeIndex, 0, bins);
+                MicroSweepForBinnedBuilder(centroidBoundsA.Min, centroidBoundsA.Max, indices.Slice(subtreeCountA), leafCounts.Slice(0, subtreeCountA), ref leaves, aBounds, nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), aIndex, nodeIndex, 0, bins);
             }
             if (subtreeCountB > 1)
             {
@@ -319,7 +350,7 @@ namespace BepuPhysics.Trees
                     centroidBoundsB.Min = Vector4.Min(centroidBoundsB.Min, bounds.Min);
                     centroidBoundsB.Max = Vector4.Max(centroidBoundsB.Max, bounds.Max);
                 }
-                MicroSweepForBinnedBuilder(centroidBoundsB.Min, centroidBoundsB.Max, indices.Slice(subtreeCountA, subtreeCountB), leafCounts.Slice(subtreeCountA, subtreeCountB), bBounds, nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), bIndex, nodeIndex, 1, bins);
+                MicroSweepForBinnedBuilder(centroidBoundsB.Min, centroidBoundsB.Max, indices.Slice(subtreeCountA, subtreeCountB), leafCounts.Slice(subtreeCountA, subtreeCountB), ref leaves, bBounds, nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), bIndex, nodeIndex, 1, bins);
             }
         }
 
@@ -339,14 +370,14 @@ namespace BepuPhysics.Trees
                 return (int)(useX ? binIndicesForLeafContinuous.X : useY ? binIndicesForLeafContinuous.Y : binIndicesForLeafContinuous.Z);
         }
 
-        static unsafe void BinnedBuilderInternal<TLeafCounts>(Buffer<int> indices, TLeafCounts leafCounts, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes,
+        static unsafe void BinnedBuilderInternal<TLeafCounts, TLeaves>(Buffer<int> indices, TLeafCounts leafCounts, ref TLeaves leaves, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes,
             int nodeIndex, int parentNodeIndex, int childIndexInParent, in Bins bins)
-            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts> where TLeaves : unmanaged
         {
             var subtreeCount = indices.Length;
             if (subtreeCount == 2)
             {
-                BuildNode(boundingBoxes[0], boundingBoxes[1], leafCounts[0], leafCounts[1], nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, out _, out _);
+                BuildNode(boundingBoxes[0], boundingBoxes[1], leafCounts[0], leafCounts[1], nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref leaves, out _, out _);
                 return;
             }
             var centroidMin = new Vector4(float.MaxValue);
@@ -389,17 +420,17 @@ namespace BepuPhysics.Trees
                     boundsB.Max = Vector4.Max(bounds.Max, boundsB.Max);
                     degenerateLeafCountB += leafCounts[i];
                 }
-                BuildNode(boundsA, boundsB, degenerateLeafCountA, degenerateLeafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, degenerateSubtreeCountA, degenerateSubtreeCountB, out var aIndex, out var bIndex);
+                BuildNode(boundsA, boundsB, degenerateLeafCountA, degenerateLeafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, degenerateSubtreeCountA, degenerateSubtreeCountB, ref leaves, out var aIndex, out var bIndex);
                 if (degenerateSubtreeCountA > 1)
-                    BinnedBuilderInternal(indices.Slice(degenerateSubtreeCountA), leafCounts.Slice(0, degenerateSubtreeCountA), boundingBoxes.Slice(degenerateSubtreeCountA), nodes.Slice(1, degenerateSubtreeCountA - 1), metanodes.Slice(1, degenerateSubtreeCountA - 1), aIndex, nodeIndex, 0, bins);
+                    BinnedBuilderInternal(indices.Slice(degenerateSubtreeCountA), leafCounts.Slice(0, degenerateSubtreeCountA), ref leaves, boundingBoxes.Slice(degenerateSubtreeCountA), nodes.Slice(1, degenerateSubtreeCountA - 1), metanodes.Slice(1, degenerateSubtreeCountA - 1), aIndex, nodeIndex, 0, bins);
                 if (degenerateSubtreeCountB > 1)
-                    BinnedBuilderInternal(indices.Slice(degenerateSubtreeCountA, degenerateSubtreeCountB), leafCounts.Slice(degenerateSubtreeCountA, degenerateSubtreeCountB), boundingBoxes.Slice(degenerateSubtreeCountA, degenerateSubtreeCountB), nodes.Slice(degenerateSubtreeCountA, degenerateSubtreeCountB - 1), metanodes.Slice(degenerateSubtreeCountA, degenerateSubtreeCountB - 1), bIndex, nodeIndex, 1, bins);
+                    BinnedBuilderInternal(indices.Slice(degenerateSubtreeCountA, degenerateSubtreeCountB), leafCounts.Slice(degenerateSubtreeCountA, degenerateSubtreeCountB), ref leaves, boundingBoxes.Slice(degenerateSubtreeCountA, degenerateSubtreeCountB), nodes.Slice(degenerateSubtreeCountA, degenerateSubtreeCountB - 1), metanodes.Slice(degenerateSubtreeCountA, degenerateSubtreeCountB - 1), bIndex, nodeIndex, 1, bins);
                 return;
             }
 
             if (subtreeCount <= bins.MicrosweepThreshold)
             {
-                MicroSweepForBinnedBuilder(centroidMin, centroidMax, indices, leafCounts, boundingBoxes, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, bins);
+                MicroSweepForBinnedBuilder(centroidMin, centroidMax, indices, leafCounts, ref leaves, boundingBoxes, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, bins);
                 return;
             }
 
@@ -534,34 +565,34 @@ namespace BepuPhysics.Trees
             var leafCountB = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountB : bestLeafCountB;
             var leafCountA = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountA : totalLeafCount - leafCountB;
             Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
-            BuildNode(bestboundsA, bestboundsB, leafCountA, leafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, out var nodeChildIndexA, out var nodeChildIndexB);
+            BuildNode(bestboundsA, bestboundsB, leafCountA, leafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref leaves, out var nodeChildIndexA, out var nodeChildIndexB);
             if (subtreeCountA > 1)
-                BinnedBuilderInternal(indices.Slice(subtreeCountA), leafCounts.Slice(0, subtreeCountA), boundingBoxes.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), nodeChildIndexA, nodeIndex, 0, bins);
+                BinnedBuilderInternal(indices.Slice(subtreeCountA), leafCounts.Slice(0, subtreeCountA), ref leaves, boundingBoxes.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), nodeChildIndexA, nodeIndex, 0, bins);
             if (subtreeCountB > 1)
-                BinnedBuilderInternal(indices.Slice(subtreeCountA, subtreeCountB), leafCounts.Slice(subtreeCountA, subtreeCountB), boundingBoxes.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), nodeChildIndexB, nodeIndex, 1, bins);
+                BinnedBuilderInternal(indices.Slice(subtreeCountA, subtreeCountB), leafCounts.Slice(subtreeCountA, subtreeCountB), ref leaves, boundingBoxes.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), nodeChildIndexB, nodeIndex, 1, bins);
         }
 
-        public static unsafe void BinnedBuilder(Buffer<int> indices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, BufferPool pool,
+        public static unsafe void BinnedBuilder(Buffer<int> encodedLeafIndices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves, BufferPool pool,
             int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
         {
-            var leafCount = indices.Length;
-            Debug.Assert(boundingBoxes.Length >= leafCount, "The bounding boxes provided must cover the range of indices provided.");
-            Debug.Assert(nodes.Length >= leafCount - 1, "The output nodes must be able to contain the nodes created for the leaves.");
-            if (leafCount == 0)
+            var subtreeCount = encodedLeafIndices.Length;
+            Debug.Assert(boundingBoxes.Length >= subtreeCount, "The bounding boxes provided must cover the range of indices provided.");
+            Debug.Assert(nodes.Length >= subtreeCount - 1, "The output nodes must be able to contain the nodes created for the leaves.");
+            if (subtreeCount == 0)
                 return;
-            if (leafCount == 1)
+            if (subtreeCount == 1)
             {
                 //If there's only one leaf, the tree has a special format: the root node has only one child.
                 ref var root = ref nodes[0];
                 root.A.Min = boundingBoxes[0].Min;
-                root.A.Index = indices[0]; //Node that we assume the indices are already encoded. This function works with subtree refinements as well which can manage either leaves or internals.
+                root.A.Index = encodedLeafIndices[0]; //Node that we assume the indices are already encoded. This function works with subtree refinements as well which can manage either leaves or internals.
                 root.A.Max = boundingBoxes[0].Max;
                 root.A.LeafCount = 1;
                 root.B = default;
                 return;
             }
-            boundingBoxes = boundingBoxes.Slice(indices.Length);
-            nodes = nodes.Slice(leafCount - 1);
+            boundingBoxes = boundingBoxes.Slice(encodedLeafIndices.Length);
+            nodes = nodes.Slice(subtreeCount - 1);
 
             //Don't let the user pick values that will just cause an explosion.
             Debug.Assert(minimumBinCount >= 2 && maximumBinCount >= 2, "At least two bins are required. In release mode, this will be clamped up to 2, but where did lower values come from?");
@@ -588,7 +619,7 @@ namespace BepuPhysics.Trees
             var leafCounts = new UnitLeafCount();
 
             //While we could avoid a recursive implementation, the overhead is low compared to the per-iteration cost.
-            BinnedBuilderInternal(indices, leafCounts, boundingBoxes.As<BoundingBox4>(), nodes, metanodes, 0, -1, -1, bins);
+            BinnedBuilderInternal(encodedLeafIndices, leafCounts, ref leaves, boundingBoxes.As<BoundingBox4>(), nodes, metanodes, 0, -1, -1, bins);
         }
     }
 }
