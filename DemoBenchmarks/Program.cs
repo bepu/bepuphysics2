@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Running;
 using DemoBenchmarks;
 
-var summary = BenchmarkRunner.Run(typeof(OneBodyConstraintBenchmarks));
+var summaryOneBody = BenchmarkRunner.Run(typeof(OneBodyConstraintBenchmarks));
+var summaryTwoBody = BenchmarkRunner.Run(typeof(TwoBodyConstraintBenchmarks));

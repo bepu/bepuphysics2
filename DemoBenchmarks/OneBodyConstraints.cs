@@ -7,6 +7,13 @@ using System.Numerics;
 
 namespace DemoBenchmarks;
 
+/// <summary>
+/// Evaluates performance of all one body constraints.
+/// </summary>
+/// <remarks>
+/// Note that all constraints operate across <see cref="Vector{}.Count"/> lanes simultaneously where T is of type <see cref="float"/>.
+/// <para>The number of bundles being executed does not change if <see cref="Vector{}.Count"/> changes; if larger bundles are allowed, then more lanes end up getting solved.</para>
+/// </remarks>
 public class OneBodyConstraintBenchmarks
 {
     static BodyVelocityWide BenchmarkOneBodyConstraint<TConstraintFunctions, TPrestep, TAccumulatedImpulse>(Vector3Wide positionA, QuaternionWide orientationA, BodyInertiaWide inertiaA, TPrestep prestep)
