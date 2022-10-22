@@ -283,4 +283,9 @@ public class ConvexCollisionTesters
     {
         return Test4Contact<CylinderConvexHullTester, CylinderWide, ConvexHullWide>(Cylinder, Hull);
     }
+    [Benchmark]
+    public Vector<float> ConvexHullPairTester()
+    {
+        return Test4Contact<ConvexHullPairTester, ConvexHullWide, ConvexHullWide>(Hull, Hull);
+    }
 }
