@@ -1,13 +1,11 @@
 ﻿using BenchmarkDotNet.Attributes;
-using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.CollisionDetection.CollisionTasks;
-using BepuPhysics.Constraints;
-using BepuPhysics.Constraints.Contact;
 using BepuUtilities;
 using BepuUtilities.Memory;
 using System.Numerics;
+using static DemoBenchmarks.BenchmarkHelper;
 
 namespace DemoBenchmarks;
 
@@ -20,54 +18,12 @@ namespace DemoBenchmarks;
 /// </remarks>
 public class ConvexCollisionTesters
 {
-    static (BodyVelocityWide, BodyVelocityWide, BodyVelocityWide, BodyVelocityWide) BenchmarkFourBodyConstraint<TConstraintFunctions, TPrestep, TAccumulatedImpulse>(
-        Vector3Wide positionA, QuaternionWide orientationA, BodyInertiaWide inertiaA,
-        Vector3Wide positionB, QuaternionWide orientationB, BodyInertiaWide inertiaB,
-        Vector3Wide positionC, QuaternionWide orientationC, BodyInertiaWide inertiaC,
-        Vector3Wide positionD, QuaternionWide orientationD, BodyInertiaWide inertiaD, TPrestep prestep)
-        where TConstraintFunctions : unmanaged, IFourBodyConstraintFunctions<TPrestep, TAccumulatedImpulse> where TPrestep : unmanaged where TAccumulatedImpulse : unmanaged
-    {
-        var functions = default(TConstraintFunctions);
-        var accumulatedImpulse = default(TAccumulatedImpulse);
-        var velocityA = default(BodyVelocityWide);
-        var velocityB = default(BodyVelocityWide);
-        var velocityC = default(BodyVelocityWide);
-        var velocityD = default(BodyVelocityWide);
-        //Individual constraint iterations are often extremely cheap, so beef the benchmark up a bit.
-        const int iterations = 10000;
-        const float inverseDt = 60f;
-        const float dt = 1f / inverseDt;
-        for (int i = 0; i < iterations; ++i)
-        {
-            functions.WarmStart(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, positionD, orientationD, inertiaD,
-                ref prestep, ref accumulatedImpulse, ref velocityA, ref velocityB, ref velocityC, ref velocityD);
-            functions.Solve(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, positionD, orientationD, inertiaD, dt, inverseDt,
-                ref prestep, ref accumulatedImpulse, ref velocityA, ref velocityB, ref velocityC, ref velocityD);
-        }
-        return (velocityA, velocityB, velocityC, velocityD);
-    }
-
     const int iterationCount = 1000;
     BufferPool pool;
     Buffer<Vector3Wide> offsetsB;
     Buffer<Vector<float>> speculativeMargins;
     Buffer<QuaternionWide> orientationsA;
     Buffer<QuaternionWide> orientationsB;
-
-    public static RigidPose CreateRandomPose(Random random, BoundingBox positionBounds)
-    {
-        RigidPose pose;
-        var span = positionBounds.Max - positionBounds.Min;
-        pose.Position = positionBounds.Min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
-        var axis = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
-        var length = axis.Length();
-        if (length > 0)
-            axis /= length;
-        else
-            axis = new Vector3(0, 1, 0);
-        pose.Orientation = QuaternionEx.CreateFromAxisAngle(axis, 1203f * random.NextSingle());
-        return pose;
-    }
 
     [GlobalSetup]
     public unsafe void Setup()
