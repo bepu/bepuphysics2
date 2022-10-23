@@ -18,7 +18,7 @@ namespace DemoBenchmarks;
 /// </remarks>
 public class ConvexCollisionTesters
 {
-    const int iterationCount = 1000;
+    const int iterationCount = 100;
     BufferPool pool;
     Buffer<Vector3Wide> offsetsB;
     Buffer<Vector<float>> speculativeMargins;

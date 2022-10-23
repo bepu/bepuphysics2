@@ -26,7 +26,7 @@ public class TwoBodyConstraintBenchmarks
         var velocityA = default(BodyVelocityWide);
         var velocityB = default(BodyVelocityWide);
         //Individual constraint iterations are often extremely cheap, so beef the benchmark up a bit.
-        const int iterations = 10000;
+        const int iterations = 1000;
         const float inverseDt = 60f;
         const float dt = 1f / inverseDt;
         for (int i = 0; i < iterations; ++i)
