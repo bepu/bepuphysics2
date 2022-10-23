@@ -81,56 +81,8 @@ public class CollisionBatcherTasks
         taskRegistry = DefaultTypes.CreateDefaultCollisionTaskRegistry();
         shapes = new Shapes(pool, 1);
 
-        var sphere = shapes.Add(new Sphere(1));
-        var capsule = shapes.Add(new Capsule(0.5f, 1));
-        var box = shapes.Add(new Box(2, 2, 2));
-        var triangle = shapes.Add(new Triangle(new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1)));
-        var cylinder = shapes.Add(new Cylinder(0.5f, 1));
-
         Random random = new(5);
-        const int pointCount = 50;
-        pool.Take<Vector3>(pointCount, out var points);
-        for (int i = 0; i < pointCount; ++i)
-        {
-            points[i] = new Vector3(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
-        }
-        var hullShape = new ConvexHull(points, pool, out _);
-        var hull = shapes.Add(hullShape);
-
-        CompoundBuilder builder = new(pool, shapes, 64);
-        BoundingBox compoundBounds = new() { Min = new Vector3(0, 0, 0), Max = new Vector3(4, 4, 4) };
-        builder.AddForKinematic(sphere, CreateRandomPose(random, compoundBounds), 1);
-        builder.AddForKinematic(capsule, CreateRandomPose(random, compoundBounds), 1);
-        builder.AddForKinematic(box, CreateRandomPose(random, compoundBounds), 1);
-        builder.AddForKinematic(triangle, CreateRandomPose(random, compoundBounds), 1);
-        builder.AddForKinematic(cylinder, CreateRandomPose(random, compoundBounds), 1);
-        builder.AddForKinematic(hull, CreateRandomPose(random, compoundBounds), 1);
-        builder.BuildKinematicCompound(out var children, out _);
-        var compound = shapes.Add(new Compound(children));
-        builder.Reset();
-
-        Span<TypedIndex> shapeIndices = stackalloc TypedIndex[9];
-        shapeIndices[0] = sphere;
-        shapeIndices[1] = capsule;
-        shapeIndices[2] = box;
-        shapeIndices[3] = triangle;
-        shapeIndices[4] = cylinder;
-        shapeIndices[5] = hull;
-
-        BoundingBox bigCompoundBounds = new() { Min = new Vector3(0, 0, 0), Max = new Vector3(16, 16, 16) };
-        for (int i = 0; i < 64; ++i)
-        {
-            builder.AddForKinematic(shapeIndices[random.Next(6)], CreateRandomPose(random, bigCompoundBounds), 1);
-        }
-        builder.BuildKinematicCompound(out var bigChildren, out _);
-        var bigCompound = shapes.Add(new BigCompound(bigChildren, shapes, pool));
-
-        CreateDeformedPlane(16, 16, (x, y) => { return new Vector3(x * 2 - 8, 3 * MathF.Sin(x) * MathF.Sin(y), y * 2 - 8); }, Vector3.One, pool, out var meshShape);
-        var mesh = shapes.Add(meshShape);
-
-        shapeIndices[6] = compound;
-        shapeIndices[7] = bigCompound;
-        shapeIndices[8] = mesh;
+        CreateShapes(random, pool, shapes);
 
         Span<float> shapeRelativeProbabilities = stackalloc float[9];
         shapeRelativeProbabilities[0] = 1;
@@ -196,6 +148,7 @@ public class CollisionBatcherTasks
         }
     }
 
+    [GlobalCleanup]
     public void Cleanup()
     {
         //All outstanding allocations poof when the pool is cleared.
