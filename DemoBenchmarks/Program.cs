@@ -10,3 +10,5 @@ BenchmarkRunner.Run(typeof(CollisionBatcherTasks));
 BenchmarkRunner.Run(typeof(Sweeps));
 BenchmarkRunner.Run(typeof(ShapeRayTests));
 BenchmarkRunner.Run(typeof(GatherScatter));
+BenchmarkRunner.Run(typeof(RagdollTubeBenchmark));
+
