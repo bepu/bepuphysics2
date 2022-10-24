@@ -8,18 +8,27 @@ namespace DemoBenchmarks;
 
 public static class BenchmarkHelper
 {
-    public static RigidPose CreateRandomPose(Random random, BoundingBox positionBounds)
+    public static Vector3 CreateRandomPosition(Random random, BoundingBox positionBounds)
     {
-        RigidPose pose;
         var span = positionBounds.Max - positionBounds.Min;
-        pose.Position = positionBounds.Min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
-        var axis = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
+        return positionBounds.Min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
+    }
+    public static Vector3 CreateRandomDirection(Random random)
+    {
+        //This is a biased sampling, but that doesn't matter.
+        var axis = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * 2 - Vector3.One;
         var length = axis.Length();
-        if (length > 0)
+        if (length > 1e-10f)
             axis /= length;
         else
             axis = new Vector3(0, 1, 0);
-        pose.Orientation = QuaternionEx.CreateFromAxisAngle(axis, 1203f * random.NextSingle());
+        return axis;
+    }
+    public static RigidPose CreateRandomPose(Random random, BoundingBox positionBounds)
+    {
+        RigidPose pose;
+        pose.Position = CreateRandomPosition(random, positionBounds);
+        pose.Orientation = QuaternionEx.CreateFromAxisAngle(CreateRandomDirection(random), 1203f * random.NextSingle());
         return pose;
     }
 

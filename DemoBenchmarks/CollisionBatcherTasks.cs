@@ -33,46 +33,6 @@ public class CollisionBatcherTasks
     CollisionTaskRegistry taskRegistry;
     Shapes shapes;
 
-
-    public static void CreateDeformedPlane(int width, int height, Func<int, int, Vector3> deformer, Vector3 scaling, BufferPool pool, out Mesh mesh)
-    {
-        pool.Take<Vector3>(width * height, out var vertices);
-        for (int i = 0; i < width; ++i)
-        {
-            for (int j = 0; j < height; ++j)
-            {
-                vertices[width * j + i] = deformer(i, j);
-            }
-        }
-
-        var quadWidth = width - 1;
-        var quadHeight = height - 1;
-        var triangleCount = quadWidth * quadHeight * 2;
-        pool.Take<Triangle>(triangleCount, out var triangles);
-
-        for (int i = 0; i < quadWidth; ++i)
-        {
-            for (int j = 0; j < quadHeight; ++j)
-            {
-                var triangleIndex = (j * quadWidth + i) * 2;
-                ref var triangle0 = ref triangles[triangleIndex];
-                ref var v00 = ref vertices[width * j + i];
-                ref var v01 = ref vertices[width * j + i + 1];
-                ref var v10 = ref vertices[width * (j + 1) + i];
-                ref var v11 = ref vertices[width * (j + 1) + i + 1];
-                triangle0.A = v00;
-                triangle0.B = v01;
-                triangle0.C = v10;
-                ref var triangle1 = ref triangles[triangleIndex + 1];
-                triangle1.A = v01;
-                triangle1.B = v11;
-                triangle1.C = v10;
-            }
-        }
-        pool.Return(ref vertices);
-        mesh = new Mesh(triangles, scaling, pool);
-    }
-
     [GlobalSetup]
     public unsafe void Setup()
     {

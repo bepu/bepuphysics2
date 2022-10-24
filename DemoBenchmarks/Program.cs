@@ -8,3 +8,4 @@ BenchmarkRunner.Run(typeof(FourBodyConstraintBenchmarks));
 BenchmarkRunner.Run(typeof(ConvexCollisionTesters));
 BenchmarkRunner.Run(typeof(CollisionBatcherTasks));
 BenchmarkRunner.Run(typeof(Sweeps));
+BenchmarkRunner.Run(typeof(ShapeRayTests));
