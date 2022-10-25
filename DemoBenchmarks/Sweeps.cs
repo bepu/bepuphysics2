@@ -95,12 +95,12 @@ public class Sweeps
                 VelocityA = new BodyVelocity
                 {
                     Linear = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * 2 - Vector3.One,
-                    Angular = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * 2 - Vector3.One
+                    Angular = 0.1f * (new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * 2 - Vector3.One)
                 },
                 VelocityB = new BodyVelocity
                 {
                     Linear = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * 2 - Vector3.One,
-                    Angular = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * 2 - Vector3.One
+                    Angular = 0.1f * (new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * 2 - Vector3.One)
                 },
                 SpeculativeMargin = random.NextSingle(),
                 A = GetRandomShapeTypeIndex(cumulative),

@@ -12,7 +12,7 @@ using System.Runtime.CompilerServices;
 namespace DemoBenchmarks;
 
 /// <summary>
-/// Evaluates performance of scatter/gather operations used by constraints to pull body data.
+/// Evaluates performance of a simulation similar to the first timesteps of the RagdollTubeDemo.
 /// </summary>
 public class RagdollTubeBenchmark
 {

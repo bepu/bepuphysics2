@@ -11,4 +11,5 @@ BenchmarkRunner.Run(typeof(Sweeps));
 BenchmarkRunner.Run(typeof(ShapeRayTests));
 BenchmarkRunner.Run(typeof(GatherScatter));
 BenchmarkRunner.Run(typeof(RagdollTubeBenchmark));
+BenchmarkRunner.Run(typeof(ShapePileBenchmark));
 
