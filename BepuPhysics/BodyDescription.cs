@@ -39,7 +39,7 @@ namespace BepuPhysics
         /// <summary>
         /// Creates a body activity description. Uses a <see cref="MinimumTimestepCountUnderThreshold"/> of 32.
         /// </summary>
-        /// <param name="sleepThreshold">Threshold of squared velocity under which the body is allowed to go to sleep. This is compared against dot(linearVelocity, linearVelocity) + dot(angularVelocity, angularVelocity).</param>
+        /// <param name="sleepThreshold">Threshold of squared velocity under which the body is allowed to go to sleep. This is compared against dot(linearVelocity, linearVelocity) + dot(angularVelocity, angularVelocity).
         /// Note that the body is not guaranteed to go to sleep immediately after meeting this minimum.</param>
         public static implicit operator BodyActivityDescription(float sleepThreshold)
         {

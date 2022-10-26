@@ -13,7 +13,7 @@ namespace BepuPhysics.CollisionDetection
         /// Checks whether a swept test should be performed for children of swept shapes.
         /// </summary>
         /// <param name="childA">Index of the child belonging to collidable A.</param>
-        /// <param name="childB">Index of the child belonging to collidable B.
+        /// <param name="childB">Index of the child belonging to collidable B.</param>
         /// <returns>True if testing should proceed, false otherwise.</returns>
         bool AllowTest(int childA, int childB);
     }
