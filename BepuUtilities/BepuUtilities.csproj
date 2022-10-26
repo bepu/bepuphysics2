@@ -3,7 +3,7 @@
     <AssemblyName>BepuUtilities</AssemblyName>
     <RootNamespace>BepuUtilities</RootNamespace>
     <TargetFramework>net7.0</TargetFramework>
-    <Version>2.5.0-beta.8</Version>
+    <Version>2.5.0-beta.9</Version>
     <Company>Bepu Entertainment LLC</Company>
     <Authors>Ross Nordby</Authors>
     <Description>Supporting utilities library for BEPUphysics v2.</Description>
