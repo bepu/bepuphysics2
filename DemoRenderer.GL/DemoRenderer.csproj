@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Condition="'$(Configuration)'=='Debug'" Command="dotnet run -p &quot;$(ProjectDir)../DemoContentBuilder&quot; -- &quot;$(ProjectDir)$(ProjectName).content&quot; -debug" />
-    <Exec Condition="'$(Configuration)'!='Debug'" Command="dotnet run -p &quot;$(ProjectDir)../DemoContentBuilder&quot; -- &quot;$(ProjectDir)$(ProjectName).content&quot;" />
+    <Exec Condition="'$(Configuration)'=='Debug'" Command="dotnet run --project &quot;$(ProjectDir)../DemoContentBuilder&quot; -- &quot;$(ProjectDir)$(ProjectName).content&quot; -debug" />
+    <Exec Condition="'$(Configuration)'!='Debug'" Command="dotnet run --project &quot;$(ProjectDir)../DemoContentBuilder&quot; -- &quot;$(ProjectDir)$(ProjectName).content&quot;" />
   </Target>
   
   <ItemGroup>

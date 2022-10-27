@@ -73,7 +73,9 @@ namespace DemoRenderer.ShapeDrawing
             for (int i = 0; i < children.Length; ++i)
             {
                 ref var child = ref children[i];
-                Compound.GetWorldPose(child.LocalPose, pose, out var childPose);
+                RigidPose childPose;
+                Compound.GetRotatedChildPose(child.LocalPosition, child.LocalOrientation, pose.Orientation, out childPose.Position, out childPose.Orientation);
+                childPose.Position += pose.Position;
                 AddShape(shapes, child.ShapeIndex, childPose, color, ref shapeCache, pool);
             }
         }
@@ -290,7 +292,7 @@ namespace DemoRenderer.ShapeDrawing
             ref var activity = ref set.Activity[indexInSet];
             Vector3 color;
             Helpers.UnpackColor((uint)HashHelper.Rehash(handle.Value), out Vector3 colorVariation);
-            ref var state = ref set.SolverStates[indexInSet];
+            ref var state = ref set.DynamicsState[indexInSet];
             if (Bodies.IsKinematic(state.Inertia.Local))
             {
                 var kinematicBase = new Vector3(0, 0.609f, 0.37f);
