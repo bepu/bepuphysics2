@@ -584,7 +584,7 @@ public class RagdollTubeBenchmark
     }
 
     [Benchmark]
-    public unsafe void Benchmark()
+    public unsafe void RagdollTubeBenchmarks()
     {
         for (int i = 0; i < timestepCount; ++i)
         {

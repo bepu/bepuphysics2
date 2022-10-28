@@ -221,7 +221,7 @@ public class ShapePileBenchmark
     }
 
     [Benchmark]
-    public unsafe void Benchmark()
+    public unsafe void ShapePileBenchmarks()
     {
         for (int i = 0; i < timestepCount; ++i)
         {
