@@ -16,7 +16,7 @@ namespace BepuPhysics
     /// <summary>
     /// Provides functionality for efficiently waking up sleeping bodies.
     /// </summary>
-    public class IslandAwakener
+    public unsafe class IslandAwakener
     {
         Solver solver;
         Statics statics;
@@ -135,9 +135,9 @@ namespace BepuPhysics
         int jobIndex;
         int jobCount;
         //TODO: once again, we repeat this worker pattern. We've done this, what, seven times? It wouldn't even be that difficult to centralize it. We'll get around to that at some point.
-        Action<int> phaseOneWorkerDelegate;
-        Action<int> phaseTwoWorkerDelegate;
-        internal void PhaseOneWorker(int workerIndex)
+        ThreadDispatcherWorker phaseOneWorkerDelegate;
+        ThreadDispatcherWorker phaseTwoWorkerDelegate;
+        internal void PhaseOneWorker(int workerIndex, void* context)
         {
             while (true)
             {
@@ -147,7 +147,7 @@ namespace BepuPhysics
                 ExecutePhaseOneJob(index);
             }
         }
-        internal void PhaseTwoWorker(int workerIndex)
+        internal void PhaseTwoWorker(int workerIndex, void* context)
         {
             while (true)
             {

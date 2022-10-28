@@ -81,7 +81,7 @@ namespace BepuPhysics.CollisionDetection
         public int Index;
     }
 
-    public abstract class NarrowPhase
+    public unsafe abstract class NarrowPhase
     {
         public Simulation Simulation;
         public BufferPool Pool;
@@ -198,8 +198,8 @@ namespace BepuPhysics.CollisionDetection
         int flushJobIndex;
         QuickList<NarrowPhaseFlushJob> flushJobs;
         IThreadDispatcher threadDispatcher;
-        Action<int> flushWorkerLoop;
-        void FlushWorkerLoop(int workerIndex)
+        ThreadDispatcherWorker flushWorkerLoop;
+        void FlushWorkerLoop(int workerIndex, void* context)
         {
             int jobIndex;
             while ((jobIndex = Interlocked.Increment(ref flushJobIndex)) < flushJobs.Count)
@@ -330,7 +330,7 @@ namespace BepuPhysics.CollisionDetection
     /// Turns broad phase overlaps into contact manifolds and uses them to manage constraints in the solver.
     /// </summary>
     /// <typeparam name="TCallbacks">Type of the callbacks to use.</typeparam>
-    public partial class NarrowPhase<TCallbacks> : NarrowPhase where TCallbacks : struct, INarrowPhaseCallbacks
+    public unsafe partial class NarrowPhase<TCallbacks> : NarrowPhase where TCallbacks : struct, INarrowPhaseCallbacks
     {
         public TCallbacks Callbacks;
         public struct OverlapWorker

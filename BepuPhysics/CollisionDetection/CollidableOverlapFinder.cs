@@ -16,7 +16,7 @@ namespace BepuPhysics.CollisionDetection
 
     //The overlap finder requires type knowledge about the narrow phase that the broad phase lacks. Don't really want to infect the broad phase with a bunch of narrow phase dependent 
     //generic parameters, so instead we just explicitly create a type-aware overlap finder to help the broad phase.
-    public class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinder where TCallbacks : struct, INarrowPhaseCallbacks
+    public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinder where TCallbacks : struct, INarrowPhaseCallbacks
     {
         struct SelfOverlapHandler : IOverlapHandler
         {
@@ -62,7 +62,7 @@ namespace BepuPhysics.CollisionDetection
         BroadPhase broadPhase;
         SelfOverlapHandler[] selfHandlers;
         IntertreeOverlapHandler[] intertreeHandlers;
-        Action<int> workerAction;
+        ThreadDispatcherWorker workerAction;
         int nextJobIndex;
         public CollidableOverlapFinder(NarrowPhase<TCallbacks> narrowPhase, BroadPhase broadPhase)
         {
@@ -73,7 +73,7 @@ namespace BepuPhysics.CollisionDetection
             workerAction = Worker;
         }
 
-        void Worker(int workerIndex)
+        void Worker(int workerIndex, void* context)
         {
             Debug.Assert(workerIndex >= 0 && workerIndex < intertreeHandlers.Length && workerIndex < selfHandlers.Length);
 

@@ -15,7 +15,7 @@ namespace BepuPhysics.Trees
         /// <summary>
         /// Caches input and output for the multithreaded execution of a tree's refit and refinement operations.
         /// </summary>
-        public class RefitAndRefineMultithreadedContext
+        public unsafe class RefitAndRefineMultithreadedContext
         {
             Tree Tree;
 
@@ -25,12 +25,12 @@ namespace BepuPhysics.Trees
 
             int RefinementLeafCountThreshold;
             Buffer<QuickList<int>> RefinementCandidates;
-            Action<int> RefitAndMarkAction;
+            ThreadDispatcherWorker RefitAndMarkAction;
 
             int RefineIndex;
             public QuickList<int> RefinementTargets;
             public int MaximumSubtrees;
-            Action<int> RefineAction;
+            ThreadDispatcherWorker RefineAction;
 
             IThreadDispatcher threadDispatcher;
 
@@ -310,7 +310,7 @@ namespace BepuPhysics.Trees
                     }
                 }
             }
-            public unsafe void RefitAndMarkForWorker(int workerIndex)
+            public unsafe void RefitAndMarkForWorker(int workerIndex, void* context)
             {
                 if (RefitNodes.Count == 0)
                     return;
@@ -334,7 +334,7 @@ namespace BepuPhysics.Trees
                 treeletInternalNodes.Count = 0;
             }
 
-            public unsafe void RefineForWorker(int workerIndex)
+            public unsafe void RefineForWorker(int workerIndex, void* context)
             {
                 if (RefinementTargets.Count == 0)
                     return;

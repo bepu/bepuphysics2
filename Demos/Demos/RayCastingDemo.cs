@@ -242,7 +242,7 @@ namespace Demos
             public CollidableReference Collidable;
             public bool Hit;
         }
-        class IntersectionAlgorithm
+        unsafe class IntersectionAlgorithm
         {
             public string Name;
             public int IntersectionCount;
@@ -250,7 +250,7 @@ namespace Demos
             public TimingsRingBuffer Timings;
 
             Func<int, IntersectionAlgorithm, int> worker;
-            Action<int> internalWorker;
+            ThreadDispatcherWorker internalWorker;
             public int JobIndex;
 
             public IntersectionAlgorithm(string name, Func<int, IntersectionAlgorithm, int> worker,
@@ -263,7 +263,7 @@ namespace Demos
                 pool.Take(largestRayCount, out Results);
             }
 
-            void ExecuteWorker(int workerIndex)
+            unsafe void ExecuteWorker(int workerIndex, void* context)
             {
                 var intersectionCount = worker(workerIndex, this);
                 Interlocked.Add(ref IntersectionCount, intersectionCount);
@@ -286,7 +286,7 @@ namespace Demos
                 }
                 else
                 {
-                    internalWorker(0);
+                    internalWorker(0, null);
                 }
                 var stop = Stopwatch.GetTimestamp();
                 Timings.Add((stop - start) / (double)Stopwatch.Frequency);

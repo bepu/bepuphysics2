@@ -51,7 +51,7 @@ namespace Demos.SpecializedTests
             pairs.Sort(comparison);
         }
 
-        static void TestTrees(BufferPool pool, IThreadDispatcher threadDispatcher, Random random)
+        unsafe static void TestTrees(BufferPool pool, IThreadDispatcher threadDispatcher, Random random)
         {
             var treeA = new Tree(pool, 1);
             var treeB = new Tree(pool, 1);

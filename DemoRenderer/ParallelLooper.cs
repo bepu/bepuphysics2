@@ -1,6 +1,7 @@
 ﻿using BepuUtilities;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 
@@ -24,9 +25,9 @@ namespace DemoRenderer
     /// </summary>
     /// <remarks>This helps avoid some unnecessary allocations associated with the TPL implementation. While a little garbage from the renderer in the demos isn't exactly a catastrophe,
     /// having zero allocations under normal execution makes it easier to notice when the physics simulation itself is allocating inappropriately.</remarks>
-    public class ParallelLooper
+    public unsafe class ParallelLooper
     {
-        Action<int> dispatcherWorker;
+        ThreadDispatcherWorker dispatcherWorker;
 
         /// <summary>
         /// Gets or sets the dispatcher used by the looper.
@@ -38,7 +39,7 @@ namespace DemoRenderer
             dispatcherWorker = Worker;
         }
 
-        void Worker(int workerIndex)
+        void Worker(int workerIndex, void* context)
         {
             while (true)
             {
@@ -78,7 +79,7 @@ namespace DemoRenderer
                 this.end = exclusiveEnd;
                 this.iteration = workAction;
                 this.workerDone = workerDone;
-                Dispatcher.DispatchWorkers(dispatcherWorker, exclusiveEnd - start);
+                Dispatcher.DispatchWorkers(dispatcherWorker, null, exclusiveEnd - start);
                 this.iteration = null;
                 this.workerDone = workerDone;
             }

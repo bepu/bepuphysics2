@@ -13,7 +13,7 @@ using BepuPhysics.Trees;
 
 namespace Demos.SpecializedTests
 {
-    public static class TreeTest
+    public unsafe static class TreeTest
     {
         public static void Test()
         {
@@ -72,7 +72,7 @@ namespace Demos.SpecializedTests
             var refineContext = new Tree.RefitAndRefineMultithreadedContext();
             var selfTestContext = new Tree.MultithreadedSelfTest<OverlapHandler>(pool);
             var overlapHandlers = new OverlapHandler[threadDispatcher.ThreadCount];
-            Action<int> pairTestAction = selfTestContext.PairTest;
+            ThreadDispatcherWorker pairTestAction = selfTestContext.PairTest;
             var removedLeafHandles = new QuickList<int>(leafCount, pool);
             for (int i = 0; i < iterations; ++i)
             {

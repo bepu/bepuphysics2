@@ -91,7 +91,7 @@ namespace BepuPhysics.CollisionDetection
         public int JobIndex;
     }
 
-    public partial class NarrowPhase<TCallbacks>
+    public unsafe partial class NarrowPhase<TCallbacks>
     {
         public struct SortConstraintTarget
         {
@@ -109,8 +109,8 @@ namespace BepuPhysics.CollisionDetection
 
         int preflushJobIndex;
         QuickList<PreflushJob> preflushJobs;
-        Action<int> preflushWorkerLoop;
-        void PreflushWorkerLoop(int workerIndex)
+        ThreadDispatcherWorker preflushWorkerLoop;
+        void PreflushWorkerLoop(int workerIndex, void* context)
         {
             int jobIndex;
             while ((jobIndex = Interlocked.Increment(ref preflushJobIndex)) < preflushJobs.Count)

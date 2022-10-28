@@ -82,7 +82,7 @@ namespace Demos.Demos.Characters
     /// <summary>
     /// System that manages all the characters in a simulation. Responsible for updating movement constraints based on character goals and contact states.
     /// </summary>
-    public class CharacterControllers : IDisposable
+    public unsafe class CharacterControllers : IDisposable
     {
         /// <summary>
         /// Gets the simulation to which this set of chracters belongs.
@@ -433,8 +433,8 @@ namespace Demos.Demos.Characters
         }
 
         int boundingBoxExpansionJobIndex;
-        Action<int> expandBoundingBoxesWorker;
-        void ExpandBoundingBoxesWorker(int workerIndex)
+        ThreadDispatcherWorker expandBoundingBoxesWorker;
+        unsafe void ExpandBoundingBoxesWorker(int workerIndex, void* context)
         {
             while (true)
             {
@@ -735,8 +735,8 @@ namespace Demos.Demos.Characters
         int analysisJobIndex;
         int analysisJobCount;
         Buffer<AnalyzeContactsJob> jobs;
-        Action<int> analyzeContactsWorker;
-        void AnalyzeContactsWorker(int workerIndex)
+        ThreadDispatcherWorker analyzeContactsWorker;
+        unsafe void AnalyzeContactsWorker(int workerIndex, void* context)
         {
             int jobIndex;
             while ((jobIndex = Interlocked.Increment(ref analysisJobIndex)) < analysisJobCount)

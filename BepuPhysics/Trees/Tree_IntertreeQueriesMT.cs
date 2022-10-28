@@ -153,7 +153,8 @@ namespace BepuPhysics.Trees
             /// Executes a single worker of the multithreaded self test.
             /// </summary>
             /// <param name="workerIndex">Index of the worker executing this set of tests.</param>
-            public unsafe void PairTest(int workerIndex)
+            /// <param name="context">Context of the dispatch, if any.</param>
+            public unsafe void PairTest(int workerIndex, void* context)
             {
                 Debug.Assert(workerIndex >= 0 && workerIndex < OverlapHandlers.Length);
                 int nextNodePairIndex;

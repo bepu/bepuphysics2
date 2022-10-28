@@ -40,7 +40,7 @@ namespace BepuPhysics.CollisionDetection
         //TODO: static trees do not need to do nearly as much work as the active; this will change in the future.
         Tree.RefitAndRefineMultithreadedContext staticRefineContext;
 
-        Action<int> executeRefitAndMarkAction, executeRefineAction;
+        ThreadDispatcherWorker executeRefitAndMarkAction, executeRefineAction;
 
         public BroadPhase(BufferPool pool, int initialActiveLeafCapacity = 4096, int initialStaticLeafCapacity = 8192)
         {
@@ -153,7 +153,7 @@ namespace BepuPhysics.CollisionDetection
         int frameIndex;
         int remainingJobCount;
         IThreadDispatcher threadDispatcher;
-        void ExecuteRefitAndMark(int workerIndex)
+        void ExecuteRefitAndMark(int workerIndex, void* context)
         {
             var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
             while (true)
@@ -174,7 +174,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        void ExecuteRefine(int workerIndex)
+        void ExecuteRefine(int workerIndex, void* context)
         {
             var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
             var maximumSubtrees = Math.Max(activeRefineContext.MaximumSubtrees, staticRefineContext.MaximumSubtrees);
@@ -212,7 +212,7 @@ namespace BepuPhysics.CollisionDetection
                 activeRefineContext.CreateRefitAndMarkJobs(ref ActiveTree, Pool, threadDispatcher);
                 staticRefineContext.CreateRefitAndMarkJobs(ref StaticTree, Pool, threadDispatcher);
                 remainingJobCount = activeRefineContext.RefitNodes.Count + staticRefineContext.RefitNodes.Count;
-                threadDispatcher.DispatchWorkers(executeRefitAndMarkAction, remainingJobCount);
+                threadDispatcher.DispatchWorkers(executeRefitAndMarkAction, null, remainingJobCount);
                 activeRefineContext.CreateRefinementJobs(Pool, frameIndex, 1f);
                 //TODO: for now, the inactive/static tree is simply updated like another active tree. This is enormously inefficient compared to the ideal-
                 //by nature, static and inactive objects do not move every frame!
@@ -221,7 +221,7 @@ namespace BepuPhysics.CollisionDetection
                 //Since the jobs are large, reducing the refinement aggressiveness doesn't change much here.
                 staticRefineContext.CreateRefinementJobs(Pool, frameIndex, 1f);
                 remainingJobCount = activeRefineContext.RefinementTargets.Count + staticRefineContext.RefinementTargets.Count;
-                threadDispatcher.DispatchWorkers(executeRefineAction, remainingJobCount);
+                threadDispatcher.DispatchWorkers(executeRefineAction, null, remainingJobCount);
                 activeRefineContext.CleanUpForRefitAndRefine(Pool);
                 staticRefineContext.CleanUpForRefitAndRefine(Pool);
                 this.threadDispatcher = null;

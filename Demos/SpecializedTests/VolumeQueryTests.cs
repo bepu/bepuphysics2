@@ -130,14 +130,14 @@ namespace Demos.SpecializedTests
         QuickList<BoundingBox> queryBoxes;
 
 
-        class BoxQueryAlgorithm
+        unsafe class BoxQueryAlgorithm
         {
             public string Name;
             public int IntersectionCount;
             public TimingsRingBuffer Timings;
 
             Func<int, BoxQueryAlgorithm, int> worker;
-            Action<int> internalWorker;
+            ThreadDispatcherWorker internalWorker;
             public int JobIndex;
 
             public BoxQueryAlgorithm(string name, BufferPool pool, Func<int, BoxQueryAlgorithm, int> worker, int timingSampleCount = 16)
@@ -148,7 +148,7 @@ namespace Demos.SpecializedTests
                 internalWorker = ExecuteWorker;
             }
 
-            void ExecuteWorker(int workerIndex)
+            unsafe void ExecuteWorker(int workerIndex, void* context)
             {
                 var intersectionCount = worker(workerIndex, this);
                 Interlocked.Add(ref IntersectionCount, intersectionCount);
@@ -166,7 +166,7 @@ namespace Demos.SpecializedTests
                 }
                 else
                 {
-                    internalWorker(0);
+                    internalWorker(0, null);
                 }
                 var stop = Stopwatch.GetTimestamp();
                 Timings.Add((stop - start) / (double)Stopwatch.Frequency);

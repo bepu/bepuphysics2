@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using BepuUtilities.Memory;
 
@@ -8,7 +9,7 @@ namespace BepuUtilities
     /// <summary>
     /// Provides a <see cref="IThreadDispatcher"/> implementation. Not reentrant.
     /// </summary>
-    public class ThreadDispatcher : IThreadDispatcher, IDisposable
+    public unsafe class ThreadDispatcher : IThreadDispatcher, IDisposable
     {
         int threadCount;
         /// <summary>
@@ -52,7 +53,7 @@ namespace BepuUtilities
         void DispatchThread(int workerIndex)
         {
             Debug.Assert(workerBody != null);
-            workerBody(workerIndex);
+            workerBody(workerIndex, context);
 
             if (Interlocked.Decrement(ref remainingWorkerCounter) == -1)
             {
@@ -60,7 +61,8 @@ namespace BepuUtilities
             }
         }
 
-        volatile Action<int> workerBody;
+        volatile ThreadDispatcherWorker workerBody;
+        volatile void* context;
         int remainingWorkerCounter;
 
         void WorkerLoop(object untypedSignal)
@@ -88,21 +90,23 @@ namespace BepuUtilities
             }
         }
 
-        public void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue)
+        public void DispatchWorkers(ThreadDispatcherWorker workerBody, void* context = null, int maximumWorkerCount = int.MaxValue)
         {
             if (maximumWorkerCount > 1)
             {
                 Debug.Assert(this.workerBody == null);
                 this.workerBody = workerBody;
+                this.context = context;
                 SignalThreads(maximumWorkerCount);
                 //Calling thread does work. No reason to spin up another worker and block this one!
                 DispatchThread(0);
                 finished.WaitOne();
                 this.workerBody = null;
+                this.context = null;
             }
             else if (maximumWorkerCount == 1)
             {
-                workerBody(0);
+                workerBody(0, context);
             }
         }
 

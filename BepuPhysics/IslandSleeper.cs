@@ -12,7 +12,7 @@ using System.Threading;
 
 namespace BepuPhysics
 {
-    public class IslandSleeper
+    public unsafe class IslandSleeper
     {
         IdPool setIdPool;
         Bodies bodies;
@@ -324,16 +324,16 @@ namespace BepuPhysics
                 FindIslands(workerIndex, threadPool, ref predicate);
             }
         }
-        Action<int> findIslandsDelegate;
+        ThreadDispatcherWorker findIslandsDelegate;
         bool forceSleep;
-        void FindIslands(int workerIndex)
+        void FindIslands(int workerIndex, void* context)
         {
             //The only reason we separate this out is to make it easier for the main pool to be passed in if there is only a single thread. 
             FindIslands(workerIndex, threadDispatcher.GetThreadMemoryPool(workerIndex));
         }
 
-        Action<int> gatherDelegate;
-        unsafe void Gather(int workerIndex)
+        ThreadDispatcherWorker gatherDelegate;
+        unsafe void Gather(int workerIndex, void* context)
         {
             while (true)
             {
@@ -389,9 +389,9 @@ namespace BepuPhysics
         }
 
         int typeBatchConstraintRemovalJobCount;
-        Action<int> typeBatchConstraintRemovalDelegate;
+        ThreadDispatcherWorker typeBatchConstraintRemovalDelegate;
 
-        void TypeBatchConstraintRemoval(int workerIndex)
+        void TypeBatchConstraintRemoval(int workerIndex, void* context)
         {
             while (true)
             {
@@ -507,8 +507,8 @@ namespace BepuPhysics
                     break;
             }
         }
-        Action<int> executeRemovalWorkDelegate;
-        void ExecuteRemovalWork(int workerIndex)
+        ThreadDispatcherWorker executeRemovalWorkDelegate;
+        void ExecuteRemovalWork(int workerIndex, void* context)
         {
             while (true)
             {
@@ -797,7 +797,7 @@ namespace BepuPhysics
             }
             else
             {
-                Gather(0);
+                Gather(0, null);
             }
             DisposeWorkerTraversalResults();
             gatheringJobs.Dispose(pool);

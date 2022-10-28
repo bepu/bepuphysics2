@@ -265,7 +265,7 @@ namespace BepuPhysics
     /// <summary>
     /// Handles body integration work that isn't bundled into the solver's execution. Predicts bounding boxes, integrates velocity and poses for unconstrained bodies, and does final post-substepping pose integration for constrained bodies.
     /// </summary>
-    public class PoseIntegrator<TCallbacks> : IPoseIntegrator where TCallbacks : IPoseIntegratorCallbacks
+    public unsafe class PoseIntegrator<TCallbacks> : IPoseIntegrator where TCallbacks : IPoseIntegratorCallbacks
     {
         Bodies bodies;
         Shapes shapes;
@@ -273,7 +273,7 @@ namespace BepuPhysics
 
         public TCallbacks Callbacks;
 
-        Action<int> predictBoundingBoxesWorker;
+        ThreadDispatcherWorker predictBoundingBoxesWorker;
         public PoseIntegrator(Bodies bodies, Shapes shapes, BroadPhase broadPhase, TCallbacks callbacks)
         {
             this.bodies = bodies;
@@ -395,7 +395,7 @@ namespace BepuPhysics
             return true;
         }
 
-        void PredictBoundingBoxesWorker(int workerIndex)
+        void PredictBoundingBoxesWorker(int workerIndex, void* context)
         {
             var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
             var bundleCount = BundleIndexing.GetBundleCount(bodies.ActiveSet.Count);
@@ -690,9 +690,9 @@ namespace BepuPhysics
             }
         }
 
-        Action<int> integrateAfterSubsteppingWorker;
+        ThreadDispatcherWorker integrateAfterSubsteppingWorker;
         IndexSet constrainedBodies;
-        private void IntegrateAfterSubsteppingWorker(int workerIndex)
+        private void IntegrateAfterSubsteppingWorker(int workerIndex, void* context)
         {
             var bundleCount = BundleIndexing.GetBundleCount(bodies.ActiveSet.Count);
             var substepDt = cachedDt / substepCount;
