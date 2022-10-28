@@ -139,7 +139,7 @@ public class CollisionBatcherTasks
     }
 
     [Benchmark]
-    public unsafe Vector3 Benchmark()
+    public unsafe Vector3 CollisionBatcherTasksBenchmark()
     {
         CollisionBatcher<Callbacks> batcher = new(pool, shapes, taskRegistry, 1 / 60f, new Callbacks());
 
