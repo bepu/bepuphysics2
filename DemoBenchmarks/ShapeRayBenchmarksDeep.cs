@@ -13,9 +13,9 @@ using static DemoBenchmarks.BenchmarkHelper;
 namespace DemoBenchmarks;
 
 /// <summary>
-/// Evaluates performance of shape ray tests.
+/// Evaluates performance of shape ray tests. Each benchmark covers a different shape type.
 /// </summary>
-public class ShapeRayTests
+public class ShapeRayBenchmarksDeep
 {
     const int iterationCount = 100;
     BufferPool pool;

@@ -168,7 +168,7 @@ public class ShapePileBenchmark
         var cylinderIndex = Simulation.Shapes.Add(cylinder);
         var hullIndex = Simulation.Shapes.Add(convexHull);
         const int width = 8;
-        const int height = 8;
+        const int height = 4;
         const int length = 8;
         var shapeCount = 0;
         for (int i = 0; i < width; ++i)

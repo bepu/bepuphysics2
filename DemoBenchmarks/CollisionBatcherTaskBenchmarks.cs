@@ -14,9 +14,9 @@ namespace DemoBenchmarks;
 /// <summary>
 /// Evaluates performance of all collision tasks together in a collision batcher.
 /// </summary>
-public class CollisionBatcherTasks
+public class CollisionBatcherTaskBenchmarks
 {
-    const int pairCount = 100000;
+    const int pairCount = 10000;
     BufferPool pool;
     struct Pair
     {
@@ -49,12 +49,12 @@ public class CollisionBatcherTasks
         shapeRelativeProbabilities[1] = 1;
         shapeRelativeProbabilities[2] = 1;
         shapeRelativeProbabilities[3] = 1;
-        shapeRelativeProbabilities[4] = 1;
-        shapeRelativeProbabilities[5] = 1;
+        shapeRelativeProbabilities[4] = 0.4f;
+        shapeRelativeProbabilities[5] = 0.35f;
 
-        shapeRelativeProbabilities[6] = 0.2f;
-        shapeRelativeProbabilities[7] = 0.2f;
-        shapeRelativeProbabilities[7] = 0.2f;
+        shapeRelativeProbabilities[6] = 0.1f;
+        shapeRelativeProbabilities[7] = 0.1f;
+        shapeRelativeProbabilities[8] = 0.1f;
 
         var sum = 0f;
         Span<float> cumulative = stackalloc float[9];

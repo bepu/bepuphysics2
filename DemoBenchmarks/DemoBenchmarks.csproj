@@ -1,10 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <StartArguments>-f *CollisionBatcherTaskBenchmarks.* *GroupedCollisionTesterBenchmarks.* *GatherScatterBenchmarks.* *OneBodyConstraintBenchmarks.* *TwoBodyConstraintBenchmarks.* *ThreeBodyConstraintBenchmarks.* *FourBodyConstraintBenchmarks.* *SweepBenchmarks.* *ShapeRayBenchmarks.* *ShapePileBenchmark.* *RagdollTubeBenchmark.* --join</StartArguments>
+    <!--<StartArguments>-f *CollisionBatcherTaskBenchmarks.* *ConvexCollisionTesterBenchmarks.* *GatherScatterBenchmarks.* *OneBodyConstraintBenchmarks.* *OneBodyConstraintBenchmarksDeep.* *TwoBodyConstraintBenchmarks.* *TwoBodyConstraintBenchmarksDeep.* *ThreeBodyConstraintBenchmarks.* *FourBodyConstraintBenchmarks.* *SweepBenchmarks.* *SweepBenchmarksDeep.* *ShapeRayBenchmarksDeep.* *ShapePileBenchmark.* *RagdollTubeBenchmark.*</StartArguments>-->
   </PropertyGroup>
 
   <ItemGroup>

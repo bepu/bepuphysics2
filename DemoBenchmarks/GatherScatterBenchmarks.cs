@@ -13,7 +13,7 @@ namespace DemoBenchmarks;
 /// <summary>
 /// Evaluates performance of scatter/gather operations used by constraints to pull body data.
 /// </summary>
-public class GatherScatter
+public class GatherScatterBenchmarks
 {
     unsafe struct NarrowPhaseCallbacks : INarrowPhaseCallbacks
     {
@@ -115,34 +115,48 @@ public class GatherScatter
     }
 
 
+    //Scattering operations are extremely similar. Breaking them out could be useful in corner cases if a regression is observed, but usually doing them all in one benchmark should suffice.
     [Benchmark]
-    public unsafe void ScatterPose()
+    public unsafe void ScatterState()
     {
         var mask = new Vector<int>(-1);
         for (int i = 0; i < iterationCount; ++i)
         {
             ref var pose = ref poses[i];
             simulation.Bodies.ScatterPose(ref pose.Position, ref pose.Orientation, bodyIndices[i], mask);
-        }
-    }
-
-    [Benchmark]
-    public unsafe void ScatterInertia()
-    {
-        var mask = new Vector<int>(-1);
-        for (int i = 0; i < iterationCount; ++i)
-        {
             simulation.Bodies.ScatterInertia(ref inertias[i], bodyIndices[i], mask);
-        }
-    }
-    [Benchmark]
-    public unsafe void ScatterVelocities()
-    {
-        for (int i = 0; i < iterationCount; ++i)
-        {
             simulation.Bodies.ScatterVelocities<AccessAll>(ref velocities[i], ref bodyIndices[i]);
         }
     }
+
+    //[Benchmark]
+    //public unsafe void ScatterPose()
+    //{
+    //    var mask = new Vector<int>(-1);
+    //    for (int i = 0; i < iterationCount; ++i)
+    //    {
+    //        ref var pose = ref poses[i];
+    //        simulation.Bodies.ScatterPose(ref pose.Position, ref pose.Orientation, bodyIndices[i], mask);
+    //    }
+    //}
+
+    //[Benchmark]
+    //public unsafe void ScatterInertia()
+    //{
+    //    var mask = new Vector<int>(-1);
+    //    for (int i = 0; i < iterationCount; ++i)
+    //    {
+    //        simulation.Bodies.ScatterInertia(ref inertias[i], bodyIndices[i], mask);
+    //    }
+    //}
+    //[Benchmark]
+    //public unsafe void ScatterVelocities()
+    //{
+    //    for (int i = 0; i < iterationCount; ++i)
+    //    {
+    //        simulation.Bodies.ScatterVelocities<AccessAll>(ref velocities[i], ref bodyIndices[i]);
+    //    }
+    //}
 
 
 }

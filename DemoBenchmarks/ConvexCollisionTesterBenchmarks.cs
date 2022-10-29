@@ -16,7 +16,7 @@ namespace DemoBenchmarks;
 /// Note that all of these collision testers operate across <see cref="Vector{}.Count"/> lanes simultaneously where T is of type <see cref="float"/>.
 /// <para>The number of bundles being executed does not change if <see cref="Vector{}.Count"/> changes; if larger bundles are allowed, then more lanes end up getting solved.</para>
 /// </remarks>
-public class ConvexCollisionTesters
+public class ConvexCollisionTesterBenchmarks
 {
     const int iterationCount = 100;
     BufferPool pool;
@@ -74,6 +74,7 @@ public class ConvexCollisionTesters
         Hull = hull;
     }
 
+    [GlobalCleanup]
     public void Cleanup()
     {
         //All outstanding allocations poof when the pool is cleared.
