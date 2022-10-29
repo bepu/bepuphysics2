@@ -7,7 +7,7 @@ For a partial but pretty high coverage set of benchmarks, consider running with 
 -f *CollisionBatcherTaskBenchmarks.* *GroupedCollisionTesterBenchmarks.* *GatherScatterBenchmarks.* *OneBodyConstraintBenchmarks.* *TwoBodyConstraintBenchmarks.* *ThreeBodyConstraintBenchmarks.* *FourBodyConstraintBenchmarks.* *SweepBenchmarks.* *ShapeRayBenchmarks.* *ShapePileBenchmark.* *RagdollTubeBenchmark.*
 ```
 
-For a longer complete set of benchmarkers, consider running with a filter of:
+For a longer complete set of benchmarks, consider running with a filter of:
 ```
 -f *CollisionBatcherTaskBenchmarks.* *ConvexCollisionTesterBenchmarks.* *GatherScatterBenchmarks.* *OneBodyConstraintBenchmarks.* *OneBodyConstraintBenchmarksDeep.* *TwoBodyConstraintBenchmarks.* *TwoBodyConstraintBenchmarksDeep.* *ThreeBodyConstraintBenchmarks.* *FourBodyConstraintBenchmarks.* *SweepBenchmarks.* *SweepBenchmarksDeep.* *ShapeRayBenchmarksDeep.* *ShapePileBenchmark.* *RagdollTubeBenchmark.*
 ```
