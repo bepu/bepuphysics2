@@ -52,8 +52,11 @@ namespace BepuUtilities
 
         void DispatchThread(int workerIndex)
         {
-            Debug.Assert(workerBody != null);
-            workerBody(workerIndex, context);
+            Debug.Assert(workerBody != null ^ workerBodyPointer != null);
+            if (workerBody != null)
+                workerBody(workerIndex, context);
+            else
+                workerBodyPointer(workerIndex, context);
 
             if (Interlocked.Decrement(ref remainingWorkerCounter) == -1)
             {
@@ -62,6 +65,7 @@ namespace BepuUtilities
         }
 
         volatile ThreadDispatcherWorker workerBody;
+        volatile delegate*<int, void*, void> workerBodyPointer;
         volatile void* context;
         int remainingWorkerCounter;
 
@@ -90,11 +94,31 @@ namespace BepuUtilities
             }
         }
 
+        public void DispatchWorkers(delegate*<int, void*, void> workerBody, void* context = null, int maximumWorkerCount = int.MaxValue)
+        {
+            if (maximumWorkerCount > 1)
+            {
+                Debug.Assert(this.workerBody == null && this.workerBodyPointer == null);
+                workerBodyPointer = workerBody;
+                this.context = context;
+                SignalThreads(maximumWorkerCount);
+                //Calling thread does work. No reason to spin up another worker and block this one!
+                DispatchThread(0);
+                finished.WaitOne();
+                workerBodyPointer = null;
+                this.context = null;
+            }
+            else if (maximumWorkerCount == 1)
+            {
+                workerBody(0, context);
+            }
+        }
+
         public void DispatchWorkers(ThreadDispatcherWorker workerBody, void* context = null, int maximumWorkerCount = int.MaxValue)
         {
             if (maximumWorkerCount > 1)
             {
-                Debug.Assert(this.workerBody == null);
+                Debug.Assert(this.workerBody == null && this.workerBodyPointer == null);
                 this.workerBody = workerBody;
                 this.context = context;
                 SignalThreads(maximumWorkerCount);

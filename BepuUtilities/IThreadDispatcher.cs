@@ -36,6 +36,14 @@ namespace BepuUtilities
         /// <summary>
         /// Dispatches all the available workers.
         /// </summary>
+        /// <param name="workerBody">Function pointer to be invoked on every worker. Matches the signature of the <see cref="ThreadDispatcherWorker"/>.</param>
+        /// <param name="context">Pointer to the context to passed to workers, if any.</param>
+        /// <param name="maximumWorkerCount">Maximum number of workers to dispatch.</param>
+        void DispatchWorkers(delegate*<int, void*, void> workerBody, void* context, int maximumWorkerCount = int.MaxValue);
+
+        /// <summary>
+        /// Dispatches all the available workers.
+        /// </summary>
         /// <param name="workerBody">Delegate to be invoked on every worker.</param>
         /// <param name="context">Pointer to the context to passed to workers, if any.</param>
         /// <param name="maximumWorkerCount">Maximum number of workers to dispatch.</param>

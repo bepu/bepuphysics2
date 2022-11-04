@@ -18,10 +18,11 @@ using BepuPhysics.Collidables;
 using static System.Formats.Asn1.AsnWriter;
 using static OpenTK.Graphics.OpenGL.GL;
 using System.Xml.Linq;
+using System.Threading;
 
 namespace Demos.SpecializedTests
 {
-    public class TreeFiddlingTestDemo : Demo
+    public unsafe class TreeFiddlingTestDemo : Demo
     {
         struct Pair : IEquatable<Pair>
         {

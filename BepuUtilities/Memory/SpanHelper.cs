@@ -17,7 +17,7 @@ namespace BepuUtilities.Memory
         {
             Debug.Assert(power >= 0 && power <= MaximumSpanSizePower, $"Power must be from 0 to {MaximumSpanSizePower}, inclusive.");
         }
-        
+
         /// <summary>
         /// Computes the lowest integer N such that 2^N >= i.
         /// </summary>
@@ -28,7 +28,7 @@ namespace BepuUtilities.Memory
         {
             var unsigned = i == 0 ? 1u : (uint)i;
             return 32 - BitOperations.LeadingZeroCount(unsigned - 1);
-            
+
         }
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace BepuUtilities.Memory
         /// <summary>
         /// Tests if a type is primitive. Slow path; unspecialized compilation.
         /// </summary>
-        /// <param name="type">Type to check for primitiveness.</typeparam>
+        /// <param name="type">Type to check for primitiveness.</param>
         /// <returns>True if the type is one of the primitive types, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsPrimitive(Type type)
