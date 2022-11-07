@@ -292,8 +292,10 @@ public unsafe struct JobQueue
     /// </summary>
     /// <param name="tasks">Tasks composing the job.</param>
     /// <returns>Result of the enqueue attempt.</returns>
-    EnqueueTasksResult TryEnqueueTasks(Span<Task> tasks)
+    public EnqueueTasksResult TryEnqueueTasks(Span<Task> tasks)
     {
+        if (tasks.Length == 0)
+            return EnqueueTasksResult.Success;
         if (Interlocked.CompareExchange(ref taskLocker, 1, 0) != 0)
             return EnqueueTasksResult.Contested;
         try
@@ -311,23 +313,28 @@ public unsafe struct JobQueue
             }
             //We can actually write the jobs.
             Debug.Assert(BitOperations.IsPow2(this.tasks.Length));
-            var wrappedStartIndex = taskStartIndex & taskMask;
-            var wrappedEndIndex = taskEndIndex & taskMask;
-            //if (wrappedEndIndex > wrappedStartIndex)
-            //{
-            //    //We can just copy the whole task block as one blob.
-            //    Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + taskStartIndex), ref Unsafe.As<Task, byte>(ref MemoryMarshal.GetReference(tasks), Unsafe.SizeOf<Task>() * tasks.Length);
-            //}
-            //else
-            //{
-            //    //Copy the task block as two blobs.
-            //    Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + taskStartIndex), ref Unsafe.As<Task, byte>(ref MemoryMarshal.GetReference(tasks), Unsafe.SizeOf<Task>() * tasks.Length);
-            //}
-            for (int i = 0; i < tasks.Length; ++i)
+            var wrappedInclusiveStartIndex = (int)(taskStartIndex & taskMask);
+            var wrappedInclusiveEndIndex = (int)(taskEndIndex & taskMask);
+            if (wrappedInclusiveEndIndex > wrappedInclusiveStartIndex)
             {
-                var taskIndex = (int)((i + taskStartIndex) & mask);
-                this.tasks[taskIndex] = tasks[i];
+                //We can just copy the whole task block as one blob.
+                Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + taskStartIndex), ref Unsafe.As<Task, byte>(ref MemoryMarshal.GetReference(tasks)), (uint)(Unsafe.SizeOf<Task>() * tasks.Length));
             }
+            else
+            {
+                //Copy the task block as two blobs.
+                ref var startTask = ref tasks[0];
+                var firstRegionCount = this.tasks.length - wrappedInclusiveStartIndex;
+                ref var secondBlobStartTask = ref tasks[firstRegionCount];
+                var secondRegionCount = tasks.Length - firstRegionCount;
+                Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + taskStartIndex), ref Unsafe.As<Task, byte>(ref startTask), (uint)(Unsafe.SizeOf<Task>() * firstRegionCount));
+                Unsafe.CopyBlockUnaligned(ref *(byte*)this.tasks.Memory, ref Unsafe.As<Task, byte>(ref secondBlobStartTask), (uint)(Unsafe.SizeOf<Task>() * secondRegionCount));
+            }
+            //for (int i = 0; i < tasks.Length; ++i)
+            //{
+            //    var taskIndex = (int)((i + taskStartIndex) & taskMask);
+            //    this.tasks[taskIndex] = tasks[i];
+            //}
             Interlocked.Exchange(ref writtenTaskIndex, taskEndIndex); //This is not assuming 64 bits. Mildly goofy considering the rest.
             return EnqueueTasksResult.Success;
         }
@@ -341,7 +348,7 @@ public unsafe struct JobQueue
     /// Appends a task to the job queue if the ring buffer is uncontested.
     /// </summary>
     /// <param name="tasks">Tasks composing the job.</param>
-    void EnqueueTasks(Span<Task> tasks)
+    public void EnqueueTasks(Span<Task> tasks)
     {
         SpinWait waiter = new SpinWait();
         while (TryEnqueueTasks(tasks) != EnqueueTasksResult.Success)
@@ -367,7 +374,7 @@ public unsafe struct JobQueue
     {
         Span<Task> stopJob = stackalloc Task[1];
         stopJob[0] = new Task { Function = null };
-        SpinWait waiter = new SpinWait();
+        var waiter = new SpinWait();
         while (TryEnqueueTasks(stopJob) != EnqueueTasksResult.Success)
         {
             waiter.SpinOnce(-1);
@@ -397,7 +404,13 @@ public unsafe struct JobQueue
         internal JobQueueContinuations* Continuations;
     }
 
-
+    /// <summary>
+    /// Wraps a set of tasks in continuation tasks that will report their completion.
+    /// </summary>
+    /// <param name="continuationHandle">Handle of the continuation to report to.</param>
+    /// <param name="tasks">Tasks to wrap.</param>
+    /// <param name="wrappedTaskContexts">Contexts to be used for the wrapped tasks. This memory must persist until the wrapped tasks complete.</param>
+    /// <param name="wrappedTasks">Span to hold the tasks created by this function.</param>
     public void CreateCompletionWrappedTasks(ContinuationHandle continuationHandle, Span<Task> tasks, WrappedTaskContext* wrappedTaskContexts, Span<Task> wrappedTasks)
     {
         var count = Math.Min(tasks.Length, wrappedTasks.Length);
@@ -416,8 +429,6 @@ public unsafe struct JobQueue
             targetTask.TaskId = sourceTask.TaskId;
         }
     }
-
-
 
     static void RunAndMarkAsComplete(int taskId, void* wrapperContextPointer, int workerIndex)
     {
