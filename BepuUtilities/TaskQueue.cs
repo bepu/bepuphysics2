@@ -165,7 +165,7 @@ internal unsafe struct TaskQueueContinuations
     public TaskContinuation* GetContinuation(ContinuationHandle continuationHandle)
     {
         Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
-        Debug.Assert(continuationHandle.Index >= Continuations.length, "This continuation refers to an invalid index.");
+        Debug.Assert(continuationHandle.Index < Continuations.length, "This continuation refers to an invalid index.");
         if (continuationHandle.Index >= Continuations.length || !continuationHandle.Initialized)
             return null;
         var continuation = Continuations.Memory + continuationHandle.Index;
@@ -338,7 +338,7 @@ public unsafe struct TaskQueue
     public bool IsComplete(ContinuationHandle continuationHandle)
     {
         Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
-        Debug.Assert(continuationHandle.Index >= continuationsContainer[0].Continuations.length, "This continuation refers to an invalid index.");
+        Debug.Assert(continuationHandle.Index < continuationsContainer[0].Continuations.length, "This continuation refers to an invalid index.");
         ref var continuationSet = ref continuationsContainer[0];
         if (continuationHandle.Index >= continuationSet.Continuations.length || !continuationHandle.Initialized)
             return false;
@@ -370,7 +370,7 @@ public unsafe struct TaskQueue
         try
         {
             //We have the lock.
-            Debug.Assert(writtenTaskIndex > 0 && this.tasks[(int)((writtenTaskIndex - 1) & taskMask)].Function != null, "No more jobs should be written after a stop command.");
+            Debug.Assert(writtenTaskIndex == 0 || this.tasks[(int)((writtenTaskIndex - 1) & taskMask)].Function != null, "No more jobs should be written after a stop command.");
             var taskStartIndex = allocatedTaskIndex;
             var taskEndIndex = taskStartIndex + tasks.Length;
             allocatedTaskIndex = taskEndIndex;
@@ -528,6 +528,7 @@ public unsafe struct TaskQueue
                     continuations->IndexPool.ReturnUnsafely((int)continuationHandle.Index);
                     --continuations->ContinuationCount;
                     continuations->Locker = 0;
+                    break;
                 }
             }
         }
