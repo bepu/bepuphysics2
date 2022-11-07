@@ -417,6 +417,7 @@ public unsafe struct TaskQueue
     /// Appends a task to the queue if the ring buffer is uncontested.
     /// </summary>
     /// <param name="tasks">Tasks composing the job.</param>
+    /// <remarks>Note that this will spin until task submission succeeds. If something is blocking task submission, such as insufficient room in the tasks buffer and there are no workers consuming tasks, this will block forever.</remarks>
     public void EnqueueTasks(Span<Task> tasks)
     {
         SpinWait waiter = new SpinWait();
@@ -439,6 +440,7 @@ public unsafe struct TaskQueue
     /// <summary>
     /// Enqueues the stop command. 
     /// </summary>
+    /// <remarks>Note that this will spin until task submission succeeds. If something is blocking task submission, such as insufficient room in the tasks buffer and there are no workers consuming tasks, this will block forever.</remarks>
     public void EnqueueStop()
     {
         Span<Task> stopJob = stackalloc Task[1];
@@ -583,15 +585,36 @@ public unsafe struct TaskQueue
     /// <param name="onCompleted">Function to execute upon completing all associated tasks.</param>
     /// <param name="onCompletedContext">Context pointer to pass into the completion function.</param>
     /// <returns>Handle of the allocated continuation.</returns>
+    /// <remarks>Note that this will spin until allocation succeeds. If something is blocking allocation, such as insufficient room in the continuations buffer and there are no workers consuming tasks, this will block forever.</remarks>
     public ContinuationHandle AllocateContinuation(int taskCount, ulong userContinuationId = 0, delegate*<ulong, void*, int, void> onCompleted = null, void* onCompletedContext = null)
     {
-        SpinWait waiter = new SpinWait();
+        var waiter = new SpinWait();
         ContinuationHandle handle;
         while (TryAllocateContinuation(taskCount, userContinuationId, onCompleted, onCompletedContext, out handle) != AllocateTaskContinuationResult.Success)
         {
             waiter.SpinOnce(-1);
         }
         return handle;
+    }
+
+    /// <summary>
+    /// Enqueues a for loop onto the task queue and returns.
+    /// </summary>
+    /// <param name="function">Function to execute on each iteration of the loop.</param>
+    /// <param name="context">Context pointer to pass into each task execution.</param>
+    /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
+    /// <param name="exclusiveEndIndex">Exclusive end index of the loop range.</param>
+    /// <remarks>This function will not attempt to run any iterations of the loop itself. It only pushes the loop tasks onto the queue. <para/>
+    /// Note that this will spin until loop task submission succeeds. If something is blocking task submission, such as insufficient room in the tasks buffer and there are no workers consuming tasks, this will block forever.</remarks>
+    public void EnqueueFor(delegate*<int, void*, int, void> function, void* context, int inclusiveStartIndex, int exclusiveEndIndex)
+    {
+        var taskCount = exclusiveEndIndex - inclusiveStartIndex;
+        Span<Task> tasks = stackalloc Task[taskCount];
+        for (int i = 0; i < tasks.Length; ++i)
+        {
+            tasks[i] = new Task { Function = function, Context = context, TaskId = i + inclusiveStartIndex };
+        }
+        EnqueueTasks(tasks);
     }
 
     /// <summary>
@@ -622,9 +645,20 @@ public unsafe struct TaskQueue
                 tasks[i] = new Task { Function = &RunAndMarkAsComplete, Context = wrappedTaskContext, TaskId = i + 1 + inclusiveStartIndex };
             }
             var waiter = new SpinWait();
-            while (TryEnqueueTasks(tasks) != EnqueueTaskResult.Success)
+            EnqueueTaskResult result;
+            while ((result = TryEnqueueTasks(tasks)) != EnqueueTaskResult.Success)
             {
-                waiter.SpinOnce(-1); //TODO: We're biting the bullet on yields/sleep(0) here. May not be ideal for the use case; investigate.
+                if (result == EnqueueTaskResult.Full)
+                {
+                    //If the task buffer is full, just execute the task locally. Clearly there's enough work for other threads to keep running productively.
+                    var task = tasks[0];
+                    task.Function(task.TaskId, task.Context, workerIndex);
+                    tasks = tasks.Slice(1);
+                }
+                else
+                {
+                    waiter.SpinOnce(-1); //TODO: We're biting the bullet on yields/sleep(0) here. May not be ideal for the use case; investigate
+                }
             }
         }
         //Tasks [1, count) are submitted to the queue and may now be executing on other workers.
