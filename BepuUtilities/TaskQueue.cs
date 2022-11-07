@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using System.Reflection.Metadata;
@@ -16,9 +17,70 @@ using BepuUtilities.Memory;
 namespace BepuUtilities;
 
 /// <summary>
-/// Refers to a continuation within a <see cref="JobQueue"/>.
+/// Description of one task within a job to be submitted to a <see cref="TaskQueue"/>.
 /// </summary>
-public struct ContinuationHandle
+public unsafe struct Task
+{
+    /// <summary>
+    /// Function to be executed by the task. Takes as arguments the <see cref="TaskId"/>, <see cref="Context"/> pointer, and executing worker index.
+    /// </summary>
+    public delegate*<int, void*, int, void> Function;
+    /// <summary>
+    /// Context to be passed into the <see cref="Function"/>.
+    /// </summary>
+    public void* Context;
+    /// <summary>
+    /// Identifier of this task within the job.
+    /// </summary>
+    public int TaskId;
+}
+
+/// <summary>
+/// Describes the result status of a dequeue attempt.
+/// </summary>
+public enum DequeueTaskResult
+{
+    /// <summary>
+    /// A task was successfully dequeued.
+    /// </summary>
+    Success,
+    /// <summary>
+    /// The dequeue attempt was contested.
+    /// </summary>
+    Contested,
+    /// <summary>
+    /// The queue was empty, but may have more tasks in the future.
+    /// </summary>
+    Empty,
+    /// <summary>
+    /// The queue has been terminated and all threads seeking work should stop.
+    /// </summary>
+    Stop
+}
+
+/// <summary>
+/// Describes the result of a task enqueue attempt.
+/// </summary>
+public enum EnqueueTaskResult
+{
+    /// <summary>
+    /// The tasks were successfully enqueued.
+    /// </summary>
+    Success,
+    /// <summary>
+    /// The enqueue attempt was blocked by concurrent access.
+    /// </summary>
+    Contested,
+    /// <summary>
+    /// The enqueue attempt was blocked because no space remained in the tasks buffer.
+    /// </summary>
+    Full,
+}
+
+/// <summary>
+/// Refers to a continuation within a <see cref="TaskQueue"/>.
+/// </summary>
+public struct ContinuationHandle : IEquatable<ContinuationHandle>
 {
     uint index;
     uint encodedVersion;
@@ -47,77 +109,107 @@ public struct ContinuationHandle
         }
     }
 
+    /// <summary>
+    /// Gets a null continuation handle.
+    /// </summary>
     public static ContinuationHandle Null => default;
 
     /// <summary>
-    /// Gets whether this handle was ever initialized. This does not guarantee that the job handle is active in the JobQueue that it was allocated from.
+    /// Gets whether this handle was ever initialized. This does not guarantee that the job handle is active in the <see cref="TaskQueue"/> that it was allocated from.
     /// </summary>
-    public bool Initialized => encodedVersion >= 1 << 31;
+    public bool Initialized => encodedVersion >= 1u << 31;
+
+    public bool Equals(ContinuationHandle other) => other.index == index && other.encodedVersion == encodedVersion;
+
+    public override bool Equals([NotNullWhen(true)] object obj) => obj is ContinuationHandle handle && Equals(handle);
+
+    public override int GetHashCode() => (int)(index ^ (encodedVersion << 24));
+
+    public static bool operator ==(ContinuationHandle left, ContinuationHandle right) => left.Equals(right);
+
+    public static bool operator !=(ContinuationHandle left, ContinuationHandle right) => !(left == right);
 }
 
 /// <summary>
-/// Description of one task within a job to be submitted to a <see cref="JobQueue"/>.
+/// Describes the result of a continuation allocation attempt.
 /// </summary>
-public unsafe struct Task
+public enum AllocateTaskContinuationResult
 {
     /// <summary>
-    /// Function to be executed by the task. Takes as arguments the <see cref="TaskId"/>, <see cref="Context"/> pointer, and executing worker index.
+    /// The continuation was successfully allocated.
     /// </summary>
-    public delegate*<int, void*, int, void> Function;
+    Success,
     /// <summary>
-    /// Context to be passed into the <see cref="Function"/>.
+    /// The continuation was blocked by concurrent access.
     /// </summary>
-    public void* Context;
+    Contested,
     /// <summary>
-    /// Identifier of this task within the job.
+    /// The queue's continuation buffer is full and can't hold the continuation.
     /// </summary>
-    public int TaskId;
+    Full
+}
+
+internal unsafe struct TaskQueueContinuations
+{
+    public Buffer<TaskContinuation> Continuations;
+    public IdPool IndexPool;
+    public int ContinuationCount;
+    public int Locker;
+
+    /// <summary>
+    /// Retrieves a pointer to the continuation data for <see cref="ContinuationHandle"/>.
+    /// </summary>
+    /// <param name="continuationHandle">Handle to look up the associated continuation for.</param>
+    /// <returns>Pointer to the continuation backing the given handle.</returns>
+    /// <remarks>This should not be used if the continuation handle is not known to be valid. The data pointed to by the data could become invalidated if the continuation completes.</remarks>
+    public TaskContinuation* GetContinuation(ContinuationHandle continuationHandle)
+    {
+        Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
+        Debug.Assert(continuationHandle.Index >= Continuations.length, "This continuation refers to an invalid index.");
+        if (continuationHandle.Index >= Continuations.length || !continuationHandle.Initialized)
+            return null;
+        var continuation = Continuations.Memory + continuationHandle.Index;
+        Debug.Assert(continuation->Version == continuationHandle.Version, "This continuation no longer refers to an active continuation.");
+        if (continuation->Version != continuationHandle.Version)
+            return null;
+        return Continuations.Memory + continuationHandle.Index;
+    }
+}
+
+/// <summary>
+/// Stores data relevant to tracking task completion and reporting completion for a job.
+/// </summary>
+public unsafe struct TaskContinuation
+{
+    /// <summary>
+    /// Function to call upon completion of the job, if any.
+    /// </summary>
+    public delegate*<ulong, void*, int, void> OnCompleted;
+    /// <summary>
+    /// Context to pass to the completion function, if any.
+    /// </summary>
+    public void* OnCompletedContext;
+    internal TaskQueueContinuations* Continuations;
+    /// <summary>
+    /// Id provided by the user to identify this job.
+    /// </summary>
+    public ulong UserId;
+    /// <summary>
+    /// Version of this continuation.
+    /// </summary>
+    public int Version;
+    /// <summary>
+    /// Number of tasks not yet reported as complete in the job.
+    /// </summary>
+    public int RemainingTaskCounter;
 }
 
 
-public unsafe struct JobQueue
+/// <summary>
+/// Multithreaded task queue 
+/// </summary>
+public unsafe struct TaskQueue
 {
-
-    public enum DequeueResult
-    {
-        /// <summary>
-        /// A task was successfully dequeued.
-        /// </summary>
-        Success,
-        /// <summary>
-        /// The dequeue attempt was contested.
-        /// </summary>
-        Contested,
-        /// <summary>
-        /// The job queue was empty, but may have more tasks in the future.
-        /// </summary>
-        Empty,
-        /// <summary>
-        /// The job queue has been terminated and all threads seeking work should stop.
-        /// </summary>
-        Stop
-    }
-    /// <summary>
-    /// Describes the result of a continuation allocation attempt.
-    /// </summary>
-    public enum ContinuationAllocationResult
-    {
-        /// <summary>
-        /// The continuation was successfully allocated.
-        /// </summary>
-        Success,
-        /// <summary>
-        /// The continuation was blocked by concurrent access.
-        /// </summary>
-        Contested,
-        /// <summary>
-        /// The job queue's continuation buffer is full and can't hold the continuation.
-        /// </summary>
-        Full
-    }
-
-
-
     Buffer<Task> tasks;
 
     int taskMask, taskShift;
@@ -129,46 +221,18 @@ public unsafe struct JobQueue
 
     volatile int taskLocker;
 
-
-    internal struct JobQueueContinuations
-    {
-        public Buffer<Continuation> Continuations;
-        public IdPool IndexPool;
-        public int ContinuationCount;
-        public int Locker;
-
-        /// <summary>
-        /// Retrieves a pointer to the continuation data for <see cref="ContinuationHandle"/>.
-        /// </summary>
-        /// <param name="continuationHandle">Handle to look up the associated continuation for.</param>
-        /// <returns>Pointer to the continuation backing the given handle.</returns>
-        /// <remarks>This should not be used if the continuation handle is not known to be valid. The data pointed to by the data could become invalidated if the continuation completes.</remarks>
-        public Continuation* GetContinuation(ContinuationHandle continuationHandle)
-        {
-            Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
-            Debug.Assert(continuationHandle.Index >= Continuations.length, "This continuation refers to an invalid index.");
-            if (continuationHandle.Index >= Continuations.length || !continuationHandle.Initialized)
-                return null;
-            var continuation = Continuations.Memory + continuationHandle.Index;
-            Debug.Assert(continuation->Version == continuationHandle.Version, "This continuation no longer refers to an active continuation.");
-            if (continuation->Version != continuationHandle.Version)
-                return null;
-            return Continuations.Memory + continuationHandle.Index;
-        }
-
-    }
     /// <summary>
-    /// Holds the job queue's continuations data in unmanaged memory just in case the queue itself is in unpinned memory.
+    /// Holds the task queue's continuations data in unmanaged memory just in case the queue itself is in unpinned memory.
     /// </summary>
-    Buffer<JobQueueContinuations> continuationsContainer;
+    Buffer<TaskQueueContinuations> continuationsContainer;
 
     /// <summary>
-    /// Constructs a new job queue.
+    /// Constructs a new task queue.
     /// </summary>
     /// <param name="pool">Buffer pool to allocate resources from.</param>
     /// <param name="maximumTaskCapacity">Maximum number of tasks to allocate space for. Tasks are individual chunks of scheduled work. Rounded up to the nearest power of 2.</param>
     /// <param name="maximumContinuationCapacity">Maximum number of continuations to allocate space for. If more continuations exist at any one moment, attempts to create new jobs will have to stall until space is available.</param>
-    public JobQueue(BufferPool pool, int maximumTaskCapacity = 1024, int maximumContinuationCapacity = 256)
+    public TaskQueue(BufferPool pool, int maximumTaskCapacity = 1024, int maximumContinuationCapacity = 256)
     {
         maximumTaskCapacity = (int)BitOperations.RoundUpToPowerOf2((uint)maximumTaskCapacity);
         pool.Take(1, out continuationsContainer);
@@ -186,6 +250,10 @@ public unsafe struct JobQueue
         taskLocker = 0;
     }
 
+    /// <summary>
+    /// Returns unmanaged resources held by the <see cref="TaskQueue"/> to a pool.
+    /// </summary>
+    /// <param name="pool">Buffer pool to return resources to.</param>
     public void Dispose(BufferPool pool)
     {
         continuationsContainer[0].IndexPool.Dispose(pool);
@@ -194,28 +262,35 @@ public unsafe struct JobQueue
         pool.Return(ref continuationsContainer);
     }
 
-    public DequeueResult TryDequeue(out delegate*<int, void*, int, void> function, out void* context, out int taskId)
+    /// <summary>
+    /// Attempts to dequeue a task.
+    /// </summary>
+    /// <param name="function">Function associated with the dequeued task, if any.</param>
+    /// <param name="context">Context pointer associated with the dequeued task, if any.</param>
+    /// <param name="taskId">Task id associated with the dequeued task, if any.</param>
+    /// <returns>Result status of the dequeue attempt.</returns>
+    public DequeueTaskResult TryDequeue(out delegate*<int, void*, int, void> function, out void* context, out int taskId)
     {
         function = default;
         context = default;
         taskId = default;
         if (Interlocked.CompareExchange(ref taskLocker, 1, 0) != 0)
-            return DequeueResult.Contested;
+            return DequeueTaskResult.Contested;
         try
         {
             //We have the lock.
             var nextTaskIndex = taskIndex;
             if (nextTaskIndex >= writtenTaskIndex)
-                return DequeueResult.Empty;
+                return DequeueTaskResult.Empty;
             var task = tasks[(int)(nextTaskIndex & taskMask)];
             if (task.Function == null)
-                return DequeueResult.Stop;
+                return DequeueTaskResult.Stop;
             //There's an actual job!
             function = task.Function;
             context = task.Context;
             taskId = task.TaskId;
             ++taskIndex;
-            return DequeueResult.Success;
+            return DequeueTaskResult.Success;
         }
         finally
         {
@@ -223,23 +298,37 @@ public unsafe struct JobQueue
         }
     }
 
-    public DequeueResult TryDequeueAndRun(int workerIndex)
+    /// <summary>
+    /// Attempts to dequeue a task and run it.
+    /// </summary>
+    /// <param name="workerIndex">Index of the worker to pass into the task function.</param>
+    /// <returns>Result status of the dequeue attempt.</returns>
+    public DequeueTaskResult TryDequeueAndRun(int workerIndex)
     {
         var result = TryDequeue(out var function, out var context, out var taskId);
-        if (result == DequeueResult.Success)
+        if (result == DequeueTaskResult.Success)
             function(taskId, context, workerIndex);
         return result;
     }
 
-    public void DequeueAndRun(int workerIndex)
+    /// <summary>
+    /// Dequeues a task from the queue and runs it.
+    /// </summary>
+    /// <param name="workerIndex">Currently executing worker index to be provided to the function.</param>
+    /// <returns>True if a task was dequeued and run, false if a stop command was enountered.</returns>
+    public bool DequeueAndRun(int workerIndex)
     {
-        SpinWait waiter = new SpinWait();
-        while (TryDequeueAndRun(workerIndex) != DequeueResult.Success)
+        var waiter = new SpinWait();
+        while (true)
         {
+            var result = TryDequeueAndRun(workerIndex);
+            if (result == DequeueTaskResult.Stop)
+                return false;
+            if (result == DequeueTaskResult.Success)
+                return true;
             waiter.SpinOnce();
         }
     }
-
 
     /// <summary>
     /// Checks whether all tasks composing a job, as reported to the continuation, have completed.
@@ -262,42 +351,22 @@ public unsafe struct JobQueue
     /// <param name="continuationHandle">Handle to look up the associated continuation for.</param>
     /// <returns>Pointer to the continuation backing the given handle.</returns>
     /// <remarks>This should not be used if the continuation handle is not known to be valid. The data pointed to by the data could become invalidated if the continuation completes.</remarks>
-    public Continuation* GetContinuation(ContinuationHandle continuationHandle)
+    public TaskContinuation* GetContinuation(ContinuationHandle continuationHandle)
     {
         return continuationsContainer[0].GetContinuation(continuationHandle);
     }
 
-
     /// <summary>
-    /// Describes the result of a task enqueue attempt.
-    /// </summary>
-    public enum EnqueueTasksResult
-    {
-        /// <summary>
-        /// The tasks were successfully enqueued.
-        /// </summary>
-        Success,
-        /// <summary>
-        /// The enqueue attempt was blocked by concurrent access.
-        /// </summary>
-        Contested,
-        /// <summary>
-        /// The enqueue attempt was blocked because no space remained in the tasks buffer.
-        /// </summary>
-        Full,
-    }
-
-    /// <summary>
-    /// Tries to appends a set of tasks to the job queue if the ring buffer is uncontested.
+    /// Tries to appends a set of tasks to the task queue if the ring buffer is uncontested.
     /// </summary>
     /// <param name="tasks">Tasks composing the job.</param>
     /// <returns>Result of the enqueue attempt.</returns>
-    public EnqueueTasksResult TryEnqueueTasks(Span<Task> tasks)
+    public EnqueueTaskResult TryEnqueueTasks(Span<Task> tasks)
     {
         if (tasks.Length == 0)
-            return EnqueueTasksResult.Success;
+            return EnqueueTaskResult.Success;
         if (Interlocked.CompareExchange(ref taskLocker, 1, 0) != 0)
-            return EnqueueTasksResult.Contested;
+            return EnqueueTaskResult.Contested;
         try
         {
             //We have the lock.
@@ -309,7 +378,7 @@ public unsafe struct JobQueue
             if (taskEndIndex - taskIndex > longLength)
             {
                 //We've run out of space in the ring buffer. If we tried to write, we'd overwrite jobs that haven't yet been completed.
-                return EnqueueTasksResult.Full;
+                return EnqueueTaskResult.Full;
             }
             //We can actually write the jobs.
             Debug.Assert(BitOperations.IsPow2(this.tasks.Length));
@@ -336,7 +405,7 @@ public unsafe struct JobQueue
             //    this.tasks[taskIndex] = tasks[i];
             //}
             Interlocked.Exchange(ref writtenTaskIndex, taskEndIndex); //This is not assuming 64 bits. Mildly goofy considering the rest.
-            return EnqueueTasksResult.Success;
+            return EnqueueTaskResult.Success;
         }
         finally
         {
@@ -345,13 +414,13 @@ public unsafe struct JobQueue
     }
 
     /// <summary>
-    /// Appends a task to the job queue if the ring buffer is uncontested.
+    /// Appends a task to the queue if the ring buffer is uncontested.
     /// </summary>
     /// <param name="tasks">Tasks composing the job.</param>
     public void EnqueueTasks(Span<Task> tasks)
     {
         SpinWait waiter = new SpinWait();
-        while (TryEnqueueTasks(tasks) != EnqueueTasksResult.Success)
+        while (TryEnqueueTasks(tasks) != EnqueueTaskResult.Success)
         {
             waiter.SpinOnce(-1);
         }
@@ -360,7 +429,7 @@ public unsafe struct JobQueue
     /// Tries to enqueues the stop command. 
     /// </summary>
     /// <returns>True if the stop could be pushed onto the queue, false otherwise.</returns>
-    public EnqueueTasksResult TryEnqueueStop()
+    public EnqueueTaskResult TryEnqueueStop()
     {
         Span<Task> stopJob = stackalloc Task[1];
         stopJob[0] = new Task { Function = null };
@@ -375,7 +444,7 @@ public unsafe struct JobQueue
         Span<Task> stopJob = stackalloc Task[1];
         stopJob[0] = new Task { Function = null };
         var waiter = new SpinWait();
-        while (TryEnqueueTasks(stopJob) != EnqueueTasksResult.Success)
+        while (TryEnqueueTasks(stopJob) != EnqueueTaskResult.Success)
         {
             waiter.SpinOnce(-1);
         }
@@ -399,9 +468,9 @@ public unsafe struct JobQueue
         /// </summary>
         public ContinuationHandle Continuation;
         /// <summary>
-        /// Set of continuations in the job queue.
+        /// Set of continuations in the queue.
         /// </summary>
-        internal JobQueueContinuations* Continuations;
+        internal TaskQueueContinuations* Continuations;
     }
 
     /// <summary>
@@ -464,42 +533,21 @@ public unsafe struct JobQueue
         }
     }
 
-
     /// <summary>
-    /// Stores data relevant to tracking task completion and reporting completion for a job.
+    /// Attempts to allocate a continuation for a set of tasks.
     /// </summary>
-    public struct Continuation
-    {
-        /// <summary>
-        /// Function to call upon completion of the job, if any.
-        /// </summary>
-        public delegate*<ulong, void*, int, void> OnCompleted;
-        /// <summary>
-        /// Context to pass to the completion function, if any.
-        /// </summary>
-        public void* OnCompletedContext;
-        internal JobQueueContinuations* Continuations;
-        /// <summary>
-        /// Id provided by the user to identify this job.
-        /// </summary>
-        public ulong UserId;
-        /// <summary>
-        /// Version of this continuation.
-        /// </summary>
-        public int Version;
-        /// <summary>
-        /// Number of tasks not yet reported as complete in the job.
-        /// </summary>
-        public int RemainingTaskCounter;
-    }
-
-
-    public ContinuationAllocationResult TryAllocateContinuation(int taskCount, ulong userContinuationId, delegate*<ulong, void*, int, void> onCompleted, void* onCompletedContext, out ContinuationHandle continuationHandle)
+    /// <param name="taskCount">Number of tasks associated with the continuation.</param>
+    /// <param name="userContinuationId">User id to associate with the handle.</param>
+    /// <param name="onCompleted">Function to execute upon completing all associated tasks.</param>
+    /// <param name="onCompletedContext">Context pointer to pass into the completion function.</param>
+    /// <param name="continuationHandle">Handle of the continuation if allocation is successful.</param>
+    /// <returns>Result status of the continuation allocation attempt.</returns>
+    public AllocateTaskContinuationResult TryAllocateContinuation(int taskCount, ulong userContinuationId, delegate*<ulong, void*, int, void> onCompleted, void* onCompletedContext, out ContinuationHandle continuationHandle)
     {
         continuationHandle = default;
         ref var continuations = ref continuationsContainer[0];
         if (Interlocked.CompareExchange(ref continuations.Locker, 1, 0) != 0)
-            return ContinuationAllocationResult.Contested;
+            return AllocateTaskContinuationResult.Contested;
         try
         {
             //We have the lock.
@@ -507,7 +555,7 @@ public unsafe struct JobQueue
             if (continuations.ContinuationCount >= continuations.Continuations.length)
             {
                 //No room.
-                return ContinuationAllocationResult.Full;
+                return AllocateTaskContinuationResult.Full;
             }
             var index = continuations.IndexPool.Take();
             ref var continuation = ref continuations.Continuations[index];
@@ -518,7 +566,7 @@ public unsafe struct JobQueue
             continuation.Version = newVersion;
             continuation.RemainingTaskCounter = taskCount;
             continuationHandle = new ContinuationHandle((uint)index, newVersion);
-            return ContinuationAllocationResult.Success;
+            return AllocateTaskContinuationResult.Success;
         }
         finally
         {
@@ -526,11 +574,19 @@ public unsafe struct JobQueue
         }
     }
 
+    /// <summary>
+    /// Allocates a continuation for a set of tasks.
+    /// </summary>
+    /// <param name="taskCount">Number of tasks associated with the continuation.</param>
+    /// <param name="userContinuationId">User id to associate with the handle.</param>
+    /// <param name="onCompleted">Function to execute upon completing all associated tasks.</param>
+    /// <param name="onCompletedContext">Context pointer to pass into the completion function.</param>
+    /// <returns>Handle of the allocated continuation.</returns>
     public ContinuationHandle AllocateContinuation(int taskCount, ulong userContinuationId = 0, delegate*<ulong, void*, int, void> onCompleted = null, void* onCompletedContext = null)
     {
         SpinWait waiter = new SpinWait();
         ContinuationHandle handle;
-        while (TryAllocateContinuation(taskCount, userContinuationId, onCompleted, onCompletedContext, out handle) != ContinuationAllocationResult.Success)
+        while (TryAllocateContinuation(taskCount, userContinuationId, onCompleted, onCompletedContext, out handle) != AllocateTaskContinuationResult.Success)
         {
             waiter.SpinOnce(-1);
         }
@@ -565,7 +621,7 @@ public unsafe struct JobQueue
                 tasks[i] = new Task { Function = &RunAndMarkAsComplete, Context = wrappedTaskContext, TaskId = i + 1 + inclusiveStartIndex };
             }
             var waiter = new SpinWait();
-            while (TryEnqueueTasks(tasks) != EnqueueTasksResult.Success)
+            while (TryEnqueueTasks(tasks) != EnqueueTaskResult.Success)
             {
                 waiter.SpinOnce(-1); //TODO: We're biting the bullet on yields/sleep(0) here. May not be ideal for the use case; investigate.
             }
@@ -583,12 +639,12 @@ public unsafe struct JobQueue
                 //Note that we don't handle the DequeueResult.Stop case; if the job isn't complete yet, there's no way to hit a stop unless we enqueued this job after a stop.
                 //Enqueuing after a stop is an error condition and is debug checked for in TryEnqueueJob.
                 var dequeueResult = TryDequeue(out var fillerJob, out var fillerContext, out var fillerTaskId);
-                if (dequeueResult == DequeueResult.Stop)
+                if (dequeueResult == DequeueTaskResult.Stop)
                 {
-                    Debug.Assert(dequeueResult != DequeueResult.Stop, "Did you enqueue this for loop *after* some thread enqueued a stop command? That's illegal!");
+                    Debug.Assert(dequeueResult != DequeueTaskResult.Stop, "Did you enqueue this for loop *after* some thread enqueued a stop command? That's illegal!");
                     return;
                 }
-                if (dequeueResult == DequeueResult.Success)
+                if (dequeueResult == DequeueTaskResult.Success)
                 {
                     fillerJob(fillerTaskId, fillerContext, workerIndex);
                     waiter.Reset();
