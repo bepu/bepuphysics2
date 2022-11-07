@@ -52,8 +52,8 @@ public unsafe class TaskQueueTestDemo : Demo
             var context = new Context { };
             var taskQueue = new TaskQueue(BufferPool);
             for (int i = 0; i < iterationCount; ++i)
-                taskQueue.EnqueueFor(&Test, &context, 0, tasksPerIteration);
-            taskQueue.EnqueueStop();
+                taskQueue.EnqueueFor(&Test, &context, 0, tasksPerIteration, 0);
+            taskQueue.EnqueueStop(0);
             ThreadDispatcher.DispatchWorkers(&DispatcherBody, &taskQueue);
 
             taskQueue.Dispose(BufferPool);

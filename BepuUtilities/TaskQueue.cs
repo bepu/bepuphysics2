@@ -231,7 +231,7 @@ public unsafe struct TaskQueue
     /// </summary>
     /// <param name="pool">Buffer pool to allocate resources from.</param>
     /// <param name="maximumTaskCapacity">Maximum number of tasks to allocate space for. Tasks are individual chunks of scheduled work. Rounded up to the nearest power of 2.</param>
-    /// <param name="maximumContinuationCapacity">Maximum number of continuations to allocate space for. If more continuations exist at any one moment, attempts to create new jobs will have to stall until space is available.</param>
+    /// <param name="maximumContinuationCapacity">Maximum number of continuations to allocate space for. If more continuations exist at any one moment, attempts to create new continuations may have to stall until space is available.</param>
     public TaskQueue(BufferPool pool, int maximumTaskCapacity = 1024, int maximumContinuationCapacity = 256)
     {
         maximumTaskCapacity = (int)BitOperations.RoundUpToPowerOf2((uint)maximumTaskCapacity);
@@ -315,7 +315,7 @@ public unsafe struct TaskQueue
     /// Dequeues a task from the queue and runs it.
     /// </summary>
     /// <param name="workerIndex">Currently executing worker index to be provided to the function.</param>
-    /// <returns>True if a task was dequeued and run, false if a stop command was enountered.</returns>
+    /// <returns>True if a task was dequeued and run, false if a stop command was encountered.</returns>
     public bool DequeueAndRun(int workerIndex)
     {
         var waiter = new SpinWait();
@@ -414,16 +414,32 @@ public unsafe struct TaskQueue
     }
 
     /// <summary>
-    /// Appends a task to the queue if the ring buffer is uncontested.
+    /// Appends a set of tasks to the queue.
     /// </summary>
     /// <param name="tasks">Tasks composing the job.</param>
-    /// <remarks>Note that this will spin until task submission succeeds. If something is blocking task submission, such as insufficient room in the tasks buffer and there are no workers consuming tasks, this will block forever.</remarks>
-    public void EnqueueTasks(Span<Task> tasks)
+    /// <param name="workerIndex">Worker index to pass to inline-executed tasks if the task buffer is full.</param>
+    /// <remarks>Note that this will keep trying until task submission succeeds. 
+    /// If the task queue is full, this will opt to run some tasks inline while waiting for room.</remarks>
+    public void EnqueueTasks(Span<Task> tasks, int workerIndex)
     {
-        SpinWait waiter = new SpinWait();
-        while (TryEnqueueTasks(tasks) != EnqueueTaskResult.Success)
+        var waiter = new SpinWait();
+        EnqueueTaskResult result;
+        while ((result = TryEnqueueTasks(tasks)) != EnqueueTaskResult.Success)
         {
-            waiter.SpinOnce(-1);
+            if (result == EnqueueTaskResult.Full)
+            {
+                //Couldn't enqueue the tasks because the task buffer is full.
+                //Clearly there's plenty of work available to execute, so go ahead and try to run one task inline.
+                var task = tasks[0];
+                task.Function(task.TaskId, task.Context, workerIndex);
+                if (tasks.Length == 1)
+                    break;
+                tasks = tasks[1..];
+            }
+            else
+            {
+                waiter.SpinOnce(-1);
+            }
         }
     }
     /// <summary>
@@ -440,15 +456,26 @@ public unsafe struct TaskQueue
     /// <summary>
     /// Enqueues the stop command. 
     /// </summary>
-    /// <remarks>Note that this will spin until task submission succeeds. If something is blocking task submission, such as insufficient room in the tasks buffer and there are no workers consuming tasks, this will block forever.</remarks>
-    public void EnqueueStop()
+    /// <param name="workerIndex">Worker index to pass to any inline executed tasks if the task buffer is full.</param>
+    /// <remarks>Note that this will keep trying until task submission succeeds.
+    /// If the task buffer is full, this may attempt to dequeue tasks to run inline.</remarks>
+    public void EnqueueStop(int workerIndex)
     {
         Span<Task> stopJob = stackalloc Task[1];
         stopJob[0] = new Task { Function = null };
         var waiter = new SpinWait();
-        while (TryEnqueueTasks(stopJob) != EnqueueTaskResult.Success)
+        EnqueueTaskResult result;
+        while ((result = TryEnqueueTasks(stopJob)) != EnqueueTaskResult.Success)
         {
-            waiter.SpinOnce(-1);
+            if (result == EnqueueTaskResult.Full)
+            {
+                var dequeueResult = TryDequeueAndRun(workerIndex);
+                Debug.Assert(dequeueResult != DequeueTaskResult.Stop, "We're trying to enqueue a stop, we shouldn't have found one already present!");
+            }
+            else
+            {
+                waiter.SpinOnce(-1);
+            }
         }
     }
 
@@ -581,18 +608,28 @@ public unsafe struct TaskQueue
     /// Allocates a continuation for a set of tasks.
     /// </summary>
     /// <param name="taskCount">Number of tasks associated with the continuation.</param>
+    /// <param name="workerIndex">Worker index to pass to any inline executed tasks if the continuations buffer is full.</param>
     /// <param name="userContinuationId">User id to associate with the handle.</param>
     /// <param name="onCompleted">Function to execute upon completing all associated tasks.</param>
     /// <param name="onCompletedContext">Context pointer to pass into the completion function.</param>
     /// <returns>Handle of the allocated continuation.</returns>
-    /// <remarks>Note that this will spin until allocation succeeds. If something is blocking allocation, such as insufficient room in the continuations buffer and there are no workers consuming tasks, this will block forever.</remarks>
-    public ContinuationHandle AllocateContinuation(int taskCount, ulong userContinuationId = 0, delegate*<ulong, void*, int, void> onCompleted = null, void* onCompletedContext = null)
+    /// <remarks>Note that this will keep trying until allocation succeeds. If something is blocking allocation, such as insufficient room in the continuations buffer and there are no workers consuming tasks, this will block forever.</remarks>
+    public ContinuationHandle AllocateContinuation(int taskCount, int workerIndex, ulong userContinuationId = 0, delegate*<ulong, void*, int, void> onCompleted = null, void* onCompletedContext = null)
     {
         var waiter = new SpinWait();
         ContinuationHandle handle;
-        while (TryAllocateContinuation(taskCount, userContinuationId, onCompleted, onCompletedContext, out handle) != AllocateTaskContinuationResult.Success)
+        AllocateTaskContinuationResult result;
+        while ((result = TryAllocateContinuation(taskCount, userContinuationId, onCompleted, onCompletedContext, out handle)) != AllocateTaskContinuationResult.Success)
         {
-            waiter.SpinOnce(-1);
+            if (result == AllocateTaskContinuationResult.Full)
+            {
+                var dequeueResult = TryDequeueAndRun(workerIndex);
+                Debug.Assert(dequeueResult != DequeueTaskResult.Stop, "We're trying to allocate a continuation, we shouldn't have run into a stop command!");
+            }
+            else
+            {
+                waiter.SpinOnce(-1);
+            }
         }
         return handle;
     }
@@ -604,9 +641,10 @@ public unsafe struct TaskQueue
     /// <param name="context">Context pointer to pass into each task execution.</param>
     /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
     /// <param name="exclusiveEndIndex">Exclusive end index of the loop range.</param>
-    /// <remarks>This function will not attempt to run any iterations of the loop itself. It only pushes the loop tasks onto the queue. <para/>
-    /// Note that this will spin until loop task submission succeeds. If something is blocking task submission, such as insufficient room in the tasks buffer and there are no workers consuming tasks, this will block forever.</remarks>
-    public void EnqueueFor(delegate*<int, void*, int, void> function, void* context, int inclusiveStartIndex, int exclusiveEndIndex)
+    /// <param name="workerIndex">Worker index to pass to any inline-executed task if the task queue is full.</param>
+    /// <remarks>This function will not usually attempt to run any iterations of the loop itself. It tries to push the loop tasks onto the queue.<para/>
+    /// If the task queue is full, this will opt to run the tasks inline while waiting for room.</remarks>
+    public void EnqueueFor(delegate*<int, void*, int, void> function, void* context, int inclusiveStartIndex, int exclusiveEndIndex, int workerIndex)
     {
         var taskCount = exclusiveEndIndex - inclusiveStartIndex;
         Span<Task> tasks = stackalloc Task[taskCount];
@@ -614,7 +652,7 @@ public unsafe struct TaskQueue
         {
             tasks[i] = new Task { Function = function, Context = context, TaskId = i + inclusiveStartIndex };
         }
-        EnqueueTasks(tasks);
+        EnqueueTasks(tasks, workerIndex);
     }
 
     /// <summary>
@@ -637,7 +675,7 @@ public unsafe struct TaskQueue
             var taskCount = iterationCount - 1;
             WrappedTaskContext* wrappedContexts = stackalloc WrappedTaskContext[taskCount];
             Span<Task> tasks = stackalloc Task[taskCount];
-            continuationHandle = AllocateContinuation(taskCount);
+            continuationHandle = AllocateContinuation(taskCount, workerIndex);
             for (int i = 0; i < tasks.Length; ++i)
             {
                 var wrappedTaskContext = wrappedContexts + i;
@@ -653,7 +691,9 @@ public unsafe struct TaskQueue
                     //If the task buffer is full, just execute the task locally. Clearly there's enough work for other threads to keep running productively.
                     var task = tasks[0];
                     task.Function(task.TaskId, task.Context, workerIndex);
-                    tasks = tasks.Slice(1);
+                    if (tasks.Length == 1)
+                        break;
+                    tasks = tasks[1..];
                 }
                 else
                 {
