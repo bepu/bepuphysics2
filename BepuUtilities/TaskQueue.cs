@@ -324,7 +324,7 @@ public unsafe struct TaskQueue
             var waiter = new SpinWait();
             while (Interlocked.CompareExchange(ref taskLocker, 1, 0) != 0)
             {
-                waiter.SpinOnce();
+                waiter.SpinOnce(-1);
             }
             var result = (int)(writtenTaskIndex - taskIndex);
             taskLocker = 0;
@@ -400,7 +400,7 @@ public unsafe struct TaskQueue
                 return false;
             if (result == DequeueTaskResult.Success)
                 return true;
-            waiter.SpinOnce();
+            waiter.SpinOnce(-1);
         }
     }
 

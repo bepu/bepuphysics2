@@ -15,7 +15,7 @@ public unsafe class TaskQueueTestDemo : Demo
     static void Test(int taskId, void* context, int workerIndex)
     {
         int sum = 0;
-        for (int i = 0; i < 1000; ++i)
+        for (int i = 0; i < 100000; ++i)
         {
             sum = (sum ^ i) * i;
         }
@@ -79,7 +79,7 @@ public unsafe class TaskQueueTestDemo : Demo
     static void Test(TestFunction function, string name, Action reset = null)
     {
         long accumulatedTime = 0;
-        const int testCount = 128;
+        const int testCount = 64;
         int accumulator = 0;
         for (int i = 0; i < testCount; ++i)
         {
@@ -89,7 +89,7 @@ public unsafe class TaskQueueTestDemo : Demo
             reset?.Invoke();
             accumulatedTime += endTime - startTime;
             //overlapHandler.Set.Clear();
-            CacheBlaster.Blast();
+            //CacheBlaster.Blast();
         }
         Console.WriteLine($"{name} time per execution (ms): {(accumulatedTime) * 1e3 / (testCount * Stopwatch.Frequency)}, acc: {accumulator}");
     }
