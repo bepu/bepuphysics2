@@ -92,15 +92,20 @@ public enum EnqueueTaskResult
 /// <summary>
 /// Refers to a continuation within a <see cref="TaskQueue"/>.
 /// </summary>
-public struct ContinuationHandle : IEquatable<ContinuationHandle>
+public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
 {
     uint index;
     uint encodedVersion;
+    /// <summary>
+    /// Set of continuations in the queue.
+    /// </summary>
+    internal TaskQueueContinuations* Continuations;
 
-    internal ContinuationHandle(uint index, int version)
+    internal ContinuationHandle(uint index, int version, TaskQueueContinuations* continuations)
     {
         this.index = index;
         encodedVersion = (uint)version | 1u << 31;
+        Continuations = continuations;
     }
 
     internal uint Index
@@ -120,6 +125,18 @@ public struct ContinuationHandle : IEquatable<ContinuationHandle>
             return (int)(encodedVersion & ((1u << 31) - 1));
         }
     }
+
+    /// <summary>
+    /// Gets whether the tasks associated with this continuation have completed.
+    /// </summary>
+    public bool Completed => Continuations->IsComplete(this);
+
+    /// <summary>
+    /// Retrieves a pointer to the continuation data for <see cref="ContinuationHandle"/>.
+    /// </summary>
+    /// <returns>Pointer to the continuation backing the given handle.</returns>
+    /// <remarks>This should not be used if the continuation handle is not known to be valid. The data pointed to by the data could become invalidated if the continuation completes.</remarks>
+    public TaskContinuation* Continuation => Continuations->GetContinuation(this);
 
     /// <summary>
     /// Gets a null continuation handle.
@@ -186,6 +203,21 @@ internal unsafe struct TaskQueueContinuations
             return null;
         return Continuations.Memory + continuationHandle.Index;
     }
+
+    /// <summary>
+    /// Checks whether all tasks composing a job, as reported to the continuation, have completed.
+    /// </summary>
+    /// <param name="continuationHandle">Job to check for completion.</param>
+    /// <returns>True if the job has completed, false otherwise.</returns>
+    public bool IsComplete(ContinuationHandle continuationHandle)
+    {
+        Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
+        Debug.Assert(continuationHandle.Index < Continuations.length, "This continuation refers to an invalid index.");
+        if (continuationHandle.Index >= Continuations.length || !continuationHandle.Initialized)
+            return false;
+        ref var continuation = ref Continuations[continuationHandle.Index];
+        return continuation.Version > continuationHandle.Version || continuation.RemainingTaskCounter == 0;
+    }
 }
 
 /// <summary>
@@ -205,10 +237,6 @@ public unsafe struct WrappedTaskContext
     /// Handle of the continuation associated with this wrapped task.
     /// </summary>
     public ContinuationHandle Continuation;
-    /// <summary>
-    /// Set of continuations in the queue.
-    /// </summary>
-    internal TaskQueueContinuations* Continuations;
 }
 
 /// <summary>
@@ -220,7 +248,6 @@ public unsafe struct TaskContinuation
     /// Task to run upon completion of the associated task.
     /// </summary>
     public Task OnCompleted;
-    internal TaskQueueContinuations* Continuations;
     /// <summary>
     /// Version of this continuation.
     /// </summary>
@@ -391,32 +418,6 @@ public unsafe struct TaskQueue
         return result;
     }
 
-    /// <summary>
-    /// Checks whether all tasks composing a job, as reported to the continuation, have completed.
-    /// </summary>
-    /// <param name="continuationHandle">Job to check for completion.</param>
-    /// <returns>True if the job has completed, false otherwise.</returns>
-    public bool IsComplete(ContinuationHandle continuationHandle)
-    {
-        Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
-        Debug.Assert(continuationHandle.Index < continuationsContainer[0].Continuations.length, "This continuation refers to an invalid index.");
-        ref var continuationSet = ref continuationsContainer[0];
-        if (continuationHandle.Index >= continuationSet.Continuations.length || !continuationHandle.Initialized)
-            return false;
-        ref var continuation = ref continuationSet.Continuations[continuationHandle.Index];
-        return continuation.Version > continuationHandle.Version || continuation.RemainingTaskCounter == 0;
-    }
-    /// <summary>
-    /// Retrieves a pointer to the continuation data for <see cref="ContinuationHandle"/>.
-    /// </summary>
-    /// <param name="continuationHandle">Handle to look up the associated continuation for.</param>
-    /// <returns>Pointer to the continuation backing the given handle.</returns>
-    /// <remarks>This should not be used if the continuation handle is not known to be valid. The data pointed to by the data could become invalidated if the continuation completes.</remarks>
-    public TaskContinuation* GetContinuation(ContinuationHandle continuationHandle)
-    {
-        return continuationsContainer[0].GetContinuation(continuationHandle);
-    }
-
     EnqueueTaskResult TryEnqueueTasksUnsafelyInternal(Span<Task> tasks, out long taskEndIndex)
     {
         Debug.Assert(tasks.Length > 0, "Probably shouldn't be trying to enqueue zero tasks.");
@@ -557,7 +558,8 @@ public unsafe struct TaskQueue
             {
                 var wrappedTaskContext = wrappedContexts + i;
                 var sourceTask = tasks[i + 1];
-                *wrappedTaskContext = new WrappedTaskContext { Function = sourceTask.Function, Context = sourceTask.Context, Continuation = continuationHandle, Continuations = continuationsContainer.Memory };
+                Debug.Assert(continuationHandle.Continuations == continuationsContainer.Memory);
+                *wrappedTaskContext = new WrappedTaskContext { Function = sourceTask.Function, Context = sourceTask.Context, Continuation = continuationHandle };
                 tasksToEnqueue[i] = new Task { Function = &RunAndMarkAsComplete, Context = wrappedTaskContext, Id = sourceTask.Id };
             }
             var waiter = new SpinWait();
@@ -589,7 +591,7 @@ public unsafe struct TaskQueue
             //Task 0 is done; this thread should seek out other work until the job is complete.
             var waiter = new SpinWait();
             Debug.Assert(continuationHandle.Initialized, "This codepath should only run if the continuation was allocated earlier.");
-            while (!IsComplete(continuationHandle))
+            while (!continuationHandle.Completed)
             {
                 //Note that we don't handle the DequeueResult.Stop case; if the job isn't complete yet, there's no way to hit a stop unless we enqueued this job after a stop.
                 //Enqueuing after a stop is an error condition and is debug checked for in TryEnqueueJob.
@@ -680,7 +682,6 @@ public unsafe struct TaskQueue
             wrappedContext->Function = sourceTask.Function;
             wrappedContext->Context = sourceTask.Context;
             wrappedContext->Continuation = continuationHandle;
-            wrappedContext->Continuations = continuationsContainer.Memory;
             targetTask.Function = &RunAndMarkAsComplete;
             targetTask.Context = wrappedContext;
             targetTask.Id = sourceTask.Id;
@@ -692,8 +693,8 @@ public unsafe struct TaskQueue
         var wrapperContext = (WrappedTaskContext*)wrapperContextPointer;
         wrapperContext->Function(taskId, wrapperContext->Context, workerIndex);
         var continuationHandle = wrapperContext->Continuation;
-        var continuations = wrapperContext->Continuations;
-        var continuation = continuations->GetContinuation(continuationHandle);
+        var continuations = continuationHandle.Continuations;
+        var continuation = continuationHandle.Continuation;
         var counter = Interlocked.Decrement(ref continuation->RemainingTaskCounter);
         if (counter == 0)
         {
@@ -750,7 +751,7 @@ public unsafe struct TaskQueue
             continuation.OnCompleted = onCompleted;
             continuation.Version = newVersion;
             continuation.RemainingTaskCounter = taskCount;
-            continuationHandle = new ContinuationHandle((uint)index, newVersion);
+            continuationHandle = new ContinuationHandle((uint)index, newVersion, continuationsContainer.Memory);
             return AllocateTaskContinuationResult.Success;
         }
         finally
