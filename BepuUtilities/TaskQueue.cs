@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Dynamic;
 using System.Linq;
 using System.Numerics;
 using System.Reflection.Metadata;
@@ -177,6 +178,29 @@ internal unsafe struct TaskQueueContinuations
 }
 
 /// <summary>
+/// Wraps a task for easier use with continuations.
+/// </summary>
+public unsafe struct WrappedTaskContext
+{
+    /// <summary>
+    /// Function to be invoked by this wrapped tsak.
+    /// </summary>
+    public delegate*<int, void*, int, void> Function;
+    /// <summary>
+    /// Context to be passed to this wrapped task.
+    /// </summary>
+    public void* Context;
+    /// <summary>
+    /// Handle of the continuation associated with this wrapped task.
+    /// </summary>
+    public ContinuationHandle Continuation;
+    /// <summary>
+    /// Set of continuations in the queue.
+    /// </summary>
+    internal TaskQueueContinuations* Continuations;
+}
+
+/// <summary>
 /// Stores data relevant to tracking task completion and reporting completion for a job.
 /// </summary>
 public unsafe struct TaskContinuation
@@ -238,16 +262,31 @@ public unsafe struct TaskQueue
         pool.Take(1, out continuationsContainer);
         ref var continuations = ref continuationsContainer[0];
         pool.Take(maximumContinuationCapacity, out continuations.Continuations);
-        continuations.Continuations.Clear(0, continuations.Continuations.Length);
         continuations.IndexPool = new IdPool(maximumContinuationCapacity, pool);
         continuations.ContinuationCount = 0;
         continuations.Locker = 0;
 
         pool.Take(maximumTaskCapacity, out tasks);
-        tasks.Clear(0, tasks.Length);
         taskMask = tasks.length - 1;
         taskShift = BitOperations.TrailingZeroCount(tasks.length);
         taskLocker = 0;
+        Reset();
+    }
+
+    /// <summary>
+    /// Returns the task queue to a fresh state without reallocating.
+    /// </summary>
+    public void Reset()
+    {
+        taskIndex = 0;
+        allocatedTaskIndex = 0;
+        writtenTaskIndex = 0;
+        Debug.Assert(taskLocker == 0, "There appears to be a thread actively working still. That's invalid.");
+
+        ref var continuations = ref continuationsContainer[0];
+        continuations.Continuations.Clear(0, continuations.Continuations.Length);
+        continuations.ContinuationCount = 0;
+        Debug.Assert(continuations.Locker == 0, "There appears to be a thread actively working still. That's invalid.");
     }
 
     /// <summary>
@@ -261,6 +300,41 @@ public unsafe struct TaskQueue
         pool.Return(ref tasks);
         pool.Return(ref continuationsContainer);
     }
+
+    /// <summary>
+    /// Gets the queue's capacity for tasks.
+    /// </summary>
+    public int TaskCapacity => tasks.length;
+    /// <summary>
+    /// Gets the queue's capacity for continuations.
+    /// </summary>
+    public int ContinuationCapacity => continuationsContainer[0].Continuations.length;
+    /// <summary>
+    /// Gets the number of tasks active in the queue.
+    /// </summary>
+    /// <remarks>Does not take a lock; if other threads are modifying the task values, the reported count may be invalid.</remarks>
+    public int UnsafeTaskCount => (int)(writtenTaskIndex - taskIndex);
+    /// <summary>
+    /// Gets the number of tasks active in the queue.
+    /// </summary>
+    public int TaskCount
+    {
+        get
+        {
+            var waiter = new SpinWait();
+            while (Interlocked.CompareExchange(ref taskLocker, 1, 0) != 0)
+            {
+                waiter.SpinOnce();
+            }
+            var result = (int)(writtenTaskIndex - taskIndex);
+            taskLocker = 0;
+            return result;
+        }
+    }
+    /// <summary>
+    /// Gets the number of continuations active in the queue.
+    /// </summary>
+    public int ContinuationCount => continuationsContainer[0].ContinuationCount;
 
     /// <summary>
     /// Attempts to dequeue a task.
@@ -356,6 +430,59 @@ public unsafe struct TaskQueue
         return continuationsContainer[0].GetContinuation(continuationHandle);
     }
 
+    EnqueueTaskResult TryEnqueueTasksUnsafelyInternal(Span<Task> tasks, out long taskEndIndex)
+    {
+        Debug.Assert(tasks.Length > 0, "Probably shouldn't be trying to enqueue zero tasks.");
+        Debug.Assert(writtenTaskIndex == 0 || this.tasks[(int)((writtenTaskIndex - 1) & taskMask)].Function != null, "No more jobs should be written after a stop command.");
+        var taskStartIndex = allocatedTaskIndex;
+        taskEndIndex = taskStartIndex + tasks.Length;
+        if (taskEndIndex - taskIndex > this.tasks.length)
+        {
+            //We've run out of space in the ring buffer. If we tried to write, we'd overwrite jobs that haven't yet been completed.
+            return EnqueueTaskResult.Full;
+        }
+        allocatedTaskIndex = taskEndIndex;
+        Debug.Assert(BitOperations.IsPow2(this.tasks.Length));
+        var wrappedInclusiveStartIndex = (int)(taskStartIndex & taskMask);
+        var wrappedInclusiveEndIndex = (int)(taskEndIndex & taskMask);
+        if (wrappedInclusiveEndIndex > wrappedInclusiveStartIndex)
+        {
+            //We can just copy the whole task block as one blob.
+            Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + taskStartIndex), ref Unsafe.As<Task, byte>(ref MemoryMarshal.GetReference(tasks)), (uint)(Unsafe.SizeOf<Task>() * tasks.Length));
+        }
+        else
+        {
+            //Copy the task block as two blobs.
+            ref var startTask = ref tasks[0];
+            var firstRegionCount = this.tasks.length - wrappedInclusiveStartIndex;
+            ref var secondBlobStartTask = ref tasks[firstRegionCount];
+            var secondRegionCount = tasks.Length - firstRegionCount;
+            Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + taskStartIndex), ref Unsafe.As<Task, byte>(ref startTask), (uint)(Unsafe.SizeOf<Task>() * firstRegionCount));
+            Unsafe.CopyBlockUnaligned(ref *(byte*)this.tasks.Memory, ref Unsafe.As<Task, byte>(ref secondBlobStartTask), (uint)(Unsafe.SizeOf<Task>() * secondRegionCount));
+        }
+        //for (int i = 0; i < tasks.Length; ++i)
+        //{
+        //    var taskIndex = (int)((i + taskStartIndex) & taskMask);
+        //    this.tasks[taskIndex] = tasks[i];
+        //}
+        return EnqueueTaskResult.Success;
+    }
+    /// <summary>
+    /// Tries to appends a set of tasks to the task queue. Does not acquire a lock; cannot return <see cref="EnqueueTaskResult.Contested"/>.
+    /// </summary>
+    /// <param name="tasks">Tasks composing the job.</param>
+    /// <returns>Result of the enqueue attempt.</returns>
+    /// <remarks>This must not be used while other threads could be performing task enqueues or task dequeues.</remarks>
+    public EnqueueTaskResult TryEnqueueTasksUnsafely(Span<Task> tasks)
+    {
+        EnqueueTaskResult result;
+        if ((result = TryEnqueueTasksUnsafelyInternal(tasks, out var taskEndIndex)) == EnqueueTaskResult.Success)
+        {
+            writtenTaskIndex = taskEndIndex;
+        }
+        return result;
+    }
+
     /// <summary>
     /// Tries to appends a set of tasks to the task queue if the ring buffer is uncontested.
     /// </summary>
@@ -370,42 +497,12 @@ public unsafe struct TaskQueue
         try
         {
             //We have the lock.
-            Debug.Assert(writtenTaskIndex == 0 || this.tasks[(int)((writtenTaskIndex - 1) & taskMask)].Function != null, "No more jobs should be written after a stop command.");
-            var taskStartIndex = allocatedTaskIndex;
-            var taskEndIndex = taskStartIndex + tasks.Length;
-            allocatedTaskIndex = taskEndIndex;
-            var longLength = (long)this.tasks.length;
-            if (taskEndIndex - taskIndex > longLength)
+            EnqueueTaskResult result;
+            if ((result = TryEnqueueTasksUnsafelyInternal(tasks, out var taskEndIndex)) == EnqueueTaskResult.Success)
             {
-                //We've run out of space in the ring buffer. If we tried to write, we'd overwrite jobs that haven't yet been completed.
-                return EnqueueTaskResult.Full;
+                Interlocked.Exchange(ref writtenTaskIndex, taskEndIndex); //This is not assuming 64 bits. Mildly goofy considering the rest.
             }
-            //We can actually write the jobs.
-            Debug.Assert(BitOperations.IsPow2(this.tasks.Length));
-            var wrappedInclusiveStartIndex = (int)(taskStartIndex & taskMask);
-            var wrappedInclusiveEndIndex = (int)(taskEndIndex & taskMask);
-            if (wrappedInclusiveEndIndex > wrappedInclusiveStartIndex)
-            {
-                //We can just copy the whole task block as one blob.
-                Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + taskStartIndex), ref Unsafe.As<Task, byte>(ref MemoryMarshal.GetReference(tasks)), (uint)(Unsafe.SizeOf<Task>() * tasks.Length));
-            }
-            else
-            {
-                //Copy the task block as two blobs.
-                ref var startTask = ref tasks[0];
-                var firstRegionCount = this.tasks.length - wrappedInclusiveStartIndex;
-                ref var secondBlobStartTask = ref tasks[firstRegionCount];
-                var secondRegionCount = tasks.Length - firstRegionCount;
-                Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + taskStartIndex), ref Unsafe.As<Task, byte>(ref startTask), (uint)(Unsafe.SizeOf<Task>() * firstRegionCount));
-                Unsafe.CopyBlockUnaligned(ref *(byte*)this.tasks.Memory, ref Unsafe.As<Task, byte>(ref secondBlobStartTask), (uint)(Unsafe.SizeOf<Task>() * secondRegionCount));
-            }
-            //for (int i = 0; i < tasks.Length; ++i)
-            //{
-            //    var taskIndex = (int)((i + taskStartIndex) & taskMask);
-            //    this.tasks[taskIndex] = tasks[i];
-            //}
-            Interlocked.Exchange(ref writtenTaskIndex, taskEndIndex); //This is not assuming 64 bits. Mildly goofy considering the rest.
-            return EnqueueTaskResult.Success;
+            return result;
         }
         finally
         {
@@ -445,7 +542,7 @@ public unsafe struct TaskQueue
     /// <summary>
     /// Tries to enqueues the stop command. 
     /// </summary>
-    /// <returns>True if the stop could be pushed onto the queue, false otherwise.</returns>
+    /// <returns>Result status of the enqueue attempt.</returns>
     public EnqueueTaskResult TryEnqueueStop()
     {
         Span<Task> stopJob = stackalloc Task[1];
@@ -480,26 +577,15 @@ public unsafe struct TaskQueue
     }
 
     /// <summary>
-    /// Wraps a task for easier use with continuations.
+    /// Tries to enqueues the stop command. Does not take a lock; cannot return <see cref="EnqueueTaskResult.Contested"/>.
     /// </summary>
-    public struct WrappedTaskContext
+    /// <returns>Result status of the enqueue attempt.</returns>
+    /// <remarks>This must not be used while other threads could be performing task enqueues or task dequeues.</remarks>
+    public EnqueueTaskResult TryEnqueueStopUnsafely()
     {
-        /// <summary>
-        /// Function to be invoked by this wrapped tsak.
-        /// </summary>
-        public delegate*<int, void*, int, void> Function;
-        /// <summary>
-        /// Context to be passed to this wrapped task.
-        /// </summary>
-        public void* Context;
-        /// <summary>
-        /// Handle of the continuation associated with this wrapped task.
-        /// </summary>
-        public ContinuationHandle Continuation;
-        /// <summary>
-        /// Set of continuations in the queue.
-        /// </summary>
-        internal TaskQueueContinuations* Continuations;
+        Span<Task> stopJob = stackalloc Task[1];
+        stopJob[0] = new Task { Function = null };
+        return TryEnqueueTasksUnsafely(stopJob);
     }
 
     /// <summary>
@@ -635,7 +721,27 @@ public unsafe struct TaskQueue
     }
 
     /// <summary>
-    /// Enqueues a for loop onto the task queue and returns.
+    /// Enqueues a for loop onto the task queue. Does not take a lock; cannot return <see cref="EnqueueTaskResult.Contested"/>.
+    /// </summary>
+    /// <param name="function">Function to execute on each iteration of the loop.</param>
+    /// <param name="context">Context pointer to pass into each task execution.</param>
+    /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
+    /// <param name="exclusiveEndIndex">Exclusive end index of the loop range.</param>
+    /// <returns>Status result of the enqueue operation.</returns>
+    /// <remarks>This must not be used while other threads could be performing task enqueues or task dequeues.</remarks>
+    public EnqueueTaskResult TryEnqueueForUnsafely(delegate*<int, void*, int, void> function, void* context, int inclusiveStartIndex, int exclusiveEndIndex)
+    {
+        var taskCount = exclusiveEndIndex - inclusiveStartIndex;
+        Span<Task> tasks = stackalloc Task[taskCount];
+        for (int i = 0; i < tasks.Length; ++i)
+        {
+            tasks[i] = new Task { Function = function, Context = context, TaskId = i + inclusiveStartIndex };
+        }
+        return TryEnqueueTasksUnsafely(tasks);
+    }
+
+    /// <summary>
+    /// Enqueues a for loop onto the task queue.
     /// </summary>
     /// <param name="function">Function to execute on each iteration of the loop.</param>
     /// <param name="context">Context pointer to pass into each task execution.</param>

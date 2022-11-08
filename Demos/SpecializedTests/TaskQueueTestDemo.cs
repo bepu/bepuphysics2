@@ -15,12 +15,13 @@ public unsafe class TaskQueueTestDemo : Demo
     static void Test(int taskId, void* context, int workerIndex)
     {
         int sum = 0;
-        for (int i = 0; i < 100000; ++i)
+        for (int i = 0; i < 1000; ++i)
         {
             sum = (sum ^ i) * i;
         }
         var typedContext = (Context*)context;
-        Interlocked.Add(ref typedContext->Sum, sum);
+        if (sum == int.MaxValue)
+            Interlocked.Add(ref typedContext->Sum, sum);
     }
 
     static void DispatcherBody(int workerIndex, void* context)
@@ -45,21 +46,21 @@ public unsafe class TaskQueueTestDemo : Demo
 
 
 
-        int iterationCount = 10;
-        int tasksPerIteration = 16;
+        int iterationCount = 128;
+        int tasksPerIteration = 4;
+        var taskQueue = new TaskQueue(BufferPool);
+        var taskQueuePointer = &taskQueue;
         Test(() =>
         {
             var context = new Context { };
-            var taskQueue = new TaskQueue(BufferPool);
             for (int i = 0; i < iterationCount; ++i)
-                taskQueue.EnqueueFor(&Test, &context, 0, tasksPerIteration, 0);
-            taskQueue.EnqueueStop(0);
-            ThreadDispatcher.DispatchWorkers(&DispatcherBody, &taskQueue);
-
-            taskQueue.Dispose(BufferPool);
+                taskQueuePointer->TryEnqueueForUnsafely(&Test, &context, 0, tasksPerIteration);
+            taskQueuePointer->TryEnqueueStopUnsafely();
+            ThreadDispatcher.DispatchWorkers(&DispatcherBody, taskQueuePointer);
             return context.Sum;
-        }, "MT");
+        }, "MT", () => taskQueuePointer->Reset());
 
+        taskQueue.Dispose(BufferPool);
 
         Test(() =>
         {
@@ -75,16 +76,17 @@ public unsafe class TaskQueueTestDemo : Demo
 
     delegate int TestFunction();
 
-    static void Test(TestFunction function, string name)
+    static void Test(TestFunction function, string name, Action reset = null)
     {
         long accumulatedTime = 0;
-        const int testCount = 16;
+        const int testCount = 128;
         int accumulator = 0;
         for (int i = 0; i < testCount; ++i)
         {
             var startTime = Stopwatch.GetTimestamp();
             accumulator += function();
             var endTime = Stopwatch.GetTimestamp();
+            reset?.Invoke();
             accumulatedTime += endTime - startTime;
             //overlapHandler.Set.Clear();
             CacheBlaster.Blast();
