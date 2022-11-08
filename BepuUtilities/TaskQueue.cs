@@ -46,10 +46,6 @@ public enum DequeueTaskResult
     /// </summary>
     Success,
     /// <summary>
-    /// The dequeue attempt was contested.
-    /// </summary>
-    Contested,
-    /// <summary>
     /// The queue was empty, but may have more tasks in the future.
     /// </summary>
     Empty,
@@ -348,27 +344,36 @@ public unsafe struct TaskQueue
         function = default;
         context = default;
         taskId = default;
-        if (Interlocked.CompareExchange(ref taskLocker, 1, 0) != 0)
-            return DequeueTaskResult.Contested;
-        try
+        while (true)
         {
-            //We have the lock.
-            var nextTaskIndex = taskIndex;
-            if (nextTaskIndex >= writtenTaskIndex)
+            long nextTaskIndex, sampledWrittenTaskIndex;
+            //Note that there is no lock taken. We sample the currently visible values and treat the dequeue as a transaction.
+            //If the transaction fails, we don't make any changes and try again.
+            if (Environment.Is64BitProcess) //This branch is compile time (at least where I've tested it).
+            {
+                //It's fine if we don't get a consistent view of the task index and written task index. Worst case scenario, this will claim that the queue is empty where a lock wouldn't.
+                nextTaskIndex = Volatile.Read(ref taskIndex);
+                sampledWrittenTaskIndex = Volatile.Read(ref writtenTaskIndex);
+            }
+            else
+            {
+                //Interlocked reads for 32 bit systems.
+                nextTaskIndex = Interlocked.Read(ref taskIndex);
+                sampledWrittenTaskIndex = Interlocked.Read(ref writtenTaskIndex);
+            }
+            if (nextTaskIndex >= sampledWrittenTaskIndex)
                 return DequeueTaskResult.Empty;
             var task = tasks[(int)(nextTaskIndex & taskMask)];
             if (task.Function == null)
                 return DequeueTaskResult.Stop;
+            //Unlike enqueues, a dequeue has a fixed contention window on a single value. There's not much point in using a spinwait when there's no reason to expect our next attempt to be blocked.
+            if (Interlocked.CompareExchange(ref taskIndex, nextTaskIndex + 1, nextTaskIndex) != nextTaskIndex)
+                continue;
             //There's an actual job!
             function = task.Function;
             context = task.Context;
             taskId = task.TaskId;
-            ++taskIndex;
             return DequeueTaskResult.Success;
-        }
-        finally
-        {
-            taskLocker = 0;
         }
     }
 
@@ -383,25 +388,6 @@ public unsafe struct TaskQueue
         if (result == DequeueTaskResult.Success)
             function(taskId, context, workerIndex);
         return result;
-    }
-
-    /// <summary>
-    /// Dequeues a task from the queue and runs it.
-    /// </summary>
-    /// <param name="workerIndex">Currently executing worker index to be provided to the function.</param>
-    /// <returns>True if a task was dequeued and run, false if a stop command was encountered.</returns>
-    public bool DequeueAndRun(int workerIndex)
-    {
-        var waiter = new SpinWait();
-        while (true)
-        {
-            var result = TryDequeueAndRun(workerIndex);
-            if (result == DequeueTaskResult.Stop)
-                return false;
-            if (result == DequeueTaskResult.Success)
-                return true;
-            waiter.SpinOnce(-1);
-        }
     }
 
     /// <summary>
@@ -500,7 +486,14 @@ public unsafe struct TaskQueue
             EnqueueTaskResult result;
             if ((result = TryEnqueueTasksUnsafelyInternal(tasks, out var taskEndIndex)) == EnqueueTaskResult.Success)
             {
-                Interlocked.Exchange(ref writtenTaskIndex, taskEndIndex); //This is not assuming 64 bits. Mildly goofy considering the rest.
+                if (Environment.Is64BitProcess)
+                {
+                    Volatile.Write(ref writtenTaskIndex, taskEndIndex);
+                }
+                else
+                {
+                    Interlocked.Exchange(ref writtenTaskIndex, taskEndIndex);
+                }
             }
             return result;
         }

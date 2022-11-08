@@ -20,14 +20,14 @@ public unsafe class TaskQueueTestDemo : Demo
             sum = (sum ^ i) * i;
         }
         var typedContext = (Context*)context;
-        if (sum == int.MaxValue)
-            Interlocked.Add(ref typedContext->Sum, sum);
+        //if (sum == int.MaxValue)
+        Interlocked.Add(ref typedContext->Sum, sum);
     }
 
     static void DispatcherBody(int workerIndex, void* context)
     {
         var taskQueue = (TaskQueue*)context;
-        while (taskQueue->DequeueAndRun(workerIndex)) ;
+        while (taskQueue->TryDequeueAndRun(workerIndex) != DequeueTaskResult.Stop) ;
     }
 
     struct Context
@@ -79,7 +79,7 @@ public unsafe class TaskQueueTestDemo : Demo
     static void Test(TestFunction function, string name, Action reset = null)
     {
         long accumulatedTime = 0;
-        const int testCount = 64;
+        const int testCount = 128;
         int accumulator = 0;
         for (int i = 0; i < testCount; ++i)
         {
