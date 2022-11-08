@@ -23,9 +23,9 @@ namespace BepuUtilities;
 public unsafe struct Task
 {
     /// <summary>
-    /// Function to be executed by the task. Takes as arguments the <see cref="TaskId"/>, <see cref="Context"/> pointer, and executing worker index.
+    /// Function to be executed by the task. Takes as arguments the <see cref="Id"/>, <see cref="Context"/> pointer, and executing worker index.
     /// </summary>
-    public delegate*<int, void*, int, void> Function;
+    public delegate*<long, void*, int, void> Function;
     /// <summary>
     /// Context to be passed into the <see cref="Function"/>.
     /// </summary>
@@ -33,7 +33,22 @@ public unsafe struct Task
     /// <summary>
     /// Identifier of this task within the job.
     /// </summary>
-    public int TaskId;
+    public long Id;
+
+    /// <summary>
+    /// Creates a new task.
+    /// </summary>
+    /// <param name="function">Function to be executed by the task. Takes as arguments the <see cref="Id"/>, <see cref="Context"/> pointer, and executing worker index.</param>
+    /// <param name="context">Context pointer to pass to the <see cref="Function"/>.</param>
+    /// <param name="taskId">Id of this task to be passed into the <see cref="Function"/>.</param>
+    public Task(delegate*<long, void*, int, void> function, void* context = null, long taskId = 0)
+    {
+        Function = function;
+        Context = context;
+        Id = taskId;
+    }
+
+    public static implicit operator Task(delegate*<long, void*, int, void> function) => new Task(function);
 }
 
 /// <summary>
@@ -181,7 +196,7 @@ public unsafe struct WrappedTaskContext
     /// <summary>
     /// Function to be invoked by this wrapped tsak.
     /// </summary>
-    public delegate*<int, void*, int, void> Function;
+    public delegate*<long, void*, int, void> Function;
     /// <summary>
     /// Context to be passed to this wrapped task.
     /// </summary>
@@ -202,18 +217,10 @@ public unsafe struct WrappedTaskContext
 public unsafe struct TaskContinuation
 {
     /// <summary>
-    /// Function to call upon completion of the job, if any.
+    /// Task to run upon completion of the associated task.
     /// </summary>
-    public delegate*<ulong, void*, int, void> OnCompleted;
-    /// <summary>
-    /// Context to pass to the completion function, if any.
-    /// </summary>
-    public void* OnCompletedContext;
+    public Task OnCompleted;
     internal TaskQueueContinuations* Continuations;
-    /// <summary>
-    /// Id provided by the user to identify this job.
-    /// </summary>
-    public ulong UserId;
     /// <summary>
     /// Version of this continuation.
     /// </summary>
@@ -335,15 +342,11 @@ public unsafe struct TaskQueue
     /// <summary>
     /// Attempts to dequeue a task.
     /// </summary>
-    /// <param name="function">Function associated with the dequeued task, if any.</param>
-    /// <param name="context">Context pointer associated with the dequeued task, if any.</param>
-    /// <param name="taskId">Task id associated with the dequeued task, if any.</param>
+    /// <param name="task">Dequeued task, if any.</param>
     /// <returns>Result status of the dequeue attempt.</returns>
-    public DequeueTaskResult TryDequeue(out delegate*<int, void*, int, void> function, out void* context, out int taskId)
+    public DequeueTaskResult TryDequeue(out Task task)
     {
-        function = default;
-        context = default;
-        taskId = default;
+        task = default;
         while (true)
         {
             long nextTaskIndex, sampledWrittenTaskIndex;
@@ -363,16 +366,14 @@ public unsafe struct TaskQueue
             }
             if (nextTaskIndex >= sampledWrittenTaskIndex)
                 return DequeueTaskResult.Empty;
-            var task = tasks[(int)(nextTaskIndex & taskMask)];
-            if (task.Function == null)
+            var taskCandidate = tasks[(int)(nextTaskIndex & taskMask)];
+            if (taskCandidate.Function == null)
                 return DequeueTaskResult.Stop;
             //Unlike enqueues, a dequeue has a fixed contention window on a single value. There's not much point in using a spinwait when there's no reason to expect our next attempt to be blocked.
             if (Interlocked.CompareExchange(ref taskIndex, nextTaskIndex + 1, nextTaskIndex) != nextTaskIndex)
                 continue;
             //There's an actual job!
-            function = task.Function;
-            context = task.Context;
-            taskId = task.TaskId;
+            task = taskCandidate;
             return DequeueTaskResult.Success;
         }
     }
@@ -384,9 +385,9 @@ public unsafe struct TaskQueue
     /// <returns>Result status of the dequeue attempt.</returns>
     public DequeueTaskResult TryDequeueAndRun(int workerIndex)
     {
-        var result = TryDequeue(out var function, out var context, out var taskId);
+        var result = TryDequeue(out var task);
         if (result == DequeueTaskResult.Success)
-            function(taskId, context, workerIndex);
+            task.Function(task.Id, task.Context, workerIndex);
         return result;
     }
 
@@ -521,7 +522,7 @@ public unsafe struct TaskQueue
                 //Couldn't enqueue the tasks because the task buffer is full.
                 //Clearly there's plenty of work available to execute, so go ahead and try to run one task inline.
                 var task = tasks[0];
-                task.Function(task.TaskId, task.Context, workerIndex);
+                task.Function(task.Id, task.Context, workerIndex);
                 if (tasks.Length == 1)
                     break;
                 tasks = tasks[1..];
@@ -532,6 +533,85 @@ public unsafe struct TaskQueue
             }
         }
     }
+
+    /// <summary>
+    /// Appends a set of tasks to the queue and returns when all tasks are complete.
+    /// </summary>
+    /// <param name="tasks">Tasks composing the job.</param>
+    /// <param name="workerIndex">Worker index to pass to inline-executed tasks if the task buffer is full.</param>
+    /// <remarks>Note that this will keep working until all tasks are run.
+    /// If the task queue is full, this will opt to run some tasks inline while waiting for room.</remarks>
+    public void RunTasks(Span<Task> tasks, int workerIndex)
+    {
+        if (tasks.Length == 0)
+            return;
+        ContinuationHandle continuationHandle = default;
+        if (tasks.Length > 1)
+        {
+            //Note that we only submit tasks to the queue for tasks beyond the first. The current thread is responsible for at least task 0.
+            var taskCount = tasks.Length - 1;
+            WrappedTaskContext* wrappedContexts = stackalloc WrappedTaskContext[taskCount];
+            Span<Task> tasksToEnqueue = stackalloc Task[taskCount];
+            continuationHandle = AllocateContinuation(taskCount, workerIndex);
+            for (int i = 0; i < tasksToEnqueue.Length; ++i)
+            {
+                var wrappedTaskContext = wrappedContexts + i;
+                var sourceTask = tasks[i + 1];
+                *wrappedTaskContext = new WrappedTaskContext { Function = sourceTask.Function, Context = sourceTask.Context, Continuation = continuationHandle, Continuations = continuationsContainer.Memory };
+                tasksToEnqueue[i] = new Task { Function = &RunAndMarkAsComplete, Context = wrappedTaskContext, Id = sourceTask.Id };
+            }
+            var waiter = new SpinWait();
+            EnqueueTaskResult result;
+            while ((result = TryEnqueueTasks(tasksToEnqueue)) != EnqueueTaskResult.Success)
+            {
+                if (result == EnqueueTaskResult.Full)
+                {
+                    //If the task buffer is full, just execute the task locally. Clearly there's enough work for other threads to keep running productively.
+                    var task = tasksToEnqueue[0];
+                    task.Function(task.Id, task.Context, workerIndex);
+                    if (tasksToEnqueue.Length == 1)
+                        break;
+                    tasksToEnqueue = tasksToEnqueue[1..];
+                }
+                else
+                {
+                    waiter.SpinOnce(-1); //TODO: We're biting the bullet on yields/sleep(0) here. May not be ideal for the use case; investigate
+                }
+            }
+        }
+        //Tasks [1, count) are submitted to the queue and may now be executing on other workers.
+        //The thread calling the for loop should not relinquish its timeslice. It should immediately begin working on task 0.
+        var task0 = tasks[0];
+        task0.Function(task0.Id, task0.Context, workerIndex);
+
+        if (tasks.Length > 1)
+        {
+            //Task 0 is done; this thread should seek out other work until the job is complete.
+            var waiter = new SpinWait();
+            Debug.Assert(continuationHandle.Initialized, "This codepath should only run if the continuation was allocated earlier.");
+            while (!IsComplete(continuationHandle))
+            {
+                //Note that we don't handle the DequeueResult.Stop case; if the job isn't complete yet, there's no way to hit a stop unless we enqueued this job after a stop.
+                //Enqueuing after a stop is an error condition and is debug checked for in TryEnqueueJob.
+                var dequeueResult = TryDequeue(out var fillerTask);
+                if (dequeueResult == DequeueTaskResult.Stop)
+                {
+                    Debug.Assert(dequeueResult != DequeueTaskResult.Stop, "Did you enqueue these tasks *after* some thread enqueued a stop command? That's illegal!");
+                    return;
+                }
+                if (dequeueResult == DequeueTaskResult.Success)
+                {
+                    fillerTask.Function(fillerTask.Id, fillerTask.Context, workerIndex);
+                    waiter.Reset();
+                }
+                else
+                {
+                    waiter.SpinOnce(-1);
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Tries to enqueues the stop command. 
     /// </summary>
@@ -603,11 +683,11 @@ public unsafe struct TaskQueue
             wrappedContext->Continuations = continuationsContainer.Memory;
             targetTask.Function = &RunAndMarkAsComplete;
             targetTask.Context = wrappedContext;
-            targetTask.TaskId = sourceTask.TaskId;
+            targetTask.Id = sourceTask.Id;
         }
     }
 
-    static void RunAndMarkAsComplete(int taskId, void* wrapperContextPointer, int workerIndex)
+    static void RunAndMarkAsComplete(long taskId, void* wrapperContextPointer, int workerIndex)
     {
         var wrapperContext = (WrappedTaskContext*)wrapperContextPointer;
         wrapperContext->Function(taskId, wrapperContext->Context, workerIndex);
@@ -618,9 +698,9 @@ public unsafe struct TaskQueue
         if (counter == 0)
         {
             //This entire job has completed.
-            if (continuation->OnCompleted != null)
+            if (continuation->OnCompleted.Function != null)
             {
-                continuation->OnCompleted(continuation->UserId, continuation->OnCompletedContext, workerIndex);
+                continuation->OnCompleted.Function(continuation->OnCompleted.Id, continuation->OnCompleted.Context, workerIndex);
             }
             //Free this continuation slot.
             var waiter = new SpinWait();
@@ -646,12 +726,10 @@ public unsafe struct TaskQueue
     /// Attempts to allocate a continuation for a set of tasks.
     /// </summary>
     /// <param name="taskCount">Number of tasks associated with the continuation.</param>
-    /// <param name="userContinuationId">User id to associate with the handle.</param>
-    /// <param name="onCompleted">Function to execute upon completing all associated tasks.</param>
-    /// <param name="onCompletedContext">Context pointer to pass into the completion function.</param>
+    /// <param name="onCompleted">Function to execute upon completing all associated tasks, if any. Any task with a null <see cref="Task.Function"/> will not be executed.</param>
     /// <param name="continuationHandle">Handle of the continuation if allocation is successful.</param>
     /// <returns>Result status of the continuation allocation attempt.</returns>
-    public AllocateTaskContinuationResult TryAllocateContinuation(int taskCount, ulong userContinuationId, delegate*<ulong, void*, int, void> onCompleted, void* onCompletedContext, out ContinuationHandle continuationHandle)
+    public AllocateTaskContinuationResult TryAllocateContinuation(int taskCount, out ContinuationHandle continuationHandle, Task onCompleted = default)
     {
         continuationHandle = default;
         ref var continuations = ref continuationsContainer[0];
@@ -669,9 +747,7 @@ public unsafe struct TaskQueue
             var index = continuations.IndexPool.Take();
             ref var continuation = ref continuations.Continuations[index];
             var newVersion = continuation.Version + 1;
-            continuation.OnCompletedContext = onCompletedContext;
             continuation.OnCompleted = onCompleted;
-            continuation.UserId = userContinuationId;
             continuation.Version = newVersion;
             continuation.RemainingTaskCounter = taskCount;
             continuationHandle = new ContinuationHandle((uint)index, newVersion);
@@ -688,17 +764,15 @@ public unsafe struct TaskQueue
     /// </summary>
     /// <param name="taskCount">Number of tasks associated with the continuation.</param>
     /// <param name="workerIndex">Worker index to pass to any inline executed tasks if the continuations buffer is full.</param>
-    /// <param name="userContinuationId">User id to associate with the handle.</param>
-    /// <param name="onCompleted">Function to execute upon completing all associated tasks.</param>
-    /// <param name="onCompletedContext">Context pointer to pass into the completion function.</param>
+    /// <param name="onCompleted">Task to execute upon completing all associated tasks, if any. Any task with a null <see cref="Task.Function"/> will not be executed.</param>
     /// <returns>Handle of the allocated continuation.</returns>
     /// <remarks>Note that this will keep trying until allocation succeeds. If something is blocking allocation, such as insufficient room in the continuations buffer and there are no workers consuming tasks, this will block forever.</remarks>
-    public ContinuationHandle AllocateContinuation(int taskCount, int workerIndex, ulong userContinuationId = 0, delegate*<ulong, void*, int, void> onCompleted = null, void* onCompletedContext = null)
+    public ContinuationHandle AllocateContinuation(int taskCount, int workerIndex, Task onCompleted = default)
     {
         var waiter = new SpinWait();
         ContinuationHandle handle;
         AllocateTaskContinuationResult result;
-        while ((result = TryAllocateContinuation(taskCount, userContinuationId, onCompleted, onCompletedContext, out handle)) != AllocateTaskContinuationResult.Success)
+        while ((result = TryAllocateContinuation(taskCount, out handle, onCompleted)) != AllocateTaskContinuationResult.Success)
         {
             if (result == AllocateTaskContinuationResult.Full)
             {
@@ -719,16 +793,15 @@ public unsafe struct TaskQueue
     /// <param name="function">Function to execute on each iteration of the loop.</param>
     /// <param name="context">Context pointer to pass into each task execution.</param>
     /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
-    /// <param name="exclusiveEndIndex">Exclusive end index of the loop range.</param>
+    /// <param name="iterationCount">Number of iterations to perform.</param>
     /// <returns>Status result of the enqueue operation.</returns>
     /// <remarks>This must not be used while other threads could be performing task enqueues or task dequeues.</remarks>
-    public EnqueueTaskResult TryEnqueueForUnsafely(delegate*<int, void*, int, void> function, void* context, int inclusiveStartIndex, int exclusiveEndIndex)
+    public EnqueueTaskResult TryEnqueueForUnsafely(delegate*<long, void*, int, void> function, void* context, int inclusiveStartIndex, int iterationCount)
     {
-        var taskCount = exclusiveEndIndex - inclusiveStartIndex;
-        Span<Task> tasks = stackalloc Task[taskCount];
+        Span<Task> tasks = stackalloc Task[iterationCount];
         for (int i = 0; i < tasks.Length; ++i)
         {
-            tasks[i] = new Task { Function = function, Context = context, TaskId = i + inclusiveStartIndex };
+            tasks[i] = new Task { Function = function, Context = context, Id = i + inclusiveStartIndex };
         }
         return TryEnqueueTasksUnsafely(tasks);
     }
@@ -739,17 +812,16 @@ public unsafe struct TaskQueue
     /// <param name="function">Function to execute on each iteration of the loop.</param>
     /// <param name="context">Context pointer to pass into each task execution.</param>
     /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
-    /// <param name="exclusiveEndIndex">Exclusive end index of the loop range.</param>
+    /// <param name="iterationCount">Number of iterations to perform.</param>
     /// <param name="workerIndex">Worker index to pass to any inline-executed task if the task queue is full.</param>
     /// <remarks>This function will not usually attempt to run any iterations of the loop itself. It tries to push the loop tasks onto the queue.<para/>
     /// If the task queue is full, this will opt to run the tasks inline while waiting for room.</remarks>
-    public void EnqueueFor(delegate*<int, void*, int, void> function, void* context, int inclusiveStartIndex, int exclusiveEndIndex, int workerIndex)
+    public void EnqueueFor(delegate*<long, void*, int, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex)
     {
-        var taskCount = exclusiveEndIndex - inclusiveStartIndex;
-        Span<Task> tasks = stackalloc Task[taskCount];
+        Span<Task> tasks = stackalloc Task[iterationCount];
         for (int i = 0; i < tasks.Length; ++i)
         {
-            tasks[i] = new Task { Function = function, Context = context, TaskId = i + inclusiveStartIndex };
+            tasks[i] = new Task { Function = function, Context = context, Id = i + inclusiveStartIndex };
         }
         EnqueueTasks(tasks, workerIndex);
     }
@@ -760,74 +832,17 @@ public unsafe struct TaskQueue
     /// <param name="function">Function to execute on each iteration of the loop.</param>
     /// <param name="context">Context pointer to pass into each iteration of the loop.</param>
     /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
-    /// <param name="exclusiveEndIndex">Exclusive end index of the loop range.</param>
+    /// <param name="iterationCount">Number of iterations to perform.</param>
     /// <param name="workerIndex">Index of the currently executing worker.</param>
-    public void For(delegate*<int, void*, int, void> function, void* context, int inclusiveStartIndex, int exclusiveEndIndex, int workerIndex)
+    public void For(delegate*<long, void*, int, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex)
     {
-        var iterationCount = exclusiveEndIndex - inclusiveStartIndex;
         if (iterationCount <= 0)
             return;
-        ContinuationHandle continuationHandle = default;
-        if (iterationCount > 1)
+        Span<Task> tasks = stackalloc Task[iterationCount];
+        for (int i = 0; i < tasks.Length; ++i)
         {
-            //Note that we only submit tasks to the queue for tasks beyond the first. The current thread is responsible for at least task 0.
-            var taskCount = iterationCount - 1;
-            WrappedTaskContext* wrappedContexts = stackalloc WrappedTaskContext[taskCount];
-            Span<Task> tasks = stackalloc Task[taskCount];
-            continuationHandle = AllocateContinuation(taskCount, workerIndex);
-            for (int i = 0; i < tasks.Length; ++i)
-            {
-                var wrappedTaskContext = wrappedContexts + i;
-                *wrappedTaskContext = new WrappedTaskContext { Function = function, Context = context, Continuation = continuationHandle, Continuations = continuationsContainer.Memory };
-                tasks[i] = new Task { Function = &RunAndMarkAsComplete, Context = wrappedTaskContext, TaskId = i + 1 + inclusiveStartIndex };
-            }
-            var waiter = new SpinWait();
-            EnqueueTaskResult result;
-            while ((result = TryEnqueueTasks(tasks)) != EnqueueTaskResult.Success)
-            {
-                if (result == EnqueueTaskResult.Full)
-                {
-                    //If the task buffer is full, just execute the task locally. Clearly there's enough work for other threads to keep running productively.
-                    var task = tasks[0];
-                    task.Function(task.TaskId, task.Context, workerIndex);
-                    if (tasks.Length == 1)
-                        break;
-                    tasks = tasks[1..];
-                }
-                else
-                {
-                    waiter.SpinOnce(-1); //TODO: We're biting the bullet on yields/sleep(0) here. May not be ideal for the use case; investigate
-                }
-            }
+            tasks[i] = new Task(function, context, inclusiveStartIndex + i);
         }
-        //Tasks [1, count) are submitted to the queue and may now be executing on other workers.
-        //The thread calling the for loop should not relinquish its timeslice. It should immediately begin working on task 0.
-        function(inclusiveStartIndex, context, workerIndex);
-
-        if (iterationCount > 1)
-        {
-            //Task 0 is done; this thread should seek out other work until the job is complete.
-            var waiter = new SpinWait();
-            while (!IsComplete(continuationHandle))
-            {
-                //Note that we don't handle the DequeueResult.Stop case; if the job isn't complete yet, there's no way to hit a stop unless we enqueued this job after a stop.
-                //Enqueuing after a stop is an error condition and is debug checked for in TryEnqueueJob.
-                var dequeueResult = TryDequeue(out var fillerJob, out var fillerContext, out var fillerTaskId);
-                if (dequeueResult == DequeueTaskResult.Stop)
-                {
-                    Debug.Assert(dequeueResult != DequeueTaskResult.Stop, "Did you enqueue this for loop *after* some thread enqueued a stop command? That's illegal!");
-                    return;
-                }
-                if (dequeueResult == DequeueTaskResult.Success)
-                {
-                    fillerJob(fillerTaskId, fillerContext, workerIndex);
-                    waiter.Reset();
-                }
-                else
-                {
-                    waiter.SpinOnce(-1);
-                }
-            }
-        }
+        RunTasks(tasks, workerIndex);
     }
 }

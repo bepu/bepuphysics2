@@ -12,15 +12,51 @@ namespace Demos.SpecializedTests;
 
 public unsafe class TaskQueueTestDemo : Demo
 {
-    static void Test(int taskId, void* context, int workerIndex)
+    static int DoSomeWork(int iterations, int sum)
     {
-        int sum = 0;
-        for (int i = 0; i < 100000; ++i)
+        for (int i = 0; i < iterations; ++i)
         {
             sum = (sum ^ i) * i;
         }
+        return sum;
+    }
+    static void DynamicallyEnqueuedTest(long taskId, void* context, int workerIndex)
+    {
+        int sum = 0;
+        DoSomeWork(10000, sum);
+        Interlocked.Add(ref ((Context*)context)->Sum, sum);
+    }
+    static void Test(long taskId, void* context, int workerIndex)
+    {
+        int sum = 0;
+        DoSomeWork(100000, sum);
         var typedContext = (Context*)context;
-        //if (sum == int.MaxValue)
+        if ((taskId & 7) == 0)
+        {
+            const int subtaskCount = 8;
+            //Span<Task> tasks = stackalloc Task[subtaskCount];
+            //for (int i = 0; i < tasks.Length; ++i)
+            //{
+            //    tasks[i] = new Task { Function = &DynamicallyEnqueuedTest, Context = context, TaskId = taskId };
+            //}
+            //typedContext->Queue->EnqueueTasks(tasks, workerIndex);
+            typedContext->Queue->For(&DynamicallyEnqueuedTest, context, 0, subtaskCount, workerIndex);
+        }
+        Interlocked.Add(ref typedContext->Sum, sum);
+    }
+    static void STTest(long taskId, void* context, int workerIndex)
+    {
+        int sum = 0;
+        DoSomeWork(100000, sum);
+        var typedContext = (Context*)context;
+        if ((taskId & 7) == 0)
+        {
+            const int subtaskCount = 8;
+            for (int i = 0; i < subtaskCount; ++i)
+            {
+                DynamicallyEnqueuedTest(taskId, context, workerIndex);
+            }
+        }
         Interlocked.Add(ref typedContext->Sum, sum);
     }
 
@@ -32,6 +68,7 @@ public unsafe class TaskQueueTestDemo : Demo
 
     struct Context
     {
+        public TaskQueue* Queue;
         public int Sum;
     }
 
@@ -52,10 +89,11 @@ public unsafe class TaskQueueTestDemo : Demo
         var taskQueuePointer = &taskQueue;
         Test(() =>
         {
-            var context = new Context { };
+            var context = new Context { Queue = taskQueuePointer };
             for (int i = 0; i < iterationCount; ++i)
-                taskQueuePointer->TryEnqueueForUnsafely(&Test, &context, 0, tasksPerIteration);
-            taskQueuePointer->TryEnqueueStopUnsafely();
+                taskQueuePointer->TryEnqueueForUnsafely(&Test, &context, i * tasksPerIteration, tasksPerIteration);
+            //taskQueuePointer->TryEnqueueStopUnsafely();
+            //taskQueuePointer->EnqueueTasks()
             ThreadDispatcher.DispatchWorkers(&DispatcherBody, taskQueuePointer);
             return context.Sum;
         }, "MT", () => taskQueuePointer->Reset());
@@ -67,7 +105,7 @@ public unsafe class TaskQueueTestDemo : Demo
             var testContext = new Context { };
             for (int i = 0; i < iterationCount * tasksPerIteration; ++i)
             {
-                Test(0, &testContext, 0);
+                STTest(0, &testContext, 0);
             }
             return testContext.Sum;
         }, "ST");
