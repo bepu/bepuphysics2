@@ -631,7 +631,7 @@ public unsafe struct TaskQueue
                 //Couldn't enqueue the tasks because the task buffer is full.
                 //Clearly there's plenty of work available to execute, so go ahead and try to run one task inline.
                 var task = tasks[0];
-                task.Function(task.Id, task.Context, workerIndex);
+                task.Run(workerIndex);
                 if (tasks.Length == 1)
                     break;
                 tasks = tasks[1..];
@@ -717,7 +717,7 @@ public unsafe struct TaskQueue
                 }
                 if (dequeueResult == DequeueTaskResult.Success)
                 {
-                    fillerTask.Function(fillerTask.Id, fillerTask.Context, workerIndex);
+                    fillerTask.Run(workerIndex);
                     waiter.Reset();
                 }
                 else
@@ -784,14 +784,15 @@ public unsafe struct TaskQueue
     /// <param name="context">Context pointer to pass into each task execution.</param>
     /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
     /// <param name="iterationCount">Number of iterations to perform.</param>
+    /// <param name="continuation">Continuation associated with the loop tasks, if any.</param>
     /// <returns>Status result of the enqueue operation.</returns>
     /// <remarks>This must not be used while other threads could be performing task enqueues or task dequeues.</remarks>
-    public EnqueueTaskResult TryEnqueueForUnsafely(delegate*<long, void*, int, void> function, void* context, int inclusiveStartIndex, int iterationCount)
+    public EnqueueTaskResult TryEnqueueForUnsafely(delegate*<long, void*, int, void> function, void* context, int inclusiveStartIndex, int iterationCount, ContinuationHandle continuation = default)
     {
         Span<Task> tasks = stackalloc Task[iterationCount];
         for (int i = 0; i < tasks.Length; ++i)
         {
-            tasks[i] = new Task { Function = function, Context = context, Id = i + inclusiveStartIndex };
+            tasks[i] = new Task { Function = function, Context = context, Id = i + inclusiveStartIndex, Continuation = continuation };
         }
         return TryEnqueueTasksUnsafely(tasks);
     }
@@ -804,14 +805,15 @@ public unsafe struct TaskQueue
     /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
     /// <param name="iterationCount">Number of iterations to perform.</param>
     /// <param name="workerIndex">Worker index to pass to any inline-executed task if the task queue is full.</param>
+    /// <param name="continuation">Continuation associated with the loop tasks, if any.</param>
     /// <remarks>This function will not usually attempt to run any iterations of the loop itself. It tries to push the loop tasks onto the queue.<para/>
     /// If the task queue is full, this will opt to run the tasks inline while waiting for room.</remarks>
-    public void EnqueueFor(delegate*<long, void*, int, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex)
+    public void EnqueueFor(delegate*<long, void*, int, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, ContinuationHandle continuation = default)
     {
         Span<Task> tasks = stackalloc Task[iterationCount];
         for (int i = 0; i < tasks.Length; ++i)
         {
-            tasks[i] = new Task { Function = function, Context = context, Id = i + inclusiveStartIndex };
+            tasks[i] = new Task { Function = function, Context = context, Id = i + inclusiveStartIndex, Continuation = continuation };
         }
         EnqueueTasks(tasks, workerIndex);
     }
