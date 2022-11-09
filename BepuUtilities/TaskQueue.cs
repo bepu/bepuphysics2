@@ -34,6 +34,10 @@ public unsafe struct Task
     /// Identifier of this task within the job.
     /// </summary>
     public long Id;
+    /// <summary>
+    /// Continuation to be notified after this job completes, if any.
+    /// </summary>
+    public ContinuationHandle Continuation;
 
     /// <summary>
     /// Creates a new task.
@@ -41,14 +45,27 @@ public unsafe struct Task
     /// <param name="function">Function to be executed by the task. Takes as arguments the <see cref="Id"/>, <see cref="Context"/> pointer, and executing worker index.</param>
     /// <param name="context">Context pointer to pass to the <see cref="Function"/>.</param>
     /// <param name="taskId">Id of this task to be passed into the <see cref="Function"/>.</param>
-    public Task(delegate*<long, void*, int, void> function, void* context = null, long taskId = 0)
+    /// <param name="continuation">Continuation to notify after the completion of this task, if any.</param>
+    public Task(delegate*<long, void*, int, void> function, void* context = null, long taskId = 0, ContinuationHandle continuation = default)
     {
         Function = function;
         Context = context;
         Id = taskId;
+        Continuation = continuation;
     }
 
     public static implicit operator Task(delegate*<long, void*, int, void> function) => new Task(function);
+
+    /// <summary>
+    /// Runs the task and, if necessary, notifies the associated continuation of its completion.
+    /// </summary>
+    /// <param name="workerIndex">Worker index to pass to the function.</param>
+    public void Run(int workerIndex)
+    {
+        Function(Id, Context, workerIndex);
+        if (Continuation.Initialized)
+            Continuation.NotifyTaskCompleted(workerIndex);
+    }
 }
 
 /// <summary>
@@ -144,11 +161,54 @@ public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
     public static ContinuationHandle Null => default;
 
     /// <summary>
-    /// Gets whether this handle was ever initialized. This does not guarantee that the job handle is active in the <see cref="TaskQueue"/> that it was allocated from.
+    /// Gets whether the continuation associated with this handle was allocated and has outstanding jobs.
+    /// </summary>
+    public bool Exists
+    {
+        get
+        {
+            if (!Initialized || Continuations == null)
+                return false;
+            ref var continuation = ref Continuations->Continuations[Index];
+            return continuation.Version == Version && continuation.RemainingTaskCounter > 0;
+        }
+    }
+
+    /// <summary>
+    /// Gets whether this handle ever represented an allocated handle. This does not guarantee that the job handle is active in the <see cref="TaskQueue"/> that it was allocated from.
     /// </summary>
     public bool Initialized => encodedVersion >= 1u << 31;
 
-    public bool Equals(ContinuationHandle other) => other.index == index && other.encodedVersion == encodedVersion;
+    /// <summary>
+    /// Notifies the continuation that one task was completed.
+    /// </summary>
+    /// <param name="workerIndex">Worker index to pass to the continuation's delegate, if any.</param>
+    public void NotifyTaskCompleted(int workerIndex)
+    {
+        var continuation = Continuation;
+        var counter = Interlocked.Decrement(ref continuation->RemainingTaskCounter);
+        Debug.Assert(counter >= 0, "The counter should not go negative. Was notify called too many times?");
+        if (counter == 0)
+        {
+            //This entire job has completed.
+            if (continuation->OnCompleted.Function != null)
+            {
+                continuation->OnCompleted.Function(continuation->OnCompleted.Id, continuation->OnCompleted.Context, workerIndex);
+            }
+            //Free this continuation slot.
+            var waiter = new SpinWait();
+            while (Interlocked.CompareExchange(ref Continuations->Locker, 1, 0) != 0)
+            {
+                waiter.SpinOnce(-1);
+            }
+            //We have the lock.
+            Continuations->IndexPool.ReturnUnsafely((int)Index);
+            --Continuations->ContinuationCount;
+            Continuations->Locker = 0;
+        }
+    }
+
+    public bool Equals(ContinuationHandle other) => other.index == index && other.encodedVersion == encodedVersion && other.Continuations == Continuations;
 
     public override bool Equals([NotNullWhen(true)] object obj) => obj is ContinuationHandle handle && Equals(handle);
 
@@ -218,25 +278,6 @@ internal unsafe struct TaskQueueContinuations
         ref var continuation = ref Continuations[continuationHandle.Index];
         return continuation.Version > continuationHandle.Version || continuation.RemainingTaskCounter == 0;
     }
-}
-
-/// <summary>
-/// Wraps a task for easier use with continuations.
-/// </summary>
-public unsafe struct WrappedTaskContext
-{
-    /// <summary>
-    /// Function to be invoked by this wrapped tsak.
-    /// </summary>
-    public delegate*<long, void*, int, void> Function;
-    /// <summary>
-    /// Context to be passed to this wrapped task.
-    /// </summary>
-    public void* Context;
-    /// <summary>
-    /// Handle of the continuation associated with this wrapped task.
-    /// </summary>
-    public ContinuationHandle Continuation;
 }
 
 /// <summary>
@@ -414,7 +455,9 @@ public unsafe struct TaskQueue
     {
         var result = TryDequeue(out var task);
         if (result == DequeueTaskResult.Success)
-            task.Function(task.Id, task.Context, workerIndex);
+        {
+            task.Run(workerIndex);
+        }
         return result;
     }
 
@@ -538,7 +581,7 @@ public unsafe struct TaskQueue
     /// <summary>
     /// Appends a set of tasks to the queue and returns when all tasks are complete.
     /// </summary>
-    /// <param name="tasks">Tasks composing the job.</param>
+    /// <param name="tasks">Tasks composing the job. A continuation will be assigned internally; no continuation should be present on any of the provided tasks.</param>
     /// <param name="workerIndex">Worker index to pass to inline-executed tasks if the task buffer is full.</param>
     /// <remarks>Note that this will keep working until all tasks are run.
     /// If the task queue is full, this will opt to run some tasks inline while waiting for room.</remarks>
@@ -551,16 +594,15 @@ public unsafe struct TaskQueue
         {
             //Note that we only submit tasks to the queue for tasks beyond the first. The current thread is responsible for at least task 0.
             var taskCount = tasks.Length - 1;
-            WrappedTaskContext* wrappedContexts = stackalloc WrappedTaskContext[taskCount];
             Span<Task> tasksToEnqueue = stackalloc Task[taskCount];
             continuationHandle = AllocateContinuation(taskCount, workerIndex);
             for (int i = 0; i < tasksToEnqueue.Length; ++i)
             {
-                var wrappedTaskContext = wrappedContexts + i;
-                var sourceTask = tasks[i + 1];
+                var task = tasks[i + 1];
                 Debug.Assert(continuationHandle.Continuations == continuationsContainer.Memory);
-                *wrappedTaskContext = new WrappedTaskContext { Function = sourceTask.Function, Context = sourceTask.Context, Continuation = continuationHandle };
-                tasksToEnqueue[i] = new Task { Function = &RunAndMarkAsComplete, Context = wrappedTaskContext, Id = sourceTask.Id };
+                Debug.Assert(!task.Continuation.Initialized, $"None of the source tasks should have continuations when provided to {nameof(RunTasks)}.");
+                task.Continuation = continuationHandle;
+                tasksToEnqueue[i] = task;
             }
             var waiter = new SpinWait();
             EnqueueTaskResult result;
@@ -584,6 +626,7 @@ public unsafe struct TaskQueue
         //Tasks [1, count) are submitted to the queue and may now be executing on other workers.
         //The thread calling the for loop should not relinquish its timeslice. It should immediately begin working on task 0.
         var task0 = tasks[0];
+        Debug.Assert(!task0.Continuation.Initialized, $"None of the source tasks should have continuations when provided to {nameof(RunTasks)}.");
         task0.Function(task0.Id, task0.Context, workerIndex);
 
         if (tasks.Length > 1)
@@ -661,66 +704,6 @@ public unsafe struct TaskQueue
         Span<Task> stopJob = stackalloc Task[1];
         stopJob[0] = new Task { Function = null };
         return TryEnqueueTasksUnsafely(stopJob);
-    }
-
-    /// <summary>
-    /// Wraps a set of tasks in continuation tasks that will report their completion.
-    /// </summary>
-    /// <param name="continuationHandle">Handle of the continuation to report to.</param>
-    /// <param name="tasks">Tasks to wrap.</param>
-    /// <param name="wrappedTaskContexts">Contexts to be used for the wrapped tasks. This memory must persist until the wrapped tasks complete.</param>
-    /// <param name="wrappedTasks">Span to hold the tasks created by this function.</param>
-    public void CreateCompletionWrappedTasks(ContinuationHandle continuationHandle, Span<Task> tasks, WrappedTaskContext* wrappedTaskContexts, Span<Task> wrappedTasks)
-    {
-        var count = Math.Min(tasks.Length, wrappedTasks.Length);
-        Debug.Assert(tasks.Length == wrappedTasks.Length, "This is probably a bug!");
-        for (int i = 0; i < count; ++i)
-        {
-            ref var sourceTask = ref tasks[i];
-            var wrappedContext = wrappedTaskContexts + i;
-            ref var targetTask = ref wrappedTasks[i];
-            wrappedContext->Function = sourceTask.Function;
-            wrappedContext->Context = sourceTask.Context;
-            wrappedContext->Continuation = continuationHandle;
-            targetTask.Function = &RunAndMarkAsComplete;
-            targetTask.Context = wrappedContext;
-            targetTask.Id = sourceTask.Id;
-        }
-    }
-
-    static void RunAndMarkAsComplete(long taskId, void* wrapperContextPointer, int workerIndex)
-    {
-        var wrapperContext = (WrappedTaskContext*)wrapperContextPointer;
-        wrapperContext->Function(taskId, wrapperContext->Context, workerIndex);
-        var continuationHandle = wrapperContext->Continuation;
-        var continuations = continuationHandle.Continuations;
-        var continuation = continuationHandle.Continuation;
-        var counter = Interlocked.Decrement(ref continuation->RemainingTaskCounter);
-        if (counter == 0)
-        {
-            //This entire job has completed.
-            if (continuation->OnCompleted.Function != null)
-            {
-                continuation->OnCompleted.Function(continuation->OnCompleted.Id, continuation->OnCompleted.Context, workerIndex);
-            }
-            //Free this continuation slot.
-            var waiter = new SpinWait();
-            while (true)
-            {
-                if (Interlocked.CompareExchange(ref continuations->Locker, 1, 0) != 0)
-                {
-                    waiter.SpinOnce(-1);
-                }
-                else
-                {
-                    //We have the lock.
-                    continuations->IndexPool.ReturnUnsafely((int)continuationHandle.Index);
-                    --continuations->ContinuationCount;
-                    continuations->Locker = 0;
-                    break;
-                }
-            }
-        }
     }
 
     /// <summary>
