@@ -20,11 +20,9 @@ public unsafe class TaskQueueTestDemo : Demo
         }
         return sum;
     }
-    static int counter = 0;
     static void DynamicallyEnqueuedTest(long taskId, void* context, int workerIndex)
     {
         var sum = DoSomeWork(10000, 0);
-        //Console.WriteLine($"Dynamically enqueued {Interlocked.Increment(ref counter)}");
         Interlocked.Add(ref ((Context*)context)->Sum, sum);
     }
     static void Test(long taskId, void* context, int workerIndex)
