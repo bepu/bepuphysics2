@@ -408,6 +408,71 @@ public unsafe struct TaskQueue
     public int ContinuationCount => continuationsContainer[0].ContinuationCount;
 
     /// <summary>
+    /// Attempts to allocate a continuation for a set of tasks.
+    /// </summary>
+    /// <param name="taskCount">Number of tasks associated with the continuation.</param>
+    /// <param name="onCompleted">Function to execute upon completing all associated tasks, if any. Any task with a null <see cref="Task.Function"/> will not be executed.</param>
+    /// <param name="continuationHandle">Handle of the continuation if allocation is successful.</param>
+    /// <returns>Result status of the continuation allocation attempt.</returns>
+    public AllocateTaskContinuationResult TryAllocateContinuation(int taskCount, out ContinuationHandle continuationHandle, Task onCompleted = default)
+    {
+        continuationHandle = default;
+        ref var continuations = ref continuationsContainer[0];
+        if (Interlocked.CompareExchange(ref continuations.Locker, 1, 0) != 0)
+            return AllocateTaskContinuationResult.Contested;
+        try
+        {
+            //We have the lock.
+            Debug.Assert(continuations.ContinuationCount <= continuations.Continuations.length);
+            if (continuations.ContinuationCount >= continuations.Continuations.length)
+            {
+                //No room.
+                return AllocateTaskContinuationResult.Full;
+            }
+            var index = continuations.IndexPool.Take();
+            ref var continuation = ref continuations.Continuations[index];
+            var newVersion = continuation.Version + 1;
+            continuation.OnCompleted = onCompleted;
+            continuation.Version = newVersion;
+            continuation.RemainingTaskCounter = taskCount;
+            continuationHandle = new ContinuationHandle((uint)index, newVersion, continuationsContainer.Memory);
+            return AllocateTaskContinuationResult.Success;
+        }
+        finally
+        {
+            continuations.Locker = 0;
+        }
+    }
+
+    /// <summary>
+    /// Allocates a continuation for a set of tasks.
+    /// </summary>
+    /// <param name="taskCount">Number of tasks associated with the continuation.</param>
+    /// <param name="workerIndex">Worker index to pass to any inline executed tasks if the continuations buffer is full.</param>
+    /// <param name="onCompleted">Task to execute upon completing all associated tasks, if any. Any task with a null <see cref="Task.Function"/> will not be executed.</param>
+    /// <returns>Handle of the allocated continuation.</returns>
+    /// <remarks>Note that this will keep trying until allocation succeeds. If something is blocking allocation, such as insufficient room in the continuations buffer and there are no workers consuming tasks, this will block forever.</remarks>
+    public ContinuationHandle AllocateContinuation(int taskCount, int workerIndex, Task onCompleted = default)
+    {
+        var waiter = new SpinWait();
+        ContinuationHandle handle;
+        AllocateTaskContinuationResult result;
+        while ((result = TryAllocateContinuation(taskCount, out handle, onCompleted)) != AllocateTaskContinuationResult.Success)
+        {
+            if (result == AllocateTaskContinuationResult.Full)
+            {
+                var dequeueResult = TryDequeueAndRun(workerIndex);
+                Debug.Assert(dequeueResult != DequeueTaskResult.Stop, "We're trying to allocate a continuation, we shouldn't have run into a stop command!");
+            }
+            else
+            {
+                waiter.SpinOnce(-1);
+            }
+        }
+        return handle;
+    }
+
+    /// <summary>
     /// Attempts to dequeue a task.
     /// </summary>
     /// <param name="task">Dequeued task, if any.</param>
@@ -579,6 +644,29 @@ public unsafe struct TaskQueue
     }
 
     /// <summary>
+    /// Appends a set of tasks to the queue. Creates a continuation for the tasks.
+    /// </summary>
+    /// <param name="tasks">Tasks composing the job. A continuation will be assigned internally; no continuation should be present on any of the provided tasks.</param>
+    /// <param name="workerIndex">Worker index to pass to inline-executed tasks if the task buffer is full.</param>
+    /// <param name="onComplete">Task to run upon completion of all the submitted tasks, if any.</param>
+    /// <returns>Handle of the continuation created for these tasks.</returns>
+    /// <remarks>Note that this will keep trying until task submission succeeds. 
+    /// If the task queue is full, this will opt to run some tasks inline while waiting for room.</remarks>
+    public ContinuationHandle AllocateContinuationAndEnqueueTasks(Span<Task> tasks, int workerIndex, Task onComplete = default)
+    {
+        var continuationHandle = AllocateContinuation(tasks.Length, workerIndex);
+        for (int i = 0; i < tasks.Length; ++i)
+        {
+            ref var task = ref tasks[i];
+            Debug.Assert(!task.Continuation.Initialized, "This function creates a continuation for the tasks");
+            task.Continuation = continuationHandle;
+        }
+        EnqueueTasks(tasks, workerIndex);
+        return continuationHandle;
+    }
+
+
+    /// <summary>
     /// Appends a set of tasks to the queue and returns when all tasks are complete.
     /// </summary>
     /// <param name="tasks">Tasks composing the job. A continuation will be assigned internally; no continuation should be present on any of the provided tasks.</param>
@@ -604,24 +692,7 @@ public unsafe struct TaskQueue
                 task.Continuation = continuationHandle;
                 tasksToEnqueue[i] = task;
             }
-            var waiter = new SpinWait();
-            EnqueueTaskResult result;
-            while ((result = TryEnqueueTasks(tasksToEnqueue)) != EnqueueTaskResult.Success)
-            {
-                if (result == EnqueueTaskResult.Full)
-                {
-                    //If the task buffer is full, just execute the task locally. Clearly there's enough work for other threads to keep running productively.
-                    var task = tasksToEnqueue[0];
-                    task.Function(task.Id, task.Context, workerIndex);
-                    if (tasksToEnqueue.Length == 1)
-                        break;
-                    tasksToEnqueue = tasksToEnqueue[1..];
-                }
-                else
-                {
-                    waiter.SpinOnce(-1); //TODO: We're biting the bullet on yields/sleep(0) here. May not be ideal for the use case; investigate
-                }
-            }
+            EnqueueTasks(tasksToEnqueue, workerIndex);
         }
         //Tasks [1, count) are submitted to the queue and may now be executing on other workers.
         //The thread calling the for loop should not relinquish its timeslice. It should immediately begin working on task 0.
@@ -704,71 +775,6 @@ public unsafe struct TaskQueue
         Span<Task> stopJob = stackalloc Task[1];
         stopJob[0] = new Task { Function = null };
         return TryEnqueueTasksUnsafely(stopJob);
-    }
-
-    /// <summary>
-    /// Attempts to allocate a continuation for a set of tasks.
-    /// </summary>
-    /// <param name="taskCount">Number of tasks associated with the continuation.</param>
-    /// <param name="onCompleted">Function to execute upon completing all associated tasks, if any. Any task with a null <see cref="Task.Function"/> will not be executed.</param>
-    /// <param name="continuationHandle">Handle of the continuation if allocation is successful.</param>
-    /// <returns>Result status of the continuation allocation attempt.</returns>
-    public AllocateTaskContinuationResult TryAllocateContinuation(int taskCount, out ContinuationHandle continuationHandle, Task onCompleted = default)
-    {
-        continuationHandle = default;
-        ref var continuations = ref continuationsContainer[0];
-        if (Interlocked.CompareExchange(ref continuations.Locker, 1, 0) != 0)
-            return AllocateTaskContinuationResult.Contested;
-        try
-        {
-            //We have the lock.
-            Debug.Assert(continuations.ContinuationCount <= continuations.Continuations.length);
-            if (continuations.ContinuationCount >= continuations.Continuations.length)
-            {
-                //No room.
-                return AllocateTaskContinuationResult.Full;
-            }
-            var index = continuations.IndexPool.Take();
-            ref var continuation = ref continuations.Continuations[index];
-            var newVersion = continuation.Version + 1;
-            continuation.OnCompleted = onCompleted;
-            continuation.Version = newVersion;
-            continuation.RemainingTaskCounter = taskCount;
-            continuationHandle = new ContinuationHandle((uint)index, newVersion, continuationsContainer.Memory);
-            return AllocateTaskContinuationResult.Success;
-        }
-        finally
-        {
-            continuations.Locker = 0;
-        }
-    }
-
-    /// <summary>
-    /// Allocates a continuation for a set of tasks.
-    /// </summary>
-    /// <param name="taskCount">Number of tasks associated with the continuation.</param>
-    /// <param name="workerIndex">Worker index to pass to any inline executed tasks if the continuations buffer is full.</param>
-    /// <param name="onCompleted">Task to execute upon completing all associated tasks, if any. Any task with a null <see cref="Task.Function"/> will not be executed.</param>
-    /// <returns>Handle of the allocated continuation.</returns>
-    /// <remarks>Note that this will keep trying until allocation succeeds. If something is blocking allocation, such as insufficient room in the continuations buffer and there are no workers consuming tasks, this will block forever.</remarks>
-    public ContinuationHandle AllocateContinuation(int taskCount, int workerIndex, Task onCompleted = default)
-    {
-        var waiter = new SpinWait();
-        ContinuationHandle handle;
-        AllocateTaskContinuationResult result;
-        while ((result = TryAllocateContinuation(taskCount, out handle, onCompleted)) != AllocateTaskContinuationResult.Success)
-        {
-            if (result == AllocateTaskContinuationResult.Full)
-            {
-                var dequeueResult = TryDequeueAndRun(workerIndex);
-                Debug.Assert(dequeueResult != DequeueTaskResult.Stop, "We're trying to allocate a continuation, we shouldn't have run into a stop command!");
-            }
-            else
-            {
-                waiter.SpinOnce(-1);
-            }
-        }
-        return handle;
     }
 
     /// <summary>

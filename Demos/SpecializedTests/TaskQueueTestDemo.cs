@@ -22,41 +22,38 @@ public unsafe class TaskQueueTestDemo : Demo
     }
     static void DynamicallyEnqueuedTest(long taskId, void* context, int workerIndex)
     {
-        int sum = 0;
-        DoSomeWork(10000, sum);
+        var sum = DoSomeWork(10000, 0);
         Interlocked.Add(ref ((Context*)context)->Sum, sum);
     }
     static void Test(long taskId, void* context, int workerIndex)
     {
-        int sum = 0;
-        DoSomeWork(100000, sum);
+        var sum = DoSomeWork(100000, 0);
         var typedContext = (Context*)context;
-        if ((taskId & 7) == 0)
-        {
-            const int subtaskCount = 8;
-            //Span<Task> tasks = stackalloc Task[subtaskCount];
-            //for (int i = 0; i < tasks.Length; ++i)
-            //{
-            //    tasks[i] = new Task { Function = &DynamicallyEnqueuedTest, Context = context, TaskId = taskId };
-            //}
-            //typedContext->Queue->EnqueueTasks(tasks, workerIndex);
-            typedContext->Queue->For(&DynamicallyEnqueuedTest, context, 0, subtaskCount, workerIndex);
-        }
+        //if ((taskId & 7) == 0)
+        //{
+        //    const int subtaskCount = 8;
+        //    //Span<Task> tasks = stackalloc Task[subtaskCount];
+        //    //for (int i = 0; i < tasks.Length; ++i)
+        //    //{
+        //    //    tasks[i] = new Task { Function = &DynamicallyEnqueuedTest, Context = context, TaskId = taskId };
+        //    //}
+        //    //typedContext->Queue->EnqueueTasks(tasks, workerIndex);
+        //    typedContext->Queue->For(&DynamicallyEnqueuedTest, context, 0, subtaskCount, workerIndex);
+        //}
         Interlocked.Add(ref typedContext->Sum, sum);
     }
     static void STTest(long taskId, void* context, int workerIndex)
     {
-        int sum = 0;
-        DoSomeWork(100000, sum);
+        var sum = DoSomeWork(100000, 0);
         var typedContext = (Context*)context;
-        if ((taskId & 7) == 0)
-        {
-            const int subtaskCount = 8;
-            for (int i = 0; i < subtaskCount; ++i)
-            {
-                DynamicallyEnqueuedTest(taskId, context, workerIndex);
-            }
-        }
+        //if ((taskId & 7) == 0)
+        //{
+        //    const int subtaskCount = 8;
+        //    for (int i = 0; i < subtaskCount; ++i)
+        //    {
+        //        DynamicallyEnqueuedTest(taskId, context, workerIndex);
+        //    }
+        //}
         Interlocked.Add(ref typedContext->Sum, sum);
     }
 
@@ -92,7 +89,7 @@ public unsafe class TaskQueueTestDemo : Demo
             var context = new Context { Queue = taskQueuePointer };
             for (int i = 0; i < iterationCount; ++i)
                 taskQueuePointer->TryEnqueueForUnsafely(&Test, &context, i * tasksPerIteration, tasksPerIteration);
-            //taskQueuePointer->TryEnqueueStopUnsafely();
+            taskQueuePointer->TryEnqueueStopUnsafely();
             //taskQueuePointer->EnqueueTasks()
             ThreadDispatcher.DispatchWorkers(&DispatcherBody, taskQueuePointer);
             return context.Sum;
