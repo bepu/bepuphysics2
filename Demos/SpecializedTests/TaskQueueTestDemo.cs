@@ -20,31 +20,27 @@ public unsafe class TaskQueueTestDemo : Demo
         }
         return sum;
     }
+    static int counter = 0;
     static void DynamicallyEnqueuedTest(long taskId, void* context, int workerIndex)
     {
-        var sum = DoSomeWork(100, 0);
+        var sum = DoSomeWork(10000, 0);
+        //Console.WriteLine($"Dynamically enqueued {Interlocked.Increment(ref counter)}");
         Interlocked.Add(ref ((Context*)context)->Sum, sum);
     }
     static void Test(long taskId, void* context, int workerIndex)
     {
-        var sum = DoSomeWork(100, 0);
+        var sum = DoSomeWork(100000, 0);
         var typedContext = (Context*)context;
         if ((taskId & 7) == 0)
         {
             const int subtaskCount = 8;
-            //Span<Task> tasks = stackalloc Task[subtaskCount];
-            //for (int i = 0; i < tasks.Length; ++i)
-            //{
-            //    tasks[i] = new Task { Function = &DynamicallyEnqueuedTest, Context = context, TaskId = taskId };
-            //}
-            //typedContext->Queue->EnqueueTasks(tasks, workerIndex);
             typedContext->Queue->For(&DynamicallyEnqueuedTest, context, 0, subtaskCount, workerIndex);
         }
         Interlocked.Add(ref typedContext->Sum, sum);
     }
     static void STTest(long taskId, void* context, int workerIndex)
     {
-        var sum = DoSomeWork(100, 0);
+        var sum = DoSomeWork(100000, 0);
         var typedContext = (Context*)context;
         if ((taskId & 7) == 0)
         {
@@ -86,8 +82,8 @@ public unsafe class TaskQueueTestDemo : Demo
 
 
 
-        int iterationCount = 1;
-        int tasksPerIteration = 2;
+        int iterationCount = 4;
+        int tasksPerIteration = 64;
         var taskQueue = new TaskQueue(BufferPool);
         var taskQueuePointer = &taskQueue;
         Test(() =>
@@ -107,9 +103,12 @@ public unsafe class TaskQueueTestDemo : Demo
         Test(() =>
         {
             var testContext = new Context { };
-            for (int i = 0; i < iterationCount * tasksPerIteration; ++i)
+            for (int i = 0; i < iterationCount; ++i)
             {
-                STTest(0, &testContext, 0);
+                for (int j = 0; j < tasksPerIteration; ++j)
+                {
+                    STTest(i * tasksPerIteration + j, &testContext, 0);
+                }
             }
             return testContext.Sum;
         }, "ST");
