@@ -18,7 +18,7 @@ using BepuUtilities.Memory;
 namespace BepuUtilities;
 
 /// <summary>
-/// Description of one task within a job to be submitted to a <see cref="TaskQueue"/>.
+/// Description of a task to be submitted to a <see cref="TaskQueue"/>.
 /// </summary>
 public unsafe struct Task
 {
@@ -31,11 +31,11 @@ public unsafe struct Task
     /// </summary>
     public void* Context;
     /// <summary>
-    /// Identifier of this task within the job.
+    /// User-provided identifier of this task.
     /// </summary>
     public long Id;
     /// <summary>
-    /// Continuation to be notified after this job completes, if any.
+    /// Continuation to be notified after this task completes, if any.
     /// </summary>
     public ContinuationHandle Continuation;
 
@@ -161,7 +161,7 @@ public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
     public static ContinuationHandle Null => default;
 
     /// <summary>
-    /// Gets whether the continuation associated with this handle was allocated and has outstanding jobs.
+    /// Gets whether the continuation associated with this handle was allocated and has outstanding tasks.
     /// </summary>
     public bool Exists
     {
@@ -175,7 +175,7 @@ public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
     }
 
     /// <summary>
-    /// Gets whether this handle ever represented an allocated handle. This does not guarantee that the job handle is active in the <see cref="TaskQueue"/> that it was allocated from.
+    /// Gets whether this handle ever represented an allocated handle. This does not guarantee that the continuation's associated tasks are active in the <see cref="TaskQueue"/> that it was allocated from.
     /// </summary>
     public bool Initialized => encodedVersion >= 1u << 31;
 
@@ -265,10 +265,10 @@ internal unsafe struct TaskQueueContinuations
     }
 
     /// <summary>
-    /// Checks whether all tasks composing a job, as reported to the continuation, have completed.
+    /// Checks whether all tasks associated with this continuation have completed.
     /// </summary>
-    /// <param name="continuationHandle">Job to check for completion.</param>
-    /// <returns>True if the job has completed, false otherwise.</returns>
+    /// <param name="continuationHandle">Continuation to check for completion.</param>
+    /// <returns>True if all tasks associated with a continuation have completed, false otherwise.</returns>
     public bool IsComplete(ContinuationHandle continuationHandle)
     {
         Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
@@ -281,7 +281,7 @@ internal unsafe struct TaskQueueContinuations
 }
 
 /// <summary>
-/// Stores data relevant to tracking task completion and reporting completion for a job.
+/// Stores data relevant to tracking task completion and reporting completion for a continuation.
 /// </summary>
 public unsafe struct TaskContinuation
 {
@@ -294,7 +294,7 @@ public unsafe struct TaskContinuation
     /// </summary>
     public int Version;
     /// <summary>
-    /// Number of tasks not yet reported as complete in the job.
+    /// Number of tasks not yet reported as complete in the continuation.
     /// </summary>
     public int RemainingTaskCounter;
 }
