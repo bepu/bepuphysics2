@@ -31,13 +31,13 @@ public unsafe struct Task
     /// </summary>
     public void* Context;
     /// <summary>
-    /// User-provided identifier of this task.
-    /// </summary>
-    public long Id;
-    /// <summary>
     /// Continuation to be notified after this task completes, if any.
     /// </summary>
     public ContinuationHandle Continuation;
+    /// <summary>
+    /// User-provided identifier of this task.
+    /// </summary>
+    public long Id;
 
     /// <summary>
     /// Creates a new task.
@@ -50,8 +50,8 @@ public unsafe struct Task
     {
         Function = function;
         Context = context;
-        Id = taskId;
         Continuation = continuation;
+        Id = taskId;
     }
 
     public static implicit operator Task(delegate*<long, void*, int, void> function) => new Task(function);
@@ -499,7 +499,7 @@ public unsafe struct TaskQueue
             }
             if (nextTaskIndex >= sampledWrittenTaskIndex)
                 return DequeueTaskResult.Empty;
-            var taskCandidate = tasks[(int)(nextTaskIndex & taskMask)];
+            ref var taskCandidate = ref tasks[(int)(nextTaskIndex & taskMask)];
             if (taskCandidate.Function == null)
                 return DequeueTaskResult.Stop;
             //Unlike enqueues, a dequeue has a fixed contention window on a single value. There's not much point in using a spinwait when there's no reason to expect our next attempt to be blocked.
@@ -665,6 +665,37 @@ public unsafe struct TaskQueue
         return continuationHandle;
     }
 
+    /// <summary>
+    /// Waits for a continuation to be completed.
+    /// </summary>
+    /// <remarks>Instead of spinning the entire time, this may dequeue and execute pending tasks to fill the gap.</remarks>
+    /// <param name="continuation">Continuation to wait on.</param>
+    /// <param name="workerIndex">Currently executing worker index to pass to any tasks used to fill the wait period.</param>
+    public void WaitForCompletion(ContinuationHandle continuation, int workerIndex)
+    {
+        var waiter = new SpinWait();
+        Debug.Assert(continuation.Initialized, "This codepath should only run if the continuation was allocated earlier.");
+        while (!continuation.Completed)
+        {
+            //Note that we don't handle the DequeueResult.Stop case; if the job isn't complete yet, there's no way to hit a stop unless we enqueued this job after a stop.
+            //Enqueuing after a stop is an error condition and is debug checked for in TryEnqueueJob.
+            var dequeueResult = TryDequeue(out var fillerTask);
+            if (dequeueResult == DequeueTaskResult.Stop)
+            {
+                Debug.Assert(dequeueResult != DequeueTaskResult.Stop, "Did you enqueue these tasks *after* some thread enqueued a stop command? That's illegal!");
+                return;
+            }
+            if (dequeueResult == DequeueTaskResult.Success)
+            {
+                fillerTask.Run(workerIndex);
+                waiter.Reset();
+            }
+            else
+            {
+                waiter.SpinOnce(-1);
+            }
+        }
+    }
 
     /// <summary>
     /// Appends a set of tasks to the queue and returns when all tasks are complete.
@@ -703,28 +734,7 @@ public unsafe struct TaskQueue
         if (tasks.Length > 1)
         {
             //Task 0 is done; this thread should seek out other work until the job is complete.
-            var waiter = new SpinWait();
-            Debug.Assert(continuationHandle.Initialized, "This codepath should only run if the continuation was allocated earlier.");
-            while (!continuationHandle.Completed)
-            {
-                //Note that we don't handle the DequeueResult.Stop case; if the job isn't complete yet, there's no way to hit a stop unless we enqueued this job after a stop.
-                //Enqueuing after a stop is an error condition and is debug checked for in TryEnqueueJob.
-                var dequeueResult = TryDequeue(out var fillerTask);
-                if (dequeueResult == DequeueTaskResult.Stop)
-                {
-                    Debug.Assert(dequeueResult != DequeueTaskResult.Stop, "Did you enqueue these tasks *after* some thread enqueued a stop command? That's illegal!");
-                    return;
-                }
-                if (dequeueResult == DequeueTaskResult.Success)
-                {
-                    fillerTask.Run(workerIndex);
-                    waiter.Reset();
-                }
-                else
-                {
-                    waiter.SpinOnce(-1);
-                }
-            }
+            WaitForCompletion(continuationHandle, workerIndex);
         }
     }
 

@@ -589,8 +589,7 @@ namespace BepuPhysics.Trees
 
         unsafe static void MultithreadedBinSubtrees<TLeafCounts>(MultithreadBinnedBuildContext<TLeafCounts>* context,
             Vector4 centroidBoundsMin, bool useX, bool useY, Vector128<int> permuteMask, int axisIndex, Vector4 offsetToBinIndex, Vector4 maximumBinIndex,
-            Buffer<BoundingBox4> bounds, TLeafCounts leafCounts,
-            Buffer<BoundingBox4> binBoundingBoxes, Buffer<int> binLeafCounts, int binCount, int workerIndex) where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+            Buffer<BoundingBox4> bounds, TLeafCounts leafCounts, int binCount, int workerIndex) where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
         {
             var taskCount = context->SetupTaskCounts(bounds.Length, SubtreesPerThreadForBinning, workerIndex);
             //Don't bother initializing more slots than we have tasks. Note that this requires special handling on the task level;
@@ -625,6 +624,7 @@ namespace BepuPhysics.Trees
 
             //Unless the number of threads and bins is really huge, there's no value in attempting to multithread the final compression.
             //(Parallel reduction is an option, but even then... I suspect the single threaded version will be faster. And it's way simpler.)
+            //Merge everything into cache 0. That's the source of bins for the worker that invoked this dispatch.
             ref var cache0 = ref worker.BinSubtreesWorkers[0];
             for (int cacheIndex = 1; cacheIndex < activeWorkerCount; ++cacheIndex)
             {
@@ -735,7 +735,7 @@ namespace BepuPhysics.Trees
             {
                 MultithreadedBinSubtrees(
                    (MultithreadBinnedBuildContext<TLeafCounts>*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading)),
-                   centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, boundingBoxes, leafCounts, binBoundingBoxes, binLeafCounts, binCount, workerIndex);
+                   centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, boundingBoxes, leafCounts, binCount, workerIndex);
             }
 
             //Identify the split index by examining the SAH of very split option.
@@ -838,15 +838,27 @@ namespace BepuPhysics.Trees
             BuildNode(bestboundsA, bestboundsB, leafCountA, leafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref leaves, out var nodeChildIndexA, out var nodeChildIndexB);
 
             var shouldPushBOntoMultithreadedQueue = typeof(TThreading) != typeof(SingleThreaded) && subtreeCountA >= SubtreesPerThreadForNodeJob && subtreeCountB >= SubtreesPerThreadForNodeJob;
+            ContinuationHandle nodeBContinuation = default;
             if (shouldPushBOntoMultithreadedQueue)
             {
                 //Both of the children are large. Push child B onto the multithreaded execution stack so it can run at the same time as child A (potentially).
                 Debug.Assert(SubtreesPerThreadForNodeJob > 1, "The job threshold for a new node should be large enough that there's no need for a subtreeCountB > 1 test.");
+                ref var threading = ref Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading);
+                //var task = new Task(&BinnedBuilderNodeWorker, &context->,  )
+                //nodeBContinuation = threading.Queue->AllocateContinuationAndEnqueueTasks(new Span<Task>(&task, 1), workerIndex);
             }
             if (subtreeCountA > 1)
                 BinnedBuilderInternal(indices.Slice(subtreeCountA), leafCounts.Slice(0, subtreeCountA), ref leaves, boundingBoxes.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), nodeChildIndexA, nodeIndex, 0, context, workerIndex);
             if (!shouldPushBOntoMultithreadedQueue && subtreeCountB > 1)
                 BinnedBuilderInternal(indices.Slice(subtreeCountA, subtreeCountB), leafCounts.Slice(subtreeCountA, subtreeCountB), ref leaves, boundingBoxes.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), nodeChildIndexB, nodeIndex, 1, context, workerIndex);
+            if (shouldPushBOntoMultithreadedQueue)
+            {
+                //We want to keep the stack at this level alive until the memory we allocated for the node push completes.
+                //Note that WaitForCompletion will execute pending work; this isn't just busywaiting the current thread.
+                //(This was just slightly easier than 
+                Debug.Assert(nodeBContinuation.Initialized);
+                Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading).Queue->WaitForCompletion(nodeBContinuation, workerIndex);
+            }
         }
 
         public static unsafe void BinnedBuilder(Buffer<int> encodedLeafIndices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves, BufferPool pool,

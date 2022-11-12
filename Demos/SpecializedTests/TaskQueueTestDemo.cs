@@ -7,6 +7,7 @@ using DemoRenderer;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Threading;
+using System.Runtime.CompilerServices;
 
 namespace Demos.SpecializedTests;
 
@@ -77,7 +78,7 @@ public unsafe class TaskQueueTestDemo : Demo
 
         Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
 
-
+        Console.WriteLine($"Task size: {Unsafe.SizeOf<Task>()}");
 
 
         int iterationCount = 4;
