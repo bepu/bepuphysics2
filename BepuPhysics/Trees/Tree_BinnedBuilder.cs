@@ -650,6 +650,24 @@ namespace BepuPhysics.Trees
             }
         }
 
+        unsafe struct NodePushTaskContext<TLeafCounts, TLeaves, TThreading>
+            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts> where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
+        {
+            public Context<TLeafCounts, TLeaves, TThreading>* Context;
+            public int NodeIndex;
+            public int ParentNodeIndex;
+            //Subtree region start index and subtree count are both encoded into the task id.
+        }
+        unsafe static void BinnedBuilderNodeWorker<TLeafCounts, TLeaves, TThreading>(long taskId, void* context, int workerIndex)
+            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts> where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
+        {
+            var subtreeRegionStartIndex = (int)taskId;
+            var subtreeCount = (int)(taskId >> 32);
+            var wrappedContext = (NodePushTaskContext<TLeafCounts, TLeaves, TThreading>*)context;
+            //Note that child index is always 1 because we only ever push child B.
+            BinnedBuilderInternal(subtreeRegionStartIndex, wrappedContext->NodeIndex, subtreeCount, wrappedContext->ParentNodeIndex, 1, wrappedContext->Context, workerIndex);
+        }
+
         static unsafe void BinnedBuilderInternal<TLeafCounts, TLeaves, TThreading>(
             int subtreeRegionStartIndex, int nodeIndex, int subtreeCount, int parentNodeIndex, int childIndexInParent, Context<TLeafCounts, TLeaves, TThreading>* context, int workerIndex)
             where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts> where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
@@ -859,8 +877,14 @@ namespace BepuPhysics.Trees
                 //Both of the children are large. Push child B onto the multithreaded execution stack so it can run at the same time as child A (potentially).
                 Debug.Assert(SubtreesPerThreadForNodeJob > 1, "The job threshold for a new node should be large enough that there's no need for a subtreeCountB > 1 test.");
                 ref var threading = ref Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading);
-                //var task = new Task(&BinnedBuilderNodeWorker, &context->,  )
-                //nodeBContinuation = threading.Queue->AllocateContinuationAndEnqueueTasks(new Span<Task>(&task, 1), workerIndex);
+                //Allocate the parameters to send to the worker on the local stack. Note that we have to preserve the stack for this to work; see the later WaitForCompletion.
+                NodePushTaskContext<TLeafCounts, TLeaves, TThreading> wrappedContext;
+                wrappedContext.Context = context;
+                wrappedContext.NodeIndex = nodeChildIndexB;
+                wrappedContext.ParentNodeIndex = nodeIndex;
+                //Note that we use the task id to store subtree start and subtree count. Don't have to do that, but no reason not to use it.
+                var task = new Task(&BinnedBuilderNodeWorker<TLeafCounts, TLeaves, TThreading>, &wrappedContext, (long)(subtreeRegionStartIndex + subtreeCountA) | ((long)subtreeCountB << 32));
+                nodeBContinuation = threading.Queue->AllocateContinuationAndEnqueueTasks(new Span<Task>(&task, 1), workerIndex);
             }
             if (subtreeCountA > 1)
                 BinnedBuilderInternal(subtreeRegionStartIndex, nodeChildIndexA, subtreeCountA, nodeIndex, 0, context, workerIndex);
