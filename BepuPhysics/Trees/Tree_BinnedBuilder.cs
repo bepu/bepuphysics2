@@ -134,6 +134,23 @@ namespace BepuPhysics.Trees
             public Buffer<Metanode> Metanodes;
 
             public TThreading Threading;
+
+            public Context(int minimumBinCount, int maximumBinCount, float leafToBinMultiplier, int microsweepThreshold,
+                Buffer<int> indices, TLeafCounts leafCounts, TLeaves leaves, Buffer<BoundingBox4> boundingBoxes,
+                Buffer<Node> nodes, Buffer<Metanode> metanodes, TThreading threading)
+            {
+                MinimumBinCount = minimumBinCount;
+                MaximumBinCount = maximumBinCount;
+                LeafToBinMultiplier = leafToBinMultiplier;
+                MicrosweepThreshold = microsweepThreshold;
+                Indices = indices;
+                LeafCounts = leafCounts;
+                Leaves = leaves;
+                BoundingBoxes = boundingBoxes;
+                Nodes = nodes;
+                Metanodes = metanodes;
+                Threading = threading;
+            }
         }
 
         struct BoundsComparerX : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.X + a.Max.X) > (b.Min.X + b.Max.X) ? -1 : 1; }
@@ -894,14 +911,18 @@ namespace BepuPhysics.Trees
             {
                 //We want to keep the stack at this level alive until the memory we allocated for the node push completes.
                 //Note that WaitForCompletion will execute pending work; this isn't just busywaiting the current thread.
-                //(This was just slightly easier than managing heap allocations or doing other interthread communication.)
+                //In addition to letting us use the local stack to store some arguments for the other thread, this wait means that all children have completed when this function returns.
+                //That makes knowing when to stop the queue easier.
                 Debug.Assert(nodeBContinuation.Initialized);
                 Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading).Queue->WaitForCompletion(nodeBContinuation, workerIndex);
             }
         }
 
-        public static unsafe void BinnedBuilder(Buffer<int> encodedLeafIndices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves, BufferPool pool,
-            int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
+
+
+
+        static unsafe void BinnedBuilderInternal(Buffer<int> encodedLeafIndices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
+            IThreadDispatcher dispatcher, TaskQueue* taskQueue, int workerCount, int minimumBinCount, int maximumBinCount, float leafToBinMultiplier, int microsweepThreshold)
         {
             var subtreeCount = encodedLeafIndices.Length;
             Debug.Assert(boundingBoxes.Length >= subtreeCount, "The bounding boxes provided must cover the range of indices provided.");
@@ -928,31 +949,30 @@ namespace BepuPhysics.Trees
             maximumBinCount = Math.Max(2, maximumBinCount);
             //The microsweep uses the same resources as the bin allocations, so expand to hold whichever is larger.
             var allocatedBinCount = Math.Max(maximumBinCount, microsweepThreshold);
-            var binBoundsMemory = stackalloc BoundingBox4[allocatedBinCount * 2 + 1];
-            //Should be basically irrelevant, but just in case it's not on some platform, align the allocation.
-            binBoundsMemory = (BoundingBox4*)(((ulong)binBoundsMemory + 31ul) & (~31ul));
 
-            Context<UnitLeafCount, Buffer<Leaf>, SingleThreaded> context;
-            context.Threading.BinBoundingBoxes = new Buffer<BoundingBox4>(binBoundsMemory, allocatedBinCount);
-            context.Threading.BinBoundingBoxesScan = new Buffer<BoundingBox4>(binBoundsMemory + allocatedBinCount, allocatedBinCount);
+            if (dispatcher == null && taskQueue == null)
+            {
+                //Use the single threaded path.
+                var binBoundsMemory = stackalloc BoundingBox4[allocatedBinCount * 2 + 1];
+                //Should be basically irrelevant, but just in case it's not on some platform, align the allocation.
+                binBoundsMemory = (BoundingBox4*)(((ulong)binBoundsMemory + 31ul) & (~31ul));
 
-            var binLeafCountsMemory = stackalloc int[allocatedBinCount];
-            context.Threading.BinLeafCounts = new Buffer<int>(binLeafCountsMemory, allocatedBinCount);
+                var binLeafCountsMemory = stackalloc int[allocatedBinCount];
+                SingleThreaded threading;
+                threading.BinBoundingBoxes = new Buffer<BoundingBox4>(binBoundsMemory, allocatedBinCount);
+                threading.BinBoundingBoxesScan = new Buffer<BoundingBox4>(binBoundsMemory + allocatedBinCount, allocatedBinCount);
+                threading.BinLeafCounts = new Buffer<int>(binLeafCountsMemory, allocatedBinCount);
+                var context = new Context<UnitLeafCount, Buffer<Leaf>, SingleThreaded>(
+                    minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold, encodedLeafIndices,
+                    new UnitLeafCount(), leaves, boundingBoxes.As<BoundingBox4>(), nodes, metanodes, threading);
+                BinnedBuilderInternal(0, 0, subtreeCount, -1, -1, &context, 0);
+            }
+        }
 
-            context.MinimumBinCount = minimumBinCount;
-            context.MaximumBinCount = maximumBinCount;
-            context.LeafToBinMultiplier = leafToBinMultiplier;
-            context.MicrosweepThreshold = microsweepThreshold;
-
-            context.Indices = encodedLeafIndices;
-            context.LeafCounts = new UnitLeafCount();
-            context.Leaves = leaves;
-            context.BoundingBoxes = boundingBoxes.As<BoundingBox4>();
-            context.Nodes = nodes;
-            context.Metanodes = metanodes;
-
-            //While we could avoid a recursive implementation, the overhead is low compared to the per-iteration cost.
-            BinnedBuilderInternal(0, 0, subtreeCount, -1, -1, &context, 0);
+        public static unsafe void BinnedBuilder(Buffer<int> encodedLeafIndices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
+            int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
+        {
+            BinnedBuilderInternal(encodedLeafIndices, boundingBoxes, nodes, metanodes, leaves, null, null, 0, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
         }
     }
 }

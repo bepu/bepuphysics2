@@ -176,19 +176,29 @@ namespace Demos.SpecializedTests
 
             BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
             BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
-            for (int i = 0; i < mesh.Triangles.Length; ++i)
-            {
-                ref var t = ref mesh.Triangles[i];
-                ref var bounds = ref leafBounds[i];
-                bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
-                bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
-                leafIndices[i] = Tree.Encode(i);
-            }
 
-            BinnedTest(() =>
+            Action setup = () =>
             {
-                Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves, BufferPool);
-            }, "Revamp Single Axis", ref mesh.Tree);
+                for (int i = 0; i < mesh.Triangles.Length; ++i)
+                {
+                    ref var t = ref mesh.Triangles[i];
+                    ref var bounds = ref leafBounds[i];
+                    bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
+                    bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
+                    leafIndices[i] = Tree.Encode(i);
+                }
+            };
+
+            BinnedTest(setup, () =>
+            {
+                Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves);
+            }, "Revamp Single Axis MT", ref mesh.Tree);
+
+            BinnedTest(setup, () =>
+            {
+                Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves);
+            }, "Revamp Single Axis ST", ref mesh.Tree);
+
 
 
             var mesh2 = new Mesh(triangles, Vector3.One, BufferPool);
@@ -196,7 +206,7 @@ namespace Demos.SpecializedTests
             QuickList<int> subtreeReferences = new(mesh2.Tree.LeafCount, BufferPool);
             QuickList<int> treeletInternalNodes = new(mesh2.Tree.LeafCount, BufferPool);
             Tree.CreateBinnedResources(BufferPool, mesh2.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
-            BinnedTest(() =>
+            BinnedTest(null, () =>
             {
                 subtreeReferences.Count = 0;
                 treeletInternalNodes.Count = 0;
@@ -255,12 +265,13 @@ namespace Demos.SpecializedTests
             Console.WriteLine($"{name} bounds 0 hash: {hash}, A ({tree.Nodes[0].A.Min}, {tree.Nodes[0].B.Max}), B ({tree.Nodes[0].B.Min}, {tree.Nodes[0].B.Max})");
         }
 
-        static void BinnedTest(Action function, string name, ref Tree tree)
+        static void BinnedTest(Action setup, Action function, string name, ref Tree tree)
         {
             long accumulatedTime = 0;
             const int testCount = 16;
             for (int i = 0; i < testCount; ++i)
             {
+                setup?.Invoke();
                 var startTime = Stopwatch.GetTimestamp();
                 function();
                 var endTime = Stopwatch.GetTimestamp();
