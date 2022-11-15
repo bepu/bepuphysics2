@@ -189,10 +189,10 @@ namespace Demos.SpecializedTests
                 }
             };
 
-            BinnedTest(setup, () =>
-            {
-                Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves);
-            }, "Revamp Single Axis MT", ref mesh.Tree);
+            //BinnedTest(setup, () =>
+            //{
+            //    Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves);
+            //}, "Revamp Single Axis MT", ref mesh.Tree);
 
             BinnedTest(setup, () =>
             {
@@ -201,17 +201,23 @@ namespace Demos.SpecializedTests
 
 
 
-            var mesh2 = new Mesh(triangles, Vector3.One, BufferPool);
+            Mesh mesh2 = default;
+            Mesh* mesh2Pointer = &mesh2;
 
-            QuickList<int> subtreeReferences = new(mesh2.Tree.LeafCount, BufferPool);
-            QuickList<int> treeletInternalNodes = new(mesh2.Tree.LeafCount, BufferPool);
-            Tree.CreateBinnedResources(BufferPool, mesh2.Tree.LeafCount, out var binnedResourcesBuffer, out var binnedResources);
-            BinnedTest(null, () =>
+            QuickList<int> subtreeReferences = new(triangles.Length, BufferPool);
+            QuickList<int> treeletInternalNodes = new(triangles.Length, BufferPool);
+            Tree.CreateBinnedResources(BufferPool, triangles.Length, out var binnedResourcesBuffer, out var binnedResources);
+            BinnedTest(() =>
+            {
+                if (mesh2Pointer->Tree.Leaves.Allocated)
+                    mesh2Pointer->Tree.Dispose(BufferPool);
+                *mesh2Pointer = DemoMeshHelper.CreateGiantMeshFast(triangles, Vector3.One, BufferPool);
+            }, () =>
             {
                 subtreeReferences.Count = 0;
                 treeletInternalNodes.Count = 0;
-                mesh2.Tree.BinnedRefine(0, ref subtreeReferences, mesh2.Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
-            }, "Original", ref mesh2.Tree);
+                mesh2Pointer->Tree.BinnedRefine(0, ref subtreeReferences, mesh2Pointer->Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
+            }, "Original", ref mesh2Pointer->Tree);
 
             //RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
             //RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);
