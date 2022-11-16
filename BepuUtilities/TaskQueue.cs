@@ -526,7 +526,7 @@ public unsafe struct TaskQueue
         return result;
     }
 
-    EnqueueTaskResult TryEnqueueTasksUnsafelyInternal(Span<Task> tasks, out long taskEndIndex)
+    EnqueueTaskResult TryEnqueueUnsafelyInternal(Span<Task> tasks, out long taskEndIndex)
     {
         Debug.Assert(tasks.Length > 0, "Probably shouldn't be trying to enqueue zero tasks.");
         Debug.Assert(writtenTaskIndex == 0 || this.tasks[(int)((writtenTaskIndex - 1) & taskMask)].Function != null, "No more jobs should be written after a stop command.");
@@ -569,14 +569,24 @@ public unsafe struct TaskQueue
     /// <param name="tasks">Tasks composing the job.</param>
     /// <returns>Result of the enqueue attempt.</returns>
     /// <remarks>This must not be used while other threads could be performing task enqueues or task dequeues.</remarks>
-    public EnqueueTaskResult TryEnqueueTasksUnsafely(Span<Task> tasks)
+    public EnqueueTaskResult TryEnqueueUnsafely(Span<Task> tasks)
     {
         EnqueueTaskResult result;
-        if ((result = TryEnqueueTasksUnsafelyInternal(tasks, out var taskEndIndex)) == EnqueueTaskResult.Success)
+        if ((result = TryEnqueueUnsafelyInternal(tasks, out var taskEndIndex)) == EnqueueTaskResult.Success)
         {
             writtenTaskIndex = taskEndIndex;
         }
         return result;
+    }
+    /// <summary>
+    /// Tries to appends a task to the task queue. Does not acquire a lock; cannot return <see cref="EnqueueTaskResult.Contested"/>.
+    /// </summary>
+    /// <param name="task">Task to enqueue</param>
+    /// <returns>Result of the enqueue attempt.</returns>
+    /// <remarks>This must not be used while other threads could be performing task enqueues or task dequeues.</remarks>
+    public EnqueueTaskResult TryEnqueueUnsafely(Task task)
+    {
+        return TryEnqueueUnsafely(new Span<Task>(&task, 1));
     }
 
     /// <summary>
@@ -584,7 +594,7 @@ public unsafe struct TaskQueue
     /// </summary>
     /// <param name="tasks">Tasks composing the job.</param>
     /// <returns>Result of the enqueue attempt.</returns>
-    public EnqueueTaskResult TryEnqueueTasks(Span<Task> tasks)
+    public EnqueueTaskResult TryEnqueue(Span<Task> tasks)
     {
         if (tasks.Length == 0)
             return EnqueueTaskResult.Success;
@@ -594,7 +604,7 @@ public unsafe struct TaskQueue
         {
             //We have the lock.
             EnqueueTaskResult result;
-            if ((result = TryEnqueueTasksUnsafelyInternal(tasks, out var taskEndIndex)) == EnqueueTaskResult.Success)
+            if ((result = TryEnqueueUnsafelyInternal(tasks, out var taskEndIndex)) == EnqueueTaskResult.Success)
             {
                 if (Environment.Is64BitProcess)
                 {
@@ -620,11 +630,11 @@ public unsafe struct TaskQueue
     /// <param name="workerIndex">Worker index to pass to inline-executed tasks if the task buffer is full.</param>
     /// <remarks>Note that this will keep trying until task submission succeeds. 
     /// If the task queue is full, this will opt to run some tasks inline while waiting for room.</remarks>
-    public void EnqueueTasks(Span<Task> tasks, int workerIndex)
+    public void Enqueue(Span<Task> tasks, int workerIndex)
     {
         var waiter = new SpinWait();
         EnqueueTaskResult result;
-        while ((result = TryEnqueueTasks(tasks)) != EnqueueTaskResult.Success)
+        while ((result = TryEnqueue(tasks)) != EnqueueTaskResult.Success)
         {
             if (result == EnqueueTaskResult.Full)
             {
@@ -652,7 +662,7 @@ public unsafe struct TaskQueue
     /// <returns>Handle of the continuation created for these tasks.</returns>
     /// <remarks>Note that this will keep trying until task submission succeeds. 
     /// If the task queue is full, this will opt to run some tasks inline while waiting for room.</remarks>
-    public ContinuationHandle AllocateContinuationAndEnqueueTasks(Span<Task> tasks, int workerIndex, Task onComplete = default)
+    public ContinuationHandle AllocateContinuationAndEnqueue(Span<Task> tasks, int workerIndex, Task onComplete = default)
     {
         var continuationHandle = AllocateContinuation(tasks.Length, workerIndex);
         for (int i = 0; i < tasks.Length; ++i)
@@ -661,7 +671,7 @@ public unsafe struct TaskQueue
             Debug.Assert(!task.Continuation.Initialized, "This function creates a continuation for the tasks");
             task.Continuation = continuationHandle;
         }
-        EnqueueTasks(tasks, workerIndex);
+        Enqueue(tasks, workerIndex);
         return continuationHandle;
     }
 
@@ -723,7 +733,7 @@ public unsafe struct TaskQueue
                 task.Continuation = continuationHandle;
                 tasksToEnqueue[i] = task;
             }
-            EnqueueTasks(tasksToEnqueue, workerIndex);
+            Enqueue(tasksToEnqueue, workerIndex);
         }
         //Tasks [1, count) are submitted to the queue and may now be executing on other workers.
         //The thread calling the for loop should not relinquish its timeslice. It should immediately begin working on task 0.
@@ -746,7 +756,7 @@ public unsafe struct TaskQueue
     {
         Span<Task> stopJob = stackalloc Task[1];
         stopJob[0] = new Task { Function = null };
-        return TryEnqueueTasks(stopJob);
+        return TryEnqueue(stopJob);
     }
 
     /// <summary>
@@ -761,7 +771,7 @@ public unsafe struct TaskQueue
         stopJob[0] = new Task { Function = null };
         var waiter = new SpinWait();
         EnqueueTaskResult result;
-        while ((result = TryEnqueueTasks(stopJob)) != EnqueueTaskResult.Success)
+        while ((result = TryEnqueue(stopJob)) != EnqueueTaskResult.Success)
         {
             if (result == EnqueueTaskResult.Full)
             {
@@ -784,7 +794,7 @@ public unsafe struct TaskQueue
     {
         Span<Task> stopJob = stackalloc Task[1];
         stopJob[0] = new Task { Function = null };
-        return TryEnqueueTasksUnsafely(stopJob);
+        return TryEnqueueUnsafely(stopJob);
     }
 
     /// <summary>
@@ -804,7 +814,7 @@ public unsafe struct TaskQueue
         {
             tasks[i] = new Task { Function = function, Context = context, Id = i + inclusiveStartIndex, Continuation = continuation };
         }
-        return TryEnqueueTasksUnsafely(tasks);
+        return TryEnqueueUnsafely(tasks);
     }
 
     /// <summary>
@@ -825,7 +835,7 @@ public unsafe struct TaskQueue
         {
             tasks[i] = new Task { Function = function, Context = context, Id = i + inclusiveStartIndex, Continuation = continuation };
         }
-        EnqueueTasks(tasks, workerIndex);
+        Enqueue(tasks, workerIndex);
     }
 
     /// <summary>

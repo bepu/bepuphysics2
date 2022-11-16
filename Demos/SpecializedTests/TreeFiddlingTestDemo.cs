@@ -166,13 +166,14 @@ namespace Demos.SpecializedTests
 
             //var triangles = CreateDeformedPlaneTriangles(width, height, scale);
             var triangles = CreateRandomSoupTriangles(new BoundingBox(new(width / -2f, scale.Y * -2, height / -2f), new(width / 2f, scale.Y * 2, height / 2f)), (width - 1) * (height - 1) * 2, 0.5f, 100f);
-            var mesh = new Mesh(triangles, Vector3.One, BufferPool);
+            //var mesh = new Mesh(triangles, Vector3.One, BufferPool);
+            var mesh = DemoMeshHelper.CreateGiantMeshFast(triangles, Vector3.One, BufferPool);
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
             Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
-            Console.WriteLine($"sweep SAH: {mesh.Tree.MeasureCostMetric()}, cache quality: {mesh.Tree.MeasureCacheQuality()}");
-            Console.WriteLine($"sweep bounds: A ({mesh.Tree.Nodes[0].A.Min}, {mesh.Tree.Nodes[0].B.Max}), B ({mesh.Tree.Nodes[0].B.Min}, {mesh.Tree.Nodes[0].B.Max})");
+            Console.WriteLine($"initial SAH: {mesh.Tree.MeasureCostMetric()}, cache quality: {mesh.Tree.MeasureCacheQuality()}");
+            Console.WriteLine($"initial bounds: A ({mesh.Tree.Nodes[0].A.Min}, {mesh.Tree.Nodes[0].B.Max}), B ({mesh.Tree.Nodes[0].B.Min}, {mesh.Tree.Nodes[0].B.Max})");
 
             BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
             BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
@@ -189,10 +190,10 @@ namespace Demos.SpecializedTests
                 }
             };
 
-            //BinnedTest(setup, () =>
-            //{
-            //    Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves);
-            //}, "Revamp Single Axis MT", ref mesh.Tree);
+            BinnedTest(setup, () =>
+            {
+                Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves, ThreadDispatcher, BufferPool);
+            }, "Revamp Single Axis MT", ref mesh.Tree);
 
             BinnedTest(setup, () =>
             {
