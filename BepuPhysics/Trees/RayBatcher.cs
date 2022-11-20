@@ -170,7 +170,22 @@ namespace BepuPhysics.Trees
             ResizeRayStacks(rayCapacity, treeDepthForPreallocation);
 
             stackPointer = stackPointerA0 = stackPointerB = stackPointerA1 = 0;
+        }
 
+        /// <summary>
+        /// Disposes all the resources backing the ray batcher.
+        /// </summary>
+        public void Dispose()
+        {
+            pool.ReturnUnsafely(rayIndicesA0.Id);
+            pool.ReturnUnsafely(rayIndicesB.Id);
+            pool.ReturnUnsafely(rayIndicesA1.Id);
+            pool.ReturnUnsafely(stack.Id);
+            pool.ReturnUnsafely(fallbackStack.Id);
+            pool.ReturnUnsafely(batchOriginalRays.Id);
+            pool.ReturnUnsafely(batchRays.Id);
+            //Easier to catch bugs if the references get cleared.
+            this = default;
         }
 
         void ResizeRayStacks(int rayCapacity, int treeDepthForPreallocation)
@@ -546,22 +561,6 @@ namespace BepuPhysics.Trees
         {
             batchRayCount = 0;
         }
-
-        /// <summary>
-        /// Disposes all the resources backing the ray batcher.
-        /// </summary>
-        public void Dispose()
-        {
-            pool.ReturnUnsafely(rayIndicesA0.Id);
-            pool.ReturnUnsafely(rayIndicesB.Id);
-            pool.ReturnUnsafely(rayIndicesA1.Id);
-            pool.ReturnUnsafely(stack.Id);
-            pool.ReturnUnsafely(batchOriginalRays.Id);
-            pool.ReturnUnsafely(batchRays.Id);
-            //Easier to catch bugs if the references get cleared.
-            this = default;
-        }
-
 
     }
 }
