@@ -36,12 +36,30 @@ namespace BepuUtilities.Memory
         /// <param name="memory">Memory to back the buffer.</param>
         /// <param name="length">Length of the buffer in terms of the specified type.</param>
         /// <param name="id">Id of the buffer.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Buffer(void* memory, int length, int id = -1)
         {
             Memory = (T*)memory;
             this.length = length;
             Id = id;
+        }
+
+        /// <summary>
+        /// Allocates a new buffer from a pool.
+        /// </summary>
+        /// <param name="length">Length of the buffer in terms of elements of type T</param>
+        /// <param name="pool">Pool to allocate from.</param>
+        public Buffer(int length, IUnmanagedMemoryPool pool)
+        {
+            pool.Take(length, out this);
+        }
+
+        /// <summary>
+        /// Returns a buffer to a pool. This should only be used if the specified pool is the same as the one used to allocate the buffer.
+        /// </summary>
+        /// <param name="pool">Pool to return the buffer to.</param>
+        public void Dispose(IUnmanagedMemoryPool pool)
+        {
+            pool.Return(ref this);
         }
 
         /// <summary>
