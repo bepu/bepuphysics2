@@ -9,10 +9,10 @@ namespace BepuUtilities.Memory;
 /// <summary>
 /// Arena allocator built to serve a single thread. Pulls resources from a central buffer pool when necessary.
 /// </summary>
-public class ArenaPool : IUnmanagedMemoryPool
+public class ArenaPool : IUnmanagedMemoryPool, IDisposable
 {
     /// <summary>
-    /// Gets the central pool backing this arena allocator. Resources are pulled from this pool when the thread pool's blocks are depleted.
+    /// Gets or sets the central pool backing this arena allocator. Resources are pulled from this pool when the thread pool's blocks are depleted.
     /// </summary>
     public IUnmanagedMemoryPool Pool { get; set; }
     /// <summary>
@@ -20,7 +20,7 @@ public class ArenaPool : IUnmanagedMemoryPool
     /// </summary>
     public object Locker { get; private set; }
     /// <summary>
-    /// Default capacity within blocks allocated by the pool.
+    /// Gets or sets the default capacity within blocks allocated by the pool.
     /// </summary>
     public int DefaultBlockCapacity { get; set; }
 
@@ -64,10 +64,11 @@ public class ArenaPool : IUnmanagedMemoryPool
     /// </summary>
     /// <param name="pool">Central pool to allocate blocks from </param>
     /// <param name="locker">Locker object used to protect accesses to the central pool. If no locker is specified, the pool reference is used.</param>
-    public ArenaPool(IUnmanagedMemoryPool pool, object locker = null)
+    public ArenaPool(IUnmanagedMemoryPool pool, int defaultBlockCapacity = 16384, object locker = null)
     {
         Pool = pool;
         Locker = locker == null ? pool : locker;
+        DefaultBlockCapacity = defaultBlockCapacity;
         blocks = new QuickList<Block>(8, pool);
         //We check for allocated blocks before allocating one, so we need to clear the memory up front.
         blocks.Span.Clear(0, blocks.Span.Length);
@@ -125,8 +126,11 @@ public class ArenaPool : IUnmanagedMemoryPool
     /// </summary>
     public void Dispose()
     {
-        Clear();
-        blocks.Dispose(Pool);
+        if (blocks.Span.Allocated)
+        {
+            Clear();
+            blocks.Dispose(Pool);
+        }
     }
 
     const int maximumBitsForBlock = 1;
