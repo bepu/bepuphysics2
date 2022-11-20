@@ -1,4 +1,5 @@
-﻿using BepuUtilities.Collections;
+﻿using BepuUtilities;
+using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
@@ -11,6 +12,7 @@ namespace BepuPhysics.CollisionDetection
         int freshnessJobCount;
         PairCache pairCache;
         ConstraintRemover constraintRemover;
+        internal IThreadDispatcher cachedDispatcher;
 
         public FreshnessChecker(NarrowPhase narrowPhase)
         {
@@ -18,8 +20,9 @@ namespace BepuPhysics.CollisionDetection
             constraintRemover = narrowPhase.ConstraintRemover;
         }
 
-        public void CreateJobs(int threadCount, ref QuickList<PreflushJob> jobs, BufferPool pool, int mappingCount)
+        public void CreateJobs(IThreadDispatcher dispatcher, int threadCount, ref QuickList<PreflushJob> jobs, BufferPool pool, int mappingCount)
         {
+            cachedDispatcher = dispatcher;
             if (mappingCount > 0)
             {
                 if (threadCount > 1)
@@ -158,11 +161,10 @@ namespace BepuPhysics.CollisionDetection
         {
             //Note that we have to grab the *old* handle, because the current frame's set of constraint caches do not contain this pair.
             //If they DID contain this pair, then it wouldn't be stale!
-            Debug.Assert(pairCache.Mapping.Values[pairIndex].ConstraintCache.Exists, "This implementation currently assumes that all pairs have constraint caches.");
             var constraintHandle = pairCache.GetOldConstraintHandle(pairIndex);
             constraintRemover.EnqueueRemoval(workerIndex, constraintHandle);
-            ref var cache = ref pairCache.NextWorkerCaches[workerIndex];
-            cache.PendingRemoves.Add(pairCache.Mapping.Keys[pairIndex], cache.pool);
+            ref var pendingChanges = ref pairCache.WorkerPendingChanges[workerIndex];
+            pendingChanges.PendingRemoves.Add(pairCache.Mapping.Keys[pairIndex], cachedDispatcher == null ? pairCache.pool : cachedDispatcher.GetThreadMemoryPool(workerIndex));
         }
     }
 }

@@ -358,10 +358,11 @@ namespace BepuPhysics.CollisionDetection
                     //var job = new PreflushJob { Type = PreflushJobType.NondeterministicConstraintAdd, WorkerCount = threadCount };
                     //ExecutePreflushJob(0, ref job);
                 }
-                FreshnessChecker.CreateJobs(threadCount, ref preflushJobs, Pool, originalPairCacheMappingCount);
+                FreshnessChecker.CreateJobs(threadDispatcher, threadCount, ref preflushJobs, Pool, originalPairCacheMappingCount);
                 //start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
                 threadDispatcher.DispatchWorkers(preflushWorkerLoop, preflushJobs.Count);
+                FreshnessChecker.cachedDispatcher = null;
                 //preflushWorkerLoop(0);
                 //end = Stopwatch.GetTimestamp();
                 //Console.WriteLine($"Preflush phase 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");

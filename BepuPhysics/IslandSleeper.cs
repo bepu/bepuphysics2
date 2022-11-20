@@ -497,7 +497,7 @@ namespace BepuPhysics
                                 largestBodyCount = setCount;
                         }
                         //We just arbitrarily guess a few pairs per body. It might be wrong, but that's fine- it'll resize if needed. Just don't want to constantly resize.
-                        var setBuilder = new SleepingSetBuilder(pool, largestBodyCount * 4, largestBodyCount);
+                        var setBuilder = new SleepingSetBuilder(pool, largestBodyCount * 4);
                         for (int setReferenceIndex = 0; setReferenceIndex < newInactiveSets.Count; ++setReferenceIndex)
                         {
                             pairCache.SleepTypeBatchPairs(ref setBuilder, newInactiveSets[setReferenceIndex].Index, solver);

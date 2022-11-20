@@ -129,7 +129,6 @@ namespace BepuPhysics.CollisionDetection
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifoldReference) where TManifold : unmanaged, IContactManifold<TManifold>
             {
-                var todoTestCollisionCache = default(EmptyCollisionCache);
                 CCDContinuationIndex continuationId = new CCDContinuationIndex(pairId);
                 Debug.Assert(continuationId.Exists);
                 var continuationIndex = continuationId.Index;
@@ -150,7 +149,7 @@ namespace BepuPhysics.CollisionDetection
                         {
                             //Direct has no need for accumulating multiple reports; we can immediately dispatch.
                             ref var continuation = ref discrete.Caches[continuationIndex];
-                            narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, ref manifoldReference, ref todoTestCollisionCache);
+                            narrowPhase.UpdateConstraintsForPair(workerIndex, continuation.Pair, ref manifoldReference);
                             discrete.Return(continuationIndex, pool);
                         }
                         break;
@@ -184,7 +183,7 @@ namespace BepuPhysics.CollisionDetection
                                     contact.Depth -= velocityAtContact * continuation.T;
                                 }
                             }
-                            narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, ref manifoldReference, ref todoTestCollisionCache);
+                            narrowPhase.UpdateConstraintsForPair(workerIndex, continuation.Pair, ref manifoldReference);
                             continuous.Return(continuationIndex, pool);
                         }
                         break;
