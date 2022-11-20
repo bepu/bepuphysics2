@@ -65,7 +65,7 @@ namespace Demos
             camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
-           
+
 
             var sphere = new Sphere(0.5f);
             var capsule = new Capsule(0, 0.5f);

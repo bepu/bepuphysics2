@@ -146,11 +146,9 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
     {
         var sizeInBytes = Unsafe.SizeOf<T>() * count;
         var blockIndex = blocks.Count - 1;
-        int previousCount = blocks[blockIndex].Count;
-        if (!blocks[blockIndex].TryAllocate(sizeInBytes, out Buffer<byte> allocation))
+        if (blocks.Count == 0 || !blocks[blockIndex].TryAllocate(sizeInBytes, out Buffer<byte> allocation))
         {
             //No room; need a new block.
-            previousCount = 0;
             var newBlockCapacityInBytes = Math.Max(DefaultBlockCapacity, sizeInBytes);
             //Check to see if there's already a block allocated that we can use.
             if (blocks.Span.Length > blocks.Count && blocks.Span[blocks.Count].Data.Length >= sizeInBytes)
@@ -160,6 +158,7 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
             }
             else
             {
+                //Need a new block.
                 Buffer<byte> blockData;
                 lock (Locker)
                 {
@@ -174,7 +173,8 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
             Debug.Assert(succeeded, "We just allocated that block, it should hold everything requested!");
         }
         buffer = allocation.As<T>();
-        var newCount = previousCount + sizeInBytes;
+        var newCount = blocks[blockIndex].Count;
+        var previousCount = newCount - sizeInBytes;
         var bitpackedBlockIndex = lowerBlockMask & blockIndex;
         var bitpackedStartIndex = countInBlockMask & newCount;
         var bitpackedPreviousIndex = countInBlockMask & previousCount;
@@ -248,7 +248,7 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
             {
                 //Deallocating is as simple as just resetting to the previous value.
                 block.Count = previousCountInBlock;
-                while (blocks[blocks.Count - 1].Count == 0)
+                while (blocks.Count > 0 && blocks[blocks.Count - 1].Count == 0)
                 {
                     //Push the block count as far as it can go.
                     --blocks.Count;

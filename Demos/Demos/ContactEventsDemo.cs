@@ -172,6 +172,7 @@ namespace Demos.Demos
 
         Simulation simulation;
         IThreadDispatcher threadDispatcher;
+        WorkerBufferPools threadPools;
         BufferPool pool;
 
         //We'll use a handle->index mapping in a CollidableProperty to point at our contiguously stored listeners (in the later listeners array).
@@ -215,6 +216,11 @@ namespace Demos.Demos
             listeners = new Listener[initialListenerCapacity];
         }
 
+        IUnmanagedMemoryPool GetPoolForWorker(int workerIndex)
+        {
+            return threadDispatcher == null ? pool : threadPools[workerIndex];
+        }
+
         /// <summary>
         /// Initializes the contact events system with a simulation.
         /// </summary>
@@ -226,6 +232,7 @@ namespace Demos.Demos
             this.simulation = simulation;
             if (pool == null)
                 pool = simulation.BufferPool;
+            threadPools = threadDispatcher != null ? new WorkerBufferPools(pool, threadDispatcher.ThreadCount) : null;
             simulation.Timestepper.BeforeCollisionDetection += SetFreshnessForCurrentActivityStatus;
             listenerIndices = new CollidableProperty<int>(simulation, pool);
             pendingWorkerAdds = new QuickList<PendingWorkerAdd>[threadDispatcher == null ? 1 : threadDispatcher.ThreadCount];
@@ -469,7 +476,7 @@ namespace Demos.Demos
                     //There was no collision previously.
                     ref var addsforWorker = ref pendingWorkerAdds[workerIndex];
                     //EnsureCapacity will create the list if it doesn't already exist.
-                    addsforWorker.EnsureCapacity(Math.Max(addsforWorker.Count + 1, 64), threadDispatcher != null ? threadDispatcher.GetThreadMemoryPool(workerIndex) : pool);
+                    addsforWorker.EnsureCapacity(Math.Max(addsforWorker.Count + 1, 64), GetPoolForWorker(workerIndex));
                     ref var pendingAdd = ref addsforWorker.AllocateUnsafely();
                     pendingAdd.ListenerIndex = listenerIndex;
                     pendingAdd.Collision.Collidable = other;
@@ -571,10 +578,11 @@ namespace Demos.Demos
                     collisions.AllocateUnsafely() = pendingAdds[j].Collision;
                 }
                 if (pendingAdds.Span.Allocated)
-                    pendingAdds.Dispose(threadDispatcher == null ? pool : threadDispatcher.GetThreadMemoryPool(i));
+                    pendingAdds.Dispose(GetPoolForWorker(i));
                 //We rely on zeroing out the count for lazy initialization.
                 pendingAdds = default;
             }
+            threadPools?.Clear();
         }
 
         public void Dispose()
@@ -585,6 +593,7 @@ namespace Demos.Demos
                 staticListenerFlags.Dispose(pool);
             listenerIndices.Dispose();
             simulation.Timestepper.BeforeCollisionDetection -= SetFreshnessForCurrentActivityStatus;
+            threadPools?.Dispose();
             for (int i = 0; i < pendingWorkerAdds.Length; ++i)
             {
                 Debug.Assert(!pendingWorkerAdds[i].Span.Allocated, "The pending worker adds should have been disposed by the previous flush.");
