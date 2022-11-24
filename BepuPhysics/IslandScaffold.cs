@@ -22,7 +22,7 @@ namespace BepuPhysics
         public int TypeId;
         public QuickList<int> Handles;
 
-        public IslandScaffoldTypeBatch(BufferPool pool, int typeId, int initialTypeBatchSize)
+        public IslandScaffoldTypeBatch(IUnmanagedMemoryPool pool, int typeId, int initialTypeBatchSize)
         {
             TypeId = typeId;
             Handles = new QuickList<int>(initialTypeBatchSize, pool);
@@ -37,7 +37,7 @@ namespace BepuPhysics
         //Note that we use *indices* during island construction, not handles. This protobatch doesn't have to deal with memory moves in between adds, so indices are fine.
         public IndexSet ReferencedBodyIndices;
 
-        public unsafe IslandScaffoldConstraintBatch(Solver solver, BufferPool pool, int batchIndex)
+        public unsafe IslandScaffoldConstraintBatch(Solver solver, IUnmanagedMemoryPool pool, int batchIndex)
         {
             pool.TakeAtLeast(solver.TypeProcessors.Length, out TypeIdToIndex);
             Unsafe.InitBlockUnaligned(TypeIdToIndex.Memory, 0xFF, (uint)(TypeIdToIndex.Length * sizeof(int)));
@@ -46,7 +46,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ref IslandScaffoldTypeBatch GetOrCreateTypeBatch(int typeId, Solver solver, BufferPool pool)
+        ref IslandScaffoldTypeBatch GetOrCreateTypeBatch(int typeId, Solver solver, IUnmanagedMemoryPool pool)
         {
             ref var idMap = ref TypeIdToIndex[typeId];
             if (idMap == -1)
@@ -76,7 +76,7 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe bool TryAdd(ConstraintHandle constraintHandle, Span<int> dynamicBodyIndices, int typeId, int batchIndex, Solver solver, BufferPool pool, ref SequentialFallbackBatch fallbackBatch)
+        public unsafe bool TryAdd(ConstraintHandle constraintHandle, Span<int> dynamicBodyIndices, int typeId, int batchIndex, Solver solver, IUnmanagedMemoryPool pool, ref SequentialFallbackBatch fallbackBatch)
         {
             if (batchIndex == solver.FallbackBatchThreshold || ReferencedBodyIndices.CanFit(dynamicBodyIndices))
             {
@@ -105,7 +105,7 @@ namespace BepuPhysics
             return false;
         }
 
-        public void Dispose(BufferPool pool)
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             for (int i = 0; i < TypeBatches.Count; ++i)
             {
@@ -128,7 +128,7 @@ namespace BepuPhysics
         public QuickList<IslandScaffoldConstraintBatch> Protobatches;
         public SequentialFallbackBatch FallbackBatch;
 
-        public IslandScaffold(ref QuickList<int> bodyIndices, ref QuickList<ConstraintHandle> constraintHandles, Solver solver, BufferPool pool) : this()
+        public IslandScaffold(ref QuickList<int> bodyIndices, ref QuickList<ConstraintHandle> constraintHandles, Solver solver, IUnmanagedMemoryPool pool) : this()
         {
             Debug.Assert(bodyIndices.Count > 0, "Don't be tryin' to create islands with no bodies in them! That don't make no sense.");
             //Create a copy of the body indices with just enough space to hold the island's indices. The original list will continue to be reused in the caller.
@@ -151,7 +151,7 @@ namespace BepuPhysics
             }
         }
 
-        unsafe void AddConstraint(ConstraintHandle constraintHandle, Solver solver, BufferPool pool)
+        unsafe void AddConstraint(ConstraintHandle constraintHandle, Solver solver, IUnmanagedMemoryPool pool)
         {
             var typeId = solver.HandleToConstraint[constraintHandle.Value].TypeId;
             var typeProcessor = solver.TypeProcessors[typeId];
@@ -178,7 +178,7 @@ namespace BepuPhysics
             Debug.Assert(addedSuccessfully, "If we created a new batch for a constraint, then it must successfully add.");
         }
 
-        internal void Dispose(BufferPool pool)
+        internal void Dispose(IUnmanagedMemoryPool pool)
         {
             BodyIndices.Dispose(pool);
             for (int k = 0; k < Protobatches.Count; ++k)

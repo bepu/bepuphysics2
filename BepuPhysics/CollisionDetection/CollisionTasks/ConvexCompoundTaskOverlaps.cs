@@ -10,7 +10,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public int Count;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe ref int Allocate(BufferPool pool)
+        public unsafe ref int Allocate(IUnmanagedMemoryPool pool)
         {
             if (Overlaps.Length == Count)
             {
@@ -20,7 +20,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose(BufferPool pool)
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             if (Overlaps.Allocated)
                 pool.Return(ref Overlaps);
@@ -31,7 +31,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         Buffer<ConvexCompoundOverlaps> overlaps;
         internal Buffer<OverlapQueryForPair> subpairQueries;
-        public ConvexCompoundTaskOverlaps(BufferPool pool, int pairCount)
+        public ConvexCompoundTaskOverlaps(IUnmanagedMemoryPool pool, int pairCount)
         {
             pool.Take(pairCount, out overlaps);
             pool.Take(pairCount, out subpairQueries);
@@ -50,7 +50,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return ref subpairQueries[pairIndex];
         }
 
-        public void Dispose(BufferPool pool)
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             for (int i = 0; i < overlaps.Length; ++i)
             {

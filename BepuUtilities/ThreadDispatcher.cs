@@ -25,14 +25,16 @@ namespace BepuUtilities
         Worker[] workers;
         AutoResetEvent finished;
 
-        BufferPool[] bufferPools;
+        /// <inheritdoc/>
+        public WorkerBufferPools WorkerPools { get; private set; }
 
         /// <summary>
         /// Creates a new thread dispatcher with the given number of threads.
         /// </summary>
         /// <param name="threadCount">Number of threads to dispatch on each invocation.</param>
+        /// <param name="pool">Pool to allocate blocks from for use in per-thread arena pools.</param>
         /// <param name="threadPoolBlockAllocationSize">Size of memory blocks to allocate for thread pools.</param>
-        public ThreadDispatcher(int threadCount, int threadPoolBlockAllocationSize = 16384)
+        public ThreadDispatcher(int threadCount, IUnmanagedMemoryPool pool, int threadPoolBlockAllocationSize = 16384)
         {
             this.threadCount = threadCount;
             workers = new Worker[threadCount - 1];
@@ -43,11 +45,7 @@ namespace BepuUtilities
                 workers[i].Thread.Start((workers[i].Signal, i + 1));
             }
             finished = new AutoResetEvent(false);
-            bufferPools = new BufferPool[threadCount];
-            for (int i = 0; i < bufferPools.Length; ++i)
-            {
-                bufferPools[i] = new BufferPool(threadPoolBlockAllocationSize);
-            }
+            WorkerPools = new WorkerBufferPools(pool, threadCount, threadPoolBlockAllocationSize);
         }
 
         void DispatchThread(int workerIndex)
@@ -94,6 +92,7 @@ namespace BepuUtilities
             }
         }
 
+        /// <inheritdoc/>
         public void DispatchWorkers(delegate*<int, void*, void> workerBody, void* context = null, int maximumWorkerCount = int.MaxValue)
         {
             if (maximumWorkerCount > 1)
@@ -114,6 +113,7 @@ namespace BepuUtilities
             }
         }
 
+        /// <inheritdoc/>
         public void DispatchWorkers(ThreadDispatcherWorker workerBody, void* context = null, int maximumWorkerCount = int.MaxValue)
         {
             if (maximumWorkerCount > 1)
@@ -145,10 +145,7 @@ namespace BepuUtilities
             {
                 disposed = true;
                 SignalThreads(threadCount);
-                for (int i = 0; i < bufferPools.Length; ++i)
-                {
-                    bufferPools[i].Clear();
-                }
+                WorkerPools.Dispose();
                 foreach (var worker in workers)
                 {
                     worker.Thread.Join();
@@ -157,10 +154,6 @@ namespace BepuUtilities
             }
         }
 
-        public BufferPool GetThreadMemoryPool(int workerIndex)
-        {
-            return bufferPools[workerIndex];
-        }
     }
 
 }

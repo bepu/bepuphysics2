@@ -164,7 +164,7 @@ namespace BepuPhysics.CollisionDetection
             var constraintHandle = pairCache.GetOldConstraintHandle(pairIndex);
             constraintRemover.EnqueueRemoval(workerIndex, constraintHandle);
             ref var pendingChanges = ref pairCache.WorkerPendingChanges[workerIndex];
-            pendingChanges.PendingRemoves.Add(pairCache.Mapping.Keys[pairIndex], cachedDispatcher == null ? pairCache.pool : cachedDispatcher.GetThreadMemoryPool(workerIndex));
+            pendingChanges.PendingRemoves.Add(pairCache.Mapping.Keys[pairIndex], cachedDispatcher == null ? pairCache.pool : cachedDispatcher.WorkerPools[workerIndex]);
         }
     }
 }

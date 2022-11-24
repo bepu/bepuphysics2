@@ -155,7 +155,7 @@ namespace BepuPhysics.CollisionDetection
         IThreadDispatcher threadDispatcher;
         void ExecuteRefitAndMark(int workerIndex, void* context)
         {
-            var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
+            var threadPool = threadDispatcher.WorkerPools[workerIndex];
             while (true)
             {
                 var jobIndex = Interlocked.Decrement(ref remainingJobCount);
@@ -176,7 +176,7 @@ namespace BepuPhysics.CollisionDetection
 
         void ExecuteRefine(int workerIndex, void* context)
         {
-            var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
+            var threadPool = threadDispatcher.WorkerPools[workerIndex];
             var maximumSubtrees = Math.Max(activeRefineContext.MaximumSubtrees, staticRefineContext.MaximumSubtrees);
             var subtreeReferences = new QuickList<int>(maximumSubtrees, threadPool);
             var treeletInternalNodes = new QuickList<int>(maximumSubtrees, threadPool);

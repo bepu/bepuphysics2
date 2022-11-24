@@ -36,6 +36,11 @@ namespace BepuUtilities.Memory
             public int BlockCount;
 
             internal const int IdPowerShift = 26;
+            /// <summary>
+            /// Byte alignment to enforce for all block allocations within the buffer pool.
+            /// </summary>
+            /// <remarks>Since this only applies at the level of blocks, we can use a pretty beefy value without much concern.</remarks>
+            public const int BlockAlignment = 128;
 
             public PowerPool(int power, int minimumBlockSize, int expectedPooledCount)
             {
@@ -76,8 +81,7 @@ namespace BepuUtilities.Memory
                 //Suballocations from the block will always occur on pow2 boundaries, so the only way for a suballocation to violate this alignment is if an individual 
                 //suballocation is smaller than the alignment- in which case it doesn't require the alignment to be that wide. Also, since the alignment and 
                 //suballocations are both pow2 sized, they won't drift out of sync.
-                //We pick 128 bytes to allow alignment with cache line pairs: https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-optimization-manual.pdf#page=162
-                Blocks[blockIndex] = (byte*)NativeMemory.AlignedAlloc((nuint)BlockSize, 128);
+                Blocks[blockIndex] = (byte*)NativeMemory.AlignedAlloc((nuint)BlockSize, BlockAlignment);
                 BlockCount = blockIndex + 1;
             }
 
@@ -314,13 +318,7 @@ namespace BepuUtilities.Memory
             slotIndex = bufferId & ((1 << PowerPool.IdPowerShift) - 1);
         }
 
-        /// <summary>
-        /// Returns a buffer to the pool by id.
-        /// </summary>
-        /// <param name="id">Id of the buffer to return to the pool.</param>
-        /// <remarks>Typed buffer pools zero out the passed-in buffer by convention.
-        /// This costs very little and avoids a wide variety of bugs (either directly or by forcing fast failure). For consistency, BufferPool.Return does the same thing.
-        /// This "Unsafe" overload should be used only in cases where there's a reason to bypass the clear; the naming is intended to dissuade casual use.</remarks>
+        /// <inheritdoc/>       
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ReturnUnsafely(int id)
         {
@@ -328,10 +326,7 @@ namespace BepuUtilities.Memory
             pools[powerIndex].Return(slotIndex);
         }
 
-        /// <summary>
-        /// Returns a buffer to the pool.
-        /// </summary>
-        /// <param name="buffer">Buffer to return to the pool.</param>
+        /// <inheritdoc/>  
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Return<T>(ref Buffer<T> buffer) where T : unmanaged
         {
@@ -343,15 +338,7 @@ namespace BepuUtilities.Memory
             buffer = default;
         }
 
-        /// <summary>
-        /// Resizes a typed buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer. 
-        /// Final buffer size is at least as large as the target size and may be larger.
-        /// </summary>
-        /// <typeparam name="T">Type of the buffer to resize.</typeparam>
-        /// <param name="buffer">Buffer reference to resize.</param>
-        /// <param name="targetSize">Number of elements to resize the buffer for.</param>
-        /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer. Contents of slots outside the copied range in the resized buffer are undefined.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <inheritdoc/>  
         public void ResizeToAtLeast<T>(ref Buffer<T> buffer, int targetSize, int copyCount) where T : unmanaged
         {
             //Only do anything if the new size is actually different from the current size.
@@ -386,21 +373,16 @@ namespace BepuUtilities.Memory
             }
         }
 
-
-        /// <summary>
-        /// Resizes a buffer to the target size. Copies a subset of elements into the new buffer.
-        /// </summary>
-        /// <typeparam name="T">Type of the buffer to resize.</typeparam>
-        /// <param name="buffer">Buffer reference to resize.</param>
-        /// <param name="targetSize">Number of elements to resize the buffer for.</param>
-        /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <inheritdoc/>  
         public void Resize<T>(ref Buffer<T> buffer, int targetSize, int copyCount) where T : unmanaged
         {
             ResizeToAtLeast(ref buffer, targetSize, copyCount);
             buffer.length = targetSize;
         }
 
+        /// <summary>
+        /// Issues debug assertions that all pools are empty.
+        /// </summary>
         [Conditional("DEBUG")]
         public void AssertEmpty()
         {

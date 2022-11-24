@@ -397,7 +397,7 @@ namespace BepuPhysics
 
         void PredictBoundingBoxesWorker(int workerIndex, void* context)
         {
-            var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
+            var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.WorkerPools[workerIndex], cachedDt);
             var bundleCount = BundleIndexing.GetBundleCount(bodies.ActiveSet.Count);
             while (TryGetJob(bundleCount, out var start, out var exclusiveEnd))
             {

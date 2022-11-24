@@ -32,7 +32,7 @@ namespace BepuPhysics.CollisionDetection
         public int CompletedChildCount;
         public Buffer<NonconvexReductionChild> Children;
 
-        public void Create(int childManifoldCount, BufferPool pool)
+        public void Create(int childManifoldCount, IUnmanagedMemoryPool pool)
         {
             ChildCount = childManifoldCount;
             CompletedChildCount = 0;
@@ -102,7 +102,7 @@ namespace BepuPhysics.CollisionDetection
             return distinctiveness;
         }
 
-        unsafe void ChooseMostDistinct(NonconvexContactManifold* manifold, BufferPool pool)
+        unsafe void ChooseMostDistinct(NonconvexContactManifold* manifold, IUnmanagedMemoryPool pool)
         {
             //The end goal of contact reduction is to choose a reasonably stable subset of contacts which offer the greatest degree of constraint.
             //Computing a globally optimal solution to this would be pretty expensive for any given scoring mechanism, so we'll make some simplifications:

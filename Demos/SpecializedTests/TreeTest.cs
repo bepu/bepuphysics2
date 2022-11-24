@@ -68,7 +68,7 @@ namespace Demos.SpecializedTests
             const int iterations = 100000;
             const int maximumChangesPerIteration = 20;
 
-            var threadDispatcher = new ThreadDispatcher(Environment.ProcessorCount);
+            var threadDispatcher = new ThreadDispatcher(Environment.ProcessorCount, pool);
             var refineContext = new Tree.RefitAndRefineMultithreadedContext();
             var selfTestContext = new Tree.MultithreadedSelfTest<OverlapHandler>(pool);
             var overlapHandlers = new OverlapHandler[threadDispatcher.ThreadCount];

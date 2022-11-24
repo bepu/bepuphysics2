@@ -69,7 +69,7 @@ namespace Demos.Demos
                 Simulation.Dispose();
                 BufferPool.Clear();
                 for (int i = 0; i < ThreadDispatcher.ThreadCount; ++i)
-                    ThreadDispatcher.GetThreadMemoryPool(i).Clear();
+                    ThreadDispatcher.WorkerPools[i].Clear();
                 Initialize(null, camera);
             }
             base.Update(window, camera, input, dt);

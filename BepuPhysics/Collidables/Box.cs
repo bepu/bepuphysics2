@@ -162,7 +162,7 @@ namespace BepuPhysics.Collidables
             return inertia;
         }
 
-        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public readonly ShapeBatch CreateShapeBatch(IUnmanagedMemoryPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new ConvexShapeBatch<Box, BoxWide>(pool, initialCapacity);
         }

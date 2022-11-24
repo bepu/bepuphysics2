@@ -299,7 +299,7 @@ namespace Demos
         {
             int intersectionCount = 0;
             var hitHandler = new HitHandler { Hits = algorithm.Results, IntersectionCount = &intersectionCount };
-            var batcher = new SimulationRayBatcher<HitHandler>(ThreadDispatcher.GetThreadMemoryPool(workerIndex), Simulation, hitHandler, 2048);
+            var batcher = new SimulationRayBatcher<HitHandler>(ThreadDispatcher.WorkerPools[workerIndex], Simulation, hitHandler, 2048);
             int claimedIndex;
             while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
             {

@@ -26,7 +26,7 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public QuickList<CollidablePair> PendingRemoves;
 
-        public WorkerPendingPairChanges(BufferPool pool, int pendingCapacity)
+        public WorkerPendingPairChanges(IUnmanagedMemoryPool pool, int pendingCapacity)
         {
             PendingAdds = new QuickList<PendingAdd>(pendingCapacity, pool);
             PendingRemoves = new QuickList<CollidablePair>(pendingCapacity, pool);
@@ -34,7 +34,7 @@ namespace BepuPhysics.CollisionDetection
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe int Add(BufferPool pool, CollidablePair pair, in ConstraintCache cache)
+        public unsafe int Add(IUnmanagedMemoryPool pool, CollidablePair pair, in ConstraintCache cache)
         {
             int index = PendingAdds.Count;
             ref var pendingAdd = ref PendingAdds.Allocate(pool);
@@ -44,7 +44,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
 
-        public void Dispose(BufferPool pool)
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             PendingAdds.Dispose(pool);
             PendingRemoves.Dispose(pool);

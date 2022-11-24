@@ -21,7 +21,7 @@ namespace BepuPhysics.CollisionDetection
     {
         public struct PendingConstraintAddCache
         {
-            BufferPool pool;
+            IUnmanagedMemoryPool pool;
             [StructLayout(LayoutKind.Sequential)]
             unsafe struct PendingConstraint<TBodyHandles, TDescription, TContactImpulses> where TBodyHandles : unmanaged where TDescription : unmanaged, IConstraintDescription<TDescription>
             {
@@ -37,7 +37,7 @@ namespace BepuPhysics.CollisionDetection
             internal Buffer<Buffer<ushort>> speculativeBatchIndices;
             int minimumConstraintCountPerCache;
 
-            public PendingConstraintAddCache(BufferPool pool, int minimumConstraintCountPerCache = 128)
+            public PendingConstraintAddCache(IUnmanagedMemoryPool pool, int minimumConstraintCountPerCache = 128)
             {
                 this.pool = pool;
                 pool.TakeAtLeast(PairCache.CollisionConstraintTypeCount, out pendingConstraintsByType);

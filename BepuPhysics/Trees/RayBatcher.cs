@@ -138,7 +138,7 @@ namespace BepuPhysics.Trees
         }
         int stackPointer;
         Buffer<StackEntry> stack;
-        BufferPool pool;
+        IUnmanagedMemoryPool pool;
         int batchRayCount;
         Buffer<TreeRay> batchRays;
         Buffer<RayData> batchOriginalRays;
@@ -157,7 +157,7 @@ namespace BepuPhysics.Trees
         /// <param name="rayCapacity">Maximum number of rays to execute in each traversal.
         /// This should typically be chosen as the highest value which avoids spilling data out of L2 cache.</param>
         /// <param name="treeDepthForPreallocation">Tree depth to preallocate ray stack space for. If a traversal finds nodes deeper than this, a dynamic resize will be triggered.</param>
-        public RayBatcher(BufferPool pool, int rayCapacity = 2048, int treeDepthForPreallocation = 24) : this()
+        public RayBatcher(IUnmanagedMemoryPool pool, int rayCapacity = 2048, int treeDepthForPreallocation = 24) : this()
         {
             this.pool = pool;
             batchRayCount = 0;
@@ -177,14 +177,14 @@ namespace BepuPhysics.Trees
         /// </summary>
         public void Dispose()
         {
-            pool.ReturnUnsafely(rayIndicesA0.Id);
-            pool.ReturnUnsafely(rayIndicesB.Id);
-            pool.ReturnUnsafely(rayIndicesA1.Id);
-            pool.ReturnUnsafely(stack.Id);
-            pool.ReturnUnsafely(fallbackStack.Id);
-            pool.ReturnUnsafely(batchOriginalRays.Id);
-            pool.ReturnUnsafely(batchRays.Id);
+            pool.Return(ref rayIndicesA0);
+            pool.Return(ref rayIndicesB);
+            pool.Return(ref rayIndicesA1);
+            pool.Return(ref stack);
             //Easier to catch bugs if the references get cleared.
+            pool.Return(ref fallbackStack);
+            pool.Return(ref batchOriginalRays);
+            pool.Return(ref batchRays);
             this = default;
         }
 

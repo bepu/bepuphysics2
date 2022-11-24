@@ -4,14 +4,17 @@ namespace BepuUtilities.Memory;
 
 /// <summary>
 /// Collection of arena pools used by worker threads.
-/// </summary>
+/// </summary> 
+/// <remarks>Returns to an <see cref="ArenaPool"/> are not guaranteed to free memory because it does not carry enough information about allocations to do so.
+/// To free up memory after use, the arena pool as a whole must be cleared using <see cref="ArenaPool.Clear"/>.<para/>
+/// Use <see cref="WorkerBufferPools.Clear"/> to clear all pools together.</remarks>
 public class WorkerBufferPools : IDisposable
 {
     ArenaPool[] pools;
     /// <summary>
     /// Central pool from which subpools allocate.
     /// </summary>
-    public BufferPool Pool { get; private set; }
+    public IUnmanagedMemoryPool Pool { get; private set; }
     /// <summary>
     /// Locker used by subpools to control access to the central pool.
     /// </summary>
@@ -36,7 +39,7 @@ public class WorkerBufferPools : IDisposable
     /// <param name="pool">Central pool from which worker pools allocate from.</param>
     /// <param name="initialWorkerCount">Initial number of workers to allocate space for.</param>
     /// <param name="defaultBlockCapacity">Default block capacity in thread pools.</param>
-    public WorkerBufferPools(BufferPool pool, int initialWorkerCount, int defaultBlockCapacity = 16384)
+    public WorkerBufferPools(IUnmanagedMemoryPool pool, int initialWorkerCount, int defaultBlockCapacity = 16384)
     {
         Pool = pool;
         Locker = new object();
@@ -89,7 +92,6 @@ public class WorkerBufferPools : IDisposable
             pools[i].Clear();
         }
     }
-
 
     /// <summary>
     /// Disposes all worker arena pools. Pools cannot be used after being disposed.

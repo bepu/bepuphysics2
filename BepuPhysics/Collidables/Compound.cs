@@ -250,7 +250,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
+        public ShapeBatch CreateShapeBatch(IUnmanagedMemoryPool pool, int initialCapacity, Shapes shapes)
         {
             return new CompoundShapeBatch<Compound>(pool, initialCapacity, shapes);
         }
@@ -272,7 +272,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="child">Child to add to the compound.</param>
         /// <param name="pool">Pool to use to resize the compound's children buffer if necessary.</param>
-        public void Add(CompoundChild child, BufferPool pool)
+        public void Add(CompoundChild child, IUnmanagedMemoryPool pool)
         {
             pool.Resize(ref Children, Children.Length + 1, Children.Length);
             Children[^1] = child;
@@ -283,7 +283,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="childIndex">Index of the child to remove from the compound.</param>
         /// <param name="pool">Pool to use to resize the compound's children buffer if necessary.</param>
-        public void RemoveAt(int childIndex, BufferPool pool)
+        public void RemoveAt(int childIndex, IUnmanagedMemoryPool pool)
         {
             var lastIndex = Children.Length - 1;
             if (childIndex < lastIndex)
@@ -295,7 +295,7 @@ namespace BepuPhysics.Collidables
         }
 
 
-        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, IUnmanagedMemoryPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
         {
@@ -320,7 +320,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlapsPointer)
+        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, IUnmanagedMemoryPool pool, Shapes shapes, void* overlapsPointer)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             Tree.ConvertBoxToCentroidWithExtent(min, max, out var sweepOrigin, out var expansion);
@@ -362,7 +362,7 @@ namespace BepuPhysics.Collidables
             return CompoundBuilder.ComputeInertia(Children, childMasses, shapes, out centerOfMass);
         }
 
-        public void Dispose(BufferPool bufferPool)
+        public void Dispose(IUnmanagedMemoryPool bufferPool)
         {
             bufferPool.Return(ref Children);
         }

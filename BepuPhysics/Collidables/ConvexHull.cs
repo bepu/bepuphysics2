@@ -58,7 +58,7 @@ namespace BepuPhysics.Collidables
         /// <param name="points">Points to compute the convex hull of.</param>
         /// <param name="pool">Pool in which to allocate the convex hull and any temporary resources needed to compute the hull.</param>
         /// <param name="center">Computed center of the convex hull before the hull was recentered.</param>
-        public ConvexHull(Span<Vector3> points, BufferPool pool, out Vector3 center)
+        public ConvexHull(Span<Vector3> points, IUnmanagedMemoryPool pool, out Vector3 center)
         {
             ConvexHullHelper.CreateShape(points, pool, out center, out this);
         }
@@ -193,7 +193,7 @@ namespace BepuPhysics.Collidables
             return inertia;
         }
 
-        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public readonly ShapeBatch CreateShapeBatch(IUnmanagedMemoryPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new ConvexHullShapeBatch(pool, initialCapacity);
         }
@@ -269,7 +269,7 @@ namespace BepuPhysics.Collidables
                 return true;
             }
         }
-        public void Dispose(BufferPool bufferPool)
+        public void Dispose(IUnmanagedMemoryPool bufferPool)
         {
             bufferPool.Return(ref Points);
             bufferPool.Return(ref BoundingPlanes);

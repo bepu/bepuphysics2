@@ -20,7 +20,7 @@ namespace DemoRenderer.ShapeDrawing
         internal QuickList<TriangleInstance> Triangles;
         internal QuickList<MeshInstance> Meshes;
 
-        public ShapeCache(int initialCapacityPerShapeType, BufferPool pool)
+        public ShapeCache(int initialCapacityPerShapeType, IUnmanagedMemoryPool pool)
         {
             Spheres = new QuickList<SphereInstance>(initialCapacityPerShapeType, pool);
             Capsules = new QuickList<CapsuleInstance>(initialCapacityPerShapeType, pool);
@@ -38,7 +38,7 @@ namespace DemoRenderer.ShapeDrawing
             Triangles.Count = 0;
             Meshes.Count = 0;
         }
-        public void Dispose(BufferPool pool)
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             Spheres.Dispose(pool);
             Capsules.Dispose(pool);
@@ -74,7 +74,7 @@ namespace DemoRenderer.ShapeDrawing
             ShapeCache.Clear();
         }
 
-        private unsafe void AddCompoundChildren(ref Buffer<CompoundChild> children, Shapes shapes, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, BufferPool pool)
+        private unsafe void AddCompoundChildren(ref Buffer<CompoundChild> children, Shapes shapes, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, IUnmanagedMemoryPool pool)
         {
             for (int i = 0; i < children.Length; ++i)
             {
@@ -85,7 +85,7 @@ namespace DemoRenderer.ShapeDrawing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void AddShape(void* shapeData, int shapeType, Shapes shapes, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, BufferPool pool)
+        unsafe void AddShape(void* shapeData, int shapeType, Shapes shapes, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, IUnmanagedMemoryPool pool)
         {
             //TODO: This should likely be swapped over to a registration-based virtualized table approach to more easily support custom shape extractors-
             //generic terrain windows and examples like voxel grids would benefit.
@@ -259,7 +259,7 @@ namespace DemoRenderer.ShapeDrawing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void AddShape(Shapes shapes, TypedIndex shapeIndex, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, BufferPool pool)
+        unsafe void AddShape(Shapes shapes, TypedIndex shapeIndex, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, IUnmanagedMemoryPool pool)
         {
             if (shapeIndex.Exists)
             {
@@ -284,7 +284,7 @@ namespace DemoRenderer.ShapeDrawing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void AddBodyShape(Shapes shapes, Bodies bodies, int setIndex, int indexInSet, ref ShapeCache shapeCache, BufferPool pool)
+        void AddBodyShape(Shapes shapes, Bodies bodies, int setIndex, int indexInSet, ref ShapeCache shapeCache, IUnmanagedMemoryPool pool)
         {
             ref var set = ref bodies.Sets[setIndex];
             var handle = set.IndexToHandle[indexInSet];
@@ -328,7 +328,7 @@ namespace DemoRenderer.ShapeDrawing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void AddStaticShape(Shapes shapes, Statics statics, int index, ref ShapeCache shapeCache, BufferPool pool)
+        void AddStaticShape(Shapes shapes, Statics statics, int index, ref ShapeCache shapeCache, IUnmanagedMemoryPool pool)
         {
             var handle = statics.IndexToHandle[index];
             //Statics don't have any activity states. Just some simple variation on a central static color.
@@ -361,7 +361,7 @@ namespace DemoRenderer.ShapeDrawing
             pool.Take(threadDispatcher.ThreadCount, out workerCaches);
             for (int i = 0; i < workerCaches.Length; ++i)
             {
-                workerCaches[i] = new ShapeCache(128, threadDispatcher.GetThreadMemoryPool(i));
+                workerCaches[i] = new ShapeCache(128, threadDispatcher.WorkerPools[i]);
             }
         }
 
@@ -370,8 +370,9 @@ namespace DemoRenderer.ShapeDrawing
             jobs.Dispose(pool);
             for (int i = 0; i < workerCaches.Length; ++i)
             {
-                workerCaches[i].Dispose(looper.Dispatcher.GetThreadMemoryPool(i));
+                workerCaches[i].Dispose(looper.Dispatcher.WorkerPools[i]);
             }
+            looper.Dispatcher.WorkerPools.Clear();
             looper.Dispatcher = null;
             pool.Return(ref workerCaches);
         }
@@ -417,7 +418,7 @@ namespace DemoRenderer.ShapeDrawing
         {
             var job = jobs[jobIndex];
             var simulation = simulations == null ? this.simulation : this.simulations[job.SimulationIndex];
-            var pool = looper.Dispatcher.GetThreadMemoryPool(workerIndex);
+            var pool = looper.Dispatcher.WorkerPools[workerIndex];
 
             if (job.SetIndex >= 0)
             {

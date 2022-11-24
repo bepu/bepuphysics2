@@ -109,7 +109,7 @@ namespace BepuPhysics.Trees
         /// <param name="bounds">Extents of the leaf bounds.</param>
         /// <param name="pool">Resource pool to use if resizing is required.</param>
         /// <returns>Index of the leaf allocated in the tree's leaf array.</returns>
-        public unsafe int Add(BoundingBox bounds, BufferPool pool)
+        public unsafe int Add(BoundingBox bounds, IUnmanagedMemoryPool pool)
         {
             //The rest of the function assumes we have sufficient room. We don't want to deal with invalidated pointers mid-add.
             if (Leaves.Length == LeafCount)

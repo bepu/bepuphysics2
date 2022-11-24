@@ -33,7 +33,7 @@ namespace BepuPhysics.CollisionDetection
     public struct CollisionBatcher<TCallbacks> where TCallbacks : struct, ICollisionCallbacks
     {
 
-        public BufferPool Pool;
+        public IUnmanagedMemoryPool Pool;
         public Shapes Shapes;
         CollisionTaskRegistry typeMatrix;
         public TCallbacks Callbacks;
@@ -54,7 +54,7 @@ namespace BepuPhysics.CollisionDetection
         public BatcherContinuations<MeshReduction> MeshReductions;
         public BatcherContinuations<CompoundMeshReduction> CompoundMeshReductions;
 
-        public unsafe CollisionBatcher(BufferPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, float dt, TCallbacks callbacks)
+        public unsafe CollisionBatcher(IUnmanagedMemoryPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, float dt, TCallbacks callbacks)
         {
             Pool = pool;
             Shapes = shapes;

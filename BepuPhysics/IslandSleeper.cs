@@ -63,7 +63,7 @@ namespace BepuPhysics
         struct ConstraintBodyEnumerator : IForEach<int>
         {
             public QuickList<int> ConstraintBodyIndices;
-            public BufferPool Pool;
+            public IUnmanagedMemoryPool Pool;
             public int SourceIndex;
             public void LoopBody(int bodyIndex)
             {
@@ -113,7 +113,7 @@ namespace BepuPhysics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool PushBody<TTraversalPredicate>(int bodyIndex, ref IndexSet consideredBodies, ref QuickList<int> bodyIndices, ref QuickList<int> visitationStack,
-            BufferPool pool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
+            IUnmanagedMemoryPool pool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
         {
             if (!consideredBodies.Contains(bodyIndex))
             {
@@ -137,7 +137,7 @@ namespace BepuPhysics
             ref IndexSet consideredBodies, ref IndexSet consideredConstraints,
             ref QuickList<int> visitationStack,
             ref ConstraintBodyEnumerator bodyEnumerator,
-            BufferPool pool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
+            IUnmanagedMemoryPool pool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
         {
             bodyEnumerator.SourceIndex = bodyIndex;
             ref var list = ref bodies.ActiveSet.Constraints[bodyIndex];
@@ -173,7 +173,7 @@ namespace BepuPhysics
         /// <param name="constraintHandles">List to fill with constraint handles traversed during island collection.</param>
         /// <returns>True if the simulation graph was traversed without ever finding a body that made the predicate return false. False if any body failed the predicate.
         /// The bodyIndices and constraintHandles lists will contain all traversed predicate-passing bodies and constraints.</returns>
-        public bool CollectIsland<TTraversalPredicate>(BufferPool pool, int startingActiveBodyIndex, ref TTraversalPredicate predicate,
+        public bool CollectIsland<TTraversalPredicate>(IUnmanagedMemoryPool pool, int startingActiveBodyIndex, ref TTraversalPredicate predicate,
             ref QuickList<int> bodyIndices, ref QuickList<ConstraintHandle> constraintHandles) where TTraversalPredicate : IPredicate<int>
         {
             Debug.Assert(startingActiveBodyIndex >= 0 && startingActiveBodyIndex < bodies.ActiveSet.Count);
@@ -237,7 +237,7 @@ namespace BepuPhysics
             public IndexSet TraversedBodies;
             public QuickList<IslandScaffold> Islands;
 
-            internal void Dispose(BufferPool pool)
+            internal void Dispose(IUnmanagedMemoryPool pool)
             {
                 for (int islandIndex = 0; islandIndex < Islands.Count; ++islandIndex)
                 {
@@ -269,7 +269,7 @@ namespace BepuPhysics
 
         QuickList<GatheringJob> gatheringJobs;
 
-        void FindIslands<TPredicate>(int workerIndex, BufferPool threadPool, ref TPredicate predicate) where TPredicate : IPredicate<int>
+        void FindIslands<TPredicate>(int workerIndex, IUnmanagedMemoryPool threadPool, ref TPredicate predicate) where TPredicate : IPredicate<int>
         {
             Debug.Assert(workerTraversalResults.Allocated && workerTraversalResults.Length > workerIndex);
             ref var results = ref workerTraversalResults[workerIndex];
@@ -310,7 +310,7 @@ namespace BepuPhysics
             constraintHandles.Dispose(threadPool);
             results.TraversedBodies = traversalTest.PreviouslyTraversedBodies;
         }
-        void FindIslands(int workerIndex, BufferPool threadPool)
+        void FindIslands(int workerIndex, IUnmanagedMemoryPool threadPool)
         {
             //This if is handled externally to push the code specialization early.
             if (forceSleep)
@@ -329,7 +329,7 @@ namespace BepuPhysics
         void FindIslands(int workerIndex, void* context)
         {
             //The only reason we separate this out is to make it easier for the main pool to be passed in if there is only a single thread. 
-            FindIslands(workerIndex, threadDispatcher.GetThreadMemoryPool(workerIndex));
+            FindIslands(workerIndex, threadDispatcher.WorkerPools[workerIndex]);
         }
 
         ThreadDispatcherWorker gatherDelegate;
@@ -648,7 +648,7 @@ namespace BepuPhysics
                     //The source of traversal worker resources is a per-thread pool.
                     for (int workerIndex = 0; workerIndex < workerTraversalThreadCount; ++workerIndex)
                     {
-                        workerTraversalResults[workerIndex].Dispose(threadDispatcher.GetThreadMemoryPool(workerIndex));
+                        workerTraversalResults[workerIndex].Dispose(threadDispatcher.WorkerPools[workerIndex]);
                     }
                 }
                 else

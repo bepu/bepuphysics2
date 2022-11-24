@@ -20,7 +20,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TCompoundB : struct, IBoundsQueryableCompound
     {
 
-        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps)
+        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, IUnmanagedMemoryPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps)
         {
             var totalCompoundChildCount = 0;
             for (int i = 0; i < pairCount; ++i)

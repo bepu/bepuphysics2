@@ -1,4 +1,6 @@
-﻿namespace BepuUtilities.Memory
+﻿using System.Runtime.CompilerServices;
+
+namespace BepuUtilities.Memory
 {
     /// <summary>
     /// Defines a type that is capable of rapidly serving requests for allocation and deallocation of unmanaged memory.
@@ -23,7 +25,7 @@
         /// Returns a buffer to the pool.
         /// </summary>
         /// <typeparam name="T">Type of the buffer's elements.</typeparam>
-        /// <param name="buffer">Buffer to return to the pool.</param>
+        /// <param name="buffer">Buffer to return to the pool. The reference will be cleared.</param>
         void Return<T>(ref Buffer<T> buffer) where T : unmanaged;
         /// <summary>
         /// Gets the capacity of a buffer that would be returned by the pool if a given element count was requested from TakeAtLeast.
@@ -32,5 +34,33 @@
         /// <param name="count">Number of elements to request.</param>
         /// <returns>Capacity of a buffer that would be returned if the given element count was requested.</returns>
         int GetCapacityForCount<T>(int count) where T : unmanaged;
+
+        /// <summary>
+        /// Returns a buffer to the pool by id.
+        /// </summary>
+        /// <param name="id">Id of the buffer to return to the pool.</param>
+        /// <remarks>Pools zero out the passed-in buffer by convention. This costs very little and avoids a wide variety of bugs (either directly or by forcing fast failure).
+        /// This "Unsafe" overload should be used only in cases where there's a reason to bypass the clear; the naming is intended to dissuade casual use.</remarks>
+        void ReturnUnsafely(int id);
+
+        /// <summary>
+        /// Resizes a typed buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer. 
+        /// Final buffer size is at least as large as the target size and may be larger.
+        /// </summary>
+        /// <typeparam name="T">Type of the buffer to resize.</typeparam>
+        /// <param name="buffer">Buffer reference to resize.</param>
+        /// <param name="targetSize">Number of elements to resize the buffer for.</param>
+        /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer. Contents of slots outside the copied range in the resized buffer are undefined.</param>
+        void ResizeToAtLeast<T>(ref Buffer<T> buffer, int targetSize, int copyCount) where T : unmanaged;
+
+        /// <summary>
+        /// Resizes a buffer to the target size. Copies a subset of elements into the new buffer.
+        /// </summary>
+        /// <typeparam name="T">Type of the buffer to resize.</typeparam>
+        /// <param name="buffer">Buffer reference to resize.</param>
+        /// <param name="targetSize">Number of elements to resize the buffer for.</param>
+        /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer.</param>
+        void Resize<T>(ref Buffer<T> buffer, int targetSize, int copyCount) where T : unmanaged;
+
     }
 }

@@ -46,7 +46,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             void* shapeDataA, Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            bool requiresFlip, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+            bool requiresFlip, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, IUnmanagedMemoryPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
             UnoffsetSweep sweepModifier = default;
             return Sweep(

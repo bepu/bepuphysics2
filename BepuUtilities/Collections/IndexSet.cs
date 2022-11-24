@@ -31,7 +31,7 @@ namespace BepuUtilities.Collections
             return (count + mask) >> shift;
         }
 
-        public IndexSet(BufferPool pool, int initialCapacity)
+        public IndexSet(IUnmanagedMemoryPool pool, int initialCapacity)
         {
             //Remember; the bundles are 64 flags wide. A default of 128 supports up to 8192 indices without needing resizing...
             Flags = new Buffer<ulong>();
@@ -39,13 +39,13 @@ namespace BepuUtilities.Collections
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void InternalResize(BufferPool pool, int capacity)
+        void InternalResize(IUnmanagedMemoryPool pool, int capacity)
         {
             InternalResizeForBundleCount(pool, GetBundleCapacity(capacity));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void InternalResizeForBundleCount(BufferPool pool, int bundleCapacity)
+        void InternalResizeForBundleCount(IUnmanagedMemoryPool pool, int bundleCapacity)
         {
             var copyRegionLength = Math.Min(bundleCapacity, Flags.Length);
             pool.ResizeToAtLeast(ref Flags, bundleCapacity, copyRegionLength);
@@ -107,7 +107,7 @@ namespace BepuUtilities.Collections
         /// <remarks>This is functionally identical to the Add method, but it doesn't include the same debug assertions. Just a way to make intent clear so that the assert can catch errors.</remarks>
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Set(int index, BufferPool pool)
+        public void Set(int index, IUnmanagedMemoryPool pool)
         {
             var bundleIndex = index >> shift;
             if (bundleIndex >= Flags.Length)
@@ -148,7 +148,7 @@ namespace BepuUtilities.Collections
         /// <param name="index">Index to add.</param>
         /// <param name="pool">Pool to use to resize the set if necessary.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(int index, BufferPool pool)
+        public void Add(int index, IUnmanagedMemoryPool pool)
         {
             var bundleIndex = index >> shift;
             if (bundleIndex >= Flags.Length)
@@ -173,7 +173,7 @@ namespace BepuUtilities.Collections
             Flags.Clear(0, Flags.Length);
         }
 
-        public void EnsureCapacity(int indexCapacity, BufferPool pool)
+        public void EnsureCapacity(int indexCapacity, IUnmanagedMemoryPool pool)
         {
             if ((Flags.Length << shift) < indexCapacity)
             {
@@ -182,7 +182,7 @@ namespace BepuUtilities.Collections
         }
 
         //While we expose a compaction and resize, using it requires care. It would be a mistake to, for example, shrink beyond the current bodies indices size.
-        public void Compact(int indexCapacity, BufferPool pool)
+        public void Compact(int indexCapacity, IUnmanagedMemoryPool pool)
         {
             var desiredBundleCount = BufferPool.GetCapacityForCount<ulong>(GetBundleCapacity(indexCapacity));
             if (Flags.Length > desiredBundleCount)
@@ -190,7 +190,7 @@ namespace BepuUtilities.Collections
                 InternalResizeForBundleCount(pool, desiredBundleCount);
             }
         }
-        public void Resize(int indexCapacity, BufferPool pool)
+        public void Resize(int indexCapacity, IUnmanagedMemoryPool pool)
         {
             var desiredBundleCount = BufferPool.GetCapacityForCount<ulong>(GetBundleCapacity(indexCapacity));
             if (Flags.Length != desiredBundleCount)
@@ -203,7 +203,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <remarks>The instance can be reused after a Dispose if EnsureCapacity or Resize is called.
         /// That's a little meaningless given that the instance is a value type, but hey, you don't have to new another one, that's something.</remarks>
-        public void Dispose(BufferPool pool)
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             Debug.Assert(Flags.Length > 0, "Cannot double-dispose.");
             pool.Return(ref Flags);

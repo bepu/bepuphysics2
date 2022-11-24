@@ -114,7 +114,6 @@ namespace BepuPhysics.CollisionDetection
         internal Buffer<byte> PairFreshness;
         internal BufferPool pool;
         int minimumPendingSize;
-        int minimumPerTypeCapacity;
         int previousPendingSize;
 
 
@@ -123,10 +122,9 @@ namespace BepuPhysics.CollisionDetection
         internal IThreadDispatcher cachedDispatcher;
 
 
-        public PairCache(BufferPool pool, int initialSetCapacity, int minimumMappingSize, int minimumPendingSize, int minimumPerTypeCapacity)
+        public PairCache(BufferPool pool, int initialSetCapacity, int minimumMappingSize, int minimumPendingSize)
         {
             this.minimumPendingSize = minimumPendingSize;
-            this.minimumPerTypeCapacity = minimumPerTypeCapacity;
             this.pool = pool;
             Mapping = new OverlapMapping(minimumMappingSize, pool);
             ResizeSetsCapacity(initialSetCapacity, 0);
@@ -143,7 +141,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 for (int i = 0; i < threadCount; ++i)
                 {
-                    WorkerPendingChanges[i] = new WorkerPendingPairChanges(threadDispatcher.GetThreadMemoryPool(i), pendingSize);
+                    WorkerPendingChanges[i] = new WorkerPendingPairChanges(threadDispatcher.WorkerPools[i], pendingSize);
                 }
             }
             else
@@ -249,7 +247,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 for (int i = 0; i < WorkerPendingChanges.Length; ++i)
                 {
-                    WorkerPendingChanges[i].Dispose(cachedDispatcher.GetThreadMemoryPool(i));
+                    WorkerPendingChanges[i].Dispose(cachedDispatcher.WorkerPools[i]);
                 }
             }
             else
@@ -313,7 +311,7 @@ namespace BepuPhysics.CollisionDetection
         internal unsafe PairCacheChangeIndex Add(int workerIndex, CollidablePair pair, in ConstraintCache constraintCache)
         {
             //Note that we do not have to set any freshness bytes here; using this path means there exists no previous overlap to remove anyway.            
-            return new PairCacheChangeIndex { WorkerIndex = workerIndex, Index = WorkerPendingChanges[workerIndex].Add(cachedDispatcher == null ? pool : cachedDispatcher.GetThreadMemoryPool(workerIndex), pair, constraintCache) };
+            return new PairCacheChangeIndex { WorkerIndex = workerIndex, Index = WorkerPendingChanges[workerIndex].Add(cachedDispatcher == null ? pool : cachedDispatcher.WorkerPools[workerIndex], pair, constraintCache) };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

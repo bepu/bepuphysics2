@@ -8,7 +8,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     {
         Buffer<ChildOverlapsCollection> childOverlaps;
         public readonly int ChildCount;
-        public CompoundPairSweepOverlaps(BufferPool pool, int childCount)
+        public CompoundPairSweepOverlaps(IUnmanagedMemoryPool pool, int childCount)
         {
             ChildCount = childCount;
             pool.Take(childCount, out childOverlaps);
@@ -22,7 +22,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             return ref childOverlaps[pairIndex];
         }
 
-        public void Dispose(BufferPool pool)
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             for (int i = 0; i < ChildCount; ++i)
             {

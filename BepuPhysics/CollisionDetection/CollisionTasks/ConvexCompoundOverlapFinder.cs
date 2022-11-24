@@ -15,16 +15,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
     public unsafe interface IBoundsQueryableCompound
     {
-        unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+        unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, IUnmanagedMemoryPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps;
 
-        unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+        unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, IUnmanagedMemoryPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps;
     }
     public interface IConvexCompoundOverlapFinder
     {
-        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps);
+        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, IUnmanagedMemoryPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps);
     }
 
     public struct ConvexCompoundOverlapFinder<TConvex, TConvexWide, TCompound> : IConvexCompoundOverlapFinder
@@ -32,7 +32,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TConvexWide : struct, IShapeWide<TConvex>
         where TCompound : struct, IBoundsQueryableCompound
     {
-        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps)
+        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, IUnmanagedMemoryPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps)
         {
             overlaps = new ConvexCompoundTaskOverlaps(pool, pairCount);
             ref var pairsToTest = ref overlaps.subpairQueries;

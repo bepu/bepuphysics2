@@ -18,7 +18,7 @@ namespace BepuPhysics.Collidables
         /// Gets the number of shapes that the batch can currently hold without resizing.
         /// </summary>
         public int Capacity { get { return shapesData.Length / shapeDataSize; } }
-        protected BufferPool pool;
+        protected IUnmanagedMemoryPool pool;
         protected IdPool idPool;
         /// <summary>
         /// Gets the type id of the shape type in this batch.
@@ -33,21 +33,21 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public int ShapeDataSize { get { return shapeDataSize; } }
 
-        protected abstract void Dispose(int index, BufferPool pool);
-        protected abstract void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool);
+        protected abstract void Dispose(int index, IUnmanagedMemoryPool pool);
+        protected abstract void RemoveAndDisposeChildren(int index, Shapes shapes, IUnmanagedMemoryPool pool);
 
         public void Remove(int index)
         {
             idPool.Return(index, pool);
         }
 
-        public void RemoveAndDispose(int index, BufferPool pool)
+        public void RemoveAndDispose(int index, IUnmanagedMemoryPool pool)
         {
             Dispose(index, pool);
             Remove(index);
         }
 
-        public void RecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool)
+        public void RecursivelyRemoveAndDispose(int index, Shapes shapes, IUnmanagedMemoryPool pool)
         {
             RemoveAndDisposeChildren(index, shapes, pool);
             RemoveAndDispose(index, pool);
@@ -133,7 +133,7 @@ namespace BepuPhysics.Collidables
         /// <returns>Reference to the shape at the given index.</returns>
         public ref TShape this[int shapeIndex] { get { return ref shapes[shapeIndex]; } }
 
-        protected ShapeBatch(BufferPool pool, int initialShapeCount)
+        protected ShapeBatch(IUnmanagedMemoryPool pool, int initialShapeCount)
         {
             this.pool = pool;
             TypeId = default(TShape).TypeId;
@@ -231,16 +231,16 @@ namespace BepuPhysics.Collidables
         where TShape : unmanaged, IConvexShape
         where TShapeWide : unmanaged, IShapeWide<TShape>
     {
-        public ConvexShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
+        public ConvexShapeBatch(IUnmanagedMemoryPool pool, int initialShapeCount) : base(pool, initialShapeCount)
         {
         }
 
-        protected override void Dispose(int index, BufferPool pool)
+        protected override void Dispose(int index, IUnmanagedMemoryPool pool)
         {
             //Most convex shapes with an associated Wide type doesn't have any internal resources to dispose.
         }
 
-        protected override void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool)
+        protected override void RemoveAndDisposeChildren(int index, Shapes shapes, IUnmanagedMemoryPool pool)
         {
             //And they don't have any children.
         }
@@ -283,11 +283,11 @@ namespace BepuPhysics.Collidables
 
     public class ConvexHullShapeBatch : ConvexShapeBatch<ConvexHull, ConvexHullWide>
     {
-        public ConvexHullShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
+        public ConvexHullShapeBatch(IUnmanagedMemoryPool pool, int initialShapeCount) : base(pool, initialShapeCount)
         {
         }
 
-        protected override void Dispose(int index, BufferPool pool)
+        protected override void Dispose(int index, IUnmanagedMemoryPool pool)
         {
             shapes[index].Dispose(pool);
         }
@@ -298,17 +298,17 @@ namespace BepuPhysics.Collidables
         where TChildShape : unmanaged, IConvexShape
         where TChildShapeWide : unmanaged, IShapeWide<TChildShape>
     {
-        public HomogeneousCompoundShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
+        public HomogeneousCompoundShapeBatch(IUnmanagedMemoryPool pool, int initialShapeCount) : base(pool, initialShapeCount)
         {
             Compound = true;
         }
 
-        protected override void Dispose(int index, BufferPool pool)
+        protected override void Dispose(int index, IUnmanagedMemoryPool pool)
         {
             shapes[index].Dispose(pool);
         }
 
-        protected override void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool)
+        protected override void RemoveAndDisposeChildren(int index, Shapes shapes, IUnmanagedMemoryPool pool)
         {
             //Meshes and other single-type containers don't have any shape-registered children.
         }
@@ -337,18 +337,18 @@ namespace BepuPhysics.Collidables
     {
         Shapes shapeBatches;
 
-        public CompoundShapeBatch(BufferPool pool, int initialShapeCount, Shapes shapeBatches) : base(pool, initialShapeCount)
+        public CompoundShapeBatch(IUnmanagedMemoryPool pool, int initialShapeCount, Shapes shapeBatches) : base(pool, initialShapeCount)
         {
             this.shapeBatches = shapeBatches;
             Compound = true;
         }
 
-        protected override void Dispose(int index, BufferPool pool)
+        protected override void Dispose(int index, IUnmanagedMemoryPool pool)
         {
             shapes[index].Dispose(pool);
         }
 
-        protected override void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool)
+        protected override void RemoveAndDisposeChildren(int index, Shapes shapes, IUnmanagedMemoryPool pool)
         {
             ref var shape = ref this.shapes[index];
             for (int i = 0; i < shape.ChildCount; ++i)
@@ -393,10 +393,10 @@ namespace BepuPhysics.Collidables
 
         public int InitialCapacityPerTypeBatch { get; set; }
         public ShapeBatch this[int typeIndex] => batches[typeIndex];
-        BufferPool pool;
+        IUnmanagedMemoryPool pool;
 
 
-        public Shapes(BufferPool pool, int initialCapacityPerTypeBatch)
+        public Shapes(IUnmanagedMemoryPool pool, int initialCapacityPerTypeBatch)
         {
             InitialCapacityPerTypeBatch = initialCapacityPerTypeBatch;
             //This list pretty much will never resize unless something really strange happens, and since batches use virtual calls, we have to allow storage of reference types.
@@ -467,7 +467,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="shapeIndex">Index of the shape to remove.</param>
         /// <param name="pool">Pool to return all shape resources to.</param>
-        public void RecursivelyRemoveAndDispose(TypedIndex shapeIndex, BufferPool pool)
+        public void RecursivelyRemoveAndDispose(TypedIndex shapeIndex, IUnmanagedMemoryPool pool)
         {
             if (shapeIndex.Exists)
             {
@@ -481,7 +481,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="shapeIndex">Index of the shape to remove.</param>
         /// <param name="pool">Pool to return all shape resources to.</param>
-        public void RemoveAndDispose(TypedIndex shapeIndex, BufferPool pool)
+        public void RemoveAndDispose(TypedIndex shapeIndex, IUnmanagedMemoryPool pool)
         {
             if (shapeIndex.Exists)
             {

@@ -82,7 +82,7 @@ namespace BepuPhysics
         public int Count;
         public bool Allocated => ShapeIndices.Allocated;
 
-        public BoundingBoxBatch(BufferPool pool, int initialCapacity)
+        public BoundingBoxBatch(IUnmanagedMemoryPool pool, int initialCapacity)
         {
             pool.Take(initialCapacity, out ShapeIndices);
             pool.Take(initialCapacity, out Continuations);
@@ -99,7 +99,7 @@ namespace BepuPhysics
             Count++;
         }
 
-        public void Dispose(BufferPool pool)
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             if (Allocated)
             {
@@ -114,7 +114,7 @@ namespace BepuPhysics
 
     public struct BoundingBoxBatcher
     {
-        internal BufferPool pool;
+        internal IUnmanagedMemoryPool pool;
         internal Shapes shapes;
         internal Bodies bodies;
         internal BroadPhase broadPhase;
@@ -129,7 +129,7 @@ namespace BepuPhysics
         /// </summary>
         public const int CollidablesPerFlush = 16;
 
-        public unsafe BoundingBoxBatcher(Bodies bodies, Shapes shapes, BroadPhase broadPhase, BufferPool pool, float dt)
+        public unsafe BoundingBoxBatcher(Bodies bodies, Shapes shapes, BroadPhase broadPhase, IUnmanagedMemoryPool pool, float dt)
         {
             this.bodies = bodies;
             this.shapes = shapes;

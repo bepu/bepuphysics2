@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities.Memory;
@@ -9,6 +10,8 @@ namespace BepuUtilities.Memory;
 /// <summary>
 /// Arena allocator built to serve a single thread. Pulls resources from a central buffer pool when necessary.
 /// </summary>
+/// <remarks>Returns to this pool are not guaranteed to free memory because it does not carry enough information about allocations to do so.
+/// To free up memory after use, the arena pool as a whole must be cleared using <see cref="ArenaPool.Clear"/>.</remarks>
 public class ArenaPool : IUnmanagedMemoryPool, IDisposable
 {
     /// <summary>
@@ -38,6 +41,7 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
         public bool TryAllocate(int sizeInBytes, out Buffer<byte> allocation)
         {
             //Following the pattern set by the bufferpool, use beefy alignment:
+            //TODO: This is somewhat dumb and we should change it!
             var startLocation = (Count + 127) & (~127);
             var newCount = startLocation + sizeInBytes;
             if (Data.Length >= newCount)
@@ -63,6 +67,7 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
     /// Creates a new arena thread pool.
     /// </summary>
     /// <param name="pool">Central pool to allocate blocks from </param>
+    /// <param name="defaultBlockCapacity">Number of bytes to allocate for a single block if an allocation request does not need more.</param>
     /// <param name="locker">Locker object used to protect accesses to the central pool. If no locker is specified, the pool reference is used.</param>
     public ArenaPool(IUnmanagedMemoryPool pool, int defaultBlockCapacity = 16384, object locker = null)
     {
@@ -149,7 +154,7 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
         if (blocks.Count == 0 || !blocks[blockIndex].TryAllocate(sizeInBytes, out Buffer<byte> allocation))
         {
             //No room; need a new block.
-            var newBlockCapacityInBytes = Math.Max(DefaultBlockCapacity, sizeInBytes);
+            var newBlockCapacityInBytes = int.Max(DefaultBlockCapacity, sizeInBytes);
             //Check to see if there's already a block allocated that we can use.
             if (blocks.Span.Length > blocks.Count && blocks.Span[blocks.Count].Data.Length >= sizeInBytes)
             {
@@ -160,13 +165,23 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
             {
                 //Need a new block.
                 Buffer<byte> blockData;
+                bool resizedBlockList = false;
                 lock (Locker)
                 {
                     Pool.Take(newBlockCapacityInBytes, out blockData);
                     if (blocks.Span.Length == blocks.Count)
+                    {
                         blocks.EnsureCapacity(blocks.Count * 2, Pool);
+                        resizedBlockList = true;
+                    }
+                }
+                if (resizedBlockList)
+                {
+                    //We check for allocated blocks before allocating one, so we need to clear the memory up front.
+                    blocks.Span.Clear(blocks.Count, blocks.Span.length - blocks.Count);
                 }
                 blocks.AllocateUnsafely() = new Block(blockData);
+                //Console.WriteLine($"allocated a new block for {sizeInBytes} size: {blocks.Count}");
             }
             blockIndex = blocks.Count - 1;
             var succeeded = blocks[blockIndex].TryAllocate(sizeInBytes, out allocation);
@@ -211,22 +226,23 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
         TakeAtLeast(count, out buffer);
     }
 
+
     /// <inheritdoc/>
-    /// <remarks>Unlike a <see cref="BufferPool"/>, the <see cref="ArenaPool"/> will not generally free up space in response to calls to <see cref="Return{T}(ref Buffer{T})"/>.
+    /// <remarks>Unlike a <see cref="BufferPool"/>, the <see cref="ArenaPool"/> will not generally free up space in response to calls to <see cref="ReturnUnsafely(int)"/>.
     /// If the deallocated buffer is the last allocated buffer for a given block, the pool may choose to bump the allocation pointer back, but it is not guaranteed.</remarks>
-    public void Return<T>(ref Buffer<T> buffer) where T : unmanaged
+    public void ReturnUnsafely(int id)
     {
-        if (buffer.Id >= 0)
+        if (id >= 0)
         {
             //This was a representable id.
 #if DEBUG
-            Debug.Assert(outstandingIds.Remove(buffer.Id),
+            Debug.Assert(outstandingIds.Remove(id),
                 "This buffer id must have been taken from the pool previously.");
 #if LEAKDEBUG
             bool found = false;
             foreach (var pair in outstandingAllocators)
             {
-                if (pair.Value.Remove(buffer.Id))
+                if (pair.Value.Remove(id))
                 {
                     found = true;
                     if (pair.Value.Count == 0)
@@ -240,9 +256,10 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
 #endif
 #endif
             //Was it the most recently allocated buffer (in that block) such that we can pop it off like a stack?
-            var blockIndex = (buffer.Id & blockMask) >> maximumBitsForIndices;
-            var countInBlock = buffer.Id & countInBlockMask;
-            var previousCountInBlock = (buffer.Id & countInBlockMask) >> maximumBitsForIndex;
+            var blockIndex = (id & blockMask) >> maximumBitsForIndices;
+            Debug.Assert(blockIndex < blocks.Count, "Invalid id; the encoded block index doesn't fit in this pool.");
+            var countInBlock = id & countInBlockMask;
+            var previousCountInBlock = (id >> maximumBitsForIndex) & countInBlockMask;
             ref var block = ref blocks[blockIndex];
             if (block.Count == countInBlock)
             {
@@ -252,9 +269,18 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
                 {
                     //Push the block count as far as it can go.
                     --blocks.Count;
+                    //Console.WriteLine($"destroyed a block: {blocks.Count}");
                 }
             }
         }
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Unlike a <see cref="BufferPool"/>, the <see cref="ArenaPool"/> will not generally free up space in response to calls to <see cref="Return{T}(ref Buffer{T})"/>.
+    /// If the deallocated buffer is the last allocated buffer for a given block, the pool may choose to bump the allocation pointer back, but it is not guaranteed.</remarks>
+    public void Return<T>(ref Buffer<T> buffer) where T : unmanaged
+    {
+        ReturnUnsafely(buffer.Id);
         buffer = default;
     }
 
@@ -263,5 +289,35 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
     {
         return count;
     }
+
+    /// <inheritdoc/>
+    public void ResizeToAtLeast<T>(ref Buffer<T> buffer, int targetSize, int copyCount) where T : unmanaged
+    {
+        //Only do anything if the new size is actually different from the current size.
+        Debug.Assert(copyCount <= targetSize && copyCount <= buffer.Length, "Can't copy more elements than exist in the source or target buffers.");
+        targetSize = GetCapacityForCount<T>(targetSize);
+        if (!buffer.Allocated)
+        {
+            Debug.Assert(buffer.Length == 0, "If a buffer is pointing at null, then it should be default initialized and have a length of zero too.");
+            //This buffer is not allocated; just return a new one. No copying to be done.
+            TakeAtLeast(targetSize, out buffer);
+        }
+        else
+        {
+            //Unlike the BufferPool, we can't rely on the Buffer id to tell us if there was spare room beyond the buffer, so we can't incrementally resize. We have to reallocate.
+            //(Alignment could be different per allocation, too, so we'd need to know something about the *next* allocation to know whether we can resize.)
+            TakeAtLeast(targetSize, out Buffer<T> newBuffer);
+            buffer.CopyTo(0, newBuffer, 0, copyCount);
+            ReturnUnsafely(buffer.Id);
+            buffer = newBuffer;
+        }
+    }
+
+    /// <inheritdoc/>
+    public void Resize<T>(ref Buffer<T> buffer, int targetSize, int copyCount) where T : unmanaged => ResizeToAtLeast(ref buffer, targetSize, copyCount);
+
+
+
+
 
 }

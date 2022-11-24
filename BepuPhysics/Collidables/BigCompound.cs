@@ -33,7 +33,7 @@ namespace BepuPhysics.Collidables
         /// <param name="shapes">Shapes set in which child shapes are allocated.</param>
         /// <param name="pool">Pool to use to allocate acceleration structures.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BigCompound(Buffer<CompoundChild> children, Shapes shapes, BufferPool pool)
+        public BigCompound(Buffer<CompoundChild> children, Shapes shapes, IUnmanagedMemoryPool pool)
         {
             Debug.Assert(children.Length > 0, "Compounds must have a nonzero number of children.");
             Debug.Assert(Compound.ValidateChildIndices(ref children, shapes), "Children must all be convex.");
@@ -139,7 +139,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
+        public ShapeBatch CreateShapeBatch(IUnmanagedMemoryPool pool, int initialCapacity, Shapes shapes)
         {
             return new CompoundShapeBatch<BigCompound>(pool, initialCapacity, shapes);
         }
@@ -163,9 +163,9 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Pool to use to resize the compound's children buffer if necessary.</param>
         /// <param name="shapes">Shapes collection containing the compound's children.</param>
         /// <remarks><para>This function keeps the <see cref="Tree"/> in a valid state, but significant changes over time may degrade the tree's quality and result in reduced collision/query performance.
-        /// If this happens, consider calling <see cref="Tree.RefitAndRefine(BufferPool, int, float)"/> with a refinementIndex that changes with each call (to prioritize different parts of the tree).
+        /// If this happens, consider calling <see cref="Tree.RefitAndRefine(IUnmanagedMemoryPool, int, float)"/> with a refinementIndex that changes with each call (to prioritize different parts of the tree).
         /// Incrementing a counter with each call would work fine. The ideal frequency of refinement depends on the kind of modifications being made, but it's likely to be rare.</para></remarks>
-        public void Add(CompoundChild child, BufferPool pool, Shapes shapes)
+        public void Add(CompoundChild child, IUnmanagedMemoryPool pool, Shapes shapes)
         {
             pool.Resize(ref Children, Children.Length + 1, Children.Length);
             Children[^1] = child;
@@ -180,9 +180,9 @@ namespace BepuPhysics.Collidables
         /// <param name="childIndex">Index of the child to remove from the compound.</param>
         /// <param name="pool">Pool to use to resize the compound's children buffer if necessary.</param>
         /// <remarks>This function keeps the <see cref="Tree"/> in a valid state, but significant changes over time may degrade the tree's quality and result in reduced collision/query performance.
-        /// If this happens, consider calling <see cref="Tree.RefitAndRefine(BufferPool, int, float)"/> with a refinementIndex that changes with each call (to prioritize different parts of the tree).
+        /// If this happens, consider calling <see cref="Tree.RefitAndRefine(IUnmanagedMemoryPool, int, float)"/> with a refinementIndex that changes with each call (to prioritize different parts of the tree).
         /// Incrementing a counter with each call would work fine. The ideal frequency of refinement depends on the kind of modifications being made, but it's likely to be rare.</remarks>
-        public void RemoveAt(int childIndex, BufferPool pool)
+        public void RemoveAt(int childIndex, IUnmanagedMemoryPool pool)
         {
             var movedChildIndex = Tree.RemoveAt(childIndex);
             if (movedChildIndex >= 0)
@@ -196,7 +196,7 @@ namespace BepuPhysics.Collidables
 
         unsafe struct Enumerator<TSubpairOverlaps> : IBreakableForEach<int> where TSubpairOverlaps : ICollisionTaskSubpairOverlaps
         {
-            public BufferPool Pool;
+            public IUnmanagedMemoryPool Pool;
             public void* Overlaps;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool LoopBody(int i)
@@ -206,7 +206,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, IUnmanagedMemoryPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
         {
@@ -225,7 +225,7 @@ namespace BepuPhysics.Collidables
 
         unsafe struct SweepLeafTester<TOverlaps> : ISweepLeafTester where TOverlaps : ICollisionTaskSubpairOverlaps
         {
-            public BufferPool Pool;
+            public IUnmanagedMemoryPool Pool;
             public void* Overlaps;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void TestLeaf(int leafIndex, ref float maximumT)
@@ -233,7 +233,7 @@ namespace BepuPhysics.Collidables
                 Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
             }
         }
-        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, IUnmanagedMemoryPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             SweepLeafTester<TOverlaps> enumerator;
@@ -268,7 +268,7 @@ namespace BepuPhysics.Collidables
             return bodyInertia;
         }
 
-        public void Dispose(BufferPool bufferPool)
+        public void Dispose(IUnmanagedMemoryPool bufferPool)
         {
             bufferPool.Return(ref Children);
             Tree.Dispose(bufferPool);

@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public UntypedList(int elementSizeInBytes, int initialCapacityInElements, BufferPool pool)
+        public UntypedList(int elementSizeInBytes, int initialCapacityInElements, IUnmanagedMemoryPool pool)
         {
             pool.TakeAtLeast(initialCapacityInElements * elementSizeInBytes, out Buffer);
             Count = 0;
@@ -23,7 +23,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void EnsureCapacityInBytes(int elementSizeInBytes, int targetCapacityInBytes, BufferPool pool)
+        internal void EnsureCapacityInBytes(int elementSizeInBytes, int targetCapacityInBytes, IUnmanagedMemoryPool pool)
         {
             //EnsureCapacity is basically a secondary constructor, but it can be used on already-existing caches. It has the same required output.
             Debug.Assert(ElementSizeInBytes == 0 || ElementSizeInBytes == elementSizeInBytes,
@@ -91,7 +91,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="pool">Pool to pull allocations from.</param>
         /// <returns>Index of the element in bytes within the list's buffer.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe int Allocate(int elementSizeInBytes, int minimumElementCount, BufferPool pool)
+        public unsafe int Allocate(int elementSizeInBytes, int minimumElementCount, IUnmanagedMemoryPool pool)
         {
             var newSize = ByteCount + elementSizeInBytes;
             if (!Buffer.Allocated)
@@ -123,14 +123,14 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe int Allocate<T>(int minimumElementCount, BufferPool pool)
+        public unsafe int Allocate<T>(int minimumElementCount, IUnmanagedMemoryPool pool)
         {
             var elementSizeInBytes = Unsafe.SizeOf<T>();
             return Allocate(elementSizeInBytes, minimumElementCount, pool);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe int Add<T>(ref T data, int minimumCount, BufferPool pool)
+        public unsafe int Add<T>(ref T data, int minimumCount, IUnmanagedMemoryPool pool)
         {
             var byteIndex = Allocate<T>(minimumCount, pool);
             GetFromBytes<T>(byteIndex) = data;

@@ -245,7 +245,7 @@ namespace BepuPhysics.Trees
         }
 
 
-        public unsafe void SweepBuild(BufferPool pool, Buffer<BoundingBox> leafBounds)
+        public unsafe void SweepBuild(IUnmanagedMemoryPool pool, Buffer<BoundingBox> leafBounds)
         {
             if (leafBounds.Length <= 0)
                 throw new ArgumentException("Length must be positive.");
@@ -302,13 +302,13 @@ namespace BepuPhysics.Trees
 
 
             //Return resources.            
-            pool.ReturnUnsafely(centroidsX.Id);
-            pool.ReturnUnsafely(centroidsY.Id);
-            pool.ReturnUnsafely(centroidsZ.Id);
-            pool.ReturnUnsafely(indexMap.Id);
-            pool.ReturnUnsafely(indexMapX.Id);
-            pool.ReturnUnsafely(indexMapY.Id);
-            pool.ReturnUnsafely(indexMapZ.Id);
+            pool.Return(ref centroidsX);
+            pool.Return(ref centroidsY);
+            pool.Return(ref centroidsZ);
+            pool.Return(ref indexMap);
+            pool.Return(ref indexMapX);
+            pool.Return(ref indexMapY);
+            pool.Return(ref indexMapZ);
             pool.Return(ref merged);
 
         }

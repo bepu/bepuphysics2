@@ -224,7 +224,7 @@ namespace Demos.Demos
             simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), simulation.Shapes.Add(new Box(500, 1, 500))));
 
             //Any IThreadDispatcher implementation can be used for multithreading. Here, we use the BepuUtilities.ThreadDispatcher implementation.
-            var threadDispatcher = new ThreadDispatcher(Environment.ProcessorCount);
+            var threadDispatcher = new ThreadDispatcher(Environment.ProcessorCount, bufferPool);
 
             //Now take 100 time steps!
             for (int i = 0; i < 100; ++i)

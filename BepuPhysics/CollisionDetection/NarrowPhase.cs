@@ -339,7 +339,7 @@ namespace BepuPhysics.CollisionDetection
             public PendingConstraintAddCache PendingConstraints;
             public QuickList<int> PendingSetAwakenings;
 
-            public OverlapWorker(int workerIndex, BufferPool pool, NarrowPhase<TCallbacks> narrowPhase)
+            public OverlapWorker(int workerIndex, IUnmanagedMemoryPool pool, NarrowPhase<TCallbacks> narrowPhase)
             {
                 Batcher = new CollisionBatcher<CollisionCallbacks>(pool, narrowPhase.Shapes, narrowPhase.CollisionTaskRegistry, narrowPhase.timestepDuration,
                     new CollisionCallbacks(workerIndex, pool, narrowPhase));
@@ -351,7 +351,7 @@ namespace BepuPhysics.CollisionDetection
         internal OverlapWorker[] overlapWorkers;
 
         public NarrowPhase(Simulation simulation, CollisionTaskRegistry collisionTaskRegistry, SweepTaskRegistry sweepTaskRegistry, TCallbacks callbacks,
-             int initialSetCapacity, int minimumMappingSize = 2048, int minimumPendingSize = 128, int minimumPerTypeCapacity = 128)
+             int initialSetCapacity, int minimumMappingSize = 2048, int minimumPendingSize = 128)
             : base()
         {
             Simulation = simulation;
@@ -364,7 +364,7 @@ namespace BepuPhysics.CollisionDetection
             Callbacks = callbacks;
             CollisionTaskRegistry = collisionTaskRegistry;
             SweepTaskRegistry = sweepTaskRegistry;
-            PairCache = new PairCache(simulation.BufferPool, initialSetCapacity, minimumMappingSize, minimumPendingSize, minimumPerTypeCapacity);
+            PairCache = new PairCache(simulation.BufferPool, initialSetCapacity, minimumMappingSize, minimumPendingSize);
             FreshnessChecker = new FreshnessChecker(this);
             preflushWorkerLoop = PreflushWorkerLoop;
         }
@@ -378,7 +378,7 @@ namespace BepuPhysics.CollisionDetection
                 Array.Resize(ref overlapWorkers, threadCount);
             for (int i = 0; i < threadCount; ++i)
             {
-                overlapWorkers[i] = new OverlapWorker(i, threadDispatcher != null ? threadDispatcher.GetThreadMemoryPool(i) : Pool, this);
+                overlapWorkers[i] = new OverlapWorker(i, threadDispatcher != null ? threadDispatcher.WorkerPools[i] : Pool, this);
             }
         }
 
