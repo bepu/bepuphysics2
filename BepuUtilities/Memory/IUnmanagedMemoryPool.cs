@@ -68,5 +68,12 @@ namespace BepuUtilities.Memory
         /// The pool will remain in a usable state after clearing.
         /// </summary>
         void Clear();
+
+        /// <summary>
+        /// Computes the total number of bytes allocated from the memory source in this pool.
+        /// Includes allocated memory regardless of whether it currently has outstanding references.
+        /// </summary>
+        /// <returns>Total number of bytes allocated from the backing memory source in this pool.</returns>
+        ulong GetTotalAllocatedByteCount();
     }
 }

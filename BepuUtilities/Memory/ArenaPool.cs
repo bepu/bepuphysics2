@@ -321,7 +321,20 @@ public class ArenaPool : IUnmanagedMemoryPool
     public void Resize<T>(ref Buffer<T> buffer, int targetSize, int copyCount) where T : unmanaged => ResizeToAtLeast(ref buffer, targetSize, copyCount);
 
 
-
+    /// <summary>
+    /// Computes the total number of bytes allocated from native memory in this buffer pool.
+    /// Includes allocated memory regardless of whether it currently has outstanding references.
+    /// </summary>
+    /// <returns>Total number of bytes allocated from native memory in this buffer pool.</returns>
+    public ulong GetTotalAllocatedByteCount()
+    {
+        ulong sum = 0;
+        for (int i = 0; i < blocks.Span.Length; ++i)
+        {
+            sum += (ulong)blocks.Span[i].Data.Length;
+        }
+        return sum;
+    }
 
 
 }
