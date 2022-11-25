@@ -11,7 +11,7 @@ namespace BepuUtilities.Memory
     /// <summary>
     /// Unmanaged memory pool that suballocates from memory blocks pulled from the native heap.
     /// </summary>
-    public class BufferPool : IUnmanagedMemoryPool, IDisposable
+    public class BufferPool : IUnmanagedMemoryPool
     {
         unsafe struct PowerPool
         {
@@ -270,6 +270,7 @@ namespace BepuUtilities.Memory
             return sum;
         }
 
+        bool DEBUGLOCK;
         /// <summary>
         /// Takes a buffer large enough to contain a number of elements of a given type. Capacity may be larger than requested.
         /// </summary>
@@ -279,11 +280,13 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void TakeAtLeast<T>(int count, out Buffer<T> buffer) where T : unmanaged
         {
+            Debug.Assert(!DEBUGLOCK); DEBUGLOCK = true;
             //Avoid returning a zero length span because 1 byte / Unsafe.SizeOf<T>() happens to be zero.
             if (count == 0)
                 count = 1;
             TakeForPower(SpanHelper.GetContainingPowerOf2(count * Unsafe.SizeOf<T>()), out var rawBuffer);
             buffer = rawBuffer.As<T>();
+            Debug.Assert(DEBUGLOCK); DEBUGLOCK = false;
         }
 
         /// <summary>
@@ -322,8 +325,10 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ReturnUnsafely(int id)
         {
+            Debug.Assert(!DEBUGLOCK); DEBUGLOCK = true;
             DecomposeId(id, out var powerIndex, out var slotIndex);
             pools[powerIndex].Return(slotIndex);
+            Debug.Assert(DEBUGLOCK); DEBUGLOCK = false;
         }
 
         /// <inheritdoc/>  
@@ -406,7 +411,8 @@ namespace BepuUtilities.Memory
         }
 
         /// <summary>
-        /// Unpins and drops reference to all memory. Any outstanding buffers will be invalidated silently.
+        /// Returns all allocations in the pool to sources. Any outstanding buffers will be invalidated silently.
+        /// The pool will remain in a usable state after clearing.
         /// </summary>
         public void Clear()
         {
@@ -416,6 +422,10 @@ namespace BepuUtilities.Memory
             }
         }
 
+        /// <summary>
+        /// Returns all allocations in the pool to sources. Any outstanding buffers will be invalidated silently.
+        /// Equivalent to <see cref="Clear"/> for <see cref="BufferPool"/>.
+        /// </summary>
         void IDisposable.Dispose()
         {
             Clear();

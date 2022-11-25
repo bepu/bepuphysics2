@@ -274,8 +274,8 @@ namespace BepuPhysics
             Debug.Assert(workerTraversalResults.Allocated && workerTraversalResults.Length > workerIndex);
             ref var results = ref workerTraversalResults[workerIndex];
             results.Islands = new QuickList<IslandScaffold>(64, threadPool);
-            var bodyIndices = new QuickList<int>(Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count), threadPool);
-            var constraintHandles = new QuickList<ConstraintHandle>(Math.Min(InitialIslandConstraintCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), threadPool);
+            var bodyIndices = new QuickList<int>(int.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count), threadPool);
+            var constraintHandles = new QuickList<ConstraintHandle>(int.Max(8, int.Min(InitialIslandConstraintCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1)), threadPool);
 
             TraversalTest<TPredicate> traversalTest;
             traversalTest.Predicate = predicate;

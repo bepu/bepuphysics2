@@ -401,11 +401,11 @@ namespace BepuPhysics
             //var applyTime = 1e6 * (applyEnd - applyStart) / Stopwatch.Frequency;
             //Console.WriteLine($"Apply time (us): {applyTime}, per applied: {applyTime / compressionsApplied}, (maximum: {maximumCompressionCount})");
 
-            for (int i = 0; i < workerCount; ++i)
-            {
-                //Be careful: the jobs may require resizes on the compression count list. That requires the use of per-worker pools.
-                workerCompressions[i].Dispose((threadDispatcher == null ? pool : threadDispatcher.WorkerPools[i]));
-            }
+            if (threadDispatcher == null)
+                workerCompressions[0].Dispose(pool);
+            else
+                threadDispatcher.WorkerPools.Clear(); //Ephemeral worker pools, don't have to be careful about deallocating individual things!
+            
             pool.Return(ref workerCompressions);
         }
 

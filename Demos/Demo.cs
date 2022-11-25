@@ -44,7 +44,7 @@ namespace Demos
 
             //It may be worth using something like hwloc or CPUID to extract extra information to reason about.
             var targetThreadCount = Math.Max(1, Environment.ProcessorCount > 4 ? Environment.ProcessorCount - 2 : Environment.ProcessorCount - 1);
-            ThreadDispatcher = new ThreadDispatcher(targetThreadCount, BufferPool);
+            ThreadDispatcher = new ThreadDispatcher(targetThreadCount);
         }
 
         public virtual void LoadGraphicalContent(ContentArchive content, RenderSurface surface)
@@ -105,8 +105,8 @@ namespace Demos
                 disposed = true;
                 OnDispose();
                 Simulation.Dispose();
-                BufferPool.Clear();
                 ThreadDispatcher.Dispose();
+                BufferPool.Clear();
             }
         }
 

@@ -1,11 +1,12 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace BepuUtilities.Memory
 {
     /// <summary>
     /// Defines a type that is capable of rapidly serving requests for allocation and deallocation of unmanaged memory.
     /// </summary>
-    public interface IUnmanagedMemoryPool
+    public interface IUnmanagedMemoryPool : IDisposable
     {
         /// <summary>
         /// Takes a buffer large enough to contain a number of elements of a given type. Capacity may be larger than requested.
@@ -62,5 +63,10 @@ namespace BepuUtilities.Memory
         /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer.</param>
         void Resize<T>(ref Buffer<T> buffer, int targetSize, int copyCount) where T : unmanaged;
 
+        /// <summary>
+        /// Returns all allocations in the pool to sources. Any outstanding buffers will be invalidated silently.
+        /// The pool will remain in a usable state after clearing.
+        /// </summary>
+        void Clear();
     }
 }

@@ -224,6 +224,7 @@ namespace BepuPhysics.CollisionDetection
                 threadDispatcher.DispatchWorkers(executeRefineAction, null, remainingJobCount);
                 activeRefineContext.CleanUpForRefitAndRefine(Pool);
                 staticRefineContext.CleanUpForRefitAndRefine(Pool);
+                threadDispatcher.WorkerPools.Clear();
                 this.threadDispatcher = null;
             }
             else

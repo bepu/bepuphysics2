@@ -7,16 +7,22 @@ namespace BepuUtilities.Memory;
 /// </summary> 
 /// <remarks>Returns to an <see cref="ArenaPool"/> are not guaranteed to free memory because it does not carry enough information about allocations to do so.
 /// To free up memory after use, the arena pool as a whole must be cleared using <see cref="ArenaPool.Clear"/>.<para/>
-/// Use <see cref="WorkerBufferPools.Clear"/> to clear all pools together.</remarks>
+/// Use <see cref="Clear"/> to clear all pools together.</remarks>
 public class WorkerBufferPools : IDisposable
 {
     ArenaPool[] pools;
     /// <summary>
-    /// Central pool from which subpools allocate.
+    /// Internal pool from which arena pools are allocated from.
     /// </summary>
+    /// <remarks>This pool will be accessed from multiple threads through the arena pools. Accessing it while workers are using the worker pools without using the <see cref="Locker"/> could lead to race conditions.<para/>
+    /// If no external pool was provided to the <see cref="WorkerBufferPools"/> constructor, <see cref="Dispose"/> will dispose the internally created <see cref="BufferPool"/>. If an external pool was provided, calling <see cref="Dispose"/> will not dispose it.</remarks>
     public IUnmanagedMemoryPool Pool { get; private set; }
     /// <summary>
-    /// Locker used by subpools to control access to the central pool.
+    /// True if the backing pool was created by the <see cref="WorkerBufferPools"/> and should be disposed with it, false otherwise.
+    /// </summary>
+    bool poolIsLocallyOwned;
+    /// <summary>
+    /// Locker used by subpools to control access to the backing pool.
     /// </summary>
     public object Locker { get; private set; }
 
@@ -36,27 +42,29 @@ public class WorkerBufferPools : IDisposable
     /// <summary>
     /// Creates a new set of worker pools.
     /// </summary>
-    /// <param name="pool">Central pool from which worker pools allocate from.</param>
+    /// <param name="backingPool">Central pool from which worker pools allocate from. If null, a <see cref="BufferPool"/> will be created. The created pool will be disposed by <see cref="Dispose"/>, but if an external pool is provided, calling <see cref="Dispose"/> will not dispose it.</param>
     /// <param name="initialWorkerCount">Initial number of workers to allocate space for.</param>
     /// <param name="defaultBlockCapacity">Default block capacity in thread pools.</param>
-    public WorkerBufferPools(IUnmanagedMemoryPool pool, int initialWorkerCount, int defaultBlockCapacity = 16384)
+    public WorkerBufferPools(int initialWorkerCount, IUnmanagedMemoryPool backingPool = null, int defaultBlockCapacity = 16384)
     {
-        Pool = pool;
+        poolIsLocallyOwned = backingPool == null;
+        Pool = poolIsLocallyOwned ? new BufferPool() : backingPool;
         Locker = new object();
         pools = new ArenaPool[initialWorkerCount];
         DefaultBlockCapacity = defaultBlockCapacity;
         for (int i = 0; i < pools.Length; ++i)
         {
-            pools[i] = new ArenaPool(pool, defaultBlockCapacity, Locker);
+            pools[i] = new ArenaPool(Pool, defaultBlockCapacity, Locker);
         }
     }
 
     /// <summary>
-    /// Preallocates for a given number of workers.
+    /// Ensures that at least the given amount of memory is available in the given number of worker pools.
     /// </summary>
     /// <param name="workerCount">Number of workers to preallocate for.</param>
     /// <param name="preallocationSize">Capacity to preallocate in the specified worker pools.</param>
-    public void Preallocate(int workerCount, int preallocationSize)
+    /// <remarks>This does not take any locks and should not be called if any other threads may be using any of the involved pools.</remarks>
+    public void EnsureCapacity(int workerCount, int preallocationSize)
     {
         if (workerCount > pools.Length)
         {
@@ -64,27 +72,29 @@ public class WorkerBufferPools : IDisposable
             Array.Resize(ref pools, workerCount);
             for (int i = oldSize; i < pools.Length; ++i)
             {
-                pools[i] = new ArenaPool(Pool, DefaultBlockCapacity);
+                pools[i] = new ArenaPool(Pool, DefaultBlockCapacity, Locker);
             }
         }
         for (int i = 0; i < workerCount; ++i)
         {
-            pools[i].EnsurePreallocatedSpaceUnsafely(preallocationSize);
+            pools[i].EnsureCapacityUnsafely(preallocationSize);
         }
     }
 
     /// <summary>
-    /// Preallocates space in all worker pools.
+    /// Ensures that at least the given amount of memory is available in all worker pools.
     /// </summary>
     /// <param name="preallocationSize">Capacity to preallocate in all worker pools.</param>
-    public void Preallocate(int preallocationSize)
+    /// <remarks>This does not take any locks and should not be called if any other threads may be using any of the involved pools.</remarks>
+    public void EnsureCapacity(int preallocationSize)
     {
-        Preallocate(pools.Length, preallocationSize);
+        EnsureCapacity(pools.Length, preallocationSize);
     }
 
     /// <summary>
     /// Clears all allocations from worker arena pools. Pools can still be used after being cleared.
     /// </summary>
+    /// <remarks>This does not take any locks and should not be called if any other threads may be using any of the involved pools.</remarks>
     public void Clear()
     {
         for (int i = 0; i < pools.Length; ++i)
@@ -96,12 +106,15 @@ public class WorkerBufferPools : IDisposable
     /// <summary>
     /// Disposes all worker arena pools. Pools cannot be used after being disposed.
     /// </summary>
+    /// <remarks>This will dispose the <see cref="Pool"/> only if no external pool was provided to the constructor.</remarks>
     public void Dispose()
     {
         for (int i = 0; i < pools.Length; ++i)
         {
             pools[i].Dispose();
         }
+        if (poolIsLocallyOwned)
+            Pool.Dispose();
     }
 
 

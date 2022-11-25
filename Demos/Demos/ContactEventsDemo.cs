@@ -232,7 +232,7 @@ namespace Demos.Demos
             this.simulation = simulation;
             if (pool == null)
                 pool = simulation.BufferPool;
-            threadPools = threadDispatcher != null ? new WorkerBufferPools(pool, threadDispatcher.ThreadCount) : null;
+            threadPools = threadDispatcher != null ? new WorkerBufferPools(threadDispatcher.ThreadCount) : null;
             simulation.Timestepper.BeforeCollisionDetection += SetFreshnessForCurrentActivityStatus;
             listenerIndices = new CollidableProperty<int>(simulation, pool);
             pendingWorkerAdds = new QuickList<PendingWorkerAdd>[threadDispatcher == null ? 1 : threadDispatcher.ThreadCount];
@@ -773,6 +773,12 @@ namespace Demos.Demos
             renderer.TextBatcher.Write(text.Clear().Append("OnContactAdded, OnContactRemoved, OnStartedTouching, OnTouching, OnStoppedTouching, OnPairCreated, OnPairUpdated, and OnPairEnded."), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
 
             base.Render(renderer, camera, input, text, font);
+        }
+
+        protected override void OnDispose()
+        {
+            base.OnDispose();
+            events.Dispose();
         }
     }
 }

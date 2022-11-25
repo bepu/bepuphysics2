@@ -11,8 +11,8 @@ namespace BepuUtilities.Memory;
 /// Arena allocator built to serve a single thread. Pulls resources from a central buffer pool when necessary.
 /// </summary>
 /// <remarks>Returns to this pool are not guaranteed to free memory because it does not carry enough information about allocations to do so.
-/// To free up memory after use, the arena pool as a whole must be cleared using <see cref="ArenaPool.Clear"/>.</remarks>
-public class ArenaPool : IUnmanagedMemoryPool, IDisposable
+/// To free up memory after use, the arena pool as a whole must be cleared using <see cref="Clear"/> or <see cref="Dispose"/>.</remarks>
+public class ArenaPool : IUnmanagedMemoryPool
 {
     /// <summary>
     /// Gets or sets the central pool backing this arena allocator. Resources are pulled from this pool when the thread pool's blocks are depleted.
@@ -89,7 +89,7 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
     /// Ensures that there is a given minimum amount of continguous space available in the pool. This does not acquire a lock to read from the internal pool.
     /// </summary>
     /// <param name="sizeInBytes">Size of the block to use. If negative, <see cref="DefaultBlockCapacity"/> will be used instead.</param>
-    public void EnsurePreallocatedSpaceUnsafely(int sizeInBytes = -1)
+    public void EnsureCapacityUnsafely(int sizeInBytes = -1)
     {
         if (sizeInBytes < 0)
             sizeInBytes = DefaultBlockCapacity;
@@ -119,10 +119,13 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
         outstandingAllocators.Clear();
 #endif
 #endif
-        for (int i = 0; i < blocks.Count; ++i)
+        int index = 0;
+        while (index < blocks.Span.length && blocks.Span[index].Data.Allocated)
         {
-            Pool.Return(ref blocks[i].Data);
+            Pool.ReturnUnsafely(blocks.Span[index].Data.Id);
+            ++index;
         }
+        blocks.Span.Clear(0, blocks.Span.Length);
         blocks.Count = 0;
     }
 
@@ -149,6 +152,7 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
     /// <inheritdoc/>
     public unsafe void TakeAtLeast<T>(int count, out Buffer<T> buffer) where T : unmanaged
     {
+        count = int.Max(1, count);
         var sizeInBytes = Unsafe.SizeOf<T>() * count;
         var blockIndex = blocks.Count - 1;
         if (blocks.Count == 0 || !blocks[blockIndex].TryAllocate(sizeInBytes, out Buffer<byte> allocation))
@@ -224,6 +228,7 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
     public void Take<T>(int count, out Buffer<T> buffer) where T : unmanaged
     {
         TakeAtLeast(count, out buffer);
+        buffer.length = count;
     }
 
 
@@ -295,7 +300,6 @@ public class ArenaPool : IUnmanagedMemoryPool, IDisposable
     {
         //Only do anything if the new size is actually different from the current size.
         Debug.Assert(copyCount <= targetSize && copyCount <= buffer.Length, "Can't copy more elements than exist in the source or target buffers.");
-        targetSize = GetCapacityForCount<T>(targetSize);
         if (!buffer.Allocated)
         {
             Debug.Assert(buffer.Length == 0, "If a buffer is pointing at null, then it should be default initialized and have a length of zero too.");
