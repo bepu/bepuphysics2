@@ -138,7 +138,7 @@ namespace BepuPhysics.Trees
         }
         int stackPointer;
         Buffer<StackEntry> stack;
-        IUnmanagedMemoryPool pool;
+        BufferPool pool;
         int batchRayCount;
         Buffer<TreeRay> batchRays;
         Buffer<RayData> batchOriginalRays;
@@ -157,7 +157,7 @@ namespace BepuPhysics.Trees
         /// <param name="rayCapacity">Maximum number of rays to execute in each traversal.
         /// This should typically be chosen as the highest value which avoids spilling data out of L2 cache.</param>
         /// <param name="treeDepthForPreallocation">Tree depth to preallocate ray stack space for. If a traversal finds nodes deeper than this, a dynamic resize will be triggered.</param>
-        public RayBatcher(IUnmanagedMemoryPool pool, int rayCapacity = 2048, int treeDepthForPreallocation = 24) : this()
+        public RayBatcher(BufferPool pool, int rayCapacity = 2048, int treeDepthForPreallocation = 24) : this()
         {
             this.pool = pool;
             batchRayCount = 0;

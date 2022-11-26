@@ -19,7 +19,7 @@ namespace BepuPhysics
         //Bodies and statics each have 'handle spaces', like namespaces. A body and static can have the same integer valued handle.
         //So, we need to have two different buffers for data.
         Simulation simulation;
-        IUnmanagedMemoryPool pool;
+        BufferPool pool;
         Buffer<T> bodyData;
         Buffer<T> staticData;
 
@@ -29,7 +29,7 @@ namespace BepuPhysics
         /// Constructs a new collection to store handle-aligned body properties. Assumes the Initialize function will be called later to provide the Bodies collection.
         /// </summary>
         /// <param name="pool">Pool from which to pull internal resources. If null, uses the later Initialize-provided Bodies pool.</param>
-        public CollidableProperty(IUnmanagedMemoryPool pool = null)
+        public CollidableProperty(BufferPool pool = null)
         {
             this.pool = pool;
         }
@@ -39,7 +39,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="simulation">Simulation to track.</param>
         /// <param name="pool">Pool from which to pull internal resources. If null, uses the Simulation pool.</param>
-        public CollidableProperty(Simulation simulation, IUnmanagedMemoryPool pool = null)
+        public CollidableProperty(Simulation simulation, BufferPool pool = null)
         {
             this.simulation = simulation;
             this.pool = pool == null ? simulation.BufferPool : pool;

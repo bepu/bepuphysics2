@@ -50,7 +50,7 @@ namespace BepuPhysics.CollisionDetection
             //Storing this stuff by constraint batch is an option, but it would require more prefiltering that isn't free.
             int minimumCapacityPerBatch;
 
-            public RemovalCache(IUnmanagedMemoryPool pool, int batchCapacity, int minimumCapacityPerBatch)
+            public RemovalCache(BufferPool pool, int batchCapacity, int minimumCapacityPerBatch)
             {
                 this.minimumCapacityPerBatch = minimumCapacityPerBatch;
 
@@ -71,7 +71,7 @@ namespace BepuPhysics.CollisionDetection
                 }
                 return -1;
             }
-            public int AllocateSpaceForTargets(TypeBatchIndex typeBatchIndex, int constraintHandleCount, int perBodyRemovalCount, IUnmanagedMemoryPool pool)
+            public int AllocateSpaceForTargets(TypeBatchIndex typeBatchIndex, int constraintHandleCount, int perBodyRemovalCount, BufferPool pool)
             {
                 var index = IndexOf(typeBatchIndex);
                 if (index >= 0)
@@ -95,7 +95,7 @@ namespace BepuPhysics.CollisionDetection
                 return index;
             }
 
-            public void Dispose(IUnmanagedMemoryPool pool)
+            public void Dispose(BufferPool pool)
             {
                 pool.Return(ref TypeBatches);
                 for (int i = 0; i < BatchCount; ++i)
@@ -113,10 +113,10 @@ namespace BepuPhysics.CollisionDetection
         struct WorkerCache
         {
 
-            internal IUnmanagedMemoryPool pool;
+            internal BufferPool pool;
             public RemovalCache Removals;
 
-            public WorkerCache(IUnmanagedMemoryPool pool, int batchCapacity, int minimumCapacityPerBatch)
+            public WorkerCache(BufferPool pool, int batchCapacity, int minimumCapacityPerBatch)
             {
                 this.pool = pool;
                 Debug.Assert(minimumCapacityPerBatch > 0);

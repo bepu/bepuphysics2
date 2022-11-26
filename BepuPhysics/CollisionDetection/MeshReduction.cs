@@ -34,7 +34,7 @@ namespace BepuPhysics.CollisionDetection
 
         public void* Mesh; //TODO: This is not flexible with respect to different mesh types. Not a problem right now, but it will be in the future.
 
-        public void Create(int childManifoldCount, IUnmanagedMemoryPool pool)
+        public void Create(int childManifoldCount, BufferPool pool)
         {
             Inner.Create(childManifoldCount, pool);
         }
@@ -286,7 +286,7 @@ namespace BepuPhysics.CollisionDetection
         struct ChildEnumerator : IBreakableForEach<int>
         {
             public QuickList<int> List;
-            public IUnmanagedMemoryPool Pool;
+            public BufferPool Pool;
             public bool LoopBody(int i)
             {
                 List.Allocate(Pool) = i;
@@ -295,7 +295,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         public unsafe static void ReduceManifolds(ref Buffer<Triangle> continuationTriangles, ref Buffer<NonconvexReductionChild> continuationChildren, int start, int count,
-           bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation, Mesh* mesh, IUnmanagedMemoryPool pool)
+           bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation, Mesh* mesh, BufferPool pool)
         {
             //Before handing responsibility off to the nonconvex reduction, make sure that no contacts create nasty 'bumps' at the border of triangles.
             //Bumps can occur when an isolated triangle test detects a contact pointing outward, like when a box hits the side. This is fine when the triangle truly is isolated,

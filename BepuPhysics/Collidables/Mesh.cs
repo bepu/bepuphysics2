@@ -11,7 +11,7 @@ namespace BepuPhysics.Collidables
 {
     public unsafe struct ShapeTreeOverlapEnumerator<TSubpairOverlaps> : IBreakableForEach<int> where TSubpairOverlaps : ICollisionTaskSubpairOverlaps
     {
-        public IUnmanagedMemoryPool Pool;
+        public BufferPool Pool;
         public void* Overlaps;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool LoopBody(int i)
@@ -22,7 +22,7 @@ namespace BepuPhysics.Collidables
     }
     public unsafe struct ShapeTreeSweepLeafTester<TOverlaps> : ISweepLeafTester where TOverlaps : ICollisionTaskSubpairOverlaps
     {
-        public IUnmanagedMemoryPool Pool;
+        public BufferPool Pool;
         public void* Overlaps;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void TestLeaf(int leafIndex, ref float maximumT)
@@ -72,7 +72,7 @@ namespace BepuPhysics.Collidables
         /// <param name="scale">Scale to apply to all vertices at runtime.
         /// Note that the scale is not baked into the triangles or acceleration structure; the same set of triangles and acceleration structure can be used across multiple Mesh instances with different scales.</param>
         /// <param name="pool">Pool used to allocate acceleration structures.</param>
-        public Mesh(Buffer<Triangle> triangles, Vector3 scale, IUnmanagedMemoryPool pool) : this()
+        public Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool) : this()
         {
             Triangles = triangles;
             Tree = new Tree(pool, triangles.Length);
@@ -94,7 +94,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="data">Data to load the mesh from.</param>
         /// <param name="pool">Pool to create the mesh with.</param>
-        public unsafe Mesh(Span<byte> data, IUnmanagedMemoryPool pool)
+        public unsafe Mesh(Span<byte> data, BufferPool pool)
         {
             if (data.Length < 16)
                 throw new ArgumentException("Data is not large enough to contain a header.");
@@ -192,7 +192,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public readonly ShapeBatch CreateShapeBatch(IUnmanagedMemoryPool pool, int initialCapacity, Shapes shapeBatches)
+        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new HomogeneousCompoundShapeBatch<Mesh, Triangle, TriangleWide>(pool, initialCapacity);
         }
@@ -273,7 +273,7 @@ namespace BepuPhysics.Collidables
             hitHandler = leafTester.HitHandler;
         }
 
-        public readonly unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, IUnmanagedMemoryPool pool, Shapes shapes, ref TOverlaps overlaps)
+        public readonly unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
         {
@@ -294,7 +294,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, IUnmanagedMemoryPool pool, Shapes shapes, void* overlaps)
+        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             var scaledMin = min * inverseScale;
@@ -470,7 +470,7 @@ namespace BepuPhysics.Collidables
         /// Returns the mesh's resources to a buffer pool.
         /// </summary>
         /// <param name="bufferPool">Pool to return the mesh's resources to.</param>
-        public void Dispose(IUnmanagedMemoryPool bufferPool)
+        public void Dispose(BufferPool bufferPool)
         {
             bufferPool.Return(ref Triangles);
             Tree.Dispose(bufferPool);

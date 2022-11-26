@@ -54,7 +54,7 @@ namespace BepuPhysics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void Allocate<TBodyReferenceGetter>(Span<BodyHandle> dynamicBodyHandles, Bodies bodies,
-            IUnmanagedMemoryPool pool, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity)
+            BufferPool pool, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity)
             where TBodyReferenceGetter : struct, IBodyReferenceGetter
         {
             EnsureCapacity(Math.Max(dynamicBodyConstraintCounts.Count + dynamicBodyHandles.Length, minimumBodyCapacity), pool);
@@ -84,7 +84,7 @@ namespace BepuPhysics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AllocateForInactive(Span<BodyHandle> dynamicBodyHandles, Bodies bodies,
-          IUnmanagedMemoryPool pool, int minimumBodyCapacity = 8)
+          BufferPool pool, int minimumBodyCapacity = 8)
         {
             Allocate(dynamicBodyHandles, bodies, pool, new InactiveSetGetter(), minimumBodyCapacity);
         }
@@ -239,7 +239,7 @@ namespace BepuPhysics
             Helpers.Swap(ref dynamicBodyConstraintCounts.Values[indexA], ref dynamicBodyConstraintCounts.Values[indexB]);
         }
 
-        internal static void CreateFrom(ref SequentialFallbackBatch sourceBatch, IUnmanagedMemoryPool pool, out SequentialFallbackBatch targetBatch)
+        internal static void CreateFrom(ref SequentialFallbackBatch sourceBatch, BufferPool pool, out SequentialFallbackBatch targetBatch)
         {
             //Copy over non-buffer state. This copies buffer references pointlessly, but that doesn't matter.
             targetBatch.dynamicBodyConstraintCounts = sourceBatch.dynamicBodyConstraintCounts;
@@ -251,7 +251,7 @@ namespace BepuPhysics
             sourceBatch.dynamicBodyConstraintCounts.Table.CopyTo(0, targetBatch.dynamicBodyConstraintCounts.Table, 0, sourceBatch.dynamicBodyConstraintCounts.TableMask + 1);
         }
 
-        internal void EnsureCapacity(int bodyCapacity, IUnmanagedMemoryPool pool)
+        internal void EnsureCapacity(int bodyCapacity, BufferPool pool)
         {
             if (dynamicBodyConstraintCounts.Keys.Allocated)
             {
@@ -265,7 +265,7 @@ namespace BepuPhysics
 
         }
 
-        public void Compact(IUnmanagedMemoryPool pool)
+        public void Compact(BufferPool pool)
         {
             if (dynamicBodyConstraintCounts.Keys.Allocated)
             {
@@ -274,7 +274,7 @@ namespace BepuPhysics
         }
 
 
-        public void Dispose(IUnmanagedMemoryPool pool)
+        public void Dispose(BufferPool pool)
         {
             if (dynamicBodyConstraintCounts.Keys.Allocated)
             {

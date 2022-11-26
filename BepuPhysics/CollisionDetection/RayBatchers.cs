@@ -54,7 +54,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="rayTester">Ray tester used to test leaves found by the broad phase tree traversals.</param>
         /// <param name="batcherRayCapacity">Maximum number of rays to execute in each traversal.
         /// This should typically be chosen as the highest value which avoids spilling data out of L2 cache.</param>
-        public BroadPhaseRayBatcher(IUnmanagedMemoryPool pool, BroadPhase broadPhase, TRayTester rayTester, int batcherRayCapacity = 2048)
+        public BroadPhaseRayBatcher(BufferPool pool, BroadPhase broadPhase, TRayTester rayTester, int batcherRayCapacity = 2048)
         {
             activeTester = new LeafTester { Leaves = broadPhase.ActiveLeaves, RayTester = rayTester };
             staticTester = new LeafTester { Leaves = broadPhase.StaticLeaves, RayTester = rayTester };
@@ -163,7 +163,7 @@ namespace BepuPhysics.CollisionDetection
 
         BroadPhaseRayBatcher<Dispatcher> batcher;
 
-        public SimulationRayBatcher(IUnmanagedMemoryPool pool, Simulation simulation, TRayHitHandler hitHandler, int batcherRayCapacity = 2048)
+        public SimulationRayBatcher(BufferPool pool, Simulation simulation, TRayHitHandler hitHandler, int batcherRayCapacity = 2048)
         {
             Dispatcher dispatcher = default;
             dispatcher.Simulation = simulation;

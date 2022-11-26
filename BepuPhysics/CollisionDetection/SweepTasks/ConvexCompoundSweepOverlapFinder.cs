@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     {
         unsafe void FindOverlaps(ref TShapeA shapeA, Quaternion orientationA, in BodyVelocity velocityA,
               ref TCompoundB compoundB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
-              Shapes shapes, IUnmanagedMemoryPool pool, out ChildOverlapsCollection overlaps);
+              Shapes shapes, BufferPool pool, out ChildOverlapsCollection overlaps);
     }
 
     public struct ConvexCompoundSweepOverlapFinder<TShapeA, TCompoundB> : IConvexCompoundSweepOverlapFinder<TShapeA, TCompoundB>
@@ -22,7 +22,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     {
         public unsafe void FindOverlaps(ref TShapeA shapeA, Quaternion orientationA, in BodyVelocity velocityA,
             ref TCompoundB compoundB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
-            Shapes shapes, IUnmanagedMemoryPool pool, out ChildOverlapsCollection overlaps)
+            Shapes shapes, BufferPool pool, out ChildOverlapsCollection overlaps)
         {
             BoundingBoxHelpers.GetLocalBoundingBoxForSweep(ref shapeA, orientationA, velocityA, offsetB, orientationB, velocityB, maximumT, out var sweep, out var min, out var max);
             

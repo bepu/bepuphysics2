@@ -17,7 +17,7 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         /// <param name="slots">Number of subpair slots to include in the continuation.</param>
         /// <param name="pool">Pool to take resources from.</param>
-        void Create(int slots, IUnmanagedMemoryPool pool);
+        void Create(int slots, BufferPool pool);
 
         /// <summary>
         /// Handles what to do next when the child pair has finished execution and the resulting manifold is available.
@@ -140,7 +140,7 @@ namespace BepuPhysics.CollisionDetection
         public IdPool IdPool;
         const int InitialCapacity = 64;
 
-        public ref T CreateContinuation(int slotsInContinuation, IUnmanagedMemoryPool pool, out int index)
+        public ref T CreateContinuation(int slotsInContinuation, BufferPool pool, out int index)
         {
             if (!Continuations.Allocated)
             {
@@ -186,7 +186,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
 
-        internal void Dispose(IUnmanagedMemoryPool pool)
+        internal void Dispose(BufferPool pool)
         {
             if (Continuations.Allocated)
             {

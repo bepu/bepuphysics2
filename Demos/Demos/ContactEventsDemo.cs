@@ -215,7 +215,7 @@ namespace Demos.Demos
             listeners = new Listener[initialListenerCapacity];
         }
 
-        IUnmanagedMemoryPool GetPoolForWorker(int workerIndex)
+        BufferPool GetPoolForWorker(int workerIndex)
         {
             return threadDispatcher == null ? pool : threadDispatcher.WorkerPools[workerIndex];
         }

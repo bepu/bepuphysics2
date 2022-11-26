@@ -27,7 +27,7 @@ namespace BepuPhysics.CollisionDetection
 
         public Mesh* Mesh; //TODO: This is not flexible with respect to different mesh types. Not a problem right now, but it will be in the future.
 
-        public void Create(int childManifoldCount, IUnmanagedMemoryPool pool)
+        public void Create(int childManifoldCount, BufferPool pool)
         {
             Inner.Create(childManifoldCount, pool);
         }

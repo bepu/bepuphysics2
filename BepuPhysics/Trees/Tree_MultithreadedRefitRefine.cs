@@ -164,7 +164,7 @@ namespace BepuPhysics.Trees
 
             unsafe void CollectNodesForMultithreadedRefit(int nodeIndex,
                 int multithreadingLeafCountThreshold, ref QuickList<int> refitAndMarkTargets,
-                int refinementLeafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool, IUnmanagedMemoryPool threadPool)
+                int refinementLeafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool, BufferPool threadPool)
             {
                 ref var node = ref Tree.Nodes[nodeIndex];
                 ref var metanode = ref Tree.Metanodes[nodeIndex];
@@ -201,7 +201,7 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            public unsafe void ExecuteRefitAndMarkJob(IUnmanagedMemoryPool threadPool, int workerIndex, int refitIndex)
+            public unsafe void ExecuteRefitAndMarkJob(BufferPool threadPool, int workerIndex, int refitIndex)
             {
                 var nodeIndex = RefitNodes[refitIndex];
                 bool shouldUseMark;
@@ -327,7 +327,7 @@ namespace BepuPhysics.Trees
 
             }
 
-            public unsafe void ExecuteRefineJob(ref QuickList<int> subtreeReferences, ref QuickList<int> treeletInternalNodes, ref BinnedResources resources, IUnmanagedMemoryPool threadPool, int refineIndex)
+            public unsafe void ExecuteRefineJob(ref QuickList<int> subtreeReferences, ref QuickList<int> treeletInternalNodes, ref BinnedResources resources, BufferPool threadPool, int refineIndex)
             {
                 Tree.BinnedRefine(RefinementTargets[refineIndex], ref subtreeReferences, MaximumSubtrees, ref treeletInternalNodes, ref resources, threadPool);
                 subtreeReferences.Count = 0;

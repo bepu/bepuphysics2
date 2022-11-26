@@ -12,7 +12,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public interface ICollisionTaskSubpairOverlaps
     {
-        ref int Allocate(IUnmanagedMemoryPool pool);
+        ref int Allocate(BufferPool pool);
     }
 
     public interface ICollisionTaskOverlaps<TSubpairOverlaps> where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
@@ -27,7 +27,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public int ChildIndex;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe ref int Allocate(IUnmanagedMemoryPool pool)
+        public unsafe ref int Allocate(BufferPool pool)
         {
             if (Overlaps.Length == Count)
             {
@@ -37,7 +37,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose(IUnmanagedMemoryPool pool)
+        public void Dispose(BufferPool pool)
         {
             if (Overlaps.Allocated)
                 pool.Return(ref Overlaps);
@@ -51,7 +51,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         Buffer<(int start, int count)> pairRegions;
         int pairCount;
         int subpairCount;
-        public CompoundPairOverlaps(IUnmanagedMemoryPool pool, int pairCapacity, int subpairCapacity)
+        public CompoundPairOverlaps(BufferPool pool, int pairCapacity, int subpairCapacity)
         {
             this.pairCount = 0;
             this.subpairCount = 0;
@@ -84,7 +84,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             this.pairQueries.Slice(region.start, region.count, out pairQueries);
         }
 
-        public void Dispose(IUnmanagedMemoryPool pool)
+        public void Dispose(BufferPool pool)
         {
             for (int i = 0; i < subpairCount; ++i)
             {

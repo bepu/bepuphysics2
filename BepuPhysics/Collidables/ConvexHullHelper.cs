@@ -72,7 +72,7 @@ namespace BepuPhysics.Collidables
             face.OriginalVertexMapping = OriginalVertexMapping;
         }
 
-        public void Dispose(IUnmanagedMemoryPool pool)
+        public void Dispose(BufferPool pool)
         {
             pool.Return(ref OriginalVertexMapping);
             pool.Return(ref FaceVertexIndices);
@@ -489,14 +489,14 @@ namespace BepuPhysics.Collidables
         }
 
 
-        static void AddFace(ref QuickList<EarlyFace> faces, IUnmanagedMemoryPool pool, Vector3 normal, QuickList<int> vertexIndices)
+        static void AddFace(ref QuickList<EarlyFace> faces, BufferPool pool, Vector3 normal, QuickList<int> vertexIndices)
         {
             ref var face = ref faces.Allocate(pool);
             face = new EarlyFace { Normal = normal, VertexIndices = new QuickList<int>(vertexIndices.Count, pool) };
             face.VertexIndices.AddRangeUnsafely(vertexIndices);
         }
 
-        static void AddFaceToEdgesAndTestList(IUnmanagedMemoryPool pool,
+        static void AddFaceToEdgesAndTestList(BufferPool pool,
             ref QuickList<int> reducedFaceIndices,
             ref QuickList<EdgeToTest> edgesToTest,
             ref QuickDictionary<EdgeEndpoints, EdgeFaceIndices, EdgeEndpoints> facesForEdges,
@@ -534,7 +534,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        static void AddIfNotPresent(ref QuickList<int> list, int value, IUnmanagedMemoryPool pool)
+        static void AddIfNotPresent(ref QuickList<int> list, int value, BufferPool pool)
         {
             if (!list.Contains(value))
                 list.Allocate(pool) = value;
@@ -600,7 +600,7 @@ namespace BepuPhysics.Collidables
         ///// <param name="points">Point set to compute the convex hull of.</param>
         ///// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
         ///// <param name="hullData">Convex hull of the input point set.</param>
-        //public static void ComputeHull(Span<Vector3> points, IUnmanagedMemoryPool pool, out HullData hullData)
+        //public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
         //{
         //    ComputeHull(points, pool, out hullData, out _);
         //}
@@ -612,7 +612,7 @@ namespace BepuPhysics.Collidables
         /// <param name="points">Point set to compute the convex hull of.</param>
         /// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
         /// <param name="hullData">Convex hull of the input point set.</param>
-        public static void ComputeHull(Span<Vector3> points, IUnmanagedMemoryPool pool, out HullData hullData)//, out List<DebugStep> steps)
+        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)//, out List<DebugStep> steps)
         {
             //steps = new List<DebugStep>();
             if (points.Length <= 0)
@@ -1031,7 +1031,7 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Pool used to allocate resources for the hullShape.</param>
         /// <param name="hullShape">Convex hull shape created from the input data.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
-        public static void CreateShape(Span<Vector3> points, HullData hullData, IUnmanagedMemoryPool pool, out Vector3 center, out ConvexHull hullShape)
+        public static void CreateShape(Span<Vector3> points, HullData hullData, BufferPool pool, out Vector3 center, out ConvexHull hullShape)
         {
             hullShape = default;
             if (hullData.OriginalVertexMapping.Length < 3)
@@ -1146,7 +1146,7 @@ namespace BepuPhysics.Collidables
         /// <param name="hullData">Intermediate hull data that got processed into the convex hull.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
         /// <param name="convexHull">Convex hull shape of the input point set.</param>
-        public static void CreateShape(Span<Vector3> points, IUnmanagedMemoryPool pool, out HullData hullData, out Vector3 center, out ConvexHull convexHull)
+        public static void CreateShape(Span<Vector3> points, BufferPool pool, out HullData hullData, out Vector3 center, out ConvexHull convexHull)
         {
             ComputeHull(points, pool, out hullData);
             CreateShape(points, hullData, pool, out center, out convexHull);
@@ -1159,7 +1159,7 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Buffer pool used for temporary allocations and the output data structures.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
         /// <param name="convexHull">Convex hull shape of the input point set.</param>
-        public static void CreateShape(Span<Vector3> points, IUnmanagedMemoryPool pool, out Vector3 center, out ConvexHull convexHull)
+        public static void CreateShape(Span<Vector3> points, BufferPool pool, out Vector3 center, out ConvexHull convexHull)
         {
             ComputeHull(points, pool, out var hullData);
             CreateShape(points, hullData, pool, out center, out convexHull);
@@ -1224,7 +1224,7 @@ namespace BepuPhysics.Collidables
         /// <param name="transform">Transform to apply to the hull points.</param>
         /// <param name="pool">Pool from which to allocate the new hull's points and bounding planes buffers.</param>
         /// <param name="target">Target convex hull to copy into. FaceVertexIndices and FaceToVertexIndicesStart buffers are reused from the source.</param>
-        public static void CreateTransformedShallowCopy(in ConvexHull source, in Matrix3x3 transform, IUnmanagedMemoryPool pool, out ConvexHull target)
+        public static void CreateTransformedShallowCopy(in ConvexHull source, in Matrix3x3 transform, BufferPool pool, out ConvexHull target)
         {
             pool.Take(source.Points.Length, out target.Points);
             pool.Take(source.BoundingPlanes.Length, out target.BoundingPlanes);
@@ -1240,7 +1240,7 @@ namespace BepuPhysics.Collidables
         /// <param name="transform">Transform to apply to the hull points.</param>
         /// <param name="pool">Pool from which to allocate the new hull's buffers.</param>
         /// <param name="target">Target convex hull to copy into.</param>
-        public static void CreateTransformedCopy(in ConvexHull source, in Matrix3x3 transform, IUnmanagedMemoryPool pool, out ConvexHull target)
+        public static void CreateTransformedCopy(in ConvexHull source, in Matrix3x3 transform, BufferPool pool, out ConvexHull target)
         {
             pool.Take(source.Points.Length, out target.Points);
             pool.Take(source.BoundingPlanes.Length, out target.BoundingPlanes);

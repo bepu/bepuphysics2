@@ -83,7 +83,7 @@ namespace BepuPhysics.Trees
         /// </summary>
         /// <param name="pool">Buffer pool to use to allocate resources in the tree.</param>
         /// <param name="initialLeafCapacity">Initial number of leaves to allocate room for.</param>
-        public unsafe Tree(IUnmanagedMemoryPool pool, int initialLeafCapacity = 4096) : this()
+        public unsafe Tree(BufferPool pool, int initialLeafCapacity = 4096) : this()
         {
             if (initialLeafCapacity <= 0)
                 throw new ArgumentException("Initial leaf capacity must be positive.");
@@ -97,7 +97,7 @@ namespace BepuPhysics.Trees
         /// </summary>
         /// <param name="data">Data to load into the tree.</param>
         /// <param name="pool">Pool to use to create the tree.</param>
-        public Tree(Span<byte> data, IUnmanagedMemoryPool pool)
+        public Tree(Span<byte> data, BufferPool pool)
         {
             if (data.Length <= 4)
                 throw new ArgumentException($"Data is only {data.Length} bytes long; that's too small for even a header.");
@@ -171,7 +171,7 @@ namespace BepuPhysics.Trees
         /// </summary>
         /// <param name="pool">Pool from which to take and return resources.</param>
         /// <param name="targetLeafSlotCount">The desired number of available leaf slots.</param>
-        public void Resize(IUnmanagedMemoryPool pool, int targetLeafSlotCount)
+        public void Resize(BufferPool pool, int targetLeafSlotCount)
         {
             //Note that it's not safe to resize below the size of potentially used leaves. If the user wants to go smaller, they'll need to explicitly deal with the leaves somehow first.
             var leafCapacityForTarget = BufferPool.GetCapacityForCount<Leaf>(Math.Max(LeafCount, targetLeafSlotCount));
@@ -217,7 +217,7 @@ namespace BepuPhysics.Trees
         /// </summary>
         /// <param name="pool">Pool to return resources to.</param>
         /// <remarks>Disposed trees can be reused if EnsureCapacity or Resize is used to rehydrate them.</remarks>
-        public void Dispose(IUnmanagedMemoryPool pool)
+        public void Dispose(BufferPool pool)
         {
             Debug.Assert(Nodes.Allocated == Leaves.Allocated && Nodes.Allocated == Metanodes.Allocated, "Nodes and leaves should have consistent lifetimes.");
             if (Nodes.Allocated)

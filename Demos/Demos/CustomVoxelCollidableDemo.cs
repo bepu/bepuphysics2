@@ -49,7 +49,7 @@ namespace Demos.Demos
 
         public readonly int ChildCount => VoxelIndices.Count;
 
-        public Voxels(QuickList<Vector3> voxelIndices, Vector3 voxelSize, IUnmanagedMemoryPool pool)
+        public Voxels(QuickList<Vector3> voxelIndices, Vector3 voxelSize, BufferPool pool)
         {
             VoxelIndices = voxelIndices;
             VoxelSize = voxelSize;
@@ -70,7 +70,7 @@ namespace Demos.Demos
             pool.Return(ref bounds);
         }
 
-        public readonly ShapeBatch CreateShapeBatch(IUnmanagedMemoryPool pool, int initialCapacity, Shapes shapeBatches)
+        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             //Shapes types are responsible for informing the shape system how to create a batch for them.
             //Convex shapes will return a ConvexShapeBatch<TShape>, compound shapes a CompoundShapeBatch<TShape>,
@@ -206,7 +206,7 @@ namespace Demos.Demos
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, IUnmanagedMemoryPool pool, Shapes shapes, ref TOverlaps overlaps)
+        public readonly unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
              where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
              where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
         {
@@ -226,7 +226,7 @@ namespace Demos.Demos
             }
         }
 
-        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, IUnmanagedMemoryPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps
+        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             //Similar to the non-swept FindLocalOverlaps function above, this just adds the overlaps to the provided collection.
             //Some unfortunate loss of type information due to some language limitations around generic pointers- pretend the overlaps pointer has type TOverlaps*.
@@ -237,7 +237,7 @@ namespace Demos.Demos
             Tree.Sweep(min, max, sweep, maximumT, ref enumerator);
         }
 
-        public void Dispose(IUnmanagedMemoryPool pool)
+        public void Dispose(BufferPool pool)
         {
             Tree.Dispose(pool);
             VoxelIndices.Dispose(pool);

@@ -28,7 +28,7 @@ namespace BepuPhysics.Collidables
         /// <returns>Shape batch for the shape type.</returns>
         /// <remarks>This is typically used internally to initialize new shape collections in response to shapes being added. It is not likely to be useful outside of the engine.
         /// Ideally, this would be implemented as a static abstract, but those aren't available yet.</remarks>
-        ShapeBatch CreateShapeBatch(IUnmanagedMemoryPool pool, int initialCapacity, Shapes shapeBatches);
+        ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches);
     }
 
     //Note that the following bounds functions require only an orientation because the effect of the position on the bounding box is the same for all shapes.
@@ -144,7 +144,7 @@ namespace BepuPhysics.Collidables
         /// Returns all resources used by the shape instance to the given pool.
         /// </summary>
         /// <param name="pool">Pool to return shape resources to.</param>
-        void Dispose(IUnmanagedMemoryPool pool);
+        void Dispose(BufferPool pool);
     }
 
     /// <summary>
@@ -208,7 +208,7 @@ namespace BepuPhysics.Collidables
         /// Returns all resources used by the shape instance to the given pool.
         /// </summary>
         /// <param name="pool">Pool to return shape resources to.</param>
-        void Dispose(IUnmanagedMemoryPool pool);
+        void Dispose(BufferPool pool);
     }
 
     /// <summary>

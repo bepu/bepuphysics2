@@ -245,7 +245,7 @@ namespace BepuPhysics.Trees
         }
 
 
-        public unsafe void SweepBuild(IUnmanagedMemoryPool pool, Buffer<BoundingBox> leafBounds)
+        public unsafe void SweepBuild(BufferPool pool, Buffer<BoundingBox> leafBounds)
         {
             if (leafBounds.Length <= 0)
                 throw new ArgumentException("Length must be positive.");

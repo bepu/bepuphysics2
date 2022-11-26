@@ -339,7 +339,7 @@ namespace BepuPhysics.CollisionDetection
             public PendingConstraintAddCache PendingConstraints;
             public QuickList<int> PendingSetAwakenings;
 
-            public OverlapWorker(int workerIndex, IUnmanagedMemoryPool pool, NarrowPhase<TCallbacks> narrowPhase)
+            public OverlapWorker(int workerIndex, BufferPool pool, NarrowPhase<TCallbacks> narrowPhase)
             {
                 Batcher = new CollisionBatcher<CollisionCallbacks>(pool, narrowPhase.Shapes, narrowPhase.CollisionTaskRegistry, narrowPhase.timestepDuration,
                     new CollisionCallbacks(workerIndex, pool, narrowPhase));

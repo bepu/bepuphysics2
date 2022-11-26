@@ -128,7 +128,7 @@ namespace BepuPhysics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void TryToFindBetterBatchForConstraint(
-            IUnmanagedMemoryPool pool, ref QuickList<Compression> compressions, ref TypeBatch typeBatch, int* bodyHandles, ref ActiveConstraintDynamicBodyHandleCollector handleAccumulator, TypeProcessor typeProcessor, int constraintIndex)
+            BufferPool pool, ref QuickList<Compression> compressions, ref TypeBatch typeBatch, int* bodyHandles, ref ActiveConstraintDynamicBodyHandleCollector handleAccumulator, TypeProcessor typeProcessor, int constraintIndex)
         {
             handleAccumulator.Count = 0;
             Solver.EnumerateConnectedRawBodyReferences(ref typeBatch, constraintIndex, ref handleAccumulator);
@@ -145,7 +145,7 @@ namespace BepuPhysics
         }
 
 
-        unsafe void DoJob(ref AnalysisRegion region, int workerIndex, IUnmanagedMemoryPool pool)
+        unsafe void DoJob(ref AnalysisRegion region, int workerIndex, BufferPool pool)
         {
             ref var compressions = ref this.workerCompressions[workerIndex];
             ref var batch = ref Solver.ActiveSet.Batches[nextBatchIndex];

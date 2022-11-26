@@ -30,7 +30,7 @@ namespace BepuPhysics.CollisionDetection
         public struct CollisionCallbacks : ICollisionCallbacks
         {
             int workerIndex;
-            IUnmanagedMemoryPool pool;
+            BufferPool pool;
             NarrowPhase<TCallbacks> narrowPhase;
 
 
@@ -70,14 +70,14 @@ namespace BepuPhysics.CollisionDetection
                 public IdPool Ids;
                 public Buffer<T> Caches;
 
-                public ContinuationCache(IUnmanagedMemoryPool pool)
+                public ContinuationCache(BufferPool pool)
                 {
                     Ids = new IdPool(32, pool);
                     pool.TakeAtLeast(128, out Caches);
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public ref T Allocate(IUnmanagedMemoryPool pool, out int index)
+                public ref T Allocate(BufferPool pool, out int index)
                 {
                     index = Ids.Take();
                     if (Caches.Length <= index)
@@ -88,13 +88,13 @@ namespace BepuPhysics.CollisionDetection
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Return(int index, IUnmanagedMemoryPool pool)
+                public void Return(int index, BufferPool pool)
                 {
                     Ids.Return(index, pool);
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Dispose(IUnmanagedMemoryPool pool)
+                public void Dispose(BufferPool pool)
                 {
                     Ids.Dispose(pool);
                     pool.Return(ref Caches);
@@ -104,7 +104,7 @@ namespace BepuPhysics.CollisionDetection
             ContinuationCache<DiscretePair> discrete;
             ContinuationCache<ContinuousPair> continuous;
 
-            public CollisionCallbacks(int workerIndex, IUnmanagedMemoryPool pool, NarrowPhase<TCallbacks> narrowPhase)
+            public CollisionCallbacks(int workerIndex, BufferPool pool, NarrowPhase<TCallbacks> narrowPhase)
             {
                 this.pool = pool;
                 this.workerIndex = workerIndex;
