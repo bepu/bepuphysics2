@@ -270,7 +270,6 @@ namespace BepuUtilities.Memory
             return sum;
         }
 
-        bool DEBUGLOCK;
         /// <summary>
         /// Takes a buffer large enough to contain a number of elements of a given type. Capacity may be larger than requested.
         /// </summary>
@@ -280,13 +279,11 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void TakeAtLeast<T>(int count, out Buffer<T> buffer) where T : unmanaged
         {
-            Debug.Assert(!DEBUGLOCK); DEBUGLOCK = true;
             //Avoid returning a zero length span because 1 byte / Unsafe.SizeOf<T>() happens to be zero.
             if (count == 0)
                 count = 1;
             TakeForPower(SpanHelper.GetContainingPowerOf2(count * Unsafe.SizeOf<T>()), out var rawBuffer);
             buffer = rawBuffer.As<T>();
-            Debug.Assert(DEBUGLOCK); DEBUGLOCK = false;
         }
 
         /// <summary>
@@ -325,10 +322,8 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ReturnUnsafely(int id)
         {
-            Debug.Assert(!DEBUGLOCK); DEBUGLOCK = true;
             DecomposeId(id, out var powerIndex, out var slotIndex);
             pools[powerIndex].Return(slotIndex);
-            Debug.Assert(DEBUGLOCK); DEBUGLOCK = false;
         }
 
         /// <inheritdoc/>  
