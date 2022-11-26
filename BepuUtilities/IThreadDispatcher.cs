@@ -64,11 +64,7 @@ namespace BepuUtilities
         /// </summary>
         /// <remarks>All usages of these worker pools within the simulation are guaranteed to return thread pool memory before the function returns. In other words,
         /// thread memory pools are used for strictly ephemeral memory, and it will never be held by the simulation outside the scope of a function that 
-        /// takes the IThreadDispatcher as input.
-        /// <para/>
-        /// Further, the simulation will often flush these pools. They should not be relied upon to store long term data;
-        /// consider creating another <see cref="WorkerBufferPools"/> instance, using other <see cref="ArenaPool"/> instances, or using other <see cref="BufferPool"/> instances.</remarks>
-        /// <returns>The set of memory pools associated with the dispatcher's thread workers.</returns>
+        /// takes the IThreadDispatcher as input.</remarks>
         WorkerBufferPools WorkerPools { get; }
     }
 }
