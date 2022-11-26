@@ -404,8 +404,13 @@ namespace BepuPhysics
             if (threadDispatcher == null)
                 workerCompressions[0].Dispose(pool);
             else
-                threadDispatcher.WorkerPools.Clear(); //Ephemeral worker pools, don't have to be careful about deallocating individual things!
-            
+            {
+                for (int i = 0; i < workerCount; ++i)
+                {
+                    workerCompressions[i].Dispose(threadDispatcher.WorkerPools[i]);
+                }
+            }
+
             pool.Return(ref workerCompressions);
         }
 

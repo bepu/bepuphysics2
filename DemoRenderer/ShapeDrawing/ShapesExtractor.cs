@@ -372,7 +372,6 @@ namespace DemoRenderer.ShapeDrawing
             {
                 workerCaches[i].Dispose(looper.Dispatcher.WorkerPools[i]);
             }
-            looper.Dispatcher.WorkerPools.Clear();
             looper.Dispatcher = null;
             pool.Return(ref workerCaches);
         }

@@ -32,9 +32,8 @@ namespace BepuUtilities
         /// Creates a new thread dispatcher with the given number of threads.
         /// </summary>
         /// <param name="threadCount">Number of threads to dispatch on each invocation.</param>
-        /// <param name="backingPool">Central pool from which worker pools allocate from. If null, a buffer pool will be created.</param>
         /// <param name="threadPoolBlockAllocationSize">Size of memory blocks to allocate for thread pools.</param>
-        public ThreadDispatcher(int threadCount, IUnmanagedMemoryPool backingPool = null, int threadPoolBlockAllocationSize = 16384)
+        public ThreadDispatcher(int threadCount, int threadPoolBlockAllocationSize = 16384)
         {
             this.threadCount = threadCount;
             workers = new Worker[threadCount - 1];
@@ -45,7 +44,7 @@ namespace BepuUtilities
                 workers[i].Thread.Start((workers[i].Signal, i + 1));
             }
             finished = new AutoResetEvent(false);
-            WorkerPools = new WorkerBufferPools(threadCount, backingPool, threadPoolBlockAllocationSize);
+            WorkerPools = new WorkerBufferPools(threadCount, threadPoolBlockAllocationSize);
         }
 
         void DispatchThread(int workerIndex)

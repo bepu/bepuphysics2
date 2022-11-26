@@ -41,7 +41,7 @@ static class HeadlessTest
                 if (i % 32 == 0)
                     Console.Write($"{i}, ");
                 var mainPoolSize = demo.BufferPool.GetTotalAllocatedByteCount();
-                var threadPoolSize = demo.ThreadDispatcher.WorkerPools.Pool.GetTotalAllocatedByteCount();
+                var threadPoolSize = demo.ThreadDispatcher.WorkerPools.GetTotalAllocatedByteCount();
                 var totalPoolSize = mainPoolSize + threadPoolSize;
                 if (totalPoolSize > maximumMemoryUsedInPools)
                 {
