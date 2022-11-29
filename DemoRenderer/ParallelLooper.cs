@@ -27,7 +27,7 @@ namespace DemoRenderer
     /// having zero allocations under normal execution makes it easier to notice when the physics simulation itself is allocating inappropriately.</remarks>
     public unsafe class ParallelLooper
     {
-        ThreadDispatcherWorker dispatcherWorker;
+        Action<int> dispatcherWorker;
 
         /// <summary>
         /// Gets or sets the dispatcher used by the looper.
@@ -39,7 +39,7 @@ namespace DemoRenderer
             dispatcherWorker = Worker;
         }
 
-        void Worker(int workerIndex, void* context)
+        void Worker(int workerIndex)
         {
             while (true)
             {
@@ -79,7 +79,7 @@ namespace DemoRenderer
                 this.end = exclusiveEnd;
                 this.iteration = workAction;
                 this.workerDone = workerDone;
-                Dispatcher.DispatchWorkers(dispatcherWorker, null, exclusiveEnd - start);
+                Dispatcher.DispatchWorkers(dispatcherWorker, exclusiveEnd - start);
                 this.iteration = null;
                 this.workerDone = workerDone;
             }

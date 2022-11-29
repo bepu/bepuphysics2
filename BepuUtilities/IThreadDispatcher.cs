@@ -34,27 +34,34 @@ namespace BepuUtilities
         int ThreadCount { get; }
 
         /// <summary>
-        /// Dispatches all the available workers.
+        /// Gets the unmanaged context associated with the current dispatch, if any.
         /// </summary>
-        /// <param name="workerBody">Function pointer to be invoked on every worker. Matches the signature of the <see cref="ThreadDispatcherWorker"/>.</param>
-        /// <param name="context">Pointer to the context to passed to workers, if any.</param>
-        /// <param name="maximumWorkerCount">Maximum number of workers to dispatch.</param>
-        void DispatchWorkers(delegate*<int, void*, void> workerBody, void* context, int maximumWorkerCount = int.MaxValue);
+        /// <remarks>This is intended to help pass information to workers, especially those defined with function pointers that can't just include extra state in closures.</remarks>
+        public void* UnmanagedContext { get; }
+
+        /// <summary>
+        /// Gets the managed context associated with the current dispatch, if any.
+        /// </summary>
+        /// <remarks>This is intended to help pass information to workers, especially those defined with function pointers that can't just include extra state in closures.</remarks>
+        public object ManagedContext { get; }
 
         /// <summary>
         /// Dispatches all the available workers.
         /// </summary>
-        /// <param name="workerBody">Delegate to be invoked on every worker.</param>
-        /// <param name="context">Pointer to the context to passed to workers, if any.</param>
+        /// <param name="workerBody">Function pointer to be invoked on every worker. Matches the signature of the <see cref="ThreadDispatcherWorker"/>.</param>
         /// <param name="maximumWorkerCount">Maximum number of workers to dispatch.</param>
-        void DispatchWorkers(ThreadDispatcherWorker workerBody, void* context, int maximumWorkerCount = int.MaxValue);
+        /// <param name="unmanagedContext">Unmanaged context of the dispatch.</param>
+        /// <param name="managedContext">Managed context of the dispatch.</param>
+        void DispatchWorkers(delegate*<int, IThreadDispatcher, void> workerBody, int maximumWorkerCount = int.MaxValue, void* unmanagedContext = null, object managedContext = null);
 
         /// <summary>
         /// Dispatches all the available workers with a null context.
         /// </summary>
         /// <param name="workerBody">Delegate to be invoked on every worker.</param>
         /// <param name="maximumWorkerCount">Maximum number of workers to dispatch.</param>
-        void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue);
+        /// <param name="unmanagedContext">Unmanaged context of the dispatch.</param>
+        /// <param name="managedContext">Managed context of the dispatch.</param>
+        void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue, void* unmanagedContext = null, object managedContext = null);
 
         /// <summary>
         /// Gets the set of memory pools associated with thread workers.

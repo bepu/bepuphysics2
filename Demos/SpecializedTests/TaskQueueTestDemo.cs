@@ -21,23 +21,23 @@ public unsafe class TaskQueueTestDemo : Demo
         }
         return sum;
     }
-    static void DynamicallyEnqueuedTest(long taskId, void* context, int workerIndex)
+    static void DynamicallyEnqueuedTest(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
     {
         var sum = DoSomeWork(10000, 0);
         Interlocked.Add(ref ((Context*)context)->Sum, sum);
     }
-    static void Test(long taskId, void* context, int workerIndex)
+    static void Test(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
     {
         var sum = DoSomeWork(100000, 0);
         var typedContext = (Context*)context;
         if ((taskId & 7) == 0)
         {
             const int subtaskCount = 8;
-            typedContext->Queue->For(&DynamicallyEnqueuedTest, context, 0, subtaskCount, workerIndex);
+            typedContext->Queue->For(&DynamicallyEnqueuedTest, context, 0, subtaskCount, workerIndex, dispatcher);
         }
         Interlocked.Add(ref typedContext->Sum, sum);
     }
-    static void STTest(long taskId, void* context, int workerIndex)
+    static void STTest(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
     {
         var sum = DoSomeWork(100000, 0);
         var typedContext = (Context*)context;
@@ -46,16 +46,16 @@ public unsafe class TaskQueueTestDemo : Demo
             const int subtaskCount = 8;
             for (int i = 0; i < subtaskCount; ++i)
             {
-                DynamicallyEnqueuedTest(i, context, workerIndex);
+                DynamicallyEnqueuedTest(i, context, workerIndex, dispatcher);
             }
         }
         Interlocked.Add(ref typedContext->Sum, sum);
     }
 
-    static void DispatcherBody(int workerIndex, void* context)
+    static void DispatcherBody(int workerIndex, IThreadDispatcher dispatcher)
     {
-        var taskQueue = (TaskQueue*)context;
-        while (taskQueue->TryDequeueAndRun(workerIndex) != DequeueTaskResult.Stop) ;
+        var taskQueue = (TaskQueue*)dispatcher.UnmanagedContext;
+        while (taskQueue->TryDequeueAndRun(workerIndex, dispatcher) != DequeueTaskResult.Stop) ;
     }
 
     struct Context
@@ -64,10 +64,10 @@ public unsafe class TaskQueueTestDemo : Demo
         public int Sum;
     }
 
-    static void IssueStop(long id, void* context, int workerIndex)
+    static void IssueStop(long id, void* context, int workerIndex, IThreadDispatcher dispatcher)
     {
         var typedContext = (Context*)context;
-        typedContext->Queue->EnqueueStop(workerIndex);
+        typedContext->Queue->EnqueueStop(workerIndex, dispatcher);
     }
 
     public override void Initialize(ContentArchive content, Camera camera)
@@ -88,12 +88,12 @@ public unsafe class TaskQueueTestDemo : Demo
         Test(() =>
         {
             var context = new Context { Queue = taskQueuePointer };
-            var continuation = taskQueuePointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, new Task(&IssueStop, &context));
+            var continuation = taskQueuePointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new Task(&IssueStop, &context));
             for (int i = 0; i < iterationCount; ++i)
                 taskQueuePointer->TryEnqueueForUnsafely(&Test, &context, i * tasksPerIteration, tasksPerIteration, continuation);
             //taskQueuePointer->TryEnqueueStopUnsafely();
             //taskQueuePointer->EnqueueTasks()
-            ThreadDispatcher.DispatchWorkers(&DispatcherBody, taskQueuePointer);
+            ThreadDispatcher.DispatchWorkers(&DispatcherBody, unmanagedContext: taskQueuePointer);
             return context.Sum;
         }, "MT", () => taskQueuePointer->Reset());
 
@@ -106,7 +106,7 @@ public unsafe class TaskQueueTestDemo : Demo
             {
                 for (int j = 0; j < tasksPerIteration; ++j)
                 {
-                    STTest(i * tasksPerIteration + j, &testContext, 0);
+                    STTest(i * tasksPerIteration + j, &testContext, 0, ThreadDispatcher);
                 }
             }
             return testContext.Sum;

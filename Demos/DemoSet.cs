@@ -48,7 +48,7 @@ namespace Demos
         {
             //AddOption<FountainStressTestDemo>();
             //AddOption<TreeFiddlingTestDemo>();
-            //AddOption<TaskQueueTestDemo>();
+            AddOption<TaskQueueTestDemo>();
             AddOption<ShapePileTestDemo>();
             AddOption<CarDemo>();
             AddOption<TankDemo>();

@@ -27,6 +27,10 @@ namespace BepuUtilities
 
         /// <inheritdoc/>
         public WorkerBufferPools WorkerPools { get; private set; }
+        /// <inheritdoc/>
+        public void* UnmanagedContext => unmanagedContext;
+        /// <inheritdoc/>
+        public object ManagedContext => managedWorker;
 
         /// <summary>
         /// Creates a new thread dispatcher with the given number of threads.
@@ -52,8 +56,7 @@ namespace BepuUtilities
             switch (workerType)
             {
                 case WorkerType.Managed: managedWorker(workerIndex); break;
-                case WorkerType.ManagedWithUnmanagedContext: managedWithContextWorker(workerIndex, context); break;
-                case WorkerType.Unmanaged: unmanagedWorker(workerIndex, context); break;
+                case WorkerType.Unmanaged: unmanagedWorker(workerIndex, this); break;
             }
 
             if (Interlocked.Decrement(ref remainingWorkerCounter) == -1)
@@ -64,26 +67,16 @@ namespace BepuUtilities
 
         enum WorkerType
         {
-            /// <summary>
-            /// Action{int}
-            /// </summary>
+            //We've gone back and forth many times on how many types exist. 2 at the moment, but will it be 4 again next week? Who knows!
             Managed,
-            /// <summary>
-            /// <see cref="ThreadDispatcherWorker"/>
-            /// </summary>
-            ManagedWithUnmanagedContext,
-            /// <summary>
-            /// Includes unmanaged context by default because these jobs can only be static functions and *some* context is probably required.
-            /// delegate*{int, void*, void}
-            /// </summary>
             Unmanaged,
         }
 
         volatile WorkerType workerType;
         volatile Action<int> managedWorker;
-        volatile ThreadDispatcherWorker managedWithContextWorker;
-        volatile delegate*<int, void*, void> unmanagedWorker;
-        volatile void* context;
+        volatile delegate*<int, IThreadDispatcher, void> unmanagedWorker;
+        volatile void* unmanagedContext;
+        volatile object managedContext;
 
         int remainingWorkerCounter;
 
@@ -113,56 +106,40 @@ namespace BepuUtilities
         }
 
         /// <inheritdoc/>
-        public void DispatchWorkers(delegate*<int, void*, void> workerBody, void* context, int maximumWorkerCount = int.MaxValue)
+        public void DispatchWorkers(delegate*<int, IThreadDispatcher, void> workerBody, int maximumWorkerCount = int.MaxValue, void* unmanagedContext = null, object managedContext = null)
         {
+            Debug.Assert(this.managedWorker == null && this.unmanagedWorker == null && this.managedContext == null && this.unmanagedContext == null);
+            this.unmanagedContext = unmanagedContext;
+            this.managedContext = managedContext;
             if (maximumWorkerCount > 1)
             {
-                Debug.Assert(this.managedWorker == null && this.managedWithContextWorker == null && this.unmanagedWorker == null && this.context == null);
                 workerType = WorkerType.Unmanaged;
-                unmanagedWorker = workerBody;
-                this.context = context;
+                this.unmanagedWorker = workerBody;
                 SignalThreads(maximumWorkerCount);
                 //Calling thread does work. No reason to spin up another worker and block this one!
                 DispatchThread(0);
                 finished.WaitOne();
-                unmanagedWorker = null;
-                this.context = null;
+                this.unmanagedWorker = null;
             }
             else if (maximumWorkerCount == 1)
             {
-                workerBody(0, context);
+                workerBody(0, this);
             }
+            this.unmanagedContext = null;
+            this.managedContext = null;
         }
 
+        //While we *could* pass in the IThreadDispatcher for the managed side of things, it is typically best to just expect closures. Simplifies some stuff.
+        //(The fact that we supply context at all is a bit of a shrug.)
         /// <inheritdoc/>
-        public void DispatchWorkers(ThreadDispatcherWorker workerBody, void* context, int maximumWorkerCount = int.MaxValue)
+        public void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue, void* unmanagedContext = null, object managedContext = null)
         {
+            Debug.Assert(this.managedWorker == null && this.unmanagedWorker == null && this.managedContext == null && this.unmanagedContext == null);
+            this.unmanagedContext = unmanagedContext;
+            this.managedContext = managedContext;
             if (maximumWorkerCount > 1)
             {
-                Debug.Assert(this.managedWorker == null && this.managedWithContextWorker == null && this.unmanagedWorker == null && this.context == null);
-                workerType = WorkerType.ManagedWithUnmanagedContext;
-                this.managedWithContextWorker = workerBody;
-                this.context = context;
-                SignalThreads(maximumWorkerCount);
-                //Calling thread does work. No reason to spin up another worker and block this one!
-                DispatchThread(0);
-                finished.WaitOne();
-                this.managedWithContextWorker = null;
-                this.context = null;
-            }
-            else if (maximumWorkerCount == 1)
-            {
-                workerBody(0, context);
-            }
-        }
-
-        /// <inheritdoc/>
-        public void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue)
-        {
-            if (maximumWorkerCount > 1)
-            {
-                Debug.Assert(this.managedWorker == null && this.managedWithContextWorker == null && this.unmanagedWorker == null && this.context == null);
-                workerType = WorkerType.ManagedWithUnmanagedContext;
+                workerType = WorkerType.Managed;
                 this.managedWorker = workerBody;
                 SignalThreads(maximumWorkerCount);
                 //Calling thread does work. No reason to spin up another worker and block this one!
@@ -174,7 +151,10 @@ namespace BepuUtilities
             {
                 workerBody(0);
             }
+            this.unmanagedContext = null;
+            this.managedContext = null;
         }
+
 
         volatile bool disposed;
 
