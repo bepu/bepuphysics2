@@ -49,11 +49,12 @@ namespace BepuUtilities
 
         void DispatchThread(int workerIndex)
         {
-            Debug.Assert(workerBody != null ^ workerBodyPointer != null);
-            if (workerBody != null)
-                workerBody(workerIndex, context);
-            else
-                workerBodyPointer(workerIndex, context);
+            switch (workerType)
+            {
+                case WorkerType.Managed: managedWorker(workerIndex); break;
+                case WorkerType.ManagedWithUnmanagedContext: managedWithContextWorker(workerIndex, context); break;
+                case WorkerType.Unmanaged: unmanagedWorker(workerIndex, context); break;
+            }
 
             if (Interlocked.Decrement(ref remainingWorkerCounter) == -1)
             {
@@ -61,9 +62,29 @@ namespace BepuUtilities
             }
         }
 
-        volatile ThreadDispatcherWorker workerBody;
-        volatile delegate*<int, void*, void> workerBodyPointer;
+        enum WorkerType
+        {
+            /// <summary>
+            /// Action{int}
+            /// </summary>
+            Managed,
+            /// <summary>
+            /// <see cref="ThreadDispatcherWorker"/>
+            /// </summary>
+            ManagedWithUnmanagedContext,
+            /// <summary>
+            /// Includes unmanaged context by default because these jobs can only be static functions and *some* context is probably required.
+            /// delegate*{int, void*, void}
+            /// </summary>
+            Unmanaged,
+        }
+
+        volatile WorkerType workerType;
+        volatile Action<int> managedWorker;
+        volatile ThreadDispatcherWorker managedWithContextWorker;
+        volatile delegate*<int, void*, void> unmanagedWorker;
         volatile void* context;
+
         int remainingWorkerCounter;
 
         void WorkerLoop(object untypedSignal)
@@ -92,18 +113,19 @@ namespace BepuUtilities
         }
 
         /// <inheritdoc/>
-        public void DispatchWorkers(delegate*<int, void*, void> workerBody, void* context = null, int maximumWorkerCount = int.MaxValue)
+        public void DispatchWorkers(delegate*<int, void*, void> workerBody, void* context, int maximumWorkerCount = int.MaxValue)
         {
             if (maximumWorkerCount > 1)
             {
-                Debug.Assert(this.workerBody == null && this.workerBodyPointer == null);
-                workerBodyPointer = workerBody;
+                Debug.Assert(this.managedWorker == null && this.managedWithContextWorker == null && this.unmanagedWorker == null && this.context == null);
+                workerType = WorkerType.Unmanaged;
+                unmanagedWorker = workerBody;
                 this.context = context;
                 SignalThreads(maximumWorkerCount);
                 //Calling thread does work. No reason to spin up another worker and block this one!
                 DispatchThread(0);
                 finished.WaitOne();
-                workerBodyPointer = null;
+                unmanagedWorker = null;
                 this.context = null;
             }
             else if (maximumWorkerCount == 1)
@@ -113,23 +135,44 @@ namespace BepuUtilities
         }
 
         /// <inheritdoc/>
-        public void DispatchWorkers(ThreadDispatcherWorker workerBody, void* context = null, int maximumWorkerCount = int.MaxValue)
+        public void DispatchWorkers(ThreadDispatcherWorker workerBody, void* context, int maximumWorkerCount = int.MaxValue)
         {
             if (maximumWorkerCount > 1)
             {
-                Debug.Assert(this.workerBody == null && this.workerBodyPointer == null);
-                this.workerBody = workerBody;
+                Debug.Assert(this.managedWorker == null && this.managedWithContextWorker == null && this.unmanagedWorker == null && this.context == null);
+                workerType = WorkerType.ManagedWithUnmanagedContext;
+                this.managedWithContextWorker = workerBody;
                 this.context = context;
                 SignalThreads(maximumWorkerCount);
                 //Calling thread does work. No reason to spin up another worker and block this one!
                 DispatchThread(0);
                 finished.WaitOne();
-                this.workerBody = null;
+                this.managedWithContextWorker = null;
                 this.context = null;
             }
             else if (maximumWorkerCount == 1)
             {
                 workerBody(0, context);
+            }
+        }
+
+        /// <inheritdoc/>
+        public void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue)
+        {
+            if (maximumWorkerCount > 1)
+            {
+                Debug.Assert(this.managedWorker == null && this.managedWithContextWorker == null && this.unmanagedWorker == null && this.context == null);
+                workerType = WorkerType.ManagedWithUnmanagedContext;
+                this.managedWorker = workerBody;
+                SignalThreads(maximumWorkerCount);
+                //Calling thread does work. No reason to spin up another worker and block this one!
+                DispatchThread(0);
+                finished.WaitOne();
+                this.managedWorker = null;
+            }
+            else if (maximumWorkerCount == 1)
+            {
+                workerBody(0);
             }
         }
 

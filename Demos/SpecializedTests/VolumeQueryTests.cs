@@ -137,7 +137,7 @@ namespace Demos.SpecializedTests
             public TimingsRingBuffer Timings;
 
             Func<int, BoxQueryAlgorithm, int> worker;
-            ThreadDispatcherWorker internalWorker;
+            Action<int> internalWorker;
             public int JobIndex;
 
             public BoxQueryAlgorithm(string name, BufferPool pool, Func<int, BoxQueryAlgorithm, int> worker, int timingSampleCount = 16)
@@ -148,7 +148,7 @@ namespace Demos.SpecializedTests
                 internalWorker = ExecuteWorker;
             }
 
-            unsafe void ExecuteWorker(int workerIndex, void* context)
+            unsafe void ExecuteWorker(int workerIndex)
             {
                 var intersectionCount = worker(workerIndex, this);
                 Interlocked.Add(ref IntersectionCount, intersectionCount);
@@ -166,7 +166,7 @@ namespace Demos.SpecializedTests
                 }
                 else
                 {
-                    internalWorker(0, null);
+                    internalWorker(0);
                 }
                 var stop = Stopwatch.GetTimestamp();
                 Timings.Add((stop - start) / (double)Stopwatch.Frequency);

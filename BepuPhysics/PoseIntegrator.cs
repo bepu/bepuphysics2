@@ -273,7 +273,7 @@ namespace BepuPhysics
 
         public TCallbacks Callbacks;
 
-        ThreadDispatcherWorker predictBoundingBoxesWorker;
+        Action<int> predictBoundingBoxesWorker;
         public PoseIntegrator(Bodies bodies, Shapes shapes, BroadPhase broadPhase, TCallbacks callbacks)
         {
             this.bodies = bodies;
@@ -395,7 +395,7 @@ namespace BepuPhysics
             return true;
         }
 
-        void PredictBoundingBoxesWorker(int workerIndex, void* context)
+        void PredictBoundingBoxesWorker(int workerIndex)
         {
             var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.WorkerPools[workerIndex], cachedDt);
             var bundleCount = BundleIndexing.GetBundleCount(bodies.ActiveSet.Count);
@@ -690,9 +690,9 @@ namespace BepuPhysics
             }
         }
 
-        ThreadDispatcherWorker integrateAfterSubsteppingWorker;
+        Action<int> integrateAfterSubsteppingWorker;
         IndexSet constrainedBodies;
-        private void IntegrateAfterSubsteppingWorker(int workerIndex, void* context)
+        private void IntegrateAfterSubsteppingWorker(int workerIndex)
         {
             var bundleCount = BundleIndexing.GetBundleCount(bodies.ActiveSet.Count);
             var substepDt = cachedDt / substepCount;

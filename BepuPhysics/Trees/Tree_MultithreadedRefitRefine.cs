@@ -25,12 +25,12 @@ namespace BepuPhysics.Trees
 
             int RefinementLeafCountThreshold;
             Buffer<QuickList<int>> RefinementCandidates;
-            ThreadDispatcherWorker RefitAndMarkAction;
+            Action<int> RefitAndMarkAction;
 
             int RefineIndex;
             public QuickList<int> RefinementTargets;
             public int MaximumSubtrees;
-            ThreadDispatcherWorker RefineAction;
+            Action<int> RefineAction;
 
             IThreadDispatcher threadDispatcher;
 
@@ -310,7 +310,7 @@ namespace BepuPhysics.Trees
                     }
                 }
             }
-            public unsafe void RefitAndMarkForWorker(int workerIndex, void* context)
+            public unsafe void RefitAndMarkForWorker(int workerIndex)
             {
                 if (RefitNodes.Count == 0)
                     return;
@@ -334,7 +334,7 @@ namespace BepuPhysics.Trees
                 treeletInternalNodes.Count = 0;
             }
 
-            public unsafe void RefineForWorker(int workerIndex, void* context)
+            public unsafe void RefineForWorker(int workerIndex)
             {
                 if (RefinementTargets.Count == 0)
                     return;

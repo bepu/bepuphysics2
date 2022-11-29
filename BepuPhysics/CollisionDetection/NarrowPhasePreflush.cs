@@ -109,8 +109,8 @@ namespace BepuPhysics.CollisionDetection
 
         int preflushJobIndex;
         QuickList<PreflushJob> preflushJobs;
-        ThreadDispatcherWorker preflushWorkerLoop;
-        void PreflushWorkerLoop(int workerIndex, void* context)
+        Action<int> preflushWorkerLoop;
+        void PreflushWorkerLoop(int workerIndex)
         {
             int jobIndex;
             while ((jobIndex = Interlocked.Increment(ref preflushJobIndex)) < preflushJobs.Count)

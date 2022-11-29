@@ -72,7 +72,7 @@ namespace Demos.SpecializedTests
             var refineContext = new Tree.RefitAndRefineMultithreadedContext();
             var selfTestContext = new Tree.MultithreadedSelfTest<OverlapHandler>(pool);
             var overlapHandlers = new OverlapHandler[threadDispatcher.ThreadCount];
-            ThreadDispatcherWorker pairTestAction = selfTestContext.PairTest;
+            Action<int> pairTestAction = selfTestContext.PairTest;
             var removedLeafHandles = new QuickList<int>(leafCount, pool);
             for (int i = 0; i < iterations; ++i)
             {

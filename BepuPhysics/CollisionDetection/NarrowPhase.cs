@@ -198,8 +198,8 @@ namespace BepuPhysics.CollisionDetection
         int flushJobIndex;
         QuickList<NarrowPhaseFlushJob> flushJobs;
         IThreadDispatcher threadDispatcher;
-        ThreadDispatcherWorker flushWorkerLoop;
-        void FlushWorkerLoop(int workerIndex, void* context)
+        Action<int> flushWorkerLoop;
+        void FlushWorkerLoop(int workerIndex)
         {
             int jobIndex;
             while ((jobIndex = Interlocked.Increment(ref flushJobIndex)) < flushJobs.Count)

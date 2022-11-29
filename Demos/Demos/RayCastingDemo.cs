@@ -250,7 +250,7 @@ namespace Demos
             public TimingsRingBuffer Timings;
 
             Func<int, IntersectionAlgorithm, int> worker;
-            ThreadDispatcherWorker internalWorker;
+            Action<int> internalWorker;
             public int JobIndex;
 
             public IntersectionAlgorithm(string name, Func<int, IntersectionAlgorithm, int> worker,
@@ -263,7 +263,7 @@ namespace Demos
                 pool.Take(largestRayCount, out Results);
             }
 
-            unsafe void ExecuteWorker(int workerIndex, void* context)
+            unsafe void ExecuteWorker(int workerIndex)
             {
                 var intersectionCount = worker(workerIndex, this);
                 Interlocked.Add(ref IntersectionCount, intersectionCount);
@@ -286,7 +286,7 @@ namespace Demos
                 }
                 else
                 {
-                    internalWorker(0, null);
+                    internalWorker(0);
                 }
                 var stop = Stopwatch.GetTimestamp();
                 Timings.Add((stop - start) / (double)Stopwatch.Frequency);

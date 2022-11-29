@@ -97,7 +97,7 @@ namespace BepuPhysics
         QuickList<AnalysisRegion> analysisJobs;
 
 
-        ThreadDispatcherWorker analysisWorkerDelegate;
+        Action<int> analysisWorkerDelegate;
         public BatchCompressor(Solver solver, Bodies bodies, float targetCandidateFraction = 0.005f, float maximumCompressionFraction = 0.0005f)
         {
             this.Solver = solver;
@@ -109,7 +109,7 @@ namespace BepuPhysics
 
 
 
-        unsafe void AnalysisWorker(int workerIndex, void* context)
+        unsafe void AnalysisWorker(int workerIndex)
         {
             int jobIndex;
             while ((jobIndex = Interlocked.Increment(ref analysisJobIndex)) < analysisJobs.Count)

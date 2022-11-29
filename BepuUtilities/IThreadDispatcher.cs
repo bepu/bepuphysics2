@@ -54,10 +54,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="workerBody">Delegate to be invoked on every worker.</param>
         /// <param name="maximumWorkerCount">Maximum number of workers to dispatch.</param>
-        void DispatchWorkers(ThreadDispatcherWorker workerBody, int maximumWorkerCount = int.MaxValue)
-        {
-            DispatchWorkers(workerBody, null, maximumWorkerCount);
-        }
+        void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue);
 
         /// <summary>
         /// Gets the set of memory pools associated with thread workers.

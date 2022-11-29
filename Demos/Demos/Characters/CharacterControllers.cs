@@ -433,8 +433,8 @@ namespace Demos.Demos.Characters
         }
 
         int boundingBoxExpansionJobIndex;
-        ThreadDispatcherWorker expandBoundingBoxesWorker;
-        unsafe void ExpandBoundingBoxesWorker(int workerIndex, void* context)
+        Action<int> expandBoundingBoxesWorker;
+        unsafe void ExpandBoundingBoxesWorker(int workerIndex)
         {
             while (true)
             {
@@ -735,8 +735,8 @@ namespace Demos.Demos.Characters
         int analysisJobIndex;
         int analysisJobCount;
         Buffer<AnalyzeContactsJob> jobs;
-        ThreadDispatcherWorker analyzeContactsWorker;
-        unsafe void AnalyzeContactsWorker(int workerIndex, void* context)
+        Action<int> analyzeContactsWorker;
+        unsafe void AnalyzeContactsWorker(int workerIndex)
         {
             int jobIndex;
             while ((jobIndex = Interlocked.Increment(ref analysisJobIndex)) < analysisJobCount)

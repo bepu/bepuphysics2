@@ -458,8 +458,8 @@ namespace BepuPhysics
             return offset + blocksPerWorker * workerIndex + Math.Min(remainder, workerIndex);
         }
 
-        ThreadDispatcherWorker solveWorker;
-        void SolveWorker(int workerIndex, void* context)
+        Action<int> solveWorker;
+        void SolveWorker(int workerIndex)
         {
             //The solver has two codepaths: one thread, acting as an orchestrator, and the others, just waiting to be used.
             //There is no requirement that a worker thread above index 0 actually runs at all for a given dispatch.
@@ -754,7 +754,7 @@ namespace BepuPhysics
             return VelocityIterationCount;
         }
         //Buffer<Buffer<int>> debugStageWorkBlocksCompleted;
-        protected void ExecuteMultithreaded(float dt, IThreadDispatcher threadDispatcher, ThreadDispatcherWorker workDelegate)
+        protected void ExecuteMultithreaded(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate)
         {
             var workerCount = substepContext.WorkerCount = threadDispatcher.ThreadCount;
             substepContext.Dt = dt;
@@ -1046,7 +1046,7 @@ namespace BepuPhysics
             return mergedFlagBundles != 0;
         }
 
-        void ConstraintIntegrationResponsibilitiesWorker(int workerIndex, void* context)
+        void ConstraintIntegrationResponsibilitiesWorker(int workerIndex)
         {
             int jobIndex;
             while ((jobIndex = Interlocked.Increment(ref nextConstraintIntegrationResponsibilityJobIndex) - 1) < integrationResponsibilityPrepassJobs.Count)
@@ -1069,7 +1069,7 @@ namespace BepuPhysics
         /// Type batches with no integration responsibilities can use a codepath with no integration checks at all.
         /// </summary>
         Buffer<Buffer<bool>> coarseBatchIntegrationResponsibilities;
-        ThreadDispatcherWorker constraintIntegrationResponsibilitiesWorker;
+        Action<int> constraintIntegrationResponsibilitiesWorker;
         IndexSet mergedConstrainedBodyHandles;
 
         public override unsafe IndexSet PrepareConstraintIntegrationResponsibilities(IThreadDispatcher threadDispatcher = null)

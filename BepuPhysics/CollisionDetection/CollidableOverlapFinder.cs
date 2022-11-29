@@ -62,7 +62,7 @@ namespace BepuPhysics.CollisionDetection
         BroadPhase broadPhase;
         SelfOverlapHandler[] selfHandlers;
         IntertreeOverlapHandler[] intertreeHandlers;
-        ThreadDispatcherWorker workerAction;
+        Action<int> workerAction;
         int nextJobIndex;
         public CollidableOverlapFinder(NarrowPhase<TCallbacks> narrowPhase, BroadPhase broadPhase)
         {
@@ -73,7 +73,7 @@ namespace BepuPhysics.CollisionDetection
             workerAction = Worker;
         }
 
-        void Worker(int workerIndex, void* context)
+        void Worker(int workerIndex)
         {
             Debug.Assert(workerIndex >= 0 && workerIndex < intertreeHandlers.Length && workerIndex < selfHandlers.Length);
 

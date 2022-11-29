@@ -324,16 +324,16 @@ namespace BepuPhysics
                 FindIslands(workerIndex, threadPool, ref predicate);
             }
         }
-        ThreadDispatcherWorker findIslandsDelegate;
+        Action<int> findIslandsDelegate;
         bool forceSleep;
-        void FindIslands(int workerIndex, void* context)
+        void FindIslands(int workerIndex)
         {
             //The only reason we separate this out is to make it easier for the main pool to be passed in if there is only a single thread. 
             FindIslands(workerIndex, threadDispatcher.WorkerPools[workerIndex]);
         }
 
-        ThreadDispatcherWorker gatherDelegate;
-        unsafe void Gather(int workerIndex, void* context)
+        Action<int> gatherDelegate;
+        unsafe void Gather(int workerIndex)
         {
             while (true)
             {
@@ -389,9 +389,9 @@ namespace BepuPhysics
         }
 
         int typeBatchConstraintRemovalJobCount;
-        ThreadDispatcherWorker typeBatchConstraintRemovalDelegate;
+        Action<int> typeBatchConstraintRemovalDelegate;
 
-        void TypeBatchConstraintRemoval(int workerIndex, void* context)
+        void TypeBatchConstraintRemoval(int workerIndex)
         {
             while (true)
             {
@@ -507,8 +507,8 @@ namespace BepuPhysics
                     break;
             }
         }
-        ThreadDispatcherWorker executeRemovalWorkDelegate;
-        void ExecuteRemovalWork(int workerIndex, void* context)
+        Action<int> executeRemovalWorkDelegate;
+        void ExecuteRemovalWork(int workerIndex)
         {
             while (true)
             {
@@ -797,7 +797,7 @@ namespace BepuPhysics
             }
             else
             {
-                Gather(0, null);
+                Gather(0);
             }
             DisposeWorkerTraversalResults();
             gatheringJobs.Dispose(pool);
