@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using BepuUtilities.Memory;
 
@@ -59,7 +60,7 @@ namespace BepuUtilities
                 case WorkerType.Unmanaged: unmanagedWorker(workerIndex, this); break;
             }
 
-            if (Interlocked.Decrement(ref remainingWorkerCounter) == -1)
+            if (Interlocked.Decrement(ref remainingWorkerCounter.Value) == -1)
             {
                 finished.Set();
             }
@@ -78,7 +79,19 @@ namespace BepuUtilities
         volatile void* unmanagedContext;
         volatile object managedContext;
 
-        int remainingWorkerCounter;
+        //We'd like to avoid the thread readonly values above being adjacent to the thread readwrite counter.
+        //If they were in the same cache line, it would cause a bit of extra contention for no reason.
+        //(It's not *that* big of a deal since the counter is only touched once per worker, but padding this also costs nothing.)
+        //In a class, we don't control layout, so wrap the counter in a beefy struct.
+        //128B padding is used for the sake of architectures that might try prefetching cache line pairs and running into sync problems.
+        [StructLayout(LayoutKind.Explicit, Size = 256)]
+        struct Counter
+        {
+            [FieldOffset(128)]
+            public int Value;
+        }
+
+        Counter remainingWorkerCounter;
 
         void WorkerLoop(object untypedSignal)
         {
@@ -98,7 +111,7 @@ namespace BepuUtilities
             //So if we want 4 total executing threads, we should signal 3 workers.
             int maximumWorkersToSignal = maximumWorkerCount - 1;
             var workersToSignal = maximumWorkersToSignal < workers.Length ? maximumWorkersToSignal : workers.Length;
-            remainingWorkerCounter = workersToSignal;
+            remainingWorkerCounter.Value = workersToSignal;
             for (int i = 0; i < workersToSignal; ++i)
             {
                 workers[i].Signal.Set();
