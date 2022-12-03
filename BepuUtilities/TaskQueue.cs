@@ -315,12 +315,23 @@ public unsafe struct TaskQueue
 
     int taskMask, taskShift;
 
-    //TODO: Careful about false sharing.
-    long taskIndex;
-    long allocatedTaskIndex;
-    long writtenTaskIndex;
+    [StructLayout(LayoutKind.Explicit, Size = 540)]
+    struct Padded
+    {
+        //WrittenTaskIndex and TaskIndex are referenced by dequeues, so keep them together.
+        //They're *also* referenced by enqueues, but enqueues are rarer so there's a good chance the local thread can avoid a direct contest.
+        [FieldOffset(128)]
+        public long WrittenTaskIndex;
+        [FieldOffset(136)]
+        public long TaskIndex;
+        //AllocatedTaskIndex and TaskLocker are only touched by enqueues, so we shove them off into their own padded region.
+        [FieldOffset(400)]
+        public long AllocatedTaskIndex;
+        [FieldOffset(408)]
+        public volatile int TaskLocker;
+    }
 
-    volatile int taskLocker;
+    Padded paddedCounters;
 
     /// <summary>
     /// Holds the task queue's continuations data in unmanaged memory just in case the queue itself is in unpinned memory.
@@ -346,7 +357,7 @@ public unsafe struct TaskQueue
         pool.Take(maximumTaskCapacity, out tasks);
         taskMask = tasks.length - 1;
         taskShift = BitOperations.TrailingZeroCount(tasks.length);
-        taskLocker = 0;
+        paddedCounters.TaskLocker = 0;
         Reset();
     }
 
@@ -355,10 +366,10 @@ public unsafe struct TaskQueue
     /// </summary>
     public void Reset()
     {
-        taskIndex = 0;
-        allocatedTaskIndex = 0;
-        writtenTaskIndex = 0;
-        Debug.Assert(taskLocker == 0, "There appears to be a thread actively working still. That's invalid.");
+        paddedCounters.TaskIndex = 0;
+        paddedCounters.AllocatedTaskIndex = 0;
+        paddedCounters.WrittenTaskIndex = 0;
+        Debug.Assert(paddedCounters.TaskLocker == 0, "There appears to be a thread actively working still. That's invalid.");
 
         ref var continuations = ref continuationsContainer[0];
         continuations.Continuations.Clear(0, continuations.Continuations.Length);
@@ -390,7 +401,7 @@ public unsafe struct TaskQueue
     /// Gets the number of tasks active in the queue.
     /// </summary>
     /// <remarks>Does not take a lock; if other threads are modifying the task values, the reported count may be invalid.</remarks>
-    public int UnsafeTaskCount => (int)(writtenTaskIndex - taskIndex);
+    public int UnsafeTaskCount => (int)(paddedCounters.WrittenTaskIndex - paddedCounters.TaskIndex);
     /// <summary>
     /// Gets the number of tasks active in the queue.
     /// </summary>
@@ -399,12 +410,12 @@ public unsafe struct TaskQueue
         get
         {
             var waiter = new SpinWait();
-            while (Interlocked.CompareExchange(ref taskLocker, 1, 0) != 0)
+            while (Interlocked.CompareExchange(ref paddedCounters.TaskLocker, 1, 0) != 0)
             {
                 waiter.SpinOnce(-1);
             }
-            var result = (int)(writtenTaskIndex - taskIndex);
-            taskLocker = 0;
+            var result = (int)(paddedCounters.WrittenTaskIndex - paddedCounters.TaskIndex);
+            paddedCounters.TaskLocker = 0;
             return result;
         }
     }
@@ -495,14 +506,14 @@ public unsafe struct TaskQueue
             if (Environment.Is64BitProcess) //This branch is compile time (at least where I've tested it).
             {
                 //It's fine if we don't get a consistent view of the task index and written task index. Worst case scenario, this will claim that the queue is empty where a lock wouldn't.
-                nextTaskIndex = Volatile.Read(ref taskIndex);
-                sampledWrittenTaskIndex = Volatile.Read(ref writtenTaskIndex);
+                nextTaskIndex = Volatile.Read(ref paddedCounters.TaskIndex);
+                sampledWrittenTaskIndex = Volatile.Read(ref paddedCounters.WrittenTaskIndex);
             }
             else
             {
                 //Interlocked reads for 32 bit systems.
-                nextTaskIndex = Interlocked.Read(ref taskIndex);
-                sampledWrittenTaskIndex = Interlocked.Read(ref writtenTaskIndex);
+                nextTaskIndex = Interlocked.Read(ref paddedCounters.TaskIndex);
+                sampledWrittenTaskIndex = Interlocked.Read(ref paddedCounters.WrittenTaskIndex);
             }
             if (nextTaskIndex >= sampledWrittenTaskIndex)
                 return DequeueTaskResult.Empty;
@@ -510,7 +521,7 @@ public unsafe struct TaskQueue
             if (taskCandidate.Function == null)
                 return DequeueTaskResult.Stop;
             //Unlike enqueues, a dequeue has a fixed contention window on a single value. There's not much point in using a spinwait when there's no reason to expect our next attempt to be blocked.
-            if (Interlocked.CompareExchange(ref taskIndex, nextTaskIndex + 1, nextTaskIndex) != nextTaskIndex)
+            if (Interlocked.CompareExchange(ref paddedCounters.TaskIndex, nextTaskIndex + 1, nextTaskIndex) != nextTaskIndex)
                 continue;
             //There's an actual job!
             task = taskCandidate;
@@ -537,15 +548,15 @@ public unsafe struct TaskQueue
     EnqueueTaskResult TryEnqueueUnsafelyInternal(Span<Task> tasks, out long taskEndIndex)
     {
         Debug.Assert(tasks.Length > 0, "Probably shouldn't be trying to enqueue zero tasks.");
-        Debug.Assert(writtenTaskIndex == 0 || this.tasks[(int)((writtenTaskIndex - 1) & taskMask)].Function != null, "No more jobs should be written after a stop command.");
-        var taskStartIndex = allocatedTaskIndex;
+        Debug.Assert(paddedCounters.WrittenTaskIndex == 0 || this.tasks[(int)((paddedCounters.WrittenTaskIndex - 1) & taskMask)].Function != null, "No more jobs should be written after a stop command.");
+        var taskStartIndex = paddedCounters.AllocatedTaskIndex;
         taskEndIndex = taskStartIndex + tasks.Length;
-        if (taskEndIndex - taskIndex > this.tasks.length)
+        if (taskEndIndex - paddedCounters.TaskIndex > this.tasks.length)
         {
             //We've run out of space in the ring buffer. If we tried to write, we'd overwrite jobs that haven't yet been completed.
             return EnqueueTaskResult.Full;
         }
-        allocatedTaskIndex = taskEndIndex;
+        paddedCounters.AllocatedTaskIndex = taskEndIndex;
         Debug.Assert(BitOperations.IsPow2(this.tasks.Length));
         var wrappedInclusiveStartIndex = (int)(taskStartIndex & taskMask);
         var wrappedInclusiveEndIndex = (int)(taskEndIndex & taskMask);
@@ -582,7 +593,7 @@ public unsafe struct TaskQueue
         EnqueueTaskResult result;
         if ((result = TryEnqueueUnsafelyInternal(tasks, out var taskEndIndex)) == EnqueueTaskResult.Success)
         {
-            writtenTaskIndex = taskEndIndex;
+            paddedCounters.WrittenTaskIndex = taskEndIndex;
         }
         return result;
     }
@@ -606,7 +617,7 @@ public unsafe struct TaskQueue
     {
         if (tasks.Length == 0)
             return EnqueueTaskResult.Success;
-        if (Interlocked.CompareExchange(ref taskLocker, 1, 0) != 0)
+        if (Interlocked.CompareExchange(ref paddedCounters.TaskLocker, 1, 0) != 0)
             return EnqueueTaskResult.Contested;
         try
         {
@@ -616,18 +627,18 @@ public unsafe struct TaskQueue
             {
                 if (Environment.Is64BitProcess)
                 {
-                    Volatile.Write(ref writtenTaskIndex, taskEndIndex);
+                    Volatile.Write(ref paddedCounters.WrittenTaskIndex, taskEndIndex);
                 }
                 else
                 {
-                    Interlocked.Exchange(ref writtenTaskIndex, taskEndIndex);
+                    Interlocked.Exchange(ref paddedCounters.WrittenTaskIndex, taskEndIndex);
                 }
             }
             return result;
         }
         finally
         {
-            taskLocker = 0;
+            paddedCounters.TaskLocker = 0;
         }
     }
 

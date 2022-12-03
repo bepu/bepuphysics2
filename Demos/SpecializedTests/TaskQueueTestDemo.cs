@@ -70,6 +70,11 @@ public unsafe class TaskQueueTestDemo : Demo
         typedContext->Queue->EnqueueStop(workerIndex, dispatcher);
     }
 
+    static void EmptyDispatch(int workerIndex, IThreadDispatcher dispatcher)
+    {
+
+    }
+
     public override void Initialize(ContentArchive content, Camera camera)
     {
         camera.Position = new Vector3(-10, 3, -10);
@@ -85,6 +90,14 @@ public unsafe class TaskQueueTestDemo : Demo
         int tasksPerIteration = 64;
         var taskQueue = new TaskQueue(BufferPool);
         var taskQueuePointer = &taskQueue;
+
+        //Test(() =>
+        //{
+        //    for (int i = 0; i < 1024; ++i)
+        //        ThreadDispatcher.DispatchWorkers(&EmptyDispatch);
+        //    return 0;
+        //}, "Dispatch");
+
         Test(() =>
         {
             var context = new Context { Queue = taskQueuePointer };
