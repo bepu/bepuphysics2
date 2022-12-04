@@ -450,9 +450,23 @@ namespace BepuPhysics.Trees
             public Buffer<bool> WorkerHelpedWithBinning;
 
             /// <summary>
-            /// Bins associated with this worker for use in the SAH scan. This will persist across the build.
+            /// Bins associated with this worker for the duration of a node. This allocation will persist across the build.
+            /// <remarks>
+            /// This is technically redundant with the storage used for workers and ends up involving an extra bin scan on a multithreaded test,
+            /// but the cost associated with doing so is... low. The complexity cost of trying to use the memory allocated for workers is not low.</remarks>
+            /// </summary>
+            public Buffer<BoundingBox4> BinBoundingBoxes;
+            /// <summary>
+            /// Bins associated with this worker for use in the SAH scan. This allocation will persist across the build.
             /// </summary>
             public Buffer<BoundingBox4> BinBoundingBoxesScan;
+            /// <summary>
+            /// Bin leaf counts associated with this worker for the duration of a node. This allocation will persist across the build.
+            /// <remarks>
+            /// This is technically redundant with the storage used for workers and ends up involving an extra bin scan on a multithreaded test,
+            /// but the cost associated with doing so is... low. The complexity cost of trying to use the memory allocated for workers is not low.</remarks>
+            /// </summary>
+            public Buffer<int> BinLeafCounts;
 
             public int BinCount;
             public Vector4 CentroidBoundsMin;
@@ -488,7 +502,7 @@ namespace BepuPhysics.Trees
                 return buffer.Slice(previousStart, size).As<T>();
             }
 
-            public void AllocatePrepassWorkers(BufferPool pool, int taskCount) => pool.Take(Unsafe.SizeOf<BoundingBox4>() * int.Min(WorkerCount, taskCount), out PrepassWorkers);
+            public void AllocatePrepassWorkers(BufferPool pool, int taskCount) => pool.Take(int.Min(WorkerCount, taskCount), out PrepassWorkers);
             public void DisposePrepassWorkers(BufferPool pool) => pool.Return(ref PrepassWorkers);
             public void AllocateBinSubtreesWorkers(BufferPool pool, int taskCount)
             {
@@ -510,30 +524,31 @@ namespace BepuPhysics.Trees
             public void DisposeBinSubtreesWorkers(BufferPool pool) => pool.Return(ref BinSubtreesWorkers); //Only need to return the main buffer because all the other allocations share the same id!
 
 
-            public BinnedBuildWorkerContext(Buffer<BoundingBox4> bounds, Buffer<BoundingBox4> binBoundingBoxesScan, TLeafCounts leafCounts, int workerCount)
+            public BinnedBuildWorkerContext(Buffer<BoundingBox4> bounds, Buffer<byte> binAllocationBuffer, ref int binStart, int binCount, TLeafCounts leafCounts, int workerCount)
             {
                 WorkerCount = workerCount;
-                BinBoundingBoxesScan = binBoundingBoxesScan;
+                BinBoundingBoxes = Suballocate<BoundingBox4>(binAllocationBuffer, ref binStart, binCount);
+                BinBoundingBoxesScan = Suballocate<BoundingBox4>(binAllocationBuffer, ref binStart, binCount);
+                BinLeafCounts = Suballocate<int>(binAllocationBuffer, ref binStart, binCount);
                 Bounds = bounds;
                 LeafCounts = leafCounts;
             }
 
             public int SetupTaskCounts(int subtreeStartIndex, int slotCount, int slotsPerTaskTarget, int maximumTaskCountPerSubmission)
             {
-                Debug.Assert(BitOperations.IsPow2(slotsPerTaskTarget), "This mask trick requires power of 2 task size targets.");
-                var mask = slotsPerTaskTarget - 1;
-                int taskCount = Math.Min(maximumTaskCountPerSubmission, (slotCount + mask) & mask);
+                Debug.Assert(BitOperations.IsPow2(slotsPerTaskTarget), "Ideally, this gets inlined and the division becomes a shift. Can't do that if the count isn't a power of 2.");
+                int taskCount = int.Min(maximumTaskCountPerSubmission, (slotCount + slotsPerTaskTarget - 1) / slotsPerTaskTarget);
                 SubtreeStartIndex = subtreeStartIndex;
                 SubtreeCount = slotCount;
                 SlotsPerTaskBase = slotCount / taskCount;
                 SlotRemainder = slotCount - taskCount * SlotsPerTaskBase;
-                TaskCountFitsInWorkerCount = taskCount <= PrepassWorkers.Length;
+                TaskCountFitsInWorkerCount = taskCount <= WorkerCount;
                 return taskCount;
             }
 
             public void GetSlotInterval(long taskId, out int start, out int count)
             {
-                var remainderedTaskCount = Math.Min(SlotRemainder, taskId);
+                var remainderedTaskCount = int.Min(SlotRemainder, (int)taskId);
                 var earlySlotCount = (SlotsPerTaskBase + 1) * remainderedTaskCount;
                 var lateSlotCount = SlotsPerTaskBase * (taskId - remainderedTaskCount);
                 start = SubtreeStartIndex + (int)(earlySlotCount + lateSlotCount);
@@ -553,10 +568,9 @@ namespace BepuPhysics.Trees
             public void GetBins(int workerIndex, out Buffer<BoundingBox4> binBoundingBoxes, out Buffer<BoundingBox4> binBoundingBoxesScan, out Buffer<int> binLeafCounts)
             {
                 ref var worker = ref Workers[workerIndex];
-                ref var cache0 = ref worker.BinSubtreesWorkers[0];
-                binBoundingBoxes = cache0.BinBoundingBoxes;
+                binBoundingBoxes = worker.BinBoundingBoxes;
                 binBoundingBoxesScan = worker.BinBoundingBoxesScan;
-                binLeafCounts = cache0.BinLeafCounts;
+                binLeafCounts = worker.BinLeafCounts;
             }
         }
 
@@ -609,7 +623,7 @@ namespace BepuPhysics.Trees
             worker.AllocatePrepassWorkers(workerPool, taskCount);
             //Don't bother initializing more slots than we have tasks. Note that this requires special handling on the task level;
             //if we have less tasks than workers, then the task needs to distinguish that fact.
-            var activeWorkerCount = Math.Min(context->Workers.Length, taskCount);
+            var activeWorkerCount = int.Min(context->Workers.Length, taskCount);
             if (taskCount > context->Workers.Length)
             {
                 //Potentially multiple tasks per worker; we must preinitialize slots.
@@ -680,10 +694,20 @@ namespace BepuPhysics.Trees
             ref var worker = ref context->Workers[workerIndex];
             var taskCount = worker.SetupTaskCounts(subtreeStartIndex, subtreeCount, SubtreesPerThreadForBinning, context->MaximumTaskCountPerSubmission);
             var workerPool = dispatcher.WorkerPools[workerIndex];
+
+            worker.BinCount = binCount;
+            worker.CentroidBoundsMin = centroidBoundsMin;
+            worker.UseX = useX;
+            worker.UseY = useY;
+            worker.PermuteMask = permuteMask;
+            worker.AxisIndex = axisIndex;
+            worker.OffsetToBinIndex = offsetToBinIndex;
+            worker.MaximumBinIndex = maximumBinIndex;
+
             worker.AllocateBinSubtreesWorkers(workerPool, taskCount);
             //Don't bother initializing more slots than we have tasks. Note that this requires special handling on the task level;
             //if we have less tasks than workers, then the task needs to distinguish that fact.
-            var activeWorkerCount = Math.Min(context->Workers.Length, taskCount);
+            var activeWorkerCount = int.Min(context->Workers.Length, taskCount);
             if (!worker.TaskCountFitsInWorkerCount)
             {
                 //If there are more tasks than workers, then we need to preinitialize all the worker caches.
@@ -699,21 +723,18 @@ namespace BepuPhysics.Trees
                     }
                 }
             }
-            worker.BinCount = binCount;
-            worker.CentroidBoundsMin = centroidBoundsMin;
-            worker.UseX = useX;
-            worker.UseY = useY;
-            worker.PermuteMask = permuteMask;
-            worker.AxisIndex = axisIndex;
-            worker.OffsetToBinIndex = offsetToBinIndex;
-            worker.MaximumBinIndex = maximumBinIndex;
 
             context->Queue->For(&BinSubtreesWorker<TLeafCounts>, Unsafe.AsPointer(ref worker), 0, taskCount, workerIndex, dispatcher);
 
             //Unless the number of threads and bins is really huge, there's no value in attempting to multithread the final compression.
             //(Parallel reduction is an option, but even then... I suspect the single threaded version will be faster. And it's way simpler.)
-            //Merge everything into cache 0. That's the source of bins for the worker that invoked this dispatch.
+            //Note that we have a separate merging target from the caches; that just makes resource management easier.
+            //We can dispose the worker stuff immediately after this merge.
+            //(Consider what happens in the case where the single threaded path is used: you need an allocation! would you allocate a bunch of multithreaded workers for it?
+            //That's not an irrelevant case, either. *Most* nodes will be too small to warrant internal multithreading.)
             ref var cache0 = ref worker.BinSubtreesWorkers[0];
+            cache0.BinBoundingBoxes.CopyTo(0, worker.BinBoundingBoxes, 0, cache0.BinBoundingBoxes.Length);
+            cache0.BinLeafCounts.CopyTo(0, worker.BinLeafCounts, 0, cache0.BinLeafCounts.Length);
             for (int cacheIndex = 1; cacheIndex < activeWorkerCount; ++cacheIndex)
             {
                 //Only bother merging from workers that actually did anything.
@@ -722,7 +743,7 @@ namespace BepuPhysics.Trees
                     ref var cache = ref worker.BinSubtreesWorkers[cacheIndex];
                     for (int binIndex = 0; binIndex < binCount; ++binIndex)
                     {
-                        ref var b0 = ref cache0.BinBoundingBoxes[binIndex];
+                        ref var b0 = ref worker.BinBoundingBoxes[binIndex];
                         ref var bi = ref cache.BinBoundingBoxes[binIndex];
                         b0.Min = Vector4.Min(b0.Min, bi.Min);
                         b0.Max = Vector4.Min(b0.Max, bi.Max);
@@ -826,14 +847,15 @@ namespace BepuPhysics.Trees
             var permuteMask = Vector128.Create(useX ? 0 : useY ? 1 : 2, 0, 0, 0);
             var axisIndex = useX ? 0 : useY ? 1 : 2;
 
-            var binCount = Math.Min(context->MaximumBinCount, Math.Max((int)(subtreeCount * context->LeafToBinMultiplier), context->MinimumBinCount));
-            context->Threading.GetBins(workerIndex, out var binBoundingBoxes, out var binBoundingBoxesScan, out var binLeafCounts);
-            Debug.Assert(binBoundingBoxes.Length >= binCount);
+            var binCount = int.Min(context->MaximumBinCount, int.Max((int)(subtreeCount * context->LeafToBinMultiplier), context->MinimumBinCount));
 
             var offsetToBinIndex = new Vector4(binCount) / centroidSpan;
             //Avoid letting NaNs into the offsetToBinIndex scale.
             offsetToBinIndex = Vector128.ConditionalSelect(axisIsDegenerate, Vector128<float>.Zero, offsetToBinIndex.AsVector128()).AsVector4();
 
+            var maximumBinIndex = new Vector4(binCount - 1);
+            context->Threading.GetBins(workerIndex, out var binBoundingBoxes, out var binBoundingBoxesScan, out var binLeafCounts);
+            Debug.Assert(binBoundingBoxes.Length >= binCount);
             for (int i = 0; i < binCount; ++i)
             {
                 ref var boxX = ref binBoundingBoxes[i];
@@ -841,8 +863,6 @@ namespace BepuPhysics.Trees
                 boxX.Max = new Vector4(float.MinValue);
                 binLeafCounts[i] = 0;
             }
-
-            var maximumBinIndex = new Vector4(binCount - 1);
             if (typeof(TThreading) == typeof(SingleThreaded) || subtreeCount < SubtreesPerThreadForBinning)
             {
                 BinSubtrees(centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, boundingBoxes, leafCounts, binBoundingBoxes, binLeafCounts);
@@ -1011,10 +1031,10 @@ namespace BepuPhysics.Trees
 
             //Don't let the user pick values that will just cause an explosion.
             Debug.Assert(minimumBinCount >= 2 && maximumBinCount >= 2, "At least two bins are required. In release mode, this will be clamped up to 2, but where did lower values come from?");
-            minimumBinCount = Math.Max(2, minimumBinCount);
-            maximumBinCount = Math.Max(2, maximumBinCount);
+            minimumBinCount = int.Max(2, minimumBinCount);
+            maximumBinCount = int.Max(2, maximumBinCount);
             //The microsweep uses the same resources as the bin allocations, so expand to hold whichever is larger.
-            var allocatedBinCount = Math.Max(maximumBinCount, microsweepThreshold);
+            var allocatedBinCount = int.Max(maximumBinCount, microsweepThreshold);
 
             if (dispatcher == null && taskQueuePointer == null)
             {
@@ -1041,15 +1061,16 @@ namespace BepuPhysics.Trees
                 //Those node jobs could spawn multithreaded work that other workers assist with.
                 //Each of those jobs needs its own context for those workers, and the number of jobs is not 1:1 with the workers.
                 //We'll handle such dispatch-required allocations from worker pools. Here, we just preallocate stuff for the first level across all workers.
-                pool.Take<BoundingBox4>(maximumBinCount * workerCount, out var workerBinsForScan);
+                pool.Take<byte>(maximumBinCount * workerCount * (sizeof(BoundingBox4) * 2 + sizeof(int)), out var workerBinsAllocation);
 
                 BinnedBuildWorkerContext<UnitLeafCount>* workerContextsPointer = stackalloc BinnedBuildWorkerContext<UnitLeafCount>[workerCount];
                 var leafCounts = new UnitLeafCount();
                 var workerContexts = new Buffer<BinnedBuildWorkerContext<UnitLeafCount>>(workerContextsPointer, workerCount);
 
+                int binAllocationStart = 0;
                 for (int i = 0; i < workerCount; ++i)
                 {
-                    workerContexts[i] = new BinnedBuildWorkerContext<UnitLeafCount>(boundingBoxes.As<BoundingBox4>(), workerBinsForScan.Slice(i * maximumBinCount, (i + 1) * maximumBinCount), leafCounts, workerCount);
+                    workerContexts[i] = new BinnedBuildWorkerContext<UnitLeafCount>(boundingBoxes.As<BoundingBox4>(), workerBinsAllocation, ref binAllocationStart, maximumBinCount, leafCounts, workerCount);
                 }
 
                 TaskQueue taskQueue = default;
@@ -1072,12 +1093,9 @@ namespace BepuPhysics.Trees
                 taskQueuePointer->TryEnqueueUnsafely(new Task(&BinnedBuilderWorkerEntry<UnitLeafCount, Buffer<Leaf>>, &context));
                 dispatcher.DispatchWorkers(&BinnedBuilderWorkerFunction<UnitLeafCount, Buffer<Leaf>>, unmanagedContext: taskQueuePointer);
 
-
                 if (createdTaskQueueLocally)
                     taskQueue.Dispose(pool);
-                pool.Return(ref workerBinsForScan);
-
-
+                pool.Return(ref workerBinsAllocation);
             }
         }
 
