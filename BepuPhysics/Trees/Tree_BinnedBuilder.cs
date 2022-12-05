@@ -780,8 +780,8 @@ namespace BepuPhysics.Trees
                         ref var b0 = ref worker.BinBoundingBoxes[binIndex];
                         ref var bi = ref cache.BinBoundingBoxes[binIndex];
                         b0.Min = Vector4.Min(b0.Min, bi.Min);
-                        b0.Max = Vector4.Min(b0.Max, bi.Max);
-                        cache0.BinLeafCounts[binIndex] += cache.BinLeafCounts[binIndex];
+                        b0.Max = Vector4.Max(b0.Max, bi.Max);
+                        worker.BinLeafCounts[binIndex] += cache.BinLeafCounts[binIndex];
                     }
                 }
             }
