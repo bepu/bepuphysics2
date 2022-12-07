@@ -8,6 +8,7 @@ using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Threading;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Demos.SpecializedTests;
 
@@ -21,10 +22,38 @@ public unsafe class TaskQueueTestDemo : Demo
         }
         return sum;
     }
-    static void DynamicallyEnqueuedTest(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
+
+    //Try different context layouts to make sure the task queue isn't mixing and matching tasks somehow.
+    [StructLayout(LayoutKind.Explicit)]
+    struct DynamicContext1
+    {
+        [FieldOffset(0)]
+        public long Pad;
+        [FieldOffset(8)]
+        public Context* Context;
+    }
+
+    static void DynamicallyEnqueuedTest1(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
     {
         var sum = DoSomeWork(10000, 0);
-        Interlocked.Add(ref ((Context*)context)->Sum, sum);
+        Interlocked.Add(ref ((DynamicContext1*)context)->Context->Sum, sum);
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    struct DynamicContext2
+    {
+        [FieldOffset(0)]
+        public long Pad1;
+        [FieldOffset(8)]
+        public long Pad2;
+        [FieldOffset(16)]
+        public Context* Context;
+    }
+
+    static void DynamicallyEnqueuedTest2(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        var sum = DoSomeWork(10000, 0);
+        Interlocked.Add(ref ((DynamicContext2*)context)->Context->Sum, sum);
     }
     static void Test(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
     {
@@ -33,7 +62,10 @@ public unsafe class TaskQueueTestDemo : Demo
         if ((taskId & 7) == 0)
         {
             const int subtaskCount = 8;
-            typedContext->Queue->For(&DynamicallyEnqueuedTest, context, 0, subtaskCount, workerIndex, dispatcher);
+            var context1 = new DynamicContext1 { Context = typedContext };
+            typedContext->Queue->For(&DynamicallyEnqueuedTest1, &context1, 0, subtaskCount, workerIndex, dispatcher);
+            var context2 = new DynamicContext2 { Context = typedContext };
+            typedContext->Queue->For(&DynamicallyEnqueuedTest2, &context2, 0, subtaskCount, workerIndex, dispatcher);
         }
         Interlocked.Add(ref typedContext->Sum, sum);
     }
@@ -44,9 +76,15 @@ public unsafe class TaskQueueTestDemo : Demo
         if ((taskId & 7) == 0)
         {
             const int subtaskCount = 8;
+            var context1 = new DynamicContext1 { Context = typedContext };
             for (int i = 0; i < subtaskCount; ++i)
             {
-                DynamicallyEnqueuedTest(i, context, workerIndex, dispatcher);
+                DynamicallyEnqueuedTest1(i, &context1, workerIndex, dispatcher);
+            }
+            var context2 = new DynamicContext2 { Context = typedContext };
+            for (int i = 0; i < subtaskCount; ++i)
+            {
+                DynamicallyEnqueuedTest2(i, &context2, workerIndex, dispatcher);
             }
         }
         Interlocked.Add(ref typedContext->Sum, sum);
