@@ -67,6 +67,7 @@ public unsafe struct Task
     /// <param name="dispatcher">Dispatcher running this task.</param>
     public void Run(int workerIndex, IThreadDispatcher dispatcher)
     {
+        Debug.Assert(!Continuation.Completed);
         Function(Id, Context, workerIndex, dispatcher);
         if (Continuation.Initialized)
             Continuation.NotifyTaskCompleted(workerIndex, dispatcher);
@@ -249,7 +250,7 @@ internal unsafe struct TaskQueueContinuations
     public Buffer<TaskContinuation> Continuations;
     public IdPool IndexPool;
     public int ContinuationCount;
-    public int Locker;
+    public volatile int Locker;
 
     /// <summary>
     /// Retrieves a pointer to the continuation data for <see cref="ContinuationHandle"/>.
@@ -441,12 +442,13 @@ public unsafe struct TaskQueue
         {
             //We have the lock.
             Debug.Assert(continuations.ContinuationCount <= continuations.Continuations.length);
-            if (continuations.ContinuationCount >= continuations.Continuations.length)
+            if (continuations.ContinuationCount == continuations.Continuations.length)
             {
                 //No room.
                 return AllocateTaskContinuationResult.Full;
             }
             var index = continuations.IndexPool.Take();
+            ++continuations.ContinuationCount;
             ref var continuation = ref continuations.Continuations[index];
             var newVersion = continuation.Version + 1;
             continuation.OnCompleted = onCompleted;
@@ -559,11 +561,12 @@ public unsafe struct TaskQueue
         paddedCounters.AllocatedTaskIndex = taskEndIndex;
         Debug.Assert(BitOperations.IsPow2(this.tasks.Length));
         var wrappedInclusiveStartIndex = (int)(taskStartIndex & taskMask);
-        var wrappedInclusiveEndIndex = (int)(taskEndIndex & taskMask);
-        if (wrappedInclusiveEndIndex > wrappedInclusiveStartIndex)
+        //Note - 1; the taskEndIndex is exclusive. Working with the inclusive index means we don't have to worry about an end index of tasks.Length being wrapped to 0.
+        var wrappedInclusiveEndIndex = (int)((taskEndIndex - 1) & taskMask);
+        if (wrappedInclusiveEndIndex >= wrappedInclusiveStartIndex)
         {
             //We can just copy the whole task block as one blob.
-            Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + taskStartIndex), ref Unsafe.As<Task, byte>(ref MemoryMarshal.GetReference(tasks)), (uint)(Unsafe.SizeOf<Task>() * tasks.Length));
+            Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + wrappedInclusiveStartIndex), ref Unsafe.As<Task, byte>(ref MemoryMarshal.GetReference(tasks)), (uint)(Unsafe.SizeOf<Task>() * tasks.Length));
         }
         else
         {
@@ -572,7 +575,7 @@ public unsafe struct TaskQueue
             var firstRegionCount = this.tasks.length - wrappedInclusiveStartIndex;
             ref var secondBlobStartTask = ref tasks[firstRegionCount];
             var secondRegionCount = tasks.Length - firstRegionCount;
-            Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + taskStartIndex), ref Unsafe.As<Task, byte>(ref startTask), (uint)(Unsafe.SizeOf<Task>() * firstRegionCount));
+            Unsafe.CopyBlockUnaligned(ref *(byte*)(this.tasks.Memory + wrappedInclusiveStartIndex), ref Unsafe.As<Task, byte>(ref startTask), (uint)(Unsafe.SizeOf<Task>() * firstRegionCount));
             Unsafe.CopyBlockUnaligned(ref *(byte*)this.tasks.Memory, ref Unsafe.As<Task, byte>(ref secondBlobStartTask), (uint)(Unsafe.SizeOf<Task>() * secondRegionCount));
         }
         //for (int i = 0; i < tasks.Length; ++i)

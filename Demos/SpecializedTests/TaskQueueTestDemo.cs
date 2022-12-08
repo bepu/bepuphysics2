@@ -9,6 +9,7 @@ using BepuPhysics.Constraints;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Reflection.Metadata;
 
 namespace Demos.SpecializedTests;
 
@@ -123,7 +124,6 @@ public unsafe class TaskQueueTestDemo : Demo
 
         Console.WriteLine($"Task size: {Unsafe.SizeOf<Task>()}");
 
-
         int iterationCount = 4;
         int tasksPerIteration = 64;
         var taskQueue = new TaskQueue(BufferPool);
@@ -141,7 +141,9 @@ public unsafe class TaskQueueTestDemo : Demo
             var context = new Context { Queue = taskQueuePointer };
             var continuation = taskQueuePointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new Task(&IssueStop, &context));
             for (int i = 0; i < iterationCount; ++i)
+            {
                 taskQueuePointer->TryEnqueueForUnsafely(&Test, &context, i * tasksPerIteration, tasksPerIteration, continuation);
+            }
             //taskQueuePointer->TryEnqueueStopUnsafely();
             //taskQueuePointer->EnqueueTasks()
             ThreadDispatcher.DispatchWorkers(&DispatcherBody, unmanagedContext: taskQueuePointer);
