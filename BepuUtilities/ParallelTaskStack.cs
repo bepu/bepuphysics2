@@ -1,6 +1,8 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -207,11 +209,13 @@ internal unsafe struct WorkerTaskStack
     public IdPool ContinuationIndexPool;
     public int ContinuationCount;
     public int WorkerIndex;
+    public Buffer<ulong> Masks;
     public volatile int TaskLocker;
     public volatile int ContinuationLocker;
 
-    public WorkerTaskStack(int workerIndex, IThreadDispatcher dispatcher, int initialTaskCapacity = 64, int initialContinuationCapacity = 16)
+    public WorkerTaskStack(int workerIndex, IThreadDispatcher dispatcher, Buffer<ulong> masks, int initialTaskCapacity = 64, int initialContinuationCapacity = 16)
     {
+        Masks = masks;
         var threadPool = dispatcher.WorkerPools[workerIndex];
         WorkerIndex = workerIndex;
         Tasks = new QuickList<Task>(initialTaskCapacity, threadPool);
@@ -257,11 +261,23 @@ internal unsafe struct WorkerTaskStack
             try
             {
                 //We have the lock.
-                return Tasks.TryPop(out task);
+                if (Tasks.TryPop(out task))
+                {
+                    if (Tasks.Count == 0)
+                    {
+                        //Just transitioned from taskful to taskless; notify the bitmask.
+                        var maskIndex = WorkerIndex / 64;
+                        var indexInMask = WorkerIndex - maskIndex * 64;
+                        Interlocked.And(ref Masks[maskIndex], ~(1ul << indexInMask));
+                    }
+                    return true;
+                }
+                return false;
             }
             finally
             {
                 TaskLocker = 0;
+
             }
         }
     }
@@ -294,8 +310,15 @@ internal unsafe struct WorkerTaskStack
             Tasks.Span.Clear(Tasks.Count, Tasks.Span.length - Tasks.Count);
 #endif
         }
-
         Tasks.AddRangeUnsafely(tasks);
+
+        if (Tasks.Count == tasks.Length)
+        {
+            //Just transitioned from taskless to taskful; notify the bitmask.
+            var maskIndex = WorkerIndex / 64;
+            var indexInMask = WorkerIndex - maskIndex * 64;
+            Interlocked.Or(ref Masks[maskIndex], 1ul << indexInMask);
+        }
     }
     /// <summary>
     /// Pushes a task onto the task stack. Does not acquire a lock.
@@ -493,6 +516,7 @@ public unsafe struct TaskContinuation
 public unsafe struct ParallelTaskStack
 {
     Buffer<WorkerTaskStack> workerStacks;
+    Buffer<ulong> workerHasTaskMask;
 
     [StructLayout(LayoutKind.Explicit, Size = 256 + 16)]
     struct StopPad
@@ -513,9 +537,11 @@ public unsafe struct ParallelTaskStack
     public ParallelTaskStack(BufferPool pool, IThreadDispatcher dispatcher, int workerCount, int initialWorkerTaskCapacity = 64, int initialWorkerContinuationCapacity = 16)
     {
         pool.Take(workerCount, out workerStacks);
+        pool.Take((workerCount + 63) / 64, out workerHasTaskMask);
+        workerHasTaskMask.Clear(0, workerHasTaskMask.Length);
         for (int i = 0; i < workerCount; ++i)
         {
-            workerStacks[i] = new WorkerTaskStack(i, dispatcher, initialWorkerTaskCapacity, initialWorkerContinuationCapacity);
+            workerStacks[i] = new WorkerTaskStack(i, dispatcher, workerHasTaskMask, initialWorkerTaskCapacity, initialWorkerContinuationCapacity);
         }
         Reset();
     }
@@ -530,6 +556,7 @@ public unsafe struct ParallelTaskStack
             workerStacks[i].Reset();
         }
         padded.Stop = false;
+        workerHasTaskMask.Clear(0, workerHasTaskMask.Length);
     }
 
     /// <summary>
@@ -543,6 +570,7 @@ public unsafe struct ParallelTaskStack
             workerStacks[i].Reset();
         }
         pool.Return(ref workerStacks);
+        pool.Return(ref workerHasTaskMask);
     }
 
     /// <summary>
@@ -604,6 +632,9 @@ public unsafe struct ParallelTaskStack
         return workerStacks[workerIndex].AllocateContinuation(taskCount, dispatcher, onCompleted);
     }
 
+    public static int PopFailed;
+    public static int StealRequired;
+    public static int NoStealRequired;
     /// <summary>
     /// Attempts to pop a task.
     /// </summary>
@@ -612,18 +643,61 @@ public unsafe struct ParallelTaskStack
     /// <returns>Result status of the pop attempt.</returns>
     public PopTaskResult TryPop(int workerIndex, out Task task)
     {
-        //Walk through the worker stacks looking for work. Start with the current worker.
-        int peekedWorkerIndex = workerIndex;
-        for (int i = 0; i < workerStacks.length; ++i)
+        //Try the local worker first.
+        if (workerStacks[workerIndex].TryPop(out task))
         {
-            if (workerStacks[peekedWorkerIndex].TryPop(out task))
-            {
-                return PopTaskResult.Success;
-            }
-            ++peekedWorkerIndex;
-            if (peekedWorkerIndex >= workerStacks.length)
-                peekedWorkerIndex -= workerStacks.length;
+            Interlocked.Increment(ref NoStealRequired);
+            return PopTaskResult.Success;
         }
+        Interlocked.Increment(ref StealRequired);
+        //There was no task available locally, so go for a steal.
+        //We want to distribute steals so that not *every* thread seeks the same source.
+        //So check all worker slots as a ring.
+        //The first time we check the local long, we should mask out all earlier slots to ensure the order.
+        var startIndex = workerIndex / 64;
+        var indexInMask = workerIndex - startIndex * 64;
+        var mask = workerHasTaskMask[startIndex];
+        var earlyMask = mask;
+        mask &= ~((1ul << indexInMask) - 1);
+        var setBitIndex = BitOperations.TrailingZeroCount(mask);
+        if (setBitIndex < 64)
+        {
+            if (workerStacks[startIndex * 64 + setBitIndex].TryPop(out task))
+                return PopTaskResult.Success;
+        }
+
+        //No task available in the local chunk, so just keep going.
+        for (int i = 1; i <= workerHasTaskMask.length; ++i)
+        {
+            var maskIndex = startIndex + i;
+            if (maskIndex >= workerHasTaskMask.length)
+                maskIndex -= workerHasTaskMask.length;
+            //No more need for masking out early bits; just find the first task.
+            mask = workerHasTaskMask[maskIndex];
+            setBitIndex = BitOperations.TrailingZeroCount(mask);
+            if (setBitIndex < 64)
+            {
+                if (workerStacks[maskIndex * 64 + setBitIndex].TryPop(out task))
+                    return PopTaskResult.Success;
+            }
+        }
+
+        Interlocked.Increment(ref PopFailed);
+        task = default;
+        return padded.Stop ? PopTaskResult.Stop : PopTaskResult.Empty;
+
+        ////Walk through the worker stacks looking for work. Start with the current worker.
+        //int peekedWorkerIndex = workerIndex;
+        //for (int i = 0; i < workerStacks.length; ++i)
+        //{
+        //    if (workerStacks[peekedWorkerIndex].TryPop(out task))
+        //    {
+        //        return PopTaskResult.Success;
+        //    }
+        //    ++peekedWorkerIndex;
+        //    if (peekedWorkerIndex >= workerStacks.length)
+        //        peekedWorkerIndex -= workerStacks.length;
+        //}
         //No worker had anything!
         task = default;
         return padded.Stop ? PopTaskResult.Stop : PopTaskResult.Empty;

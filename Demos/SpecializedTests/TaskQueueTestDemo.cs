@@ -151,7 +151,7 @@ public unsafe class TaskQueueTestDemo : Demo
 
         Console.WriteLine($"Task size: {Unsafe.SizeOf<TaskQ>()}, {Unsafe.SizeOf<TaskS>()}");
 
-        int iterationCount = 4;
+        int iterationCount = 64;
         int tasksPerIteration = 64;
 
         //Test(() =>
@@ -170,13 +170,22 @@ public unsafe class TaskQueueTestDemo : Demo
             var continuation = taskStackPointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new TaskS(&IssueStop<ParallelTaskStack>, &context));
             for (int i = 0; i < iterationCount; ++i)
             {
-                taskStackPointer->PushForUnsafely(&Test<ParallelTaskStack>, &context, i * tasksPerIteration, tasksPerIteration, 0, ThreadDispatcher, continuation);
+                taskStackPointer->PushForUnsafely(&Test<ParallelTaskStack>, &context, i * tasksPerIteration, tasksPerIteration, i % ThreadDispatcher.ThreadCount, ThreadDispatcher, continuation);
             }
             //taskQueuePointer->TryEnqueueStopUnsafely();
             //taskQueuePointer->EnqueueTasks()
             ThreadDispatcher.DispatchWorkers(&DispatcherBody<ParallelTaskStack>, unmanagedContext: taskStackPointer);
             return context.Sum;
-        }, "MT", () => taskStackPointer->Reset());
+        }, "MT Parallel Stack", () => taskStackPointer->Reset());
+
+        var noSteal = ParallelTaskStack.NoStealRequired;
+        var stealRequired = ParallelTaskStack.StealRequired;
+        var stealFail = ParallelTaskStack.PopFailed;
+        var steal = stealRequired - stealFail;
+
+        Console.WriteLine($"Nosteal, steal succeed, steal fail: {noSteal}, {steal}, {stealFail} ({steal / (double)(stealRequired + noSteal)})");
+
+        taskStack.Dispose(BufferPool);
 
         var taskQueue = new TaskQueue(BufferPool, maximumTaskCapacity: 1 << 19, maximumContinuationCapacity: 1 << 19);
         var taskQueuePointer = &taskQueue;
