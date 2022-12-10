@@ -646,10 +646,31 @@ public unsafe struct ParallelTaskStack
         //Try the local worker first.
         if (workerStacks[workerIndex].TryPop(out task))
         {
-            Interlocked.Increment(ref NoStealRequired);
+            //Interlocked.Increment(ref NoStealRequired);
             return PopTaskResult.Success;
         }
-        Interlocked.Increment(ref StealRequired);
+        //Interlocked.Increment(ref StealRequired);
+
+        //for (int i = 0; i < workerHasTaskMask.length; ++i)
+        //{
+        //    //No more need for masking out early bits; just find the first task.
+        //    var mask = workerHasTaskMask[i];
+        //    int setBitIndex;
+
+        //    while ((setBitIndex = BitOperations.TrailingZeroCount(mask)) < 64)
+        //    {
+        //        if (workerStacks[i * 64 + setBitIndex].TryPop(out task))
+        //            return PopTaskResult.Success;
+        //        //This stack didn't have anything for us, mask it out.
+        //        mask &= ~(1ul << setBitIndex);
+        //    }
+        //}
+        ////Interlocked.Increment(ref PopFailed);
+        //task = default;
+        //return padded.Stop ? PopTaskResult.Stop : PopTaskResult.Empty;
+
+
+
         //There was no task available locally, so go for a steal.
         //We want to distribute steals so that not *every* thread seeks the same source.
         //So check all worker slots as a ring.
@@ -682,9 +703,11 @@ public unsafe struct ParallelTaskStack
             }
         }
 
-        Interlocked.Increment(ref PopFailed);
+        //Interlocked.Increment(ref PopFailed);
         task = default;
         return padded.Stop ? PopTaskResult.Stop : PopTaskResult.Empty;
+
+
 
         ////Walk through the worker stacks looking for work. Start with the current worker.
         //int peekedWorkerIndex = workerIndex;
