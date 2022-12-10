@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BepuUtilities.Memory;
 
-namespace BepuUtilities;
+namespace BepuUtilities.TestQueue;
 
 /// <summary>
 /// Description of a task to be submitted to a <see cref="TaskQueue"/>.
@@ -193,6 +193,7 @@ public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
     public void NotifyTaskCompleted(int workerIndex, IThreadDispatcher dispatcher)
     {
         var continuation = Continuation;
+        Debug.Assert(!Completed);
         var counter = Interlocked.Decrement(ref continuation->RemainingTaskCounter);
         Debug.Assert(counter >= 0, "The counter should not go negative. Was notify called too many times?");
         if (counter == 0)
@@ -527,6 +528,7 @@ public unsafe struct TaskQueue
                 continue;
             //There's an actual job!
             task = taskCandidate;
+            Debug.Assert(!task.Continuation.Completed);
             return DequeueTaskResult.Success;
         }
     }

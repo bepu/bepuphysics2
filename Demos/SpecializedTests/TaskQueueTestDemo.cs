@@ -10,8 +10,13 @@ using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Reflection.Metadata;
+using BepuUtilities.TestQueue;
+using BepuUtilities.TestStack;
+using TaskQ = BepuUtilities.TestQueue.Task;
+using TaskS = BepuUtilities.TestStack.Task;
 
 namespace Demos.SpecializedTests;
+
 
 public unsafe class TaskQueueTestDemo : Demo
 {
@@ -56,17 +61,27 @@ public unsafe class TaskQueueTestDemo : Demo
         var sum = DoSomeWork(10000, 0);
         Interlocked.Add(ref ((DynamicContext2*)context)->Context->Sum, sum);
     }
-    static void Test(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
+    static void Test<T>(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher) where T : unmanaged
     {
         var sum = DoSomeWork(100000, 0);
         var typedContext = (Context*)context;
-        if ((taskId & 7) == 0)
+        //if ((taskId & 7) == 0)
         {
             const int subtaskCount = 8;
             var context1 = new DynamicContext1 { Context = typedContext };
-            typedContext->Queue->For(&DynamicallyEnqueuedTest1, &context1, 0, subtaskCount, workerIndex, dispatcher);
             var context2 = new DynamicContext2 { Context = typedContext };
-            typedContext->Queue->For(&DynamicallyEnqueuedTest2, &context2, 0, subtaskCount, workerIndex, dispatcher);
+            if (typeof(T) == typeof(TaskQueue))
+            {
+                var queue = (TaskQueue*)typedContext->TaskPile;
+                queue->For(&DynamicallyEnqueuedTest1, &context1, 0, subtaskCount, workerIndex, dispatcher);
+                queue->For(&DynamicallyEnqueuedTest2, &context2, 0, subtaskCount, workerIndex, dispatcher);
+            }
+            else
+            {
+                var stack = (ParallelTaskStack*)typedContext->TaskPile;
+                stack->For(&DynamicallyEnqueuedTest1, &context1, 0, subtaskCount, workerIndex, dispatcher);
+                stack->For(&DynamicallyEnqueuedTest2, &context2, 0, subtaskCount, workerIndex, dispatcher);
+            }
         }
         Interlocked.Add(ref typedContext->Sum, sum);
     }
@@ -74,7 +89,7 @@ public unsafe class TaskQueueTestDemo : Demo
     {
         var sum = DoSomeWork(100000, 0);
         var typedContext = (Context*)context;
-        if ((taskId & 7) == 0)
+        //if ((taskId & 7) == 0)
         {
             const int subtaskCount = 8;
             var context1 = new DynamicContext1 { Context = typedContext };
@@ -91,22 +106,34 @@ public unsafe class TaskQueueTestDemo : Demo
         Interlocked.Add(ref typedContext->Sum, sum);
     }
 
-    static void DispatcherBody(int workerIndex, IThreadDispatcher dispatcher)
+    static void DispatcherBody<T>(int workerIndex, IThreadDispatcher dispatcher) where T : unmanaged
     {
-        var taskQueue = (TaskQueue*)dispatcher.UnmanagedContext;
-        while (taskQueue->TryDequeueAndRun(workerIndex, dispatcher) != DequeueTaskResult.Stop) ;
+        if (typeof(T) == typeof(TaskQueue))
+        {
+            var taskQueue = (TaskQueue*)dispatcher.UnmanagedContext;
+            while (taskQueue->TryDequeueAndRun(workerIndex, dispatcher) != DequeueTaskResult.Stop) ;
+        }
+        else
+        {
+            var taskStack = (ParallelTaskStack*)dispatcher.UnmanagedContext;
+            while (taskStack->TryPopAndRun(workerIndex, dispatcher) != PopTaskResult.Stop) ;
+        }
     }
 
     struct Context
     {
-        public TaskQueue* Queue;
+        public void* TaskPile;
         public int Sum;
     }
 
-    static void IssueStop(long id, void* context, int workerIndex, IThreadDispatcher dispatcher)
+    static void IssueStop<T>(long id, void* context, int workerIndex, IThreadDispatcher dispatcher) where T : unmanaged
     {
         var typedContext = (Context*)context;
-        typedContext->Queue->EnqueueStop(workerIndex, dispatcher);
+        if (typeof(T) == typeof(TaskQueue))
+            ((TaskQueue*)typedContext->TaskPile)->EnqueueStop(workerIndex, dispatcher);
+        else
+            ((ParallelTaskStack*)typedContext->TaskPile)->RequestStop();
+
     }
 
     static void EmptyDispatch(int workerIndex, IThreadDispatcher dispatcher)
@@ -122,12 +149,10 @@ public unsafe class TaskQueueTestDemo : Demo
 
         Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
 
-        Console.WriteLine($"Task size: {Unsafe.SizeOf<Task>()}");
+        Console.WriteLine($"Task size: {Unsafe.SizeOf<TaskQ>()}, {Unsafe.SizeOf<TaskS>()}");
 
         int iterationCount = 4;
         int tasksPerIteration = 64;
-        var taskQueue = new TaskQueue(BufferPool);
-        var taskQueuePointer = &taskQueue;
 
         //Test(() =>
         //{
@@ -136,34 +161,54 @@ public unsafe class TaskQueueTestDemo : Demo
         //    return 0;
         //}, "Dispatch");
 
+        var taskStack = new ParallelTaskStack(BufferPool, ThreadDispatcher, ThreadDispatcher.ThreadCount);
+        var taskStackPointer = &taskStack;
+
         Test(() =>
         {
-            var context = new Context { Queue = taskQueuePointer };
-            var continuation = taskQueuePointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new Task(&IssueStop, &context));
+            var context = new Context { TaskPile = taskStackPointer };
+            var continuation = taskStackPointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new TaskS(&IssueStop<ParallelTaskStack>, &context));
             for (int i = 0; i < iterationCount; ++i)
             {
-                taskQueuePointer->TryEnqueueForUnsafely(&Test, &context, i * tasksPerIteration, tasksPerIteration, continuation);
+                taskStackPointer->PushForUnsafely(&Test<ParallelTaskStack>, &context, i * tasksPerIteration, tasksPerIteration, 0, ThreadDispatcher, continuation);
             }
             //taskQueuePointer->TryEnqueueStopUnsafely();
             //taskQueuePointer->EnqueueTasks()
-            ThreadDispatcher.DispatchWorkers(&DispatcherBody, unmanagedContext: taskQueuePointer);
+            ThreadDispatcher.DispatchWorkers(&DispatcherBody<ParallelTaskStack>, unmanagedContext: taskStackPointer);
+            return context.Sum;
+        }, "MT", () => taskStackPointer->Reset());
+
+        var taskQueue = new TaskQueue(BufferPool, maximumTaskCapacity: 1 << 19, maximumContinuationCapacity: 1 << 19);
+        var taskQueuePointer = &taskQueue;
+
+        Test(() =>
+        {
+            var context = new Context { TaskPile = taskQueuePointer };
+            var continuation = taskQueuePointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new TaskQ(&IssueStop<TaskQueue>, &context));
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                taskQueuePointer->TryEnqueueForUnsafely(&Test<TaskQueue>, &context, i * tasksPerIteration, tasksPerIteration, continuation);
+            }
+            //taskQueuePointer->TryEnqueueStopUnsafely();
+            //taskQueuePointer->EnqueueTasks()
+            ThreadDispatcher.DispatchWorkers(&DispatcherBody<TaskQueue>, unmanagedContext: taskQueuePointer);
             return context.Sum;
         }, "MT", () => taskQueuePointer->Reset());
 
         taskQueue.Dispose(BufferPool);
 
-        Test(() =>
-        {
-            var testContext = new Context { };
-            for (int i = 0; i < iterationCount; ++i)
-            {
-                for (int j = 0; j < tasksPerIteration; ++j)
-                {
-                    STTest(i * tasksPerIteration + j, &testContext, 0, ThreadDispatcher);
-                }
-            }
-            return testContext.Sum;
-        }, "ST");
+        //Test(() =>
+        //{
+        //    var testContext = new Context { };
+        //    for (int i = 0; i < iterationCount; ++i)
+        //    {
+        //        for (int j = 0; j < tasksPerIteration; ++j)
+        //        {
+        //            STTest(i * tasksPerIteration + j, &testContext, 0, ThreadDispatcher);
+        //        }
+        //    }
+        //    return testContext.Sum;
+        //}, "ST");
 
     }
 
