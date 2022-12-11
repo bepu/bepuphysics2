@@ -9,7 +9,7 @@ using System.Threading;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 
-namespace BepuUtilities.TestStack;
+namespace BepuUtilities.TestParallelStack;
 
 /// <summary>
 /// Description of a task to be submitted to a <see cref="ParallelTaskStack"/>.
