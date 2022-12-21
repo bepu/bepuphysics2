@@ -55,22 +55,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector3Wide.Subtract(closestPointOnCapsule, closestPointOnEdge, out normal);
             Vector3Wide.LengthSquared(normal, out var normalLengthSquared);
-            //In the event that the normal has zero length due to the capsule internal line segment touching the edge, use the cross product of the edge and axis.
-            Vector3Wide.CrossWithoutOverlap(edgeOffset, capsuleAxis, out var fallbackNormal);
+            //In the event that the normal has zero length due to the capsule internal line segment touching the edge, use the calibrated cross product of the edge and axis.
+            Vector3Wide.CrossWithoutOverlap(capsuleAxis, edgeOffset, out var fallbackNormal);
+            //Fallback calibration can use the fact that dot(fallbackNormal, capsuleCenter) >= 0, because capsuleCenter is the offset from the center of the triangle to the center of the capsule.
+            Vector3Wide.Dot(fallbackNormal, capsuleCenter, out var calibrationDot);
+            Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<float>.Zero), ref fallbackNormal);
             Vector3Wide.LengthSquared(fallbackNormal, out var fallbackNormalLengthSquared);
-            var useFallbackNormal = Vector.LessThan(normalLengthSquared, new Vector<float>(1e-15f));
+            var useFallbackNormal = Vector.LessThan(normalLengthSquared, new Vector<float>(1e-13f));
             Vector3Wide.ConditionalSelect(useFallbackNormal, fallbackNormal, normal, out normal);
             normalLengthSquared = Vector.ConditionalSelect(useFallbackNormal, fallbackNormalLengthSquared, normalLengthSquared);
             //Unfortunately, if the edge and axis are parallel, the cross product will ALSO be zero, so we need another fallback. We'll use the edge plane normal.
             //Unless the triangle is degenerate, this can't be zero length.
             Vector3Wide.CrossWithoutOverlap(triangleNormal, edgeOffset, out var secondFallbackNormal);
             Vector3Wide.LengthSquared(fallbackNormal, out var secondFallbackNormalLengthSquared);
-            var useSecondFallbackNormal = Vector.LessThan(normalLengthSquared, new Vector<float>(1e-15f));
+            var useSecondFallbackNormal = Vector.LessThan(normalLengthSquared, new Vector<float>(1e-13f));
             Vector3Wide.ConditionalSelect(useSecondFallbackNormal, secondFallbackNormal, normal, out normal);
             normalLengthSquared = Vector.ConditionalSelect(useSecondFallbackNormal, secondFallbackNormalLengthSquared, normalLengthSquared);
-            //Note that we DO NOT 'calibrate' the normal here! The edge winding should avoid the need for any calibration,
-            //and attempting to calibrate this normal can actually result in normals pointing into the triangle face.
-            //That can cause backfaces to generate contacts incorrectly.
+            //Note that we do not do additional normal calibration here!
+            //Closest points contacts should not need it,
+            //first fallback normals do their own calibration, and
+            //second fallback does not need calibration by edge winding.
             Vector3Wide.Scale(normal, Vector<float>.One / Vector.SquareRoot(normalLengthSquared), out normal);
 
             //Note that the normal between the closest points is not necessarily perpendicular to both the edge and capsule axis due to clamping, so to compute depth
