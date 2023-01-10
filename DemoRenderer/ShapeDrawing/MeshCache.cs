@@ -56,6 +56,7 @@ namespace DemoRenderer.ShapeDrawing
 
         public unsafe bool Allocate(ulong id, int vertexCount, out int start, out Buffer<Vector3> vertices)
         {
+            requestedIds.Add(id, Pool);
             if (TryGetExistingMesh(id, out start, out vertices))
             {
                 return false;
