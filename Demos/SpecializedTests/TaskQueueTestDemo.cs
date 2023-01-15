@@ -14,6 +14,7 @@ using BepuUtilities.TestQueue;
 using BepuUtilities.TestParallelStack;
 using TaskQ = BepuUtilities.TestQueue.Task;
 using BepuUtilities.TestStack;
+using BepuUtilities.TestLinkedTaskStack;
 
 namespace Demos.SpecializedTests;
 
@@ -88,6 +89,12 @@ public unsafe class TaskQueueTestDemo : Demo
                 stack->For(&DynamicallyEnqueuedTest1, &context1, 0, subtaskCount, workerIndex, dispatcher);
                 stack->For(&DynamicallyEnqueuedTest2, &context2, 0, subtaskCount, workerIndex, dispatcher);
             }
+            else if (typeof(T) == typeof(LinkedTaskStack))
+            {
+                var stack = (LinkedTaskStack*)typedContext->TaskPile;
+                stack->For(&DynamicallyEnqueuedTest1, &context1, 0, subtaskCount, workerIndex, dispatcher);
+                stack->For(&DynamicallyEnqueuedTest2, &context2, 0, subtaskCount, workerIndex, dispatcher);
+            }
         }
         Interlocked.Add(ref typedContext->Sum, sum);
     }
@@ -129,6 +136,11 @@ public unsafe class TaskQueueTestDemo : Demo
             var taskStack = (TaskStack*)dispatcher.UnmanagedContext;
             while (taskStack->TryPopAndRun(workerIndex, dispatcher) != BepuUtilities.TestStack.PopTaskResult.Stop) ;
         }
+        else if (typeof(T) == typeof(LinkedTaskStack))
+        {
+            var taskStack = (LinkedTaskStack*)dispatcher.UnmanagedContext;
+            while (taskStack->TryPopAndRun(workerIndex, dispatcher) != BepuUtilities.TestLinkedTaskStack.PopTaskResult.Stop) ;
+        }
     }
 
     struct Context
@@ -146,6 +158,8 @@ public unsafe class TaskQueueTestDemo : Demo
             ((ParallelTaskStack*)typedContext->TaskPile)->RequestStop();
         else if (typeof(T) == typeof(TaskStack))
             ((TaskStack*)typedContext->TaskPile)->RequestStop();
+        else if (typeof(T) == typeof(LinkedTaskStack))
+            ((LinkedTaskStack*)typedContext->TaskPile)->RequestStop();
 
     }
 
@@ -173,6 +187,28 @@ public unsafe class TaskQueueTestDemo : Demo
         //        ThreadDispatcher.DispatchWorkers(&EmptyDispatch);
         //    return 0;
         //}, "Dispatch");
+
+        //LINKED TASK STACK
+        var linkedTaskStack = new LinkedTaskStack(BufferPool, ThreadDispatcher, ThreadDispatcher.ThreadCount);
+        var linkedTaskStackPointer = &linkedTaskStack;
+
+        Test(() =>
+        {
+            var context = new Context { TaskPile = linkedTaskStackPointer };
+            var continuation = linkedTaskStackPointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new BepuUtilities.TestLinkedTaskStack.Task(&IssueStop<LinkedTaskStack>, &context));
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                linkedTaskStackPointer->PushForUnsafely(&Test<LinkedTaskStack>, &context, i * tasksPerIteration, tasksPerIteration, 0, ThreadDispatcher, continuation);
+            }
+            //taskQueuePointer->TryEnqueueStopUnsafely();
+            //taskQueuePointer->EnqueueTasks()
+            ThreadDispatcher.DispatchWorkers(&DispatcherBody<LinkedTaskStack>, unmanagedContext: linkedTaskStackPointer);
+            return context.Sum;
+        }, "MT Linked Stack", () => linkedTaskStackPointer->Reset(ThreadDispatcher));
+
+
+        linkedTaskStack.Dispose(BufferPool, ThreadDispatcher);
+
 
         //TASK STACK
         var taskStack = new TaskStack(BufferPool, ThreadDispatcher);

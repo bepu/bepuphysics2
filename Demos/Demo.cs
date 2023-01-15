@@ -43,7 +43,7 @@ namespace Demos
             //there won't be enough memory bandwidth to even feed half the physical cores. Using all 128 logical cores would just add overhead.
 
             //It may be worth using something like hwloc or CPUID to extract extra information to reason about.
-            var targetThreadCount = int.Max(1, Environment.ProcessorCount > 4 ? Environment.ProcessorCount - 2 : Environment.ProcessorCount - 1);
+            var targetThreadCount = 2;// int.Max(1, Environment.ProcessorCount > 4 ? Environment.ProcessorCount - 2 : Environment.ProcessorCount - 1);
             ThreadDispatcher = new ThreadDispatcher(targetThreadCount);
         }
 

@@ -47,7 +47,7 @@ namespace Demos
         public DemoSet()
         {
             //AddOption<FountainStressTestDemo>();
-            AddOption<TreeFiddlingTestDemo>();
+            //AddOption<TreeFiddlingTestDemo>();
             AddOption<TaskQueueTestDemo>();
             AddOption<ShapePileTestDemo>();
             AddOption<CarDemo>();

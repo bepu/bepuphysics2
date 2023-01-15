@@ -4,6 +4,7 @@ using BepuPhysics.Constraints.Contact;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.TestQueue;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -561,6 +562,7 @@ namespace BepuPhysics.Trees
             {
                 TaskData = taskData;
                 pool.Take(int.Min(taskData.WorkerCount, taskData.TaskCount), out PrepassWorkers);
+                Debug.Assert(PrepassWorkers.Length >= 2);
                 Bounds = bounds;
             }
 
@@ -569,6 +571,7 @@ namespace BepuPhysics.Trees
         unsafe static void CentroidPrepassWorker(long taskId, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
         {
             ref var context = ref *(CentroidPrepassTaskContext*)untypedContext;
+            Debug.Assert(context.TaskData.WorkerCount > 1 && context.TaskData.TaskCount > 1 && context.TaskData.WorkerCount < 100);
             context.TaskData.GetSlotInterval(taskId, out var start, out var count);
             var centroidBounds = ComputeCentroidBounds(context.Bounds.Slice(start, count));
             if (context.TaskData.TaskCountFitsInWorkerCount)
@@ -590,6 +593,8 @@ namespace BepuPhysics.Trees
             ref var worker = ref context->Workers[workerIndex];
             var workerPool = dispatcher.WorkerPools[workerIndex];
             var taskContext = new CentroidPrepassTaskContext(workerPool, new SharedTaskData(context->Workers.Length, subtreeStartIndex, subtreeCount, SubtreesPerThreadForCentroidPrepass, context->MaximumTaskCountPerSubmission), worker.Bounds);
+            Debug.Assert(taskContext.TaskData.TaskCount > 1, "This codepath shouldn't be used if there's only one task!");
+            Debug.Assert(taskContext.TaskData.WorkerCount > 1 && taskContext.TaskData.WorkerCount < 100);
             var taskCount = taskContext.TaskData.TaskCount;
             //Don't bother initializing more slots than we have tasks. Note that this requires special handling on the task level;
             //if we have less tasks than workers, then the task needs to distinguish that fact.
@@ -604,6 +609,7 @@ namespace BepuPhysics.Trees
                     workerBounds.Max = new Vector4(float.MinValue);
                 }
             }
+            Debug.Assert(taskContext.TaskData.TaskCount > 0 && taskContext.TaskData.WorkerCount > 0);
             context->Queue->For(&CentroidPrepassWorker, &taskContext, 0, taskCount, workerIndex, dispatcher);
 
             var centroidBounds = taskContext.PrepassWorkers[0];
@@ -709,6 +715,7 @@ namespace BepuPhysics.Trees
         unsafe static void BinSubtreesWorker<TLeafCounts>(long taskId, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher) where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
         {
             ref var context = ref *(BinSubtreesTaskContext<TLeafCounts>*)untypedContext;
+            Debug.Assert(context.TaskData.WorkerCount > 1 && context.TaskData.TaskCount > 1 && context.TaskData.WorkerCount < 100);
             //Note that if we have more workers than tasks, we use the task id to index into the caches (and initialize the data here rather then before dispatching).
             var effectiveWorkerIndex = context.TaskData.TaskCountFitsInWorkerCount ? (int)taskId : workerIndex;
             ref var worker = ref context.BinSubtreesWorkers[effectiveWorkerIndex];
