@@ -310,8 +310,6 @@ internal unsafe struct Worker
 
     public void Dispose(BufferPool threadPool)
     {
-        ValidateTasks();
-        Console.WriteLine($"Dispose {WorkerIndex}");
         for (int i = 0; i < AllocatedJobs.Count; ++i)
         {
             ((Job*)AllocatedJobs[i])->Dispose(threadPool);
@@ -323,8 +321,6 @@ internal unsafe struct Worker
 
     internal void Reset(BufferPool threadPool)
     {
-        ValidateTasks();
-        Console.WriteLine($"Reset {WorkerIndex}");
         for (int i = 0; i < AllocatedJobs.Count; ++i)
         {
             ((Job*)AllocatedJobs[i])->Dispose(threadPool);
@@ -346,8 +342,6 @@ internal unsafe struct Worker
     /// <remarks>If the worker associated with this stack might be active, this function can only be called by the worker.</remarks>
     internal Job* AllocateJob(Span<Task> tasks, IThreadDispatcher dispatcher)
     {
-        Console.WriteLine($"AllocateJob {WorkerIndex}");
-        ValidateTasks();
         Debug.Assert(tasks.Length > 0, "Probably shouldn't be trying to push zero tasks.");
         var threadPool = dispatcher.WorkerPools[WorkerIndex];
         //Note that we allocate jobs on the heap directly; it's safe to resize the AllocatedJobs list because it's just storing pointers.
@@ -367,7 +361,6 @@ internal unsafe struct Worker
     /// <returns>True if the continuation was allocated, false if the attempt was contested..</returns>
     public bool TryAllocateContinuation(int taskCount, IThreadDispatcher dispatcher, out ContinuationHandle continuationHandle, Task onCompleted = default)
     {
-        ValidateTasks();
         continuationHandle = default;
         if (Interlocked.CompareExchange(ref ContinuationLocker, 1, 0) != 0)
             return false;
@@ -439,7 +432,6 @@ internal unsafe struct Worker
     /// <remarks>This should not be used if the continuation handle is not known to be valid. The data pointed to by the data could become invalidated if the continuation completes.</remarks>
     public TaskContinuation* GetContinuation(ContinuationHandle continuationHandle)
     {
-        ValidateTasks();
         Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
         Debug.Assert(continuationHandle.Index < Continuations.length, "This continuation refers to an invalid index.");
         if (continuationHandle.Index >= Continuations.length || !continuationHandle.Initialized)
@@ -458,7 +450,6 @@ internal unsafe struct Worker
     /// <returns>True if all tasks associated with a continuation have completed, false otherwise.</returns>
     public bool IsComplete(ContinuationHandle continuationHandle)
     {
-        ValidateTasks();
         Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
         Debug.Assert(continuationHandle.Index < Continuations.length, "This continuation refers to an invalid index.");
         if (continuationHandle.Index >= Continuations.length || !continuationHandle.Initialized)
@@ -507,7 +498,8 @@ public unsafe struct LinkedTaskStack
     /// <summary>
     /// Most recently pushed job on the stack. May be null if the stack is empty.
     /// </summary>
-    Job* head;
+    /// <remarks>Pointers and generics don't play well, alas.</remarks>
+    volatile nuint head;
 
     /// <summary>
     /// Constructs a new parallel task stack.
@@ -538,6 +530,7 @@ public unsafe struct LinkedTaskStack
             workers[i].Reset(dispatcher.WorkerPools[workers[i].WorkerIndex]);
         }
         padded.Stop = false;
+        head = (nuint)null;
     }
 
     /// <summary>
@@ -562,7 +555,7 @@ public unsafe struct LinkedTaskStack
         get
         {
             int sum = 0;
-            var job = this.head;
+            var job = (Job*)this.head;
             while (true)
             {
                 if (job == null)
@@ -614,7 +607,6 @@ public unsafe struct LinkedTaskStack
     /// <returns>Handle of the allocated continuation.</returns>
     public ContinuationHandle AllocateContinuation(int taskCount, int workerIndex, IThreadDispatcher dispatcher, Task onCompleted = default)
     {
-        Console.WriteLine($"AllocateContinuation {workerIndex}");
         return workers[workerIndex].AllocateContinuation(taskCount, dispatcher, onCompleted);
     }
 
@@ -626,11 +618,9 @@ public unsafe struct LinkedTaskStack
     public PopTaskResult TryPop(out Task task)
     {
         //Note that this implementation does not need to lock against anything. We just follow the pointer.
-        int counter = 0;
-        Console.WriteLine("TryPop");
         while (true)
         {
-            var job = head;
+            var job = (Job*)head;
             if (job == null)
             {
                 //There is no job to pop from.
@@ -645,17 +635,13 @@ public unsafe struct LinkedTaskStack
             }
             else
             {
-                task = default;
-                return padded.Stop ? PopTaskResult.Stop : PopTaskResult.Empty;
                 //There was no task available in this job, which means the sampled job should be removed from the stack.
                 //Note that other threads might be doing the same thing; we must use an interlocked operation to try to swap the head.
-                var previousHead = head;
-                var scusy = Interlocked.CompareExchange(ref Unsafe.AsRef<ulong>(head), (ulong)job->Previous, (ulong)job);
-                ++counter;
-                if (counter > 100000)
-                    Console.WriteLine($"ughh {counter}");
-
+                //If this fails, the head has changed before we could remove it and the current empty job will persists in the stack until some other dequeue finds it.
+                //That's okay.
+                Interlocked.CompareExchange(ref head, (nuint)job->Previous, (nuint)job);
             }
+
         }
     }
 
@@ -667,14 +653,11 @@ public unsafe struct LinkedTaskStack
     /// <returns>Result status of the pop attempt.</returns>
     public PopTaskResult TryPopAndRun(int workerIndex, IThreadDispatcher dispatcher)
     {
-        Console.WriteLine($"TryPopAndRun {workerIndex}");
-        workers[workerIndex].ValidateTasks();
         var result = TryPop(out var task);
         if (result == PopTaskResult.Success)
         {
             task.Run(workerIndex, dispatcher);
         }
-        workers[workerIndex].ValidateTasks();
         return result;
     }
 
@@ -687,12 +670,9 @@ public unsafe struct LinkedTaskStack
     /// <remarks>This must not be used while other threads could be performing task pushes or pops that could affect the specified worker.</remarks>
     public void PushUnsafely(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher)
     {
-        Console.WriteLine($"PushUnsafely {workerIndex}");
-        workers[workerIndex].ValidateTasks();
-        var job = workers[workerIndex].AllocateJob(tasks, dispatcher);
-        job->Previous = head;
-        head = job;
-        workers[workerIndex].ValidateTasks();
+        Job* job = workers[workerIndex].AllocateJob(tasks, dispatcher);
+        job->Previous = (Job*)head;
+        head = (nuint)job;
     }
     /// <summary>
     /// Pushes a task onto the task stack. This function is not thread safe.
@@ -715,14 +695,16 @@ public unsafe struct LinkedTaskStack
     /// <returns>True if the push succeeded, false if it was contested.</returns>
     public void Push(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher)
     {
-        Console.WriteLine($"Push {workerIndex}");
-        workers[workerIndex].ValidateTasks();
-        var job = workers[workerIndex].AllocateJob(tasks, dispatcher);
-        //Note that we assign a previous pointer *before* doing the "official" swap because we don't want to risk a pop seeing a null previous pointer.
-        //(There's a brief gap between the swap and the assignment. This doesn't actually matter much; it would just result in a false empty.)
-        job->Previous = head;
-        job->Previous = (Job*)Interlocked.Exchange(ref Unsafe.AsRef<nuint>(head), (nuint)job);
-        workers[workerIndex].ValidateTasks();
+        Job* job = workers[workerIndex].AllocateJob(tasks, dispatcher);
+
+        while (true)
+        {
+            //Pre-set the previous pointer so that it's visible when the job is swapped in.
+            //Note that if the head pointer changes between the first set attempt and the swap, the previous pointer will be wrong and we must try again.
+            job->Previous = (Job*)head;
+            if ((nuint)job->Previous == Interlocked.CompareExchange(ref head, (nuint)job, (nuint)job->Previous))
+                break;
+        }
     }
 
 
@@ -737,8 +719,6 @@ public unsafe struct LinkedTaskStack
     /// <remarks>Note that this will keep trying until task submission succeeds.</remarks>
     public ContinuationHandle AllocateContinuationAndPush(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher, Task onComplete = default)
     {
-        Console.WriteLine($"AllocateContinuationAndPush {workerIndex}");
-        workers[workerIndex].ValidateTasks();
         var continuationHandle = AllocateContinuation(tasks.Length, workerIndex, dispatcher, onComplete);
         for (int i = 0; i < tasks.Length; ++i)
         {
@@ -747,7 +727,6 @@ public unsafe struct LinkedTaskStack
             task.Continuation = continuationHandle;
         }
         Push(tasks, workerIndex, dispatcher);
-        workers[workerIndex].ValidateTasks();
         return continuationHandle;
     }
 
@@ -760,8 +739,6 @@ public unsafe struct LinkedTaskStack
     /// <param name="workerIndex">Index of the executing worker.</param>
     public void WaitForCompletion(ContinuationHandle continuation, int workerIndex, IThreadDispatcher dispatcher)
     {
-        workers[workerIndex].ValidateTasks();
-        Console.WriteLine($"WaitForCompletion {workerIndex}");
         var waiter = new SpinWait();
         Debug.Assert(continuation.Initialized, "This codepath should only run if the continuation was allocated earlier.");
         while (!continuation.Completed)
@@ -781,7 +758,6 @@ public unsafe struct LinkedTaskStack
                 waiter.SpinOnce(-1);
             }
         }
-        workers[workerIndex].ValidateTasks();
     }
 
     /// <summary>
@@ -793,8 +769,6 @@ public unsafe struct LinkedTaskStack
     /// <remarks>Note that this will keep working until all tasks are run. It may execute tasks unrelated to the requested tasks while waiting on other workers to complete constituent tasks.</remarks>
     public void RunTasks(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher)
     {
-        Console.WriteLine($"RunTasks {workerIndex}");
-        workers[workerIndex].ValidateTasks();
         if (tasks.Length == 0)
             return;
         ContinuationHandle continuationHandle = default;
@@ -826,7 +800,6 @@ public unsafe struct LinkedTaskStack
             //Task 0 is done; this thread should seek out other work until the job is complete.
             WaitForCompletion(continuationHandle, workerIndex, dispatcher);
         }
-        workers[workerIndex].ValidateTasks();
     }
 
     /// <summary>
