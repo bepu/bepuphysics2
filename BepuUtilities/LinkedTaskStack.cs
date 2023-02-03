@@ -12,7 +12,7 @@ using BepuUtilities.Memory;
 namespace BepuUtilities.TestLinkedTaskStack;
 
 /// <summary>
-/// Description of a task to be submitted to a <see cref="ParallelTaskStack"/>.
+/// Description of a task to be submitted to a <see cref="LinkedTaskStack"/>.
 /// </summary>
 public unsafe struct Task
 {
@@ -231,10 +231,6 @@ internal unsafe struct Job
         sourceTasks.CopyTo(job->Tasks);
         job->Counter = sourceTasks.Length;
         job->Previous = null;
-        for (int i = 0; i < job->Tasks.Length; ++i)
-        {
-            Debug.Assert(job->Tasks[i].Function != null);
-        }
         return job;
     }
 
@@ -246,19 +242,37 @@ internal unsafe struct Job
     /// <returns>True if a task was available to pop, false otherwise.</returns>
     internal bool TryPop(out Task task)
     {
-        for (int i = 0; i < Tasks.Length; ++i)
+        //Note that we can't pre-decrement to claim the task:
+        //we can't return until after the task is copied into the caller's memory (because the counter is used to dispose the job),
+        //and we can't know what task to copy until after we've claimed it.
+        //So attempt a claim, and then compare exchange.
+        var count = Counter;
+        while (count > 0)
         {
-            Debug.Assert(Tasks[i].Function != null);
-        }
-        var newCount = Interlocked.Decrement(ref Counter);
-        if (newCount >= 0)
-        {
+            var newCount = count - 1;
             task = Tasks[newCount];
-            Debug.Assert(task.Function != null);
-            return true;
+            var preexchangeCount = Interlocked.CompareExchange(ref Counter, newCount, count);
+            if (count == preexchangeCount)
+            {
+                //The claim succeeded.
+                Debug.Assert(task.Function != null);
+                return true;
+            }
+            //the claim didn't succeed. Try again.
+            count = preexchangeCount;
         }
         task = default;
         return false;
+
+        //var newCount = Interlocked.Decrement(ref Counter);
+        //if (newCount >= 0)
+        //{
+        //    task = Tasks[newCount];
+        //    Debug.Assert(task.Function != null);
+        //    return true;
+        //}
+        //task = default;
+        //return false;
     }
 
     public void Dispose(BufferPool pool)

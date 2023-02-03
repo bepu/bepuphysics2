@@ -42,7 +42,7 @@ public unsafe class TaskQueueTestDemo : Demo
 
     static void DynamicallyEnqueuedTest1(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
     {
-        var sum = DoSomeWork(10000, 0);
+        var sum = DoSomeWork(100, 0);
         Interlocked.Add(ref ((DynamicContext1*)context)->Context->Sum, sum);
     }
 
@@ -59,12 +59,12 @@ public unsafe class TaskQueueTestDemo : Demo
 
     static void DynamicallyEnqueuedTest2(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
     {
-        var sum = DoSomeWork(10000, 0);
+        var sum = DoSomeWork(100, 0);
         Interlocked.Add(ref ((DynamicContext2*)context)->Context->Sum, sum);
     }
     static void Test<T>(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher) where T : unmanaged
     {
-        var sum = DoSomeWork(100000, 0);
+        var sum = DoSomeWork(100, 0);
         var typedContext = (Context*)context;
         //if ((taskId & 7) == 0)
         {
@@ -100,7 +100,7 @@ public unsafe class TaskQueueTestDemo : Demo
     }
     static void STTest(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
     {
-        var sum = DoSomeWork(100000, 0);
+        var sum = DoSomeWork(100, 0);
         var typedContext = (Context*)context;
         //if ((taskId & 7) == 0)
         {
@@ -192,7 +192,7 @@ public unsafe class TaskQueueTestDemo : Demo
 
         //LINKED TASK STACK
 
-        for (int i = 0; i < 1000; ++i)
+        for (int i = 0; i < 10; ++i)
         {
             var linkedTaskStack = new LinkedTaskStack(BufferPool, ThreadDispatcher, ThreadDispatcher.ThreadCount);
             var linkedTaskStackPointer = &linkedTaskStack;
@@ -215,75 +215,78 @@ public unsafe class TaskQueueTestDemo : Demo
 
 
 
-        //TASK STACK
-        var taskStack = new TaskStack(BufferPool, ThreadDispatcher);
-        var taskStackPointer = &taskStack;
+        ////TASK STACK
+        //var taskStack = new TaskStack(BufferPool, ThreadDispatcher);
+        //var taskStackPointer = &taskStack;
 
-        Test(() =>
+        //Test(() =>
+        //{
+        //    var context = new Context { TaskPile = taskStackPointer };
+        //    var continuation = taskStackPointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new BepuUtilities.TestStack.Task(&IssueStop<TaskStack>, &context));
+        //    for (int i = 0; i < iterationCount; ++i)
+        //    {
+        //        taskStackPointer->TryPushForUnsafely(&Test<TaskStack>, &context, i * tasksPerIteration, tasksPerIteration, continuation);
+        //    }
+        //    //taskQueuePointer->TryEnqueueStopUnsafely();
+        //    //taskQueuePointer->EnqueueTasks()
+        //    ThreadDispatcher.DispatchWorkers(&DispatcherBody<TaskStack>, unmanagedContext: taskStackPointer);
+        //    return context.Sum;
+        //}, "MT Stack", () => taskStackPointer->Reset());
+
+
+        //taskStack.Dispose(BufferPool);
+
+
+        ////PARALLEL TASK STACK
+        //var parallelTaskStack = new ParallelTaskStack(BufferPool, ThreadDispatcher, ThreadDispatcher.ThreadCount);
+        //var parallelTaskStackPointer = &parallelTaskStack;
+
+        //Test(() =>
+        //{
+        //    var context = new Context { TaskPile = parallelTaskStackPointer };
+        //    var continuation = parallelTaskStackPointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new BepuUtilities.TestParallelStack.Task(&IssueStop<ParallelTaskStack>, &context));
+        //    for (int i = 0; i < iterationCount; ++i)
+        //    {
+        //        parallelTaskStackPointer->PushForUnsafely(&Test<ParallelTaskStack>, &context, i * tasksPerIteration, tasksPerIteration, i % ThreadDispatcher.ThreadCount, ThreadDispatcher, continuation);
+        //    }
+        //    //taskQueuePointer->TryEnqueueStopUnsafely();
+        //    //taskQueuePointer->EnqueueTasks()
+        //    ThreadDispatcher.DispatchWorkers(&DispatcherBody<ParallelTaskStack>, unmanagedContext: parallelTaskStackPointer);
+        //    return context.Sum;
+        //}, "MT Parallel Stack", () => parallelTaskStackPointer->Reset());
+
+        //var noSteal = ParallelTaskStack.NoStealRequired;
+        //var stealRequired = ParallelTaskStack.StealRequired;
+        //var stealFail = ParallelTaskStack.PopFailed;
+        //var steal = stealRequired - stealFail;
+
+        //Console.WriteLine($"Nosteal, steal succeed, steal fail: {noSteal}, {steal}, {stealFail} ({steal / (double)(stealRequired + noSteal)})");
+
+        //parallelTaskStack.Dispose(BufferPool);
+
+
+        for (int i = 0; i < 10; ++i)
         {
-            var context = new Context { TaskPile = taskStackPointer };
-            var continuation = taskStackPointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new BepuUtilities.TestStack.Task(&IssueStop<TaskStack>, &context));
-            for (int i = 0; i < iterationCount; ++i)
+            //TASK QUEUE
+            var taskQueue = new TaskQueue(BufferPool, maximumTaskCapacity: 1 << 19, maximumContinuationCapacity: 1 << 19);
+            var taskQueuePointer = &taskQueue;
+
+            Test(() =>
             {
-                taskStackPointer->TryPushForUnsafely(&Test<TaskStack>, &context, i * tasksPerIteration, tasksPerIteration, continuation);
-            }
-            //taskQueuePointer->TryEnqueueStopUnsafely();
-            //taskQueuePointer->EnqueueTasks()
-            ThreadDispatcher.DispatchWorkers(&DispatcherBody<TaskStack>, unmanagedContext: taskStackPointer);
-            return context.Sum;
-        }, "MT Stack", () => taskStackPointer->Reset());
+                var context = new Context { TaskPile = taskQueuePointer };
+                var continuation = taskQueuePointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new TaskQ(&IssueStop<TaskQueue>, &context));
+                for (int i = 0; i < iterationCount; ++i)
+                {
+                    taskQueuePointer->TryEnqueueForUnsafely(&Test<TaskQueue>, &context, i * tasksPerIteration, tasksPerIteration, continuation);
+                }
+                //taskQueuePointer->TryEnqueueStopUnsafely();
+                //taskQueuePointer->EnqueueTasks()
+                ThreadDispatcher.DispatchWorkers(&DispatcherBody<TaskQueue>, unmanagedContext: taskQueuePointer);
+                return context.Sum;
+            }, "MT", () => taskQueuePointer->Reset());
 
-
-        taskStack.Dispose(BufferPool);
-
-
-        //PARALLEL TASK STACK
-        var parallelTaskStack = new ParallelTaskStack(BufferPool, ThreadDispatcher, ThreadDispatcher.ThreadCount);
-        var parallelTaskStackPointer = &parallelTaskStack;
-
-        Test(() =>
-        {
-            var context = new Context { TaskPile = parallelTaskStackPointer };
-            var continuation = parallelTaskStackPointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new BepuUtilities.TestParallelStack.Task(&IssueStop<ParallelTaskStack>, &context));
-            for (int i = 0; i < iterationCount; ++i)
-            {
-                parallelTaskStackPointer->PushForUnsafely(&Test<ParallelTaskStack>, &context, i * tasksPerIteration, tasksPerIteration, i % ThreadDispatcher.ThreadCount, ThreadDispatcher, continuation);
-            }
-            //taskQueuePointer->TryEnqueueStopUnsafely();
-            //taskQueuePointer->EnqueueTasks()
-            ThreadDispatcher.DispatchWorkers(&DispatcherBody<ParallelTaskStack>, unmanagedContext: parallelTaskStackPointer);
-            return context.Sum;
-        }, "MT Parallel Stack", () => parallelTaskStackPointer->Reset());
-
-        var noSteal = ParallelTaskStack.NoStealRequired;
-        var stealRequired = ParallelTaskStack.StealRequired;
-        var stealFail = ParallelTaskStack.PopFailed;
-        var steal = stealRequired - stealFail;
-
-        Console.WriteLine($"Nosteal, steal succeed, steal fail: {noSteal}, {steal}, {stealFail} ({steal / (double)(stealRequired + noSteal)})");
-
-        parallelTaskStack.Dispose(BufferPool);
-
-
-        //TASK QUEUE
-        var taskQueue = new TaskQueue(BufferPool, maximumTaskCapacity: 1 << 19, maximumContinuationCapacity: 1 << 19);
-        var taskQueuePointer = &taskQueue;
-
-        Test(() =>
-        {
-            var context = new Context { TaskPile = taskQueuePointer };
-            var continuation = taskQueuePointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new TaskQ(&IssueStop<TaskQueue>, &context));
-            for (int i = 0; i < iterationCount; ++i)
-            {
-                taskQueuePointer->TryEnqueueForUnsafely(&Test<TaskQueue>, &context, i * tasksPerIteration, tasksPerIteration, continuation);
-            }
-            //taskQueuePointer->TryEnqueueStopUnsafely();
-            //taskQueuePointer->EnqueueTasks()
-            ThreadDispatcher.DispatchWorkers(&DispatcherBody<TaskQueue>, unmanagedContext: taskQueuePointer);
-            return context.Sum;
-        }, "MT", () => taskQueuePointer->Reset());
-
-        taskQueue.Dispose(BufferPool);
+            taskQueue.Dispose(BufferPool);
+        }
 
         //Test(() =>
         //{
