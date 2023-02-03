@@ -242,37 +242,16 @@ internal unsafe struct Job
     /// <returns>True if a task was available to pop, false otherwise.</returns>
     internal bool TryPop(out Task task)
     {
-        //Note that we can't pre-decrement to claim the task:
-        //we can't return until after the task is copied into the caller's memory (because the counter is used to dispose the job),
-        //and we can't know what task to copy until after we've claimed it.
-        //So attempt a claim, and then compare exchange.
-        var count = Counter;
-        while (count > 0)
+
+        var newCount = Interlocked.Decrement(ref Counter);
+        if (newCount >= 0)
         {
-            var newCount = count - 1;
             task = Tasks[newCount];
-            var preexchangeCount = Interlocked.CompareExchange(ref Counter, newCount, count);
-            if (count == preexchangeCount)
-            {
-                //The claim succeeded.
-                Debug.Assert(task.Function != null);
-                return true;
-            }
-            //the claim didn't succeed. Try again.
-            count = preexchangeCount;
+            Debug.Assert(task.Function != null);
+            return true;
         }
         task = default;
         return false;
-
-        //var newCount = Interlocked.Decrement(ref Counter);
-        //if (newCount >= 0)
-        //{
-        //    task = Tasks[newCount];
-        //    Debug.Assert(task.Function != null);
-        //    return true;
-        //}
-        //task = default;
-        //return false;
     }
 
     public void Dispose(BufferPool pool)
