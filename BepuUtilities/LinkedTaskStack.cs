@@ -92,36 +92,13 @@ public enum PopTaskResult
 /// </summary>
 public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
 {
-    uint index;
-    uint encodedVersion;
-    /// <summary>
-    /// Source worker task stack.
-    /// </summary>
-    internal Worker* Worker;
+    //This is a bit odd. We're presenting this pointer as a handle, even though it's not.
+    //Hiding the implementation detail makes it a little easier to change later if we need to.
+    TaskContinuation* continuation;
 
-    internal ContinuationHandle(uint index, int version, Worker* workerStack)
+    internal ContinuationHandle(TaskContinuation* continuation)
     {
-        this.index = index;
-        encodedVersion = (uint)version | 1u << 31;
-        Worker = workerStack;
-    }
-
-    internal uint Index
-    {
-        get
-        {
-            Debug.Assert(Initialized, "If you're trying to pull a continuation id from a continuation handle, it should have been initialized.");
-            return index;
-        }
-    }
-
-    internal int Version
-    {
-        get
-        {
-            Debug.Assert(Initialized, "If you're trying to pull a continuation id from a continuation handle, it should have been initialized.");
-            return (int)(encodedVersion & ((1u << 31) - 1));
-        }
+        this.continuation = continuation;
     }
 
     /// <summary>
@@ -131,8 +108,7 @@ public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
     {
         get
         {
-            Debug.Assert(Initialized == (Worker != null));
-            return Initialized && Worker->IsComplete(this);
+            return Initialized && continuation->RemainingTaskCounter <= 0;
         }
     }
 
@@ -141,7 +117,7 @@ public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
     /// </summary>
     /// <returns>Pointer to the continuation backing the given handle.</returns>
     /// <remarks>This should not be used if the continuation handle is not known to be valid. The data pointed to by the data could become invalidated if the continuation completes.</remarks>
-    public TaskContinuation* Continuation => Worker->GetContinuation(this);
+    public TaskContinuation* Continuation => continuation;
 
     /// <summary>
     /// Gets a null continuation handle.
@@ -149,23 +125,9 @@ public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
     public static ContinuationHandle Null => default;
 
     /// <summary>
-    /// Gets whether the continuation associated with this handle was allocated and has outstanding tasks.
-    /// </summary>
-    public bool Exists
-    {
-        get
-        {
-            if (!Initialized || Worker == null)
-                return false;
-            ref var continuation = ref Worker->Continuations[Index];
-            return continuation.Version == Version && continuation.RemainingTaskCounter > 0;
-        }
-    }
-
-    /// <summary>
     /// Gets whether this handle ever represented an allocated handle. This does not guarantee that the continuation's associated tasks are active in the <see cref="LinkedTaskStack"/> that it was allocated from.
     /// </summary>
-    public bool Initialized => encodedVersion >= 1u << 31;
+    public bool Initialized => continuation != null;
 
     /// <summary>
     /// Notifies the continuation that one task was completed.
@@ -185,24 +147,14 @@ public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
             {
                 continuation->OnCompleted.Function(continuation->OnCompleted.Id, continuation->OnCompleted.Context, workerIndex, dispatcher);
             }
-            //Free this continuation slot.
-            var waiter = new SpinWait();
-            while (Interlocked.CompareExchange(ref Worker->ContinuationLocker, 1, 0) != 0)
-            {
-                waiter.SpinOnce(-1);
-            }
-            //We have the lock.
-            Worker->ContinuationIndexPool.ReturnUnsafely((int)Index);
-            --Worker->ContinuationCount;
-            Worker->ContinuationLocker = 0;
         }
     }
 
-    public bool Equals(ContinuationHandle other) => other.index == index && other.encodedVersion == encodedVersion && other.Worker == Worker;
+    public bool Equals(ContinuationHandle other) => other.continuation == continuation;
 
     public override bool Equals([NotNullWhen(true)] object obj) => obj is ContinuationHandle handle && Equals(handle);
 
-    public override int GetHashCode() => (int)(index ^ (encodedVersion << 24));
+    public override int GetHashCode() => (int)continuation;
 
     public static bool operator ==(ContinuationHandle left, ContinuationHandle right) => left.Equals(right);
 
@@ -263,17 +215,55 @@ internal unsafe struct Job
     }
 }
 
+/// <summary>
+/// Stores a block of task continuations that maintains a pointer to previous blocks. 
+/// </summary>
+internal unsafe struct ContinuationBlock
+{
+    public ContinuationBlock* Previous;
+
+    public int Count;
+    public Buffer<TaskContinuation> Continuations;
+
+    public static ContinuationBlock* Create(int continuationCapacity, BufferPool pool)
+    {
+        pool.Take<byte>(sizeof(TaskContinuation) * continuationCapacity + sizeof(ContinuationBlock), out var rawBuffer);
+        ContinuationBlock* block = (ContinuationBlock*)rawBuffer.Memory;
+        block->Continuations = new Buffer<TaskContinuation>(rawBuffer.Memory + sizeof(ContinuationBlock), continuationCapacity, rawBuffer.Id);
+        block->Count = 0;
+        block->Previous = null;
+        return block;
+    }
+
+    public bool TryAllocateContinuation(out TaskContinuation* continuation)
+    {
+        if (Count < Continuations.length)
+        {
+            continuation = Continuations.Memory + (Count++);
+            return true;
+        }
+        continuation = null;
+        return false;
+    }
+
+    public void Dispose(BufferPool pool)
+    {
+        var id = Continuations.Id;
+        pool.ReturnUnsafely(id);
+        if (Previous != null)
+            Previous->Dispose(pool);
+        this = default;
+    }
+}
+
+
 internal unsafe struct Worker
 {
     //The worker needs to track allocations made over the course of its lifetime so they can be disposed later.
     public QuickList<nuint> AllocatedJobs;
 
-    public Buffer<TaskContinuation> Continuations;
-    public IdPool ContinuationIndexPool;
-    public int ContinuationCount;
+    public ContinuationBlock* ContinuationHead;
     public int WorkerIndex;
-    public volatile int ContinuationLocker;
-
 
     [Conditional("DEBUG")]
     public void ValidateTasks()
@@ -288,17 +278,13 @@ internal unsafe struct Worker
         }
     }
 
-    public Worker(int workerIndex, IThreadDispatcher dispatcher, int initialJobCapacity = 64, int initialContinuationCapacity = 16)
+
+    public Worker(int workerIndex, IThreadDispatcher dispatcher, int initialJobCapacity = 128, int continuationBlockCapacity = 128)
     {
         var threadPool = dispatcher.WorkerPools[workerIndex];
         WorkerIndex = workerIndex;
         AllocatedJobs = new QuickList<nuint>(initialJobCapacity, threadPool);
-        threadPool.Take(initialContinuationCapacity, out Continuations);
-#if DEBUG
-        //While you shouldn't *need* to clear continuations, it can be useful for debug purposes.
-        Continuations.Clear(0, Continuations.length);
-#endif
-        ContinuationIndexPool = new IdPool(initialContinuationCapacity, threadPool);
+        ContinuationHead = ContinuationBlock.Create(continuationBlockCapacity, threadPool);
     }
 
     public void Dispose(BufferPool threadPool)
@@ -308,8 +294,7 @@ internal unsafe struct Worker
             ((Job*)AllocatedJobs[i])->Dispose(threadPool);
         }
         AllocatedJobs.Dispose(threadPool);
-        threadPool.Return(ref Continuations);
-        ContinuationIndexPool.Dispose(threadPool);
+        ContinuationHead->Dispose(threadPool);
     }
 
     internal void Reset(BufferPool threadPool)
@@ -319,12 +304,9 @@ internal unsafe struct Worker
             ((Job*)AllocatedJobs[i])->Dispose(threadPool);
         }
         AllocatedJobs.Count = 0;
-#if DEBUG
-        //While you shouldn't *need* to clear continuations, it can be useful for debug purposes.
-        Continuations.Clear(0, Continuations.length);
-#endif
-        ContinuationCount = 0;
-        Debug.Assert(ContinuationLocker == 0, "There appears to be a thread actively working still. That's invalid.");
+        var capacity = ContinuationHead->Continuations.length;
+        ContinuationHead->Dispose(threadPool);
+        ContinuationHead = ContinuationBlock.Create(capacity, threadPool);
     }
 
     /// <summary>
@@ -345,112 +327,28 @@ internal unsafe struct Worker
 
 
     /// <summary>
-    /// Attempts to allocate a continuation for a set of tasks.
+    /// Allocates a continuation for a set of tasks.
     /// </summary>
     /// <param name="taskCount">Number of tasks associated with the continuation.</param>
     /// <param name="dispatcher">Dispatcher from which to pull a buffer pool if needed for resizing.</param>
     /// <param name="onCompleted">Function to execute upon completing all associated tasks, if any. Any task with a null <see cref="Task.Function"/> will not be executed.</param>
-    /// <param name="continuationHandle">Handle of the continuation if allocation is successful.</param>
-    /// <returns>True if the continuation was allocated, false if the attempt was contested..</returns>
-    public bool TryAllocateContinuation(int taskCount, IThreadDispatcher dispatcher, out ContinuationHandle continuationHandle, Task onCompleted = default)
-    {
-        continuationHandle = default;
-        if (Interlocked.CompareExchange(ref ContinuationLocker, 1, 0) != 0)
-            return false;
-        try
-        {
-            //We have the lock.
-            if (ContinuationCount == Continuations.length)
-            {
-                //Doing a resize within a lock is *really* not great. This is something to be avoided via preallocation whenever possible.
-                //BUT:
-                //1. It should be trivial to make these resizes effectively never happen.
-                //2. In the cases where it happens anyway, suffering the pain of a resize in a lock is the lesser of two evils.
-                //In the case where we *didn't* resize, we'd have to either stall on the allocation attempt or cycle on other tasks until continuations are freed up.
-                //But there's no guarantee that running tasks will actually free up continuations on net- they could make more!
-                //So having the fallback plan of expanding storage for more continuations avoids deadlock prone options.
-                //Note that *ONLY THE OWNING WORKER* can ever validly perform this resize!
-                //We have to use the thread's buffer pool, and only the thread can validly access that pool.
-                var workerPool = dispatcher.WorkerPools[WorkerIndex];
-                workerPool.ResizeToAtLeast(ref Continuations, ContinuationCount * 2, ContinuationCount);
-                ContinuationIndexPool.Resize(Continuations.length, workerPool);
-#if DEBUG
-                //While you shouldn't *need* to clear continuations, it can be useful for debug purposes.
-                Continuations.Clear(ContinuationCount, Continuations.length - ContinuationCount);
-#endif
-            }
-            var index = ContinuationIndexPool.Take();
-            ++ContinuationCount;
-            ref var continuation = ref Continuations[index];
-            //Note that the version number could be based on undefined data initially. That's actually fine; all we care about is whether it is different.
-            //Note mask to leave a valid bit for encoding in the handle.
-            var newVersion = (continuation.Version + 1) & (~(1 << 31));
-            continuation.OnCompleted = onCompleted;
-            continuation.Version = newVersion;
-            continuation.RemainingTaskCounter = taskCount;
-            continuationHandle = new ContinuationHandle((uint)index, newVersion, (Worker*)Unsafe.AsPointer(ref this));
-            return true;
-        }
-        finally
-        {
-            ContinuationLocker = 0;
-        }
-    }
-
-
-    /// <summary>
-    /// Allocates a continuation for a set of tasks.
-    /// </summary>
-    /// <param name="taskCount">Number of tasks associated with the continuation.</param>
-    /// <param name="dispatcher">Dispatcher from which to pull any thread allocations if necessary.</param>
-    /// <param name="onCompleted">Task to execute upon completing all associated tasks, if any. Any task with a null <see cref="Task.Function"/> will not be executed.</param>
-    /// <returns>Handle of the allocated continuation.</returns>
-    /// <remarks>Note that this will keep trying until allocation succeeds. If something is blocking allocation, such as insufficient room in the continuations buffer and there are no workers consuming tasks, this will block forever.</remarks>
+    /// <returns>Handle of the continuation.</returns>
     public ContinuationHandle AllocateContinuation(int taskCount, IThreadDispatcher dispatcher, Task onCompleted = default)
     {
-        var waiter = new SpinWait();
-        ContinuationHandle handle;
-        while (!TryAllocateContinuation(taskCount, dispatcher, out handle, onCompleted))
+        if (!ContinuationHead->TryAllocateContinuation(out TaskContinuation* continuation))
         {
-            waiter.SpinOnce(-1);
+            //Couldn't allocate; need to allocate a new block.
+            //(The reason for the linked list style allocation is that resizing a buffer- and returning the old buffer- opens up a potential race condition.)
+            var newBlock = ContinuationBlock.Create(ContinuationHead->Continuations.length, dispatcher.WorkerPools[WorkerIndex]);
+            newBlock->Previous = ContinuationHead;
+            ContinuationHead = newBlock;
+            var allocated = ContinuationHead->TryAllocateContinuation(out continuation);
+            Debug.Assert(allocated, "Just created that block! Is the capacity wrong?");
         }
-        return handle;
+        continuation->OnCompleted = onCompleted;
+        continuation->RemainingTaskCounter = taskCount;
+        return new ContinuationHandle(continuation);
     }
-
-    /// <summary>
-    /// Retrieves a pointer to the continuation data for <see cref="ContinuationHandle"/>.
-    /// </summary>
-    /// <param name="continuationHandle">Handle to look up the associated continuation for.</param>
-    /// <returns>Pointer to the continuation backing the given handle.</returns>
-    /// <remarks>This should not be used if the continuation handle is not known to be valid. The data pointed to by the data could become invalidated if the continuation completes.</remarks>
-    public TaskContinuation* GetContinuation(ContinuationHandle continuationHandle)
-    {
-        Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
-        Debug.Assert(continuationHandle.Index < Continuations.length, "This continuation refers to an invalid index.");
-        if (continuationHandle.Index >= Continuations.length || !continuationHandle.Initialized)
-            return null;
-        var continuation = Continuations.Memory + continuationHandle.Index;
-        Debug.Assert(continuation->Version == continuationHandle.Version, "This continuation no longer refers to an active continuation.");
-        if (continuation->Version != continuationHandle.Version)
-            return null;
-        return Continuations.Memory + continuationHandle.Index;
-    }
-
-    /// <summary>
-    /// Checks whether all tasks associated with this continuation have completed.
-    /// </summary>
-    /// <param name="continuationHandle">Continuation to check for completion.</param>
-    /// <returns>True if all tasks associated with a continuation have completed, false otherwise.</returns>
-    public bool IsComplete(ContinuationHandle continuationHandle)
-    {
-        Debug.Assert(continuationHandle.Initialized, "This continuation handle was never initialized.");
-        Debug.Assert(continuationHandle.Index < Continuations.length, "This continuation refers to an invalid index.");
-        if (continuationHandle.Index >= Continuations.length || !continuationHandle.Initialized)
-            return false;
-        ref var continuation = ref Continuations[continuationHandle.Index];
-        return continuation.Version > continuationHandle.Version || continuation.RemainingTaskCounter == 0;
-    }
-
 }
 
 /// <summary>
@@ -462,10 +360,6 @@ public unsafe struct TaskContinuation
     /// Task to run upon completion of the associated task.
     /// </summary>
     public Task OnCompleted;
-    /// <summary>
-    /// Version of this continuation.
-    /// </summary>
-    public int Version;
     /// <summary>
     /// Number of tasks not yet reported as complete in the continuation.
     /// </summary>
@@ -501,13 +395,13 @@ public unsafe struct LinkedTaskStack
     /// <param name="dispatcher">Thread dispatcher to pull thread pools from for thread allocations.</param>
     /// <param name="workerCount">Number of workers to allocate space for.</param>
     /// <param name="initialWorkerJobCapacity">Initial number of jobs (groups of tasks submitted together) to allocate space for in each worker.</param>
-    /// <param name="initialWorkerContinuationCapacity">Initial number of continuations to allocate space for in each worker.</param>
-    public LinkedTaskStack(BufferPool pool, IThreadDispatcher dispatcher, int workerCount, int initialWorkerJobCapacity = 64, int initialWorkerContinuationCapacity = 16)
+    /// <param name="continuationBlockCapacity">Number of slots to allocate in each block of continuations in each worker.</param>
+    public LinkedTaskStack(BufferPool pool, IThreadDispatcher dispatcher, int workerCount, int initialWorkerJobCapacity = 128, int continuationBlockCapacity = 128)
     {
         pool.Take(workerCount, out workers);
         for (int i = 0; i < workerCount; ++i)
         {
-            workers[i] = new Worker(i, dispatcher, initialWorkerJobCapacity, initialWorkerContinuationCapacity);
+            workers[i] = new Worker(i, dispatcher, initialWorkerJobCapacity, continuationBlockCapacity);
         }
         Reset(dispatcher);
     }
@@ -569,7 +463,12 @@ public unsafe struct LinkedTaskStack
             int sum = 0;
             for (int i = 0; i < workers.Length; ++i)
             {
-                sum += workers[i].ContinuationCount;
+                var block = workers[i].ContinuationHead;
+                while (block != null)
+                {
+                    sum += block->Count;
+                    block = block->Previous;
+                }
             }
             return sum;
         }
@@ -583,26 +482,12 @@ public unsafe struct LinkedTaskStack
     /// <param name="workerIndex">Worker index to allocate the continuation on.</param>
     /// <param name="dispatcher">Dispatcher to use for any per-thread allocations if necessary.</param>
     /// <param name="onCompleted">Function to execute upon completing all associated tasks, if any. Any task with a null <see cref="Task.Function"/> will not be executed.</param>
-    /// <param name="continuationHandle">Handle of the continuation if allocation is successful.</param>
-    /// <returns>True if the allocation succeeded, false if it was contested..</returns>
-    public bool TryAllocateContinuation(int taskCount, int workerIndex, IThreadDispatcher dispatcher, out ContinuationHandle continuationHandle, Task onCompleted = default)
-    {
-        return workers[workerIndex].TryAllocateContinuation(taskCount, dispatcher, out continuationHandle, onCompleted);
-    }
-
-    /// <summary>
-    /// Allocates a continuation for a set of tasks.
-    /// </summary>
-    /// <param name="taskCount">Number of tasks associated with the continuation.</param>
-    /// <param name="workerIndex">Worker index to allocate the continuation on.</param>
-    /// <param name="dispatcher">Dispatcher to use for any per-thread allocations if necessary.</param>
-    /// <param name="onCompleted">Task to execute upon completing all associated tasks, if any. Any task with a null <see cref="Task.Function"/> will not be executed.</param>
-    /// <returns>Handle of the allocated continuation.</returns>
+    /// <returns>Handle of the continuation.</returns>
     public ContinuationHandle AllocateContinuation(int taskCount, int workerIndex, IThreadDispatcher dispatcher, Task onCompleted = default)
     {
         return workers[workerIndex].AllocateContinuation(taskCount, dispatcher, onCompleted);
     }
-
+    
     /// <summary>
     /// Attempts to pop a task.
     /// </summary>
@@ -775,7 +660,6 @@ public unsafe struct LinkedTaskStack
             for (int i = 0; i < tasksToPush.Length; ++i)
             {
                 var task = tasks[i + 1];
-                Debug.Assert(continuationHandle.Worker == workers.Memory + workerIndex);
                 Debug.Assert(!task.Continuation.Initialized, $"None of the source tasks should have continuations when provided to {nameof(RunTasks)}.");
                 task.Continuation = continuationHandle;
                 tasksToPush[i] = task;

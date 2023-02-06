@@ -155,78 +155,83 @@ namespace Demos.SpecializedTests
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
-
-            //Create a mesh.
-            var width = 64;// 768;
-            var height = 64;// 768;
-            var scale = new Vector3(1, 1, 1);
-            //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
-            //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
-
-            //var triangles = CreateDeformedPlaneTriangles(width, height, scale);
-            var triangles = CreateRandomSoupTriangles(new BoundingBox(new(width / -2f, scale.Y * -2, height / -2f), new(width / 2f, scale.Y * 2, height / 2f)), (width - 1) * (height - 1) * 2, 0.5f, 100f);
-            //var mesh = new Mesh(triangles, Vector3.One, BufferPool);
-            var mesh = DemoMeshHelper.CreateGiantMeshFast(triangles, Vector3.One, BufferPool);
-
-            Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
-
-            Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
-            Console.WriteLine($"initial SAH: {mesh.Tree.MeasureCostMetric()}, cache quality: {mesh.Tree.MeasureCacheQuality()}");
-            Console.WriteLine($"initial bounds: A ({mesh.Tree.Nodes[0].A.Min}, {mesh.Tree.Nodes[0].B.Max}), B ({mesh.Tree.Nodes[0].B.Min}, {mesh.Tree.Nodes[0].B.Max})");
-
-            BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
-            BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
-
-            Action setup = () =>
+            for (int i = 0; i < 128; ++i)
             {
-                for (int i = 0; i < mesh.Triangles.Length; ++i)
+                BufferPool.Clear();
+                ThreadDispatcher.WorkerPools.Clear();
+                Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
+
+                //Create a mesh.
+                var width = 1024;
+                var height = 1024;
+                var scale = new Vector3(1, 1, 1);
+                //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
+                //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
+
+                //var triangles = CreateDeformedPlaneTriangles(width, height, scale);
+                var triangles = CreateRandomSoupTriangles(new BoundingBox(new(width / -2f, scale.Y * -2, height / -2f), new(width / 2f, scale.Y * 2, height / 2f)), (width - 1) * (height - 1) * 2, 0.5f, 100f);
+                //var mesh = new Mesh(triangles, Vector3.One, BufferPool);
+                var mesh = DemoMeshHelper.CreateGiantMeshFast(triangles, Vector3.One, BufferPool);
+
+                Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
+
+                Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
+                Console.WriteLine($"initial SAH: {mesh.Tree.MeasureCostMetric()}, cache quality: {mesh.Tree.MeasureCacheQuality()}");
+                Console.WriteLine($"initial bounds: A ({mesh.Tree.Nodes[0].A.Min}, {mesh.Tree.Nodes[0].B.Max}), B ({mesh.Tree.Nodes[0].B.Min}, {mesh.Tree.Nodes[0].B.Max})");
+
+                BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
+                BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
+
+                Action setup = () =>
                 {
-                    ref var t = ref mesh.Triangles[i];
-                    ref var bounds = ref leafBounds[i];
-                    bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
-                    bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
-                    leafIndices[i] = Tree.Encode(i);
-                }
-            };
+                    for (int i = 0; i < mesh.Triangles.Length; ++i)
+                    {
+                        ref var t = ref mesh.Triangles[i];
+                        ref var bounds = ref leafBounds[i];
+                        bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
+                        bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
+                        leafIndices[i] = Tree.Encode(i);
+                    }
+                };
 
-            BinnedTest(setup, () =>
-            {
-                Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves, ThreadDispatcher, BufferPool);
-            }, "Revamp Single Axis MT", ref mesh.Tree);
+                BinnedTest(setup, () =>
+                {
+                    Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves, ThreadDispatcher, BufferPool);
+                }, "Revamp Single Axis MT", ref mesh.Tree);
 
-            BinnedTest(setup, () =>
-            {
-                Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves);
-            }, "Revamp Single Axis ST", ref mesh.Tree);
+                //BinnedTest(setup, () =>
+                //{
+                //    Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves);
+                //}, "Revamp Single Axis ST", ref mesh.Tree);
 
 
 
-            Mesh mesh2 = default;
-            Mesh* mesh2Pointer = &mesh2;
+                //Mesh mesh2 = default;
+                //Mesh* mesh2Pointer = &mesh2;
 
-            QuickList<int> subtreeReferences = new(triangles.Length, BufferPool);
-            QuickList<int> treeletInternalNodes = new(triangles.Length, BufferPool);
-            Tree.CreateBinnedResources(BufferPool, triangles.Length, out var binnedResourcesBuffer, out var binnedResources);
-            BinnedTest(() =>
-            {
-                if (mesh2Pointer->Tree.Leaves.Allocated)
-                    mesh2Pointer->Tree.Dispose(BufferPool);
-                *mesh2Pointer = DemoMeshHelper.CreateGiantMeshFast(triangles, Vector3.One, BufferPool);
-            }, () =>
-            {
-                subtreeReferences.Count = 0;
-                treeletInternalNodes.Count = 0;
-                mesh2Pointer->Tree.BinnedRefine(0, ref subtreeReferences, mesh2Pointer->Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
-            }, "Original", ref mesh2Pointer->Tree);
+                //QuickList<int> subtreeReferences = new(triangles.Length, BufferPool);
+                //QuickList<int> treeletInternalNodes = new(triangles.Length, BufferPool);
+                //Tree.CreateBinnedResources(BufferPool, triangles.Length, out var binnedResourcesBuffer, out var binnedResources);
+                //BinnedTest(() =>
+                //{
+                //    if (mesh2Pointer->Tree.Leaves.Allocated)
+                //        mesh2Pointer->Tree.Dispose(BufferPool);
+                //    *mesh2Pointer = DemoMeshHelper.CreateGiantMeshFast(triangles, Vector3.One, BufferPool);
+                //}, () =>
+                //{
+                //    subtreeReferences.Count = 0;
+                //    treeletInternalNodes.Count = 0;
+                //    mesh2Pointer->Tree.BinnedRefine(0, ref subtreeReferences, mesh2Pointer->Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
+                //}, "Original", ref mesh2Pointer->Tree);
 
-            //RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
-            //RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);
+                //RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
+                //RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);
 
-            //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlapsContiguousPrepass(ref handler, BufferPool), mesh.Tree.LeafCount, "Prepass");
-            //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlaps(ref handler), mesh.Tree.LeafCount, "Original");
+                //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlapsContiguousPrepass(ref handler, BufferPool), mesh.Tree.LeafCount, "Prepass");
+                //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlaps(ref handler), mesh.Tree.LeafCount, "Original");
 
-            Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 10, 0), 1, Simulation.Shapes, new Sphere(0.5f)));
+                Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 10, 0), 1, Simulation.Shapes, new Sphere(0.5f)));
+            }
         }
 
         delegate void TestFunction(ref OverlapHandler handler);
