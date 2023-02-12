@@ -69,8 +69,7 @@ namespace BepuPhysics.Collidables
 
             //Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
             var tOffset = -Vector3.Dot(o, d) - (HalfLength + Radius);
-            if (tOffset < 0)
-                tOffset = 0;
+            tOffset = float.Max(0, tOffset);
             o += d * tOffset;
             var oh = new Vector3(o.X, 0, o.Z);
             var dh = new Vector3(d.X, 0, d.Z);
@@ -97,7 +96,7 @@ namespace BepuPhysics.Collidables
                     normal = new Vector3();
                     return false;
                 }
-                t = (-b - (float)Math.Sqrt(discriminant)) / a;
+                t = (-b - MathF.Sqrt(discriminant)) / a;
                 if (t < -tOffset)
                     t = -tOffset;
                 var cylinderHitLocation = o + d * t;
@@ -121,7 +120,11 @@ namespace BepuPhysics.Collidables
             else
             {
                 //The ray is parallel to the axis; the impact is on a spherical cap or nothing.
-                sphereY = d.Y > 0 ? -HalfLength : HalfLength;
+                //Note that the sphere cap is nudged forward to match the origin of the ray.
+                //This is just a simple way to capture the case where the ray starts inside the capsule, but too far to up/down to hit the cap chosen by d.Y.
+                sphereY = d.Y > 0 ?
+                    float.Max(float.Min(HalfLength, o.Y), -HalfLength) :
+                    float.Min(float.Max(-HalfLength, o.Y), HalfLength);
             }
 
             var os = o - new Vector3(0, sphereY, 0);
@@ -144,9 +147,8 @@ namespace BepuPhysics.Collidables
                 normal = new Vector3();
                 return false;
             }
-            t = -capB - (float)Math.Sqrt(capDiscriminant);
-            if (t < -tOffset)
-                t = -tOffset;
+            t = -capB - MathF.Sqrt(capDiscriminant);
+            t = float.Max(t, -tOffset);
             normal = (os + d * t) / Radius;
             t = (t + tOffset) * inverseDLength;
             Matrix3x3.Transform(normal, orientation, out normal);
@@ -284,10 +286,14 @@ namespace BepuPhysics.Collidables
             var useCylinder = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(cylinderHitLocation.Y, -HalfLength), Vector.LessThanOrEqual(cylinderHitLocation.Y, HalfLength));
 
             //Intersect the spherical cap for any lane which ended up not using the cylinder.
-            Vector<float> sphereY = Vector.ConditionalSelect(
-                Vector.BitwiseOr(
-                    Vector.BitwiseAnd(Vector.GreaterThan(cylinderHitLocation.Y, HalfLength), rayIsntParallel),
-                    Vector.AndNot(Vector.LessThanOrEqual(d.Y, Vector<float>.Zero), rayIsntParallel)), HalfLength, -HalfLength);
+            //Note that the sphere cap is nudged forward in the parallel case to match the origin of the ray.
+            //This is just a simple way to capture the case where the ray starts inside the capsule, but too far to up/down to hit the cap chosen by d.Y.
+            var negatedHalfLength = -HalfLength;
+            var parallelSphereY = Vector.ConditionalSelect(Vector.LessThan(d.Y, Vector<float>.Zero), 
+                Vector.Max(negatedHalfLength, Vector.Min(o.Y, HalfLength)), 
+                Vector.Min(HalfLength, Vector.Max(o.Y, negatedHalfLength)));
+            var nonParallelSphereY = Vector.ConditionalSelect(Vector.GreaterThan(cylinderHitLocation.Y, HalfLength), HalfLength, negatedHalfLength);
+            Vector<float> sphereY = Vector.ConditionalSelect(rayIsntParallel, nonParallelSphereY, parallelSphereY);
 
             o.Y -= sphereY;
             Vector3Wide.Dot(o, d, out var capB);

@@ -263,29 +263,49 @@ namespace Demos.SpecializedTests
     {
         internal static void GetUnitDirection(Random random, out Vector3 direction)
         {
-            //Not much cleverness involved here. This does not produce a uniform distribution over the the unit sphere.
-            float length;
-            do
+            var directionSelector = random.NextSingle();
+            //Occasionally choose to use an axis-aligned direction. These are often special cases that could fail.
+            const float axisAlignedProbability = 0.2f;
+            if (directionSelector < axisAlignedProbability / 3)
+                direction = new Vector3(random.NextSingle() < 0.5f ? -1 : 1, 0, 0);
+            else if (directionSelector < axisAlignedProbability * 2 / 3)
+                direction = new Vector3(0, random.NextSingle() < 0.5f ? -1 : 1, 0);
+            else if (directionSelector < axisAlignedProbability)
+                direction = new Vector3(0, 0, random.NextSingle() < 0.5f ? -1 : 1);
+            else
             {
-                direction = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * new Vector3(2) - new Vector3(1);
-                length = direction.Length();
-            } while (length < 1e-7f);
-            direction /= length;
+                //Not much cleverness involved here. This does not produce a uniform distribution over the the unit sphere.
+                float length;
+                do
+                {
+                    direction = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * new Vector3(2) - new Vector3(1);
+                    length = direction.Length();
+                } while (length < 1e-7f);
+                direction /= length;
+            }
         }
         static void GetUnitQuaternion(Random random, out Quaternion orientation)
         {
-            //Not much cleverness involved here. This does not produce a uniform distribution over the the unit sphere.
-            float length;
-            do
+            var identitySelector = random.NextSingle();
+            if (identitySelector < 0.5)
             {
-                orientation = new Quaternion(
-                    random.NextSingle() * 2 - 1,
-                    random.NextSingle() * 2 - 1,
-                    random.NextSingle() * 2 - 1,
-                    random.NextSingle() * 2 - 1);
-                length = orientation.Length();
-            } while (length < 1e-7f);
-            Unsafe.As<Quaternion, Vector4>(ref orientation) /= length;
+                //Combined with choosing ray directions that are often axis-aligned, identity orientation can help reveal special case failures.
+                orientation = Quaternion.Identity;
+            }
+            else
+            {
+                float length;
+                do
+                {
+                    orientation = new Quaternion(
+                        random.NextSingle() * 2 - 1,
+                        random.NextSingle() * 2 - 1,
+                        random.NextSingle() * 2 - 1,
+                        random.NextSingle() * 2 - 1);
+                    length = orientation.Length();
+                } while (length < 1e-7f);
+                Unsafe.As<Quaternion, Vector4>(ref orientation) /= length;
+            }
         }
         static void GetPointOnPlane(Random random, float centralExclusion, float span, ref Vector3 anchor, ref Vector3 normal, out Vector3 point)
         {
