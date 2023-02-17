@@ -69,6 +69,7 @@ namespace Demos
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();
             AddOption<ContactEventsDemo>();
+            AddOption<CollisionTrackingDemo>();
             AddOption<CollisionQueryDemo>();
             AddOption<SolverContactEnumerationDemo>();
             AddOption<CustomVoxelCollidableDemo>();
