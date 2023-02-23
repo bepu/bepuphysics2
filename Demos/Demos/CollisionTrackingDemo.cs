@@ -252,7 +252,7 @@ public class CollisionTrackingDemo : Demo
             workerCaches = new Buffer<QuickList<WorkerPairContacts>>(dispatcher.ThreadCount, pool);
             for (int i = 0; i < workerCaches.Length; ++i)
             {
-                workerCaches[i] = new QuickList<WorkerPairContacts>(512, dispatcher.GetThreadMemoryPool(i));
+                workerCaches[i] = new QuickList<WorkerPairContacts>(512, dispatcher.WorkerPools[i]);
             }
         }
 
@@ -272,7 +272,7 @@ public class CollisionTrackingDemo : Demo
                     Tracked.Values[elementIndex].Pairs.Add(entry.Other, entry.Collision, pool);
                 }
                 //The worker cache memory must be returned to the thread pool, not the main pool!
-                cache.Dispose(dispatcher.GetThreadMemoryPool(i));
+                cache.Dispose(dispatcher.WorkerPools[i]);
             }
             workerCaches.Dispose(pool);
         }
@@ -282,7 +282,7 @@ public class CollisionTrackingDemo : Demo
             if (Tracked.ContainsKey(self))
             {
                 //A is a listener, add it.            
-                ref var pairContacts = ref workerCaches[workerIndex].Allocate(dispatcher.GetThreadMemoryPool(workerIndex));
+                ref var pairContacts = ref workerCaches[workerIndex].Allocate(dispatcher.WorkerPools[workerIndex]);
                 pairContacts.Self = self;
                 pairContacts.Other = other;
                 pairContacts.Collision.OtherIsAInPair = otherIsA;
