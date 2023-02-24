@@ -490,9 +490,9 @@ namespace BepuPhysics.Trees
         }
 
         //These should be powers of 2 for maskhack reasons.
-        const int SubtreesPerThreadForCentroidPrepass = 2;//2048;
-        const int SubtreesPerThreadForBinning = 2;//512;
-        const int SubtreesPerThreadForNodeJob = 2;//512;
+        const int SubtreesPerThreadForCentroidPrepass = 262144;
+        const int SubtreesPerThreadForBinning = 262144;
+        const int SubtreesPerThreadForNodeJob = 1024;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static BoundingBox4 ComputeCentroidBounds(Buffer<BoundingBox4> bounds)

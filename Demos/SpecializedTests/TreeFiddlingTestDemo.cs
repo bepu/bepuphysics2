@@ -155,7 +155,7 @@ namespace Demos.SpecializedTests
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = 0;
 
-            for (int i = 0; i < 128; ++i)
+            for (int i = 0; i < 2; ++i)
             {
                 BufferPool.Clear();
                 ThreadDispatcher.WorkerPools.Clear();
@@ -280,7 +280,7 @@ namespace Demos.SpecializedTests
         static void BinnedTest(Action setup, Action function, string name, ref Tree tree)
         {
             long accumulatedTime = 0;
-            const int testCount = 16;
+            const int testCount = 64;
             for (int i = 0; i < testCount; ++i)
             {
                 setup?.Invoke();
