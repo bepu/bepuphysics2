@@ -311,7 +311,7 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            Debug.Assert(subtreeCount <= context->MaximumBinCount || subtreeCount < context->MicrosweepThreshold, "We're reusing the bin resources under the assumption that this is only ever called when there are less leaves than maximum bins.");
+            Debug.Assert(subtreeCount <= context->MaximumBinCount || subtreeCount <= context->MicrosweepThreshold, "We're reusing the bin resources under the assumption that this is only ever called when there are less leaves than maximum bins.");
             //Identify the split index by examining the SAH of very split option.
             //Premerge from left to right so we have a sorta-summed area table to cheaply look up all possible child A bounds as we scan.
             binBoundingBoxesScan[0] = boundingBoxes[0];
@@ -461,11 +461,11 @@ namespace BepuPhysics.Trees
             /// </summary>
             public TLeafCounts LeafCounts;
 
-            public BinnedBuildWorkerContext(Buffer<BoundingBox4> bounds, Buffer<byte> binAllocationBuffer, ref int binStart, int binCount, TLeafCounts leafCounts)
+            public BinnedBuildWorkerContext(Buffer<BoundingBox4> bounds, Buffer<byte> binAllocationBuffer, ref int binStart, int binCapacity, TLeafCounts leafCounts)
             {
-                BinBoundingBoxes = Suballocate<BoundingBox4>(binAllocationBuffer, ref binStart, binCount);
-                BinBoundingBoxesScan = Suballocate<BoundingBox4>(binAllocationBuffer, ref binStart, binCount);
-                BinLeafCounts = Suballocate<int>(binAllocationBuffer, ref binStart, binCount);
+                BinBoundingBoxes = Suballocate<BoundingBox4>(binAllocationBuffer, ref binStart, binCapacity);
+                BinBoundingBoxesScan = Suballocate<BoundingBox4>(binAllocationBuffer, ref binStart, binCapacity);
+                BinLeafCounts = Suballocate<int>(binAllocationBuffer, ref binStart, binCapacity);
                 Bounds = bounds;
                 LeafCounts = leafCounts;
             }
@@ -1099,7 +1099,7 @@ namespace BepuPhysics.Trees
                 //Those node jobs could spawn multithreaded work that other workers assist with.
                 //Each of those jobs needs its own context for those workers, and the number of jobs is not 1:1 with the workers.
                 //We'll handle such dispatch-required allocations from worker pools. Here, we just preallocate stuff for the first level across all workers.
-                pool.Take<byte>(maximumBinCount * workerCount * (sizeof(BoundingBox4) * 2 + sizeof(int)), out var workerBinsAllocation);
+                pool.Take<byte>(allocatedBinCount * workerCount * (sizeof(BoundingBox4) * 2 + sizeof(int)), out var workerBinsAllocation);
 
                 BinnedBuildWorkerContext<UnitLeafCount>* workerContextsPointer = stackalloc BinnedBuildWorkerContext<UnitLeafCount>[workerCount];
                 var leafCounts = new UnitLeafCount();
@@ -1108,7 +1108,7 @@ namespace BepuPhysics.Trees
                 int binAllocationStart = 0;
                 for (int i = 0; i < workerCount; ++i)
                 {
-                    workerContexts[i] = new BinnedBuildWorkerContext<UnitLeafCount>(boundingBoxes.As<BoundingBox4>(), workerBinsAllocation, ref binAllocationStart, maximumBinCount, leafCounts);
+                    workerContexts[i] = new BinnedBuildWorkerContext<UnitLeafCount>(boundingBoxes.As<BoundingBox4>(), workerBinsAllocation, ref binAllocationStart, allocatedBinCount, leafCounts);
                 }
 
                 LinkedTaskStack taskStack = default;
