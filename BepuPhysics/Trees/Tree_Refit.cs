@@ -29,22 +29,24 @@ namespace BepuPhysics.Trees
                 metanode = ref Metanodes[metanode.Parent];
             }
         }
-
-        readonly unsafe void Refit(ref NodeChild childInParent)
+        //TODO: Recursive approach is a bit silly. Our earlier nonrecursive implementations weren't great, but we could do better.
+        //This is especially true if we end up changing the memory layout. If we go back to a contiguous array per level, refit becomes trivial.
+        //That would only happen if it turns out useful for other parts of the execution, though- optimizing refits at the cost of self-tests would be a terrible idea.
+        readonly unsafe void Refit(int nodeIndex, out Vector3 min, out Vector3 max)
         {
             Debug.Assert(LeafCount >= 2);
-            ref var node = ref Nodes[childInParent.Index];
+            ref var node = ref Nodes[nodeIndex];
             ref var a = ref node.A;
             if (node.A.Index >= 0)
             {
-                Refit(ref a);
+                Refit(a.Index, out a.Min, out a.Max);
             }
             ref var b = ref node.B;
             if (b.Index >= 0)
             {
-                Refit(ref b);
+                Refit(b.Index, out b.Min, out b.Max);
             }
-            BoundingBox.CreateMergedUnsafeWithPreservation(a, b, out childInParent);
+            BoundingBox.CreateMerged(a.Min, a.Max, b.Min, b.Max, out min, out max);
         }
         /// <summary>
         /// Updates the bounding boxes of all internal nodes in the tree.
@@ -54,8 +56,35 @@ namespace BepuPhysics.Trees
             //No point in refitting a tree with no internal nodes!
             if (LeafCount <= 2)
                 return;
+            Refit(0, out var rootMin, out var rootMax);
+        }
+
+        readonly unsafe void Refit2(ref NodeChild childInParent)
+        {
+            Debug.Assert(LeafCount >= 2);
+            ref var node = ref Nodes[childInParent.Index];
+            ref var a = ref node.A;
+            if (node.A.Index >= 0)
+            {
+                Refit2(ref a);
+            }
+            ref var b = ref node.B;
+            if (b.Index >= 0)
+            {
+                Refit2(ref b);
+            }
+            BoundingBox.CreateMergedUnsafeWithPreservation(a, b, out childInParent);
+        }
+        /// <summary>
+        /// Updates the bounding boxes of all internal nodes in the tree.
+        /// </summary>
+        public unsafe readonly void Refit2()
+        {
+            //No point in refitting a tree with no internal nodes!
+            if (LeafCount <= 2)
+                return;
             NodeChild stub = default;
-            Refit(ref stub);
+            Refit2(ref stub);
         }
 
     }
