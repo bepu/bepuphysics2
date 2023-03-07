@@ -82,10 +82,9 @@ public class CollisionTrackingDemo : Demo
         BufferPool pool;
         Simulation simulation;
 
-        public CollisionTracker(BufferPool pool, IThreadDispatcher dispatcher)
+        public CollisionTracker(BufferPool pool)
         {
             this.pool = pool;
-            this.dispatcher = dispatcher;
             Tracked = new QuickDictionary<ContactSource, TrackedPairs, ContactSource>(16, pool);
         }
 
@@ -249,32 +248,56 @@ public class CollisionTrackingDemo : Demo
                 }
             }
 
-            workerCaches = new Buffer<QuickList<WorkerPairContacts>>(dispatcher.ThreadCount, pool);
-            for (int i = 0; i < workerCaches.Length; ++i)
+            const int initialWorkerCapacity = 512;
+            if (dispatcher != null)
             {
-                workerCaches[i] = new QuickList<WorkerPairContacts>(512, dispatcher.WorkerPools[i]);
+                //Cache the dispatcher so ReportContacts can use the buffers in the narrowphase callbacks.
+                workerCaches = new Buffer<QuickList<WorkerPairContacts>>(dispatcher.ThreadCount, pool);
+                for (int i = 0; i < workerCaches.Length; ++i)
+                {
+                    workerCaches[i] = new QuickList<WorkerPairContacts>(initialWorkerCapacity, dispatcher.WorkerPools[i]);
+                }
+                this.dispatcher = dispatcher;
+            }
+            else
+            {
+                //The simulation is being updated without a thread dispatcher, so all allocations can use the main pool.
+                workerCaches = new Buffer<QuickList<WorkerPairContacts>>(1, pool);
+                workerCaches[0] = new QuickList<WorkerPairContacts>(initialWorkerCapacity, pool);
             }
         }
 
+        void FlushWorkerCache(ref QuickList<WorkerPairContacts> cache, BufferPool pool)
+        {
+            for (int j = 0; j < cache.Count; ++j)
+            {
+                ref var entry = ref cache[j];
+                Tracked.GetTableIndices(ref entry.Self, out _, out var elementIndex);
+                Tracked.Values[elementIndex].Pairs.Add(entry.Other, entry.Collision, pool);
+            }
+            //The worker cache memory must be returned to the thread pool, not the main pool!
+            cache.Dispose(pool);
+        }
         /// <summary>
         /// Flushes all collisions found in the previous timestep into efficient storage for queries.
         /// </summary>
         void Flush(float dt, IThreadDispatcher threadDispatcher)
-        {           
-            //Flush the worker caches into the main storage and dispose the caches.
-            for (int i = 0; i < workerCaches.Length; ++i)
+        {
+            if (dispatcher != null)
             {
-                ref var cache = ref workerCaches[i];
-                for (int j = 0; j < cache.Count; ++j)
+                //Flush the worker caches into the main storage and dispose the caches.
+                for (int i = 0; i < workerCaches.Length; ++i)
                 {
-                    ref var entry = ref cache[j];
-                    Tracked.GetTableIndices(ref entry.Self, out _, out var elementIndex);
-                    Tracked.Values[elementIndex].Pairs.Add(entry.Other, entry.Collision, pool);
+                    FlushWorkerCache(ref workerCaches[i], dispatcher.WorkerPools[i]);
                 }
-                //The worker cache memory must be returned to the thread pool, not the main pool!
-                cache.Dispose(dispatcher.WorkerPools[i]);
+            }
+            else
+            {
+                //Simulation is running sequentially and there's only one thread; the allocations are on the main pool.
+                FlushWorkerCache(ref workerCaches[0], pool);
             }
             workerCaches.Dispose(pool);
+            this.dispatcher = null;
         }
 
         private void ReportContacts<TContacts>(int workerIndex, ContactSource self, ContactSource other, bool otherIsA, ref TContacts contacts) where TContacts : unmanaged, IContactManifold<TContacts>
@@ -282,7 +305,7 @@ public class CollisionTrackingDemo : Demo
             if (Tracked.ContainsKey(self))
             {
                 //A is a listener, add it.            
-                ref var pairContacts = ref workerCaches[workerIndex].Allocate(dispatcher.WorkerPools[workerIndex]);
+                ref var pairContacts = ref workerCaches[workerIndex].Allocate(dispatcher != null ? dispatcher.WorkerPools[workerIndex] : pool);
                 pairContacts.Self = self;
                 pairContacts.Other = other;
                 pairContacts.Collision.OtherIsAInPair = otherIsA;
@@ -418,7 +441,7 @@ public class CollisionTrackingDemo : Demo
 
         particles = new QuickList<ContactResponseParticle>(8, BufferPool);
 
-        collisionTracker = new CollisionTracker(BufferPool, ThreadDispatcher);
+        collisionTracker = new CollisionTracker(BufferPool);
         Simulation = Simulation.Create(BufferPool, new CollisionTrackingCallbacks(collisionTracker), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
 
