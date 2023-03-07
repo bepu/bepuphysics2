@@ -78,7 +78,6 @@ namespace BepuPhysics.Trees
             var toReturn = Memory + memoryAllocated;
             memoryAllocated = newSize;
             return toReturn;
-
         }
         public static unsafe void CreateBinnedResources(BufferPool bufferPool, int maximumSubtreeCount, out Buffer<byte> buffer, out BinnedResources resources)
         {

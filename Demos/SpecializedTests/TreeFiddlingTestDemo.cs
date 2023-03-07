@@ -224,8 +224,7 @@ namespace Demos.SpecializedTests
                 //    mesh2Pointer->Tree.BinnedRefine(0, ref subtreeReferences, mesh2Pointer->Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
                 //}, "Original", ref mesh2Pointer->Tree);
 
-                //RefitTest(() => mesh.Tree.Refit2(), "refit2", ref mesh.Tree);
-                //RefitTest(() => mesh.Tree.Refit(), "Original", ref mesh.Tree);
+                RefitTest(() => mesh.Tree.Refit(), "Refit", ref mesh.Tree);
 
                 //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlapsContiguousPrepass(ref handler, BufferPool), mesh.Tree.LeafCount, "Prepass");
                 //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlaps(ref handler), mesh.Tree.LeafCount, "Original");
