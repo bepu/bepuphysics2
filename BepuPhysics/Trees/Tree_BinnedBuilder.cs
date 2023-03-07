@@ -159,6 +159,19 @@ namespace BepuPhysics.Trees
         struct BoundsComparerY : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Y + a.Max.Y) > (b.Min.Y + b.Max.Y) ? -1 : 1; }
         struct BoundsComparerZ : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Z + a.Max.Z) > (b.Min.Z + b.Max.Z) ? -1 : 1; }
 
+        public struct NodeTimes
+        {
+            public double Total;
+            public double CentroidPrepass;
+            public double Binning;
+            public double Huh;
+            public bool MTPrepass;
+            public bool MTBinning;
+            public int SubtreeCount;
+        }
+
+        public static NodeTimes[] Times;
+
         static unsafe void MicroSweepForBinnedBuilder<TLeafCounts, TLeaves, TThreading>(
             Vector4 centroidMin, Vector4 centroidMax, Buffer<int> indices, TLeafCounts leafCounts, ref TLeaves leaves,
             Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Context<TLeafCounts, TLeaves, TThreading>* context, int workerIndex)
@@ -706,9 +719,9 @@ namespace BepuPhysics.Trees
             {
                 ref var box = ref bounds[i];
                 var binIndex = ComputeBinIndex(centroidBoundsMin, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, box);
-                ref var xBounds = ref binBoundingBoxes[binIndex];
-                xBounds.Min = Vector4.Min(xBounds.Min, box.Min);
-                xBounds.Max = Vector4.Max(xBounds.Max, box.Max);
+                ref var binBounds = ref binBoundingBoxes[binIndex];
+                binBounds.Min = Vector4.Min(binBounds.Min, box.Min);
+                binBounds.Max = Vector4.Max(binBounds.Max, box.Max);
                 binLeafCounts[binIndex] += leafCounts[i];
             }
         }
@@ -817,6 +830,9 @@ namespace BepuPhysics.Trees
             int subtreeRegionStartIndex, int nodeIndex, int subtreeCount, int parentNodeIndex, int childIndexInParent, Context<TLeafCounts, TLeaves, TThreading>* context, int workerIndex, IThreadDispatcher dispatcher)
             where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts> where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
         {
+            var debugStartTime = Stopwatch.GetTimestamp();
+            ref var debugTimes = ref Times[nodeIndex];
+            debugTimes.SubtreeCount = subtreeCount;
             var indices = context->Indices.Slice(subtreeRegionStartIndex, subtreeCount);
             var boundingBoxes = context->BoundingBoxes.Slice(subtreeRegionStartIndex, subtreeCount);
             var leafCounts = context->LeafCounts.Slice(subtreeRegionStartIndex, subtreeCount);
@@ -828,16 +844,20 @@ namespace BepuPhysics.Trees
                 BuildNode(boundingBoxes[0], boundingBoxes[1], leafCounts[0], leafCounts[1], nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref context->Leaves, out _, out _);
                 return;
             }
+            var debugCentroidStartTime = Stopwatch.GetTimestamp();
             BoundingBox4 centroidBounds;
             if (typeof(TThreading) == typeof(SingleThreaded) || subtreeCount < SubtreesPerThreadForCentroidPrepass)
             {
                 centroidBounds = ComputeCentroidBounds(boundingBoxes);
+                debugTimes.MTPrepass = false;
             }
             else
             {
                 centroidBounds = MultithreadedCentroidPrepass(
                     (MultithreadBinnedBuildContext<TLeafCounts>*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading)), subtreeRegionStartIndex, subtreeCount, workerIndex, dispatcher);
+                debugTimes.MTPrepass = true;
             }
+            var debugCentroidEndTime = Stopwatch.GetTimestamp();
             var centroidSpan = centroidBounds.Max - centroidBounds.Min;
             var axisIsDegenerate = Vector128.LessThanOrEqual(centroidSpan.AsVector128(), Vector128.Create(1e-12f));
             if ((Vector128.ExtractMostSignificantBits(axisIsDegenerate) & 0b111) == 0b111)
@@ -904,16 +924,20 @@ namespace BepuPhysics.Trees
                 boxX.Max = new Vector4(float.MinValue);
                 binLeafCounts[i] = 0;
             }
+            var debugBinStartTime = Stopwatch.GetTimestamp();
             if (typeof(TThreading) == typeof(SingleThreaded) || subtreeCount < SubtreesPerThreadForBinning)
             {
                 BinSubtrees(centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, boundingBoxes, leafCounts, binBoundingBoxes, binLeafCounts);
+                debugTimes.MTBinning = false;
             }
             else
             {
                 MultithreadedBinSubtrees(
                    (MultithreadBinnedBuildContext<TLeafCounts>*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading)),
                    centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtreeRegionStartIndex, subtreeCount, binCount, workerIndex, dispatcher);
+                debugTimes.MTBinning = true;
             }
+            var debugBinEndTime = Stopwatch.GetTimestamp();
 
             //Identify the split index by examining the SAH of very split option.
             //Premerge from left to right so we have a sorta-summed area table to cheaply look up all possible child A bounds as we scan.
@@ -964,13 +988,13 @@ namespace BepuPhysics.Trees
                 accumulatedLeafCountB += binLeafCounts[previousIndex];
             }
 
-            //Choose the best SAH from all axes and split the indices/bounds into two halves for the children to operate on.
+            var debugHuhStartTime = Stopwatch.GetTimestamp();
+            //Split the indices/bounds into two halves for the children to operate on.
             var subtreeCountB = 0;
             var subtreeCountA = 0;
             var splitIndex = bestSplit;
             var bestboundsA = binBoundingBoxesScan[bestSplit - 1];
             var bestboundsB = bestBoundingBoxB;
-            //Now we have the split index between bins. Go back through and sort the indices and bounds into two halves.
             while (subtreeCountA + subtreeCountB < subtreeCount)
             {
                 ref var box = ref boundingBoxes[subtreeCountA];
@@ -1009,10 +1033,16 @@ namespace BepuPhysics.Trees
                     ++subtreeCountA;
                 }
             }
+            var debugHuhEndTime = Stopwatch.GetTimestamp();
             var leafCountB = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountB : bestLeafCountB;
             var leafCountA = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountA : totalLeafCount - leafCountB;
             Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
             BuildNode(bestboundsA, bestboundsB, leafCountA, leafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref context->Leaves, out var nodeChildIndexA, out var nodeChildIndexB);
+            var debugEndTime = Stopwatch.GetTimestamp();
+            debugTimes.Total = (debugEndTime - debugStartTime) / (double)Stopwatch.Frequency;
+            debugTimes.Huh = (debugHuhEndTime - debugHuhStartTime) / (double)Stopwatch.Frequency;
+            debugTimes.CentroidPrepass = (debugCentroidEndTime - debugCentroidStartTime) / (double)Stopwatch.Frequency;
+            debugTimes.Binning = (debugBinEndTime - debugBinStartTime) / (double)Stopwatch.Frequency;
 
             var shouldPushBOntoMultithreadedQueue = typeof(TThreading) != typeof(SingleThreaded) && subtreeCountA >= SubtreesPerThreadForNodeJob && subtreeCountB >= SubtreesPerThreadForNodeJob;
             ContinuationHandle nodeBContinuation = default;

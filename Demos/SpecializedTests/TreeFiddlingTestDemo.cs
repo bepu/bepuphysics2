@@ -154,7 +154,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(-10, 3, -10);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = 0;
-
+            Tree.Times = new Tree.NodeTimes[1 << 22];
             for (int i = 0; i < 2; ++i)
             {
                 BufferPool.Clear();
@@ -224,7 +224,7 @@ namespace Demos.SpecializedTests
                 //    mesh2Pointer->Tree.BinnedRefine(0, ref subtreeReferences, mesh2Pointer->Tree.LeafCount, ref treeletInternalNodes, ref binnedResources, BufferPool);
                 //}, "Original", ref mesh2Pointer->Tree);
 
-                RefitTest(() => mesh.Tree.Refit(), "Refit", ref mesh.Tree);
+                //RefitTest(() => mesh.Tree.Refit(), "Refit", ref mesh.Tree);
 
                 //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlapsContiguousPrepass(ref handler, BufferPool), mesh.Tree.LeafCount, "Prepass");
                 //SelfTest((ref OverlapHandler handler) => mesh.Tree.GetSelfOverlaps(ref handler), mesh.Tree.LeafCount, "Original");
