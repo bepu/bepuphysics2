@@ -219,7 +219,6 @@ public class SolverContactEnumerationDemo : Demo
             }
         }
 
-
         sensorBodyHandle = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 0, 1), 10, Simulation.Shapes, new Box(4, 2, 6)));
 
         //Put a mesh under the sensor so that nonconvex contacts are shown.

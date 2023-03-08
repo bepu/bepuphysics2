@@ -368,13 +368,13 @@ namespace BepuPhysics.CollisionDetection
             //Active constraints store body indices as references; inactive constraints store handles.
             if (constraintLocation.SetIndex == 0)
             {
-                bodyHandleA = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexA[0]];
-                bodyHandleB = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexB[0]];
+                bodyHandleA = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexA[0] & Bodies.BodyReferenceMask];
+                bodyHandleB = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexB[0] & Bodies.BodyReferenceMask];
             }
             else
             {
-                bodyHandleA = new BodyHandle(bodyReferences.IndexA[0]);
-                bodyHandleB = new BodyHandle(bodyReferences.IndexB[0]);
+                bodyHandleA = new BodyHandle(bodyReferences.IndexA[0] & Bodies.BodyReferenceMask);
+                bodyHandleB = new BodyHandle(bodyReferences.IndexB[0] & Bodies.BodyReferenceMask);
             }
             extractor.ConvexTwoBody(bodyHandleA, bodyHandleB, ref prestep, ref impulses);
         }
@@ -471,13 +471,13 @@ namespace BepuPhysics.CollisionDetection
             //Active constraints store body indices as references; inactive constraints store handles.
             if (constraintLocation.SetIndex == 0)
             {
-                bodyHandleA = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexA[0]];
-                bodyHandleB = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexB[0]];
+                bodyHandleA = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexA[0] & Bodies.BodyReferenceMask];
+                bodyHandleB = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexB[0] & Bodies.BodyReferenceMask];
             }
             else
             {
-                bodyHandleA = new BodyHandle(bodyReferences.IndexA[0]);
-                bodyHandleB = new BodyHandle(bodyReferences.IndexB[0]);
+                bodyHandleA = new BodyHandle(bodyReferences.IndexA[0] & Bodies.BodyReferenceMask);
+                bodyHandleB = new BodyHandle(bodyReferences.IndexB[0] & Bodies.BodyReferenceMask);
             }
             extractor.NonconvexTwoBody(bodyHandleA, bodyHandleB, ref prestep, ref impulses);
         }
