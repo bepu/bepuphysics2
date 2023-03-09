@@ -286,26 +286,32 @@ namespace BepuPhysics.Trees
             if (subtreeCountA > 1)
             {
                 var aBounds = boundingBoxes.Slice(subtreeCountA);
-                BoundingBox4 centroidBoundsA = aBounds[0];
+                var initialCentroid = aBounds.Memory->Min + aBounds.Memory->Max;
+                BoundingBox4 centroidBoundsA;
+                centroidBoundsA.Min = initialCentroid;
+                centroidBoundsA.Max = initialCentroid;
                 for (int i = 1; i < subtreeCountA; ++i)
                 {
                     ref var bounds = ref aBounds[i];
-                    //TODO: THIS SHOULD BE CENTROID, NOT FULL MERGE
-                    centroidBoundsA.Min = Vector4.Min(centroidBoundsA.Min, bounds.Min);
-                    centroidBoundsA.Max = Vector4.Max(centroidBoundsA.Max, bounds.Max);
+                    var centroid = bounds.Min + bounds.Max;
+                    centroidBoundsA.Min = Vector4.Min(centroidBoundsA.Min, centroid);
+                    centroidBoundsA.Max = Vector4.Max(centroidBoundsA.Max, centroid);
                 }
                 MicroSweepForBinnedBuilder(centroidBoundsA.Min, centroidBoundsA.Max, ref leaves, subtrees.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), aIndex, nodeIndex, 0, context, workerIndex);
             }
             if (subtreeCountB > 1)
             {
-                var bBounds = boundingBoxes.Slice(subtreeCountA, subtreeCountB);
-                BoundingBox4 centroidBoundsB = bBounds[0];
-                for (int i = 0; i < subtreeCountB; ++i)
+                var bBounds = boundingBoxes.Slice(subtreeCountA, subtreeCountB); 
+                var initialCentroid = bBounds.Memory->Min + bBounds.Memory->Max;
+                BoundingBox4 centroidBoundsB;
+                centroidBoundsB.Min = initialCentroid;
+                centroidBoundsB.Max = initialCentroid;
+                for (int i = 1; i < subtreeCountB; ++i)
                 {
                     ref var bounds = ref bBounds[i];
-                    //TODO: THIS SHOULD BE CENTROID, NOT FULL MERGE
-                    centroidBoundsB.Min = Vector4.Min(centroidBoundsB.Min, bounds.Min);
-                    centroidBoundsB.Max = Vector4.Max(centroidBoundsB.Max, bounds.Max);
+                    var centroid = bounds.Min + bounds.Max;
+                    centroidBoundsB.Min = Vector4.Min(centroidBoundsB.Min, centroid);
+                    centroidBoundsB.Max = Vector4.Max(centroidBoundsB.Max, centroid);
                 }
                 MicroSweepForBinnedBuilder(centroidBoundsB.Min, centroidBoundsB.Max, ref leaves, subtrees.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), bIndex, nodeIndex, 1, context, workerIndex);
             }
