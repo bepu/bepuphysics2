@@ -29,7 +29,7 @@ namespace BepuPhysics.Trees
         static void BuildNode<TLeaves>(
             BoundingBox4 a, BoundingBox4 b,
             int leafCountA, int leafCountB,
-            Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<int> indices,
+            Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes,
             int nodeIndex, int parentNodeIndex, int childIndexInParent, int subtreeCountA, int subtreeCountB, ref TLeaves leaves, out int aIndex, out int bIndex)
             where TLeaves : unmanaged
         {
@@ -39,9 +39,12 @@ namespace BepuPhysics.Trees
             metanode.IndexInParent = childIndexInParent;
             metanode.RefineFlag = 0;
             ref var node = ref nodes[0];
+            node.A = Unsafe.As<BoundingBox4, NodeChild>(ref a);
+            node.B = Unsafe.As<BoundingBox4, NodeChild>(ref b);
             if (subtreeCountA == 1)
             {
-                aIndex = indices[0];
+                aIndex = subtrees[0].Index;
+                Debug.Assert(leafCountA == 1);
                 if (typeof(TLeaves) == typeof(Buffer<Leaf>))
                 {
                     Debug.Assert(aIndex < 0, "During building, any subtreeCount of 1 should imply a leaf.");
@@ -52,10 +55,12 @@ namespace BepuPhysics.Trees
             else
             {
                 aIndex = nodeIndex + 1;
+                node.A.Index = aIndex;
             }
             if (subtreeCountB == 1)
             {
-                bIndex = indices[^1];
+                bIndex = subtrees[^1].Index;
+                Debug.Assert(leafCountB == 1);
                 if (typeof(TLeaves) == typeof(Buffer<Leaf>))
                 {
                     Debug.Assert(bIndex < 0, "During building, any subtreeCount of 1 should imply a leaf.");
@@ -66,13 +71,8 @@ namespace BepuPhysics.Trees
             else
             {
                 bIndex = nodeIndex + subtreeCountA; //parentNodeIndex + 1 + (subtreeCountA - 1)
+                node.B.Index = bIndex;
             }
-            node.A = Unsafe.As<BoundingBox4, NodeChild>(ref a);
-            node.B = Unsafe.As<BoundingBox4, NodeChild>(ref b);
-            node.A.Index = aIndex;
-            node.A.LeafCount = leafCountA;
-            node.B.Index = bIndex;
-            node.B.LeafCount = leafCountB;
         }
 
         internal static float ComputeBoundsMetric(BoundingBox4 bounds) => ComputeBoundsMetric(bounds.Min, bounds.Max);
@@ -87,39 +87,13 @@ namespace BepuPhysics.Trees
 
         }
 
-        interface ILeafCountBuffer<T> where T : unmanaged, ILeafCountBuffer<T>
-        {
-            int this[int index] { get; set; }
-            T Slice(int startIndex, int count);
-        }
-
-        /// <summary>
-        /// An implicit buffer where every slot contains a 1.
-        /// </summary>
-        struct UnitLeafCount : ILeafCountBuffer<UnitLeafCount>
-        {
-            public int this[int index] { get => 1; set { } }
-            public UnitLeafCount Slice(int startIndex, int count) => this;
-        }
-
-        /// <summary>
-        /// Leaf counts buffer with actual values.
-        /// </summary>
-        struct LeafCountBuffer : ILeafCountBuffer<LeafCountBuffer>
-        {
-            public Buffer<int> LeafCounts;
-            public int this[int index] { get => LeafCounts[index]; set => LeafCounts[index] = value; }
-            public LeafCountBuffer Slice(int startIndex, int count) => new() { LeafCounts = LeafCounts.Slice(startIndex, count) };
-        }
-
         interface IBinnedBuilderThreading
         {
             void GetBins(int workerIndex, out Buffer<BoundingBox4> binBoundingBoxes, out Buffer<BoundingBox4> binBoundingBoxesScan, out Buffer<int> binLeafCounts);
         }
 
 
-        struct Context<TLeafCounts, TLeaves, TThreading>
-            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+        struct Context<TLeaves, TThreading>
             where TLeaves : unmanaged
             where TThreading : unmanaged, IBinnedBuilderThreading
         {
@@ -128,36 +102,33 @@ namespace BepuPhysics.Trees
             public float LeafToBinMultiplier;
             public int MicrosweepThreshold;
 
-            public Buffer<int> Indices;
-            public TLeafCounts LeafCounts;
             public TLeaves Leaves;
-            public Buffer<BoundingBox4> BoundingBoxes;
+            public Buffer<NodeChild> SubtreesPing;
+            public Buffer<NodeChild> SubtreesPong;
             public Buffer<Node> Nodes;
             public Buffer<Metanode> Metanodes;
 
             public TThreading Threading;
 
             public Context(int minimumBinCount, int maximumBinCount, float leafToBinMultiplier, int microsweepThreshold,
-                Buffer<int> indices, TLeafCounts leafCounts, TLeaves leaves, Buffer<BoundingBox4> boundingBoxes,
-                Buffer<Node> nodes, Buffer<Metanode> metanodes, TThreading threading)
+                Buffer<NodeChild> subtreesPing, Buffer<NodeChild> subtreesPong, TLeaves leaves, Buffer<Node> nodes, Buffer<Metanode> metanodes, TThreading threading)
             {
                 MinimumBinCount = minimumBinCount;
                 MaximumBinCount = maximumBinCount;
                 LeafToBinMultiplier = leafToBinMultiplier;
                 MicrosweepThreshold = microsweepThreshold;
-                Indices = indices;
-                LeafCounts = leafCounts;
+                SubtreesPing = subtreesPing;
+                SubtreesPong = subtreesPong;
                 Leaves = leaves;
-                BoundingBoxes = boundingBoxes;
                 Nodes = nodes;
                 Metanodes = metanodes;
                 Threading = threading;
             }
         }
 
-        struct BoundsComparerX : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.X + a.Max.X) > (b.Min.X + b.Max.X) ? -1 : 1; }
-        struct BoundsComparerY : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Y + a.Max.Y) > (b.Min.Y + b.Max.Y) ? -1 : 1; }
-        struct BoundsComparerZ : IComparerRef<BoundingBox4> { public int Compare(ref BoundingBox4 a, ref BoundingBox4 b) => (a.Min.Z + a.Max.Z) > (b.Min.Z + b.Max.Z) ? -1 : 1; }
+        struct BoundsComparerX : IComparerRef<NodeChild> { public int Compare(ref NodeChild a, ref NodeChild b) => (a.Min.X + a.Max.X) > (b.Min.X + b.Max.X) ? -1 : 1; }
+        struct BoundsComparerY : IComparerRef<NodeChild> { public int Compare(ref NodeChild a, ref NodeChild b) => (a.Min.Y + a.Max.Y) > (b.Min.Y + b.Max.Y) ? -1 : 1; }
+        struct BoundsComparerZ : IComparerRef<NodeChild> { public int Compare(ref NodeChild a, ref NodeChild b) => (a.Min.Z + a.Max.Z) > (b.Min.Z + b.Max.Z) ? -1 : 1; }
 
         public struct NodeTimes
         {
@@ -172,16 +143,19 @@ namespace BepuPhysics.Trees
 
         public static NodeTimes[] Times;
 
-        static unsafe void MicroSweepForBinnedBuilder<TLeafCounts, TLeaves, TThreading>(
-            Vector4 centroidMin, Vector4 centroidMax, Buffer<int> indices, TLeafCounts leafCounts, ref TLeaves leaves,
-            Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Context<TLeafCounts, TLeaves, TThreading>* context, int workerIndex)
-            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts> where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
+        static unsafe void MicroSweepForBinnedBuilder<TLeaves, TThreading>(
+            Vector4 centroidMin, Vector4 centroidMax, ref TLeaves leaves,
+            Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Context<TLeaves, TThreading>* context, int workerIndex)
+            where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
         {
             //This is a very small scale sweep build.
-            var subtreeCount = indices.Length;
+            var subtreeCount = subtrees.Length;
             if (subtreeCount == 2)
             {
-                BuildNode(boundingBoxes[0], boundingBoxes[1], leafCounts[0], leafCounts[1], nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref leaves, out _, out _);
+                ref var subtreeA = ref subtrees[0];
+                ref var subtreeB = ref subtrees[1];
+                BuildNode(Unsafe.As<NodeChild, BoundingBox4>(ref subtreeA), Unsafe.As<NodeChild, BoundingBox4>(ref subtreeB), subtreeA.LeafCount, subtreeB.LeafCount, subtrees,
+                    nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref leaves, out _, out _);
                 return;
             }
             var centroidSpan = centroidMax - centroidMin;
@@ -202,7 +176,7 @@ namespace BepuPhysics.Trees
                 {
                     for (int i = 0; i < subtreeCount; ++i)
                     {
-                        ref var bounds = ref boundingBoxes[i];
+                        ref var bounds = ref subtrees[i];
                         keys[i] = bounds.Min.X + bounds.Max.X;
                     }
                 }
@@ -210,7 +184,7 @@ namespace BepuPhysics.Trees
                 {
                     for (int i = 0; i < subtreeCount; ++i)
                     {
-                        ref var bounds = ref boundingBoxes[i];
+                        ref var bounds = ref subtrees[i];
                         keys[i] = bounds.Min.Y + bounds.Max.Y;
                     }
                 }
@@ -218,7 +192,7 @@ namespace BepuPhysics.Trees
                 {
                     for (int i = 0; i < subtreeCount; ++i)
                     {
-                        ref var bounds = ref boundingBoxes[i];
+                        ref var bounds = ref subtrees[i];
                         keys[i] = bounds.Min.Z + bounds.Max.Z;
                     }
                 }
@@ -228,107 +202,43 @@ namespace BepuPhysics.Trees
                 }
                 VectorizedSorts.VectorCountingSort(keys, targetIndices, subtreeCount);
 
-                //Now that we know the target indices, copy things back.
+                //Now that we know the target indices, copy things into position.
                 //Have to copy things into a temporary cache to avoid overwrites since we didn't do any shuffling during the sort.
                 //Note that we can now reuse the keys memory.              
-                if (typeof(TLeafCounts) != typeof(LeafCountBuffer))
+                var subtreeCache = binBoundingBoxesScan.As<NodeChild>();
+                subtrees.CopyTo(0, subtreeCache, 0, subtreeCount);
+                for (int i = 0; i < subtreeCount; ++i)
                 {
-                    //There aren't any leaf counts that we need to copy; they're all just 1 anyway.
-                    Debug.Assert(typeof(TLeafCounts) == typeof(UnitLeafCount));
-                    var indicesCache = new Buffer<int>(binBoundingBoxes.Memory, subtreeCount);
-                    var boundingBoxCache = binBoundingBoxesScan;
-                    boundingBoxes.CopyTo(0, boundingBoxCache, 0, subtreeCount);
-                    indices.CopyTo(0, indicesCache, 0, subtreeCount);
-                    for (int i = 0; i < subtreeCount; ++i)
-                    {
-                        var targetIndex = targetIndices[i];
-                        boundingBoxes[targetIndex] = boundingBoxCache[i];
-                        indices[targetIndex] = indicesCache[i];
-                    }
-                }
-                else
-                {
-                    //There are actual leaf counts we need to worry about on top of the rest!
-                    var indicesCache = new Buffer<int>(binBoundingBoxes.Memory, subtreeCount);
-                    var leafCountCache = new Buffer<int>(targetIndices.Memory + subtreeCount, subtreeCount);
-                    var boundingBoxCache = binBoundingBoxesScan;
-                    boundingBoxes.CopyTo(0, boundingBoxCache, 0, subtreeCount);
-                    indices.CopyTo(0, indicesCache, 0, subtreeCount);
-                    var leafCountBuffer = Unsafe.As<TLeafCounts, LeafCountBuffer>(ref leafCounts).LeafCounts;
-                    leafCountBuffer.CopyTo(0, leafCountCache, 0, subtreeCount);
-                    for (int i = 0; i < subtreeCount; ++i)
-                    {
-                        var targetIndex = targetIndices[i];
-                        boundingBoxes[targetIndex] = boundingBoxCache[i];
-                        indices[targetIndex] = indicesCache[i];
-                        leafCountBuffer[targetIndex] = leafCountCache[i];
-                    }
+                    var targetIndex = targetIndices[i];
+                    subtrees[targetIndex] = subtreeCache[i];
                 }
             }
             else
             {
                 //No vectorization supported. Fall back to poopymode!
-                if (typeof(TLeafCounts) != typeof(LeafCountBuffer))
+                if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
                 {
-                    if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
-                    {
-                        var comparer = new BoundsComparerX();
-                        QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, subtreeCount - 1, ref comparer);
-                    }
-                    else if (centroidSpan.Y > centroidSpan.Z)
-                    {
-                        var comparer = new BoundsComparerY();
-                        QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, subtreeCount - 1, ref comparer);
-                    }
-                    else
-                    {
-                        var comparer = new BoundsComparerZ();
-                        QuickSort.Sort(ref boundingBoxes[0], ref indices[0], 0, subtreeCount - 1, ref comparer);
-                    }
+                    var comparer = new BoundsComparerX();
+                    QuickSort.Sort(ref subtrees[0], 0, subtreeCount - 1, ref comparer);
+                }
+                else if (centroidSpan.Y > centroidSpan.Z)
+                {
+                    var comparer = new BoundsComparerY();
+                    QuickSort.Sort(ref subtrees[0], 0, subtreeCount - 1, ref comparer);
                 }
                 else
                 {
-                    //There are leaf counts that we need to sort alongside the rest. This is a pretty low value codepath, so we'll just create a targetIndices buffer.
-                    var targetIndices = new Buffer<int>(binBoundingBoxes.Memory, subtreeCount);
-                    for (int i = 0; i < subtreeCount; ++i)
-                    {
-                        targetIndices[i] = i;
-                    }
-                    if (centroidSpan.X > centroidSpan.Y && centroidSpan.X > centroidSpan.Z)
-                    {
-                        var comparer = new BoundsComparerX();
-                        QuickSort.Sort(ref boundingBoxes[0], ref targetIndices[0], 0, subtreeCount - 1, ref comparer);
-                    }
-                    else if (centroidSpan.Y > centroidSpan.Z)
-                    {
-                        var comparer = new BoundsComparerY();
-                        QuickSort.Sort(ref boundingBoxes[0], ref targetIndices[0], 0, subtreeCount - 1, ref comparer);
-                    }
-                    else
-                    {
-                        var comparer = new BoundsComparerZ();
-                        QuickSort.Sort(ref boundingBoxes[0], ref targetIndices[0], 0, subtreeCount - 1, ref comparer);
-                    }
-                    //Apply the swaps to indices and leaf counts.
-                    var indicesCache = new Buffer<int>(targetIndices.Memory + subtreeCount, subtreeCount);
-                    var leafCountCache = new Buffer<int>(indicesCache.Memory + subtreeCount, subtreeCount);
-                    indices.CopyTo(0, indicesCache, 0, subtreeCount);
-                    var leafCountBuffer = Unsafe.As<TLeafCounts, LeafCountBuffer>(ref leafCounts).LeafCounts;
-                    leafCountBuffer.CopyTo(0, leafCountCache, 0, subtreeCount);
-                    for (int i = 0; i < subtreeCount; ++i)
-                    {
-                        var targetIndex = targetIndices[i];
-                        leafCountBuffer[targetIndex] = leafCountCache[i];
-                        indices[targetIndex] = indicesCache[i];
-                    }
+                    var comparer = new BoundsComparerZ();
+                    QuickSort.Sort(ref subtrees[0], 0, subtreeCount - 1, ref comparer);
                 }
             }
 
             Debug.Assert(subtreeCount <= context->MaximumBinCount || subtreeCount <= context->MicrosweepThreshold, "We're reusing the bin resources under the assumption that this is only ever called when there are less leaves than maximum bins.");
             //Identify the split index by examining the SAH of very split option.
             //Premerge from left to right so we have a sorta-summed area table to cheaply look up all possible child A bounds as we scan.
+            var boundingBoxes = subtrees.As<BoundingBox4>();
             binBoundingBoxesScan[0] = boundingBoxes[0];
-            int totalLeafCount = typeof(TLeafCounts) == typeof(LeafCountBuffer) ? leafCounts[0] : subtreeCount;
+            int totalLeafCount = subtrees[0].LeafCount;
             for (int i = 1; i < subtreeCount; ++i)
             {
                 var previousIndex = i - 1;
@@ -337,8 +247,7 @@ namespace BepuPhysics.Trees
                 ref var bounds = ref boundingBoxes[i];
                 scanBounds.Min = Vector4.Min(bounds.Min, previousScanBounds.Min);
                 scanBounds.Max = Vector4.Max(bounds.Max, previousScanBounds.Max);
-                if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
-                    totalLeafCount += leafCounts[i];
+                totalLeafCount += subtrees[i].LeafCount;
             }
 
             float bestSAH = float.MaxValue;
@@ -360,23 +269,20 @@ namespace BepuPhysics.Trees
                     bestSAH = sahCandidate;
                     bestSplit = splitIndexCandidate;
                     bestBoundsB = accumulatedBoundingBoxB;
-                    if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
-                        bestLeafCountB = accumulatedLeafCountB;
+                    bestLeafCountB = accumulatedLeafCountB;
                 }
                 ref var bounds = ref boundingBoxes[previousIndex];
                 accumulatedBoundingBoxB.Min = Vector4.Min(bounds.Min, accumulatedBoundingBoxB.Min);
                 accumulatedBoundingBoxB.Max = Vector4.Max(bounds.Max, accumulatedBoundingBoxB.Max);
-                accumulatedLeafCountB += leafCounts[previousIndex];
+                accumulatedLeafCountB += subtrees[previousIndex].LeafCount;
             }
 
             var bestBoundsA = binBoundingBoxesScan[bestSplit - 1];
             var subtreeCountA = bestSplit;
             var subtreeCountB = subtreeCount - bestSplit;
-            var bestLeafCountA = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountA : totalLeafCount - bestLeafCountB;
-            if (typeof(TLeafCounts) == typeof(UnitLeafCount))
-                bestLeafCountB = subtreeCountB;
+            var bestLeafCountA = totalLeafCount - bestLeafCountB;
 
-            BuildNode(bestBoundsA, bestBoundsB, bestLeafCountA, bestLeafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref leaves, out var aIndex, out var bIndex);
+            BuildNode(bestBoundsA, bestBoundsB, bestLeafCountA, bestLeafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref leaves, out var aIndex, out var bIndex);
             if (subtreeCountA > 1)
             {
                 var aBounds = boundingBoxes.Slice(subtreeCountA);
@@ -384,10 +290,11 @@ namespace BepuPhysics.Trees
                 for (int i = 1; i < subtreeCountA; ++i)
                 {
                     ref var bounds = ref aBounds[i];
+                    //TODO: THIS SHOULD BE CENTROID, NOT FULL MERGE
                     centroidBoundsA.Min = Vector4.Min(centroidBoundsA.Min, bounds.Min);
                     centroidBoundsA.Max = Vector4.Max(centroidBoundsA.Max, bounds.Max);
                 }
-                MicroSweepForBinnedBuilder(centroidBoundsA.Min, centroidBoundsA.Max, indices.Slice(subtreeCountA), leafCounts.Slice(0, subtreeCountA), ref leaves, aBounds, nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), aIndex, nodeIndex, 0, context, workerIndex);
+                MicroSweepForBinnedBuilder(centroidBoundsA.Min, centroidBoundsA.Max, ref leaves, subtrees.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), aIndex, nodeIndex, 0, context, workerIndex);
             }
             if (subtreeCountB > 1)
             {
@@ -396,10 +303,11 @@ namespace BepuPhysics.Trees
                 for (int i = 0; i < subtreeCountB; ++i)
                 {
                     ref var bounds = ref bBounds[i];
+                    //TODO: THIS SHOULD BE CENTROID, NOT FULL MERGE
                     centroidBoundsB.Min = Vector4.Min(centroidBoundsB.Min, bounds.Min);
                     centroidBoundsB.Max = Vector4.Max(centroidBoundsB.Max, bounds.Max);
                 }
-                MicroSweepForBinnedBuilder(centroidBoundsB.Min, centroidBoundsB.Max, indices.Slice(subtreeCountA, subtreeCountB), leafCounts.Slice(subtreeCountA, subtreeCountB), ref leaves, bBounds, nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), bIndex, nodeIndex, 1, context, workerIndex);
+                MicroSweepForBinnedBuilder(centroidBoundsB.Min, centroidBoundsB.Max, ref leaves, subtrees.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), bIndex, nodeIndex, 1, context, workerIndex);
             }
         }
 
@@ -444,7 +352,7 @@ namespace BepuPhysics.Trees
         /// <summary>
         /// Stores resources required by a worker to dispatch and manage multithreaded work.
         /// </summary>
-        unsafe struct BinnedBuildWorkerContext<TLeafCounts> where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+        unsafe struct BinnedBuildWorkerContext
         {
             /// <summary>
             /// Bins associated with this worker for the duration of a node. This allocation will persist across the build.
@@ -466,24 +374,19 @@ namespace BepuPhysics.Trees
             public Buffer<int> BinLeafCounts;
 
             /// <summary>
-            /// Bounds for all subtrees in the builder. Cached in the worker to simplify accesses.
+            /// Cached view of all subtrees the builder is working on to simplify accesses.
             /// </summary>
-            public Buffer<BoundingBox4> Bounds;
-            /// <summary>
-            /// Leaf counts for all subtrees in the builder. Cached in the worker to simplify accesses.
-            /// </summary>
-            public TLeafCounts LeafCounts;
+            public Buffer<NodeChild> Subtrees;
 
-            public BinnedBuildWorkerContext(Buffer<BoundingBox4> bounds, Buffer<byte> binAllocationBuffer, ref int binStart, int binCapacity, TLeafCounts leafCounts)
+            public BinnedBuildWorkerContext(Buffer<NodeChild> subtrees, Buffer<byte> binAllocationBuffer, ref int binStart, int binCapacity)
             {
                 BinBoundingBoxes = Suballocate<BoundingBox4>(binAllocationBuffer, ref binStart, binCapacity);
                 BinBoundingBoxesScan = Suballocate<BoundingBox4>(binAllocationBuffer, ref binStart, binCapacity);
                 BinLeafCounts = Suballocate<int>(binAllocationBuffer, ref binStart, binCapacity);
-                Bounds = bounds;
-                LeafCounts = leafCounts;
+                Subtrees = subtrees;
             }
         }
-        unsafe struct MultithreadBinnedBuildContext<TLeafCounts> : IBinnedBuilderThreading where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+        unsafe struct MultithreadBinnedBuildContext : IBinnedBuilderThreading
         {
             public LinkedTaskStack* TaskStack;
             /// <summary>
@@ -491,7 +394,7 @@ namespace BepuPhysics.Trees
             /// If you have far more tasks than there are workers, adding more tasks just adds overhead without additional workstealing advantages.
             /// </summary>
             public int MaximumTaskCountPerSubmission;
-            public Buffer<BinnedBuildWorkerContext<TLeafCounts>> Workers;
+            public Buffer<BinnedBuildWorkerContext> Workers;
 
             public void GetBins(int workerIndex, out Buffer<BoundingBox4> binBoundingBoxes, out Buffer<BoundingBox4> binBoundingBoxesScan, out Buffer<int> binLeafCounts)
             {
@@ -567,16 +470,16 @@ namespace BepuPhysics.Trees
             /// </summary>
             public Buffer<BoundingBox4> PrepassWorkers;
             /// <summary>
-            /// Buffer containing all bounds in the tree.
+            /// Buffer containing all subtrees being built.
             /// </summary>
-            public Buffer<BoundingBox4> Bounds;
+            public Buffer<NodeChild> Subtrees;
 
-            public CentroidPrepassTaskContext(BufferPool pool, SharedTaskData taskData, Buffer<BoundingBox4> bounds)
+            public CentroidPrepassTaskContext(BufferPool pool, SharedTaskData taskData, Buffer<NodeChild> subtrees)
             {
                 TaskData = taskData;
                 pool.Take(int.Min(taskData.WorkerCount, taskData.TaskCount), out PrepassWorkers);
                 Debug.Assert(PrepassWorkers.Length >= 2);
-                Bounds = bounds;
+                Subtrees = subtrees;
             }
 
             public void Dispose(BufferPool pool) => pool.Return(ref PrepassWorkers);
@@ -586,7 +489,7 @@ namespace BepuPhysics.Trees
             ref var context = ref *(CentroidPrepassTaskContext*)untypedContext;
             Debug.Assert(context.TaskData.WorkerCount > 1 && context.TaskData.TaskCount > 1 && context.TaskData.WorkerCount < 100);
             context.TaskData.GetSlotInterval(taskId, out var start, out var count);
-            var centroidBounds = ComputeCentroidBounds(context.Bounds.Slice(start, count));
+            var centroidBounds = ComputeCentroidBounds(context.Subtrees.Slice(start, count).As<BoundingBox4>());
             if (context.TaskData.TaskCountFitsInWorkerCount)
             {
                 //There were less tasks than workers; directly write into the slot without bothering to merge.
@@ -600,12 +503,11 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe static BoundingBox4 MultithreadedCentroidPrepass<TLeafCounts>(MultithreadBinnedBuildContext<TLeafCounts>* context, int subtreeStartIndex, int subtreeCount, int workerIndex, IThreadDispatcher dispatcher)
-            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+        unsafe static BoundingBox4 MultithreadedCentroidPrepass(MultithreadBinnedBuildContext* context, int subtreeStartIndex, int subtreeCount, int workerIndex, IThreadDispatcher dispatcher)
         {
             ref var worker = ref context->Workers[workerIndex];
             var workerPool = dispatcher.WorkerPools[workerIndex];
-            var taskContext = new CentroidPrepassTaskContext(workerPool, new SharedTaskData(context->Workers.Length, subtreeStartIndex, subtreeCount, SubtreesPerThreadForCentroidPrepass, context->MaximumTaskCountPerSubmission), worker.Bounds);
+            var taskContext = new CentroidPrepassTaskContext(workerPool, new SharedTaskData(context->Workers.Length, subtreeStartIndex, subtreeCount, SubtreesPerThreadForCentroidPrepass, context->MaximumTaskCountPerSubmission), worker.Subtrees);
             Debug.Assert(taskContext.TaskData.TaskCount > 1, "This codepath shouldn't be used if there's only one task!");
             Debug.Assert(taskContext.TaskData.WorkerCount > 1 && taskContext.TaskData.WorkerCount < 100);
             var taskCount = taskContext.TaskData.TaskCount;
@@ -641,7 +543,7 @@ namespace BepuPhysics.Trees
             public Buffer<BoundingBox4> BinBoundingBoxes;
             public Buffer<int> BinLeafCounts;
         }
-        unsafe struct BinSubtreesTaskContext<TLeafCounts> where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+        unsafe struct BinSubtreesTaskContext
         {
             public SharedTaskData TaskData;
             /// <summary>
@@ -658,13 +560,9 @@ namespace BepuPhysics.Trees
             public Buffer<bool> WorkerHelpedWithBinning;
 
             /// <summary>
-            /// Buffer containing all bounds in the tree.
+            /// Buffer containing all subtrees under construction.
             /// </summary>
-            public Buffer<BoundingBox4> Bounds;
-            /// <summary>
-            /// Buffer containing all leaf counts in the tree.
-            /// </summary>
-            public TLeafCounts LeafCounts;
+            public Buffer<NodeChild> Subtrees;
 
             public int BinCount;
             public bool UseX, UseY;
@@ -674,13 +572,12 @@ namespace BepuPhysics.Trees
             public Vector4 OffsetToBinIndex;
             public Vector4 MaximumBinIndex;
 
-            public BinSubtreesTaskContext(BufferPool pool, SharedTaskData taskData, Buffer<BoundingBox4> bounds, TLeafCounts leafCounts,
+            public BinSubtreesTaskContext(BufferPool pool, SharedTaskData taskData, Buffer<NodeChild> subtrees,
                 int binCount, bool useX, bool useY, Vector128<int> permuteMask, int axisIndex,
                 Vector4 centroidBoundsMin, Vector4 offsetToBinIndex, Vector4 maximumBinIndex)
             {
                 TaskData = taskData;
-                Bounds = bounds;
-                LeafCounts = leafCounts;
+                Subtrees = subtrees;
                 BinCount = binCount;
                 UseX = useX;
                 UseY = useY;
@@ -708,26 +605,26 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void BinSubtrees<TLeafCounts>(Vector4 centroidBoundsMin,
+        static void BinSubtrees(Vector4 centroidBoundsMin,
             bool useX, bool useY, Vector128<int> permuteMask, int axisIndex, Vector4 offsetToBinIndex, Vector4 maximumBinIndex,
-            Buffer<BoundingBox4> bounds, TLeafCounts leafCounts,
-            Buffer<BoundingBox4> binBoundingBoxes, Buffer<int> binLeafCounts) where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+            Buffer<NodeChild> subtrees, Buffer<BoundingBox4> binBoundingBoxes, Buffer<int> binLeafCounts)
         {
             //Note that we don't store out any of the indices into per-bin lists here. We only *really* want two final groups for the children,
             //and we can easily compute those by performing another scan. It requires recomputing the bin indices, but that's really not much of a concern.
-            for (int i = 0; i < bounds.Length; ++i)
+            for (int i = 0; i < subtrees.Length; ++i)
             {
-                ref var box = ref bounds[i];
+                ref var subtree = ref subtrees[i];
+                ref var box = ref Unsafe.As<NodeChild, BoundingBox4>(ref subtree);
                 var binIndex = ComputeBinIndex(centroidBoundsMin, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, box);
                 ref var binBounds = ref binBoundingBoxes[binIndex];
                 binBounds.Min = Vector4.Min(binBounds.Min, box.Min);
                 binBounds.Max = Vector4.Max(binBounds.Max, box.Max);
-                binLeafCounts[binIndex] += leafCounts[i];
+                binLeafCounts[binIndex] += subtree.LeafCount;
             }
         }
-        unsafe static void BinSubtreesWorker<TLeafCounts>(long taskId, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher) where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+        unsafe static void BinSubtreesWorker(long taskId, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
         {
-            ref var context = ref *(BinSubtreesTaskContext<TLeafCounts>*)untypedContext;
+            ref var context = ref *(BinSubtreesTaskContext*)untypedContext;
             Debug.Assert(context.TaskData.WorkerCount > 1 && context.TaskData.TaskCount > 1 && context.TaskData.WorkerCount < 100);
             //Note that if we have more workers than tasks, we use the task id to index into the caches (and initialize the data here rather then before dispatching).
             var effectiveWorkerIndex = context.TaskData.TaskCountFitsInWorkerCount ? (int)taskId : workerIndex;
@@ -745,19 +642,19 @@ namespace BepuPhysics.Trees
             }
             context.TaskData.GetSlotInterval(taskId, out var start, out var count);
             BinSubtrees(context.CentroidBoundsMin, context.UseX, context.UseY, context.PermuteMask, context.AxisIndex, context.OffsetToBinIndex, context.MaximumBinIndex,
-                context.Bounds.Slice(start, count), context.LeafCounts.Slice(start, count), worker.BinBoundingBoxes, worker.BinLeafCounts);
+                context.Subtrees.Slice(start, count), worker.BinBoundingBoxes, worker.BinLeafCounts);
         }
 
-        unsafe static void MultithreadedBinSubtrees<TLeafCounts>(MultithreadBinnedBuildContext<TLeafCounts>* context,
+        unsafe static void MultithreadedBinSubtrees(MultithreadBinnedBuildContext* context,
             Vector4 centroidBoundsMin, bool useX, bool useY, Vector128<int> permuteMask, int axisIndex, Vector4 offsetToBinIndex, Vector4 maximumBinIndex,
-            int subtreeStartIndex, int subtreeCount, int binCount, int workerIndex, IThreadDispatcher dispatcher) where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+            int subtreeStartIndex, int subtreeCount, int binCount, int workerIndex, IThreadDispatcher dispatcher)
         {
             ref var worker = ref context->Workers[workerIndex];
             var workerPool = dispatcher.WorkerPools[workerIndex];
-            var taskContext = new BinSubtreesTaskContext<TLeafCounts>(
+            var taskContext = new BinSubtreesTaskContext(
                 workerPool,
                 new SharedTaskData(context->Workers.Length, subtreeStartIndex, subtreeCount, SubtreesPerThreadForBinning, context->MaximumTaskCountPerSubmission),
-                worker.Bounds, worker.LeafCounts, binCount, useX, useY, permuteMask, axisIndex, centroidBoundsMin, offsetToBinIndex, maximumBinIndex);
+                worker.Subtrees, binCount, useX, useY, permuteMask, axisIndex, centroidBoundsMin, offsetToBinIndex, maximumBinIndex);
 
             //Don't bother initializing more slots than we have tasks. Note that this requires special handling on the task level;
             //if we have less tasks than workers, then the task needs to distinguish that fact.
@@ -778,7 +675,7 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            context->TaskStack->For(&BinSubtreesWorker<TLeafCounts>, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher);
+            context->TaskStack->For(&BinSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher);
 
             //Unless the number of threads and bins is really huge, there's no value in attempting to multithread the final compression.
             //(Parallel reduction is an option, but even then... I suspect the single threaded version will be faster. And it's way simpler.)
@@ -808,40 +705,40 @@ namespace BepuPhysics.Trees
             taskContext.Dispose(workerPool);
         }
 
-        unsafe struct NodePushTaskContext<TLeafCounts, TLeaves, TThreading>
-            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts> where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
+        unsafe struct NodePushTaskContext<TLeaves, TThreading>
+            where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
         {
-            public Context<TLeafCounts, TLeaves, TThreading>* Context;
+            public Context<TLeaves, TThreading>* Context;
             public int NodeIndex;
             public int ParentNodeIndex;
             //Subtree region start index and subtree count are both encoded into the task id.
         }
-        unsafe static void BinnedBuilderNodeWorker<TLeafCounts, TLeaves, TThreading>(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
-            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts> where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
+        unsafe static void BinnedBuilderNodeWorker<TLeaves, TThreading>(long taskId, void* context, int workerIndex, IThreadDispatcher dispatcher)
+            where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
         {
             var subtreeRegionStartIndex = (int)taskId;
             var subtreeCount = (int)(taskId >> 32);
-            var nodePushContext = (NodePushTaskContext<TLeafCounts, TLeaves, TThreading>*)context;
+            var nodePushContext = (NodePushTaskContext<TLeaves, TThreading>*)context;
             //Note that child index is always 1 because we only ever push child B.
-            BinnedBuildNode(subtreeRegionStartIndex, nodePushContext->NodeIndex, subtreeCount, nodePushContext->ParentNodeIndex, 1, nodePushContext->Context, workerIndex, dispatcher);
+            BinnedBuildNode(false, subtreeRegionStartIndex, nodePushContext->NodeIndex, subtreeCount, nodePushContext->ParentNodeIndex, 1, nodePushContext->Context, workerIndex, dispatcher);
         }
 
-        static unsafe void BinnedBuildNode<TLeafCounts, TLeaves, TThreading>(
-            int subtreeRegionStartIndex, int nodeIndex, int subtreeCount, int parentNodeIndex, int childIndexInParent, Context<TLeafCounts, TLeaves, TThreading>* context, int workerIndex, IThreadDispatcher dispatcher)
-            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts> where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
+        static unsafe void BinnedBuildNode<TLeaves, TThreading>(
+            bool usePongBuffer, int subtreeRegionStartIndex, int nodeIndex, int subtreeCount, int parentNodeIndex, int childIndexInParent, Context<TLeaves, TThreading>* context, int workerIndex, IThreadDispatcher dispatcher)
+            where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
         {
             var debugStartTime = Stopwatch.GetTimestamp();
             ref var debugTimes = ref Times[nodeIndex];
             debugTimes.SubtreeCount = subtreeCount;
-            var indices = context->Indices.Slice(subtreeRegionStartIndex, subtreeCount);
-            var boundingBoxes = context->BoundingBoxes.Slice(subtreeRegionStartIndex, subtreeCount);
-            var leafCounts = context->LeafCounts.Slice(subtreeRegionStartIndex, subtreeCount);
+            var subtrees = (usePongBuffer ? context->SubtreesPong : context->SubtreesPing).Slice(subtreeRegionStartIndex, subtreeCount);
+            //leaf counts, indices, and bounds are packed together, but it's useful to have a bounds-only representation so that the merging processes don't have to worry about dealing with the fourth lanes.
+            var boundingBoxes = subtrees.As<BoundingBox4>();
             var nodeCount = subtreeCount - 1;
             var nodes = context->Nodes.Slice(nodeIndex, nodeCount);
             var metanodes = context->Metanodes.Slice(nodeIndex, nodeCount);
             if (subtreeCount == 2)
             {
-                BuildNode(boundingBoxes[0], boundingBoxes[1], leafCounts[0], leafCounts[1], nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref context->Leaves, out _, out _);
+                BuildNode(boundingBoxes[0], boundingBoxes[1], subtrees[0].LeafCount, subtrees[1].LeafCount, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref context->Leaves, out _, out _);
                 return;
             }
             var debugCentroidStartTime = Stopwatch.GetTimestamp();
@@ -854,7 +751,7 @@ namespace BepuPhysics.Trees
             else
             {
                 centroidBounds = MultithreadedCentroidPrepass(
-                    (MultithreadBinnedBuildContext<TLeafCounts>*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading)), subtreeRegionStartIndex, subtreeCount, workerIndex, dispatcher);
+                    (MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)), subtreeRegionStartIndex, subtreeCount, workerIndex, dispatcher);
                 debugTimes.MTPrepass = true;
             }
             var debugCentroidEndTime = Stopwatch.GetTimestamp();
@@ -864,8 +761,8 @@ namespace BepuPhysics.Trees
             {
                 //This node is completely degenerate; there is no 'good' ordering of the children. Pick a split in the middle and shrug.
                 //This shouldn't happen unless something is badly wrong with the input; no point in optimizing it.
-                var degenerateSubtreeCountA = indices.Length / 2;
-                var degenerateSubtreeCountB = indices.Length - degenerateSubtreeCountA;
+                var degenerateSubtreeCountA = subtrees.Length / 2;
+                var degenerateSubtreeCountB = subtrees.Length - degenerateSubtreeCountA;
                 //Still have to compute the child bounding boxes, because the centroid bounds span being zero doesn't imply that the full bounds are zero.
                 BoundingBox4 boundsA, boundsB;
                 boundsA.Min = new Vector4(float.MaxValue);
@@ -878,27 +775,27 @@ namespace BepuPhysics.Trees
                     ref var bounds = ref boundingBoxes[i];
                     boundsA.Min = Vector4.Min(bounds.Min, boundsA.Min);
                     boundsA.Max = Vector4.Max(bounds.Max, boundsA.Max);
-                    degenerateLeafCountA += leafCounts[i];
+                    degenerateLeafCountA += subtrees[i].LeafCount;
                 }
-                for (int i = degenerateSubtreeCountA; i < indices.Length; ++i)
+                for (int i = degenerateSubtreeCountA; i < subtrees.Length; ++i)
                 {
                     ref var bounds = ref boundingBoxes[i];
                     boundsB.Min = Vector4.Min(bounds.Min, boundsB.Min);
                     boundsB.Max = Vector4.Max(bounds.Max, boundsB.Max);
-                    degenerateLeafCountB += leafCounts[i];
+                    degenerateLeafCountB += subtrees[i].LeafCount;
                 }
-                BuildNode(boundsA, boundsB, degenerateLeafCountA, degenerateLeafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, degenerateSubtreeCountA, degenerateSubtreeCountB, ref context->Leaves, out var aIndex, out var bIndex);
+                BuildNode(boundsA, boundsB, degenerateLeafCountA, degenerateLeafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, degenerateSubtreeCountA, degenerateSubtreeCountB, ref context->Leaves, out var aIndex, out var bIndex);
                 if (degenerateSubtreeCountA > 1)
-                    BinnedBuildNode(subtreeRegionStartIndex, aIndex, degenerateSubtreeCountA, nodeIndex, 0, context, workerIndex, dispatcher);
+                    BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex, aIndex, degenerateSubtreeCountA, nodeIndex, 0, context, workerIndex, dispatcher);
                 if (degenerateSubtreeCountB > 1)
-                    BinnedBuildNode(subtreeRegionStartIndex + degenerateSubtreeCountA, bIndex, degenerateSubtreeCountB, nodeIndex, 1, context, workerIndex, dispatcher);
+                    BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex + degenerateSubtreeCountA, bIndex, degenerateSubtreeCountB, nodeIndex, 1, context, workerIndex, dispatcher);
                 return;
             }
 
             //Note that we don't bother even trying to internally multithread microsweeps. They *should* be small, and should only show up deeper in the recursion process.
             if (subtreeCount <= context->MicrosweepThreshold)
             {
-                MicroSweepForBinnedBuilder(centroidBounds.Min, centroidBounds.Max, indices, leafCounts, ref context->Leaves, boundingBoxes, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, context, workerIndex);
+                MicroSweepForBinnedBuilder(centroidBounds.Min, centroidBounds.Max, ref context->Leaves, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, context, workerIndex);
                 return;
             }
 
@@ -927,13 +824,13 @@ namespace BepuPhysics.Trees
             var debugBinStartTime = Stopwatch.GetTimestamp();
             if (typeof(TThreading) == typeof(SingleThreaded) || subtreeCount < SubtreesPerThreadForBinning)
             {
-                BinSubtrees(centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, boundingBoxes, leafCounts, binBoundingBoxes, binLeafCounts);
+                BinSubtrees(centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtrees, binBoundingBoxes, binLeafCounts);
                 debugTimes.MTBinning = false;
             }
             else
             {
                 MultithreadedBinSubtrees(
-                   (MultithreadBinnedBuildContext<TLeafCounts>*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading)),
+                   (MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)),
                    centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtreeRegionStartIndex, subtreeCount, binCount, workerIndex, dispatcher);
                 debugTimes.MTBinning = true;
             }
@@ -942,7 +839,7 @@ namespace BepuPhysics.Trees
             //Identify the split index by examining the SAH of very split option.
             //Premerge from left to right so we have a sorta-summed area table to cheaply look up all possible child A bounds as we scan.
             binBoundingBoxesScan[0] = binBoundingBoxes[0];
-            int totalLeafCount = typeof(TLeafCounts) == typeof(LeafCountBuffer) ? binLeafCounts[0] : subtreeCount;
+            int totalLeafCount = binLeafCounts[0];
             for (int i = 1; i < binCount; ++i)
             {
                 var previousIndex = i - 1;
@@ -951,8 +848,7 @@ namespace BepuPhysics.Trees
                 ref var xPreviousScanBounds = ref binBoundingBoxesScan[previousIndex];
                 xScanBounds.Min = Vector4.Min(xBounds.Min, xPreviousScanBounds.Min);
                 xScanBounds.Max = Vector4.Max(xBounds.Max, xPreviousScanBounds.Max);
-                if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
-                    totalLeafCount += binLeafCounts[i];
+                totalLeafCount += binLeafCounts[i];
             }
             var leftBoundsX = binBoundingBoxes[0];
             Debug.Assert(
@@ -979,8 +875,7 @@ namespace BepuPhysics.Trees
                     bestSAH = sahCandidate;
                     bestSplit = splitIndexCandidate;
                     bestBoundingBoxB = accumulatedBoundingBoxB;
-                    if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
-                        bestLeafCountB = accumulatedLeafCountB;
+                    bestLeafCountB = accumulatedLeafCountB;
                 }
                 ref var xBounds = ref binBoundingBoxes[previousIndex];
                 accumulatedBoundingBoxB.Min = Vector4.Min(xBounds.Min, accumulatedBoundingBoxB.Min);
@@ -993,8 +888,8 @@ namespace BepuPhysics.Trees
             var subtreeCountB = 0;
             var subtreeCountA = 0;
             var splitIndex = bestSplit;
-            var bestboundsA = binBoundingBoxesScan[bestSplit - 1];
-            var bestboundsB = bestBoundingBoxB;
+            var bestBoundsA = binBoundingBoxesScan[bestSplit - 1];
+            var bestBoundsB = bestBoundingBoxB;
             while (subtreeCountA + subtreeCountB < subtreeCount)
             {
                 ref var box = ref boundingBoxes[subtreeCountA];
@@ -1003,18 +898,10 @@ namespace BepuPhysics.Trees
                 {
                     //Belongs to B. Swap it.
                     var targetIndex = subtreeCount - subtreeCountB - 1;
-                    Helpers.Swap(ref indices[targetIndex], ref indices[subtreeCountA]);
-                    if (typeof(TLeafCounts) == typeof(LeafCountBuffer))
-                    {
-                        var tempTarget = leafCounts[targetIndex];
-                        var tempACount = leafCounts[subtreeCountA];
-                        leafCounts[subtreeCountA] = tempTarget;
-                        leafCounts[targetIndex] = tempACount;
-                    }
                     if (Vector256.IsHardwareAccelerated)
                     {
-                        var targetMemory = (byte*)(boundingBoxes.Memory + targetIndex);
-                        var aCountMemory = (byte*)(boundingBoxes.Memory + subtreeCountA);
+                        var targetMemory = (byte*)(subtrees.Memory + targetIndex);
+                        var aCountMemory = (byte*)(subtrees.Memory + subtreeCountA);
                         var targetVector = Vector256.Load(targetMemory);
                         var aCountVector = Vector256.Load(aCountMemory);
                         Vector256.Store(aCountVector, targetMemory);
@@ -1022,7 +909,7 @@ namespace BepuPhysics.Trees
                     }
                     else
                     {
-                        Helpers.Swap(ref boundingBoxes[targetIndex], ref boundingBoxes[subtreeCountA]);
+                        Helpers.Swap(ref subtrees[targetIndex], ref subtrees[subtreeCountA]);
                     }
                     ++subtreeCountB;
                     //(Note that we still need to examine what we just swapped into the slot! It may belong to B too!)
@@ -1034,10 +921,10 @@ namespace BepuPhysics.Trees
                 }
             }
             var debugHuhEndTime = Stopwatch.GetTimestamp();
-            var leafCountB = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountB : bestLeafCountB;
-            var leafCountA = typeof(TLeafCounts) == typeof(UnitLeafCount) ? subtreeCountA : totalLeafCount - leafCountB;
+            var leafCountB = bestLeafCountB;
+            var leafCountA = totalLeafCount - leafCountB;
             Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
-            BuildNode(bestboundsA, bestboundsB, leafCountA, leafCountB, nodes, metanodes, indices, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref context->Leaves, out var nodeChildIndexA, out var nodeChildIndexB);
+            BuildNode(bestBoundsA, bestBoundsB, leafCountA, leafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref context->Leaves, out var nodeChildIndexA, out var nodeChildIndexB);
             var debugEndTime = Stopwatch.GetTimestamp();
             debugTimes.Total = (debugEndTime - debugStartTime) / (double)Stopwatch.Frequency;
             debugTimes.Huh = (debugHuhEndTime - debugHuhStartTime) / (double)Stopwatch.Frequency;
@@ -1050,20 +937,20 @@ namespace BepuPhysics.Trees
             {
                 //Both of the children are large. Push child B onto the multithreaded execution stack so it can run at the same time as child A (potentially).
                 Debug.Assert(SubtreesPerThreadForNodeJob > 1, "The job threshold for a new node should be large enough that there's no need for a subtreeCountB > 1 test.");
-                ref var threading = ref Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading);
+                ref var threading = ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading);
                 //Allocate the parameters to send to the worker on the local stack. Note that we have to preserve the stack for this to work; see the later WaitForCompletion.
-                NodePushTaskContext<TLeafCounts, TLeaves, TThreading> nodePushContext;
+                NodePushTaskContext<TLeaves, TThreading> nodePushContext;
                 nodePushContext.Context = context;
                 nodePushContext.NodeIndex = nodeChildIndexB;
                 nodePushContext.ParentNodeIndex = nodeIndex;
                 //Note that we use the task id to store subtree start and subtree count. Don't have to do that, but no reason not to use it.
-                var task = new Task(&BinnedBuilderNodeWorker<TLeafCounts, TLeaves, TThreading>, &nodePushContext, (long)(subtreeRegionStartIndex + subtreeCountA) | ((long)subtreeCountB << 32));
+                var task = new Task(&BinnedBuilderNodeWorker<TLeaves, TThreading>, &nodePushContext, (long)(subtreeRegionStartIndex + subtreeCountA) | ((long)subtreeCountB << 32));
                 nodeBContinuation = threading.TaskStack->AllocateContinuationAndPush(new Span<Task>(&task, 1), workerIndex, dispatcher);
             }
             if (subtreeCountA > 1)
-                BinnedBuildNode(subtreeRegionStartIndex, nodeChildIndexA, subtreeCountA, nodeIndex, 0, context, workerIndex, dispatcher);
+                BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex, nodeChildIndexA, subtreeCountA, nodeIndex, 0, context, workerIndex, dispatcher);
             if (!shouldPushBOntoMultithreadedQueue && subtreeCountB > 1)
-                BinnedBuildNode(subtreeRegionStartIndex + subtreeCountA, nodeChildIndexB, subtreeCountB, nodeIndex, 1, context, workerIndex, dispatcher);
+                BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex + subtreeCountA, nodeChildIndexB, subtreeCountB, nodeIndex, 1, context, workerIndex, dispatcher);
             if (shouldPushBOntoMultithreadedQueue)
             {
                 //We want to keep the stack at this level alive until the memory we allocated for the node push completes.
@@ -1071,15 +958,33 @@ namespace BepuPhysics.Trees
                 //In addition to letting us use the local stack to store some arguments for the other thread, this wait means that all children have completed when this function returns.
                 //That makes knowing when to stop the queue easier.
                 Debug.Assert(nodeBContinuation.Initialized);
-                Unsafe.As<TThreading, MultithreadBinnedBuildContext<TLeafCounts>>(ref context->Threading).TaskStack->WaitForCompletion(nodeBContinuation, workerIndex, dispatcher);
+                Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading).TaskStack->WaitForCompletion(nodeBContinuation, workerIndex, dispatcher);
             }
         }
 
-        static unsafe void BinnedBuilderInternal(Buffer<int> encodedLeafIndices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
+        /// <summary>
+        /// Runs a binned build across the input <see cref="NodeChild"/> buffer.
+        /// </summary>
+        /// <param name="subtrees">Subtrees (either leaves or nodes) to run the builder over. The builder may make in-place modifications to the input buffer; the input buffer should not be assumed to be in a valid state after the builder runs.</param>
+        /// <param name="nodes">Buffer holding the nodes created by the build process.<para/>
+        /// Nodes are created in a depth first ordering with respect to the input buffer.</param>
+        /// <param name="metanodes">Buffer holding the metanodes created by the build process.<para/>
+        /// Metanodes, like nodes, are created in a depth first ordering with respect to the input buffer.
+        /// Metanodes are in the same order and in the same slots; they simply contain data about nodes that most traversals don't need to know about.</param>
+        /// <param name="leaves">Buffer holding the leaf references created by the build process.<para/>
+        /// The indices written by the build process are those defined in the inputs; any <see cref="NodeChild.Index"/> that is negative is encoded according to <see cref="Tree.Encode(int)"/> and points into the leaf buffer.</param>
+        /// <param name="dispatcher">Thread dispatcher used to accelerate the build process.</param>
+        /// <param name="taskStackPointer">Task stack used to accelerate the build process. Can be null; one will be created if not provided.</param>
+        /// <param name="workerCount">Number of workers to be used in the builder.</param>
+        /// <param name="pool">Buffer pool used to preallocate temporary resources for building.</param>
+        /// <param name="minimumBinCount">Minimum number of bins the builder should use per node.</param>
+        /// <param name="maximumBinCount">Maximum number of bins the builder should use per node.</param>
+        /// <param name="leafToBinMultiplier">Multiplier to apply to the subtree count within a node to decide the bin count. Resulting value will then be clamped by the minimum/maximum bin counts.</param>
+        /// <param name="microsweepThreshold">Threshold at or under which the binned builder resorts to local counting sort sweeps.</param>
+        static unsafe void BinnedBuilderInternal(Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
             IThreadDispatcher dispatcher, LinkedTaskStack* taskStackPointer, int workerCount, BufferPool pool, int minimumBinCount, int maximumBinCount, float leafToBinMultiplier, int microsweepThreshold)
         {
-            var subtreeCount = encodedLeafIndices.Length;
-            Debug.Assert(boundingBoxes.Length >= subtreeCount, "The bounding boxes provided must cover the range of indices provided.");
+            var subtreeCount = subtrees.Length;
             Debug.Assert(nodes.Length >= subtreeCount - 1, "The output nodes must be able to contain the nodes created for the leaves.");
             if (subtreeCount == 0)
                 return;
@@ -1087,14 +992,10 @@ namespace BepuPhysics.Trees
             {
                 //If there's only one leaf, the tree has a special format: the root node has only one child.
                 ref var root = ref nodes[0];
-                root.A.Min = boundingBoxes[0].Min;
-                root.A.Index = encodedLeafIndices[0]; //Node that we assume the indices are already encoded. This function works with subtree refinements as well which can manage either leaves or internals.
-                root.A.Max = boundingBoxes[0].Max;
-                root.A.LeafCount = 1;
+                root.A = subtrees[0];
                 root.B = default;
                 return;
             }
-            boundingBoxes = boundingBoxes.Slice(encodedLeafIndices.Length);
             nodes = nodes.Slice(subtreeCount - 1);
 
             //Don't let the user pick values that will just cause an explosion.
@@ -1103,6 +1004,7 @@ namespace BepuPhysics.Trees
             maximumBinCount = int.Max(2, maximumBinCount);
             //The microsweep uses the same resources as the bin allocations, so expand to hold whichever is larger.
             var allocatedBinCount = int.Max(maximumBinCount, microsweepThreshold);
+
 
             if (dispatcher == null && taskStackPointer == null)
             {
@@ -1116,75 +1018,77 @@ namespace BepuPhysics.Trees
                 threading.BinBoundingBoxes = new Buffer<BoundingBox4>(binBoundsMemory, allocatedBinCount);
                 threading.BinBoundingBoxesScan = new Buffer<BoundingBox4>(binBoundsMemory + allocatedBinCount, allocatedBinCount);
                 threading.BinLeafCounts = new Buffer<int>(binLeafCountsMemory, allocatedBinCount);
-                var context = new Context<UnitLeafCount, Buffer<Leaf>, SingleThreaded>(
-                    minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold, encodedLeafIndices,
-                    new UnitLeafCount(), leaves, boundingBoxes.As<BoundingBox4>(), nodes, metanodes, threading);
-                BinnedBuildNode(0, 0, subtreeCount, -1, -1, &context, 0, null);
+                var context = new Context<Buffer<Leaf>, SingleThreaded>(
+                    minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
+                     subtrees, default, leaves, nodes, metanodes, threading);
+                BinnedBuildNode(false, 0, 0, subtreeCount, -1, -1, &context, 0, null);
             }
-            else if (dispatcher != null)
+            else
             {
-                //There's a task queue; we should use a multithreaded dispatch.
-                //While we could allocate on the stack with reasonable safety in the single threaded path, that's not very reasonable for the multithreaded path.
-                //Each worker thread could be given a node job which executes asynchronously with respect to other node jobs.
-                //Those node jobs could spawn multithreaded work that other workers assist with.
-                //Each of those jobs needs its own context for those workers, and the number of jobs is not 1:1 with the workers.
-                //We'll handle such dispatch-required allocations from worker pools. Here, we just preallocate stuff for the first level across all workers.
-                pool.Take<byte>(allocatedBinCount * workerCount * (sizeof(BoundingBox4) * 2 + sizeof(int)), out var workerBinsAllocation);
-
-                BinnedBuildWorkerContext<UnitLeafCount>* workerContextsPointer = stackalloc BinnedBuildWorkerContext<UnitLeafCount>[workerCount];
-                var leafCounts = new UnitLeafCount();
-                var workerContexts = new Buffer<BinnedBuildWorkerContext<UnitLeafCount>>(workerContextsPointer, workerCount);
-
-                int binAllocationStart = 0;
-                for (int i = 0; i < workerCount; ++i)
+                //Multithreaded execution of some type.
+                pool.Take<NodeChild>(subtrees.Length, out var subtreesPong);
+                if (dispatcher != null)
                 {
-                    workerContexts[i] = new BinnedBuildWorkerContext<UnitLeafCount>(boundingBoxes.As<BoundingBox4>(), workerBinsAllocation, ref binAllocationStart, allocatedBinCount, leafCounts);
+                    //There's a task queue; we should use a multithreaded dispatch.
+                    //While we could allocate on the stack with reasonable safety in the single threaded path, that's not very reasonable for the multithreaded path.
+                    //Each worker thread could be given a node job which executes asynchronously with respect to other node jobs.
+                    //Those node jobs could spawn multithreaded work that other workers assist with.
+                    //Each of those jobs needs its own context for those workers, and the number of jobs is not 1:1 with the workers.
+                    //We'll handle such dispatch-required allocations from worker pools. Here, we just preallocate stuff for the first level across all workers.
+                    pool.Take<byte>(allocatedBinCount * workerCount * (sizeof(BoundingBox4) * 2 + sizeof(int)), out var workerBinsAllocation);
+
+                    BinnedBuildWorkerContext* workerContextsPointer = stackalloc BinnedBuildWorkerContext[workerCount];
+                    var workerContexts = new Buffer<BinnedBuildWorkerContext>(workerContextsPointer, workerCount);
+
+                    int binAllocationStart = 0;
+                    for (int i = 0; i < workerCount; ++i)
+                    {
+                        workerContexts[i] = new BinnedBuildWorkerContext(subtrees, workerBinsAllocation, ref binAllocationStart, allocatedBinCount);
+                    }
+
+                    LinkedTaskStack taskStack = default;
+                    bool createdTaskQueueLocally = taskStackPointer == null;
+                    if (taskStackPointer == null)
+                    {
+                        taskStack = new LinkedTaskStack(pool, dispatcher, dispatcher.ThreadCount);
+                        taskStackPointer = &taskStack;
+                    }
+                    var threading = new MultithreadBinnedBuildContext
+                    {
+                        MaximumTaskCountPerSubmission = workerCount * 2,
+                        TaskStack = taskStackPointer,
+                        Workers = workerContexts,
+                    };
+                    var context = new Context<Buffer<Leaf>, MultithreadBinnedBuildContext>(
+                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
+                        subtrees, subtreesPong, leaves, nodes, metanodes, threading);
+
+                    taskStackPointer->PushUnsafely(new Task(&BinnedBuilderWorkerEntry<Buffer<Leaf>>, &context), 0, dispatcher);
+                    dispatcher.DispatchWorkers(&BinnedBuilderWorkerFunction<Buffer<Leaf>>, unmanagedContext: taskStackPointer);
+
+                    if (createdTaskQueueLocally)
+                        taskStack.Dispose(pool, dispatcher);
+                    pool.Return(ref workerBinsAllocation);
                 }
-
-                LinkedTaskStack taskStack = default;
-                bool createdTaskQueueLocally = taskStackPointer == null;
-                if (taskStackPointer == null)
+                else
                 {
-                    taskStack = new LinkedTaskStack(pool, dispatcher, dispatcher.ThreadCount);
-                    taskStackPointer = &taskStack;
+                    //TODO: TaskStackPointer-only path?
+                    throw new NotImplementedException("Haven't yet implemented this path, or decided if it should really exist!");
                 }
-                var threading = new MultithreadBinnedBuildContext<UnitLeafCount>
-                {
-                    MaximumTaskCountPerSubmission = workerCount * 2,
-                    TaskStack = taskStackPointer,
-                    Workers = workerContexts,
-                };
-                var context = new Context<UnitLeafCount, Buffer<Leaf>, MultithreadBinnedBuildContext<UnitLeafCount>>(
-                    minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold, encodedLeafIndices,
-                    leafCounts, leaves, boundingBoxes.As<BoundingBox4>(), nodes, metanodes, threading);
-
-                taskStackPointer->PushUnsafely(new Task(&BinnedBuilderWorkerEntry<UnitLeafCount, Buffer<Leaf>>, &context), 0, dispatcher);
-                dispatcher.DispatchWorkers(&BinnedBuilderWorkerFunction<UnitLeafCount, Buffer<Leaf>>, unmanagedContext: taskStackPointer);
-
-                if (createdTaskQueueLocally)
-                    taskStack.Dispose(pool, dispatcher);
-                pool.Return(ref workerBinsAllocation);
+                pool.Return(ref subtreesPong);
             }
         }
 
-        public static unsafe void BinnedBuilder(Buffer<int> encodedLeafIndices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
-            int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
-        {
-            BinnedBuilderInternal(encodedLeafIndices, boundingBoxes, nodes, metanodes, leaves, null, null, 0, null, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
-        }
-
-        unsafe static void BinnedBuilderWorkerEntry<TLeafCounts, TLeaves>(long taskId, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
-            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+        unsafe static void BinnedBuilderWorkerEntry<TLeaves>(long taskId, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
             where TLeaves : unmanaged
         {
-            var context = (Context<TLeafCounts, TLeaves, MultithreadBinnedBuildContext<TLeafCounts>>*)untypedContext;
-            BinnedBuildNode(0, 0, context->Indices.Length, -1, -1, context, workerIndex, dispatcher);
+            var context = (Context<TLeaves, MultithreadBinnedBuildContext>*)untypedContext;
+            BinnedBuildNode(false, 0, 0, context->SubtreesPing.Length, -1, -1, context, workerIndex, dispatcher);
             //Once the entry point returns, all workers should stop because it won't return unless both nodes are done.
             context->Threading.TaskStack->RequestStop();
         }
 
-        unsafe static void BinnedBuilderWorkerFunction<TLeafCounts, TLeaves>(int workerIndex, IThreadDispatcher dispatcher)
-            where TLeafCounts : unmanaged, ILeafCountBuffer<TLeafCounts>
+        unsafe static void BinnedBuilderWorkerFunction<TLeaves>(int workerIndex, IThreadDispatcher dispatcher)
             where TLeaves : unmanaged
         {
             var taskQueue = (LinkedTaskStack*)dispatcher.UnmanagedContext;
@@ -1196,11 +1100,18 @@ namespace BepuPhysics.Trees
             }
         }
 
-        public static unsafe void BinnedBuilder(Buffer<int> encodedLeafIndices, Buffer<BoundingBox> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
+        public static unsafe void BinnedBuilder(Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
             IThreadDispatcher threadDispatcher, BufferPool pool,
             int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
         {
-            BinnedBuilderInternal(encodedLeafIndices, boundingBoxes, nodes, metanodes, leaves, threadDispatcher, null, threadDispatcher.ThreadCount, pool, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
+            BinnedBuilderInternal(subtrees, nodes, metanodes, leaves, threadDispatcher, null, threadDispatcher.ThreadCount, pool, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
         }
+
+        public static unsafe void BinnedBuilder(Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
+            int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
+        {
+            BinnedBuilderInternal(subtrees, nodes, metanodes, leaves, null, null, 0, null, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
+        }
+
     }
 }

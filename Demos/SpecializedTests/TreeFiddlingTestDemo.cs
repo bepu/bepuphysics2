@@ -179,27 +179,42 @@ namespace Demos.SpecializedTests
                 Console.WriteLine($"initial SAH: {mesh.Tree.MeasureCostMetric()}, cache quality: {mesh.Tree.MeasureCacheQuality()}");
                 Console.WriteLine($"initial bounds: A ({mesh.Tree.Nodes[0].A.Min}, {mesh.Tree.Nodes[0].B.Max}), B ({mesh.Tree.Nodes[0].B.Min}, {mesh.Tree.Nodes[0].B.Max})");
 
-                BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
-                BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
+                BufferPool.Take<NodeChild>(mesh.Triangles.Length, out var subtrees);
 
                 Action setup = () =>
                 {
                     for (int i = 0; i < mesh.Triangles.Length; ++i)
                     {
                         ref var t = ref mesh.Triangles[i];
-                        ref var bounds = ref leafBounds[i];
-                        bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
-                        bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
-                        leafIndices[i] = Tree.Encode(i);
+                        ref var subtree = ref subtrees[i];
+                        subtree.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
+                        subtree.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
+                        subtree.Index = Tree.Encode(i);
+                        subtree.LeafCount = 1;
                     }
                 };
 
                 BinnedTest(setup, () =>
                 {
-                    Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves, ThreadDispatcher, BufferPool);
+                    Tree.BinnedBuilder(subtrees, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves, ThreadDispatcher, BufferPool);
                 }, "Revamp Single Axis MT", ref mesh.Tree);
 
-                //BinnedTest(setup, () =>
+
+                //BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
+                //BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
+
+                //Action yeOldeSetup = () =>
+                //{
+                //    for (int i = 0; i < mesh.Triangles.Length; ++i)
+                //    {
+                //        ref var t = ref mesh.Triangles[i];
+                //        ref var bounds = ref leafBounds[i];
+                //        bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
+                //        bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
+                //        leafIndices[i] = Tree.Encode(i);
+                //    }
+                //};
+                //BinnedTest(yeOldeSetup, () =>
                 //{
                 //    Tree.BinnedBuilder(leafIndices, leafBounds, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves);
                 //}, "Revamp Single Axis ST", ref mesh.Tree);
