@@ -12,7 +12,7 @@ using BepuUtilities.Memory;
 namespace BepuUtilities.TestStack;
 
 /// <summary>
-/// Description of a task to be submitted to a <see cref="ParallelTaskStack"/>.
+/// Description of a task to be submitted to a <see cref="TaskStack"/>.
 /// </summary>
 public unsafe struct Task
 {
@@ -179,7 +179,7 @@ public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
     }
 
     /// <summary>
-    /// Gets whether this handle ever represented an allocated handle. This does not guarantee that the continuation's associated tasks are active in the <see cref="ParallelTaskStack"/> that it was allocated from.
+    /// Gets whether this handle ever represented an allocated handle. This does not guarantee that the continuation's associated tasks are active in the <see cref="TaskStack"/> that it was allocated from.
     /// </summary>
     public bool Initialized => encodedVersion >= 1u << 31;
 
