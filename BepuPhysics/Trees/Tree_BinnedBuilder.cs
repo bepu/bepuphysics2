@@ -818,7 +818,7 @@ namespace BepuPhysics.Trees
             ref var worker = ref context->Workers[workerIndex];
             var workerPool = dispatcher.WorkerPools[workerIndex];
             var taskContext = new PartitionTaskContext(
-                new SharedTaskData(context->Workers.Length, 0, subtrees.Length, SubtreesPerThreadForBinning, context->MaximumTaskCountPerSubmission),
+                new SharedTaskData(context->Workers.Length, 0, subtrees.Length, SubtreesPerThreadForPartitioning, context->MaximumTaskCountPerSubmission),
                 subtrees, subtreesNext, binSplitIndex, binCount, useX, useY, permuteMask, axisIndex, centroidBoundsMin, offsetToBinIndex, maximumBinIndex);
 
             context->TaskStack->For(&PartitionSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher);
@@ -857,6 +857,7 @@ namespace BepuPhysics.Trees
             var nodeCount = subtreeCount - 1;
             var nodes = context->Nodes.Slice(nodeIndex, nodeCount);
             var metanodes = context->Metanodes.Slice(nodeIndex, nodeCount);
+            var forceInternalSingleThreaded = typeof(TThreading) == typeof(SingleThreaded) || subtreeCount * dispatcher.ThreadCount <= context->SubtreesPing.Length;
             if (subtreeCount == 2)
             {
                 BuildNode(boundingBoxes[0], boundingBoxes[1], subtrees[0].LeafCount, subtrees[1].LeafCount, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref context->Leaves, out _, out _);
@@ -864,7 +865,7 @@ namespace BepuPhysics.Trees
             }
             var debugCentroidStartTime = Stopwatch.GetTimestamp();
             BoundingBox4 centroidBounds;
-            if (typeof(TThreading) == typeof(SingleThreaded) || subtreeCount < SubtreesPerThreadForCentroidPrepass)
+            if (forceInternalSingleThreaded || subtreeCount < SubtreesPerThreadForCentroidPrepass)
             {
                 centroidBounds = ComputeCentroidBounds(boundingBoxes);
                 debugTimes.MTPrepass = false;
@@ -943,7 +944,7 @@ namespace BepuPhysics.Trees
                 binLeafCounts[i] = 0;
             }
             var debugBinStartTime = Stopwatch.GetTimestamp();
-            if (typeof(TThreading) == typeof(SingleThreaded) || subtreeCount < SubtreesPerThreadForBinning)
+            if (forceInternalSingleThreaded || subtreeCount < SubtreesPerThreadForBinning)
             {
                 BinSubtrees(centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtrees, binBoundingBoxes, binLeafCounts);
                 debugTimes.MTBinning = false;
@@ -1016,7 +1017,7 @@ namespace BepuPhysics.Trees
             {
                 //If the current buffer is pong, then write to ping, and vice versa.
                 var subtreesNext = (usePongBuffer ? context->SubtreesPing : context->SubtreesPong).Slice(subtreeRegionStartIndex, subtreeCount);
-                if (typeof(TThreading) == typeof(SingleThreaded) || subtreeCount < SubtreesPerThreadForPartitioning)
+                if (forceInternalSingleThreaded || subtreeCount < SubtreesPerThreadForPartitioning)
                 {
                     for (int i = 0; i < subtreeCount; ++i)
                     {
