@@ -52,6 +52,7 @@ namespace DemoRenderer.ShapeDrawing
 
         public bool Allocate(ulong id, int vertexCount, out int start, out Buffer<Vector4> vertices)
         {
+            requestedIds.Add(id, Pool);
             if (TryGetExistingMesh(id, out start, out vertices))
             {
                 return false;
@@ -65,8 +66,8 @@ namespace DemoRenderer.ShapeDrawing
             }
             //Didn't fit. We need to resize.
             var copyCount = TriangleBuffer.Capacity + vertexCount;
-            var newSize = 1 << SpanHelper.GetContainingPowerOf2(copyCount);
-            Pool.ResizeToAtLeast(ref this.vertices, newSize, copyCount);
+            var newSize = (int)BitOperations.RoundUpToPowerOf2((uint)copyCount);
+            Pool.ResizeToAtLeast(ref this.vertices, newSize, 0);
             allocator.Capacity = newSize;
             allocator.Allocate(id, vertexCount, out longStart);
             start = (int)longStart;
