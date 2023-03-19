@@ -357,7 +357,7 @@ namespace DemoRenderer.ShapeDrawing
             pool.Take(threadDispatcher.ThreadCount, out workerCaches);
             for (int i = 0; i < workerCaches.Length; ++i)
             {
-                workerCaches[i] = new ShapeCache(128, threadDispatcher.GetThreadMemoryPool(i));
+                workerCaches[i] = new ShapeCache(128, threadDispatcher.WorkerPools[i]);
             }
         }
 
@@ -366,7 +366,7 @@ namespace DemoRenderer.ShapeDrawing
             jobs.Dispose(pool);
             for (int i = 0; i < workerCaches.Length; ++i)
             {
-                workerCaches[i].Dispose(looper.Dispatcher.GetThreadMemoryPool(i));
+                workerCaches[i].Dispose(looper.Dispatcher.WorkerPools[i]);
             }
             looper.Dispatcher = null;
             pool.Return(ref workerCaches);
@@ -413,7 +413,7 @@ namespace DemoRenderer.ShapeDrawing
         {
             var job = jobs[jobIndex];
             var simulation = simulations == null ? this.simulation : this.simulations[job.SimulationIndex];
-            var pool = looper.Dispatcher.GetThreadMemoryPool(workerIndex);
+            var pool = looper.Dispatcher.WorkerPools[workerIndex];
 
             if (job.SetIndex >= 0)
             {
