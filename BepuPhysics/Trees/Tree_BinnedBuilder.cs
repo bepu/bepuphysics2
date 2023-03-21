@@ -140,6 +140,7 @@ namespace BepuPhysics.Trees
             public bool MTPrepass;
             public bool MTBinning;
             public bool MTPartition;
+            public int TargetTaskCount;
             public int SubtreeCount;
         }
 
@@ -392,10 +393,13 @@ namespace BepuPhysics.Trees
         {
             public LinkedTaskStack* TaskStack;
             /// <summary>
-            /// Maximum number of tasks any one job submission should create.
-            /// If you have far more tasks than there are workers, adding more tasks just adds overhead without additional workstealing advantages.
+            /// The number of subtrees present at the root of the build.
             /// </summary>
-            public int MaximumTaskCountPerSubmission;
+            public int OriginalSubtreeCount;
+            /// <summary>
+            /// The target number of tasks that would be used for the root node. Later nodes will tend to target smaller numbers of tasks on the assumption that other parallel nodes will provide enough work to fill in the gaps.
+            /// </summary>
+            public int TopLevelTargetTaskCount;
             public Buffer<BinnedBuildWorkerContext> Workers;
 
             public void GetBins(int workerIndex, out Buffer<BoundingBox4> binBoundingBoxes, out Buffer<BoundingBox4> binBoundingBoxesScan, out Buffer<int> binLeafCounts)
@@ -405,13 +409,17 @@ namespace BepuPhysics.Trees
                 binBoundingBoxesScan = worker.BinBoundingBoxesScan;
                 binLeafCounts = worker.BinLeafCounts;
             }
+
+            public int GetTargetTaskCount(int subtreeCount)
+            {
+                return (int)float.Ceiling(TopLevelTargetTaskCount * (float)subtreeCount / OriginalSubtreeCount);
+            }
         }
 
-        //These should be powers of 2 for maskhack reasons.
-        const int SubtreesPerThreadForCentroidPrepass = 65536;
-        const int SubtreesPerThreadForBinning = 65536;
-        const int SubtreesPerThreadForPartitioning = 65536;
-        const int SubtreesPerThreadForNodeJob = 1024;
+        const int MinimumSubtreesPerThreadForCentroidPrepass = 65536;
+        const int MinimumSubtreesPerThreadForBinning = 65536;
+        const int MinimumSubtreesPerThreadForPartitioning = 65536;
+        const int MinimumSubtreesPerThreadForNodeJob = 1024;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static BoundingBox4 ComputeCentroidBounds(Buffer<BoundingBox4> bounds)
@@ -442,11 +450,12 @@ namespace BepuPhysics.Trees
             public int SlotRemainder;
             public bool TaskCountFitsInWorkerCount;
 
-            public SharedTaskData(int workerCount, int subtreeStartIndex, int slotCount, int slotsPerTaskTarget, int maximumTaskCountPerSubmission)
+            public SharedTaskData(int workerCount, int subtreeStartIndex, int slotCount,
+                int minimumSlotsPerTask, int targetTaskCount)
             {
                 WorkerCount = workerCount;
-                Debug.Assert(BitOperations.IsPow2(slotsPerTaskTarget), "Ideally, this gets inlined and the division becomes a shift. Can't do that if the count isn't a power of 2.");
-                TaskCount = int.Min(maximumTaskCountPerSubmission, (slotCount + slotsPerTaskTarget - 1) / slotsPerTaskTarget);
+                var taskSize = int.Max(minimumSlotsPerTask, slotCount / targetTaskCount);
+                TaskCount = (slotCount + taskSize - 1) / taskSize;
                 SubtreeStartIndex = subtreeStartIndex;
                 SubtreeCount = slotCount;
                 SlotsPerTaskBase = slotCount / TaskCount;
@@ -506,11 +515,11 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe static BoundingBox4 MultithreadedCentroidPrepass(MultithreadBinnedBuildContext* context, Buffer<NodeChild> subtrees, int workerIndex, IThreadDispatcher dispatcher)
+        unsafe static BoundingBox4 MultithreadedCentroidPrepass(MultithreadBinnedBuildContext* context, Buffer<NodeChild> subtrees, int targetTaskCount, int workerIndex, IThreadDispatcher dispatcher)
         {
             ref var worker = ref context->Workers[workerIndex];
             var workerPool = dispatcher.WorkerPools[workerIndex];
-            var taskContext = new CentroidPrepassTaskContext(workerPool, new SharedTaskData(context->Workers.Length, 0, subtrees.Length, SubtreesPerThreadForCentroidPrepass, context->MaximumTaskCountPerSubmission), subtrees);
+            var taskContext = new CentroidPrepassTaskContext(workerPool, new SharedTaskData(context->Workers.Length, 0, subtrees.Length, MinimumSubtreesPerThreadForCentroidPrepass, targetTaskCount), subtrees);
             Debug.Assert(taskContext.TaskData.TaskCount > 1, "This codepath shouldn't be used if there's only one task!");
             Debug.Assert(taskContext.TaskData.WorkerCount > 1 && taskContext.TaskData.WorkerCount < 100);
             var taskCount = taskContext.TaskData.TaskCount;
@@ -656,7 +665,7 @@ namespace BepuPhysics.Trees
             var workerPool = dispatcher.WorkerPools[workerIndex];
             var taskContext = new BinSubtreesTaskContext(
                 workerPool,
-                new SharedTaskData(context->Workers.Length, 0, subtrees.Length, SubtreesPerThreadForBinning, context->MaximumTaskCountPerSubmission),
+                new SharedTaskData(context->Workers.Length, 0, subtrees.Length, MinimumSubtreesPerThreadForBinning, context->GetTargetTaskCount(subtrees.Length)),
                 subtrees, binCount, useX, useY, permuteMask, axisIndex, centroidBoundsMin, offsetToBinIndex, maximumBinIndex);
 
             //Don't bother initializing more slots than we have tasks. Note that this requires special handling on the task level;
@@ -813,12 +822,12 @@ namespace BepuPhysics.Trees
 
         unsafe static (int subtreeCountA, int subtreeCountB) MultithreadedPartition(MultithreadBinnedBuildContext* context,
             Vector4 centroidBoundsMin, bool useX, bool useY, Vector128<int> permuteMask, int axisIndex, Vector4 offsetToBinIndex, Vector4 maximumBinIndex,
-            Buffer<NodeChild> subtrees, Buffer<NodeChild> subtreesNext, int binSplitIndex, int binCount, int workerIndex, IThreadDispatcher dispatcher)
+            Buffer<NodeChild> subtrees, Buffer<NodeChild> subtreesNext, int binSplitIndex, int binCount, int targetTaskCount, int workerIndex, IThreadDispatcher dispatcher)
         {
             ref var worker = ref context->Workers[workerIndex];
             var workerPool = dispatcher.WorkerPools[workerIndex];
             var taskContext = new PartitionTaskContext(
-                new SharedTaskData(context->Workers.Length, 0, subtrees.Length, SubtreesPerThreadForPartitioning, context->MaximumTaskCountPerSubmission),
+                new SharedTaskData(context->Workers.Length, 0, subtrees.Length, MinimumSubtreesPerThreadForPartitioning, targetTaskCount),
                 subtrees, subtreesNext, binSplitIndex, binCount, useX, useY, permuteMask, axisIndex, centroidBoundsMin, offsetToBinIndex, maximumBinIndex);
 
             context->TaskStack->For(&PartitionSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher);
@@ -848,35 +857,36 @@ namespace BepuPhysics.Trees
             bool usePongBuffer, int subtreeRegionStartIndex, int nodeIndex, int subtreeCount, int parentNodeIndex, int childIndexInParent, Context<TLeaves, TThreading>* context, int workerIndex, IThreadDispatcher dispatcher)
             where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
         {
-            var debugStartTime = Stopwatch.GetTimestamp();
-            ref var debugTimes = ref Times[nodeIndex];
-            debugTimes.SubtreeCount = subtreeCount;
+            //var debugStartTime = Stopwatch.GetTimestamp();
+            //ref var debugTimes = ref Times[nodeIndex];
+            //debugTimes.SubtreeCount = subtreeCount;
             var subtrees = (usePongBuffer ? context->SubtreesPong : context->SubtreesPing).Slice(subtreeRegionStartIndex, subtreeCount);
             //leaf counts, indices, and bounds are packed together, but it's useful to have a bounds-only representation so that the merging processes don't have to worry about dealing with the fourth lanes.
             var boundingBoxes = subtrees.As<BoundingBox4>();
             var nodeCount = subtreeCount - 1;
             var nodes = context->Nodes.Slice(nodeIndex, nodeCount);
             var metanodes = context->Metanodes.Slice(nodeIndex, nodeCount);
-            var forceInternalSingleThreaded = typeof(TThreading) == typeof(SingleThreaded) || subtreeCount * dispatcher.ThreadCount <= context->SubtreesPing.Length;
             if (subtreeCount == 2)
             {
                 BuildNode(boundingBoxes[0], boundingBoxes[1], subtrees[0].LeafCount, subtrees[1].LeafCount, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref context->Leaves, out _, out _);
                 return;
             }
-            var debugCentroidStartTime = Stopwatch.GetTimestamp();
+            var targetTaskCount = typeof(TThreading) == typeof(SingleThreaded) ? 1 :
+                ((MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)))->GetTargetTaskCount(subtreeCount);
+            //var debugCentroidStartTime = Stopwatch.GetTimestamp();
             BoundingBox4 centroidBounds;
-            if (forceInternalSingleThreaded || subtreeCount < SubtreesPerThreadForCentroidPrepass)
+            if (targetTaskCount == 1 || subtreeCount < MinimumSubtreesPerThreadForCentroidPrepass)
             {
                 centroidBounds = ComputeCentroidBounds(boundingBoxes);
-                debugTimes.MTPrepass = false;
+                //debugTimes.MTPrepass = false;
             }
             else
             {
                 centroidBounds = MultithreadedCentroidPrepass(
-                    (MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)), subtrees, workerIndex, dispatcher);
-                debugTimes.MTPrepass = true;
+                    (MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)), subtrees, targetTaskCount, workerIndex, dispatcher);
+                //debugTimes.MTPrepass = true;
             }
-            var debugCentroidEndTime = Stopwatch.GetTimestamp();
+            //var debugCentroidEndTime = Stopwatch.GetTimestamp();
             var centroidSpan = centroidBounds.Max - centroidBounds.Min;
             var axisIsDegenerate = Vector128.LessThanOrEqual(centroidSpan.AsVector128(), Vector128.Create(1e-12f));
             if ((Vector128.ExtractMostSignificantBits(axisIsDegenerate) & 0b111) == 0b111)
@@ -943,20 +953,20 @@ namespace BepuPhysics.Trees
                 boxX.Max = new Vector4(float.MinValue);
                 binLeafCounts[i] = 0;
             }
-            var debugBinStartTime = Stopwatch.GetTimestamp();
-            if (forceInternalSingleThreaded || subtreeCount < SubtreesPerThreadForBinning)
+            //var debugBinStartTime = Stopwatch.GetTimestamp();
+            if (targetTaskCount == 1 || subtreeCount < MinimumSubtreesPerThreadForBinning)
             {
                 BinSubtrees(centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtrees, binBoundingBoxes, binLeafCounts);
-                debugTimes.MTBinning = false;
+                //debugTimes.MTBinning = false;
             }
             else
             {
                 MultithreadedBinSubtrees(
                    (MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)),
                    centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtrees, binCount, workerIndex, dispatcher);
-                debugTimes.MTBinning = true;
+                //debugTimes.MTBinning = true;
             }
-            var debugBinEndTime = Stopwatch.GetTimestamp();
+            //var debugBinEndTime = Stopwatch.GetTimestamp();
 
             //Identify the split index by examining the SAH of very split option.
             //Premerge from left to right so we have a sorta-summed area table to cheaply look up all possible child A bounds as we scan.
@@ -1005,7 +1015,7 @@ namespace BepuPhysics.Trees
                 accumulatedLeafCountB += binLeafCounts[previousIndex];
             }
 
-            var debugHuhStartTime = Stopwatch.GetTimestamp();
+            //var debugHuhStartTime = Stopwatch.GetTimestamp();
             var subtreeCountB = 0;
             var subtreeCountA = 0;
             var splitIndex = bestSplit;
@@ -1017,7 +1027,7 @@ namespace BepuPhysics.Trees
             {
                 //If the current buffer is pong, then write to ping, and vice versa.
                 var subtreesNext = (usePongBuffer ? context->SubtreesPing : context->SubtreesPong).Slice(subtreeRegionStartIndex, subtreeCount);
-                if (forceInternalSingleThreaded || subtreeCount < SubtreesPerThreadForPartitioning)
+                if (targetTaskCount == 1 || subtreeCount < MinimumSubtreesPerThreadForPartitioning)
                 {
                     for (int i = 0; i < subtreeCount; ++i)
                     {
@@ -1025,14 +1035,14 @@ namespace BepuPhysics.Trees
                         var targetIndex = binIndex >= splitIndex ? subtreeCount - ++subtreeCountB : subtreeCountA++;
                         subtreesNext[targetIndex] = subtrees[i];
                     }
-                    debugTimes.MTPartition = false;
+                    //debugTimes.MTPartition = false;
                 }
                 else
                 {
                     (subtreeCountA, subtreeCountB) = MultithreadedPartition(
                        (MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)),
-                       centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtrees, subtreesNext, splitIndex, binCount, workerIndex, dispatcher);
-                    debugTimes.MTPartition = true;
+                       centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtrees, subtreesNext, splitIndex, binCount, targetTaskCount, workerIndex, dispatcher);
+                    //debugTimes.MTPartition = true;
                 }
                 subtrees = subtreesNext;
                 usePongBuffer = !usePongBuffer;
@@ -1072,23 +1082,24 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            var debugHuhEndTime = Stopwatch.GetTimestamp();
+            //var debugHuhEndTime = Stopwatch.GetTimestamp();
             var leafCountB = bestLeafCountB;
             var leafCountA = totalLeafCount - leafCountB;
             Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
             BuildNode(bestBoundsA, bestBoundsB, leafCountA, leafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref context->Leaves, out var nodeChildIndexA, out var nodeChildIndexB);
-            var debugEndTime = Stopwatch.GetTimestamp();
-            debugTimes.Total = (debugEndTime - debugStartTime) / (double)Stopwatch.Frequency;
-            debugTimes.Partition = (debugHuhEndTime - debugHuhStartTime) / (double)Stopwatch.Frequency;
-            debugTimes.CentroidPrepass = (debugCentroidEndTime - debugCentroidStartTime) / (double)Stopwatch.Frequency;
-            debugTimes.Binning = (debugBinEndTime - debugBinStartTime) / (double)Stopwatch.Frequency;
+            //var debugEndTime = Stopwatch.GetTimestamp();
+            //debugTimes.Total = (debugEndTime - debugStartTime) / (double)Stopwatch.Frequency;
+            //debugTimes.Partition = (debugHuhEndTime - debugHuhStartTime) / (double)Stopwatch.Frequency;
+            //debugTimes.CentroidPrepass = (debugCentroidEndTime - debugCentroidStartTime) / (double)Stopwatch.Frequency;
+            //debugTimes.Binning = (debugBinEndTime - debugBinStartTime) / (double)Stopwatch.Frequency;
+            //debugTimes.TargetTaskCount = targetTaskCount;
 
-            var shouldPushBOntoMultithreadedQueue = typeof(TThreading) != typeof(SingleThreaded) && subtreeCountA >= SubtreesPerThreadForNodeJob && subtreeCountB >= SubtreesPerThreadForNodeJob;
+            var shouldPushBOntoMultithreadedQueue = typeof(TThreading) != typeof(SingleThreaded) && subtreeCountA >= MinimumSubtreesPerThreadForNodeJob && subtreeCountB >= MinimumSubtreesPerThreadForNodeJob;
             ContinuationHandle nodeBContinuation = default;
             if (shouldPushBOntoMultithreadedQueue)
             {
                 //Both of the children are large. Push child B onto the multithreaded execution stack so it can run at the same time as child A (potentially).
-                Debug.Assert(SubtreesPerThreadForNodeJob > 1, "The job threshold for a new node should be large enough that there's no need for a subtreeCountB > 1 test.");
+                Debug.Assert(MinimumSubtreesPerThreadForNodeJob > 1, "The job threshold for a new node should be large enough that there's no need for a subtreeCountB > 1 test.");
                 ref var threading = ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading);
                 //Allocate the parameters to send to the worker on the local stack. Note that we have to preserve the stack for this to work; see the later WaitForCompletion.
                 NodePushTaskContext<TLeaves, TThreading> nodePushContext;
@@ -1208,7 +1219,8 @@ namespace BepuPhysics.Trees
                     }
                     var threading = new MultithreadBinnedBuildContext
                     {
-                        MaximumTaskCountPerSubmission = workerCount * 2,
+                        TopLevelTargetTaskCount = dispatcher.ThreadCount,
+                        OriginalSubtreeCount = subtrees.Length,
                         TaskStack = taskStackPointer,
                         Workers = workerContexts,
                     };
