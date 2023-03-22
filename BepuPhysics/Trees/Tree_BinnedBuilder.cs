@@ -785,8 +785,8 @@ namespace BepuPhysics.Trees
             context.TaskData.GetSlotInterval(taskId, out var start, out var count);
             //We don't really want to trigger interlocked operation for *every single subtree*, but we also don't want to allocate a bunch of memory.
             //Compromise! Stackalloc enough memory to cover sub-batches of the worker's subtrees, and do interlocked operations at the end of each batch.
-            //Note that the main limit to the batch size is the amount of memory in L1 cache: the subtrees are 32 bytes per.
-            const int batchSize = 8192;
+            //Note that the main limit to the batch size is the amount of memory in cache.
+            const int batchSize = 16384;
             bool* slotBelongsToA = stackalloc bool[batchSize];
 
             var batchCount = (count + batchSize - 1) / batchSize;
