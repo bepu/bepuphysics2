@@ -786,15 +786,9 @@ namespace BepuPhysics.Trees
             //We don't really want to trigger interlocked operation for *every single subtree*, but we also don't want to allocate a bunch of memory.
             //Compromise! Stackalloc enough memory to cover sub-batches of the worker's subtrees, and do interlocked operations at the end of each batch.
             //Note that the main limit to the batch size is the amount of memory in L1 cache: the subtrees are 32 bytes per.
-            const int batchSize = 256;
-            //bool* slotBelongsToA = stackalloc bool[batchSize];
-            int* slotBelongsToA = stackalloc int[batchSize];
-            float* minimumsSpan = stackalloc float[Vector<float>.Count];
-            float* maximumsSpan = stackalloc float[Vector<float>.Count];
-            Vector<float> offsetToBinIndexBundle = new Vector<float>(context.AxisIndex == 0 ? context.OffsetToBinIndex.X : context.AxisIndex == 1 ? context.OffsetToBinIndex.Y : context.OffsetToBinIndex.Z);
-            Vector<float> maximumBinIndexBundle = new Vector<float>(context.MaximumBinIndex.X);
-            Vector<float> centroidMinBundle = new Vector<float>(context.AxisIndex == 0 ? context.CentroidBoundsMin.X : context.AxisIndex == 1 ? context.CentroidBoundsMin.Y : context.CentroidBoundsMin.Z);
-            Vector<float> splitIndexBundle = new Vector<float>(context.BinSplitIndex);
+            const int batchSize = 8192;
+            bool* slotBelongsToA = stackalloc bool[batchSize];
+
             var batchCount = (count + batchSize - 1) / batchSize;
             var boundingBoxes = context.Subtrees.As<BoundingBox4>();
             var subtrees = context.Subtrees;
@@ -802,60 +796,19 @@ namespace BepuPhysics.Trees
             for (int batchIndex = 0; batchIndex < batchCount; ++batchIndex)
             {
                 var localCountA = 0;
-                int localCountB;
                 var batchStart = start + batchIndex * batchSize;
                 var countInBatch = int.Min(start + count - batchStart, batchSize);
-                if (Vector<int>.IsSupported)
-                {
-                    Vector<int> localCountABundle = Vector<int>.Zero;
-                    var bundleCount = (countInBatch + Vector<int>.Count - 1) / Vector<int>.Count;
-                    var maxOffset = 4 + axisIndex;
 
-                    for (int bundleIndex = 0; bundleIndex < bundleCount; ++bundleIndex)
-                    {
-                        //Gather the bundle min/max scalars.
-                        var countInBundle = int.Min(Vector<int>.Count, countInBatch - bundleIndex * Vector<int>.Count);
-                        var boundsStartForBundle = boundingBoxes.Memory + batchStart + bundleIndex * Vector<int>.Count;
-                        for (int i = 0; i < countInBundle; ++i)
-                        {
-                            var index = bundleIndex * Vector<int>.Count + i;
-                            float* boundsForLane = (float*)(boundsStartForBundle + i);
-                            minimumsSpan[i] = boundsForLane[axisIndex];
-                            maximumsSpan[i] = boundsForLane[maxOffset];
-                        }
-                        var minimums = new Vector<float>(new Span<float>(minimumsSpan, Vector<float>.Count));
-                        var maximums = new Vector<float>(new Span<float>(maximumsSpan, Vector<float>.Count));
-                        //Now compute the actual bin indices and accumulate the local count bundles.
-                        var binIndicesBundle = Vector.Min((minimums + maximums - centroidMinBundle) * offsetToBinIndexBundle, maximumBinIndexBundle);
-                        var bundleLaneMask = BundleIndexing.CreateMaskForCountInBundle(countInBundle);
-                        var belongsToA = Vector.BitwiseAnd(bundleLaneMask, Vector.LessThan(binIndicesBundle, splitIndexBundle));
-                        ((Vector<int>*)slotBelongsToA)[bundleIndex] = belongsToA;
-                        localCountABundle += Vector.ConditionalSelect(belongsToA, Vector<int>.One, Vector<int>.Zero);
-                    }
-                    localCountA = Vector.Sum(localCountABundle);
-                }
-                else
+                for (int indexInBatch = 0; indexInBatch < countInBatch; ++indexInBatch)
                 {
-                    for (int indexInBatch = 0; indexInBatch < countInBatch; ++indexInBatch)
-                    {
-                        var subtreeIndex = indexInBatch + batchStart;
-                        var binIndex = ComputeBinIndex(centroidBoundsMin, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, boundingBoxes[subtreeIndex]);
-                        var belongsToA = binIndex < context.BinSplitIndex;
-                        slotBelongsToA[indexInBatch] = belongsToA ? -1 : 0;
-                        if (belongsToA) ++localCountA;
-                    }
-                    //for (int indexInBatch = 0; indexInBatch < countInBatch; ++indexInBatch)
-                    //{
-                    //    var subtreeIndex = indexInBatch + batchStart;
-                    //    var binIndex = ComputeBinIndex(centroidBoundsMin, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, boundingBoxes[subtreeIndex]);
-                    //    slotBelongsToA[indexInBatch] = binIndex < context.BinSplitIndex;
-                    //}
-                    //for (int indexInBatch = 0; indexInBatch < countInBatch; ++indexInBatch)
-                    //{
-                    //    if (slotBelongsToA[indexInBatch]) ++localCountA; else ++localCountB;
-                    //}
+                    var subtreeIndex = indexInBatch + batchStart;
+                    var binIndex = ComputeBinIndex(centroidBoundsMin, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, boundingBoxes[subtreeIndex]);
+                    var belongsToA = binIndex < context.BinSplitIndex;
+                    slotBelongsToA[indexInBatch] = belongsToA;
+                    if (belongsToA) ++localCountA;
                 }
-                localCountB = countInBatch - localCountA;
+
+                var localCountB = countInBatch - localCountA;
                 var startIndexA = Interlocked.Add(ref context.Counters.SubtreeCountA, localCountA) - localCountA;
                 var startIndexB = subtrees.Length - Interlocked.Add(ref context.Counters.SubtreeCountB, localCountB);
 
@@ -863,7 +816,7 @@ namespace BepuPhysics.Trees
                 int recountB = 0;
                 for (int indexInBatch = 0; indexInBatch < countInBatch; ++indexInBatch)
                 {
-                    var targetIndex = slotBelongsToA[indexInBatch] != 0 ? startIndexA + recountA++ : startIndexB + recountB++;
+                    var targetIndex = slotBelongsToA[indexInBatch] ? startIndexA + recountA++ : startIndexB + recountB++;
                     subtreesNext[targetIndex] = subtrees[batchStart + indexInBatch];
                 }
 
