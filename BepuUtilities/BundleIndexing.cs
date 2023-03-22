@@ -64,6 +64,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe Vector<int> CreateTrailingMaskForCountInBundle(int countInBundle)
         {
+            //TODO: Cross platform intrinsics rewrite
             if (Avx.IsSupported && Vector<int>.Count == 8)
             {
                 return Avx.CompareLessThanOrEqual(Vector256.Create((float)countInBundle), Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)).AsInt32().AsVector();
@@ -82,13 +83,13 @@ namespace BepuUtilities
                 }
                 return mask;
             }
-            //TODO: ARM
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe Vector<int> CreateMaskForCountInBundle(int countInBundle)
         {
+            //TODO: Cross platform intrinsics rewrite
             if (Avx.IsSupported && Vector<int>.Count == 8)
             {
                 return Avx.CompareGreaterThan(Vector256.Create((float)countInBundle), Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)).AsInt32().AsVector();
@@ -107,13 +108,13 @@ namespace BepuUtilities
                 }
                 return mask;
             }
-            //TODO: ARM
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetFirstSetLaneIndex(Vector<int> v)
         {
+            //TODO: Probable cross platform intrinsics rewrite
             if (Avx.IsSupported && Vector<int>.Count == 8)
             {
                 var scalarMask = Avx.MoveMask(v.AsVector256().As<int, float>());
@@ -143,6 +144,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetLastSetLaneCount(Vector<int> v)
         {
+            //TODO: Cross platform intrinsics rewrite
             if (Avx.IsSupported && Vector<int>.Count == 8)
             {
                 var scalarMask = Avx.MoveMask(v.AsVector256().As<int, float>());
