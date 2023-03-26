@@ -934,9 +934,6 @@ namespace BepuPhysics.Trees
             BoundingBox4 centroidBounds, Context<TLeaves, TThreading>* context, int workerIndex, IThreadDispatcher dispatcher)
             where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
         {
-            //var debugStartTime = Stopwatch.GetTimestamp();
-            //ref var debugTimes = ref Times[nodeIndex];
-            //debugTimes.SubtreeCount = subtreeCount;
             var subtrees = (usePongBuffer ? context->SubtreesPong : context->SubtreesPing).Slice(subtreeRegionStartIndex, subtreeCount);
             var subtreeBinIndices = context->BinIndices.Allocated ? context->BinIndices.Slice(subtreeRegionStartIndex, subtreeCount) : default;
             //leaf counts, indices, and bounds are packed together, but it's useful to have a bounds-only representation so that the merging processes don't have to worry about dealing with the fourth lanes.
@@ -951,23 +948,19 @@ namespace BepuPhysics.Trees
             }
             var targetTaskCount = typeof(TThreading) == typeof(SingleThreaded) ? 1 :
                 ((MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)))->GetTargetTaskCount(subtreeCount);
-            //var debugCentroidStartTime = Stopwatch.GetTimestamp();
             if (nodeIndex == 0)
             {
                 //The first node doesn't have a parent, and so isn't given centroid bounds. We have to compute them.
                 if (targetTaskCount == 1 || subtreeCount < MinimumSubtreesPerThreadForCentroidPrepass)
                 {
                     centroidBounds = ComputeCentroidBounds(boundingBoxes);
-                    //debugTimes.MTPrepass = false;
                 }
                 else
                 {
                     centroidBounds = MultithreadedCentroidPrepass(
                         (MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)), subtrees, targetTaskCount, workerIndex, dispatcher);
-                    //debugTimes.MTPrepass = true;
                 }
             }
-            //var debugCentroidEndTime = Stopwatch.GetTimestamp();
             var centroidSpan = centroidBounds.Max - centroidBounds.Min;
             var axisIsDegenerate = Vector128.LessThanOrEqual(centroidSpan.AsVector128(), Vector128.Create(1e-12f));
             if ((Vector128.ExtractMostSignificantBits(axisIsDegenerate) & 0b111) == 0b111)
@@ -1037,7 +1030,6 @@ namespace BepuPhysics.Trees
                 binCentroidBounds.Max = new Vector4(float.MinValue);
                 binLeafCounts[i] = 0;
             }
-            //var debugBinStartTime = Stopwatch.GetTimestamp();
             if (targetTaskCount == 1 || subtreeCount < MinimumSubtreesPerThreadForBinning)
             {
                 //If the subtree bin indices buffer isn't available, then the binning process can't write to them! That'll happen if:
@@ -1048,16 +1040,13 @@ namespace BepuPhysics.Trees
                     BinSubtrees<DoWriteBinIndices>(centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtrees, binBoundingBoxes, binCentroidBoundingBoxes, binLeafCounts, subtreeBinIndices);
                 else
                     BinSubtrees<DoNotWriteBinIndices>(centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtrees, binBoundingBoxes, binCentroidBoundingBoxes, binLeafCounts, subtreeBinIndices);
-                //debugTimes.MTBinning = false;
             }
             else
             {
                 MultithreadedBinSubtrees(
                    (MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)),
                    centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtrees, subtreeBinIndices, binCount, workerIndex, dispatcher);
-                //debugTimes.MTBinning = true;
             }
-            //var debugBinEndTime = Stopwatch.GetTimestamp();
 
             //Identify the split index by examining the SAH of very split option.
             //Premerge from left to right so we have a sorta-summed area table to cheaply look up all possible child A bounds as we scan.
@@ -1136,14 +1125,12 @@ namespace BepuPhysics.Trees
                         var targetIndex = subtreeBinIndices[i] >= splitIndex ? subtreeCount - ++subtreeCountB : subtreeCountA++;
                         subtreesNext[targetIndex] = subtrees[i];
                     }
-                    //debugTimes.MTPartition = false;
                 }
                 else
                 {
                     (subtreeCountA, subtreeCountB) = MultithreadedPartition(
                        (MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)),
                        subtrees, subtreesNext, subtreeBinIndices, splitIndex, targetTaskCount, workerIndex, dispatcher);
-                    //debugTimes.MTPartition = true;
                 }
                 subtrees = subtreesNext;
                 usePongBuffer = !usePongBuffer;
@@ -1183,17 +1170,10 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            //var debugHuhEndTime = Stopwatch.GetTimestamp();
             var leafCountB = bestLeafCountB;
             var leafCountA = totalLeafCount - leafCountB;
             Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
             BuildNode(bestBoundingBoxA, bestBoundingBoxB, leafCountA, leafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref context->Leaves, out var nodeChildIndexA, out var nodeChildIndexB);
-            //var debugEndTime = Stopwatch.GetTimestamp();
-            //debugTimes.Total = (debugEndTime - debugStartTime) / (double)Stopwatch.Frequency;
-            //debugTimes.Partition = (debugHuhEndTime - debugHuhStartTime) / (double)Stopwatch.Frequency;
-            //debugTimes.CentroidPrepass = (debugCentroidEndTime - debugCentroidStartTime) / (double)Stopwatch.Frequency;
-            //debugTimes.Binning = (debugBinEndTime - debugBinStartTime) / (double)Stopwatch.Frequency;
-            //debugTimes.TargetTaskCount = targetTaskCount;
 
             var shouldPushBOntoMultithreadedQueue = typeof(TThreading) != typeof(SingleThreaded) && subtreeCountA >= MinimumSubtreesPerThreadForNodeJob && subtreeCountB >= MinimumSubtreesPerThreadForNodeJob;
             ContinuationHandle nodeBContinuation = default;
