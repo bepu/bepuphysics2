@@ -443,16 +443,21 @@ namespace BepuPhysics.Trees
                 binLeafCounts = worker.BinLeafCounts;
             }
 
-            public int GetTargetTaskCount(int subtreeCount)
+            public int GetTargetTaskCountForInnerLoop(int subtreeCount)
             {
                 return (int)float.Ceiling(TopLevelTargetTaskCount * (float)subtreeCount / OriginalSubtreeCount);
             }
+            public int GetTargetTaskCountForNodes(int subtreeCount)
+            {
+                return (int)float.Ceiling(TargetTaskCountMultiplierForNodePushOverInnerLoop * TopLevelTargetTaskCount * (float)subtreeCount / OriginalSubtreeCount);
+            }
         }
 
-        const int MinimumSubtreesPerThreadForCentroidPrepass = 65536;
-        const int MinimumSubtreesPerThreadForBinning = 65536;
-        const int MinimumSubtreesPerThreadForPartitioning = 65536;
-        const int MinimumSubtreesPerThreadForNodeJob = 1024;
+        const int MinimumSubtreesPerThreadForCentroidPrepass = 1024;
+        const int MinimumSubtreesPerThreadForBinning = 131072;
+        const int MinimumSubtreesPerThreadForPartitioning = 131072;
+        const int MinimumSubtreesPerThreadForNodeJob = 256;
+        const int TargetTaskCountMultiplierForNodePushOverInnerLoop = 8;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static BoundingBox4 ComputeCentroidBounds(Buffer<BoundingBox4> bounds)
@@ -729,7 +734,7 @@ namespace BepuPhysics.Trees
             var workerPool = dispatcher.WorkerPools[workerIndex];
             var taskContext = new BinSubtreesTaskContext(
                 workerPool,
-                new SharedTaskData(context->Workers.Length, 0, subtrees.Length, MinimumSubtreesPerThreadForBinning, context->GetTargetTaskCount(subtrees.Length)),
+                new SharedTaskData(context->Workers.Length, 0, subtrees.Length, MinimumSubtreesPerThreadForBinning, context->GetTargetTaskCountForInnerLoop(subtrees.Length)),
                 subtrees, subtreeBinIndices, binCount, useX, useY, permuteMask, axisIndex, centroidBoundsMin, offsetToBinIndex, maximumBinIndex);
 
             //Don't bother initializing more slots than we have tasks. Note that this requires special handling on the task level;
@@ -947,7 +952,7 @@ namespace BepuPhysics.Trees
                 return;
             }
             var targetTaskCount = typeof(TThreading) == typeof(SingleThreaded) ? 1 :
-                ((MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)))->GetTargetTaskCount(subtreeCount);
+                ((MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)))->GetTargetTaskCountForInnerLoop(subtreeCount);
             if (nodeIndex == 0)
             {
                 //The first node doesn't have a parent, and so isn't given centroid bounds. We have to compute them.
@@ -1175,7 +1180,9 @@ namespace BepuPhysics.Trees
             Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
             BuildNode(bestBoundingBoxA, bestBoundingBoxB, leafCountA, leafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref context->Leaves, out var nodeChildIndexA, out var nodeChildIndexB);
 
-            var shouldPushBOntoMultithreadedQueue = typeof(TThreading) != typeof(SingleThreaded) && subtreeCountA >= MinimumSubtreesPerThreadForNodeJob && subtreeCountB >= MinimumSubtreesPerThreadForNodeJob;
+            var targetNodeTaskCount = typeof(TThreading) == typeof(SingleThreaded) ? 1 :
+                ((MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref Unsafe.As<TThreading, MultithreadBinnedBuildContext>(ref context->Threading)))->GetTargetTaskCountForNodes(subtreeCount);
+            var shouldPushBOntoMultithreadedQueue = targetNodeTaskCount > 1 && subtreeCountA >= MinimumSubtreesPerThreadForNodeJob && subtreeCountB >= MinimumSubtreesPerThreadForNodeJob;
             ContinuationHandle nodeBContinuation = default;
             if (shouldPushBOntoMultithreadedQueue)
             {
