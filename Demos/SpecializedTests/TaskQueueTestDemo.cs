@@ -202,7 +202,7 @@ public unsafe class TaskQueueTestDemo : Demo
                 var continuation = linkedTaskStackPointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new BepuUtilities.TestLinkedTaskStack.Task(&IssueStop<LinkedTaskStack>, &context));
                 for (int i = 0; i < iterationCount; ++i)
                 {
-                    linkedTaskStackPointer->PushForUnsafely(&Test<LinkedTaskStack>, &context, i * tasksPerIteration, tasksPerIteration, 0, ThreadDispatcher, continuation);
+                    linkedTaskStackPointer->PushForUnsafely(&Test<LinkedTaskStack>, &context, i * tasksPerIteration, tasksPerIteration, 0, ThreadDispatcher, continuation: continuation);
                 }
                 //taskQueuePointer->TryEnqueueStopUnsafely();
                 //taskQueuePointer->EnqueueTasks()

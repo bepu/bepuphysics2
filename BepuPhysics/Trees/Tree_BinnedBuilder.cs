@@ -575,7 +575,13 @@ namespace BepuPhysics.Trees
                 }
             }
             Debug.Assert(taskContext.TaskData.TaskCount > 0 && taskContext.TaskData.WorkerCount > 0);
-            context->TaskStack->For(&CentroidPrepassWorker, &taskContext, 0, taskCount, workerIndex, dispatcher);
+            //We only want the inner multithreading to work on small, non-recursive jobs.
+            //Diving into a node at this point would stall the current node and favor more (and smaller) nodes.
+            //(Note: the centroid prepass only runs at the root, so we don't expect there to be any competition from other nodes *in this tree*,
+            //but it's possible that the same taskstack is used from multiple binned builds.
+            //Technically, there's potential interference from other user tasks that have nothing to do with binned building, but... not too concerned at this point.)
+            var jobFilter = new MinimumTagFilter(1);
+            context->TaskStack->For(&CentroidPrepassWorker, &taskContext, 0, taskCount, workerIndex, dispatcher, ref jobFilter, 1);
 
             var centroidBounds = taskContext.PrepassWorkers[0];
             for (int i = 1; i < activeWorkerCount; ++i)
@@ -759,7 +765,10 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            context->TaskStack->For(&BinSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher);
+            //We only want the inner multithreading to work on small, non-recursive jobs.
+            //Diving into a node at this point would stall the current node and favor more (and smaller) nodes.
+            var jobFilter = new MinimumTagFilter(1);
+            context->TaskStack->For(&BinSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher, ref jobFilter, 1);
 
             //Unless the number of threads and bins is really huge, there's no value in attempting to multithread the final compression.
             //(Parallel reduction is an option, but even then... I suspect the single threaded version will be faster. And it's way simpler.)
@@ -909,8 +918,10 @@ namespace BepuPhysics.Trees
             var taskContext = new PartitionTaskContext(
                 new SharedTaskData(context->Workers.Length, 0, subtrees.Length, MinimumSubtreesPerThreadForPartitioning, targetTaskCount),
                 subtrees, subtreesNext, binIndices, binSplitIndex);
-
-            context->TaskStack->For(&PartitionSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher);
+            //We only want the inner multithreading to work on small, non-recursive jobs.
+            //Diving into a node at this point would stall the current node and favor more (and smaller) nodes.
+            var jobFilter = new MinimumTagFilter(1);
+            context->TaskStack->For(&PartitionSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher, ref jobFilter, 1);
             return (taskContext.Counters.SubtreeCountA, taskContext.Counters.SubtreeCountB);
         }
 
@@ -1198,7 +1209,7 @@ namespace BepuPhysics.Trees
                 //Note that we use the task id to store subtree start, subtree count, and the pong buffer flag. Don't have to do that, but no reason not to use it.
                 Debug.Assert((uint)subtreeCountB < (1u << 31), "The task id encodes start, count, and a pong flag, so we don't have room for a full 32 bits of count.");
                 var task = new Task(&BinnedBuilderNodeWorker<TLeaves, TThreading>, &nodePushContext, (long)(subtreeRegionStartIndex + subtreeCountA) | ((long)subtreeCountB << 32) | (usePongBuffer ? 1L << 63 : 0));
-                nodeBContinuation = threading.TaskStack->AllocateContinuationAndPush(new Span<Task>(&task, 1), workerIndex, dispatcher);
+                nodeBContinuation = threading.TaskStack->AllocateContinuationAndPush(new Span<Task>(&task, 1), workerIndex, dispatcher, 0);
             }
             if (subtreeCountA > 1)
                 BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex, nodeChildIndexA, subtreeCountA, nodeIndex, 0, bestCentroidBoundingBoxA, context, workerIndex, dispatcher);

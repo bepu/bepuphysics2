@@ -238,7 +238,7 @@ public unsafe struct FunctionPointerJobFilter : IJobFilter
 /// <summary>
 /// A job filter that requires the job tag to meet or exceed a threshold value.
 /// </summary>
-public struct TagThresholdFilter : IJobFilter
+public struct MinimumTagFilter : IJobFilter
 {
     /// <summary>
     /// Value that a job must match or exceed to be allowed.
@@ -248,7 +248,7 @@ public struct TagThresholdFilter : IJobFilter
     /// Creates a job filter that wraps a delegate.
     /// </summary>
     /// <param name="minimumTagValue">Value that a job must match or exceed to be allowed.</param>
-    public TagThresholdFilter(ulong minimumTagValue)
+    public MinimumTagFilter(ulong minimumTagValue)
     {
         MinimumTagValue = minimumTagValue;
     }
@@ -696,10 +696,11 @@ public unsafe struct LinkedTaskStack
     /// <param name="task">Task to push.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
     /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
+    /// <param name="tag">User tag associated with the job spanning the submitted tasks.</param>
     /// <remarks>This must not be used while other threads could be performing task pushes or pops that could affect the specified worker.</remarks>
-    public unsafe void PushUnsafely(Task task, int workerIndex, IThreadDispatcher dispatcher)
+    public unsafe void PushUnsafely(Task task, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0)
     {
-        PushUnsafely(new Span<Task>(&task, 1), workerIndex, dispatcher);
+        PushUnsafely(new Span<Task>(&task, 1), workerIndex, dispatcher, tag);
     }
 
     /// <summary>
@@ -731,10 +732,11 @@ public unsafe struct LinkedTaskStack
     /// <param name="tasks">Tasks composing the job. A continuation will be assigned internally; no continuation should be present on any of the provided tasks.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
     /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
+    /// <param name="tag">User tag associated with the job spanning the submitted tasks.</param>
     /// <param name="onComplete">Task to run upon completion of all the submitted tasks, if any.</param>
     /// <returns>Handle of the continuation created for these tasks.</returns>
     /// <remarks>Note that this will keep trying until task submission succeeds.</remarks>
-    public ContinuationHandle AllocateContinuationAndPush(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher, Task onComplete = default)
+    public ContinuationHandle AllocateContinuationAndPush(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0, Task onComplete = default)
     {
         var continuationHandle = AllocateContinuation(tasks.Length, workerIndex, dispatcher, onComplete);
         for (int i = 0; i < tasks.Length; ++i)
@@ -743,7 +745,7 @@ public unsafe struct LinkedTaskStack
             Debug.Assert(!task.Continuation.Initialized, "This function creates a continuation for the tasks");
             task.Continuation = continuationHandle;
         }
-        Push(tasks, workerIndex, dispatcher);
+        Push(tasks, workerIndex, dispatcher, tag);
         return continuationHandle;
     }
 
@@ -799,9 +801,10 @@ public unsafe struct LinkedTaskStack
     /// <param name="workerIndex">Index of the worker executing this function.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
     /// <param name="filter">Filter applied to jobs considered for filling the calling thread's wait for other threads to complete.</param>
+    /// <param name="tag">User tag associated with the job spanning the submitted tasks.</param>
     /// <typeparam name="TJobFilter">Type of the job filter used in the pop.</typeparam>
     /// <remarks>Note that this will keep working until all tasks are run. It may execute tasks unrelated to the requested tasks while waiting on other workers to complete constituent tasks.</remarks>
-    public void RunTasks<TJobFilter>(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher, ref TJobFilter filter) where TJobFilter : IJobFilter
+    public void RunTasks<TJobFilter>(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher, ref TJobFilter filter, ulong tag = 0) where TJobFilter : IJobFilter
     {
         if (tasks.Length == 0)
             return;
@@ -820,7 +823,7 @@ public unsafe struct LinkedTaskStack
                 task.Continuation = continuationHandle;
                 tasksToPush[i] = task;
             }
-            Push(tasksToPush, workerIndex, dispatcher);
+            Push(tasksToPush, workerIndex, dispatcher, tag);
         }
         //Tasks [1, count) are submitted to the stack and may now be executing on other workers.
         //The thread calling the for loop should not relinquish its timeslice. It should immediately begin working on task 0.
@@ -842,11 +845,12 @@ public unsafe struct LinkedTaskStack
     /// <param name="tasks">Tasks composing the job. A continuation will be assigned internally; no continuation should be present on any of the provided tasks.</param>
     /// <param name="workerIndex">Index of the worker executing this function.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
+    /// <param name="tag">User tag associated with the job spanning the submitted tasks.</param>
     /// <remarks>Note that this will keep working until all tasks are run. It may execute tasks unrelated to the requested tasks while waiting on other workers to complete constituent tasks.</remarks>
-    public void RunTasks(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher)
+    public void RunTasks(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0)
     {
         AllowAllJobs filter = default;
-        RunTasks(tasks, workerIndex, dispatcher, ref filter);
+        RunTasks(tasks, workerIndex, dispatcher, ref filter, tag);
     }
 
     /// <summary>
@@ -867,16 +871,17 @@ public unsafe struct LinkedTaskStack
     /// <param name="iterationCount">Number of iterations to perform.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
     /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
+    /// <param name="tag">User tag associated with the job spanning the submitted tasks.</param>
     /// <param name="continuation">Continuation associated with the loop tasks, if any.</param>
     /// <remarks>This must not be used while other threads could be performing task pushes or pops that could affect the specified worker.</remarks>
-    public void PushForUnsafely(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher, ContinuationHandle continuation = default)
+    public void PushForUnsafely(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0, ContinuationHandle continuation = default)
     {
         Span<Task> tasks = stackalloc Task[iterationCount];
         for (int i = 0; i < tasks.Length; ++i)
         {
             tasks[i] = new Task { Function = function, Context = context, Id = i + inclusiveStartIndex, Continuation = continuation };
         }
-        PushUnsafely(tasks, workerIndex, dispatcher);
+        PushUnsafely(tasks, workerIndex, dispatcher, tag);
     }
 
     /// <summary>
@@ -889,15 +894,16 @@ public unsafe struct LinkedTaskStack
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
     /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param> 
     /// <param name="continuation">Continuation associated with the loop tasks, if any.</param>
+    /// <param name="tag">User tag associated with the job spanning the submitted tasks.</param>
     /// <remarks>This function will not attempt to run any iterations of the loop itself.</remarks>
-    public void PushFor(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher, ContinuationHandle continuation = default)
+    public void PushFor(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0, ContinuationHandle continuation = default)
     {
         Span<Task> tasks = stackalloc Task[iterationCount];
         for (int i = 0; i < tasks.Length; ++i)
         {
             tasks[i] = new Task { Function = function, Context = context, Id = i + inclusiveStartIndex, Continuation = continuation };
         }
-        Push(tasks, workerIndex, dispatcher);
+        Push(tasks, workerIndex, dispatcher, tag);
     }
 
     /// <summary>
@@ -910,9 +916,10 @@ public unsafe struct LinkedTaskStack
     /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
     /// <param name="filter">Filter applied to jobs considered for filling the calling thread's wait for other threads to complete.</param>
+    /// <param name="tag">User tag associated with the job spanning the submitted tasks.</param>
     /// <typeparam name="TJobFilter">Type of the job filter used in the pop.</typeparam>
     public void For<TJobFilter>(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher,
-        ref TJobFilter filter) where TJobFilter : IJobFilter
+        ref TJobFilter filter, ulong tag = 0) where TJobFilter : IJobFilter
     {
         if (iterationCount <= 0)
             return;
@@ -921,7 +928,7 @@ public unsafe struct LinkedTaskStack
         {
             tasks[i] = new Task(function, context, inclusiveStartIndex + i);
         }
-        RunTasks(tasks, workerIndex, dispatcher, ref filter);
+        RunTasks(tasks, workerIndex, dispatcher, ref filter, tag);
     }
 
     /// <summary>
@@ -933,9 +940,10 @@ public unsafe struct LinkedTaskStack
     /// <param name="iterationCount">Number of iterations to perform.</param>
     /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
-    public void For(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher)
+    /// <param name="tag">User tag associated with the job spanning the submitted tasks.</param>
+    public void For(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0)
     {
         AllowAllJobs filter = default;
-        For(function, context, inclusiveStartIndex, iterationCount, workerIndex, dispatcher, ref filter);
+        For(function, context, inclusiveStartIndex, iterationCount, workerIndex, dispatcher, ref filter, tag);
     }
 }
