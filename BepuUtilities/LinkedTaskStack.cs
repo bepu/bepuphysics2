@@ -161,18 +161,119 @@ public unsafe struct ContinuationHandle : IEquatable<ContinuationHandle>
     public static bool operator !=(ContinuationHandle left, ContinuationHandle right) => !(left == right);
 }
 
-[StructLayout(LayoutKind.Explicit, Size = 280)]
+
+
+/// <summary>
+/// Determines which jobs are allowed to serve a <see cref="LinkedTaskStack.TryPop{TJobFilter}(ref TJobFilter, out Task)"/> request.
+/// </summary>
+public interface IJobFilter
+{
+    /// <summary>
+    /// Determines whether a job with the given tag should be allowed to serve a <see cref="LinkedTaskStack.TryPop{TJobFilter}(ref TJobFilter, out Task)"/> request.
+    /// </summary>
+    /// <param name="jobTag">Tag of the candidate job.</param>
+    /// <returns>True if the job should be allowed to serve a request, false otherwise.</returns>
+    bool AllowJob(ulong jobTag);
+}
+
+/// <summary>
+/// A filter that will allow pops from any jobs.
+/// </summary>
+public struct AllowAllJobs : IJobFilter
+{
+    /// <inheritdoc/>
+    public readonly bool AllowJob(ulong jobTag)
+    {
+        return true;
+    }
+}
+
+/// <summary>
+/// A job filter that wraps a managed delegate.
+/// </summary>
+public struct DelegateJobFilter : IJobFilter
+{
+    /// <summary>
+    /// Delegate to use as the filter.
+    /// </summary>
+    public Func<ulong, bool> Filter;
+    /// <summary>
+    /// Creates a job filter that wraps a delegate.
+    /// </summary>
+    /// <param name="filter">Delegate to use as the filter.</param>
+    public DelegateJobFilter(Func<ulong, bool> filter)
+    {
+        Filter = filter;
+    }
+    /// <inheritdoc/>
+    public readonly bool AllowJob(ulong jobTag)
+    {
+        return Filter(jobTag);
+    }
+}
+
+/// <summary>
+/// A job filter that wraps a function pointer.
+/// </summary>
+public unsafe struct FunctionPointerJobFilter : IJobFilter
+{
+    /// <summary>
+    /// Delegate to use as the filter.
+    /// </summary>
+    public delegate*<ulong, bool> Filter;
+    /// <summary>
+    /// Creates a job filter that wraps a delegate.
+    /// </summary>
+    /// <param name="filter">Delegate to use as the filter.</param>
+    public FunctionPointerJobFilter(delegate*<ulong, bool> filter)
+    {
+        Filter = filter;
+    }
+    /// <inheritdoc/>
+    public readonly bool AllowJob(ulong jobTag)
+    {
+        return Filter(jobTag);
+    }
+}
+/// <summary>
+/// A job filter that requires the job tag to meet or exceed a threshold value.
+/// </summary>
+public struct TagThresholdFilter : IJobFilter
+{
+    /// <summary>
+    /// Value that a job must match or exceed to be allowed.
+    /// </summary>
+    public ulong MinimumTagValue;
+    /// <summary>
+    /// Creates a job filter that wraps a delegate.
+    /// </summary>
+    /// <param name="minimumTagValue">Value that a job must match or exceed to be allowed.</param>
+    public TagThresholdFilter(ulong minimumTagValue)
+    {
+        MinimumTagValue = minimumTagValue;
+    }
+    /// <inheritdoc/>
+    public bool AllowJob(ulong jobTag)
+    {
+        return jobTag >= MinimumTagValue;
+    }
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 292)]
 internal unsafe struct Job
 {
     [FieldOffset(0)]
     public Buffer<Task> Tasks;
     [FieldOffset(16)]
     public Job* Previous;
+    [FieldOffset(24)]
+    public ulong Tag;
 
-    [FieldOffset(152)]
+    [FieldOffset(160)]
     public int Counter;
 
-    public static Job* Create(Span<Task> sourceTasks, BufferPool pool)
+
+    public static Job* Create(Span<Task> sourceTasks, ulong tag, BufferPool pool)
     {
         //Note that the job and the buffer of tasks are allocated together as one block.
         //This ensures we only need to perform one 
@@ -180,6 +281,7 @@ internal unsafe struct Job
         pool.Take<byte>(sizeToAllocate, out var rawBuffer);
         Job* job = (Job*)rawBuffer.Memory;
         job->Tasks = new Buffer<Task>(rawBuffer.Memory + sizeof(Job), sourceTasks.Length, rawBuffer.Id);
+        job->Tag = tag;
         sourceTasks.CopyTo(job->Tasks);
         job->Counter = sourceTasks.Length;
         job->Previous = null;
@@ -313,14 +415,15 @@ internal unsafe struct Worker
     /// Pushes a set of tasks onto the stack.
     /// </summary>
     /// <param name="tasks">Tasks composing the job.</param>
+    /// <param name="tag">User tag associated with the job.</param>
     /// <param name="dispatcher">Dispatcher used to pull thread allocations if necessary.</param>
     /// <remarks>If the worker associated with this stack might be active, this function can only be called by the worker.</remarks>
-    internal Job* AllocateJob(Span<Task> tasks, IThreadDispatcher dispatcher)
+    internal Job* AllocateJob(Span<Task> tasks, ulong tag, IThreadDispatcher dispatcher)
     {
         Debug.Assert(tasks.Length > 0, "Probably shouldn't be trying to push zero tasks.");
         var threadPool = dispatcher.WorkerPools[WorkerIndex];
         //Note that we allocate jobs on the heap directly; it's safe to resize the AllocatedJobs list because it's just storing pointers.
-        var job = Job.Create(tasks, threadPool);
+        var job = Job.Create(tasks, tag, threadPool);
         AllocatedJobs.Allocate(threadPool) = (nuint)job;
         return job;
     }
@@ -487,25 +590,33 @@ public unsafe struct LinkedTaskStack
     {
         return workers[workerIndex].AllocateContinuation(taskCount, dispatcher, onCompleted);
     }
-    
+
     /// <summary>
     /// Attempts to pop a task.
     /// </summary>
+    /// <param name="filter">Filter to apply to jobs. Only allowed jobs can have tasks popped from them.</param>
     /// <param name="task">Popped task, if any.</param>
+    /// <typeparam name="TJobFilter">Type of the job filter used in the pop.</typeparam>
     /// <returns>Result status of the pop attempt.</returns>
-    public PopTaskResult TryPop(out Task task)
+    public PopTaskResult TryPop<TJobFilter>(ref TJobFilter filter, out Task task) where TJobFilter : IJobFilter
     {
         //Note that this implementation does not need to lock against anything. We just follow the pointer.
+        var job = (Job*)head;
         while (true)
         {
-            var job = (Job*)head;
             if (job == null)
             {
                 //There is no job to pop from.
                 task = default;
                 return padded.Stop ? PopTaskResult.Stop : PopTaskResult.Empty;
             }
-            //The sampled head exists. Try to pop a task from it.
+            //Try to pop a task from the current job.
+            if (!filter.AllowJob(job->Tag))
+            {
+                //This job isn't allowed for this pop; go to the next one.
+                job = job->Previous;
+                continue;
+            }
             if (job->TryPop(out task))
             {
                 Debug.Assert(task.Function != null);
@@ -518,9 +629,38 @@ public unsafe struct LinkedTaskStack
                 //If this fails, the head has changed before we could remove it and the current empty job will persists in the stack until some other dequeue finds it.
                 //That's okay.
                 Interlocked.CompareExchange(ref head, (nuint)job->Previous, (nuint)job);
+                job = (Job*)head;
             }
-
         }
+    }
+
+    /// <summary>
+    /// Attempts to pop a task.
+    /// </summary>
+    /// <param name="task">Popped task, if any.</param>
+    /// <returns>Result status of the pop attempt.</returns>
+    public PopTaskResult TryPop(out Task task)
+    {
+        AllowAllJobs filter = default;
+        return TryPop(ref filter, out task);
+    }
+
+    /// <summary>
+    /// Attempts to pop a task and run it.
+    /// </summary>
+    /// <param name="filter">Filter to apply to jobs. Only allowed jobs can have tasks popped from them.</param>
+    /// <param name="workerIndex">Index of the worker to pass into the task function.</param>
+    /// <param name="dispatcher">Thread dispatcher running this task stack.</param>
+    /// <typeparam name="TJobFilter">Type of the job filter used in the pop.</typeparam>
+    /// <returns>Result status of the pop attempt.</returns>
+    public PopTaskResult TryPopAndRun<TJobFilter>(ref TJobFilter filter, int workerIndex, IThreadDispatcher dispatcher) where TJobFilter : IJobFilter
+    {
+        var result = TryPop(ref filter, out var task);
+        if (result == PopTaskResult.Success)
+        {
+            task.Run(workerIndex, dispatcher);
+        }
+        return result;
     }
 
     /// <summary>
@@ -531,13 +671,10 @@ public unsafe struct LinkedTaskStack
     /// <returns>Result status of the pop attempt.</returns>
     public PopTaskResult TryPopAndRun(int workerIndex, IThreadDispatcher dispatcher)
     {
-        var result = TryPop(out var task);
-        if (result == PopTaskResult.Success)
-        {
-            task.Run(workerIndex, dispatcher);
-        }
-        return result;
+        AllowAllJobs filter = default;
+        return TryPopAndRun(ref filter, workerIndex, dispatcher);
     }
+
 
     /// <summary>
     /// Pushes a set of tasks onto the task stack. This function is not thread safe.
@@ -545,10 +682,11 @@ public unsafe struct LinkedTaskStack
     /// <param name="tasks">Tasks composing the job.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
     /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
+    /// <param name="tag">User-defined tag data for the submitted job.</param>
     /// <remarks>This must not be used while other threads could be performing task pushes or pops that could affect the specified worker.</remarks>
-    public void PushUnsafely(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher)
+    public void PushUnsafely(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0)
     {
-        Job* job = workers[workerIndex].AllocateJob(tasks, dispatcher);
+        Job* job = workers[workerIndex].AllocateJob(tasks, tag, dispatcher);
         job->Previous = (Job*)head;
         head = (nuint)job;
     }
@@ -570,10 +708,11 @@ public unsafe struct LinkedTaskStack
     /// <param name="tasks">Tasks composing the job.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
     /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
+    /// <param name="tag">User-defined tag data for the submitted job.</param>
     /// <returns>True if the push succeeded, false if it was contested.</returns>
-    public void Push(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher)
+    public void Push(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0)
     {
-        Job* job = workers[workerIndex].AllocateJob(tasks, dispatcher);
+        Job* job = workers[workerIndex].AllocateJob(tasks, tag, dispatcher);
 
         while (true)
         {
@@ -612,16 +751,18 @@ public unsafe struct LinkedTaskStack
     /// Waits for a continuation to be completed.
     /// </summary>
     /// <remarks>Instead of spinning the entire time, this may pop and execute pending tasks to fill the gap.</remarks>
+    /// <param name="filter">Filter to apply to jobs. Only allowed jobs can have tasks popped from them.</param>
     /// <param name="continuation">Continuation to wait on.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
     /// <param name="workerIndex">Index of the executing worker.</param>
-    public void WaitForCompletion(ContinuationHandle continuation, int workerIndex, IThreadDispatcher dispatcher)
+    /// <typeparam name="TJobFilter">Type of the job filter used in the pop.</typeparam>
+    public void WaitForCompletion<TJobFilter>(ref TJobFilter filter, ContinuationHandle continuation, int workerIndex, IThreadDispatcher dispatcher) where TJobFilter : IJobFilter
     {
         var waiter = new SpinWait();
         Debug.Assert(continuation.Initialized, "This codepath should only run if the continuation was allocated earlier.");
         while (!continuation.Completed)
         {
-            var result = TryPop(out var fillerTask);
+            var result = TryPop(ref filter, out var fillerTask);
             if (result == PopTaskResult.Stop)
             {
                 return;
@@ -639,13 +780,28 @@ public unsafe struct LinkedTaskStack
     }
 
     /// <summary>
+    /// Waits for a continuation to be completed.
+    /// </summary>
+    /// <remarks>Instead of spinning the entire time, this may pop and execute pending tasks to fill the gap.</remarks>
+    /// <param name="continuation">Continuation to wait on.</param>
+    /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
+    /// <param name="workerIndex">Index of the executing worker.</param>
+    public void WaitForCompletion(ContinuationHandle continuation, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        AllowAllJobs filter = default;
+        WaitForCompletion(ref filter, continuation, workerIndex, dispatcher);
+    }
+
+    /// <summary>
     /// Pushes a set of tasks to the worker stack and returns when all tasks are complete.
     /// </summary>
     /// <param name="tasks">Tasks composing the job. A continuation will be assigned internally; no continuation should be present on any of the provided tasks.</param>
     /// <param name="workerIndex">Index of the worker executing this function.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
+    /// <param name="filter">Filter applied to jobs considered for filling the calling thread's wait for other threads to complete.</param>
+    /// <typeparam name="TJobFilter">Type of the job filter used in the pop.</typeparam>
     /// <remarks>Note that this will keep working until all tasks are run. It may execute tasks unrelated to the requested tasks while waiting on other workers to complete constituent tasks.</remarks>
-    public void RunTasks(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher)
+    public void RunTasks<TJobFilter>(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher, ref TJobFilter filter) where TJobFilter : IJobFilter
     {
         if (tasks.Length == 0)
             return;
@@ -675,8 +831,22 @@ public unsafe struct LinkedTaskStack
         if (tasks.Length > 1)
         {
             //Task 0 is done; this thread should seek out other work until the job is complete.
-            WaitForCompletion(continuationHandle, workerIndex, dispatcher);
+            WaitForCompletion(ref filter, continuationHandle, workerIndex, dispatcher);
         }
+    }
+
+
+    /// <summary>
+    /// Pushes a set of tasks to the worker stack and returns when all tasks are complete.
+    /// </summary>
+    /// <param name="tasks">Tasks composing the job. A continuation will be assigned internally; no continuation should be present on any of the provided tasks.</param>
+    /// <param name="workerIndex">Index of the worker executing this function.</param>
+    /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
+    /// <remarks>Note that this will keep working until all tasks are run. It may execute tasks unrelated to the requested tasks while waiting on other workers to complete constituent tasks.</remarks>
+    public void RunTasks(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        AllowAllJobs filter = default;
+        RunTasks(tasks, workerIndex, dispatcher, ref filter);
     }
 
     /// <summary>
@@ -717,10 +887,9 @@ public unsafe struct LinkedTaskStack
     /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
     /// <param name="iterationCount">Number of iterations to perform.</param>
     /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
-    /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
+    /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param> 
     /// <param name="continuation">Continuation associated with the loop tasks, if any.</param>
-    /// <remarks>This function will not usually attempt to run any iterations of the loop itself. It tries to push the loop tasks onto the stack.<para/>
-    /// If the task stack is full, this will opt to run the tasks inline while waiting for room.</remarks>
+    /// <remarks>This function will not attempt to run any iterations of the loop itself.</remarks>
     public void PushFor(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher, ContinuationHandle continuation = default)
     {
         Span<Task> tasks = stackalloc Task[iterationCount];
@@ -738,9 +907,12 @@ public unsafe struct LinkedTaskStack
     /// <param name="context">Context pointer to pass into each iteration of the loop.</param>
     /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
     /// <param name="iterationCount">Number of iterations to perform.</param>
-    /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
     /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
-    public void For(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher)
+    /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
+    /// <param name="filter">Filter applied to jobs considered for filling the calling thread's wait for other threads to complete.</param>
+    /// <typeparam name="TJobFilter">Type of the job filter used in the pop.</typeparam>
+    public void For<TJobFilter>(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher,
+        ref TJobFilter filter) where TJobFilter : IJobFilter
     {
         if (iterationCount <= 0)
             return;
@@ -749,6 +921,21 @@ public unsafe struct LinkedTaskStack
         {
             tasks[i] = new Task(function, context, inclusiveStartIndex + i);
         }
-        RunTasks(tasks, workerIndex, dispatcher);
+        RunTasks(tasks, workerIndex, dispatcher, ref filter);
+    }
+
+    /// <summary>
+    /// Submits a set of tasks representing a for loop over the given indices and returns when all loop iterations are complete.
+    /// </summary>
+    /// <param name="function">Function to execute on each iteration of the loop.</param>
+    /// <param name="context">Context pointer to pass into each iteration of the loop.</param>
+    /// <param name="inclusiveStartIndex">Inclusive start index of the loop range.</param>
+    /// <param name="iterationCount">Number of iterations to perform.</param>
+    /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
+    /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
+    public void For(delegate*<long, void*, int, IThreadDispatcher, void> function, void* context, int inclusiveStartIndex, int iterationCount, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        AllowAllJobs filter = default;
+        For(function, context, inclusiveStartIndex, iterationCount, workerIndex, dispatcher, ref filter);
     }
 }
