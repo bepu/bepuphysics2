@@ -29,7 +29,7 @@ namespace Demos.Demos.Sponsors
             this.targetLocation = targetLocation;
         }
 
-        public void Update(CharacterControllers characters, Simulation simulation, ref QuickList<SponsorNewt> newts, in Vector2 arenaMin, in Vector2 arenaMax, Random random)
+        public void Update(CharacterControllers characters, Simulation simulation, ref QuickList<SponsorNewt> newts, Random random)
         {
             var body = simulation.Bodies[bodyHandle];
             Vector2 influenceSum = default;
@@ -44,7 +44,7 @@ namespace Demos.Demos.Sponsors
                     var influenceMagnitude = 1f / (distance * 0.1f + .1f);
                     influenceSum -= new Vector2(offset.X, offset.Z) * influenceMagnitude / distance;
                 }
-                if(distance < 20)
+                if (distance < 20)
                 {
                     spooked = true;
                 }
@@ -53,7 +53,9 @@ namespace Demos.Demos.Sponsors
             influenceSum /= newts.Count;
             ref var character = ref characters.GetCharacterByBodyHandle(bodyHandle);
             influenceSum -= (new Vector2(body.Pose.Position.X, body.Pose.Position.Z) - targetLocation) * 0.001f;
-            var targetWorldVelocity = 6f * Vector2.Normalize(influenceSum);
+            //Newts should do a good job at avoiding a division by zero here, but just in case, guard against it.
+            var influenceSumLength = influenceSum.Length();
+            var targetWorldVelocity = influenceSumLength > 1e-6f ? influenceSum * (6f / influenceSumLength) : new Vector2();
             //Rephrase the target velocity in terms of the character's control basis. 
             character.TargetVelocity = new Vector2(targetWorldVelocity.X, -targetWorldVelocity.Y);
             if (spooked && random.NextDouble() < 0.015f)

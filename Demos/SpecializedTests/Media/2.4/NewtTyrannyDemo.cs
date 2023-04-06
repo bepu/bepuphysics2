@@ -101,7 +101,7 @@ namespace Demos.Demos.Sponsors
             }
             for (int i = 0; i < characterAIs.Count; ++i)
             {
-                characterAIs[i].Update(characterControllers, Simulation, ref newts, newtArenaMin, newtArenaMax, random);
+                characterAIs[i].Update(characterControllers, Simulation, ref newts, random);
             }
             simulationTime += TimestepDuration;
 
