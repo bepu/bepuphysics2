@@ -580,7 +580,7 @@ namespace BepuPhysics.Trees
             //(Note: the centroid prepass only runs at the root, so we don't expect there to be any competition from other nodes *in this tree*,
             //but it's possible that the same taskstack is used from multiple binned builds.
             //Technically, there's potential interference from other user tasks that have nothing to do with binned building, but... not too concerned at this point.)
-            var jobFilter = new MinimumTagFilter(1);
+            var jobFilter = new MinimumTagFilter(2);
             context->TaskStack->For(&CentroidPrepassWorker, &taskContext, 0, taskCount, workerIndex, dispatcher, ref jobFilter, 1);
 
             var centroidBounds = taskContext.PrepassWorkers[0];
@@ -767,7 +767,7 @@ namespace BepuPhysics.Trees
 
             //We only want the inner multithreading to work on small, non-recursive jobs.
             //Diving into a node at this point would stall the current node and favor more (and smaller) nodes.
-            var jobFilter = new MinimumTagFilter(1);
+            var jobFilter = new MinimumTagFilter(2);
             context->TaskStack->For(&BinSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher, ref jobFilter, 1);
 
             //Unless the number of threads and bins is really huge, there's no value in attempting to multithread the final compression.
@@ -920,7 +920,7 @@ namespace BepuPhysics.Trees
                 subtrees, subtreesNext, binIndices, binSplitIndex);
             //We only want the inner multithreading to work on small, non-recursive jobs.
             //Diving into a node at this point would stall the current node and favor more (and smaller) nodes.
-            var jobFilter = new MinimumTagFilter(1);
+            var jobFilter = new MinimumTagFilter(2);
             context->TaskStack->For(&PartitionSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher, ref jobFilter, 1);
             return (taskContext.Counters.SubtreeCountA, taskContext.Counters.SubtreeCountB);
         }
