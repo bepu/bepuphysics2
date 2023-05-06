@@ -429,10 +429,10 @@ public class ConvexHullTestDemo : Demo
         Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), Simulation.Shapes.Add(new Box(1000, 1, 1000))));
 
         Random random = new Random(5);
-        DemoMeshHelper.CreateDeformedPlane(64, 64, (x, y) => new Vector3(
+        var mesh = DemoMeshHelper.CreateDeformedPlane(64, 64, (x, y) => new Vector3(
             x + 8,
             2f * MathF.Sin(x * 0.125f) * MathF.Sin(y * 0.125f) + 0.1f * random.NextSingle() - 3,
-            y - 8), new Vector3(1, 1, 1), BufferPool, out var mesh);
+            y - 8), new Vector3(1, 1, 1), BufferPool);
         Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
     }
 

@@ -78,12 +78,12 @@ namespace Demos.SpecializedTests
 
             const int planeWidth = 256;
             const int planeHeight = 256;
-            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
+            var planeMesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
                     Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
                     return new Vector3(offsetFromCenter.X, MathF.Cos(x / 2f) + MathF.Sin(y / 2f), offsetFromCenter.Y);
-                }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
+                }, new Vector3(2, 1, 2), BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
 
             removedCharacters = new QuickQueue<CharacterController>(characters.CharacterCount, BufferPool);

@@ -123,12 +123,12 @@ namespace Demos.SpecializedTests.Media
                     Simulation.Shapes.Add(buildingShape)));
             }
 
-            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,
+            var planeMesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,
                 (int vX, int vY) =>
                     {
                         var position2D = new Vector2(vX, vY) * terrainScale + terrainPosition;
                         return new Vector3(position2D.X, GetHeightForPosition(position2D.X, position2D.Y, planeWidth, inverseTerrainScale, terrainPosition), position2D.Y);
-                    }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
+                    }, new Vector3(1, 1, 1), BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(planeMesh)));
 
             explosions = new QuickList<Explosion>(32, BufferPool);

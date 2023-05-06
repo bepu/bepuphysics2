@@ -33,7 +33,7 @@ namespace Demos.Demos.Sponsors
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characterControllers), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
             Simulation.Deterministic = true;
 
-            DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(-10, 10, -10), out var newtMesh);
+            var newtMesh = DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(-10, 10, -10));
             var newtShape = Simulation.Shapes.Add(newtMesh);
             var newtCount = 10;
             newts = new QuickList<SponsorNewt>(newtCount, BufferPool);

@@ -31,7 +31,7 @@ namespace Demos.SpecializedTests.Media
             //High fidelity simulation isn't super important on this one.
             Simulation.Solver.VelocityIterationCount = 2;
 
-            DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(30), out var mesh);
+            var mesh = DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(30));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 20, 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, 0), Simulation.Shapes.Add(mesh)));
         }
 

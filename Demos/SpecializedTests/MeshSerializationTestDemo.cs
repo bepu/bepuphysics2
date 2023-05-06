@@ -21,7 +21,7 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             var startTime = Stopwatch.GetTimestamp();
-            DemoMeshHelper.CreateDeformedPlane(1025, 1025, (x, y) => new Vector3(x * 0.125f, MathF.Sin(x) + MathF.Sin(y), y * 0.125f), Vector3.One, BufferPool, out var originalMesh);
+            var originalMesh = DemoMeshHelper.CreateDeformedPlane(1025, 1025, (x, y) => new Vector3(x * 0.125f, MathF.Sin(x) + MathF.Sin(y), y * 0.125f), Vector3.One, BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(originalMesh)));
             var endTime = Stopwatch.GetTimestamp();
             var freshConstructionTime = (endTime - startTime) / (double)Stopwatch.Frequency;

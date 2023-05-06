@@ -129,11 +129,11 @@ namespace Demos
 
             const int planeWidth = 128;
             const int planeHeight = 128;
-            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
+            var planeMesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
                     return new Vector3(x - planeWidth / 2, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y - planeHeight / 2);
-                }, new Vector3(1, 3, 1), BufferPool, out var planeMesh);
+                }, new Vector3(1, 3, 1), BufferPool);
             Simulation.Statics.Add(new StaticDescription(
                 new Vector3(0, -10, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 4),
                 Simulation.Shapes.Add(planeMesh)));

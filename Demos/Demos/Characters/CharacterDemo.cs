@@ -86,7 +86,7 @@ namespace Demos.Demos.Characters
             }
 
             //Include a giant newt to test character-newt behavior and to ensure thematic consistency.
-            DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(15, 15, 15), out var newtMesh);
+            var newtMesh = DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(15, 15, 15));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0.5f, 0), Simulation.Shapes.Add(newtMesh)));
 
             //Give the newt a tongue, I guess.

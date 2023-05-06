@@ -42,7 +42,7 @@ namespace Demos.Demos
             }
 
             //Add in a static object to test against. Note that the mesh triangles are one sided, so some of the queries whose centers are beneath the mesh do not generate any contacts.
-            DemoMeshHelper.CreateDeformedPlane(20, 20, (x, y) => { return new Vector3(x * 5 - 50, 3 * MathF.Sin(x) * MathF.Sin(y), y * 5 - 50); }, Vector3.One, BufferPool, out var mesh);
+            var mesh = DemoMeshHelper.CreateDeformedPlane(20, 20, (x, y) => { return new Vector3(x * 5 - 50, 3 * MathF.Sin(x) * MathF.Sin(y), y * 5 - 50); }, Vector3.One, BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(mesh)));
         }
 

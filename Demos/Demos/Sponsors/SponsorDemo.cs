@@ -115,7 +115,7 @@ namespace Demos.Demos.Sponsors
             characterControllers = new CharacterControllers(BufferPool);
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characterControllers), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
-            DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(-10, 10, -10), out var newtMesh);
+            var newtMesh = DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(-10, 10, -10));
             var newtShape = Simulation.Shapes.Add(newtMesh);
             newts = new QuickList<SponsorNewt>(sponsors2.Count, BufferPool);
             newtArenaMin = new Vector2(-100);

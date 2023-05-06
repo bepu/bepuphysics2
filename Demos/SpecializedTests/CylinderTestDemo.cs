@@ -249,7 +249,7 @@ namespace Demos.SpecializedTests
 
             const int planeWidth = 50;
             const int planeHeight = 50;
-            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
+            var planeMesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
                     var octave0 = (MathF.Sin((x + 5f) * 0.05f) + MathF.Sin((y + 11) * 0.05f)) * 3f;
@@ -258,7 +258,7 @@ namespace Demos.SpecializedTests
                     var octave3 = (MathF.Sin((x + 53) * 0.65f) + MathF.Sin((y + 47) * 0.65f)) * 0.5f;
                     var octave4 = (MathF.Sin((x + 67) * 1.50f) + MathF.Sin((y + 13) * 1.5f)) * 0.25f;
                     return new Vector3(x, octave0 + octave1 + octave2 + octave3 + octave4, y);
-                }, new Vector3(4, 1, 4), BufferPool, out var planeMesh);
+                }, new Vector3(4, 1, 4), BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(-100, -15, 100), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
 
             //Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0), Simulation.Shapes.Add(new Cylinder(100, 1f)), 0.1f));

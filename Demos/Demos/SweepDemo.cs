@@ -102,11 +102,11 @@ namespace Demos.Demos
 
             const int planeWidth = 64;
             const int planeHeight = 64;
-            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
+            var planeMesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
                     return new Vector3(x, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y);
-                }, new Vector3(2, 3, 2), BufferPool, out var planeMesh);
+                }, new Vector3(2, 3, 2), BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(-64, -10, -64), Simulation.Shapes.Add(planeMesh)));
 
         }
@@ -281,11 +281,11 @@ namespace Demos.Demos
 
             const int planeWidth = 3;
             const int planeHeight = 3;
-            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
+            var mesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
                     return new Vector3(x - 1.5f, 0.1f * MathF.Cos(x) * MathF.Sin(y), y - 1.5f);
-                }, new Vector3(1, 2, 1), BufferPool, out var mesh);
+                }, new Vector3(1, 2, 1), BufferPool);
 
 
             var triangle = new Triangle(new Vector3(0, 0, 0), new Vector3(2, 0, -1), new Vector3(-1, 0, 1.5f));

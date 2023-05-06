@@ -219,7 +219,7 @@ namespace Demos.SpecializedTests
             var bigCompound = new BigCompound(children, shapes, pool);
 
             //MESH
-            DemoMeshHelper.CreateDeformedPlane(8, 8, (x, y) => { return new Vector3(x * 2 - 8, 3 * MathF.Sin(x) * MathF.Sin(y), y * 2 - 8); }, Vector3.One, pool, out var mesh);
+            var mesh = DemoMeshHelper.CreateDeformedPlane(8, 8, (x, y) => { return new Vector3(x * 2 - 8, 3 * MathF.Sin(x) * MathF.Sin(y), y * 2 - 8); }, Vector3.One, pool);
 
             int iterationCount = 1 << 20;
             pool.Take<RigidPose>(iterationCount, out var posesA);

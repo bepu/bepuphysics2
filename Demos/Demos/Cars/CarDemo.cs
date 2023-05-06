@@ -112,7 +112,7 @@ namespace Demos.Demos.Cars
                 aiControllers[i].LaneOffset = random.NextSingle() * 20 - 10;
             }
 
-            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,
+            var planeMesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,
                 (int vX, int vY) =>
                 {
                     var octave0 = (MathF.Sin((vX + 5f) * 0.05f) + MathF.Sin((vY + 11) * 0.05f)) * 1.8f;
@@ -129,7 +129,7 @@ namespace Demos.Demos.Cars
                     var height = trackWeight * -10f + terrainHeight * (1 - trackWeight);
                     return new Vector3(vertexPosition.X, height + edgeRamp, vertexPosition.Y);
 
-                }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
+                }, new Vector3(1, 1, 1), BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
         }
 

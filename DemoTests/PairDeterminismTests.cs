@@ -261,7 +261,7 @@ namespace DemoTests
             var compoundCollidable = new CollidableDescription(shapes.Add(compound), continuousDetection);
             var bigCompoundCollidable = new CollidableDescription(shapes.Add(bigCompound), continuousDetection);
 
-            DemoMeshHelper.CreateDeformedPlane(2, 2, (x, y) => new Vector3(x, 0, y), Vector3.One, pool, out var mesh);
+            var mesh = DemoMeshHelper.CreateDeformedPlane(2, 2, (x, y) => new Vector3(x, 0, y), Vector3.One, pool);
             var meshCollidable = new CollidableDescription(shapes.Add(mesh), continuousDetection);
 
             const int pairCount = 128;

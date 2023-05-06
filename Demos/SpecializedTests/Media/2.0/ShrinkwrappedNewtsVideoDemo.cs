@@ -52,7 +52,7 @@ namespace Demos.SpecializedTests.Media
 
 
 
-            DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(1, 1.5f, 1), out mesh);
+            mesh = DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(1, 1.5f, 1));
             Simulation.Statics.Add(new StaticDescription(new Vector3(30, 0, 20), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), Simulation.Shapes.Add(mesh)));
         }
 

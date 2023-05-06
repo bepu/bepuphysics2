@@ -10,7 +10,7 @@ namespace Demos
 {
     public static class DemoMeshHelper
     {
-        public static void LoadModel(ContentArchive content, BufferPool pool, string contentName, Vector3 scaling, out Mesh mesh)
+        public static Mesh LoadModel(ContentArchive content, BufferPool pool, string contentName, Vector3 scaling)
         {
             var meshContent = content.Load<MeshContent>(contentName);
             pool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);
@@ -18,10 +18,10 @@ namespace Demos
             {
                 triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
             }
-            mesh = new Mesh(triangles, scaling, pool);
+            return new Mesh(triangles, scaling, pool);
         }
 
-        public static void CreateFan(int triangleCount, float radius, Vector3 scaling, BufferPool pool, out Mesh mesh)
+        public static Mesh CreateFan(int triangleCount, float radius, Vector3 scaling, BufferPool pool)
         {
             var anglePerTriangle = 2 * MathF.PI / triangleCount;
             pool.Take<Triangle>(triangleCount, out var triangles);
@@ -36,10 +36,10 @@ namespace Demos
                 triangle.B = new Vector3(radius * MathF.Cos(secondAngle), 0, radius * MathF.Sin(secondAngle));
                 triangle.C = new Vector3();
             }
-            mesh = new Mesh(triangles, scaling, pool);
+            return new Mesh(triangles, scaling, pool);
         }
 
-        public static void CreateDeformedPlane(int width, int height, Func<int, int, Vector3> deformer, Vector3 scaling, BufferPool pool, out Mesh mesh)
+        public static Mesh CreateDeformedPlane(int width, int height, Func<int, int, Vector3> deformer, Vector3 scaling, BufferPool pool, IThreadDispatcher dispatcher = null)
         {
             pool.Take<Vector3>(width * height, out var vertices);
             for (int i = 0; i < width; ++i)
@@ -75,7 +75,7 @@ namespace Demos
                 }
             }
             pool.Return(ref vertices);
-            mesh = new Mesh(triangles, scaling, pool);
+            return new Mesh(triangles, scaling, pool);
         }
 
         /// <summary>
@@ -130,14 +130,7 @@ namespace Demos
                 //The special logic isn't necessary for tiny meshes, and we also don't handle the corner case of leaf counts <= 2. Just use the regular constructor.
                 return new Mesh(triangles, scaling, pool);
             }
-            Mesh mesh = new()
-            {
-                Triangles = triangles,
-                Tree = new Tree(pool, triangles.Length),
-                Scale = scaling
-            };
-            mesh.Tree.NodeCount = triangles.Length - 1;
-            mesh.Tree.LeafCount = triangles.Length;
+            var mesh = Mesh.CreateMeshWithoutTreeBuild(triangles, scaling, pool);
             int leafCounter = 0;
             CreateDummyNodes(ref mesh.Tree, 0, triangles.Length, ref leafCounter);
             for (int i = 0; i < triangles.Length; ++i)

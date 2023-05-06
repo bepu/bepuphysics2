@@ -202,12 +202,12 @@ namespace Demos.Demos
             }
             const int planeWidth = 48;
             const int planeHeight = 48;
-            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
+            var planeMesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                         {
                             Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
                             return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.01f * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
-                        }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
+                        }, new Vector3(2, 1, 2), BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(64, 4, 32), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
         }
 

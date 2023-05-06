@@ -41,12 +41,12 @@ namespace Demos.SpecializedTests
 
             const int planeWidth = 8;
             const int planeHeight = 8;
-            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
+            var staticShape = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
                     Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
                     return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.2f * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
-                }, new Vector3(2, 1, 2), BufferPool, out var staticShape);
+                }, new Vector3(2, 1, 2), BufferPool);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             const int staticGridWidthInInstances = 128;
             const float staticSpacing = 8;

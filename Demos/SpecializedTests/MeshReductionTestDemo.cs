@@ -47,7 +47,7 @@ namespace Demos.SpecializedTests
             Vector3 span = new Vector3(planeWidth * scale * 0.9f, 15, planeWidth * scale * 0.9f);
 
 
-            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,
+            var planeMesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,
                 (int vX, int vY) =>
                 {
                     var octave0 = (MathF.Sin((vX + 5f) * 0.05f) + MathF.Sin((vY + 11) * 0.05f)) * 1.8f;
@@ -61,7 +61,7 @@ namespace Demos.SpecializedTests
                     var vertexPosition = new Vector2(vX * scale, vY * scale) + terrainPosition;
                     return new Vector3(vertexPosition.X, terrainHeight + edgeRamp, vertexPosition.Y);
 
-                }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
+                }, new Vector3(1, 1, 1), BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
 
             var testBox = new Box(3, 3, 3);
