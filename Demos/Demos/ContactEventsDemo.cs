@@ -248,7 +248,7 @@ namespace Demos.Demos
                 staticListenerFlags.Add(collidable.RawHandleValue, pool);
             else
                 bodyListenerFlags.Add(collidable.RawHandleValue, pool);
-            if (listenerCount > listeners.Length)
+            if (listenerCount >= listeners.Length)
             {
                 Array.Resize(ref listeners, listeners.Length * 2);
             }
