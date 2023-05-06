@@ -245,7 +245,7 @@ public struct MinimumTagFilter : IJobFilter
     /// </summary>
     public ulong MinimumTagValue;
     /// <summary>
-    /// Creates a job filter that wraps a delegate.
+    /// Creates a job filter that requires the job tag to meet or exceed a threshold value.
     /// </summary>
     /// <param name="minimumTagValue">Value that a job must match or exceed to be allowed.</param>
     public MinimumTagFilter(ulong minimumTagValue)
@@ -258,6 +258,31 @@ public struct MinimumTagFilter : IJobFilter
         return jobTag >= MinimumTagValue;
     }
 }
+
+/// <summary>
+/// A job filter that requires the job tag to match a specific value.
+/// </summary>
+public struct EqualTagFilter : IJobFilter
+{
+    /// <summary>
+    /// Tag value required to allow a job.
+    /// </summary>
+    public ulong RequiredTag;
+
+    /// <summary>
+    /// Creates a job filter that requires the job tag to match a specific value.
+    /// </summary>
+    public EqualTagFilter(ulong requiredTag)
+    {
+        RequiredTag = requiredTag;
+    }
+    /// <inheritdoc/>
+    public bool AllowJob(ulong jobTag)
+    {
+        return jobTag == RequiredTag;
+    }
+}
+
 
 [StructLayout(LayoutKind.Explicit, Size = 292)]
 internal unsafe struct Job

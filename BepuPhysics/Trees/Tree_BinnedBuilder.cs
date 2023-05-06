@@ -454,10 +454,15 @@ namespace BepuPhysics.Trees
         }
 
         const int MinimumSubtreesPerThreadForCentroidPrepass = 1024;
-        const int MinimumSubtreesPerThreadForBinning = 131072;
-        const int MinimumSubtreesPerThreadForPartitioning = 131072;
+        const int MinimumSubtreesPerThreadForBinning = 1024;
+        const int MinimumSubtreesPerThreadForPartitioning = 1024;
         const int MinimumSubtreesPerThreadForNodeJob = 256;
         const int TargetTaskCountMultiplierForNodePushOverInnerLoop = 8;
+        /// <summary>
+        /// Random value stored in the upper 32 bits of the job tag submitted for internal multithreading operations.
+        /// </summary>
+        /// <remarks>Other systems using the same task stack may want to use their own filtering approaches. By using a very specific and unique signature, those other systems are less likely to accidentally collide.</remarks>
+        const ulong JobFilterTagHeader = 0xB0A1BF32ul << 32;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static BoundingBox4 ComputeCentroidBounds(Buffer<BoundingBox4> bounds)
@@ -580,8 +585,9 @@ namespace BepuPhysics.Trees
             //(Note: the centroid prepass only runs at the root, so we don't expect there to be any competition from other nodes *in this tree*,
             //but it's possible that the same taskstack is used from multiple binned builds.
             //Technically, there's potential interference from other user tasks that have nothing to do with binned building, but... not too concerned at this point.)
-            var jobFilter = new MinimumTagFilter(2);
-            context->TaskStack->For(&CentroidPrepassWorker, &taskContext, 0, taskCount, workerIndex, dispatcher, ref jobFilter, 1);
+            var tagValue = (uint)workerIndex | JobFilterTagHeader;
+            var jobFilter = new EqualTagFilter(tagValue);
+            context->TaskStack->For(&CentroidPrepassWorker, &taskContext, 0, taskCount, workerIndex, dispatcher, ref jobFilter, tagValue);
 
             var centroidBounds = taskContext.PrepassWorkers[0];
             for (int i = 1; i < activeWorkerCount; ++i)
@@ -767,8 +773,9 @@ namespace BepuPhysics.Trees
 
             //We only want the inner multithreading to work on small, non-recursive jobs.
             //Diving into a node at this point would stall the current node and favor more (and smaller) nodes.
-            var jobFilter = new MinimumTagFilter(2);
-            context->TaskStack->For(&BinSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher, ref jobFilter, 1);
+            var tagValue = (uint)workerIndex | JobFilterTagHeader;
+            var jobFilter = new EqualTagFilter(tagValue);
+            context->TaskStack->For(&BinSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher, ref jobFilter, tagValue);
 
             //Unless the number of threads and bins is really huge, there's no value in attempting to multithread the final compression.
             //(Parallel reduction is an option, but even then... I suspect the single threaded version will be faster. And it's way simpler.)
@@ -920,8 +927,9 @@ namespace BepuPhysics.Trees
                 subtrees, subtreesNext, binIndices, binSplitIndex);
             //We only want the inner multithreading to work on small, non-recursive jobs.
             //Diving into a node at this point would stall the current node and favor more (and smaller) nodes.
-            var jobFilter = new MinimumTagFilter(2);
-            context->TaskStack->For(&PartitionSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher, ref jobFilter, 1);
+            var tagValue = (uint)workerIndex | JobFilterTagHeader;
+            var jobFilter = new EqualTagFilter(tagValue);
+            context->TaskStack->For(&PartitionSubtreesWorker, &taskContext, 0, taskContext.TaskData.TaskCount, workerIndex, dispatcher, ref jobFilter, tagValue);
             return (taskContext.Counters.SubtreeCountA, taskContext.Counters.SubtreeCountB);
         }
 

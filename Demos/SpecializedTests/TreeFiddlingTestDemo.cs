@@ -190,7 +190,6 @@ public unsafe class TreeFiddlingTestDemo : Demo
                 Tree.BinnedBuilder(subtrees, mesh.Tree.Nodes, mesh.Tree.Metanodes, mesh.Tree.Leaves, ThreadDispatcher, BufferPool);
             }, "Revamp Single Axis MT", ref mesh.Tree);
 
-
             //BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
             //BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
 
