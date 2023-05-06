@@ -75,7 +75,7 @@ namespace Demos
                 }
             }
             pool.Return(ref vertices);
-            return new Mesh(triangles, scaling, pool);
+            return new Mesh(triangles, scaling, pool, dispatcher);
         }
 
         /// <summary>

@@ -127,7 +127,7 @@ namespace Demos.Demos.Tanks
                     {
                         var position2D = new Vector2(vX, vY) * terrainScale + terrainPosition;
                         return new Vector3(position2D.X, GetHeightForPosition(position2D.X, position2D.Y, planeWidth, inverseTerrainScale, terrainPosition), position2D.Y);
-                    }, new Vector3(1, 1, 1), BufferPool);
+                    }, new Vector3(1, 1, 1), BufferPool, ThreadDispatcher);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(planeMesh)));
 
             explosions = new QuickList<Explosion>(32, BufferPool);

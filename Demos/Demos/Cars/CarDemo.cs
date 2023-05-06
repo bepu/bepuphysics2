@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
 using BepuPhysics;
 using BepuPhysics.Collidables;
@@ -129,7 +130,7 @@ namespace Demos.Demos.Cars
                     var height = trackWeight * -10f + terrainHeight * (1 - trackWeight);
                     return new Vector3(vertexPosition.X, height + edgeRamp, vertexPosition.Y);
 
-                }, new Vector3(1, 1, 1), BufferPool);
+                }, new Vector3(1, 1, 1), BufferPool, ThreadDispatcher);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
         }
 
