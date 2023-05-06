@@ -19,6 +19,7 @@ using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 using System.Threading;
 using System.Threading.Tasks.Sources;
+using System.Xml.Linq;
 
 namespace BepuPhysics.Trees
 {
@@ -1326,12 +1327,12 @@ namespace BepuPhysics.Trees
                     bool createdTaskQueueLocally = taskStackPointer == null;
                     if (taskStackPointer == null)
                     {
-                        taskStack = new LinkedTaskStack(pool, dispatcher, dispatcher.ThreadCount);
+                        taskStack = new LinkedTaskStack(pool, dispatcher, workerCount);
                         taskStackPointer = &taskStack;
                     }
                     var threading = new MultithreadBinnedBuildContext
                     {
-                        TopLevelTargetTaskCount = dispatcher.ThreadCount,
+                        TopLevelTargetTaskCount = workerCount,
                         OriginalSubtreeCount = subtrees.Length,
                         TaskStack = taskStackPointer,
                         Workers = workerContexts,
@@ -1341,7 +1342,7 @@ namespace BepuPhysics.Trees
                         subtrees, subtreesPong, leaves, nodes, metanodes, binIndices, threading);
 
                     taskStackPointer->PushUnsafely(new Task(&BinnedBuilderWorkerEntry<Buffer<Leaf>>, &context), 0, dispatcher);
-                    dispatcher.DispatchWorkers(&BinnedBuilderWorkerFunction<Buffer<Leaf>>, unmanagedContext: taskStackPointer);
+                    dispatcher.DispatchWorkers(&BinnedBuilderWorkerFunction<Buffer<Leaf>>, unmanagedContext: taskStackPointer, maximumWorkerCount: workerCount);
 
                     if (createdTaskQueueLocally)
                         taskStack.Dispose(pool, dispatcher);
@@ -1376,18 +1377,9 @@ namespace BepuPhysics.Trees
             }
         }
 
-        public static unsafe void BinnedBuilder(Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
-            IThreadDispatcher threadDispatcher, BufferPool pool, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
-        {
-            pool.Take(subtrees.Length, out Buffer<NodeChild> subtreesPong);
-            pool.Take(subtrees.Length, out Buffer<byte> binIndices);
-            BinnedBuilderInternal(subtrees, subtreesPong, nodes, metanodes, leaves, binIndices, threadDispatcher, null, threadDispatcher.ThreadCount, pool, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
-            pool.Return(ref subtreesPong);
-            pool.Return(ref binIndices);
-        }
 
         /// <summary>
-        /// Runs a binned build across the subtrees buffer.
+        /// Runs a multithreaded binned build across the subtrees buffer.
         /// </summary>
         /// <param name="subtrees">Subtrees (either leaves or nodes) to run the builder over. The builder may make in-place modifications to the input buffer; the input buffer should not be assumed to be in a valid state after the builder runs.</param>
         /// <param name="nodes">Buffer holding the nodes created by the build process.<para/>
@@ -1397,16 +1389,20 @@ namespace BepuPhysics.Trees
         /// Metanodes are in the same order and in the same slots; they simply contain data about nodes that most traversals don't need to know about.</param>
         /// <param name="leaves">Buffer holding the leaf references created by the build process.<para/>
         /// The indices written by the build process are those defined in the inputs; any <see cref="NodeChild.Index"/> that is negative is encoded according to <see cref="Tree.Encode(int)"/> and points into the leaf buffer.</param>
-        /// <param name="pool">Buffer pool used to preallocate a pingpong buffer if the number of subtrees exceeds maximumSubtreeStackAllocationCount. If null, stack allocation or a slower in-place partitioning will be used.</param>
+        /// <param name="dispatcher">Dispatcher used to multithread the execution of the build. If the dispatcher is not null, pool must also not be null.</param>
+        /// <param name="pool">Buffer pool used to preallocate a pingpong buffer if the number of subtrees exceeds maximumSubtreeStackAllocationCount. If null, stack allocation or a slower in-place partitioning will be used.
+        /// <para/>A pool must be provided if a thread dispatcher is given.</param>
         /// <param name="maximumSubtreeStackAllocationCount">Maximum number of subtrees to try putting on the stack for the binned builder's pong buffers.<para/>
         /// Subtree counts larger than this threshold will either resort to a buffer pool allocation (if available) or slower in-place partition operations.</param>
         /// <param name="minimumBinCount">Minimum number of bins the builder should use per node.</param>
         /// <param name="maximumBinCount">Maximum number of bins the builder should use per node.</param>
         /// <param name="leafToBinMultiplier">Multiplier to apply to the subtree count within a node to decide the bin count. Resulting value will then be clamped by the minimum/maximum bin counts.</param>
         /// <param name="microsweepThreshold">Threshold at or under which the binned builder resorts to local counting sort sweeps.</param>
-        public static unsafe void BinnedBuilder(Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
-            BufferPool pool = null, int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
+        public static unsafe void BinnedBuild(Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
+            IThreadDispatcher dispatcher = null, BufferPool pool = null, int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
         {
+            if (dispatcher != null && pool == null)
+                throw new ArgumentException("If a ThreadDispatcher has been given to BinnedBuild, a BufferPool must also be provided.");
             Buffer<NodeChild> subtreesPong;
             Buffer<byte> binIndices;
             bool requiresReturn = false;
@@ -1428,13 +1424,33 @@ namespace BepuPhysics.Trees
                 binIndices = default;
                 subtreesPong = default;
             }
-            BinnedBuilderInternal(subtrees, subtreesPong, nodes, metanodes, leaves, binIndices, null, null, 0, null, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
+            //TODO: Note that there's no public entrypoint into the binned builder that provides a task stack right now. Good chance that'll change once we use it in refinement.
+            BinnedBuilderInternal(subtrees, subtreesPong, nodes, metanodes, leaves, binIndices, dispatcher, null, dispatcher == null ? 0 : dispatcher.ThreadCount, pool, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
 
             if (requiresReturn)
             {
                 pool.Return(ref binIndices);
                 pool.Return(ref subtreesPong);
             }
+        }
+
+        /// <summary>
+        /// Runs a binned build across the subtrees buffer.
+        /// </summary>
+        /// <param name="subtrees">Subtrees (either leaves or nodes) to run the builder over. The builder may make in-place modifications to the input buffer; the input buffer should not be assumed to be in a valid state after the builder runs.</param>
+        /// <param name="dispatcher">Dispatcher used to multithread the execution of the build. If the dispatcher is not null, pool must also not be null.</param>
+        /// <param name="pool">Buffer pool used to preallocate a pingpong buffer if the number of subtrees exceeds maximumSubtreeStackAllocationCount. If null, stack allocation or a slower in-place partitioning will be used.
+        /// <para/>A pool must be provided if a thread dispatcher is given.</param>
+        /// <param name="maximumSubtreeStackAllocationCount">Maximum number of subtrees to try putting on the stack for the binned builder's pong buffers.<para/>
+        /// Subtree counts larger than this threshold will either resort to a buffer pool allocation (if available) or slower in-place partition operations.</param>
+        /// <param name="minimumBinCount">Minimum number of bins the builder should use per node.</param>
+        /// <param name="maximumBinCount">Maximum number of bins the builder should use per node.</param>
+        /// <param name="leafToBinMultiplier">Multiplier to apply to the subtree count within a node to decide the bin count. Resulting value will then be clamped by the minimum/maximum bin counts.</param>
+        /// <param name="microsweepThreshold">Threshold at or under which the binned builder resorts to local counting sort sweeps.</param>
+        public unsafe void BinnedBuild(Buffer<NodeChild> subtrees,
+            IThreadDispatcher dispatcher = null, BufferPool pool = null, int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
+        {
+            BinnedBuild(subtrees, Nodes, Metanodes, Leaves, dispatcher, pool, maximumSubtreeStackAllocationCount, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
         }
     }
 }

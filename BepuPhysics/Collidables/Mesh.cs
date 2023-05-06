@@ -66,27 +66,67 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
+        /// Fills a buffer of subtrees according to a buffer of triangles.
+        /// </summary>
+        /// <remarks>The term "subtree" is used because the binned builder does not care whether the input came from leaf nodes or a refinement process's internal nodes.</remarks>
+        /// <param name="triangles">Triangles to build subtrees from.</param>
+        /// <param name="subtrees">Subtrees created for the triangles.</param>
+        public static void FillSubtreesForTriangles(Span<Triangle> triangles, Span<NodeChild> subtrees)
+        {
+            if (subtrees.Length != triangles.Length)
+                throw new ArgumentException("Triangles and subtrees span lengths should match.");
+            for (int i = 0; i < triangles.Length; ++i)
+            {
+                ref var t = ref triangles[i];
+                ref var subtree = ref subtrees[i];
+                subtree.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
+                subtree.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
+                subtree.LeafCount = 1;
+                subtree.Index = Tree.Encode(i);
+            }
+        }
+
+        /// <summary>
+        /// Creates a mesh shape instance, but leaves the Tree in an unbuilt state. The tree must be built before the mesh can be used.
+        /// </summary>
+        /// <param name="triangles">Triangles to use in the mesh.</param>
+        /// <param name="scale">Scale to apply to all vertices at runtime.
+        /// Note that the scale is not baked into the triangles or acceleration structure; the same set of triangles and acceleration structure can be used across multiple Mesh instances with different scales.</param>
+        /// <param name="pool">Pool used to allocate acceleration structures.</param>
+        /// <returns>Created mesh shape.</returns>
+        /// <remarks>In some cases, the default binned build may not be the ideal builder. This function does everything needed to set up a tree without the expense of figuring out the details of the acceleration structure.
+        /// The user can then run whatever build/refinement process is appropriate.</remarks>
+        public static Mesh CreateMeshWithoutTreeBuild(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool)
+        {
+            Mesh mesh = default;
+            mesh.Triangles = triangles;
+            mesh.Tree = new Tree(pool, triangles.Length)
+            {
+                //If this codepath is being used, we're assuming that the triangles are going to be the actual children
+                //so we can go ahead and set the node/leaf counts.
+                //(This is in contrast to creating a tree with a certain capacity, but then relying on incremental adds/removes later.)
+                NodeCount = triangles.Length - 1,
+                LeafCount = triangles.Length
+            };
+            mesh.Scale = scale;
+            return mesh;
+        }
+
+        /// <summary>
         /// Creates a mesh shape.
         /// </summary>
         /// <param name="triangles">Triangles to use in the mesh.</param>
         /// <param name="scale">Scale to apply to all vertices at runtime.
         /// Note that the scale is not baked into the triangles or acceleration structure; the same set of triangles and acceleration structure can be used across multiple Mesh instances with different scales.</param>
         /// <param name="pool">Pool used to allocate acceleration structures.</param>
-        public Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool) : this()
+        /// <param name="dispatcher">Dispatcher to use to multithread the execution of the mesh build process. If null, the build will be single threaded.</param>
+        public Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool, IThreadDispatcher dispatcher = null)
         {
-            Triangles = triangles;
-            Tree = new Tree(pool, triangles.Length);
-            pool.Take<BoundingBox>(triangles.Length, out var boundingBoxes);
-            for (int i = 0; i < triangles.Length; ++i)
-            {
-                ref var t = ref triangles[i];
-                ref var bounds = ref boundingBoxes[i];
-                bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
-                bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
-            }
-            Tree.SweepBuild(pool, boundingBoxes);
-            pool.Return(ref boundingBoxes);
-            Scale = scale;
+            this = CreateMeshWithoutTreeBuild(triangles, scale, pool);           
+            pool.Take<NodeChild>(triangles.Length, out var subtrees);
+            FillSubtreesForTriangles(triangles, subtrees);
+            Tree.BinnedBuild(subtrees, dispatcher: dispatcher, pool: pool);
+            pool.Return(ref subtrees);
         }
 
         /// <summary>
@@ -112,7 +152,6 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Gets the number of bytes it would take to store the given mesh in a byte buffer.
         /// </summary>
-        /// <param name="mesh">Mesh to measure.</param>
         /// <returns>Number of bytes it would take to store the mesh.</returns>
         public readonly unsafe int GetSerializedByteCount()
         {
@@ -122,7 +161,6 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Writes a mesh's data to a byte buffer.
         /// </summary>
-        /// <param name="mesh">Mesh to write into the byte buffer.</param>
         /// <param name="data">Byte buffer to store the mesh in.</param>
         public readonly unsafe void Serialize(Span<byte> data)
         {
