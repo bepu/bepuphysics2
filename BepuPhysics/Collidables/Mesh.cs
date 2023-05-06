@@ -113,6 +113,30 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
+        /// Creates a mesh shape instance and builds an acceleration structure using a sweep builder.
+        /// </summary>
+        /// <param name="triangles">Triangles to use in the mesh.</param>
+        /// <param name="scale">Scale to apply to all vertices at runtime.
+        /// Note that the scale is not baked into the triangles or acceleration structure; the same set of triangles and acceleration structure can be used across multiple Mesh instances with different scales.</param>
+        /// <param name="pool">Pool used to allocate acceleration structures.</param>
+        /// <returns>Created mesh shape.</returns>
+        /// <remarks>The sweep builder is significantly slower than the binned builder, but can sometimes create higher quality trees.
+        /// <para>Note that the binned builder can be tuned to create higher quality trees. That is usually a better choice than trying to use the sweep builder; this is here primarily for legacy reasons.</para></remarks>
+        public unsafe static Mesh CreateMeshWithSweepBuild(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool)
+        {
+            var mesh = CreateMeshWithoutTreeBuild(triangles, scale, pool);
+            pool.Take<NodeChild>(triangles.Length, out var subtrees);
+            FillSubtreesForTriangles(triangles, subtrees);
+            Debug.Assert(sizeof(BoundingBox) == sizeof(NodeChild),
+                "This assumption *should* hold, because the binned builder relies on it. If it doesn't, something weird as happened." +
+                "Did you forget about this requirement when revamping for 64 bit or something?");
+            //NodeChild intentionally shares the same memory layout as BoundingBox. NodeChild just includes some extra data in the fields unused by bounds.
+            mesh.Tree.SweepBuild(pool, subtrees.As<BoundingBox>());
+            pool.Return(ref subtrees);
+            return mesh;
+        }
+
+        /// <summary>
         /// Creates a mesh shape.
         /// </summary>
         /// <param name="triangles">Triangles to use in the mesh.</param>
@@ -122,7 +146,7 @@ namespace BepuPhysics.Collidables
         /// <param name="dispatcher">Dispatcher to use to multithread the execution of the mesh build process. If null, the build will be single threaded.</param>
         public Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool, IThreadDispatcher dispatcher = null)
         {
-            this = CreateMeshWithoutTreeBuild(triangles, scale, pool);           
+            this = CreateMeshWithoutTreeBuild(triangles, scale, pool);
             pool.Take<NodeChild>(triangles.Length, out var subtrees);
             FillSubtreesForTriangles(triangles, subtrees);
             Tree.BinnedBuild(subtrees, dispatcher: dispatcher, pool: pool);

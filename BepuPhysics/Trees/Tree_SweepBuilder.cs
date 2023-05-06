@@ -249,8 +249,6 @@ namespace BepuPhysics.Trees
         {
             if (leafBounds.Length <= 0)
                 throw new ArgumentException("Length must be positive.");
-            if (LeafCount != 0)
-                throw new InvalidOperationException("Cannot build a tree that already contains nodes.");
             //The tree is built with an empty node at the root to make insertion work more easily.
             //As long as that is the case (and as long as this is not a constructor),
             //we must clear it out.
