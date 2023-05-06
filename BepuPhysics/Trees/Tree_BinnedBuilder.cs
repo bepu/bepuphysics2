@@ -1450,7 +1450,7 @@ namespace BepuPhysics.Trees
         public unsafe void BinnedBuild(Buffer<NodeChild> subtrees,
             IThreadDispatcher dispatcher = null, BufferPool pool = null, int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
         {
-            BinnedBuild(subtrees, Nodes, Metanodes, Leaves, dispatcher, pool, maximumSubtreeStackAllocationCount, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
+            BinnedBuild(subtrees, Nodes.Slice(NodeCount), Metanodes.Slice(NodeCount), Leaves.Slice(LeafCount), dispatcher, pool, maximumSubtreeStackAllocationCount, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
         }
     }
 }
