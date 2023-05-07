@@ -114,7 +114,7 @@ namespace BepuPhysics.Collidables
         /// <param name="children">Children to examine.</param>
         /// <param name="shapeBatches">Shape collection into which the children index.</param>
         /// <returns>True if all child indices are valid, false otherwise.</returns>
-        public static bool ValidateChildIndices(ref Buffer<CompoundChild> children, Shapes shapeBatches)
+        public static bool ValidateChildIndices(Span<CompoundChild> children, Shapes shapeBatches)
         {
             for (int i = 0; i < children.Length; ++i)
             {

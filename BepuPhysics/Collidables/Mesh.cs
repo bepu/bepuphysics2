@@ -96,7 +96,7 @@ namespace BepuPhysics.Collidables
         /// <returns>Created mesh shape.</returns>
         /// <remarks>In some cases, the default binned build may not be the ideal builder. This function does everything needed to set up a tree without the expense of figuring out the details of the acceleration structure.
         /// The user can then run whatever build/refinement process is appropriate.</remarks>
-        public static Mesh CreateMeshWithoutTreeBuild(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool)
+        public static Mesh CreateWithoutTreeBuild(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool)
         {
             Mesh mesh = default;
             mesh.Triangles = triangles;
@@ -122,9 +122,9 @@ namespace BepuPhysics.Collidables
         /// <returns>Created mesh shape.</returns>
         /// <remarks>The sweep builder is significantly slower than the binned builder, but can sometimes create higher quality trees.
         /// <para>Note that the binned builder can be tuned to create higher quality trees. That is usually a better choice than trying to use the sweep builder; this is here primarily for legacy reasons.</para></remarks>
-        public unsafe static Mesh CreateMeshWithSweepBuild(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool)
+        public unsafe static Mesh CreateWithSweepBuild(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool)
         {
-            var mesh = CreateMeshWithoutTreeBuild(triangles, scale, pool);
+            var mesh = CreateWithoutTreeBuild(triangles, scale, pool);
             pool.Take<NodeChild>(triangles.Length, out var subtrees);
             FillSubtreesForTriangles(triangles, subtrees);
             Debug.Assert(sizeof(BoundingBox) == sizeof(NodeChild),
@@ -146,7 +146,7 @@ namespace BepuPhysics.Collidables
         /// <param name="dispatcher">Dispatcher to use to multithread the execution of the mesh build process. If null, the build will be single threaded.</param>
         public Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool, IThreadDispatcher dispatcher = null)
         {
-            this = CreateMeshWithoutTreeBuild(triangles, scale, pool);
+            this = CreateWithoutTreeBuild(triangles, scale, pool);
             pool.Take<NodeChild>(triangles.Length, out var subtrees);
             FillSubtreesForTriangles(triangles, subtrees);
             Tree.BinnedBuild(subtrees, dispatcher: dispatcher, pool: pool);

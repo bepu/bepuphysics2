@@ -130,7 +130,7 @@ namespace Demos
                 //The special logic isn't necessary for tiny meshes, and we also don't handle the corner case of leaf counts <= 2. Just use the regular constructor.
                 return new Mesh(triangles, scaling, pool);
             }
-            var mesh = Mesh.CreateMeshWithoutTreeBuild(triangles, scaling, pool);
+            var mesh = Mesh.CreateWithoutTreeBuild(triangles, scaling, pool);
             int leafCounter = 0;
             CreateDummyNodes(ref mesh.Tree, 0, triangles.Length, ref leafCounter);
             for (int i = 0; i < triangles.Length; ++i)

@@ -27,27 +27,90 @@ namespace BepuPhysics.Collidables
         public Buffer<CompoundChild> Children;
 
         /// <summary>
+        /// Creates a BigCompound shape instance, but leaves the Tree in an unbuilt state. The Tree must be built before the compound can be used.
+        /// </summary>
+        /// <param name="children">Children to use in the compound.</param>
+        /// <param name="pool">Pool used to allocate acceleration structures.</param>
+        /// <returns>Created compound shape.</returns>
+        /// <remarks>In some cases, the default binned build may not be the ideal builder. This function does everything needed to set up a tree without the expense of figuring out the details of the acceleration structure.
+        /// The user can then run whatever build/refinement process is appropriate.</remarks>
+        public static BigCompound CreateWithoutTreeBuild(Buffer<CompoundChild> children, BufferPool pool)
+        {
+            Debug.Assert(children.Length > 0, "Compounds must have a nonzero number of children.");
+            BigCompound compound = default;
+            compound.Children = children;
+            compound.Tree = new Tree(pool, children.Length)
+            {
+                //If this codepath is being used, we're assuming that the children are as given.
+                //so we can go ahead and set the node/leaf counts.
+                //(This is in contrast to creating a tree with a certain capacity, but then relying on incremental adds/removes later.)
+                NodeCount = children.Length - 1,
+                LeafCount = children.Length
+            };
+            return compound;
+        }
+
+
+        /// <summary>
+        /// Fills a buffer of subtrees according to a buffer of triangles.
+        /// </summary>
+        /// <remarks>The term "subtree" is used because the binned builder does not care whether the input came from leaf nodes or a refinement process's internal nodes.</remarks>
+        /// <param name="children">Children to build subtrees from.</param>
+        /// <param name="shapes">Shapes set in which child shapes are allocated.</param>
+        /// <param name="subtrees">Subtrees created for the triangles.</param>
+        public static void FillSubtreesForChildren(Span<CompoundChild> children, Shapes shapes, Span<NodeChild> subtrees)
+        {
+            if (subtrees.Length != children.Length)
+                throw new ArgumentException("Triangles and subtrees span lengths should match.");
+            Debug.Assert(Compound.ValidateChildIndices(children, shapes), "Children must all be convex.");
+            for (int i = 0; i < children.Length; ++i)
+            {
+                ref var t = ref children[i];
+                ref var subtree = ref subtrees[i];
+                Compound.ComputeChildBounds(children[i], Quaternion.Identity, shapes, out subtree.Min, out subtree.Max);
+                subtree.LeafCount = 1;
+                subtree.Index = Tree.Encode(i);
+            }
+        }
+
+        /// <summary>
+        /// Creates a compound shape instance and builds an acceleration structure using a sweep builder.
+        /// </summary>
+        /// <param name="children">Children to use in the compound.</param>
+        /// <param name="shapes">Shapes set in which child shapes are allocated.</param>
+        /// <param name="pool">Pool used to allocate acceleration structures.</param>
+        /// <returns>Created compound shape.</returns>
+        /// <remarks>The sweep builder is significantly slower than the binned builder, but can sometimes create higher quality trees.
+        /// <para>Note that the binned builder can be tuned to create higher quality trees. That is usually a better choice than trying to use the sweep builder; this is here primarily for legacy reasons.</para></remarks>
+        public unsafe static BigCompound CreateWithSweepBuild(Buffer<CompoundChild> children, Shapes shapes, BufferPool pool)
+        {
+            var compound = CreateWithoutTreeBuild(children, pool);
+            pool.Take<NodeChild>(children.Length, out var subtrees);
+            FillSubtreesForChildren(children, shapes, subtrees);
+            Debug.Assert(sizeof(BoundingBox) == sizeof(NodeChild),
+                "This assumption *should* hold, because the binned builder relies on it. If it doesn't, something weird as happened." +
+                "Did you forget about this requirement when revamping for 64 bit or something?");
+            //NodeChild intentionally shares the same memory layout as BoundingBox. NodeChild just includes some extra data in the fields unused by bounds.
+            compound.Tree.SweepBuild(pool, subtrees.As<BoundingBox>());
+            pool.Return(ref subtrees);
+            return compound;
+        }
+
+        /// <summary>
         /// Creates a compound shape with an acceleration structure.
         /// </summary>
         /// <param name="children">Set of children in the compound.</param>
         /// <param name="shapes">Shapes set in which child shapes are allocated.</param>
         /// <param name="pool">Pool to use to allocate acceleration structures.</param>
+        /// <param name="dispatcher">Thread dispatcher to use to multithread the acceleration structure build, if any.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BigCompound(Buffer<CompoundChild> children, Shapes shapes, BufferPool pool)
+        public BigCompound(Buffer<CompoundChild> children, Shapes shapes, BufferPool pool, IThreadDispatcher dispatcher = null)
         {
-            Debug.Assert(children.Length > 0, "Compounds must have a nonzero number of children.");
-            Debug.Assert(Compound.ValidateChildIndices(ref children, shapes), "Children must all be convex.");
-            Children = children;
-            Tree = new Tree(pool, children.Length);
-            pool.Take(children.Length, out Buffer<BoundingBox> leafBounds);
-            Compound.ComputeChildBounds(Children[0], Quaternion.Identity, shapes, out leafBounds[0].Min, out leafBounds[0].Max);
-            for (int i = 1; i < Children.Length; ++i)
-            {
-                ref var bounds = ref leafBounds[i];
-                Compound.ComputeChildBounds(Children[i], Quaternion.Identity, shapes, out bounds.Min, out bounds.Max);
-            }
-            Tree.SweepBuild(pool, leafBounds);
-            pool.Return(ref leafBounds);
+            this = CreateWithoutTreeBuild(children, pool);
+            pool.Take(children.Length, out Buffer<NodeChild> subtrees);
+            FillSubtreesForChildren(children, shapes, subtrees);
+            Tree.BinnedBuild(subtrees, dispatcher, pool);
+            pool.Return(ref subtrees);
         }
 
         public void ComputeBounds(Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
