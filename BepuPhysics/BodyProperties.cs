@@ -306,7 +306,7 @@ namespace BepuPhysics
         /// <returns>String representing the BodyInertias.</returns>
         public override string ToString()
         {
-            return $"[Local: {Local}, World: {World}]";
+            return $"Local: {Local}, World: {World}";
         }
     }
 
@@ -337,7 +337,7 @@ namespace BepuPhysics
         /// <returns>String representing the BodyDynamics.</returns>
         public override string ToString()
         {
-            return $"[Motion: {Motion}, Inertia: {Inertia}]";
+            return $"Motion: {Motion}, Inertia: {Inertia}";
         }
     }
 
