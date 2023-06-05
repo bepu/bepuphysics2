@@ -29,21 +29,6 @@ namespace BepuPhysics
         internal const int OffsetToAngularY = 13;
         internal const int OffsetToAngularZ = 14;
 
-        internal const int ByteOffsetToPositionX = OffsetToPositionX * 4;
-        internal const int ByteOffsetToPositionY = OffsetToPositionY * 4;
-        internal const int ByteOffsetToPositionZ = OffsetToPositionZ * 4;
-        internal const int ByteOffsetToOrientationX = OffsetToOrientationX * 4;
-        internal const int ByteOffsetToOrientationY = OffsetToOrientationY * 4;
-        internal const int ByteOffsetToOrientationZ = OffsetToOrientationZ * 4;
-        internal const int ByteOffsetToOrientationW = OffsetToOrientationW * 4;
-        internal const int ByteOffsetToLinearX = OffsetToLinearX * 4;
-        internal const int ByteOffsetToLinearY = OffsetToLinearY * 4;
-        internal const int ByteOffsetToLinearZ = OffsetToLinearZ * 4;
-        internal const int ByteOffsetToAngularX = OffsetToAngularX * 4;
-        internal const int ByteOffsetToAngularY = OffsetToAngularY * 4;
-        internal const int ByteOffsetToAngularZ = OffsetToAngularZ * 4;
-
-
         /// <summary>
         /// Pose of the body.
         /// </summary>
@@ -52,6 +37,16 @@ namespace BepuPhysics
         /// Linear and angular velocity of the body.
         /// </summary>
         public BodyVelocity Velocity;
+
+        /// <summary>
+        /// Returns a string representing the MotionState.
+        /// </summary>
+        /// <returns>String representing the MotionState.</returns>
+        public override string ToString()
+        {
+            return $"Pose: {Pose}, Velocity: {Velocity}";
+        }
+
     }
 
     //TODO: It's a little odd that this exists alongside the BepuUtilities.RigidTransform. The original reasoning was that rigid poses may end up having a non-FP32 representation.
@@ -180,6 +175,15 @@ namespace BepuPhysics
             QuaternionEx.Transform(a.Position, b.Orientation, out var rotatedTranslationA);
             result.Position = rotatedTranslationA + b.Position;
         }
+
+        /// <summary>
+        /// Returns a string representing the RigidPose as "Position, Orientation".
+        /// </summary>
+        /// <returns>String representing the RigidPose.</returns>
+        public override string ToString()
+        {
+            return $"{Position}, {Orientation}";
+        }
     }
 
     /// <summary>
@@ -240,6 +244,15 @@ namespace BepuPhysics
         {
             return new BodyVelocity(velocities.linearVelocity, velocities.angularVelocity);
         }
+
+        /// <summary>
+        /// Returns a string representing the BodyVelocity as "Linear, Angular".
+        /// </summary>
+        /// <returns>String representing the BodyVelocity.</returns>
+        public override string ToString()
+        {
+            return $"{Linear}, {Angular}";
+        }
     }
 
     /// <summary>
@@ -257,6 +270,15 @@ namespace BepuPhysics
         /// Inverse of the body's mass.
         /// </summary>
         public float InverseMass;
+
+        /// <summary>
+        /// Returns a string representing the BodyInertia as "InverseMass, InverseInertiaTensor".
+        /// </summary>
+        /// <returns>String representing the BodyInertia.</returns>
+        public override string ToString()
+        {
+            return $"{InverseMass}, {InverseInertiaTensor}";
+        }
     }
 
     /// <summary>
@@ -277,6 +299,15 @@ namespace BepuPhysics
         /// We cache this here because velocity integration wants both the local and world inertias, and any integration happening within the solver will do so without the benefit of sequential loads.
         /// In that context, being able to load a single cache line to grab both local and world inertia helps quite a lot.</remarks>
         public BodyInertia World;
+
+        /// <summary>
+        /// Returns a string representing the BodyInertias.
+        /// </summary>
+        /// <returns>String representing the BodyInertias.</returns>
+        public override string ToString()
+        {
+            return $"[Local: {Local}, World: {World}]";
+        }
     }
 
     /// <summary>
@@ -299,6 +330,15 @@ namespace BepuPhysics
         /// Inertia information for the body.
         /// </summary>
         public BodyInertias Inertia;
+
+        /// <summary>
+        /// Returns a string representing the BodyDynamics.
+        /// </summary>
+        /// <returns>String representing the BodyDynamics.</returns>
+        public override string ToString()
+        {
+            return $"[Motion: {Motion}, Inertia: {Inertia}]";
+        }
     }
 
 
