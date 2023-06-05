@@ -187,7 +187,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
 
             BinnedTest(setup, () =>
             {
-                mesh.Tree.BinnedBuild(subtrees, pool: BufferPool);
+                mesh.Tree.BinnedBuild(subtrees, ThreadDispatcher, pool: BufferPool);
             }, "Revamp Single Axis MT", ref mesh.Tree);
 
             //BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);

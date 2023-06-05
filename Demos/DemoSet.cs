@@ -46,6 +46,7 @@ namespace Demos
 
         public DemoSet()
         {
+            //AddOption<BroadPhaseStressTestDemo>();
             //AddOption<FountainStressTestDemo>();
             //AddOption<TreeFiddlingTestDemo>();
             //AddOption<TaskQueueTestDemo>();
