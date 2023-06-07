@@ -125,9 +125,13 @@ namespace Demos.SpecializedTests
                 motion.Velocity.Linear = offset;
             }
 
+            //Simulation.BroadPhase.ActiveTree.CacheOptimize(0);
+            //Simulation.BroadPhase.StaticTree.CacheOptimize(0);
             base.Update(window, camera, input, dt);
             refineTimes.Add(Simulation.Profiler[Simulation.BroadPhase]);
             testTimes.Add(Simulation.Profiler[Simulation.BroadPhaseOverlapFinder]);
+
+
             if (frameCount++ % sampleCount == 0)
             {
                 var refineStats = refineTimes.ComputeStats();
@@ -136,6 +140,18 @@ namespace Demos.SpecializedTests
                 Console.WriteLine($"Test:   {testStats.Average * 1000} ms average, {testStats.StdDev * 1000} stddev");
                 Console.WriteLine($"Active Cost: {Simulation.BroadPhase.ActiveTree.MeasureCostMetric()}");
                 Console.WriteLine($"Static Cost: {Simulation.BroadPhase.StaticTree.MeasureCostMetric()}");
+                Console.WriteLine($"Active CQ:   {Simulation.BroadPhase.ActiveTree.MeasureCacheQuality()}");
+                Console.WriteLine($"Static CQ:   {Simulation.BroadPhase.StaticTree.MeasureCacheQuality()}");
+
+                var a = Stopwatch.GetTimestamp();
+                Simulation.BroadPhase.ActiveTree.Refit2();
+                var b = Stopwatch.GetTimestamp();
+                Simulation.BroadPhase.StaticTree.Refit2();
+                var c = Stopwatch.GetTimestamp();
+
+
+                Console.WriteLine($"Manual ST refit active: {1e3 * (b - a) / Stopwatch.Frequency} ms");
+                Console.WriteLine($"Manual ST refit static: {1e3 * (c - b) / Stopwatch.Frequency} ms");
 
             }
         }
