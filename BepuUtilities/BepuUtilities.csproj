@@ -45,7 +45,7 @@
 
   <!-- Needed for Source Link package debugging, see https://github.com/dotnet/sourcelink -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
 
 </Project>

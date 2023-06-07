@@ -7,10 +7,8 @@ using DemoRenderer;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Threading;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Reflection.Metadata;
-using BepuUtilities.TestLinkedTaskStack;
+using BepuUtilities.TaskScheduling;
 
 namespace Demos.SpecializedTests;
 
@@ -68,7 +66,7 @@ public unsafe class TaskQueueTestDemo : Demo
             var context1 = new DynamicContext1 { Context = typedContext };
             var context2 = new DynamicContext2 { Context = typedContext };
 
-            var stack = (LinkedTaskStack*)typedContext->TaskPile;
+            var stack = (TaskStack*)typedContext->TaskPile;
             stack->For(&DynamicallyEnqueuedTest1, &context1, 0, subtaskCount, workerIndex, dispatcher);
             stack->For(&DynamicallyEnqueuedTest2, &context2, 0, subtaskCount, workerIndex, dispatcher);
         }
@@ -99,8 +97,8 @@ public unsafe class TaskQueueTestDemo : Demo
     {
         //if (workerIndex > 1)
         //    return;
-        var taskStack = (LinkedTaskStack*)dispatcher.UnmanagedContext;
-        while (taskStack->TryPopAndRun(workerIndex, dispatcher) != BepuUtilities.TestLinkedTaskStack.PopTaskResult.Stop) ;
+        var taskStack = (TaskStack*)dispatcher.UnmanagedContext;
+        while (taskStack->TryPopAndRun(workerIndex, dispatcher) != PopTaskResult.Stop) ;
 
     }
 
@@ -113,7 +111,7 @@ public unsafe class TaskQueueTestDemo : Demo
     static void IssueStop<T>(long id, void* context, int workerIndex, IThreadDispatcher dispatcher) where T : unmanaged
     {
         var typedContext = (Context*)context;
-        ((LinkedTaskStack*)typedContext->TaskPile)->RequestStop();
+        ((TaskStack*)typedContext->TaskPile)->RequestStop();
 
     }
 
@@ -146,19 +144,19 @@ public unsafe class TaskQueueTestDemo : Demo
 
         for (int i = 0; i < 10; ++i)
         {
-            var linkedTaskStack = new LinkedTaskStack(BufferPool, ThreadDispatcher, ThreadDispatcher.ThreadCount);
+            var linkedTaskStack = new TaskStack(BufferPool, ThreadDispatcher, ThreadDispatcher.ThreadCount);
             var linkedTaskStackPointer = &linkedTaskStack;
             Test(() =>
             {
                 var context = new Context { TaskPile = linkedTaskStackPointer };
-                var continuation = linkedTaskStackPointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new BepuUtilities.TestLinkedTaskStack.Task(&IssueStop<LinkedTaskStack>, &context));
+                var continuation = linkedTaskStackPointer->AllocateContinuation(iterationCount * tasksPerIteration, 0, ThreadDispatcher, new Task(&IssueStop<TaskStack>, &context));
                 for (int i = 0; i < iterationCount; ++i)
                 {
-                    linkedTaskStackPointer->PushForUnsafely(&Test<LinkedTaskStack>, &context, i * tasksPerIteration, tasksPerIteration, 0, ThreadDispatcher, continuation: continuation);
+                    linkedTaskStackPointer->PushForUnsafely(&Test<TaskStack>, &context, i * tasksPerIteration, tasksPerIteration, 0, ThreadDispatcher, continuation: continuation);
                 }
                 //taskQueuePointer->TryEnqueueStopUnsafely();
                 //taskQueuePointer->EnqueueTasks()
-                ThreadDispatcher.DispatchWorkers(&DispatcherBody<LinkedTaskStack>, unmanagedContext: linkedTaskStackPointer);
+                ThreadDispatcher.DispatchWorkers(&DispatcherBody<TaskStack>, unmanagedContext: linkedTaskStackPointer);
                 return context.Sum;
             }, "MT Linked Stack", () => linkedTaskStackPointer->Reset(ThreadDispatcher));
             linkedTaskStack.Dispose(BufferPool, ThreadDispatcher);

@@ -1,25 +1,15 @@
-﻿using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
-using BepuPhysics.Constraints;
-using BepuPhysics.Constraints.Contact;
-using BepuUtilities;
+﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using BepuUtilities.TestLinkedTaskStack;
+using BepuUtilities.TaskScheduling;
 using System;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Net;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 using System.Threading;
-using System.Threading.Tasks.Sources;
-using System.Xml.Linq;
 
 namespace BepuPhysics.Trees
 {
@@ -421,7 +411,7 @@ namespace BepuPhysics.Trees
         }
         unsafe struct MultithreadBinnedBuildContext : IBinnedBuilderThreading
         {
-            public LinkedTaskStack* TaskStack;
+            public TaskStack* TaskStack;
             /// <summary>
             /// The number of subtrees present at the root of the build.
             /// </summary>
@@ -1257,7 +1247,7 @@ namespace BepuPhysics.Trees
         /// <param name="leafToBinMultiplier">Multiplier to apply to the subtree count within a node to decide the bin count. Resulting value will then be clamped by the minimum/maximum bin counts.</param>
         /// <param name="microsweepThreshold">Threshold at or under which the binned builder resorts to local counting sort sweeps.</param>
         static unsafe void BinnedBuilderInternal(Buffer<NodeChild> subtrees, Buffer<NodeChild> subtreesPong, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves, Buffer<byte> binIndices,
-            IThreadDispatcher dispatcher, LinkedTaskStack* taskStackPointer, int workerCount, BufferPool pool, int minimumBinCount, int maximumBinCount, float leafToBinMultiplier, int microsweepThreshold)
+            IThreadDispatcher dispatcher, TaskStack* taskStackPointer, int workerCount, BufferPool pool, int minimumBinCount, int maximumBinCount, float leafToBinMultiplier, int microsweepThreshold)
         {
             var subtreeCount = subtrees.Length;
             if (nodes.Length < subtreeCount - 1)
@@ -1323,11 +1313,11 @@ namespace BepuPhysics.Trees
                         workerContexts[i] = new BinnedBuildWorkerContext(workerBinsAllocation, ref binAllocationStart, allocatedBinCount);
                     }
 
-                    LinkedTaskStack taskStack = default;
+                    TaskStack taskStack = default;
                     bool createdTaskQueueLocally = taskStackPointer == null;
                     if (taskStackPointer == null)
                     {
-                        taskStack = new LinkedTaskStack(pool, dispatcher, workerCount);
+                        taskStack = new TaskStack(pool, dispatcher, workerCount);
                         taskStackPointer = &taskStack;
                     }
                     var threading = new MultithreadBinnedBuildContext
@@ -1368,7 +1358,7 @@ namespace BepuPhysics.Trees
         unsafe static void BinnedBuilderWorkerFunction<TLeaves>(int workerIndex, IThreadDispatcher dispatcher)
             where TLeaves : unmanaged
         {
-            var taskQueue = (LinkedTaskStack*)dispatcher.UnmanagedContext;
+            var taskQueue = (TaskStack*)dispatcher.UnmanagedContext;
             PopTaskResult popTaskResult;
             var waiter = new SpinWait();
             while ((popTaskResult = taskQueue->TryPopAndRun(workerIndex, dispatcher)) != PopTaskResult.Stop)
