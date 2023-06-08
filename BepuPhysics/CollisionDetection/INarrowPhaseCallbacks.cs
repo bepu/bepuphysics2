@@ -99,7 +99,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="childIndexA">Index of the child of collidable A in the pair. If collidable A is not compound, then this is always 0.</param>
         /// <param name="childIndexB">Index of the child of collidable B in the pair. If collidable B is not compound, then this is always 0.</param>
         /// <param name="manifold">Set of contacts detected between the collidables.</param>
-        /// <returns>True if this manifold should be considered for constraint generation, false otherwise.</returns>
+        /// <returns>True if this manifold should be considered for the parent pair's contact manifold generation, false otherwise.</returns>
         bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold);
         
         /// <summary>

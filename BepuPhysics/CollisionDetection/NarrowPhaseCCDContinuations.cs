@@ -218,7 +218,14 @@ namespace BepuPhysics.CollisionDetection
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ref ConvexContactManifold manifold)
             {
-                narrowPhase.Callbacks.ConfigureContactManifold(workerIndex, GetCollidablePair(pairId), childA, childB, ref manifold);
+                var keepManifold = narrowPhase.Callbacks.ConfigureContactManifold(workerIndex, GetCollidablePair(pairId), childA, childB, ref manifold);
+                //This looks a little weird because it is. 
+                //The other ConfigureContactManifold function (over the entire pair) has a bool return for whether a constraint should be created.
+                //For API consistency, we also have a bool return for the per-subpair case, but it's not about whether to create a constraint.
+                //It can prevent the manifold from contributing any contacts at all to the parent.
+                //The user *could* just set the manifold.Count = 0 themselves and it's completely equivalent, but shrug.
+                if (!keepManifold)
+                    manifold.Count = 0;
             }
 
             internal void Dispose()
