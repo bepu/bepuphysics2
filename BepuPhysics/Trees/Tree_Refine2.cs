@@ -166,27 +166,7 @@ public partial struct Tree
         var rootRefinementMetanodes = refinementMetanodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
         //TODO: Need to use the BinnedBuildNode path with TLeaves = LeavesHandledInPostpass.
         BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, null, pool);
-        for (int i = 0; i < rootRefinementNodes.Length; ++i)
-        {
-            //rootRefinementNodeIndices maps "refinement index space" to "real index space"; we can use it to update child pointers to the real locations.
-            var realNodeIndex = rootRefinementNodeIndices[i];
-            ref var refinedNode = ref rootRefinementNodes[i];
-            ref var refinedMetanode = ref rootRefinementMetanodes[i];
-            //Map child indices, and update leaf references..
-            if (refinedNode.A.Index >= 0)
-                refinedNode.A.Index = rootRefinementNodeIndices[refinedNode.A.Index];
-            else
-                Leaves[Encode(refinedNode.A.Index)] = new Leaf(realNodeIndex, 0);
-            if (refinedNode.B.Index >= 0)
-                refinedNode.B.Index = rootRefinementNodeIndices[refinedNode.B.Index];
-            else
-                Leaves[Encode(refinedNode.B.Index)] = new Leaf(realNodeIndex, 1);
-            if (refinedMetanode.Parent >= 0)
-                refinedMetanode.Parent = rootRefinementNodeIndices[refinedMetanode.Parent];
-            Nodes[realNodeIndex] = refinedNode;
-            Metanodes[realNodeIndex] = refinedMetanode;
-        }
-
+        ReifyRefinement(rootRefinementNodeIndices, rootRefinementNodes, rootRefinementMetanodes);
 
         //Root refine is done; execute all the subtree refinements.
         var subtreeRefinementNodeIndices = new QuickList<int>(subtreeRefinementSize, pool);
@@ -212,12 +192,37 @@ public partial struct Tree
 
             var refinementNodes = refinementNodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
             var refinementMetanodes = refinementMetanodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
-            //TODO: Binned build; mind the leaves again.
-            //TODO: Reify the binned build.
+            //TODO: Need to use the BinnedBuildNode path with TLeaves = LeavesHandledInPostpass.
+            BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, null, pool);
+            ReifyRefinement(subtreeRefinementNodeIndices, refinementNodes, refinementMetanodes);
         }
         subtreeRefinementNodeIndices.Dispose(pool);
         subtreeRefinementLeaves.Dispose(pool);
         refinementNodesAllocation.Dispose(pool);
         refinementMetanodesAllocation.Dispose(pool);
+    }
+
+    void ReifyRefinement(QuickList<int> refinementNodeIndices, Buffer<Node> refinementNodes, Buffer<Metanode> refinementMetanodes)
+    {
+        for (int i = 0; i < refinementNodeIndices.Count; ++i)
+        {
+            //refinementNodeIndices maps "refinement index space" to "real index space"; we can use it to update child pointers to the real locations.
+            var realNodeIndex = refinementNodeIndices[i];
+            ref var refinedNode = ref refinementNodes[i];
+            ref var refinedMetanode = ref refinementMetanodes[i];
+            //Map child indices, and update leaf references.
+            if (refinedNode.A.Index >= 0)
+                refinedNode.A.Index = refinementNodeIndices[refinedNode.A.Index];
+            else
+                Leaves[Encode(refinedNode.A.Index)] = new Leaf(realNodeIndex, 0);
+            if (refinedNode.B.Index >= 0)
+                refinedNode.B.Index = refinementNodeIndices[refinedNode.B.Index];
+            else
+                Leaves[Encode(refinedNode.B.Index)] = new Leaf(realNodeIndex, 1);
+            if (refinedMetanode.Parent >= 0)
+                refinedMetanode.Parent = refinementNodeIndices[refinedMetanode.Parent];
+            Nodes[realNodeIndex] = refinedNode;
+            Metanodes[realNodeIndex] = refinedMetanode;
+        }
     }
 }
