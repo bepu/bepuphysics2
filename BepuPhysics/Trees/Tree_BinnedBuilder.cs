@@ -33,6 +33,8 @@ namespace BepuPhysics.Trees
             ref var node = ref nodes[0];
             node.A = Unsafe.As<BoundingBox4, NodeChild>(ref a);
             node.B = Unsafe.As<BoundingBox4, NodeChild>(ref b);
+            node.A.LeafCount = leafCountA;
+            node.B.LeafCount = leafCountB;
             if (subtreeCountA == 1)
             {
                 aIndex = subtrees[0].Index;
@@ -153,6 +155,7 @@ namespace BepuPhysics.Trees
             {
                 ref var subtreeA = ref subtrees[0];
                 ref var subtreeB = ref subtrees[1];
+                Debug.Assert(parentNodeIndex < 0 || Unsafe.Add(ref context->Nodes[parentNodeIndex].A, childIndexInParent).LeafCount == subtreeA.LeafCount + subtreeB.LeafCount);
                 BuildNode(Unsafe.As<NodeChild, BoundingBox4>(ref subtreeA), Unsafe.As<NodeChild, BoundingBox4>(ref subtreeB), subtreeA.LeafCount, subtreeB.LeafCount, subtrees,
                     nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref leaves, out _, out _);
                 return;
@@ -255,7 +258,7 @@ namespace BepuPhysics.Trees
             var lastSubtreeIndex = subtreeCount - 1;
             BoundingBox4 accumulatedBoundingBoxB = boundingBoxes[lastSubtreeIndex];
             Unsafe.SkipInit(out BoundingBox4 bestBoundsB);
-            int accumulatedLeafCountB = 1;
+            int accumulatedLeafCountB = subtrees[lastSubtreeIndex].LeafCount;
             int bestLeafCountB = 0;
             for (int splitIndexCandidate = lastSubtreeIndex; splitIndexCandidate >= 1; --splitIndexCandidate)
             {
@@ -281,6 +284,7 @@ namespace BepuPhysics.Trees
             var subtreeCountB = subtreeCount - bestSplit;
             var bestLeafCountA = totalLeafCount - bestLeafCountB;
 
+            Debug.Assert(parentNodeIndex < 0 || Unsafe.Add(ref context->Nodes[parentNodeIndex].A, childIndexInParent).LeafCount == bestLeafCountA + bestLeafCountB);
             BuildNode(bestBoundsA, bestBoundsB, bestLeafCountA, bestLeafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref leaves, out var aIndex, out var bIndex);
             if (subtreeCountA > 1)
             {
@@ -958,6 +962,7 @@ namespace BepuPhysics.Trees
             var metanodes = context->Metanodes.Slice(nodeIndex, nodeCount);
             if (subtreeCount == 2)
             {
+                Debug.Assert(parentNodeIndex < 0 || Unsafe.Add(ref context->Nodes[parentNodeIndex].A, childIndexInParent).LeafCount == subtrees[0].LeafCount + subtrees[1].LeafCount);
                 BuildNode(boundingBoxes[0], boundingBoxes[1], subtrees[0].LeafCount, subtrees[1].LeafCount, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, 1, 1, ref context->Leaves, out _, out _);
                 return;
             }
@@ -1005,6 +1010,7 @@ namespace BepuPhysics.Trees
                     boundsB.Max = Vector4.Max(bounds.Max, boundsB.Max);
                     degenerateLeafCountB += subtrees[i].LeafCount;
                 }
+                Debug.Assert(parentNodeIndex < 0 || Unsafe.Add(ref context->Nodes[parentNodeIndex].A, childIndexInParent).LeafCount == degenerateLeafCountA + degenerateLeafCountB);
                 BuildNode(boundsA, boundsB, degenerateLeafCountA, degenerateLeafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, degenerateSubtreeCountA, degenerateSubtreeCountB, ref context->Leaves, out var aIndex, out var bIndex);
                 if (degenerateSubtreeCountA > 1)
                     BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex, aIndex, degenerateSubtreeCountA, nodeIndex, 0, boundsA, context, workerIndex, dispatcher);
@@ -1188,6 +1194,7 @@ namespace BepuPhysics.Trees
             var leafCountB = bestLeafCountB;
             var leafCountA = totalLeafCount - leafCountB;
             Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
+            Debug.Assert(parentNodeIndex < 0 || Unsafe.Add(ref context->Nodes[parentNodeIndex].A, childIndexInParent).LeafCount == leafCountA + leafCountB);
             BuildNode(bestBoundingBoxA, bestBoundingBoxB, leafCountA, leafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref context->Leaves, out var nodeChildIndexA, out var nodeChildIndexB);
 
             var targetNodeTaskCount = typeof(TThreading) == typeof(SingleThreaded) ? 1 :
