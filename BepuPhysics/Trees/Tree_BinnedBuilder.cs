@@ -36,9 +36,9 @@ namespace BepuPhysics.Trees
             if (subtreeCountA == 1)
             {
                 aIndex = subtrees[0].Index;
-                Debug.Assert(leafCountA == 1);
                 if (typeof(TLeaves) == typeof(Buffer<Leaf>))
                 {
+                    Debug.Assert(leafCountA == 1);
                     Debug.Assert(aIndex < 0, "During building, any subtreeCount of 1 should imply a leaf.");
                     //This is a leaf node, and this is a direct builder execution, so write to the leaf data.
                     Unsafe.As<TLeaves, Buffer<Leaf>>(ref leaves)[Encode(aIndex)] = new Leaf(nodeIndex, 0);
@@ -52,9 +52,9 @@ namespace BepuPhysics.Trees
             if (subtreeCountB == 1)
             {
                 bIndex = subtrees[^1].Index;
-                Debug.Assert(leafCountB == 1);
                 if (typeof(TLeaves) == typeof(Buffer<Leaf>))
                 {
+                    Debug.Assert(leafCountB == 1);
                     Debug.Assert(bIndex < 0, "During building, any subtreeCount of 1 should imply a leaf.");
                     //This is a leaf node, and this is a direct builder execution, so write to the leaf data.
                     Unsafe.As<TLeaves, Buffer<Leaf>>(ref leaves)[Encode(bIndex)] = new Leaf(nodeIndex, 1);
@@ -1236,7 +1236,8 @@ namespace BepuPhysics.Trees
         /// Metanodes, like nodes, are created in a depth first ordering with respect to the input buffer.
         /// Metanodes are in the same order and in the same slots; they simply contain data about nodes that most traversals don't need to know about.</param>
         /// <param name="leaves">Buffer holding the leaf references created by the build process.<para/>
-        /// The indices written by the build process are those defined in the inputs; any <see cref="NodeChild.Index"/> that is negative is encoded according to <see cref="Tree.Encode(int)"/> and points into the leaf buffer.</param>
+        /// The indices written by the build process are those defined in the inputs; any <see cref="NodeChild.Index"/> that is negative is encoded according to <see cref="Tree.Encode(int)"/> and points into the leaf buffer.
+        /// If a default-valued (unallocated) buffer is passed in, the binned builder will ignore leaves.</param>
         /// <param name="binIndices">Buffer to be used for caching bin indices during execution. If subtreesPong is defined, binIndices must also be defined, and vice versa.</param>
         /// <param name="dispatcher">Thread dispatcher used to accelerate the build process.</param>
         /// <param name="taskStackPointer">Task stack used to accelerate the build process. Can be null; one will be created if not provided.</param>
@@ -1286,10 +1287,20 @@ namespace BepuPhysics.Trees
                 var binBoundsMemory = new Buffer<byte>(binBoundsMemoryAllocation, allocatedByteCount);
 
                 var threading = new SingleThreaded(binBoundsMemory, allocatedBinCount);
-                var context = new Context<Buffer<Leaf>, SingleThreaded>(
-                    minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
-                     subtrees, default, leaves, nodes, metanodes, binIndices, threading);
-                BinnedBuildNode(false, 0, 0, subtreeCount, -1, -1, default, &context, 0, null);
+                if (leaves.Allocated)
+                {
+                    var context = new Context<Buffer<Leaf>, SingleThreaded>(
+                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
+                         subtrees, default, leaves, nodes, metanodes, binIndices, threading);
+                    BinnedBuildNode(false, 0, 0, subtreeCount, -1, -1, default, &context, 0, null);
+                }
+                else
+                {
+                    var context = new Context<LeavesHandledInPostPass, SingleThreaded>(
+                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
+                         subtrees, default, default, nodes, metanodes, binIndices, threading);
+                    BinnedBuildNode(false, 0, 0, subtreeCount, -1, -1, default, &context, 0, null);
+                }
             }
             else
             {
@@ -1327,12 +1338,24 @@ namespace BepuPhysics.Trees
                         TaskStack = taskStackPointer,
                         Workers = workerContexts,
                     };
-                    var context = new Context<Buffer<Leaf>, MultithreadBinnedBuildContext>(
-                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
-                        subtrees, subtreesPong, leaves, nodes, metanodes, binIndices, threading);
+                    if (leaves.Allocated)
+                    {
+                        var context = new Context<Buffer<Leaf>, MultithreadBinnedBuildContext>(
+                            minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
+                            subtrees, subtreesPong, leaves, nodes, metanodes, binIndices, threading);
 
-                    taskStackPointer->PushUnsafely(new Task(&BinnedBuilderWorkerEntry<Buffer<Leaf>>, &context), 0, dispatcher);
-                    dispatcher.DispatchWorkers(&BinnedBuilderWorkerFunction<Buffer<Leaf>>, unmanagedContext: taskStackPointer, maximumWorkerCount: workerCount);
+                        taskStackPointer->PushUnsafely(new Task(&BinnedBuilderWorkerEntry<Buffer<Leaf>>, &context), 0, dispatcher);
+                        dispatcher.DispatchWorkers(&BinnedBuilderWorkerFunction<Buffer<Leaf>>, unmanagedContext: taskStackPointer, maximumWorkerCount: workerCount);
+                    }
+                    else
+                    {
+                        var context = new Context<LeavesHandledInPostPass, MultithreadBinnedBuildContext>(
+                            minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
+                            subtrees, subtreesPong, default, nodes, metanodes, binIndices, threading);
+
+                        taskStackPointer->PushUnsafely(new Task(&BinnedBuilderWorkerEntry<LeavesHandledInPostPass>, &context), 0, dispatcher);
+                        dispatcher.DispatchWorkers(&BinnedBuilderWorkerFunction<LeavesHandledInPostPass>, unmanagedContext: taskStackPointer, maximumWorkerCount: workerCount);
+                    }
 
                     if (createdTaskQueueLocally)
                         taskStack.Dispose(pool, dispatcher);
@@ -1378,7 +1401,8 @@ namespace BepuPhysics.Trees
         /// Metanodes, like nodes, are created in a depth first ordering with respect to the input buffer.
         /// Metanodes are in the same order and in the same slots; they simply contain data about nodes that most traversals don't need to know about.</param>
         /// <param name="leaves">Buffer holding the leaf references created by the build process.<para/>
-        /// The indices written by the build process are those defined in the inputs; any <see cref="NodeChild.Index"/> that is negative is encoded according to <see cref="Tree.Encode(int)"/> and points into the leaf buffer.</param>
+        /// The indices written by the build process are those defined in the inputs; any <see cref="NodeChild.Index"/> that is negative is encoded according to <see cref="Tree.Encode(int)"/> and points into the leaf buffer.
+        /// If a default-valued (unallocated) buffer is passed in, the binned builder will ignore leaves.</param>
         /// <param name="dispatcher">Dispatcher used to multithread the execution of the build. If the dispatcher is not null, pool must also not be null.</param>
         /// <param name="pool">Buffer pool used to preallocate a pingpong buffer if the number of subtrees exceeds maximumSubtreeStackAllocationCount. If null, stack allocation or a slower in-place partitioning will be used.
         /// <para/>A pool must be provided if a thread dispatcher is given.</param>
