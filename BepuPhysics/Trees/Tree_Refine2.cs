@@ -1,5 +1,6 @@
 ﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -170,7 +171,9 @@ public partial struct Tree
         subtreeRefinementCandidates.Dispose(pool);
 
         //We now have the set of root refinement subtrees. Root refine!
-        //TODO: The nodes collected during the root refinement are not ordered, so may destroy existing cache coherency. Sorting it would help.
+        //The nodes collected during the root refinement are not ordered, so may destroy existing cache coherency.
+        //Sorting *may* help in some cases, but not enough to warrant it by default.
+        //((Span<int>)rootRefinementNodeIndices).Sort();
         Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
         var refinementNodesAllocation = new Buffer<Node>(int.Max(rootRefinementNodeIndices.Count, subtreeRefinementSize), pool);
         var refinementMetanodesAllocation = new Buffer<Metanode>(refinementNodesAllocation.Length, pool);
