@@ -1,24 +1,31 @@
-﻿using BepuPhysics.Constraints.Contact;
-using BepuUtilities.Collections;
+﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BepuPhysics.Trees;
 
 public partial struct Tree
 {
+    const int flagForRootRefinementSubtree = 1 << 30;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void AppendRootRefinementInternalSubtree(ref QuickList<NodeChild> rootSubtrees, in NodeChild child)
+    {
+        ref var allocatedChild = ref rootSubtrees.AllocateUnsafely();
+        allocatedChild = child;
+        //Internal nodes used as subtrees by the root refinement are flagged.
+        Debug.Assert(allocatedChild.Index < flagForRootRefinementSubtree, "The use of an upper index bit as flag means the binned refiner cannot handle trees with billions of children.");
+        if (allocatedChild.Index >= 0)
+            allocatedChild.Index |= flagForRootRefinementSubtree;
+
+    }
+
     /// <summary>
     /// Incrementally refines a subset of the tree by running a binned builder over subtrees.
     /// </summary>
     /// <param name="refinementStartIndex">Index used to distribute refinements over multiple executions.</param>
     /// <remarks>Nodes will not be refit.</remarks>
-    internal void Refine2(ref int refinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, int rootRefinementSize, BufferPool pool)
+    public void Refine2(ref int refinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, int rootRefinementSize, BufferPool pool)
     {
         //1. The root gets traversed by every traversal, so refinement always refines the region close to the root.
         //2. Subtrees dangling off the root region are refined incrementally over time.
@@ -73,6 +80,7 @@ public partial struct Tree
         for (int i = 0; i < effectiveSubtreeRefinementCount; ++i)
         {
             var candidate = subtreeRefinementCandidates[refinementStartIndex];
+            Debug.Assert(Nodes[candidate].A.LeafCount + Nodes[candidate].B.LeafCount <= subtreeRefinementSize);
             subtreeRefinementTargets.AllocateUnsafely() = candidate;
             //Note that refinement targets are *also* subtrees for the root refinement.
             //Add the NodeChild associated with the refinement target to the root refinement list.
@@ -80,7 +88,7 @@ public partial struct Tree
             if (metanode.Parent >= 0)
             {
                 ref var childOfParent = ref Unsafe.Add(ref Nodes[metanode.Parent].A, metanode.IndexInParent);
-                rootRefinementSubtrees.AllocateUnsafely() = childOfParent;
+                AppendRootRefinementInternalSubtree(ref rootRefinementSubtrees, childOfParent);
             }
             ++refinementStartIndex;
             if (refinementStartIndex >= subtreeRefinementCandidates.Count)
@@ -105,7 +113,7 @@ public partial struct Tree
             var subtreeSurplus = 0;
             for (int i = 0; i < traversalRestartCount; ++i)
             {
-                var targetAmountForCandidate = baseAmountPerCandidate + subtreeSurplus;
+                var targetAmountForCandidate = baseAmountPerCandidate;
                 if (i < remainder) ++targetAmountForCandidate;
                 var candidate = subtreeRefinementCandidates[refinementCandidateIndex];
                 ref var candidateNode = ref Nodes[candidate];
@@ -115,7 +123,7 @@ public partial struct Tree
                 //We do make a very lazy attempt at redistributing: if we can't fit the full amount, we'll carry over the rest to the next candidate.
                 //If we can't allocate all the budget, shrugohwell. Don't really want to iterate.
                 var candidateLeafCount = candidateNode.A.LeafCount + candidateNode.B.LeafCount;
-                var amountForCandidate = int.Min(targetAmountForCandidate, candidateLeafCount);
+                var amountForCandidate = int.Min(targetAmountForCandidate + subtreeSurplus, candidateLeafCount);
                 largestRestartedTraversalLeafCount = int.Max(largestRestartedTraversalLeafCount, amountForCandidate);
                 subtreeSurplus += targetAmountForCandidate - amountForCandidate;
                 traversalRestarts.AllocateUnsafely() = (candidate, amountForCandidate);
@@ -137,24 +145,29 @@ public partial struct Tree
                     ref var node = ref Nodes[entry.nodeToVisit];
                     rootRefinementNodeIndices.AllocateUnsafely() = entry.nodeToVisit;
                     var maximumLeafCount = entry.maximumLeafCount;
-                    var aLeafCount = int.Min(node.A.LeafCount, maximumLeafCount / 2);
-                    var bLeafCount = maximumLeafCount - aLeafCount;
+                    int smallerLeafCount = int.Min(node.A.LeafCount, node.B.LeafCount);
+                    var targetLeafCountForSmaller = int.Min(smallerLeafCount, (maximumLeafCount + 1) / 2);
+                    var targetLeafCountForLarger = maximumLeafCount - targetLeafCountForSmaller;
+                    var aIsSmaller = node.A.LeafCount < node.B.LeafCount;
+                    var aLeafCount = aIsSmaller ? targetLeafCountForSmaller : targetLeafCountForLarger;
+                    var bLeafCount = aIsSmaller ? targetLeafCountForLarger : targetLeafCountForSmaller;
                     Debug.Assert(bLeafCount <= node.B.LeafCount, "The node visited in this traversal should never see a target leaf count that exceeds what could fit in the children.");
                     Debug.Assert(aLeafCount > 0 && bLeafCount > 0, "Splitting subtree budget between children should never yield zero sized subtrees.");
                     //B pushed first so A is popped first; some degree of consistent local DFS ordering.
                     if (bLeafCount > 1)
                         traversalRestartStack.AllocateUnsafely() = (node.B.Index, bLeafCount);
                     else
-                        rootRefinementSubtrees.AllocateUnsafely() = node.B;
+                        AppendRootRefinementInternalSubtree(ref rootRefinementSubtrees, node.B);
                     if (aLeafCount > 1)
                         traversalRestartStack.AllocateUnsafely() = (node.A.Index, aLeafCount);
                     else
-                        rootRefinementSubtrees.AllocateUnsafely() = node.A;
+                        AppendRootRefinementInternalSubtree(ref rootRefinementSubtrees, node.A);
                 }
             }
             traversalRestarts.Dispose(pool);
             traversalRestartStack.Dispose(pool);
         }
+        subtreeRefinementCandidates.Dispose(pool);
 
         //We now have the set of root refinement subtrees. Root refine!
         //TODO: The nodes collected during the root refinement are not ordered, so may destroy existing cache coherency. Sorting it would help.
@@ -162,11 +175,27 @@ public partial struct Tree
         var refinementNodesAllocation = new Buffer<Node>(int.Max(rootRefinementNodeIndices.Count, subtreeRefinementSize), pool);
         var refinementMetanodesAllocation = new Buffer<Metanode>(refinementNodesAllocation.Length, pool);
 
+        //Validate();
         var rootRefinementNodes = refinementNodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
         var rootRefinementMetanodes = refinementMetanodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
-        //TODO: Need to use the BinnedBuildNode path with TLeaves = LeavesHandledInPostpass.
+        //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
         BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, null, pool);
-        ReifyRefinement(rootRefinementNodeIndices, rootRefinementNodes, rootRefinementMetanodes);
+        ReifyRootRefinement(rootRefinementNodeIndices, rootRefinementNodes);
+        rootRefinementSubtrees.Dispose(pool);
+        rootRefinementNodeIndices.Dispose(pool);
+
+        for (int i = 0; i < NodeCount; ++i)
+        {
+            var node = Nodes[i];
+            var expectedParentLeafCount = node.A.LeafCount + node.B.LeafCount;
+            var metanode = Metanodes[i];
+            if (metanode.Parent >= 0)
+            {
+                Debug.Assert(Unsafe.Add(ref Nodes[metanode.Parent].A, metanode.IndexInParent).LeafCount == expectedParentLeafCount);
+            }
+        }
+
+        //Validate();
 
         //Root refine is done; execute all the subtree refinements.
         var subtreeRefinementNodeIndices = new QuickList<int>(subtreeRefinementSize, pool);
@@ -174,6 +203,7 @@ public partial struct Tree
         for (int i = 0; i < subtreeRefinementTargets.Count; ++i)
         {
             //Accumulate nodes and leaves with a prepass.
+            Debug.Assert(stack.Count == 0 && subtreeRefinementNodeIndices.Count == 0);
             stack.AllocateUnsafely() = subtreeRefinementTargets[i];
             while (stack.TryPop(out var nodeToVisit))
             {
@@ -189,40 +219,108 @@ public partial struct Tree
                     subtreeRefinementLeaves.AllocateUnsafely() = node.A;
             }
 
-
-            var refinementNodes = refinementNodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
-            var refinementMetanodes = refinementMetanodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
-            //TODO: Need to use the BinnedBuildNode path with TLeaves = LeavesHandledInPostpass.
+            var refinementNodes = refinementNodesAllocation.Slice(0, subtreeRefinementNodeIndices.Count);
+            var refinementMetanodes = refinementMetanodesAllocation.Slice(0, subtreeRefinementNodeIndices.Count);
+            //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
             BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, null, pool);
-            ReifyRefinement(subtreeRefinementNodeIndices, refinementNodes, refinementMetanodes);
+            ReifyRefinement(subtreeRefinementNodeIndices, refinementNodes);
+
+            subtreeRefinementNodeIndices.Count = 0;
+            subtreeRefinementLeaves.Count = 0;
         }
+        subtreeRefinementTargets.Dispose(pool);
+        stack.Dispose(pool);
         subtreeRefinementNodeIndices.Dispose(pool);
         subtreeRefinementLeaves.Dispose(pool);
         refinementNodesAllocation.Dispose(pool);
         refinementMetanodesAllocation.Dispose(pool);
+        //Validate();
     }
 
-    void ReifyRefinement(QuickList<int> refinementNodeIndices, Buffer<Node> refinementNodes, Buffer<Metanode> refinementMetanodes)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    void ReifyRootRefinementNodeChild(ref int index, ref QuickList<int> refinementNodeIndices, int realNodeIndex, int childIndexInParent)
+    {
+        //Root refinements mark internal subtrees with a flag in the second to last index.
+        if (index < 0)
+        {
+            //The child is a leaf.
+            Leaves[Encode(index)] = new Leaf(realNodeIndex, childIndexInParent);
+        }
+        else
+        {
+            //The child is an internal node.
+            if ((uint)index < flagForRootRefinementSubtree)
+            {
+                //The child is an internal node that is part of the refinement; remap its index to point at the real memory location.
+                index = refinementNodeIndices[index];
+            }
+            else
+            {
+                //The child is an internal node that is *not* part of the refinement: it's a subtree endpoint.
+                //No remapping is required, but we do need to strip off the 'this is a subtree endpoint of the refinement' flag.
+                index &= ~flagForRootRefinementSubtree;
+            }
+            //Just as leaves need to be updated to point at the new node state, parent pointers for internal nodes need be updated too.
+            //Note that this touches memory associated with nodes that weren't included in the refinement.
+            //This is only safe if the subtree refinement either occurs sequentially with root refinement, or the subtree refinement doesn't touch the subtree refinement root's metanode.
+            ref var childMetanode = ref Metanodes[index];
+            childMetanode.Parent = realNodeIndex;
+            childMetanode.IndexInParent = childIndexInParent;
+        }
+    }
+
+    void ReifyRootRefinement(QuickList<int> refinementNodeIndices, Buffer<Node> refinementNodes)
     {
         for (int i = 0; i < refinementNodeIndices.Count; ++i)
         {
             //refinementNodeIndices maps "refinement index space" to "real index space"; we can use it to update child pointers to the real locations.
             var realNodeIndex = refinementNodeIndices[i];
             ref var refinedNode = ref refinementNodes[i];
-            ref var refinedMetanode = ref refinementMetanodes[i];
             //Map child indices, and update leaf references.
-            if (refinedNode.A.Index >= 0)
-                refinedNode.A.Index = refinementNodeIndices[refinedNode.A.Index];
-            else
-                Leaves[Encode(refinedNode.A.Index)] = new Leaf(realNodeIndex, 0);
-            if (refinedNode.B.Index >= 0)
-                refinedNode.B.Index = refinementNodeIndices[refinedNode.B.Index];
-            else
-                Leaves[Encode(refinedNode.B.Index)] = new Leaf(realNodeIndex, 1);
-            if (refinedMetanode.Parent >= 0)
-                refinedMetanode.Parent = refinementNodeIndices[refinedMetanode.Parent];
+            ReifyRootRefinementNodeChild(ref refinedNode.A.Index, ref refinementNodeIndices, realNodeIndex, 0);
+            ReifyRootRefinementNodeChild(ref refinedNode.B.Index, ref refinementNodeIndices, realNodeIndex, 1);
             Nodes[realNodeIndex] = refinedNode;
-            Metanodes[realNodeIndex] = refinedMetanode;
+            Debug.Assert(Metanodes[realNodeIndex].Parent < 0 || Unsafe.Add(ref Nodes[Metanodes[realNodeIndex].Parent].A, Metanodes[realNodeIndex].IndexInParent).LeafCount == refinedNode.A.LeafCount + refinedNode.B.LeafCount);
+            Debug.Assert(Metanodes[realNodeIndex].Parent < 0 || Unsafe.Add(ref Nodes[Metanodes[realNodeIndex].Parent].A, Metanodes[realNodeIndex].IndexInParent).Index == realNodeIndex);
+        }
+    }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    void ReifyRefinementNodeChild(ref int index, ref QuickList<int> refinementNodeIndices, int realNodeIndex, int childIndexInParent)
+    {
+        //Root refinements mark internal subtrees with a flag in the second to last index.
+        if (index < 0)
+        {
+            //The child is a leaf.
+            Leaves[Encode(index)] = new Leaf(realNodeIndex, childIndexInParent);
+        }
+        else
+        {
+            //The child is an internal node that is part of the refinement; remap its index to point at the real memory location.
+            index = refinementNodeIndices[index];
+            //Just as leaves need to be updated to point at the new node state, parent pointers for internal nodes need be updated too.
+            //Note that this touches memory associated with nodes that weren't included in the refinement.
+            //This is only safe if the subtree refinement either occurs sequentially with root refinement, or the subtree refinement doesn't touch the subtree refinement root's metanode.
+            ref var childMetanode = ref Metanodes[index];
+            childMetanode.Parent = realNodeIndex;
+            childMetanode.IndexInParent = childIndexInParent;
+        }
+    }
+
+    void ReifyRefinement(QuickList<int> refinementNodeIndices, Buffer<Node> refinementNodes)
+    {
+        for (int i = 0; i < refinementNodeIndices.Count; ++i)
+        {
+            //refinementNodeIndices maps "refinement index space" to "real index space"; we can use it to update child pointers to the real locations.
+            var realNodeIndex = refinementNodeIndices[i];
+            ref var refinedNode = ref refinementNodes[i];
+            //Map child indices, and update leaf references.
+            //Root refinements mark internal subtrees with a flag in the second to last index.
+            ReifyRefinementNodeChild(ref refinedNode.A.Index, ref refinementNodeIndices, realNodeIndex, 0);
+            ReifyRefinementNodeChild(ref refinedNode.B.Index, ref refinementNodeIndices, realNodeIndex, 1);
+            Nodes[realNodeIndex] = refinedNode;
+            Debug.Assert(Metanodes[realNodeIndex].Parent < 0 || Unsafe.Add(ref Nodes[Metanodes[realNodeIndex].Parent].A, Metanodes[realNodeIndex].IndexInParent).Index == realNodeIndex);
         }
     }
 }
