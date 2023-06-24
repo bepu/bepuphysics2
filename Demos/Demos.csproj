@@ -17,7 +17,6 @@
     <Optimize>true</Optimize>
     <DefineConstants>TRACE;RELEASE</DefineConstants>
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">

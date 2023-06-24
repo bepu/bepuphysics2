@@ -164,31 +164,62 @@ public unsafe class TreeFiddlingTestDemo : Demo
             //var mesh = new Mesh(triangles, Vector3.One, BufferPool);
             var mesh = DemoMeshHelper.CreateGiantMeshFast(triangles, Vector3.One, BufferPool);
 
+            int refinementState = 0;
+            long sum = 0;
+            int cacheOptimizationStart = 0;
+            for (int refinementIndex = 0; refinementIndex < 16384; ++refinementIndex)
+            {
+                //mesh.Tree.CacheOptimizeLimitedSubtree(0, 4096);
+                //mesh.Tree.CacheOptimize(0);
+                //var optimizedCount = mesh.Tree.CacheOptimizeRegion(0, int.MaxValue);
+                //int localOptimizationCount = 0;
+                //const int targetOptimizationCount = 8192;
+                //while (localOptimizationCount < targetOptimizationCount)
+                //{
+                //    var optimizedCount = mesh.Tree.CacheOptimizeRegion(cacheOptimizationStart, targetOptimizationCount);
+                //    localOptimizationCount += optimizedCount;
+                //    cacheOptimizationStart += optimizedCount;
+                //    if (cacheOptimizationStart >= mesh.Tree.NodeCount)
+                //        cacheOptimizationStart -= mesh.Tree.NodeCount;
+                //}
+                var start = Stopwatch.GetTimestamp();
+                //mesh.Tree.Refine2(8192, ref refinementState, 1, 8192, BufferPool);
+                mesh.Tree.Refine3(32768, ref refinementState, 1, 32768, BufferPool);
+                var end = Stopwatch.GetTimestamp();
+                sum += end - start;
+                if ((refinementIndex + 1) % 128 == 0)
+                {
+                    var cacheQuality = mesh.Tree.MeasureCacheQuality();
+                    var costMetric = mesh.Tree.MeasureCostMetric();
+                    Console.WriteLine($"cost, cache for {refinementIndex}: {costMetric}, {cacheQuality}");
+                    Console.WriteLine($"Time (average) (ms): {(end - start) * 1e3 / Stopwatch.Frequency}, {sum * 1e3 / ((refinementIndex + 1) * Stopwatch.Frequency)}");
+                }
+            }
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
             Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
             Console.WriteLine($"initial SAH: {mesh.Tree.MeasureCostMetric()}, cache quality: {mesh.Tree.MeasureCacheQuality()}");
             Console.WriteLine($"initial bounds: A ({mesh.Tree.Nodes[0].A.Min}, {mesh.Tree.Nodes[0].B.Max}), B ({mesh.Tree.Nodes[0].B.Min}, {mesh.Tree.Nodes[0].B.Max})");
 
-            BufferPool.Take<NodeChild>(mesh.Triangles.Length, out var subtrees);
+            //BufferPool.Take<NodeChild>(mesh.Triangles.Length, out var subtrees);
 
-            Action setup = () =>
-            {
-                for (int i = 0; i < mesh.Triangles.Length; ++i)
-                {
-                    ref var t = ref mesh.Triangles[i];
-                    ref var subtree = ref subtrees[i];
-                    subtree.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
-                    subtree.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
-                    subtree.Index = Tree.Encode(i);
-                    subtree.LeafCount = 1;
-                }
-            };
+            //Action setup = () =>
+            //{
+            //    for (int i = 0; i < mesh.Triangles.Length; ++i)
+            //    {
+            //        ref var t = ref mesh.Triangles[i];
+            //        ref var subtree = ref subtrees[i];
+            //        subtree.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
+            //        subtree.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
+            //        subtree.Index = Tree.Encode(i);
+            //        subtree.LeafCount = 1;
+            //    }
+            //};
 
-            BinnedTest(setup, () =>
-            {
-                mesh.Tree.BinnedBuild(subtrees, ThreadDispatcher, pool: BufferPool);
-            }, "Revamp Single Axis MT", ref mesh.Tree);
+            //BinnedTest(setup, () =>
+            //{
+            //    mesh.Tree.BinnedBuild(subtrees, ThreadDispatcher, pool: BufferPool);
+            //}, "Revamp Single Axis MT", ref mesh.Tree);
 
             //BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
             //BufferPool.Take<int>(mesh.Triangles.Length, out var leafIndices);
