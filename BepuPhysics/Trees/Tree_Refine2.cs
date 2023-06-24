@@ -160,15 +160,15 @@ public partial struct Tree
 
 
 
-    bool IsNodeChildSubtreeRefinementTarget(in QuickList<int> subtreeRefinements, in NodeChild child, int parentTotalLeafCount, int subtreeRefinementSize)
+    bool IsNodeChildSubtreeRefinementTarget(Buffer<int> subtreeRefinements, in NodeChild child, int parentTotalLeafCount, int subtreeRefinementSize)
     {
         //First check if it *could* be one by checking the leaf count threshold.
         if (child.LeafCount <= subtreeRefinementSize && parentTotalLeafCount > subtreeRefinementSize)
         {
             //It may be a subtree refinement. Do a deeper test!
-            var vectorCount = BundleIndexing.GetBundleCount(subtreeRefinements.Count);
+            var vectorCount = BundleIndexing.GetBundleCount(subtreeRefinements.Length);
             var search = new Vector<int>(child.Index);
-            var vectors = subtreeRefinements.Span.As<Vector<int>>();
+            var vectors = subtreeRefinements.As<Vector<int>>();
             for (int i = 0; i < vectorCount; ++i)
             {
                 if (Vector.EqualsAny(search, vectors[i]))
@@ -182,7 +182,7 @@ public partial struct Tree
     /// Checks if a child should be a subtree in the root refinement. If so, it's added to the list. Otherwise, it's pushed onto the stack.
     /// </summary>
     private void TryPushChildForRootRefinement(
-         int subtreeRefinementSize, in QuickList<int> subtreeRefinementRoots, int nodeTotalLeafCount, int subtreeBudget, in NodeChild child, ref QuickList<(int nodeIndex, int subtreeBudget)> stack, ref QuickList<NodeChild> rootRefinementSubtrees)
+         int subtreeRefinementSize, Buffer<int> subtreeRefinementRoots, int nodeTotalLeafCount, int subtreeBudget, in NodeChild child, ref QuickList<(int nodeIndex, int subtreeBudget)> stack, ref QuickList<NodeChild> rootRefinementSubtrees)
     {
         //We automatically accept any child as a subtree for the refinement process if:
         //1. It's a leaf node, or
@@ -215,6 +215,49 @@ public partial struct Tree
         }
     }
 
+    void CollectSubtreesForRootRefinement(int rootRefinementSize, int subtreeRefinementSize, BufferPool pool, in QuickList<int> subtreeRefinementTargets, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
+    {
+        var rootStack = new QuickList<(int nodeIndex, int subtreeBudget)>(rootRefinementSize, pool);
+        rootStack.AllocateUnsafely() = (0, rootRefinementSize);
+        var subtreeRefinementTargetsBuffer = subtreeRefinementTargets.Span[..subtreeRefinementTargets.Count];
+        while (rootStack.TryPop(out var nodeToVisit))
+        {
+            rootRefinementNodeIndices.AllocateUnsafely() = nodeToVisit.nodeIndex;
+            ref var node = ref Nodes[nodeToVisit.nodeIndex];
+            var nodeTotalLeafCount = node.A.LeafCount + node.B.LeafCount;
+            Debug.Assert(nodeToVisit.subtreeBudget <= nodeTotalLeafCount);
+            var lowerSubtreeBudget = int.Min((nodeToVisit.subtreeBudget + 1) / 2, int.Min(node.A.LeafCount, node.B.LeafCount));
+            var higherSubtreeBudget = nodeToVisit.subtreeBudget - lowerSubtreeBudget;
+            var useSmallerForA = lowerSubtreeBudget == node.A.LeafCount;
+            var aSubtreeBudget = useSmallerForA ? lowerSubtreeBudget : higherSubtreeBudget;
+            var bSubtreeBudget = useSmallerForA ? higherSubtreeBudget : lowerSubtreeBudget;
+
+            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetsBuffer, nodeTotalLeafCount, bSubtreeBudget, node.B, ref rootStack, ref rootRefinementSubtrees);
+            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetsBuffer, nodeTotalLeafCount, aSubtreeBudget, node.A, ref rootStack, ref rootRefinementSubtrees);
+        }
+        rootStack.Dispose(pool);
+    }
+
+    void CollectSubtreesForSubtreeRefinement(int refinementTargetRootNodeIndex, Buffer<int> subtreeStackBuffer, ref QuickList<int> subtreeRefinementNodeIndices, ref QuickList<NodeChild> subtreeRefinementLeaves)
+    {
+        Debug.Assert(subtreeRefinementLeaves.Count == 0 && subtreeRefinementNodeIndices.Count == 0);
+        var subtreeStack = new QuickList<int>(subtreeStackBuffer);
+        subtreeStack.AllocateUnsafely() = refinementTargetRootNodeIndex;
+        while (subtreeStack.TryPop(out var nodeToVisit))
+        {
+            ref var node = ref Nodes[nodeToVisit];
+            subtreeRefinementNodeIndices.AllocateUnsafely() = nodeToVisit;
+            if (node.B.Index >= 0)
+                subtreeStack.AllocateUnsafely() = node.B.Index;
+            else
+                subtreeRefinementLeaves.AllocateUnsafely() = node.B;
+            if (node.A.Index >= 0)
+                subtreeStack.AllocateUnsafely() = node.A.Index;
+            else
+                subtreeRefinementLeaves.AllocateUnsafely() = node.A;
+        }
+    }
+
     /// <summary>
     /// Incrementally refines a subset of the tree by running a binned builder over subtrees.
     /// </summary>
@@ -240,25 +283,9 @@ public partial struct Tree
         ((Span<int>)subtreeRefinementTargets.Span)[subtreeRefinementTargets.Count..].Fill(-1);
 
         //We now know which nodes are the roots of subtree refinements; the root refinement can avoid traversing through them.
-        var rootStack = new QuickList<(int nodeIndex, int subtreeBudget)>(rootRefinementSize, pool);
         var rootRefinementSubtrees = new QuickList<NodeChild>(rootRefinementSize, pool);
         var rootRefinementNodeIndices = new QuickList<int>(rootRefinementSize, pool);
-        rootStack.AllocateUnsafely() = (0, rootRefinementSize);
-        while (rootStack.TryPop(out var nodeToVisit))
-        {
-            rootRefinementNodeIndices.AllocateUnsafely() = nodeToVisit.nodeIndex;
-            ref var node = ref Nodes[nodeToVisit.nodeIndex];
-            var nodeTotalLeafCount = node.A.LeafCount + node.B.LeafCount;
-            Debug.Assert(nodeToVisit.subtreeBudget <= nodeTotalLeafCount);
-            var lowerSubtreeBudget = int.Min((nodeToVisit.subtreeBudget + 1) / 2, int.Min(node.A.LeafCount, node.B.LeafCount));
-            var higherSubtreeBudget = nodeToVisit.subtreeBudget - lowerSubtreeBudget;
-            var useSmallerForA = lowerSubtreeBudget == node.A.LeafCount;
-            var aSubtreeBudget = useSmallerForA ? lowerSubtreeBudget : higherSubtreeBudget;
-            var bSubtreeBudget = useSmallerForA ? higherSubtreeBudget : lowerSubtreeBudget;
-
-            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargets, nodeTotalLeafCount, bSubtreeBudget, node.B, ref rootStack, ref rootRefinementSubtrees);
-            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargets, nodeTotalLeafCount, aSubtreeBudget, node.A, ref rootStack, ref rootRefinementSubtrees);
-        }
+        CollectSubtreesForRootRefinement(rootRefinementSize, subtreeRefinementSize, pool, subtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
 
         //Now that we have a list of nodes to refine, we can run the root refinement.
         Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
@@ -273,29 +300,14 @@ public partial struct Tree
         rootRefinementSubtrees.Dispose(pool);
         rootRefinementNodeIndices.Dispose(pool);
 
-        rootStack.Dispose(pool);
 
         var subtreeRefinementNodeIndices = new QuickList<int>(subtreeRefinementSize, pool);
         var subtreeRefinementLeaves = new QuickList<NodeChild>(subtreeRefinementSize, pool);
-        var subtreeStack = new QuickList<int>(subtreeRefinementSize, pool);
+        var subtreeStackBuffer = new Buffer<int>(subtreeRefinementSize, pool);
         for (int i = 0; i < subtreeRefinementTargets.Count; ++i)
         {
             //Accumulate nodes and leaves with a prepass.
-            Debug.Assert(subtreeStack.Count == 0 && subtreeRefinementNodeIndices.Count == 0);
-            subtreeStack.AllocateUnsafely() = subtreeRefinementTargets[i];
-            while (subtreeStack.TryPop(out var nodeToVisit))
-            {
-                ref var node = ref Nodes[nodeToVisit];
-                subtreeRefinementNodeIndices.AllocateUnsafely() = nodeToVisit;
-                if (node.B.Index >= 0)
-                    subtreeStack.AllocateUnsafely() = node.B.Index;
-                else
-                    subtreeRefinementLeaves.AllocateUnsafely() = node.B;
-                if (node.A.Index >= 0)
-                    subtreeStack.AllocateUnsafely() = node.A.Index;
-                else
-                    subtreeRefinementLeaves.AllocateUnsafely() = node.A;
-            }
+            CollectSubtreesForSubtreeRefinement(subtreeRefinementTargets[i], subtreeStackBuffer, ref subtreeRefinementNodeIndices, ref subtreeRefinementLeaves);         
 
             var refinementNodes = refinementNodesAllocation.Slice(0, subtreeRefinementNodeIndices.Count);
             var refinementMetanodes = refinementMetanodesAllocation.Slice(0, subtreeRefinementNodeIndices.Count);
@@ -310,7 +322,7 @@ public partial struct Tree
         subtreeRefinementNodeIndices.Dispose(pool);
         subtreeRefinementLeaves.Dispose(pool);
         subtreeRefinementTargets.Dispose(pool);
-        subtreeStack.Dispose(pool);
+        subtreeStackBuffer.Dispose(pool);
         refinementNodesAllocation.Dispose(pool);
         refinementMetanodesAllocation.Dispose(pool);
     }
