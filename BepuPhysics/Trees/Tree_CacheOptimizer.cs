@@ -164,10 +164,10 @@ partial struct Tree
     }
 
     /// <summary>
-    /// Puts all nodes starting from the given node index into depth traversal order.
+    /// Puts all nodes starting from the given node index into depth first traversal order.
     /// If the count is larger than the number of nodes beneath the starting node, the optimization will stop early.
     /// </summary>
-    /// <param name="startingNodeIndex"></param>
+    /// <param name="startingNodeIndex">Node index to start the optimization at.</param>
     /// <param name="targetCount">Number of nodes to try to optimize.</param>
     /// <returns>Number of nodes optimized.</returns>
     public unsafe int CacheOptimizeRegion(int startingNodeIndex, int targetCount)
@@ -179,13 +179,15 @@ partial struct Tree
             SwapNodes(targetNodeIndex, startingNodeIndex);
 
         ref var startNode = ref Nodes[targetNodeIndex];
-        var nodeCount = int.Min(startNode.A.LeafCount + startNode.B.LeafCount - 1, targetCount);
+        //Note minus 2: visiting the parent of the last node is sufficient to put the last node into position.
+        var nodeCount = int.Min(startNode.A.LeafCount + startNode.B.LeafCount - 2, targetCount);
         for (int i = 0; i < nodeCount; ++i)
         {
             int parentIndex = targetNodeIndex + i;
             ref var node = ref Nodes[parentIndex];
             //Put both children into depth first order before continuing.
             var targetLocationA = parentIndex + 1;
+
             var targetLocationB = parentIndex + node.A.LeafCount;
             if (node.A.Index >= 0 && node.A.Index != targetLocationA)
                 SwapNodes(node.A.Index, targetLocationA);
@@ -193,6 +195,5 @@ partial struct Tree
                 SwapNodes(node.B.Index, targetLocationB);
         }
         return nodeCount;
-
     }
 }
