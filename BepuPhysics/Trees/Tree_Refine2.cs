@@ -12,7 +12,7 @@ namespace BepuPhysics.Trees;
 public partial struct Tree
 {
     const int flagForRootRefinementSubtree = 1 << 30;
-  
+
     void ReifyRootRefinementNodeChild(ref int index, ref QuickList<int> refinementNodeIndices, int realNodeIndex, int childIndexInParent)
     {
         //Root refinements mark internal subtrees with a flag in the second to last index.
@@ -60,8 +60,6 @@ public partial struct Tree
         }
     }
 
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void ReifyRefinementNodeChild(ref int index, ref QuickList<int> refinementNodeIndices, int realNodeIndex, int childIndexInParent)
     {
         //Root refinements mark internal subtrees with a flag in the second to last index.
@@ -183,9 +181,8 @@ public partial struct Tree
     /// <summary>
     /// Checks if a child should be a subtree in the root refinement. If so, it's added to the list. Otherwise, it's pushed onto the stack.
     /// </summary>
-    /// <returns>The amount of surplus leaf budget accumulated by pushing this child. The value will be nonzero only if the child was a subtree refinement target.</returns>
-    private int TryPushChildForRootRefinement(
-        int subtreeRefinementSize, in QuickList<int> subtreeRefinementRoots, int nodeTotalLeafCount, int subtreeBudget, in NodeChild child, ref QuickList<(int nodeIndex, int subtreeBudget)> stack, ref QuickList<NodeChild> rootRefinementSubtrees)
+    private void TryPushChildForRootRefinement(
+         int subtreeRefinementSize, in QuickList<int> subtreeRefinementRoots, int nodeTotalLeafCount, int subtreeBudget, in NodeChild child, ref QuickList<(int nodeIndex, int subtreeBudget)> stack, ref QuickList<NodeChild> rootRefinementSubtrees)
     {
         //We automatically accept any child as a subtree for the refinement process if:
         //1. It's a leaf node, or
@@ -209,8 +206,6 @@ public partial struct Tree
                 //Internal nodes used as subtrees by the root refinement are flagged so that the reification process knows to stop.
                 Debug.Assert(allocatedChild.Index < flagForRootRefinementSubtree, "The use of an upper index bit as flag means the binned refiner cannot handle trees with billions of children.");
                 allocatedChild.Index |= flagForRootRefinementSubtree;
-                //Return the budget so it can be used on other nodes that follow in the traversal. Don't really care *where* it goes.
-                return subtreeBudget;
             }
             else
             {
@@ -218,7 +213,6 @@ public partial struct Tree
                 stack.AllocateUnsafely() = (child.Index, subtreeBudget);
             }
         }
-        return 0;
     }
 
     /// <summary>
@@ -235,6 +229,9 @@ public partial struct Tree
         //No point refining anything with two leaves. This condition also avoids having to special case for an incomplete root node.
         if (LeafCount <= 2)
             return;
+        //Clamp refinement sizes to avoid pointless overallocations when the user supplies odd inputs.
+        rootRefinementSize = int.Min(rootRefinementSize, LeafCount);
+        subtreeRefinementSize = int.Min(subtreeRefinementSize, LeafCount);
         //We used a vectorized containment test later, so make sure to pad out the refinement target list.
         var subtreeRefinementCapacity = BundleIndexing.GetBundleCount(subtreeRefinementCount) * Vector<int>.Count;
         var subtreeRefinementTargets = new QuickList<int>(subtreeRefinementCapacity, pool);
@@ -242,33 +239,25 @@ public partial struct Tree
         //Fill the trailing slots in the list with -1 to avoid matches.
         ((Span<int>)subtreeRefinementTargets.Span)[subtreeRefinementTargets.Count..].Fill(-1);
 
-
-
         //We now know which nodes are the roots of subtree refinements; the root refinement can avoid traversing through them.
         var rootStack = new QuickList<(int nodeIndex, int subtreeBudget)>(rootRefinementSize, pool);
         var rootRefinementSubtrees = new QuickList<NodeChild>(rootRefinementSize, pool);
         var rootRefinementNodeIndices = new QuickList<int>(rootRefinementSize, pool);
         rootStack.AllocateUnsafely() = (0, rootRefinementSize);
-        int surplusSubtreeBudget = 0;
         while (rootStack.TryPop(out var nodeToVisit))
         {
             rootRefinementNodeIndices.AllocateUnsafely() = nodeToVisit.nodeIndex;
             ref var node = ref Nodes[nodeToVisit.nodeIndex];
             var nodeTotalLeafCount = node.A.LeafCount + node.B.LeafCount;
-            //The "budget" is just a mechanism for bottoming out the traversal at the same depth as a BFS, but during a depth first traversal.
-            var effectiveNodeBudget = int.Min(nodeTotalLeafCount, nodeToVisit.subtreeBudget + surplusSubtreeBudget);
-            var lowerSubtreeBudget = int.Min((effectiveNodeBudget + 1) / 2, int.Min(node.A.LeafCount, node.B.LeafCount));
-            var higherSubtreeBudget = effectiveNodeBudget - lowerSubtreeBudget;
+            Debug.Assert(nodeToVisit.subtreeBudget <= nodeTotalLeafCount);
+            var lowerSubtreeBudget = int.Min((nodeToVisit.subtreeBudget + 1) / 2, int.Min(node.A.LeafCount, node.B.LeafCount));
+            var higherSubtreeBudget = nodeToVisit.subtreeBudget - lowerSubtreeBudget;
             var useSmallerForA = lowerSubtreeBudget == node.A.LeafCount;
             var aSubtreeBudget = useSmallerForA ? lowerSubtreeBudget : higherSubtreeBudget;
             var bSubtreeBudget = useSmallerForA ? higherSubtreeBudget : lowerSubtreeBudget;
 
-            //If the effective budgets exceed the originally scheduled amount, then we've used up part of our surplus.
-            surplusSubtreeBudget += nodeToVisit.subtreeBudget - (aSubtreeBudget + bSubtreeBudget);
-
-            surplusSubtreeBudget += TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargets, nodeTotalLeafCount, bSubtreeBudget, node.B, ref rootStack, ref rootRefinementSubtrees);
-            surplusSubtreeBudget += TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargets, nodeTotalLeafCount, aSubtreeBudget, node.A, ref rootStack, ref rootRefinementSubtrees);
-            surplusSubtreeBudget = 0;
+            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargets, nodeTotalLeafCount, bSubtreeBudget, node.B, ref rootStack, ref rootRefinementSubtrees);
+            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargets, nodeTotalLeafCount, aSubtreeBudget, node.A, ref rootStack, ref rootRefinementSubtrees);
         }
 
         //Now that we have a list of nodes to refine, we can run the root refinement.
