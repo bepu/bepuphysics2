@@ -184,7 +184,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
                 //}
                 var start = Stopwatch.GetTimestamp();
                 //mesh.Tree.Refine2(8192, ref refinementState, 1, 8192, BufferPool);
-                mesh.Tree.Refine3(32768, ref refinementState, 1, 32768, BufferPool);
+                mesh.Tree.Refine2(512, ref refinementState, 1, 32768, BufferPool);
                 var end = Stopwatch.GetTimestamp();
                 sum += end - start;
                 if ((refinementIndex + 1) % 128 == 0)
