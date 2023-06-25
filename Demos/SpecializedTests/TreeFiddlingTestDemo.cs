@@ -10,6 +10,7 @@ using DemoRenderer;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using BepuPhysics.Collidables;
+using BepuUtilities.TaskScheduling;
 
 namespace Demos.SpecializedTests;
 
@@ -167,6 +168,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
             int refinementState = 0;
             long sum = 0;
             int cacheOptimizationStart = 0;
+            var taskStack = new TaskStack(BufferPool, ThreadDispatcher, ThreadDispatcher.ThreadCount);
             for (int refinementIndex = 0; refinementIndex < 16384; ++refinementIndex)
             {
                 //mesh.Tree.CacheOptimizeLimitedSubtree(0, 4096);
@@ -182,9 +184,11 @@ public unsafe class TreeFiddlingTestDemo : Demo
                 //    if (cacheOptimizationStart >= mesh.Tree.NodeCount)
                 //        cacheOptimizationStart -= mesh.Tree.NodeCount;
                 //}
+
                 var start = Stopwatch.GetTimestamp();
-                //mesh.Tree.Refine2(8192, ref refinementState, 1, 8192, BufferPool);
-                mesh.Tree.Refine2(8192, ref refinementState, 32, 1024, BufferPool);
+                //mesh.Tree.Refine2(8192, ref refinementState, 0, 8192, BufferPool);
+                //mesh.Tree.Refine2(8192, ref refinementState, 32, 1024, BufferPool);
+                mesh.Tree.Refine2(8192, ref refinementState, 32, 4096, BufferPool, ThreadDispatcher);
                 var end = Stopwatch.GetTimestamp();
                 sum += end - start;
                 if ((refinementIndex + 1) % 128 == 0)
@@ -195,6 +199,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
                     Console.WriteLine($"Time (average) (ms): {(end - start) * 1e3 / Stopwatch.Frequency}, {sum * 1e3 / ((refinementIndex + 1) * Stopwatch.Frequency)}");
                 }
             }
+            taskStack.Dispose(BufferPool, ThreadDispatcher);
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
             Console.WriteLine($"node count: {mesh.Tree.NodeCount}");

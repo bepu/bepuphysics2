@@ -1,10 +1,13 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.TaskScheduling;
 using System;
+using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Xml.Linq;
 
 namespace BepuPhysics.Trees;
@@ -325,4 +328,151 @@ public partial struct Tree
         refinementMetanodesAllocation.Dispose(pool);
     }
 
+
+    struct RefinementContext
+    {
+        public int RootRefinementSize;
+        public int SubtreeRefinementSize;
+        public QuickList<int> SubtreeRefinementTargets;
+        /// <remarks>
+        /// This is a *copy* of the original tree that spawned this refinement. Refinements do not modify the memory stored at the level of the Tree, only memory *pointed* to by the tree.
+        /// </remarks>
+        public Tree Tree;
+    }
+    unsafe static void ExecuteRootRefinementTask(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        ref var context = ref *(RefinementContext*)untypedContext;
+        var pool = dispatcher.WorkerPools[workerIndex];
+
+        //We now know which nodes are the roots of subtree refinements; the root refinement can avoid traversing through them.
+        var rootRefinementSubtrees = new QuickList<NodeChild>(context.RootRefinementSize, pool);
+        var rootRefinementNodeIndices = new QuickList<int>(context.RootRefinementSize, pool);
+        context.Tree.CollectSubtreesForRootRefinement(context.RootRefinementSize, context.SubtreeRefinementSize, pool, context.SubtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+
+        //Now that we have a list of nodes to refine, we can run the root refinement.
+        Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
+        var rootRefinementNodes = new Buffer<Node>(rootRefinementNodeIndices.Count, pool);
+        var rootRefinementMetanodes = new Buffer<Metanode>(rootRefinementNodeIndices.Count, pool);
+
+        //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
+        BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, null, pool);
+        context.Tree.ReifyRootRefinement(rootRefinementNodeIndices, rootRefinementNodes);
+        rootRefinementSubtrees.Dispose(pool);
+        rootRefinementNodeIndices.Dispose(pool);
+        rootRefinementNodes.Dispose(pool);
+        rootRefinementMetanodes.Dispose(pool);
+    }
+    unsafe static void ExecuteSubtreeRefinementTask(long subtreeRefinementTarget, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        ref var context = ref *(RefinementContext*)untypedContext;
+        var pool = dispatcher.WorkerPools[workerIndex];
+
+        var subtreeRefinementNodeIndices = new QuickList<int>(context.SubtreeRefinementSize, pool);
+        var subtreeRefinementLeaves = new QuickList<NodeChild>(context.SubtreeRefinementSize, pool);
+        var subtreeStackBuffer = new Buffer<int>(context.SubtreeRefinementSize, pool);
+
+        //Accumulate nodes and leaves with a prepass.
+        context.Tree.CollectSubtreesForSubtreeRefinement((int)subtreeRefinementTarget, subtreeStackBuffer, ref subtreeRefinementNodeIndices, ref subtreeRefinementLeaves);
+
+        var refinementNodes = new Buffer<Node>(subtreeRefinementNodeIndices.Count, pool);
+        var refinementMetanodes = new Buffer<Metanode>(subtreeRefinementNodeIndices.Count, pool);
+        //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
+        BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, null, pool);
+        context.Tree.ReifyRefinement(subtreeRefinementNodeIndices, refinementNodes);
+
+        refinementNodes.Dispose(pool);
+        refinementMetanodes.Dispose(pool);
+        subtreeRefinementNodeIndices.Dispose(pool);
+        subtreeRefinementLeaves.Dispose(pool);
+        subtreeStackBuffer.Dispose(pool);
+
+    }
+    static unsafe void ExecuteWorker(int workerIndex, IThreadDispatcher dispatcher)
+    {
+        var taskStack = (TaskStack*)dispatcher.UnmanagedContext;
+        PopTaskResult popTaskResult;
+        var waiter = new SpinWait();
+        while ((popTaskResult = taskStack->TryPopAndRun(workerIndex, dispatcher)) != PopTaskResult.Stop)
+        {
+            waiter.SpinOnce(-1);
+        }
+    }
+
+    static unsafe void StopStackOnCompletion(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        ((TaskStack*)untypedContext)->RequestStop();
+    }
+
+
+    /// <summary>
+    /// Incrementally refines a subset of the tree by running a binned builder over subtrees.
+    /// </summary>
+    /// <param name="rootRefinementSize">Size of the refinement run on nodes near the root.</param>
+    /// <param name="subtreeRefinementStartIndex">Index used to distribute subtree refinements over multiple executions.</param>
+    /// <param name="subtreeRefinementCount">Number of subtree refinements to execute.</param>
+    /// <param name="subtreeRefinementSize">Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</param>
+    /// <param name="pool">Pool used for ephemeral allocations during the refinement.</param>
+    /// <remarks>Nodes will not be refit.</remarks>
+    private unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch)
+    {
+        //No point refining anything with two leaves. This condition also avoids having to special case for an incomplete root node.
+        if (LeafCount <= 2)
+            return;
+        //Clamp refinement sizes to avoid pointless overallocations when the user supplies odd inputs.
+        rootRefinementSize = int.Min(rootRefinementSize, LeafCount);
+        subtreeRefinementSize = int.Min(subtreeRefinementSize, LeafCount);
+        //We used a vectorized containment test later, so make sure to pad out the refinement target list.
+        var subtreeRefinementCapacity = BundleIndexing.GetBundleCount(subtreeRefinementCount) * Vector<int>.Count;
+        var subtreeRefinementTargets = new QuickList<int>(subtreeRefinementCapacity, pool);
+        FindSubtreeRefinementTargets(subtreeRefinementSize, subtreeRefinementCount, ref subtreeRefinementStartIndex, ref subtreeRefinementTargets);
+        //Fill the trailing slots in the list with -1 to avoid matches.
+        ((Span<int>)subtreeRefinementTargets.Span)[subtreeRefinementTargets.Count..].Fill(-1);
+
+        var tasks = new Buffer<Task>(1 + subtreeRefinementTargets.Count, pool);
+        var context = new RefinementContext
+        {
+            RootRefinementSize = rootRefinementSize,
+            SubtreeRefinementSize = subtreeRefinementSize,
+            SubtreeRefinementTargets = subtreeRefinementTargets,
+            Tree = this
+        };
+        for (int i = 0; i < subtreeRefinementTargets.Count; ++i)
+        {
+            tasks[i] = new Task(&ExecuteSubtreeRefinementTask, &context, subtreeRefinementTargets[i]);
+        }
+        tasks[^1] = new Task(&ExecuteRootRefinementTask, &context);
+        if (internallyDispatch)
+        {
+            //There isn't an active dispatch, so we need to do it.
+            taskStack->AllocateContinuationAndPush(tasks, workerIndex, threadDispatcher, onComplete: new Task(&StopStackOnCompletion, taskStack));
+            threadDispatcher.DispatchWorkers(&ExecuteWorker, unmanagedContext: taskStack);
+        }
+        else
+        {
+            //We're executing from within a multithreaded dispatch already, so we can simply run the tasks and trust that other threads are ready to steal.
+            taskStack->RunTasks(tasks, workerIndex, threadDispatcher);
+        }
+        tasks.Dispose(pool);
+
+        subtreeRefinementTargets.Dispose(pool);
+    }
+
+    /// <summary>
+    /// Incrementally refines a subset of the tree by running a binned builder over subtrees.
+    /// </summary>
+    /// <param name="rootRefinementSize">Size of the refinement run on nodes near the root.</param>
+    /// <param name="subtreeRefinementStartIndex">Index used to distribute subtree refinements over multiple executions.</param>
+    /// <param name="subtreeRefinementCount">Number of subtree refinements to execute.</param>
+    /// <param name="subtreeRefinementSize">Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</param>
+    /// <param name="pool">Pool used for ephemeral allocations during the refinement.</param>
+    /// <remarks>Nodes will not be refit.</remarks>
+    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, IThreadDispatcher threadDispatcher)
+    {
+        //No point refining anything with two leaves. This condition also avoids having to special case for an incomplete root node.
+        if (LeafCount <= 2)
+            return;
+        var taskStack = new TaskStack(pool, threadDispatcher, threadDispatcher.ThreadCount);
+        Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, 0, &taskStack, threadDispatcher, true);
+        taskStack.Dispose(pool, threadDispatcher);
+    }
 }
