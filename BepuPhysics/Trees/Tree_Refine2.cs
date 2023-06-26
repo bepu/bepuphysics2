@@ -268,7 +268,7 @@ public partial struct Tree
     /// <param name="subtreeRefinementSize">Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</param>
     /// <param name="pool">Pool used for ephemeral allocations during the refinement.</param>
     /// <remarks>Nodes will not be refit.</remarks>
-    public void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool)
+    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool)
     {
         //No point refining anything with two leaves. This condition also avoids having to special case for an incomplete root node.
         if (LeafCount <= 2)
@@ -296,7 +296,7 @@ public partial struct Tree
         var rootRefinementNodes = refinementNodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
         var rootRefinementMetanodes = refinementMetanodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
         //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
-        BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, null, pool);
+        BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool);
         ReifyRootRefinement(rootRefinementNodeIndices, rootRefinementNodes);
         rootRefinementSubtrees.Dispose(pool);
         rootRefinementNodeIndices.Dispose(pool);
@@ -313,7 +313,7 @@ public partial struct Tree
             var refinementNodes = refinementNodesAllocation.Slice(0, subtreeRefinementNodeIndices.Count);
             var refinementMetanodes = refinementMetanodesAllocation.Slice(0, subtreeRefinementNodeIndices.Count);
             //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
-            BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, null, pool);
+            BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, pool);
             ReifyRefinement(subtreeRefinementNodeIndices, refinementNodes);
 
             subtreeRefinementNodeIndices.Count = 0;
@@ -355,7 +355,7 @@ public partial struct Tree
         var rootRefinementMetanodes = new Buffer<Metanode>(rootRefinementNodeIndices.Count, pool);
 
         //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
-        BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, null, pool);
+        BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool);
         context.Tree.ReifyRootRefinement(rootRefinementNodeIndices, rootRefinementNodes);
         rootRefinementSubtrees.Dispose(pool);
         rootRefinementNodeIndices.Dispose(pool);
@@ -377,7 +377,7 @@ public partial struct Tree
         var refinementNodes = new Buffer<Node>(subtreeRefinementNodeIndices.Count, pool);
         var refinementMetanodes = new Buffer<Metanode>(subtreeRefinementNodeIndices.Count, pool);
         //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
-        BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, null, pool);
+        BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, pool);
         context.Tree.ReifyRefinement(subtreeRefinementNodeIndices, refinementNodes);
 
         refinementNodes.Dispose(pool);

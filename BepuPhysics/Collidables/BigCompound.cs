@@ -104,12 +104,12 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Pool to use to allocate acceleration structures.</param>
         /// <param name="dispatcher">Thread dispatcher to use to multithread the acceleration structure build, if any.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BigCompound(Buffer<CompoundChild> children, Shapes shapes, BufferPool pool, IThreadDispatcher dispatcher = null)
+        public unsafe BigCompound(Buffer<CompoundChild> children, Shapes shapes, BufferPool pool, IThreadDispatcher dispatcher = null)
         {
             this = CreateWithoutTreeBuild(children, pool);
             pool.Take(children.Length, out Buffer<NodeChild> subtrees);
             FillSubtreesForChildren(children, shapes, subtrees);
-            Tree.BinnedBuild(subtrees, dispatcher, pool);
+            Tree.BinnedBuild(subtrees, pool, dispatcher);
             pool.Return(ref subtrees);
         }
 

@@ -144,12 +144,12 @@ namespace BepuPhysics.Collidables
         /// Note that the scale is not baked into the triangles or acceleration structure; the same set of triangles and acceleration structure can be used across multiple Mesh instances with different scales.</param>
         /// <param name="pool">Pool used to allocate acceleration structures.</param>
         /// <param name="dispatcher">Dispatcher to use to multithread the execution of the mesh build process. If null, the build will be single threaded.</param>
-        public Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool, IThreadDispatcher dispatcher = null)
+        public unsafe Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool, IThreadDispatcher dispatcher = null)
         {
             this = CreateWithoutTreeBuild(triangles, scale, pool);
             pool.Take<NodeChild>(triangles.Length, out var subtrees);
             FillSubtreesForTriangles(triangles, subtrees);
-            Tree.BinnedBuild(subtrees, dispatcher: dispatcher, pool: pool);
+            Tree.BinnedBuild(subtrees, pool, dispatcher);
             pool.Return(ref subtrees);
         }
 
