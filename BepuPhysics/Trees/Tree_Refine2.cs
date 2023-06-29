@@ -329,11 +329,15 @@ public partial struct Tree
     }
 
 
-    struct RefinementContext
+    unsafe struct RefinementContext
     {
         public int RootRefinementSize;
         public int SubtreeRefinementSize;
+        public int TotalLeafCountInSubtrees;
+        public int TargetTaskBudget;
+        public int WorkerCount;
         public QuickList<int> SubtreeRefinementTargets;
+        public TaskStack* TaskStack;
         /// <remarks>
         /// This is a *copy* of the original tree that spawned this refinement. Refinements do not modify the memory stored at the level of the Tree, only memory *pointed* to by the tree.
         /// </remarks>
@@ -353,6 +357,15 @@ public partial struct Tree
         Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
         var rootRefinementNodes = new Buffer<Node>(rootRefinementNodeIndices.Count, pool);
         var rootRefinementMetanodes = new Buffer<Metanode>(rootRefinementNodeIndices.Count, pool);
+        //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
+        if (taskCount > 1)
+        {
+            BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool, dispatcher, context.TaskStack, workerIndex, context.WorkerCount, taskCount);
+        }
+        else
+        {
+            BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool, workerIndex: workerIndex);
+        }
 
         //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
         BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool);
@@ -413,7 +426,7 @@ public partial struct Tree
     /// <param name="subtreeRefinementSize">Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</param>
     /// <param name="pool">Pool used for ephemeral allocations during the refinement.</param>
     /// <remarks>Nodes will not be refit.</remarks>
-    private unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch)
+    private unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget)
     {
         //No point refining anything with two leaves. This condition also avoids having to special case for an incomplete root node.
         if (LeafCount <= 2)
@@ -429,11 +442,21 @@ public partial struct Tree
         ((Span<int>)subtreeRefinementTargets.Span)[subtreeRefinementTargets.Count..].Fill(-1);
 
         var tasks = new Buffer<Task>(1 + subtreeRefinementTargets.Count, pool);
+        var totalLeafCountInSubtrees = 0;
+        for (int i = 0; i < subtreeRefinementTargets.Count; ++i)
+        {
+            ref var node = ref Nodes[subtreeRefinementTargets[i]];
+            totalLeafCountInSubtrees += node.A.LeafCount + node.B.LeafCount;
+        }
         var context = new RefinementContext
         {
             RootRefinementSize = rootRefinementSize,
             SubtreeRefinementSize = subtreeRefinementSize,
+            TotalLeafCountInSubtrees = totalLeafCountInSubtrees,
+            TargetTaskBudget = targetTaskBudget,
             SubtreeRefinementTargets = subtreeRefinementTargets,
+            TaskStack = taskStack,
+            WorkerCount = workerCount,
             Tree = this
         };
         for (int i = 0; i < subtreeRefinementTargets.Count; ++i)
@@ -445,7 +468,7 @@ public partial struct Tree
         {
             //There isn't an active dispatch, so we need to do it.
             taskStack->AllocateContinuationAndPush(tasks, workerIndex, threadDispatcher, onComplete: new Task(&StopStackOnCompletion, taskStack));
-            threadDispatcher.DispatchWorkers(&ExecuteWorker, unmanagedContext: taskStack);
+            threadDispatcher.DispatchWorkers(&ExecuteWorker, unmanagedContext: taskStack, maximumWorkerCount: workerCount);
         }
         else
         {
