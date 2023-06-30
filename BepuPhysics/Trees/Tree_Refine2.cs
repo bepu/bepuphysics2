@@ -348,6 +348,8 @@ public partial struct Tree
         ref var context = ref *(RefinementContext*)untypedContext;
         var pool = dispatcher.WorkerPools[workerIndex];
 
+        var taskCount = (int)float.Ceiling(context.TargetTaskBudget * (float)context.RootRefinementSize / (context.RootRefinementSize + context.TotalLeafCountInSubtrees));
+
         //We now know which nodes are the roots of subtree refinements; the root refinement can avoid traversing through them.
         var rootRefinementSubtrees = new QuickList<NodeChild>(context.RootRefinementSize, pool);
         var rootRefinementNodeIndices = new QuickList<int>(context.RootRefinementSize, pool);
@@ -495,7 +497,7 @@ public partial struct Tree
         if (LeafCount <= 2)
             return;
         var taskStack = new TaskStack(pool, threadDispatcher, threadDispatcher.ThreadCount);
-        Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, 0, &taskStack, threadDispatcher, true);
+        Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount);
         taskStack.Dispose(pool, threadDispatcher);
     }
 }
