@@ -99,6 +99,8 @@ namespace BepuPhysics.Trees
             public float LeafToBinMultiplier;
             public int MicrosweepThreshold;
 
+            public bool Deterministic;
+
             public TLeaves Leaves;
             public Buffer<NodeChild> SubtreesPing;
             public Buffer<NodeChild> SubtreesPong;
@@ -109,13 +111,14 @@ namespace BepuPhysics.Trees
 
             public TThreading Threading;
 
-            public Context(int minimumBinCount, int maximumBinCount, float leafToBinMultiplier, int microsweepThreshold,
+            public Context(int minimumBinCount, int maximumBinCount, float leafToBinMultiplier, int microsweepThreshold, bool deterministic,
                 Buffer<NodeChild> subtreesPing, Buffer<NodeChild> subtreesPong, TLeaves leaves, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<byte> binIndices, TThreading threading)
             {
                 MinimumBinCount = minimumBinCount;
                 MaximumBinCount = maximumBinCount;
                 LeafToBinMultiplier = leafToBinMultiplier;
                 MicrosweepThreshold = microsweepThreshold;
+                Deterministic = deterministic;
                 SubtreesPing = subtreesPing;
                 SubtreesPong = subtreesPong;
                 BinIndices = binIndices;
@@ -1150,7 +1153,11 @@ namespace BepuPhysics.Trees
                 var subtreesNext = (usePongBuffer ? context->SubtreesPing : context->SubtreesPong).Slice(subtreeRegionStartIndex, subtreeCount);
 
                 var useSTForPartitioning = true;
-                if (typeof(TThreading) != typeof(SingleThreaded))
+                //TODO: Note that the current multithreaded partitioning implementation is nondeterministic.
+                //Because of microsweeps/terminal node ordering, this can result in nondeterministic tree topology.
+                //See https://github.com/bepu/bepuphysics2/issues/276 for more information (and how to improve this in the future if valuable).
+                //For now, if the user wants determinism, we just use the single threaded path for partitioning.
+                if (typeof(TThreading) != typeof(SingleThreaded) && !context->Deterministic)
                 {
                     var mtContext = (MultithreadBinnedBuildContext*)Unsafe.AsPointer(ref context->Threading);
                     var taskData = new SharedTaskData(mtContext->Workers.Length, 0, subtrees.Length, MinimumSubtreesPerThreadForPartitioning, mtContext->GetTargetTaskCountForInnerLoop(subtreeCount));
@@ -1275,8 +1282,10 @@ namespace BepuPhysics.Trees
         /// <param name="maximumBinCount">Maximum number of bins the builder should use per node. Must be no higher than 255.</param>
         /// <param name="leafToBinMultiplier">Multiplier to apply to the subtree count within a node to decide the bin count. Resulting value will then be clamped by the minimum/maximum bin counts.</param>
         /// <param name="microsweepThreshold">Threshold at or under which the binned builder resorts to local counting sort sweeps.</param>
+        /// <param name="deterministic">Whether to force determinism at a slightly higher cost when using internally multithreaded execution.<para/>
+        /// If the build is single threaded, it is already deterministic and this flag has no effect.</param>
         static unsafe void BinnedBuilderInternal(Buffer<NodeChild> subtrees, Buffer<NodeChild> subtreesPong, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves, Buffer<byte> binIndices,
-            IThreadDispatcher dispatcher, TaskStack* taskStackPointer, int workerIndex, int workerCount, int targetTaskCount, BufferPool pool, int minimumBinCount, int maximumBinCount, float leafToBinMultiplier, int microsweepThreshold)
+            IThreadDispatcher dispatcher, TaskStack* taskStackPointer, int workerIndex, int workerCount, int targetTaskCount, BufferPool pool, int minimumBinCount, int maximumBinCount, float leafToBinMultiplier, int microsweepThreshold, bool deterministic)
         {
             var subtreeCount = subtrees.Length;
             if (nodes.Length < subtreeCount - 1)
@@ -1318,14 +1327,14 @@ namespace BepuPhysics.Trees
                 if (leaves.Allocated)
                 {
                     var context = new Context<Buffer<Leaf>, SingleThreaded>(
-                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
+                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold, deterministic,
                          subtrees, default, leaves, nodes, metanodes, binIndices, threading);
                     BinnedBuildNode(false, 0, 0, subtreeCount, -1, -1, default, &context, workerIndex, null);
                 }
                 else
                 {
                     var context = new Context<LeavesHandledInPostPass, SingleThreaded>(
-                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
+                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold, deterministic,
                          subtrees, default, default, nodes, metanodes, binIndices, threading);
                     BinnedBuildNode(false, 0, 0, subtreeCount, -1, -1, default, &context, workerIndex, null);
                 }
@@ -1370,7 +1379,7 @@ namespace BepuPhysics.Trees
                 if (leaves.Allocated)
                 {
                     var context = new Context<Buffer<Leaf>, MultithreadBinnedBuildContext>(
-                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
+                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold, deterministic,
                         subtrees, subtreesPong, leaves, nodes, metanodes, binIndices, threading);
 
                     if (dispatchInternally)
@@ -1387,7 +1396,7 @@ namespace BepuPhysics.Trees
                 else
                 {
                     var context = new Context<LeavesHandledInPostPass, MultithreadBinnedBuildContext>(
-                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold,
+                        minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold, deterministic,
                         subtrees, subtreesPong, default, nodes, metanodes, binIndices, threading);
 
                     if (dispatchInternally)
@@ -1459,9 +1468,11 @@ namespace BepuPhysics.Trees
         /// <param name="maximumBinCount">Maximum number of bins the builder should use per node.</param>
         /// <param name="leafToBinMultiplier">Multiplier to apply to the subtree count within a node to decide the bin count. Resulting value will then be clamped by the minimum/maximum bin counts.</param>
         /// <param name="microsweepThreshold">Threshold at or under which the binned builder resorts to local counting sort sweeps.</param>
+        /// <param name="deterministic">Whether to force determinism at a slightly higher cost when using internally multithreaded execution.<para/>
+        /// If the build is single threaded, it is already deterministic and this flag has no effect.</param>
         public static unsafe void BinnedBuild(Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, Buffer<Leaf> leaves,
             BufferPool pool = null, IThreadDispatcher dispatcher = null, TaskStack* taskStackPointer = null, int workerIndex = 0, int workerCount = -1, int targetTaskCount = -1,
-            int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
+            int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64, bool deterministic = false)
         {
             if (dispatcher != null && pool == null)
                 throw new ArgumentException("If a ThreadDispatcher has been given to BinnedBuild, a BufferPool must also be provided.");
@@ -1489,7 +1500,7 @@ namespace BepuPhysics.Trees
             BinnedBuilderInternal(subtrees, subtreesPong, nodes, metanodes, leaves, binIndices, dispatcher, taskStackPointer, workerIndex,
                 dispatcher == null ? 0 : workerCount < 0 ? dispatcher.ThreadCount : workerCount,
                 dispatcher == null ? 0 : targetTaskCount < 0 ? dispatcher.ThreadCount : targetTaskCount,
-                pool, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
+                pool, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold, deterministic);
 
             if (requiresReturn)
             {
@@ -1518,9 +1529,11 @@ namespace BepuPhysics.Trees
         /// <param name="maximumBinCount">Maximum number of bins the builder should use per node.</param>
         /// <param name="leafToBinMultiplier">Multiplier to apply to the subtree count within a node to decide the bin count. Resulting value will then be clamped by the minimum/maximum bin counts.</param>
         /// <param name="microsweepThreshold">Threshold at or under which the binned builder resorts to local counting sort sweeps.</param>
+        /// <param name="deterministic">Whether to force determinism at a slightly higher cost when using internally multithreaded execution.<para/>
+        /// If the build is single threaded, it is already deterministic and this flag has no effect.</param>
         public unsafe void BinnedBuild(Buffer<NodeChild> subtrees,
             BufferPool pool = null, IThreadDispatcher dispatcher = null, TaskStack* taskStackPointer = null, int workerIndex = 0, int workerCount = -1, int targetTaskCount = -1,
-            int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64)
+            int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64, bool deterministic = false)
         {
             BinnedBuild(subtrees, Nodes.Slice(NodeCount), Metanodes.Slice(NodeCount), Leaves.Slice(LeafCount), pool, dispatcher, taskStackPointer, workerIndex,
                 workerCount, targetTaskCount, maximumSubtreeStackAllocationCount, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);

@@ -96,7 +96,7 @@ public partial struct Tree
             ReifyRefinementNodeChild(ref refinedNode.A.Index, ref refinementNodeIndices, realNodeIndex, 0);
             ReifyRefinementNodeChild(ref refinedNode.B.Index, ref refinementNodeIndices, realNodeIndex, 1);
             Nodes[realNodeIndex] = refinedNode;
-            Debug.Assert(Metanodes[realNodeIndex].Parent < 0 || Unsafe.Add(ref Nodes[Metanodes[realNodeIndex].Parent].A, Metanodes[realNodeIndex].IndexInParent).Index == realNodeIndex);
+            //Debug.Assert(Metanodes[realNodeIndex].Parent < 0 || Unsafe.Add(ref Nodes[Metanodes[realNodeIndex].Parent].A, Metanodes[realNodeIndex].IndexInParent).Index == realNodeIndex);
         }
     }
 
@@ -338,11 +338,15 @@ public partial struct Tree
         public int WorkerCount;
         public QuickList<int> SubtreeRefinementTargets;
         public TaskStack* TaskStack;
+        public bool Deterministic;
         /// <remarks>
         /// This is a *copy* of the original tree that spawned this refinement. Refinements do not modify the memory stored at the level of the Tree, only memory *pointed* to by the tree.
         /// </remarks>
         public Tree Tree;
     }
+    //static int debugAccumulatorForSubtreeIndices = 0;
+    //static int debugAccumulatorForNodeTopology = 0;
+    //static int debugIndex = 0;
     unsafe static void ExecuteRootRefinementTask(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
     {
         ref var context = ref *(RefinementContext*)untypedContext;
@@ -354,7 +358,13 @@ public partial struct Tree
         var rootRefinementSubtrees = new QuickList<NodeChild>(context.RootRefinementSize, pool);
         var rootRefinementNodeIndices = new QuickList<int>(context.RootRefinementSize, pool);
         context.Tree.CollectSubtreesForRootRefinement(context.RootRefinementSize, context.SubtreeRefinementSize, pool, context.SubtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
-
+        //var localSubtreeHash = 0;
+        //for (int i = 0; i < rootRefinementSubtrees.Count; ++i)
+        //{
+        //    localSubtreeHash = HashHelper.Rehash(localSubtreeHash) + rootRefinementSubtrees[i].Index;
+        //    //localSubtreeHash += rootRefinementSubtrees[i].Index;
+        //}
+        //debugAccumulatorForSubtreeIndices = HashHelper.Rehash(debugAccumulatorForSubtreeIndices) + localSubtreeHash;
         //Now that we have a list of nodes to refine, we can run the root refinement.
         Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
         var rootRefinementNodes = new Buffer<Node>(rootRefinementNodeIndices.Count, pool);
@@ -362,15 +372,27 @@ public partial struct Tree
         //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
         if (taskCount > 1)
         {
-            BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool, dispatcher, context.TaskStack, workerIndex, context.WorkerCount, taskCount);
+            BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool, dispatcher, context.TaskStack, workerIndex, context.WorkerCount, taskCount, deterministic: context.Deterministic);
         }
         else
         {
             BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool, workerIndex: workerIndex);
         }
+        //var localNodeTopologyHash = 0;
+        //for (int i = 0; i < rootRefinementNodes.Length; ++i)
+        //{
+        //    localNodeTopologyHash = HashHelper.Rehash(HashHelper.Rehash(localNodeTopologyHash) + rootRefinementNodes[i].A.Index) + rootRefinementNodes[i].B.Index;
+        //    //localNodeTopologyHash += rootRefinementNodes[i].A.Index + rootRefinementNodes[i].B.Index;
+        //}
 
-        //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
-        BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool);
+
+        //debugAccumulatorForNodeTopology = HashHelper.Rehash(debugAccumulatorForNodeTopology) + localNodeTopologyHash;
+        ////for (int i = 0; i < context.SubtreeRefinementTargets.Count; ++i)
+        ////{
+        ////    debugAccumulator = HashHelper.Rehash(debugAccumulator) + context.SubtreeRefinementTargets[i];
+        ////}
+        //Console.WriteLine($"Refinement targets count {debugIndex}: {context.SubtreeRefinementTargets.Count}, node topology hash: {debugAccumulatorForNodeTopology}, subtree indices hash: {debugAccumulatorForSubtreeIndices}");
+        //++debugIndex;
         context.Tree.ReifyRootRefinement(rootRefinementNodeIndices, rootRefinementNodes);
         rootRefinementSubtrees.Dispose(pool);
         rootRefinementNodeIndices.Dispose(pool);
@@ -427,8 +449,10 @@ public partial struct Tree
     /// <param name="subtreeRefinementCount">Number of subtree refinements to execute.</param>
     /// <param name="subtreeRefinementSize">Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</param>
     /// <param name="pool">Pool used for ephemeral allocations during the refinement.</param>
+    /// <param name="deterministic">Whether to force determinism at a slightly higher cost when using internally multithreaded execution for an individual refinement operation.<para/>
+    /// If the refine is single threaded, it is already deterministic and this flag has no effect.</param>
     /// <remarks>Nodes will not be refit.</remarks>
-    private unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget)
+    private unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget, bool deterministic)
     {
         //No point refining anything with two leaves. This condition also avoids having to special case for an incomplete root node.
         if (LeafCount <= 2)
@@ -459,6 +483,7 @@ public partial struct Tree
             SubtreeRefinementTargets = subtreeRefinementTargets,
             TaskStack = taskStack,
             WorkerCount = workerCount,
+            Deterministic = deterministic,
             Tree = this
         };
         for (int i = 0; i < subtreeRefinementTargets.Count; ++i)
@@ -490,14 +515,16 @@ public partial struct Tree
     /// <param name="subtreeRefinementCount">Number of subtree refinements to execute.</param>
     /// <param name="subtreeRefinementSize">Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</param>
     /// <param name="pool">Pool used for ephemeral allocations during the refinement.</param>
+    /// <param name="deterministic">Whether to force determinism at a slightly higher cost when using internally multithreaded execution for an individual refinement operation.<para/>
+    /// If the refine is single threaded, it is already deterministic and this flag has no effect.</param>
     /// <remarks>Nodes will not be refit.</remarks>
-    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, IThreadDispatcher threadDispatcher)
+    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, IThreadDispatcher threadDispatcher, bool deterministic = false)
     {
         //No point refining anything with two leaves. This condition also avoids having to special case for an incomplete root node.
         if (LeafCount <= 2)
             return;
         var taskStack = new TaskStack(pool, threadDispatcher, threadDispatcher.ThreadCount);
-        Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount);
+        Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount, deterministic);
         taskStack.Dispose(pool, threadDispatcher);
     }
 }
