@@ -7,8 +7,11 @@ using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
+using Task = BepuUtilities.TaskScheduling.Task;
 
 namespace BepuPhysics.Trees;
 
@@ -163,7 +166,7 @@ public partial struct Tree
 
 
 
-    bool IsNodeChildSubtreeRefinementTarget(Buffer<Vector<int>> subtreeRefinementBundles, in NodeChild child, int parentTotalLeafCount, int subtreeRefinementSize)
+    static bool IsNodeChildSubtreeRefinementTarget(Buffer<Vector<int>> subtreeRefinementBundles, in NodeChild child, int parentTotalLeafCount, int subtreeRefinementSize)
     {
         //First check if it *could* be one by checking the leaf count threshold.
         if (child.LeafCount <= subtreeRefinementSize && parentTotalLeafCount > subtreeRefinementSize)
@@ -182,7 +185,7 @@ public partial struct Tree
     /// <summary>
     /// Checks if a child should be a subtree in the root refinement. If so, it's added to the list. Otherwise, it's pushed onto the stack.
     /// </summary>
-    private void TryPushChildForRootRefinement(
+    private static void TryPushChildForRootRefinement(
          int subtreeRefinementSize, Buffer<Vector<int>> subtreeRefinementRootBundles, int nodeTotalLeafCount, int subtreeBudget, in NodeChild child, ref QuickList<(int nodeIndex, int subtreeBudget)> stack, ref QuickList<NodeChild> rootRefinementSubtrees)
     {
         //We automatically accept any child as a subtree for the refinement process if:
@@ -216,15 +219,121 @@ public partial struct Tree
         }
     }
 
-    unsafe void CollectSubtreesForRootRefinement(int rootRefinementSize, int subtreeRefinementSize, BufferPool pool, in QuickList<int> subtreeRefinementTargets, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
+    unsafe struct RootSubtreeCollectionContext
     {
-        var rootStack = new QuickList<(int nodeIndex, int subtreeBudget)>(rootRefinementSize, pool);
-        rootStack.AllocateUnsafely() = (0, rootRefinementSize);
+        public int StartNode;
+        public int SubtreeBudget;
+        public int SubtreeRefinementSize;
+        public QuickList<int> RootRefinementNodeIndices;
+        public QuickList<NodeChild> RootRefinementSubtrees;
+        public Buffer<Vector<int>> SubtreeRefinementTargetBundles;
+        public Tree* Tree;
+
+
+        public RootSubtreeCollectionContext(int startNodeIndex, int subtreeBudget, int subtreeRefinementSize, Buffer<Vector<int>> subtreeRefinementTargetBundles, Tree* tree,
+            ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
+        {
+            //Rather than allocating our own space for node indices and subtrees, we can simply suballocate out of the main list.            
+            RootRefinementNodeIndices = new QuickList<int>(rootRefinementNodeIndices.Span.Slice(rootRefinementNodeIndices.Count, subtreeBudget - 1));
+            rootRefinementNodeIndices.Count += RootRefinementNodeIndices.Span.Length;
+            RootRefinementSubtrees = new QuickList<NodeChild>(rootRefinementSubtrees.Span.Slice(rootRefinementSubtrees.Count, subtreeBudget));
+            rootRefinementSubtrees.Count += subtreeBudget;
+
+            StartNode = startNodeIndex;
+            SubtreeBudget = subtreeBudget;
+            SubtreeRefinementSize = subtreeRefinementSize;
+            SubtreeRefinementTargetBundles = subtreeRefinementTargetBundles;
+            Tree = tree;
+        }
+
+    }
+
+    unsafe void CollectSubtreesForRootRefinementMT(
+        int rootRefinementSize, int subtreeRefinementSize, int targetTaskSizeInSubtrees, BufferPool pool,
+        QuickList<int> subtreeRefinementTargets, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees,
+        int workerIndex, TaskStack* taskStack, IThreadDispatcher dispatcher)
+    {
         var subtreeRefinementTargetBundles = new Buffer<Vector<int>>(subtreeRefinementTargets.Span.Memory, BundleIndexing.GetBundleCount(subtreeRefinementTargets.Count));
-        while (rootStack.TryPop(out var nodeToVisit))
+        var taskCountEstimate = (int)float.Ceiling((float)rootRefinementSize / targetTaskSizeInSubtrees) * 2;
+        QuickList<RootSubtreeCollectionContext> taskContexts = new QuickList<RootSubtreeCollectionContext>(taskCountEstimate, pool);
+        var stack = new QuickList<(int nodeIndex, int subtreeBudget)>(rootRefinementSize, pool);
+        var tree = this;
+        stack.AllocateUnsafely() = (0, rootRefinementSize);
+        while (stack.TryPop(out var nodeToVisit))
         {
             rootRefinementNodeIndices.AllocateUnsafely() = nodeToVisit.nodeIndex;
-            ref var node = ref Nodes[nodeToVisit.nodeIndex];
+            ref var node = ref tree.Nodes[nodeToVisit.nodeIndex];
+            var nodeTotalLeafCount = node.A.LeafCount + node.B.LeafCount;
+            Debug.Assert(nodeToVisit.subtreeBudget <= nodeTotalLeafCount);
+            var lowerSubtreeBudget = int.Min((nodeToVisit.subtreeBudget + 1) / 2, int.Min(node.A.LeafCount, node.B.LeafCount));
+            var higherSubtreeBudget = nodeToVisit.subtreeBudget - lowerSubtreeBudget;
+            var useSmallerForA = lowerSubtreeBudget == node.A.LeafCount;
+            var subtreeBudgetA = useSmallerForA ? lowerSubtreeBudget : higherSubtreeBudget;
+            var subtreeBudgetB = useSmallerForA ? higherSubtreeBudget : lowerSubtreeBudget;
+
+            //Technically, while we could kick off a task *immediately*, traversing to find all tasks is a submicrosecond affair.
+            if (subtreeBudgetB <= targetTaskSizeInSubtrees && node.B.Index >= 0 && !IsNodeChildSubtreeRefinementTarget(subtreeRefinementTargetBundles, node.B, nodeTotalLeafCount, subtreeRefinementSize))
+            {
+                taskContexts.Allocate(pool) = new RootSubtreeCollectionContext(node.B.Index, subtreeBudgetB, subtreeRefinementSize, subtreeRefinementTargetBundles, &tree, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+            }
+            else
+                TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetBundles, nodeTotalLeafCount, subtreeBudgetB, node.B, ref stack, ref rootRefinementSubtrees);
+
+            if (subtreeBudgetA <= targetTaskSizeInSubtrees && node.A.Index >= 0 && !IsNodeChildSubtreeRefinementTarget(subtreeRefinementTargetBundles, node.A, nodeTotalLeafCount, subtreeRefinementSize))
+            {
+                taskContexts.Allocate(pool) = new RootSubtreeCollectionContext(node.A.Index, subtreeBudgetA, subtreeRefinementSize, subtreeRefinementTargetBundles, &tree, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+            }
+            else
+                TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetBundles, nodeTotalLeafCount, subtreeBudgetA, node.A, ref stack, ref rootRefinementSubtrees);
+        }
+        stack.Dispose(pool);
+        for (int i = 0; i < taskContexts.Count; ++i)
+        {
+            new Task(&CollectSubtreesForRootRefinementTask, &taskContexts, i).Run(workerIndex, dispatcher);
+        }
+        //taskStack->For(&CollectSubtreesForRootRefinementTask, &taskContexts, 0, taskContexts.Count, workerIndex, dispatcher);
+        //While we pushed everything into a worst case sized single buffer, it's likely that there are gaps in the RootRefinementNodeIndices and rootRefinementSubtrees because of subtree refinement roots being encountered.
+        //Hard to justify doing another multithreaded execution to handle this, so we're just going to
+        //(Why not interlocked or something from the MT context? determinism, basically. Didn't want to create even more codepath permutations for something that's pretty cheap anyway.)
+        var accumulatedLeftMove = 0;
+        int* lastNodeIndicesRegionEnd = null;
+        NodeChild* lastSubtreesRegionEnd = null;
+        for (int i = 0; i < taskContexts.Count; ++i)
+        {
+            ref var context = ref taskContexts[i];
+            if (accumulatedLeftMove > 0)
+            {
+                //Have to move some memory. Copy everything from the end of the previous region (including the possibly unused trailing bit), up to the end of the current region (only the used bits!).
+                //Move it by the accumulatedLeftMove.
+                var nodeIndicesByteCount = sizeof(int) * (int)((context.RootRefinementNodeIndices.Span.Memory + context.RootRefinementNodeIndices.Count) - lastNodeIndicesRegionEnd);
+                var subtreesByteCount = sizeof(NodeChild) * (int)((context.RootRefinementSubtrees.Span.Memory + context.RootRefinementSubtrees.Count) - lastSubtreesRegionEnd);
+                Buffer.MemoryCopy(lastNodeIndicesRegionEnd, lastNodeIndicesRegionEnd - accumulatedLeftMove, nodeIndicesByteCount, nodeIndicesByteCount);
+                Buffer.MemoryCopy(lastSubtreesRegionEnd, lastSubtreesRegionEnd - accumulatedLeftMove, subtreesByteCount, subtreesByteCount);
+            }
+            lastNodeIndicesRegionEnd = context.RootRefinementNodeIndices.Span.Memory + context.RootRefinementNodeIndices.Span.Length;
+            lastSubtreesRegionEnd = context.RootRefinementSubtrees.Span.Memory + context.RootRefinementSubtrees.Span.Length;
+            var additionalMovementRequiredForFutureRegions = context.RootRefinementNodeIndices.Span.Length - context.RootRefinementNodeIndices.Count;
+            accumulatedLeftMove += additionalMovementRequiredForFutureRegions;
+        }
+        rootRefinementNodeIndices.Count -= accumulatedLeftMove;
+        rootRefinementSubtrees.Count -= accumulatedLeftMove;
+        Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
+        for (int i = 0; i < rootRefinementSubtrees.Count; ++i)
+        {
+            var subtree = rootRefinementSubtrees[i];
+            var span = subtree.Max - subtree.Min;
+            if (span.LengthSquared() < 1e-12f || float.IsNaN(span.LengthSquared()) || subtree.LeafCount == 0 || subtree.Index == 0)
+                Console.WriteLine("No :)");
+        }
+        taskContexts.Dispose(pool);
+    }
+
+    static unsafe void CollectSubtreesForRootRefinement(ref QuickList<(int nodeIndex, int subtreeBudget)> stack, int subtreeRefinementSize, BufferPool pool, Buffer<Vector<int>> subtreeRefinementTargetBundles, ref Tree tree, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
+    {
+        while (stack.TryPop(out var nodeToVisit))
+        {
+            rootRefinementNodeIndices.AllocateUnsafely() = nodeToVisit.nodeIndex;
+            ref var node = ref tree.Nodes[nodeToVisit.nodeIndex];
             var nodeTotalLeafCount = node.A.LeafCount + node.B.LeafCount;
             Debug.Assert(nodeToVisit.subtreeBudget <= nodeTotalLeafCount);
             var lowerSubtreeBudget = int.Min((nodeToVisit.subtreeBudget + 1) / 2, int.Min(node.A.LeafCount, node.B.LeafCount));
@@ -233,9 +342,29 @@ public partial struct Tree
             var aSubtreeBudget = useSmallerForA ? lowerSubtreeBudget : higherSubtreeBudget;
             var bSubtreeBudget = useSmallerForA ? higherSubtreeBudget : lowerSubtreeBudget;
 
-            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetBundles, nodeTotalLeafCount, bSubtreeBudget, node.B, ref rootStack, ref rootRefinementSubtrees);
-            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetBundles, nodeTotalLeafCount, aSubtreeBudget, node.A, ref rootStack, ref rootRefinementSubtrees);
+            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetBundles, nodeTotalLeafCount, bSubtreeBudget, node.B, ref stack, ref rootRefinementSubtrees);
+            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetBundles, nodeTotalLeafCount, aSubtreeBudget, node.A, ref stack, ref rootRefinementSubtrees);
         }
+    }
+    static unsafe void CollectSubtreesForRootRefinementTask(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        ref var jobContext = ref *(QuickList<RootSubtreeCollectionContext>*)untypedContext;
+        ref var context = ref jobContext[(int)id];
+        var subtreeBudget = context.SubtreeBudget;
+        var pool = dispatcher.WorkerPools[workerIndex];
+        var stack = new QuickList<(int nodeIndex, int subtreeBudget)>(subtreeBudget, pool);
+        stack.AllocateUnsafely() = (context.StartNode, subtreeBudget);
+        CollectSubtreesForRootRefinement(ref stack, context.SubtreeRefinementSize, pool, context.SubtreeRefinementTargetBundles, ref *context.Tree, ref context.RootRefinementNodeIndices, ref context.RootRefinementSubtrees);
+        stack.Dispose(pool);
+    }
+
+
+    unsafe void CollectSubtreesForRootRefinementST(int rootRefinementSize, int subtreeRefinementSize, BufferPool pool, in QuickList<int> subtreeRefinementTargets, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
+    {
+        var rootStack = new QuickList<(int nodeIndex, int subtreeBudget)>(rootRefinementSize, pool);
+        rootStack.AllocateUnsafely() = (0, rootRefinementSize);
+        var subtreeRefinementTargetBundles = new Buffer<Vector<int>>(subtreeRefinementTargets.Span.Memory, BundleIndexing.GetBundleCount(subtreeRefinementTargets.Count));
+        CollectSubtreesForRootRefinement(ref rootStack, subtreeRefinementSize, pool, subtreeRefinementTargetBundles, ref this, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
         rootStack.Dispose(pool);
     }
 
@@ -286,7 +415,7 @@ public partial struct Tree
         //We now know which nodes are the roots of subtree refinements; the root refinement can avoid traversing through them.
         var rootRefinementSubtrees = new QuickList<NodeChild>(rootRefinementSize, pool);
         var rootRefinementNodeIndices = new QuickList<int>(rootRefinementSize, pool);
-        CollectSubtreesForRootRefinement(rootRefinementSize, subtreeRefinementSize, pool, subtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+        CollectSubtreesForRootRefinementST(rootRefinementSize, subtreeRefinementSize, pool, subtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
 
         //Now that we have a list of nodes to refine, we can run the root refinement.
         Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
@@ -357,7 +486,18 @@ public partial struct Tree
         //We now know which nodes are the roots of subtree refinements; the root refinement can avoid traversing through them.
         var rootRefinementSubtrees = new QuickList<NodeChild>(context.RootRefinementSize, pool);
         var rootRefinementNodeIndices = new QuickList<int>(context.RootRefinementSize, pool);
-        context.Tree.CollectSubtreesForRootRefinement(context.RootRefinementSize, context.SubtreeRefinementSize, pool, context.SubtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+
+        //if (taskCount > 1)
+        //{
+        //    var targetTaskSizeInSubtrees = (context.RootRefinementSize + taskCount - 1) / taskCount;
+        //    context.Tree.CollectSubtreesForRootRefinementMT(context.RootRefinementSize, context.SubtreeRefinementSize, targetTaskSizeInSubtrees, pool,
+        //        context.SubtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees, workerIndex, context.TaskStack, dispatcher);
+        //}
+        //else
+        {
+            context.Tree.CollectSubtreesForRootRefinementST(context.RootRefinementSize, context.SubtreeRefinementSize, pool, context.SubtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+
+        }
         //var localSubtreeHash = 0;
         //for (int i = 0; i < rootRefinementSubtrees.Count; ++i)
         //{
