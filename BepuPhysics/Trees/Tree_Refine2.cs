@@ -239,7 +239,7 @@ public partial struct Tree
         }
     }
 
-    unsafe void CollectSubtreesForRootRefinementST(int rootRefinementSize, int subtreeRefinementSize, BufferPool pool, in QuickList<int> subtreeRefinementTargets, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
+    unsafe void CollectSubtreesForRootRefinement(int rootRefinementSize, int subtreeRefinementSize, BufferPool pool, in QuickList<int> subtreeRefinementTargets, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
     {
         var rootStack = new QuickList<(int nodeIndex, int subtreeBudget)>(rootRefinementSize, pool);
         rootStack.AllocateUnsafely() = (0, rootRefinementSize);
@@ -292,16 +292,9 @@ public partial struct Tree
         //Fill the trailing slots in the list with -1 to avoid matches.
         ((Span<int>)subtreeRefinementTargets.Span)[subtreeRefinementTargets.Count..].Fill(-1);
 
-        //We now know which nodes are the roots of subtree refinements; the root refinement can avoid traversing through them.
-        //TODO: A multithreaded version of the collection phase *could* help a little, but there's a few problems to overcome:
-        // 1. The cost of the collection phase is pretty cheap. Around the cost of a refit. Multithreading a collection phase of a thousand nodes is probably going to be net slower.
-        // 2. It's difficult to do it deterministically without having to do a postpass to copy things into position in the contiguous buffer, and touching all that memory is a big hit.
-        // 3. The main use case for refinements is in the broad phase. This will usually be run next to a dynamic refit refine, so we'll already have decent utilization.
-        // 4. I don't wanna.
-        //So, punting this for later. A nondeterministic implementation wouldn't be too bad. Could always just fall back to ST when deterministic flag is set. 
         var rootRefinementSubtrees = new QuickList<NodeChild>(rootRefinementSize, pool);
         var rootRefinementNodeIndices = new QuickList<int>(rootRefinementSize, pool);
-        CollectSubtreesForRootRefinementST(rootRefinementSize, subtreeRefinementSize, pool, subtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+        CollectSubtreesForRootRefinement(rootRefinementSize, subtreeRefinementSize, pool, subtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
 
         //Now that we have a list of nodes to refine, we can run the root refinement.
         Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
@@ -373,7 +366,14 @@ public partial struct Tree
         var rootRefinementSubtrees = new QuickList<NodeChild>(context.RootRefinementSize, pool);
         var rootRefinementNodeIndices = new QuickList<int>(context.RootRefinementSize, pool);
 
-        context.Tree.CollectSubtreesForRootRefinementST(context.RootRefinementSize, context.SubtreeRefinementSize, pool, context.SubtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+        //We now know which nodes are the roots of subtree refinements; the root refinement can avoid traversing through them.
+        //TODO: A multithreaded version of the collection phase *could* help a little, but there's a few problems to overcome:
+        // 1. The cost of the collection phase is pretty cheap. Around the cost of a refit. Multithreading a collection phase of a thousand nodes is probably going to be net slower.
+        // 2. It's difficult to do it deterministically without having to do a postpass to copy things into position in the contiguous buffer, and touching all that memory is a big hit.
+        // 3. The main use case for refinements is in the broad phase. This will usually be run next to a dynamic refit refine, so we'll already have decent utilization.
+        // 4. I don't wanna.
+        //So, punting this for later. A nondeterministic implementation wouldn't be too bad. Could always just fall back to ST when deterministic flag is set. 
+        context.Tree.CollectSubtreesForRootRefinement(context.RootRefinementSize, context.SubtreeRefinementSize, pool, context.SubtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
 
         //var localSubtreeHash = 0;
         //for (int i = 0; i < rootRefinementSubtrees.Count; ++i)
