@@ -19,7 +19,7 @@ public partial struct Tree
 {
     const int flagForRootRefinementSubtree = 1 << 30;
 
-    void ReifyRootRefinementNodeChild(ref int index, ref QuickList<int> refinementNodeIndices, int realNodeIndex, int childIndexInParent)
+    readonly void ReifyRootRefinementNodeChild(ref int index, ref QuickList<int> refinementNodeIndices, int realNodeIndex, int childIndexInParent)
     {
         //Root refinements mark internal subtrees with a flag in the second to last index.
         if (index < 0)
@@ -50,23 +50,68 @@ public partial struct Tree
         }
     }
 
-    void ReifyRootRefinement(QuickList<int> refinementNodeIndices, Buffer<Node> refinementNodes)
+    static unsafe void ReifyRootRefinement(int startIndex, int endIndex, QuickList<int> nodeIndices, Buffer<Node> refinementNodes, Tree tree)
     {
-        for (int i = 0; i < refinementNodeIndices.Count; ++i)
+        for (int i = startIndex; i < endIndex; ++i)
         {
             //refinementNodeIndices maps "refinement index space" to "real index space"; we can use it to update child pointers to the real locations.
-            var realNodeIndex = refinementNodeIndices[i];
+            var realNodeIndex = nodeIndices[i];
             ref var refinedNode = ref refinementNodes[i];
             //Map child indices, and update leaf references.
-            ReifyRootRefinementNodeChild(ref refinedNode.A.Index, ref refinementNodeIndices, realNodeIndex, 0);
-            ReifyRootRefinementNodeChild(ref refinedNode.B.Index, ref refinementNodeIndices, realNodeIndex, 1);
-            Nodes[realNodeIndex] = refinedNode;
-            Debug.Assert(Metanodes[realNodeIndex].Parent < 0 || Unsafe.Add(ref Nodes[Metanodes[realNodeIndex].Parent].A, Metanodes[realNodeIndex].IndexInParent).LeafCount == refinedNode.A.LeafCount + refinedNode.B.LeafCount);
-            Debug.Assert(Metanodes[realNodeIndex].Parent < 0 || Unsafe.Add(ref Nodes[Metanodes[realNodeIndex].Parent].A, Metanodes[realNodeIndex].IndexInParent).Index == realNodeIndex);
+            tree.ReifyRootRefinementNodeChild(ref refinedNode.A.Index, ref nodeIndices, realNodeIndex, 0);
+            tree.ReifyRootRefinementNodeChild(ref refinedNode.B.Index, ref nodeIndices, realNodeIndex, 1);
+            tree.Nodes[realNodeIndex] = refinedNode;
         }
     }
 
-    void ReifyRefinementNodeChild(ref int index, ref QuickList<int> refinementNodeIndices, int realNodeIndex, int childIndexInParent)
+    readonly void ReifyRootRefinementST(QuickList<int> refinementNodeIndices, Buffer<Node> refinementNodes)
+    {
+        ReifyRootRefinement(0, refinementNodeIndices.Count, refinementNodeIndices, refinementNodes, this);
+    }
+
+    unsafe struct ReifyRootRefinementContext
+    {
+        public QuickList<int>* RefinementNodeIndices;
+        public Buffer<Node>* RefinementNodes;
+        public int StartIndex;
+        public int EndIndex;
+        public Tree* Tree;
+    }
+
+    static unsafe void ReifyRootRefinementTask(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        ref var context = ref *(ReifyRootRefinementContext*)untypedContext;
+        ReifyRootRefinement(context.StartIndex, context.EndIndex, *context.RefinementNodeIndices, *context.RefinementNodes, *context.Tree);
+    }
+
+    readonly unsafe void ReifyRootRefinementMT(QuickList<int>* refinementNodeIndices, Buffer<Node>* refinementNodes, int targetTaskCount, int workerIndex, TaskStack* taskStack, IThreadDispatcher dispatcher)
+    {
+        var nodesPerTask = refinementNodeIndices->Count / targetTaskCount;
+        var remainder = refinementNodeIndices->Count - targetTaskCount * nodesPerTask;
+        Debug.Assert(targetTaskCount < 1024, "We used a stackalloc for these task allocations under the assumption that there would be *very* few required, and that's clearly wrong here! What's going on?");
+        Span<Task> tasks = stackalloc Task[targetTaskCount];
+        ReifyRootRefinementContext* contexts = stackalloc ReifyRootRefinementContext[targetTaskCount];
+        var tree = this;
+
+        var previousEnd = 0;
+        for (int i = 0; i < tasks.Length; ++i)
+        {
+            var count = i < remainder ? nodesPerTask + 1 : nodesPerTask;
+            ref var context = ref contexts[i];
+            context.RefinementNodeIndices = refinementNodeIndices;
+            context.RefinementNodes = refinementNodes;
+            context.Tree = &tree;
+            context.StartIndex = previousEnd;
+            previousEnd += count;
+            context.EndIndex = previousEnd;
+            tasks[i] = new Task(&ReifyRootRefinementTask, contexts + i, i);
+        }
+
+        taskStack->RunTasks(tasks, workerIndex, dispatcher);
+    }
+
+
+    readonly void ReifyRefinementNodeChild(ref int index, ref QuickList<int> refinementNodeIndices, int realNodeIndex, int childIndexInParent)
     {
         //Root refinements mark internal subtrees with a flag in the second to last index.
         if (index < 0)
@@ -305,7 +350,7 @@ public partial struct Tree
         var rootRefinementMetanodes = refinementMetanodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
         //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
         BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool);
-        ReifyRootRefinement(rootRefinementNodeIndices, rootRefinementNodes);
+        ReifyRootRefinementST(rootRefinementNodeIndices, rootRefinementNodes);
         rootRefinementSubtrees.Dispose(pool);
         rootRefinementNodeIndices.Dispose(pool);
 
@@ -410,7 +455,14 @@ public partial struct Tree
         ////}
         //Console.WriteLine($"Refinement targets count {debugIndex}: {context.SubtreeRefinementTargets.Count}, node topology hash: {debugAccumulatorForNodeTopology}, subtree indices hash: {debugAccumulatorForSubtreeIndices}");
         //++debugIndex;
-        context.Tree.ReifyRootRefinement(rootRefinementNodeIndices, rootRefinementNodes);
+        if (taskCount > 1)
+        {
+            context.Tree.ReifyRootRefinementMT(&rootRefinementNodeIndices, &rootRefinementNodes, taskCount, workerIndex, context.TaskStack, dispatcher);
+        }
+        else
+        {
+            context.Tree.ReifyRootRefinementST(rootRefinementNodeIndices, rootRefinementNodes);
+        }
         rootRefinementSubtrees.Dispose(pool);
         rootRefinementNodeIndices.Dispose(pool);
         rootRefinementNodes.Dispose(pool);
