@@ -27,10 +27,14 @@ namespace BepuPhysics.Trees
             where TLeaves : unmanaged
         {
             Debug.Assert(typeof(TLeaves) == typeof(LeavesHandledInPostPass) || typeof(TLeaves) == typeof(Buffer<Leaf>), "While we didn't bother with an interface here, we assume one of two types only.");
-            ref var metanode = ref metanodes[0];
-            metanode.Parent = parentNodeIndex;
-            metanode.IndexInParent = childIndexInParent;
-            metanode.RefineFlag = 0;
+            if (metanodes.Allocated)
+            {
+                //Note that we touching the metanodes buffer is *conditional*. There won't be any metanodes in the refinement use case, for example, because it has to be handled in a postpass.
+                ref var metanode = ref metanodes[0];
+                metanode.Parent = parentNodeIndex;
+                metanode.IndexInParent = childIndexInParent;
+                metanode.RefineFlag = 0;
+            }
             ref var node = ref nodes[0];
             node.A = Unsafe.As<BoundingBox4, NodeChild>(ref a);
             node.B = Unsafe.As<BoundingBox4, NodeChild>(ref b);
@@ -304,7 +308,7 @@ namespace BepuPhysics.Trees
                     centroidBoundsA.Min = Vector4.Min(centroidBoundsA.Min, centroid);
                     centroidBoundsA.Max = Vector4.Max(centroidBoundsA.Max, centroid);
                 }
-                MicroSweepForBinnedBuilder(centroidBoundsA.Min, centroidBoundsA.Max, ref leaves, subtrees.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Slice(1, subtreeCountA - 1), aIndex, nodeIndex, 0, context, workerIndex);
+                MicroSweepForBinnedBuilder(centroidBoundsA.Min, centroidBoundsA.Max, ref leaves, subtrees.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Allocated ? metanodes.Slice(1, subtreeCountA - 1) : metanodes, aIndex, nodeIndex, 0, context, workerIndex);
             }
             if (subtreeCountB > 1)
             {
@@ -320,7 +324,7 @@ namespace BepuPhysics.Trees
                     centroidBoundsB.Min = Vector4.Min(centroidBoundsB.Min, centroid);
                     centroidBoundsB.Max = Vector4.Max(centroidBoundsB.Max, centroid);
                 }
-                MicroSweepForBinnedBuilder(centroidBoundsB.Min, centroidBoundsB.Max, ref leaves, subtrees.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Slice(subtreeCountA, subtreeCountB - 1), bIndex, nodeIndex, 1, context, workerIndex);
+                MicroSweepForBinnedBuilder(centroidBoundsB.Min, centroidBoundsB.Max, ref leaves, subtrees.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Allocated ? metanodes.Slice(subtreeCountA, subtreeCountB - 1) : metanodes, bIndex, nodeIndex, 1, context, workerIndex);
             }
         }
 
@@ -957,7 +961,7 @@ namespace BepuPhysics.Trees
             var boundingBoxes = subtrees.As<BoundingBox4>();
             var nodeCount = subtreeCount - 1;
             var nodes = context->Nodes.Slice(nodeIndex, nodeCount);
-            var metanodes = context->Metanodes.Slice(nodeIndex, nodeCount);
+            var metanodes = context->Metanodes.Allocated ? context->Metanodes.Slice(nodeIndex, nodeCount) : context->Metanodes;
             if (subtreeCount == 2)
             {
                 Debug.Assert(parentNodeIndex < 0 || Unsafe.Add(ref context->Nodes[parentNodeIndex].A, childIndexInParent).LeafCount == subtrees[0].LeafCount + subtrees[1].LeafCount);

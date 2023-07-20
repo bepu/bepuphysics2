@@ -345,12 +345,10 @@ public partial struct Tree
         //Now that we have a list of nodes to refine, we can run the root refinement.
         Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
         var refinementNodesAllocation = new Buffer<Node>(int.Max(rootRefinementNodeIndices.Count, subtreeRefinementSize), pool);
-        var refinementMetanodesAllocation = new Buffer<Metanode>(refinementNodesAllocation.Length, pool);
 
         var rootRefinementNodes = refinementNodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
-        var rootRefinementMetanodes = refinementMetanodesAllocation.Slice(0, rootRefinementNodeIndices.Count);
         //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
-        BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool);
+        BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, default, default, pool);
         ReifyRootRefinementST(rootRefinementNodeIndices, rootRefinementNodes);
         rootRefinementSubtrees.Dispose(pool);
         rootRefinementNodeIndices.Dispose(pool);
@@ -365,9 +363,8 @@ public partial struct Tree
             CollectSubtreesForSubtreeRefinement(subtreeRefinementTargets[i], subtreeStackBuffer, ref subtreeRefinementNodeIndices, ref subtreeRefinementLeaves);
 
             var refinementNodes = refinementNodesAllocation.Slice(0, subtreeRefinementNodeIndices.Count);
-            var refinementMetanodes = refinementMetanodesAllocation.Slice(0, subtreeRefinementNodeIndices.Count);
             //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
-            BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, pool);
+            BinnedBuild(subtreeRefinementLeaves, refinementNodes, default, default, pool);
             ReifySubtreeRefinement(subtreeRefinementNodeIndices, refinementNodes);
 
             subtreeRefinementNodeIndices.Count = 0;
@@ -379,7 +376,6 @@ public partial struct Tree
         subtreeRefinementTargets.Dispose(pool);
         subtreeStackBuffer.Dispose(pool);
         refinementNodesAllocation.Dispose(pool);
-        refinementMetanodesAllocation.Dispose(pool);
     }
 
 
@@ -431,15 +427,14 @@ public partial struct Tree
         //Now that we have a list of nodes to refine, we can run the root refinement.
         Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
         var rootRefinementNodes = new Buffer<Node>(rootRefinementNodeIndices.Count, pool);
-        var rootRefinementMetanodes = new Buffer<Metanode>(rootRefinementNodeIndices.Count, pool);
         //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
         if (taskCount > 1)
         {
-            BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool, dispatcher, context.TaskStack, workerIndex, context.WorkerCount, taskCount, deterministic: context.Deterministic);
+            BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, default, default, pool, dispatcher, context.TaskStack, workerIndex, context.WorkerCount, taskCount, deterministic: context.Deterministic);
         }
         else
         {
-            BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, rootRefinementMetanodes, default, pool, workerIndex: workerIndex);
+            BinnedBuild(rootRefinementSubtrees, rootRefinementNodes, default, default, pool, workerIndex: workerIndex);
         }
         //var localNodeTopologyHash = 0;
         //for (int i = 0; i < rootRefinementNodes.Length; ++i)
@@ -468,7 +463,6 @@ public partial struct Tree
         rootRefinementSubtrees.Dispose(pool);
         rootRefinementNodeIndices.Dispose(pool);
         rootRefinementNodes.Dispose(pool);
-        rootRefinementMetanodes.Dispose(pool);
     }
     unsafe static void ExecuteSubtreeRefinementTask(long subtreeRefinementTarget, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
     {
@@ -486,22 +480,20 @@ public partial struct Tree
         //Accumulate nodes and leaves with a prepass.
         context.Tree.CollectSubtreesForSubtreeRefinement((int)subtreeRefinementTarget, subtreeStackBuffer, ref subtreeRefinementNodeIndices, ref subtreeRefinementLeaves);
         var refinementNodes = new Buffer<Node>(subtreeRefinementNodeIndices.Count, pool);
-        var refinementMetanodes = new Buffer<Metanode>(subtreeRefinementNodeIndices.Count, pool);
         //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
 
         if (taskCount > 1)
         {
-            BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, pool, dispatcher, context.TaskStack,
+            BinnedBuild(subtreeRefinementLeaves, refinementNodes, default, default, pool, dispatcher, context.TaskStack,
                 workerIndex: workerIndex, workerCount: context.WorkerCount, targetTaskCount: taskCount, deterministic: context.Deterministic);
         }
         else
         {
-            BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, pool, workerIndex: workerIndex);
+            BinnedBuild(subtreeRefinementLeaves, refinementNodes, default, default, pool, workerIndex: workerIndex);
         }
         context.Tree.ReifySubtreeRefinement(subtreeRefinementNodeIndices, refinementNodes);
 
         refinementNodes.Dispose(pool);
-        refinementMetanodes.Dispose(pool);
         subtreeRefinementNodeIndices.Dispose(pool);
         subtreeRefinementLeaves.Dispose(pool);
         subtreeStackBuffer.Dispose(pool);
