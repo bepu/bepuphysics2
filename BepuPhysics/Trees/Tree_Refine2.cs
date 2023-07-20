@@ -44,6 +44,7 @@ public partial struct Tree
             //Just as leaves need to be updated to point at the new node state, parent pointers for internal nodes need be updated too.
             //Note that this touches memory associated with nodes that weren't included in the refinement.
             //This is only safe if the subtree refinement either occurs sequentially with root refinement, or the subtree refinement doesn't touch the subtree refinement root's metanode.
+            //NOTE: This means the binned builder *should not touch the metanodes*.
             ref var childMetanode = ref Metanodes[index];
             childMetanode.Parent = realNodeIndex;
             childMetanode.IndexInParent = childIndexInParent;
@@ -111,9 +112,8 @@ public partial struct Tree
     }
 
 
-    readonly void ReifyRefinementNodeChild(ref int index, ref QuickList<int> refinementNodeIndices, int realNodeIndex, int childIndexInParent)
+    readonly void ReifySubtreeRefinementNodeChild(ref int index, ref QuickList<int> refinementNodeIndices, int realNodeIndex, int childIndexInParent)
     {
-        //Root refinements mark internal subtrees with a flag in the second to last index.
         if (index < 0)
         {
             //The child is a leaf.
@@ -126,13 +126,14 @@ public partial struct Tree
             //Just as leaves need to be updated to point at the new node state, parent pointers for internal nodes need be updated too.
             //Note that this touches memory associated with nodes that weren't included in the refinement.
             //This is only safe if the subtree refinement either occurs sequentially with root refinement, or the subtree refinement doesn't touch the subtree refinement root's metanode.
+            //NOTE: This means the binned builder *should not touch the metanodes*.
             ref var childMetanode = ref Metanodes[index];
             childMetanode.Parent = realNodeIndex;
             childMetanode.IndexInParent = childIndexInParent;
         }
     }
 
-    void ReifyRefinement(QuickList<int> refinementNodeIndices, Buffer<Node> refinementNodes)
+    void ReifySubtreeRefinement(QuickList<int> refinementNodeIndices, Buffer<Node> refinementNodes)
     {
         for (int i = 0; i < refinementNodeIndices.Count; ++i)
         {
@@ -141,8 +142,8 @@ public partial struct Tree
             ref var refinedNode = ref refinementNodes[i];
             //Map child indices, and update leaf references.
             //Root refinements mark internal subtrees with a flag in the second to last index.
-            ReifyRefinementNodeChild(ref refinedNode.A.Index, ref refinementNodeIndices, realNodeIndex, 0);
-            ReifyRefinementNodeChild(ref refinedNode.B.Index, ref refinementNodeIndices, realNodeIndex, 1);
+            ReifySubtreeRefinementNodeChild(ref refinedNode.A.Index, ref refinementNodeIndices, realNodeIndex, 0);
+            ReifySubtreeRefinementNodeChild(ref refinedNode.B.Index, ref refinementNodeIndices, realNodeIndex, 1);
             Nodes[realNodeIndex] = refinedNode;
             //Debug.Assert(Metanodes[realNodeIndex].Parent < 0 || Unsafe.Add(ref Nodes[Metanodes[realNodeIndex].Parent].A, Metanodes[realNodeIndex].IndexInParent).Index == realNodeIndex);
         }
@@ -367,7 +368,7 @@ public partial struct Tree
             var refinementMetanodes = refinementMetanodesAllocation.Slice(0, subtreeRefinementNodeIndices.Count);
             //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
             BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, pool);
-            ReifyRefinement(subtreeRefinementNodeIndices, refinementNodes);
+            ReifySubtreeRefinement(subtreeRefinementNodeIndices, refinementNodes);
 
             subtreeRefinementNodeIndices.Count = 0;
             subtreeRefinementLeaves.Count = 0;
@@ -463,6 +464,7 @@ public partial struct Tree
         {
             context.Tree.ReifyRootRefinementST(rootRefinementNodeIndices, rootRefinementNodes);
         }
+
         rootRefinementSubtrees.Dispose(pool);
         rootRefinementNodeIndices.Dispose(pool);
         rootRefinementNodes.Dispose(pool);
@@ -473,18 +475,30 @@ public partial struct Tree
         ref var context = ref *(RefinementContext*)untypedContext;
         var pool = dispatcher.WorkerPools[workerIndex];
 
+        ref var refinementRootNode = ref context.Tree.Nodes[(int)subtreeRefinementTarget];
+        var refinementLeafCount = refinementRootNode.A.LeafCount + refinementRootNode.B.LeafCount;
+        var taskCount = (int)float.Ceiling(context.TargetTaskBudget * (float)refinementLeafCount / (context.RootRefinementSize + context.TotalLeafCountInSubtrees));
+
         var subtreeRefinementNodeIndices = new QuickList<int>(context.SubtreeRefinementSize, pool);
         var subtreeRefinementLeaves = new QuickList<NodeChild>(context.SubtreeRefinementSize, pool);
         var subtreeStackBuffer = new Buffer<int>(context.SubtreeRefinementSize, pool);
 
         //Accumulate nodes and leaves with a prepass.
         context.Tree.CollectSubtreesForSubtreeRefinement((int)subtreeRefinementTarget, subtreeStackBuffer, ref subtreeRefinementNodeIndices, ref subtreeRefinementLeaves);
-
         var refinementNodes = new Buffer<Node>(subtreeRefinementNodeIndices.Count, pool);
         var refinementMetanodes = new Buffer<Metanode>(subtreeRefinementNodeIndices.Count, pool);
         //Passing 'default' for the leaves tells the binned builder to not worry about updating leaves.
-        BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, pool);
-        context.Tree.ReifyRefinement(subtreeRefinementNodeIndices, refinementNodes);
+
+        if (taskCount > 1)
+        {
+            BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, pool, dispatcher, context.TaskStack,
+                workerIndex: workerIndex, workerCount: context.WorkerCount, targetTaskCount: taskCount, deterministic: context.Deterministic);
+        }
+        else
+        {
+            BinnedBuild(subtreeRefinementLeaves, refinementNodes, refinementMetanodes, default, pool, workerIndex: workerIndex);
+        }
+        context.Tree.ReifySubtreeRefinement(subtreeRefinementNodeIndices, refinementNodes);
 
         refinementNodes.Dispose(pool);
         refinementMetanodes.Dispose(pool);
