@@ -50,8 +50,8 @@ namespace BepuPhysics.Trees
             else
             {
                 aIndex = nodeIndex + 1;
-                node.A.Index = aIndex;
             }
+            node.A.Index = aIndex;
             if (subtreeCountB == 1)
             {
                 bIndex = subtrees[^1].Index;
@@ -66,8 +66,8 @@ namespace BepuPhysics.Trees
             else
             {
                 bIndex = nodeIndex + subtreeCountA; //parentNodeIndex + 1 + (subtreeCountA - 1)
-                node.B.Index = bIndex;
             }
+            node.B.Index = bIndex;
         }
 
         internal static float ComputeBoundsMetric(BoundingBox4 bounds) => ComputeBoundsMetric(bounds.Min, bounds.Max);
@@ -1080,7 +1080,6 @@ namespace BepuPhysics.Trees
                 else
                     BinSubtrees<DoNotWriteBinIndices>(centroidBounds.Min, useX, useY, permuteMask, axisIndex, offsetToBinIndex, maximumBinIndex, subtrees, binBoundingBoxes, binCentroidBoundingBoxes, binLeafCounts, subtreeBinIndices);
             }
-
             //Identify the split index by examining the SAH of very split option.
             //Premerge from left to right so we have a sorta-summed area table to cheaply look up all possible child A bounds as we scan.
             binBoundingBoxesScan[0] = binBoundingBoxes[0];
@@ -1214,7 +1213,6 @@ namespace BepuPhysics.Trees
                     }
                 }
             }
-
             var leafCountB = bestLeafCountB;
             var leafCountA = totalLeafCount - leafCountB;
             Debug.Assert(subtreeCountA + subtreeCountB == subtreeCount);
