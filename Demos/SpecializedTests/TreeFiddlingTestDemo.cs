@@ -187,12 +187,13 @@ public unsafe class TreeFiddlingTestDemo : Demo
 
                 var start = Stopwatch.GetTimestamp();
                 //mesh.Tree.Refine2(8192, ref refinementState, 0, 8192, BufferPool);
-                //mesh.Tree.Refine2(8192, ref refinementState, 32, 1024, BufferPool);
-                mesh.Tree.Refine2(8192, ref refinementState, 32, 4096, BufferPool, ThreadDispatcher);
+                //mesh.Tree.Refine2(1024, ref refinementState, 1, 131072, BufferPool);
+                mesh.Tree.Refine2(8192, ref refinementState, 16, 2048, BufferPool, ThreadDispatcher);
                 var end = Stopwatch.GetTimestamp();
                 sum += end - start;
                 if ((refinementIndex + 1) % 128 == 0)
                 {
+                    mesh.Tree.Validate();
                     var cacheQuality = mesh.Tree.MeasureCacheQuality();
                     var costMetric = mesh.Tree.MeasureCostMetric();
                     Console.WriteLine($"cost, cache for {refinementIndex}: {costMetric}, {cacheQuality}");
@@ -223,7 +224,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
 
             //BinnedTest(setup, () =>
             //{
-            //    mesh.Tree.BinnedBuild(subtrees, ThreadDispatcher, pool: BufferPool);
+            //    mesh.Tree.BinnedBuild(subtrees, BufferPool, ThreadDispatcher);
             //}, "Revamp Single Axis MT", ref mesh.Tree);
 
             //BufferPool.Take<BoundingBox>(mesh.Triangles.Length, out var leafBounds);
