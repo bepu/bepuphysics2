@@ -1388,7 +1388,7 @@ namespace BepuPhysics.Trees
                     {
                         Debug.Assert(workerIndex == 0, "If we're dispatching internally, there shouldn't be any other active workers.");
                         taskStackPointer->PushUnsafely(new Task(&BinnedBuilderWorkerEntry<Buffer<Leaf>>, &context), 0, dispatcher);
-                        dispatcher.DispatchWorkers(&BinnedBuilderWorkerFunction<Buffer<Leaf>>, unmanagedContext: taskStackPointer, maximumWorkerCount: workerCount);
+                        TaskStack.DispatchWorkers(dispatcher, taskStackPointer, workerCount);
                     }
                     else
                     {
@@ -1405,7 +1405,7 @@ namespace BepuPhysics.Trees
                     {
                         Debug.Assert(workerIndex == 0, "If we're dispatching internally, there shouldn't be any other active workers.");
                         taskStackPointer->PushUnsafely(new Task(&BinnedBuilderWorkerEntry<LeavesHandledInPostPass>, &context), 0, dispatcher);
-                        dispatcher.DispatchWorkers(&BinnedBuilderWorkerFunction<LeavesHandledInPostPass>, unmanagedContext: taskStackPointer, maximumWorkerCount: workerCount);
+                        TaskStack.DispatchWorkers(dispatcher, taskStackPointer, workerCount);
                     }
                     else
                     {
@@ -1427,18 +1427,6 @@ namespace BepuPhysics.Trees
             BinnedBuildNode(false, 0, 0, context->SubtreesPing.Length, -1, -1, default, context, workerIndex, dispatcher);
             //Once the entry point returns, all workers should stop because it won't return unless both nodes are done.
             context->Threading.TaskStack->RequestStop();
-        }
-
-        unsafe static void BinnedBuilderWorkerFunction<TLeaves>(int workerIndex, IThreadDispatcher dispatcher)
-            where TLeaves : unmanaged
-        {
-            var taskStack = (TaskStack*)dispatcher.UnmanagedContext;
-            PopTaskResult popTaskResult;
-            var waiter = new SpinWait();
-            while ((popTaskResult = taskStack->TryPopAndRun(workerIndex, dispatcher)) != PopTaskResult.Stop)
-            {
-                waiter.SpinOnce(-1);
-            }
         }
 
 

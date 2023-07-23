@@ -485,4 +485,31 @@ public unsafe struct TaskStack
         AllowAllJobs filter = default;
         For(function, context, inclusiveStartIndex, iterationCount, workerIndex, dispatcher, ref filter, tag);
     }
+
+    /// <summary>
+    /// Worker function that pops tasks from the stack and executes them.
+    /// </summary>
+    /// <param name="workerIndex">Index of the worker calling this function.</param>
+    /// <param name="dispatcher">Thread dispatcher responsible for the invocation.</param>
+    public static void DispatchWorkerFunction(int workerIndex, IThreadDispatcher dispatcher)
+    {
+        var taskStack = (TaskStack*)dispatcher.UnmanagedContext;
+        PopTaskResult popTaskResult;
+        var waiter = new SpinWait();
+        while ((popTaskResult = taskStack->TryPopAndRun(workerIndex, dispatcher)) != PopTaskResult.Stop)
+        {
+            waiter.SpinOnce(-1);
+        }
+    }
+
+    /// <summary>
+    /// Dispatches workers to execute tasks from the given stack.
+    /// </summary>
+    /// <param name="taskStack">Task stack to pull work from.</param>
+    /// <param name="dispatcher">Thread dispatcher to dispatch workers with.</param>
+    /// <param name="maximumWorkerCount">Maximum number of workers to spin up for the dispatch.</param>
+    public static void DispatchWorkers(IThreadDispatcher dispatcher, TaskStack* taskStack, int maximumWorkerCount = int.MaxValue)
+    {
+        dispatcher.DispatchWorkers(&DispatchWorkerFunction, maximumWorkerCount, taskStack);
+    }
 }

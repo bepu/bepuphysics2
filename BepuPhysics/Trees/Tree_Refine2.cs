@@ -508,16 +508,6 @@ public partial struct Tree
         subtreeStackBuffer.Dispose(pool);
 
     }
-    static unsafe void ExecuteWorker(int workerIndex, IThreadDispatcher dispatcher)
-    {
-        var taskStack = (TaskStack*)dispatcher.UnmanagedContext;
-        PopTaskResult popTaskResult;
-        var waiter = new SpinWait();
-        while ((popTaskResult = taskStack->TryPopAndRun(workerIndex, dispatcher)) != PopTaskResult.Stop)
-        {
-            waiter.SpinOnce(-1);
-        }
-    }
 
     static unsafe void StopStackOnCompletion(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
     {
@@ -579,7 +569,7 @@ public partial struct Tree
         {
             //There isn't an active dispatch, so we need to do it.
             taskStack->AllocateContinuationAndPush(tasks, workerIndex, threadDispatcher, onComplete: new Task(&StopStackOnCompletion, taskStack));
-            threadDispatcher.DispatchWorkers(&ExecuteWorker, unmanagedContext: taskStack, maximumWorkerCount: workerCount);
+            TaskStack.DispatchWorkers(threadDispatcher, taskStack, workerCount);
         }
         else
         {
