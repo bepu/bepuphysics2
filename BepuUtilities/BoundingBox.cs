@@ -204,17 +204,28 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void CreateMergedUnsafeWithPreservation<TA, TB>(in TA boundingBoxA, in TB boundingBoxB, out TA merged) where TA : unmanaged where TB : unmanaged
         {
-            if (Sse41.IsSupported)
+            if (Vector128.IsHardwareAccelerated)
             {
                 Unsafe.SkipInit(out merged);
                 ref var resultMin = ref Unsafe.As<TA, Vector128<float>>(ref merged);
                 ref var resultMax = ref Unsafe.Add(ref Unsafe.As<TA, Vector128<float>>(ref merged), 1);
-                resultMin = Sse41.Blend(Vector128.Min(
+                var min = Vector128.Min(
                     Unsafe.As<TA, Vector128<float>>(ref Unsafe.AsRef(boundingBoxA)),
-                    Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB))), resultMin, 0b111111);
-                resultMax = Sse41.Blend(Vector128.Max(
+                    Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB)));
+                var max = Vector128.Max(
                     Unsafe.Add(ref Unsafe.As<TA, Vector128<float>>(ref Unsafe.AsRef(boundingBoxA)), 1),
-                    Unsafe.Add(ref Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB)), 1)), resultMax, 0b111111);
+                    Unsafe.Add(ref Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB)), 1));
+                if (Sse41.IsSupported)
+                {
+                    resultMin = Sse41.Blend(min, resultMin, 0b1000);
+                    resultMax = Sse41.Blend(max, resultMax, 0b1000);
+                }
+                else
+                {
+                    var mask = Vector128.Create(-1, -1, -1, 0).As<int, float>();
+                    resultMin = Vector128.ConditionalSelect(mask, min, resultMin);
+                    resultMax = Vector128.ConditionalSelect(mask, max, resultMax);
+                }
             }
             else
             {
