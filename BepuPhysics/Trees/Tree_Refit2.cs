@@ -1,6 +1,8 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.TaskScheduling;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
@@ -12,12 +14,13 @@ using System.Threading;
 namespace BepuPhysics.Trees;
 
 partial struct Tree
-{    readonly unsafe void Refit2(ref NodeChild childInParent)
+{
+    readonly unsafe void Refit2(ref NodeChild childInParent)
     {
         Debug.Assert(LeafCount >= 2);
         ref var node = ref Nodes[childInParent.Index];
         ref var a = ref node.A;
-        if (node.A.Index >= 0)
+        if (a.Index >= 0)
         {
             Refit2(ref a);
         }
@@ -40,37 +43,104 @@ partial struct Tree
         Refit2(ref stub);
     }
 
-    public void RefitBottomUp(BufferPool pool)
+    unsafe struct RefitContext
     {
-        var refitFlags = new Buffer<ulong>((NodeCount + 63) / 64, pool);
-        refitFlags.Clear(0, refitFlags.Length);
-        //Refit doesn't calculate new bounding boxes for leaves; they are assumed to have already been supplied to the leaf-owning nodes.
-        for (int i = 0; i < LeafCount; ++i)
+        public Tree* Tree;
+        public TaskStack* TaskStack;
+        public int LeafCountPerTask;
+    }
+    unsafe readonly void Refit2WithTaskSpawning(ref NodeChild childInParent, RefitContext* context, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        Debug.Assert(LeafCount >= 2);
+        ref var node = ref Nodes[childInParent.Index];
+        ref var a = ref node.A;
+        ref var b = ref node.B;
+        Debug.Assert(context->LeafCountPerTask > 1);
+        if (a.LeafCount >= context->LeafCountPerTask && b.LeafCount >= context->LeafCountPerTask)
         {
-            var leaf = Leaves[i];
-            var nodeIndex = leaf.NodeIndex;
-            //There's nowhere to go from the root, so if the traversal gets there, it's done.
-            //(If the leaf is owned by the root, that's fine; the direct owner of a leaf is assumed to have been updated by an external process before the refit.)
-            while (nodeIndex > 0)
+            //Both children are big enough to warrant a task. Spawn one task for B and recurse on A.
+            //(We always punt B because, if any cache optimizer-ish stuff is going on, A will be more likely to be contiguous in memory.)
+            var task = new Task(&Refit2Task, context, childInParent.Index);
+            var continuation = context->TaskStack->AllocateContinuationAndPush(new Span<Task>(ref task), workerIndex, dispatcher);
+            Debug.Assert(a.Index >= 0);
+            Refit2WithTaskSpawning(ref a, context, workerIndex, dispatcher);
+            //Wait until B is fully done before continuing.
+            context->TaskStack->WaitForCompletion(continuation, workerIndex, dispatcher);
+        }
+        else
+        {
+            //At least one child is too small to warrant a new task. Just recurse on both.
+            if (a.Index >= 0)
             {
-                var bundleIndex = nodeIndex / 64;
-                var indexInBundle = nodeIndex - bundleIndex * 64;
-                var mask = 1ul << indexInBundle;
-                ref var bundle = ref refitFlags[bundleIndex];
-                if ((bundle & mask) == 0)
-                {
-                    //This node is incomplete. Mark it and terminate the local refit 'thread'.
-                    bundle |= mask;
-                    break;
-                }
-                //This node is complete; both children have been refit. Merge into the parent.
-                ref var metanode = ref Metanodes[nodeIndex];
-                nodeIndex = metanode.Parent;
-                ref var node = ref Nodes[nodeIndex];
-                ref var child = ref Unsafe.Add(ref node.A, metanode.IndexInParent);
-                BoundingBox.CreateMergedUnsafeWithPreservation(node.A, node.B, out child);
+                Refit2(ref a);
+            }
+            if (b.Index >= 0)
+            {
+                Refit2(ref b);
             }
         }
-        refitFlags.Dispose(pool);
+        BoundingBox.CreateMergedUnsafeWithPreservation(a, b, out childInParent);
     }
+
+    static unsafe void Refit2Task(long parentNodeIndex, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        var context = (RefitContext*)untypedContext;
+        ref var node = ref context->Tree->Nodes[(int)parentNodeIndex];
+        context->Tree->Refit2WithTaskSpawning(ref node.B, context, workerIndex, dispatcher);
+    }
+    static unsafe void RefitRootEntryTask(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        var context = (RefitContext*)untypedContext;
+        NodeChild stub = default;
+        context->Tree->Refit2WithTaskSpawning(ref stub, context, workerIndex, dispatcher);
+        context->TaskStack->RequestStop();
+    }
+
+    unsafe readonly void Refit2(BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount, bool internallyDispatch)
+    {
+        //No point in refitting a tree with no internal nodes!
+        if (LeafCount <= 2)
+            return;
+        var tree = this;
+        if (targetTaskCount < 0)
+            targetTaskCount = dispatcher.ThreadCount;
+        var leafCountPerTask = (int)float.Ceiling(LeafCount / (float)targetTaskCount);
+        var refitContext = new RefitContext { LeafCountPerTask = leafCountPerTask, TaskStack = taskStack, Tree = &tree };
+        if (internallyDispatch)
+        {
+            taskStack->PushUnsafely(new Task(&RefitRootEntryTask, &refitContext), workerIndex, dispatcher);
+            TaskStack.DispatchWorkers(dispatcher, taskStack, int.Min(dispatcher.ThreadCount, targetTaskCount));
+        }
+        else
+        {
+            NodeChild stub = default;
+            Refit2WithTaskSpawning(ref stub, &refitContext, workerIndex, dispatcher);
+        }
+    }
+
+    /// <summary>
+    /// Refits all bounding boxes in the tree using multiple threads.
+    /// </summary>
+    /// <param name="pool">Pool used for main thread temporary allocations during execution.</param>
+    /// <param name="dispatcher">Dispatcher used during execution.</param>
+    public unsafe readonly void Refit2(BufferPool pool, IThreadDispatcher dispatcher)
+    {
+        var taskStack = new TaskStack(pool, dispatcher, dispatcher.ThreadCount);
+        Refit2(pool, dispatcher, &taskStack, 0, -1, internallyDispatch: true);
+        taskStack.Dispose(pool, dispatcher);
+    }
+
+    /// <summary>
+    /// Refits all bounding boxes in the tree using multiple threads.<para/>Pushes tasks into the provided <see cref="TaskStack"/>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
+    /// </summary>
+    /// <param name="pool">Pool used for allocations during execution.</param>
+    /// <param name="dispatcher">Dispatcher used during execution.</param>
+    /// <param name="taskStack"><see cref="TaskStack"/> that the refit operation will push tasks onto as needed.</param>
+    /// <param name="workerIndex">Index of the worker calling the function.</param>
+    /// <param name="targetTaskCount">Number of tasks the refit should try to create during execution.</param>
+    public unsafe readonly void Refit2(BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1)
+    {
+        Refit2(pool, dispatcher, taskStack, workerIndex, targetTaskCount, internallyDispatch: false);
+    }
+
 }
