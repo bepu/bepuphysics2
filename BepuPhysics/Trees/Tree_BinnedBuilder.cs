@@ -286,6 +286,12 @@ namespace BepuPhysics.Trees
                 accumulatedBoundingBoxB.Max = Vector4.Max(bounds.Max, accumulatedBoundingBoxB.Max);
                 accumulatedLeafCountB += subtrees[previousIndex].LeafCount;
             }
+            if (bestLeafCountB == 0 || bestLeafCountB == totalLeafCount || bestSAH == float.MaxValue || float.IsNaN(bestSAH) || float.IsInfinity(bestSAH))
+            {
+                //Some form of major problem detected! Fall back to a degenerate split.
+                HandleMicrosweepDegeneracy(ref leaves, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, context, workerIndex);
+                return;
+            }
 
             var bestBoundsA = binBoundingBoxesScan[bestSplit - 1];
             var subtreeCountA = bestSplit;
@@ -332,7 +338,8 @@ namespace BepuPhysics.Trees
         private static unsafe int ComputeBinIndex(Vector4 centroidMin, bool useX, bool useY, Vector128<int> permuteMask, int axisIndex, Vector4 offsetToBinIndex, Vector4 maximumBinIndex, in BoundingBox4 box)
         {
             var centroid = box.Min + box.Max;
-            var binIndicesForLeafContinuous = Vector4.Min(maximumBinIndex, (centroid - centroidMin) * offsetToBinIndex);
+            //Note the clamp against zero as well as maximumBinIndex; going negative *can* happen when the bounding box is corrupted. We'd rather not crash with an access violation.
+            var binIndicesForLeafContinuous = Vector4.Clamp((centroid - centroidMin) * offsetToBinIndex, Vector4.Zero, maximumBinIndex);
             //Note that we don't store out any of the indices into per-bin lists here. We only *really* want two final groups for the children,
             //and we can easily compute those by performing another scan. It requires recomputing the bin indices, but that's really not much of a concern.
             //To extract the desired lane, we need to use a variable shuffle mask. At the time of writing, the Vector128 cross platform shuffle did not like variable masks.
@@ -950,6 +957,65 @@ namespace BepuPhysics.Trees
             BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex, nodePushContext->NodeIndex, subtreeCount, nodePushContext->ParentNodeIndex, 1, nodePushContext->CentroidBounds, nodePushContext->Context, workerIndex, dispatcher);
         }
 
+        private static unsafe void BuildNodeForDegeneracy<TLeaves, TThreading>(
+            Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent,
+            Context<TLeaves, TThreading>* context, out int subtreeCountA, out int subtreeCountB, out BoundingBox4 boundsA, out BoundingBox4 boundsB, out int aIndex, out int bIndex)
+            where TLeaves : unmanaged
+            where TThreading : unmanaged, IBinnedBuilderThreading
+        {
+            //This shouldn't happen unless something is badly wrong with the input; no point in optimizing it.
+            subtreeCountA = subtrees.Length / 2;
+            subtreeCountB = subtrees.Length - subtreeCountA;
+            boundsA.Min = new Vector4(float.MaxValue);
+            boundsA.Max = new Vector4(float.MinValue);
+            boundsB.Min = new Vector4(float.MaxValue);
+            boundsB.Max = new Vector4(float.MinValue);
+            int leafCountA = 0, leafCountB = 0;
+            var boundingBoxes = subtrees.As<BoundingBox4>();
+            for (int i = 0; i < subtreeCountA; ++i)
+            {
+                ref var bounds = ref boundingBoxes[i];
+                boundsA.Min = Vector4.Min(bounds.Min, boundsA.Min);
+                boundsA.Max = Vector4.Max(bounds.Max, boundsA.Max);
+                leafCountA += subtrees[i].LeafCount;
+            }
+            for (int i = subtreeCountA; i < subtrees.Length; ++i)
+            {
+                ref var bounds = ref boundingBoxes[i];
+                boundsB.Min = Vector4.Min(bounds.Min, boundsB.Min);
+                boundsB.Max = Vector4.Max(bounds.Max, boundsB.Max);
+                leafCountB += subtrees[i].LeafCount;
+            }
+            Debug.Assert(parentNodeIndex < 0 || Unsafe.Add(ref context->Nodes[parentNodeIndex].A, childIndexInParent).LeafCount == leafCountA + leafCountB);
+            //Note that we just use the bounds as centroid bounds. This is a degenerate situation anyway.
+            BuildNode(boundsA, boundsB, leafCountA, leafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref context->Leaves, out aIndex, out bIndex);
+        }
+        static unsafe void HandleDegeneracy<TLeaves, TThreading>(Buffer<NodeChild> subtrees, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes,
+            bool usePongBuffer, int subtreeRegionStartIndex, int nodeIndex, int subtreeCount, int parentNodeIndex, int childIndexInParent,
+            BoundingBox4 centroidBounds, Context<TLeaves, TThreading>* context, int workerIndex, IThreadDispatcher dispatcher)
+            where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
+        {
+
+            BuildNodeForDegeneracy(subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, context, out var subtreeCountA, out var subtreeCountB, out var boundsA, out var boundsB, out var aIndex, out var bIndex);
+            if (subtreeCountA > 1)
+                BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex, aIndex, subtreeCountA, nodeIndex, 0, boundsA, context, workerIndex, dispatcher);
+            if (subtreeCountB > 1)
+                BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex + subtreeCountA, bIndex, subtreeCountB, nodeIndex, 1, boundsB, context, workerIndex, dispatcher);
+        }
+
+
+        static unsafe void HandleMicrosweepDegeneracy<TLeaves, TThreading>(ref TLeaves leaves,
+            Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Context<TLeaves, TThreading>* context, int workerIndex)
+            where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
+        {
+            BuildNodeForDegeneracy(subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, context, out var subtreeCountA, out var subtreeCountB, out var boundsA, out var boundsB, out var aIndex, out var bIndex);
+            if (subtreeCountA > 1)
+                MicroSweepForBinnedBuilder(boundsA.Min, boundsA.Max, ref leaves, subtrees.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Allocated ? metanodes.Slice(1, subtreeCountA - 1) : metanodes, aIndex, nodeIndex, 0, context, workerIndex);
+            if (subtreeCountB > 1)
+                MicroSweepForBinnedBuilder(boundsB.Max, boundsB.Max, ref leaves, subtrees.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Allocated ? metanodes.Slice(subtreeCountA, subtreeCountB - 1) : metanodes, bIndex, nodeIndex, 1, context, workerIndex);
+        }
+
+
         static unsafe void BinnedBuildNode<TLeaves, TThreading>(
             bool usePongBuffer, int subtreeRegionStartIndex, int nodeIndex, int subtreeCount, int parentNodeIndex, int childIndexInParent,
             BoundingBox4 centroidBounds, Context<TLeaves, TThreading>* context, int workerIndex, IThreadDispatcher dispatcher)
@@ -996,35 +1062,7 @@ namespace BepuPhysics.Trees
             {
                 //This node is completely degenerate; there is no 'good' ordering of the children. Pick a split in the middle and shrug.
                 //This shouldn't happen unless something is badly wrong with the input; no point in optimizing it.
-                var degenerateSubtreeCountA = subtrees.Length / 2;
-                var degenerateSubtreeCountB = subtrees.Length - degenerateSubtreeCountA;
-                //Still have to compute the child bounding boxes, because the centroid bounds span being zero doesn't imply that the full bounds are zero.
-                BoundingBox4 boundsA, boundsB;
-                boundsA.Min = new Vector4(float.MaxValue);
-                boundsA.Max = new Vector4(float.MinValue);
-                boundsB.Min = new Vector4(float.MaxValue);
-                boundsB.Max = new Vector4(float.MinValue);
-                int degenerateLeafCountA = 0, degenerateLeafCountB = 0;
-                for (int i = 0; i < degenerateSubtreeCountA; ++i)
-                {
-                    ref var bounds = ref boundingBoxes[i];
-                    boundsA.Min = Vector4.Min(bounds.Min, boundsA.Min);
-                    boundsA.Max = Vector4.Max(bounds.Max, boundsA.Max);
-                    degenerateLeafCountA += subtrees[i].LeafCount;
-                }
-                for (int i = degenerateSubtreeCountA; i < subtrees.Length; ++i)
-                {
-                    ref var bounds = ref boundingBoxes[i];
-                    boundsB.Min = Vector4.Min(bounds.Min, boundsB.Min);
-                    boundsB.Max = Vector4.Max(bounds.Max, boundsB.Max);
-                    degenerateLeafCountB += subtrees[i].LeafCount;
-                }
-                Debug.Assert(parentNodeIndex < 0 || Unsafe.Add(ref context->Nodes[parentNodeIndex].A, childIndexInParent).LeafCount == degenerateLeafCountA + degenerateLeafCountB);
-                BuildNode(boundsA, boundsB, degenerateLeafCountA, degenerateLeafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, degenerateSubtreeCountA, degenerateSubtreeCountB, ref context->Leaves, out var aIndex, out var bIndex);
-                if (degenerateSubtreeCountA > 1)
-                    BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex, aIndex, degenerateSubtreeCountA, nodeIndex, 0, boundsA, context, workerIndex, dispatcher);
-                if (degenerateSubtreeCountB > 1)
-                    BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex + degenerateSubtreeCountA, bIndex, degenerateSubtreeCountB, nodeIndex, 1, boundsB, context, workerIndex, dispatcher);
+                HandleDegeneracy(subtrees, boundingBoxes, nodes, metanodes, usePongBuffer, subtreeRegionStartIndex, nodeIndex, subtreeCount, parentNodeIndex, childIndexInParent, centroidBounds, context, workerIndex, dispatcher);
                 return;
             }
 
@@ -1141,8 +1179,13 @@ namespace BepuPhysics.Trees
                 accumulatedCentroidBoundingBoxB.Max = Vector4.Max(centroidBoundsForBin.Max, accumulatedCentroidBoundingBoxB.Max);
                 accumulatedLeafCountB += binLeafCounts[previousIndex];
             }
+            if (bestLeafCountB == 0 || bestLeafCountB == totalLeafCount || bestSAH == float.MaxValue || float.IsNaN(bestSAH) || float.IsInfinity(bestSAH))
+            {
+                //Some form of major problem detected! Fall back to a degenerate split.
+                HandleDegeneracy(subtrees, boundingBoxes, nodes, metanodes, usePongBuffer, subtreeRegionStartIndex, nodeIndex, subtreeCount, parentNodeIndex, childIndexInParent, centroidBounds, context, workerIndex, dispatcher);
+                return;
+            }
 
-            //var debugHuhStartTime = Stopwatch.GetTimestamp();
             var subtreeCountB = 0;
             var subtreeCountA = 0;
             var bestBoundingBoxA = binBoundingBoxesScan[splitIndex - 1];
