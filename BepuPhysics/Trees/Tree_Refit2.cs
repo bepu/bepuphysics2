@@ -143,4 +143,116 @@ partial struct Tree
         Refit2(pool, dispatcher, taskStack, workerIndex, targetTaskCount, internallyDispatch: false);
     }
 
+    struct Refit2CacheContext
+    {
+        public Buffer<Node> TargetNodes;
+        public Buffer<Metanode> TargetMetanodes;
+        public Tree Tree;
+    }
+
+    static unsafe void Refit2WithCacheOptimization(int sourceNodeIndex, int targetNodeIndex, int parentIndex, int childIndexInParent, ref NodeChild childInParent, ref Refit2CacheContext context)
+    {
+        Debug.Assert(context.Tree.LeafCount >= 2);
+
+        ref var sourceNode = ref context.Tree.Nodes[sourceNodeIndex];
+        ref var targetNode = ref context.TargetNodes[targetNodeIndex];
+        ref var targetMetanode = ref context.TargetMetanodes[targetNodeIndex];
+        targetMetanode.Parent = parentIndex;
+        targetMetanode.IndexInParent = childIndexInParent;
+        ref var sourceA = ref sourceNode.A;
+        ref var sourceB = ref sourceNode.B;
+        var targetIndexA = targetNodeIndex + 1;
+        var targetIndexB = targetNodeIndex + sourceA.LeafCount;
+        ref var targetA = ref targetNode.A;
+        ref var targetB = ref targetNode.B;
+        if (sourceA.Index >= 0)
+        {
+            targetA.Index = targetIndexA;
+            targetA.LeafCount = sourceA.LeafCount;
+            Refit2WithCacheOptimization(sourceA.Index, targetA.Index, targetNodeIndex, 0, ref targetA, ref context);
+        }
+        else
+        {
+            //It's a leaf; copy over the source verbatim.
+            targetA = sourceA;
+            context.Tree.Leaves[Encode(sourceA.Index)] = new Leaf(targetNodeIndex, 0);
+        }
+        if (sourceB.Index >= 0)
+        {
+            targetB.Index = targetIndexB;
+            targetB.LeafCount = sourceB.LeafCount;
+            Refit2WithCacheOptimization(sourceB.Index, targetB.Index, targetNodeIndex, 1, ref targetB, ref context);
+        }
+        else
+        {
+            targetB = sourceB;
+            context.Tree.Leaves[Encode(sourceB.Index)] = new Leaf(targetNodeIndex, 1);
+        }
+        BoundingBox.CreateMergedUnsafeWithPreservation(targetA, targetB, out childInParent);
+    }
+
+    /// <summary>
+    /// Updates the bounding boxes of all internal nodes in the tree. Reallocates the nodes and metanodes and writes the refit tree into them.
+    /// The tree instance is modified to point to the new nodes and metanodes.
+    /// </summary>
+    /// <param name="pool">Pool to allocate from. If disposeOriginals is true, this must be the same pool from which the <see cref="Nodes"/> and <see cref="Metanodes"/> buffers were allocated from.</param>
+    /// <param name="disposeOriginals">Whether to dispose of the original version. If false, it's up to the caller to dispose of them appropriately.</param>
+    public unsafe void Refit2WithCacheOptimization(BufferPool pool, bool disposeOriginals = true)
+    {
+        //No point in refitting a tree with no internal nodes!
+        if (LeafCount <= 2)
+            return;
+        NodeChild stub = default;
+        var newNodes = new Buffer<Node>(Nodes.Length, pool);
+        var newMetanodes = new Buffer<Metanode>(Metanodes.Length, pool);
+        var context = new Refit2CacheContext
+        {
+            TargetNodes = newNodes,
+            TargetMetanodes = newMetanodes,
+            Tree = this,
+        };
+        Refit2WithCacheOptimization(0, 0, -1, -1, ref stub, ref context);
+
+        if (disposeOriginals)
+        {
+            Nodes.Dispose(pool);
+            Metanodes.Dispose(pool);
+        }
+        Nodes = newNodes;
+        Metanodes = newMetanodes;
+    }
+
+    //unsafe readonly void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount, bool internallyDispatch, bool disposeOriginals)
+    //{
+    //    //No point in refitting a tree with no internal nodes!
+    //    if (LeafCount <= 2)
+    //        return;
+    //    var tree = this;
+    //    if (targetTaskCount < 0)
+    //        targetTaskCount = dispatcher.ThreadCount;
+
+    //    var newNodes = new Buffer<Node>(Nodes.Length, pool);
+    //    var newMetanodes = new Buffer<Metanode>(Metanodes.Length, pool);
+    //    var leafCountPerTask = (int)float.Ceiling(LeafCount / (float)targetTaskCount);
+    //    var refitContext = new RefitContext { LeafCountPerTask = leafCountPerTask, TaskStack = taskStack, Tree = &tree };
+    //    if (internallyDispatch)
+    //    {
+    //        taskStack->PushUnsafely(new Task(&RefitRootEntryTask, &refitContext), workerIndex, dispatcher);
+    //        TaskStack.DispatchWorkers(dispatcher, taskStack, int.Min(dispatcher.ThreadCount, targetTaskCount));
+    //    }
+    //    else
+    //    {
+    //        NodeChild stub = default;
+    //        Refit2WithTaskSpawning(ref stub, &refitContext, workerIndex, dispatcher);
+    //    }
+
+    //    if (disposeOriginals)
+    //    {
+    //        tree.Nodes.Dispose(pool);
+    //        tree.Metanodes.Dispose(pool);
+    //    }
+    //    tree.Nodes = newNodes;
+    //    tree.Metanodes = newMetanodes;
+
+    //}
 }
