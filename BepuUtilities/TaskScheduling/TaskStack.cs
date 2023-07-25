@@ -400,6 +400,24 @@ public unsafe struct TaskStack
         padded.Stop = true;
     }
 
+    /// <summary>
+    /// Convenience function for requesting a stop. Requires the context to be the expected <see cref="TaskStack"/>.
+    /// </summary>
+    /// <param name="id">Id of the task.</param>
+    /// <param name="untypedContext"><see cref="TaskStack"/> to be stopped.</param>
+    /// <param name="workerIndex">Index of the worker executing this task.</param>
+    /// <param name="dispatcher">Dispatcher associated with the execution.</param>
+    public static unsafe void RequestStopTaskFunction(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        ((TaskStack*)untypedContext)->RequestStop();
+    }
+
+    /// <summary>
+    /// Convenience function for getting a task representing a stop request.
+    /// </summary>
+    /// <param name="stack">Stack to be stopped.</param>
+    /// <returns>Task representing a stop request.</returns>
+    public static Task GetRequestStopTask(TaskStack* stack) => new(&RequestStopTaskFunction, stack);
 
     /// <summary>
     /// Pushes a for loop onto the task stack. Does not take a lock.

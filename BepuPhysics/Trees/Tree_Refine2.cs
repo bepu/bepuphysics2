@@ -515,12 +515,6 @@ public partial struct Tree
 
     }
 
-    static unsafe void StopStackOnCompletion(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
-    {
-        ((TaskStack*)untypedContext)->RequestStop();
-    }
-
-
     private unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget, bool deterministic)
     {
         //No point refining anything with two leaves. This condition also avoids having to special case for an incomplete root node.
@@ -574,7 +568,7 @@ public partial struct Tree
         if (internallyDispatch)
         {
             //There isn't an active dispatch, so we need to do it.
-            taskStack->AllocateContinuationAndPush(tasks, workerIndex, threadDispatcher, onComplete: new Task(&StopStackOnCompletion, taskStack));
+            taskStack->AllocateContinuationAndPush(tasks, workerIndex, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(taskStack));
             TaskStack.DispatchWorkers(threadDispatcher, taskStack, workerCount);
         }
         else
