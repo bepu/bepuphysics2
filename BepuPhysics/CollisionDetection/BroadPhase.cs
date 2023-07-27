@@ -300,7 +300,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="subtreeRefinementSize">Target size of the subtree refinements.</param>
         public static void DefaultActiveRefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize)
         {
-            DefaultRefinementScheduler(1f / 50f, 8, 4, 4, frameIndex, tree, out rootRefinementSize, out subtreeRefinementCount, out subtreeRefinementSize);
+            DefaultRefinementScheduler(1f / 20f, 8, 4, 4, frameIndex, tree, out rootRefinementSize, out subtreeRefinementCount, out subtreeRefinementSize);
         }
 
 
@@ -314,7 +314,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="subtreeRefinementSize">Target size of the subtree refinements.</param>
         public static void DefaultStaticRefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize)
         {
-            DefaultRefinementScheduler(1f / 200f, 20, 4, 4, frameIndex, tree, out rootRefinementSize, out subtreeRefinementCount, out subtreeRefinementSize);
+            DefaultRefinementScheduler(1f / 100f, 32, 4, 4, frameIndex, tree, out rootRefinementSize, out subtreeRefinementCount, out subtreeRefinementSize);
         }
 
         struct RefinementContext
@@ -356,7 +356,7 @@ namespace BepuPhysics.CollisionDetection
         public void Update2(IThreadDispatcher threadDispatcher = null, bool deterministic = false)
         {
             ActiveRefinementSchedule(frameIndex, ActiveTree, out var activeRootRefinementSize, out var activeSubtreeRefinementCount, out var activeSubtreeRefinementSize);
-            StaticRefinementSchedule(frameIndex, ActiveTree, out var staticRootRefinementSize, out var staticSubtreeRefinementCount, out var staticSubtreeRefinementSize);
+            StaticRefinementSchedule(frameIndex, StaticTree, out var staticRootRefinementSize, out var staticSubtreeRefinementCount, out var staticSubtreeRefinementSize);
             if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
             {
                 //Distribute tasks for refinement roughly in proportion to their cost.
