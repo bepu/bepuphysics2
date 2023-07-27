@@ -8,6 +8,7 @@ using System.Numerics;
 using BepuPhysics.Trees;
 using System.Threading;
 using BepuUtilities.Collections;
+using BepuUtilities.TaskScheduling;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -54,6 +55,9 @@ namespace BepuPhysics.CollisionDetection
             staticRefineContext = new Tree.RefitAndRefineMultithreadedContext();
             executeRefitAndMarkAction = ExecuteRefitAndMark;
             executeRefineAction = ExecuteRefine;
+
+            ActiveRefinementSchedule = DefaultActiveRefinementScheduler;
+            StaticRefinementSchedule = DefaultStaticRefinementScheduler;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -232,6 +236,191 @@ namespace BepuPhysics.CollisionDetection
                 StaticTree.RefitAndRefine(Pool, frameIndex);
             }
             ++frameIndex;
+        }
+
+        /// <summary>
+        /// Returns the size and number of refinements to execute during the broad phase.
+        /// </summary>
+        /// <param name="frameIndex">Index of the frame as tracked by the broad phase.</param>
+        /// <param name="tree">Tree being considered for refinement.</param>
+        /// <param name="rootRefinementSize">Size of the root refinement. If zero or negative, no root refinement will be performed.</param>
+        /// <param name="subtreeRefinementCount">Number of subtree refinements to perform. Can be zero.</param>
+        /// <param name="subtreeRefinementSize">Target size of the subtree refinements.</param>
+        public delegate void RefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize);
+
+        /// <summary>
+        /// Gets or sets the refinement schedule to use for the active tree.
+        /// </summary>
+        public RefinementScheduler ActiveRefinementSchedule { get; set; }
+        /// <summary>
+        /// Gets or sets the refinement schedule to use for the static tree.
+        /// </summary>
+        public RefinementScheduler StaticRefinementSchedule { get; set; }
+
+        /// <summary>
+        /// Returns the size and number of refinements to execute for the active tree. Used by default.
+        /// </summary>
+        /// <param name="optimizationFraction">Target fraction of the tree to be optimized.</param>
+        /// <param name="rootRefinementPeriod">Period, in timesteps, of refinements applied to the root.</param>
+        /// <param name="rootRefinementSizeScale">Multiplier to apply to the square root of the leaf count to get the target root refinement size.</param>
+        /// <param name="subtreeRefinementSizeScale">Multiplier to apply to the square root of the leaf count to get the target subtree refinement size.</param>
+        /// <param name="frameIndex">Index of the frame as tracked by the broad phase.</param>
+        /// <param name="tree">Tree being considered for refinement.</param>
+        /// <param name="rootRefinementSize">Size of the root refinement. If zero or negative, no root refinement will be performed.</param>
+        /// <param name="subtreeRefinementCount">Number of subtree refinements to perform. Can be zero.</param>
+        /// <param name="subtreeRefinementSize">Target size of the subtree refinements.</param>
+        public static void DefaultRefinementScheduler(float optimizationFraction, int rootRefinementPeriod, float rootRefinementSizeScale, float subtreeRefinementSizeScale,
+           int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize)
+        {
+            var refineRoot = frameIndex % rootRefinementPeriod == 0;
+            var targetOptimizedLeafCount = (int)float.Ceiling(tree.LeafCount * optimizationFraction);
+            //The square root of the leaf count gets us roughly halfway down the tree. (Each subtree has ~sqrt(LeafCount) leaves, and there are ~sqrt(LeafCount) subtrees.)
+            //Root and subtree refinements need to be larger than that: subtrees must be able to exchange nodes, and the root refinement is the intermediary.
+            //Another consideration for choosing refinement sizes: larger refinement sizes increase in cost nonlinearly (O(nlogn)).
+            //You should choose a size which is large *enough* to get within your quality target and no larger.
+            var sqrtLeafCount = float.Sqrt(tree.LeafCount);
+
+            var targetRootRefinementSize = (int)float.Ceiling(sqrtLeafCount * rootRefinementSizeScale);
+            subtreeRefinementSize = (int)float.Ceiling(sqrtLeafCount * subtreeRefinementSizeScale);
+
+            var subtreeRefinementsPerRootRefinement = (int)float.Ceiling(subtreeRefinementSize * float.Log2(subtreeRefinementSize) / (targetRootRefinementSize * float.Log2(targetRootRefinementSize)));
+            //If we're refining the root, reduce the number of subtree refinements to avoid cost spikes.
+            subtreeRefinementCount = int.Max(0, (int)float.Ceiling((float)targetOptimizedLeafCount / subtreeRefinementSize) - (refineRoot ? subtreeRefinementsPerRootRefinement : 0));
+
+            rootRefinementSize = refineRoot ? targetRootRefinementSize : 0;
+        }
+
+        /// <summary>
+        /// Returns the size and number of refinements to execute for the active tree. Used by default.
+        /// </summary>
+        /// <param name="frameIndex">Index of the frame as tracked by the broad phase.</param>
+        /// <param name="tree">Tree being considered for refinement.</param>
+        /// <param name="rootRefinementSize">Size of the root refinement. If zero or negative, no root refinement will be performed.</param>
+        /// <param name="subtreeRefinementCount">Number of subtree refinements to perform. Can be zero.</param>
+        /// <param name="subtreeRefinementSize">Target size of the subtree refinements.</param>
+        public static void DefaultActiveRefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize)
+        {
+            DefaultRefinementScheduler(1f / 50f, 8, 4, 4, frameIndex, tree, out rootRefinementSize, out subtreeRefinementCount, out subtreeRefinementSize);
+        }
+
+
+        /// <summary>
+        /// Returns the size and number of refinements to execute for the active tree. Used by default.
+        /// </summary>
+        /// <param name="frameIndex">Index of the frame as tracked by the broad phase.</param>
+        /// <param name="tree">Tree being considered for refinement.</param>
+        /// <param name="rootRefinementSize">Size of the root refinement. If zero or negative, no root refinement will be performed.</param>
+        /// <param name="subtreeRefinementCount">Number of subtree refinements to perform. Can be zero.</param>
+        /// <param name="subtreeRefinementSize">Target size of the subtree refinements.</param>
+        public static void DefaultStaticRefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize)
+        {
+            DefaultRefinementScheduler(1f / 200f, 20, 4, 4, frameIndex, tree, out rootRefinementSize, out subtreeRefinementCount, out subtreeRefinementSize);
+        }
+
+        struct RefinementContext
+        {
+            public TaskStack* TaskStack;
+            public Tree Tree;
+            public int TargetTaskCount;
+            public int TargetTotalTaskCount;
+            public int RootRefinementSize;
+            public int SubtreeRefinementCount;
+            public int SubtreeRefinementSize;
+            public int SubtreeRefinementStartIndex;
+            public bool Deterministic;
+
+            //Used for active tree. Didn't split the type because whocares.
+            public Buffer<Node> TargetNodes;
+        }
+
+        static void ActiveEntrypointTask(long taskId, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+        {
+            ref var context = ref *(RefinementContext*)untypedContext;
+            var pool = dispatcher.WorkerPools[workerIndex];
+            context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, deterministic: context.Deterministic);
+            //Now refit! Note that we use all but one task. It doesn't affect the performance of a refit much (we're not compute bound), and we can use it to do an incremental cache optimization on the static tree.
+            var sourceNodes = context.Tree.Nodes;
+            context.Tree.Nodes = context.TargetNodes;
+            context.Tree.Refit2WithCacheOptimization(sourceNodes, pool, dispatcher, context.TaskStack, workerIndex, context.TargetTotalTaskCount - 1);
+        }
+
+        static void StaticEntrypointTask(long taskId, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+        {
+            ref var context = ref *(RefinementContext*)untypedContext;
+            var pool = dispatcher.WorkerPools[workerIndex];
+            context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, deterministic: context.Deterministic);
+            //TODO: Incremental cache optimization. If you end up not implementing it, make sure to give the task back to active refit.
+        }
+
+        int staticSubtreeRefinementStartIndex, activeSubtreeRefinementStartIndex;
+        public void Update2(IThreadDispatcher threadDispatcher = null, bool deterministic = false)
+        {
+            ActiveRefinementSchedule(frameIndex, ActiveTree, out var activeRootRefinementSize, out var activeSubtreeRefinementCount, out var activeSubtreeRefinementSize);
+            StaticRefinementSchedule(frameIndex, ActiveTree, out var staticRootRefinementSize, out var staticSubtreeRefinementCount, out var staticSubtreeRefinementSize);
+            if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
+            {
+                //Distribute tasks for refinement roughly in proportion to their cost.
+                //This doesn't need to be perfect.
+                //Cost of a refinement is roughly n * log2(n), for n = refinement size.
+                var activeCost = float.Log2(activeRootRefinementSize) * activeRootRefinementSize + float.Log2(activeSubtreeRefinementSize) * activeSubtreeRefinementSize * activeSubtreeRefinementCount;
+                var staticCost = float.Log2(staticRootRefinementSize) * staticRootRefinementSize + float.Log2(staticSubtreeRefinementSize) * staticSubtreeRefinementSize * staticSubtreeRefinementCount;
+                var activeTaskFraction = activeCost / (activeCost + staticCost);
+                var targetTotalTaskCount = threadDispatcher.ThreadCount; //could scale this. Empirically, doesn't matter on the CPUs tested so far.
+                var targetActiveTaskCount = (int)float.Ceiling(activeTaskFraction * targetTotalTaskCount);
+                var taskStack = new TaskStack(Pool, threadDispatcher, threadDispatcher.ThreadCount);
+                var activeRefineContext = new RefinementContext
+                {
+                    TaskStack = &taskStack,
+                    Tree = ActiveTree,
+                    TargetTotalTaskCount = targetTotalTaskCount,
+                    TargetTaskCount = targetActiveTaskCount,
+                    RootRefinementSize = activeRootRefinementSize,
+                    SubtreeRefinementCount = activeSubtreeRefinementCount,
+                    SubtreeRefinementSize = activeSubtreeRefinementSize,
+                    SubtreeRefinementStartIndex = activeSubtreeRefinementStartIndex,
+                    Deterministic = deterministic,
+                    TargetNodes = new Buffer<Node>(ActiveTree.Nodes.Length, Pool),
+                };
+                var staticRefineContext = new RefinementContext
+                {
+                    TaskStack = &taskStack,
+                    Tree = StaticTree,
+                    TargetTotalTaskCount = targetTotalTaskCount,
+                    TargetTaskCount = targetTotalTaskCount - targetActiveTaskCount,
+                    RootRefinementSize = staticRootRefinementSize,
+                    SubtreeRefinementCount = staticSubtreeRefinementCount,
+                    SubtreeRefinementSize = staticSubtreeRefinementSize,
+                    SubtreeRefinementStartIndex = staticSubtreeRefinementStartIndex,
+                    Deterministic = deterministic,
+                };
+                Span<Task> tasks = stackalloc Task[2];
+                tasks[0] = new Task(&ActiveEntrypointTask, &activeRefineContext);
+                tasks[1] = new Task(&StaticEntrypointTask, &staticRefineContext);
+                taskStack.AllocateContinuationAndPush(tasks, 0, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(&taskStack));
+                TaskStack.DispatchWorkers(threadDispatcher, &taskStack);
+                taskStack.Dispose(Pool, threadDispatcher);
+                //When using the cache optimizing refit, the tree is modified. Since passed a copy, we need to copy it back.
+                //Static tree doesn't undergo a refit, so no copy required there.
+                ActiveTree.Nodes.Dispose(Pool);
+                ActiveTree.Nodes = activeRefineContext.TargetNodes;
+                //The start indices need to be copied back for both.
+                activeSubtreeRefinementStartIndex = activeRefineContext.SubtreeRefinementStartIndex;
+                staticSubtreeRefinementStartIndex = staticRefineContext.SubtreeRefinementStartIndex;
+
+            }
+            else
+            {
+                StaticTree.Refine2(staticRootRefinementSize, ref staticSubtreeRefinementStartIndex, staticSubtreeRefinementCount, staticSubtreeRefinementSize, Pool);
+                //Note we refine *before* refitting. This means the refinement is working with slightly out of date data, but that's okay, the entire point is incremental refinement.
+                //The reason to prefer this is that refining scrambles the memory layout a little bit.
+                //Refit with cache optimization *after* refinement ensures the rest of the library (and the user) sees the cache optimized version.
+                ActiveTree.Refine2(activeRootRefinementSize, ref activeSubtreeRefinementStartIndex, activeSubtreeRefinementCount, activeSubtreeRefinementSize, Pool);
+                ActiveTree.Refit2WithCacheOptimization(Pool);
+            }
+            if (frameIndex == int.MaxValue)
+                frameIndex = 0;
+            else
+                ++frameIndex;
         }
 
         /// <summary>

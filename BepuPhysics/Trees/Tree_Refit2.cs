@@ -145,8 +145,7 @@ partial struct Tree
 
     unsafe struct RefitWithCacheOptimizationContext
     {
-        public Buffer<Node> TargetNodes;
-        public Buffer<Metanode> TargetMetanodes;
+        public Buffer<Node> SourceNodes;
         public Tree Tree;
         //These aren't used in the ST path, but, shrug! it's a few bytes.
         public int LeafCountPerTask;
@@ -157,10 +156,10 @@ partial struct Tree
     {
         Debug.Assert(context.Tree.LeafCount >= 2);
 
-        ref var sourceNode = ref context.Tree.Nodes[sourceNodeIndex];
+        ref var sourceNode = ref context.SourceNodes[sourceNodeIndex];
         var targetNodeIndex = childInParent.Index;
-        ref var targetNode = ref context.TargetNodes[targetNodeIndex];
-        ref var targetMetanode = ref context.TargetMetanodes[targetNodeIndex];
+        ref var targetNode = ref context.Tree.Nodes[targetNodeIndex];
+        ref var targetMetanode = ref context.Tree.Metanodes[targetNodeIndex];
         targetMetanode.Parent = parentIndex;
         targetMetanode.IndexInParent = childIndexInParent;
         ref var sourceA = ref sourceNode.A;
@@ -195,44 +194,52 @@ partial struct Tree
         BoundingBox.CreateMergedUnsafeWithPreservation(targetA, targetB, out childInParent);
     }
 
+
     /// <summary>
-    /// Updates the bounding boxes of all internal nodes in the tree. Reallocates the nodes and metanodes and writes the refit tree into them in depth first traversal order.
-    /// The tree instance is modified to point to the new nodes and metanodes.
+    /// Updates the bounding boxes of all internal nodes in the tree. The refit is based on the provided sourceNodes, and 
+    /// the results are written into the tree's current <see cref="Nodes"/>, <see cref="Metanodes"/>, and <see cref="Leaves"/> buffers.
+    /// The nodes and metanodes will be in depth traversal order.
+    /// The input source buffer is not modified.
     /// </summary>
-    /// <param name="pool">Pool to allocate from. If disposeOriginals is true, this must be the same pool from which the <see cref="Nodes"/> and <see cref="Metanodes"/> buffers were allocated from.</param>
-    /// <param name="disposeOriginals">Whether to dispose of the original version. If false, it's up to the caller to dispose of them appropriately.</param>
-    public unsafe void Refit2WithCacheOptimization(BufferPool pool, bool disposeOriginals = true)
+    /// <param name="sourceNodes">Nodes to base the refit on.</param>
+    public unsafe void Refit2WithCacheOptimization(Buffer<Node> sourceNodes)
     {
         //No point in refitting a tree with no internal nodes!
         if (LeafCount <= 2)
             return;
         NodeChild stub = default;
-        var newNodes = new Buffer<Node>(Nodes.Length, pool);
-        var newMetanodes = new Buffer<Metanode>(Metanodes.Length, pool);
         var context = new RefitWithCacheOptimizationContext
         {
-            TargetNodes = newNodes,
-            TargetMetanodes = newMetanodes,
+            SourceNodes = sourceNodes,
             Tree = this,
         };
         Refit2WithCacheOptimization(0, -1, -1, ref stub, ref context);
 
-        if (disposeOriginals)
-        {
-            Nodes.Dispose(pool);
-            Metanodes.Dispose(pool);
-        }
-        Nodes = newNodes;
-        Metanodes = newMetanodes;
     }
+
+    /// <summary>
+    /// Updates the bounding boxes of all internal nodes in the tree. Reallocates the nodes and metanodes and writes the refit tree into them in depth first traversal order.
+    /// The tree instance is modified to point to the new nodes and metanodes.
+    /// </summary>
+    /// <param name="pool">Pool to allocate from. If disposeOriginals is true, this must be the same pool from which the <see cref="Nodes"/> buffer was allocated from.</param>
+    /// <param name="disposeOriginalNodes">Whether to dispose of the original nodes buffer. If false, it's up to the caller to dispose of it appropriately.</param>
+    public unsafe void Refit2WithCacheOptimization(BufferPool pool, bool disposeOriginalNodes = true)
+    {
+        var oldNodes = Nodes;
+        Nodes = new Buffer<Node>(oldNodes.Length, pool);
+        Refit2WithCacheOptimization(oldNodes);
+        if (disposeOriginalNodes)
+            oldNodes.Dispose(pool);
+    }
+
     static unsafe void Refit2WithCacheOptimizationAndTaskSpawning(
         int sourceNodeIndex, int parentIndex, int childIndexInParent, ref NodeChild childInParent, RefitWithCacheOptimizationContext* context, int workerIndex, IThreadDispatcher dispatcher)
     {
         Debug.Assert(context->Tree.LeafCount >= 2);
-        ref var sourceNode = ref context->Tree.Nodes[sourceNodeIndex];
+        ref var sourceNode = ref context->SourceNodes[sourceNodeIndex];
         var targetNodeIndex = childInParent.Index;
-        ref var targetNode = ref context->TargetNodes[targetNodeIndex];
-        ref var targetMetanode = ref context->TargetMetanodes[targetNodeIndex];
+        ref var targetNode = ref context->Tree.Nodes[targetNodeIndex];
+        ref var targetMetanode = ref context->Tree.Metanodes[targetNodeIndex];
         targetMetanode.Parent = parentIndex;
         targetMetanode.IndexInParent = childIndexInParent;
         ref var sourceA = ref sourceNode.A;
@@ -293,8 +300,8 @@ partial struct Tree
         var context = (RefitWithCacheOptimizationContext*)untypedContext;
         var sourceParentIndex = (int)(parentNodeIndices >> 32);
         var targetParentIndex = (int)parentNodeIndices;
-        ref var sourceParentNode = ref context->Tree.Nodes[sourceParentIndex];
-        ref var targetParentNode = ref context->TargetNodes[targetParentIndex];
+        ref var sourceParentNode = ref context->SourceNodes[sourceParentIndex];
+        ref var targetParentNode = ref context->Tree.Nodes[targetParentIndex];
         Refit2WithCacheOptimizationAndTaskSpawning(sourceParentNode.B.Index, targetParentIndex, 1, ref targetParentNode.B, context, workerIndex, dispatcher);
     }
     static unsafe void RefitWithCacheOptimizationRootEntryTask(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
@@ -304,7 +311,7 @@ partial struct Tree
         Refit2WithCacheOptimizationAndTaskSpawning(0, -1, -1, ref stub, context, workerIndex, dispatcher);
         context->TaskStack->RequestStop();
     }
-    unsafe void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount, bool internallyDispatch, bool disposeOriginals)
+    unsafe void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount, bool internallyDispatch, Buffer<Node> sourceNodes)
     {
         //No point in refitting a tree with no internal nodes!
         if (LeafCount <= 2)
@@ -312,14 +319,11 @@ partial struct Tree
         if (targetTaskCount < 0)
             targetTaskCount = dispatcher.ThreadCount;
 
-        var newNodes = new Buffer<Node>(Nodes.Length, pool);
-        var newMetanodes = new Buffer<Metanode>(Metanodes.Length, pool);
         const int minimumTaskSize = 32;
         var leafCountPerTask = int.Max(minimumTaskSize, (int)float.Ceiling(LeafCount / (float)targetTaskCount));
         var refitContext = new RefitWithCacheOptimizationContext
         {
-            TargetNodes = newNodes,
-            TargetMetanodes = newMetanodes,
+            SourceNodes = sourceNodes,
             Tree = this,
             LeafCountPerTask = leafCountPerTask,
             TaskStack = taskStack,
@@ -334,15 +338,6 @@ partial struct Tree
             NodeChild stub = default;
             Refit2WithCacheOptimizationAndTaskSpawning(0, -1, -1, ref stub, &refitContext, workerIndex, dispatcher);
         }
-
-        if (disposeOriginals)
-        {
-            Nodes.Dispose(pool);
-            Metanodes.Dispose(pool);
-        }
-        Nodes = newNodes;
-        Metanodes = newMetanodes;
-
     }
 
 
@@ -352,27 +347,53 @@ partial struct Tree
     /// </summary>
     /// <param name="pool">Pool used for main thread temporary allocations during execution.</param>
     /// <param name="dispatcher">Dispatcher used during execution.</param>
-    /// <param name="disposeOriginals">Whether to dispose of the original version. If false, it's up to the caller to dispose of them appropriately.</param>
-    public unsafe void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, bool disposeOriginals = true)
+    /// <param name="disposeOriginalNodes">Whether to dispose of the original nodes buffer. If false, it's up to the caller to dispose of it appropriately.</param>
+    public unsafe void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, bool disposeOriginalNodes = true)
     {
         var taskStack = new TaskStack(pool, dispatcher, dispatcher.ThreadCount);
-        Refit2WithCacheOptimization(pool, dispatcher, &taskStack, 0, -1, internallyDispatch: true, disposeOriginals: disposeOriginals);
+        var oldNodes = Nodes;
+        Nodes = new Buffer<Node>(oldNodes.Length, pool);
+        Refit2WithCacheOptimization(pool, dispatcher, &taskStack, 0, -1, internallyDispatch: true, oldNodes);
         taskStack.Dispose(pool, dispatcher);
+        if (disposeOriginalNodes)
+            oldNodes.Dispose(pool);
     }
 
     /// <summary>
-    /// Refits all bounding boxes in the tree using multiple threads. Reallocates the nodes and metanodes and writes the refit tree into them in depth first traversal order.
-    /// The tree instance is modified to point to the new nodes and metanodes.
+    /// Refits all bounding boxes in the tree using multiple threads. Reallocates the nodes and writes the refit tree into them in depth first traversal order.
+    /// The tree instance is modified to point to the new nodes.
     /// <para/>Pushes tasks into the provided <see cref="TaskStack"/>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
     /// </summary>
     /// <param name="pool">Pool used for allocations during execution.</param>
     /// <param name="dispatcher">Dispatcher used during execution.</param>
     /// <param name="taskStack"><see cref="TaskStack"/> that the refit operation will push tasks onto as needed.</param>
     /// <param name="workerIndex">Index of the worker calling the function.</param>
-    /// <param name="targetTaskCount">Number of tasks the refit should try to create during execution.</param>
-    /// <param name="disposeOriginals">Whether to dispose of the original version. If false, it's up to the caller to dispose of them appropriately.</param>
-    public unsafe void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1, bool disposeOriginals = true)
+    /// <param name="targetTaskCount">Number of tasks the refit should try to create during execution. If negative, uses <see cref="IThreadDispatcher.ThreadCount"/>.</param>
+    /// <param name="disposeOriginalNodes">Whether to dispose of the original nodes buffer. If false, it's up to the caller to dispose of it appropriately.</param>
+    public unsafe void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1, bool disposeOriginalNodes = true)
     {
-        Refit2WithCacheOptimization(pool, dispatcher, taskStack, workerIndex, targetTaskCount, internallyDispatch: false, disposeOriginals: disposeOriginals);
+        var oldNodes = Nodes;
+        Nodes = new Buffer<Node>(oldNodes.Length, pool);
+        Refit2WithCacheOptimization(pool, dispatcher, taskStack, workerIndex, targetTaskCount, internallyDispatch: false, oldNodes);
+        if (disposeOriginalNodes)
+            oldNodes.Dispose(pool);
+    }
+
+    /// <summary>
+    /// Updates the bounding boxes of all internal nodes in the tree using multiple threads. The refit is based on the provided sourceNodes, and 
+    /// the results are written into the tree's current <see cref="Nodes"/>, <see cref="Metanodes"/>, and <see cref="Leaves"/> buffers.
+    /// The nodes and metanodes will be in depth traversal order.
+    /// The input source buffer is not modified.
+    /// <para/>Pushes tasks into the provided <see cref="TaskStack"/>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
+    /// </summary>
+    /// <param name="sourceNodes">Nodes to base the refit on.</param>
+    /// <param name="pool">Pool used for allocations during execution.</param>
+    /// <param name="dispatcher">Dispatcher used during execution.</param>
+    /// <param name="taskStack"><see cref="TaskStack"/> that the refit operation will push tasks onto as needed.</param>
+    /// <param name="workerIndex">Index of the worker calling the function.</param>
+    /// <param name="targetTaskCount">Number of tasks the refit should try to create during execution. If negative, uses <see cref="IThreadDispatcher.ThreadCount"/>.</param>
+    public unsafe void Refit2WithCacheOptimization(Buffer<Node> sourceNodes, BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1)
+    {
+        Refit2WithCacheOptimization(pool, dispatcher, taskStack, workerIndex, targetTaskCount, internallyDispatch: false, sourceNodes);
     }
 }

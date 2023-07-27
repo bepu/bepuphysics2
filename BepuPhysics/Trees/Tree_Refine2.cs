@@ -526,6 +526,8 @@ public partial struct Tree
         //Setting root refinement size to 0 or negative values disables root refinement. People might intuitively try the same for subtree sizes.
         if (subtreeRefinementSize <= 0)
             subtreeRefinementCount = 0;
+        if (targetTaskBudget < 0)
+            targetTaskBudget = threadDispatcher.ThreadCount;
         //Clamp refinement sizes to avoid pointless overallocations when the user supplies odd inputs.
         rootRefinementSize = int.Min(rootRefinementSize, LeafCount);
         subtreeRefinementSize = int.Min(subtreeRefinementSize, LeafCount);
@@ -598,5 +600,28 @@ public partial struct Tree
         var taskStack = new TaskStack(pool, threadDispatcher, threadDispatcher.ThreadCount);
         Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount, deterministic);
         taskStack.Dispose(pool, threadDispatcher);
+    }
+
+
+    /// <summary>
+    /// Incrementally refines a subset of the tree by running a binned builder over subtrees.
+    /// <para/>Pushes tasks into the provided <see cref="TaskStack"/>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
+    /// </summary>
+    /// <param name="rootRefinementSize">Size of the refinement run on nodes near the root. Nonpositive values will cause the root refinement to be skipped.</param>
+    /// <param name="subtreeRefinementStartIndex">Index used to distribute subtree refinements over multiple executions.</param>
+    /// <param name="subtreeRefinementCount">Number of subtree refinements to execute.</param>
+    /// <param name="subtreeRefinementSize">Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</param>
+    /// <param name="pool">Pool used for ephemeral allocations during the refinement.</param>
+    /// <param name="threadDispatcher">Thread dispatcher used during the refinement.</param>
+    /// <param name="deterministic">Whether to force determinism at a slightly higher cost when using internally multithreaded execution for an individual refinement operation.<para/>
+    /// If the refine is single threaded, it is already deterministic and this flag has no effect.</param>
+    /// <param name="taskStack"><see cref="TaskStack"/> that the refine operation will push tasks onto as needed.</param>
+    /// <param name="workerIndex">Index of the worker calling the function.</param>
+    /// <param name="targetTaskCount">Number of tasks the refit should try to create during execution. If negative, uses <see cref="IThreadDispatcher.ThreadCount"/>.</param>
+    /// <remarks>Nodes will not be refit.</remarks>
+    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, 
+        BufferPool pool, IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1, bool deterministic = false)
+    {
+        Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount, deterministic);
     }
 }
