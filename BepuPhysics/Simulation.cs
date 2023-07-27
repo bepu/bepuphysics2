@@ -221,7 +221,8 @@ namespace BepuPhysics
         public void CollisionDetection(float dt, IThreadDispatcher threadDispatcher = null)
         {
             profiler.Start(BroadPhase);
-            BroadPhase.Update(threadDispatcher);
+            //BroadPhase.Update(threadDispatcher);
+            BroadPhase.Update2(threadDispatcher);
             profiler.End(BroadPhase);
 
             profiler.Start(BroadPhaseOverlapFinder);

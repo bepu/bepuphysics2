@@ -341,7 +341,7 @@ namespace BepuPhysics.CollisionDetection
             //Now refit! Note that we use all but one task. It doesn't affect the performance of a refit much (we're not compute bound), and we can use it to do an incremental cache optimization on the static tree.
             var sourceNodes = context.Tree.Nodes;
             context.Tree.Nodes = context.TargetNodes;
-            context.Tree.Refit2WithCacheOptimization(sourceNodes, pool, dispatcher, context.TaskStack, workerIndex, context.TargetTotalTaskCount - 1);
+            context.Tree.Refit2WithCacheOptimization(sourceNodes, pool, dispatcher, context.TaskStack, workerIndex, context.TargetTotalTaskCount);
         }
 
         static void StaticEntrypointTask(long taskId, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
@@ -349,7 +349,6 @@ namespace BepuPhysics.CollisionDetection
             ref var context = ref *(RefinementContext*)untypedContext;
             var pool = dispatcher.WorkerPools[workerIndex];
             context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, deterministic: context.Deterministic);
-            //TODO: Incremental cache optimization. If you end up not implementing it, make sure to give the task back to active refit.
         }
 
         int staticSubtreeRefinementStartIndex, activeSubtreeRefinementStartIndex;
