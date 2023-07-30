@@ -337,7 +337,7 @@ namespace BepuPhysics.CollisionDetection
         {
             ref var context = ref *(RefinementContext*)untypedContext;
             var pool = dispatcher.WorkerPools[workerIndex];
-            context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, deterministic: context.Deterministic);
+            context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, targetTaskCount: context.TargetTaskCount, deterministic: context.Deterministic);
             //Now refit! Note that we use all but one task. It doesn't affect the performance of a refit much (we're not compute bound), and we can use it to do an incremental cache optimization on the static tree.
             var sourceNodes = context.Tree.Nodes;
             context.Tree.Nodes = context.TargetNodes;
@@ -348,7 +348,7 @@ namespace BepuPhysics.CollisionDetection
         {
             ref var context = ref *(RefinementContext*)untypedContext;
             var pool = dispatcher.WorkerPools[workerIndex];
-            context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, deterministic: context.Deterministic);
+            context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, targetTaskCount: context.TargetTaskCount, deterministic: context.Deterministic);
         }
 
         int staticSubtreeRefinementStartIndex, activeSubtreeRefinementStartIndex;
@@ -361,8 +361,8 @@ namespace BepuPhysics.CollisionDetection
                 //Distribute tasks for refinement roughly in proportion to their cost.
                 //This doesn't need to be perfect.
                 //Cost of a refinement is roughly n * log2(n), for n = refinement size.
-                var activeCost = float.Log2(activeRootRefinementSize) * activeRootRefinementSize + float.Log2(activeSubtreeRefinementSize) * activeSubtreeRefinementSize * activeSubtreeRefinementCount;
-                var staticCost = float.Log2(staticRootRefinementSize) * staticRootRefinementSize + float.Log2(staticSubtreeRefinementSize) * staticSubtreeRefinementSize * staticSubtreeRefinementCount;
+                var activeCost = float.Log2(activeRootRefinementSize + 1) * activeRootRefinementSize + float.Log2(activeSubtreeRefinementSize + 1) * activeSubtreeRefinementSize * activeSubtreeRefinementCount;
+                var staticCost = float.Log2(staticRootRefinementSize + 1) * staticRootRefinementSize + float.Log2(staticSubtreeRefinementSize + 1) * staticSubtreeRefinementSize * staticSubtreeRefinementCount;
                 var activeTaskFraction = activeCost / (activeCost + staticCost);
                 var targetTotalTaskCount = threadDispatcher.ThreadCount; //could scale this. Empirically, doesn't matter on the CPUs tested so far.
                 var targetActiveTaskCount = (int)float.Ceiling(activeTaskFraction * targetTotalTaskCount);
