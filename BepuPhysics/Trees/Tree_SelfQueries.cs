@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Security.Cryptography;
+using System.Xml.Linq;
 
 namespace BepuPhysics.Trees
 {
@@ -126,20 +127,16 @@ namespace BepuPhysics.Trees
 
             ref var a = ref node.A;
             ref var b = ref node.B;
-
             var ab = BoundingBox.IntersectsUnsafe(a, b);
-
             if (a.Index >= 0)
                 GetOverlapsInNode(ref Nodes[a.Index], ref results);
             if (b.Index >= 0)
                 GetOverlapsInNode(ref Nodes[b.Index], ref results);
-
             //Test all different nodes.
             if (ab)
             {
                 DispatchTestForNodes(ref a, ref b, ref results);
             }
-
         }
 
         public unsafe void GetSelfOverlaps<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
@@ -297,153 +294,179 @@ namespace BepuPhysics.Trees
             packedB = Avx.PermuteVar(b.AsSingle(), permuteMask).AsInt32();
 
         }
-
-        public unsafe void GetSelfOverlapsContiguousPrepass<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
+        public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
-            //If there are less than two leaves, there can't be any overlap.
-            //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
-            if (LeafCount < 2)
-                return;
-
-            //A recursive self test will at some point visit all nodes with certainty. Instead of framing it as a recursive test at all, do a prepass that's just a contiguous iteration.
-            //Include a little buffer to avoid overruns by vectorized operations.
-            var stackSize = ((NodeCount + 7) / 8 + 1) * 8;
-            pool.Take<int>(stackSize, out var crossoverStackA);
-            pool.Take<int>(stackSize, out var crossoverStackB);
-            pool.Take<uint>(stackSize, out var nodeLeafStackA);
-            pool.Take<uint>(stackSize, out var nodeLeafStackB);
-            int crossoverStackCount = 0;
-            int nodeLeafStackCount = 0;
-            for (int i = 0; i < NodeCount; ++i)
+            for (int i = NodeCount - 1; i >= 0; --i)
             {
                 ref var node = ref Nodes[i];
-                var a = node.A.Index;
-                var b = node.B.Index;
-                var aIsInternal = a >= 0;
-                var bIsInternal = b >= 0;
-                if (aIsInternal && bIsInternal)
+                ref var a = ref node.A;
+                ref var b = ref node.B;
+                var ab = BoundingBox.IntersectsUnsafe(a, b);
+                if (ab)
                 {
-                    if (BoundingBox.IntersectsUnsafe(node.A, node.B))
-                    {
-                        crossoverStackA[crossoverStackCount] = a;
-                        crossoverStackB[crossoverStackCount] = b;
-                        ++crossoverStackCount;
-                    }
-                }
-                else if (aIsInternal || bIsInternal)
-                {
-                    //One is a leaf, one is internal.
-                    nodeLeafStackA[nodeLeafStackCount] = (uint)i;
-                    nodeLeafStackB[nodeLeafStackCount] = (uint)i | (1u << 31);
-                    ++nodeLeafStackCount;
-                }
-                else
-                {
-                    //Both are leaves.
-                    results.Handle(Encode(a), Encode(b));
+                    DispatchTestForNodes(ref a, ref b, ref results);
                 }
             }
-
-            //Now, we need to complete all crossovers and leaf-node tests. Note that leaf-node tests can only generate leaf-node or leaf-leaf tests, they never produce crossovers.
-            //In contrast, crossovers can generate leaf-node tests. So do crossovers first so we'll have every leaf-node test in the stack ready to go.
-            while (crossoverStackCount > 0)
-            {
-                var toVisitIndex = --crossoverStackCount;
-                var index0 = crossoverStackA[toVisitIndex];
-                var index1 = crossoverStackB[toVisitIndex];
-                ref var n0 = ref Nodes[index0];
-                ref var n1 = ref Nodes[index1];
-
-                var aaIntersects = BoundingBox.IntersectsUnsafe(n0.A, n1.A);
-                var abIntersects = BoundingBox.IntersectsUnsafe(n0.A, n1.B);
-                var baIntersects = BoundingBox.IntersectsUnsafe(n0.B, n1.A);
-                var bbIntersects = BoundingBox.IntersectsUnsafe(n0.B, n1.B);
-
-                var intersects = Vector128.Create(aaIntersects ? -1 : 0, abIntersects ? -1 : 0, baIntersects ? -1 : 0, bbIntersects ? -1 : 0);
-                var indices = Vector128.Create(n0.A.Index, n0.B.Index, n1.A.Index, n1.B.Index);
-                var n0Indices = Vector128.Shuffle(indices, Vector128.Create(0, 0, 1, 1));
-                var n1Indices = Vector128.Shuffle(indices, Vector128.Create(2, 3, 2, 3));
-                var n0Internal = Vector128.GreaterThan(n0Indices, Vector128<int>.Zero);
-                var n1Internal = Vector128.GreaterThan(n1Indices, Vector128<int>.Zero);
-
-                var leafLeaf = Vector128.AndNot(Vector128.AndNot(intersects, n0Internal), n1Internal);
-                var nodeLeaf = intersects & (n0Internal ^ n1Internal);
-                var crossover = intersects & n0Internal & n1Internal;
-
-                LeftPack(leafLeaf, Encode(n0Indices), Encode(n1Indices), out var leafleafToPush0, out var leafleafToPush1, out var leafLeafCount);
-                var parentEncoded0 = Vector128.BitwiseOr(Vector128.Create(index0), Vector128.Create(0, 0, 1 << 31, 1 << 31));
-                var parentEncoded1 = Vector128.BitwiseOr(Vector128.Create(index1), Vector128.Create(0, 1 << 31, 0, 1 << 31));
-                LeftPack(nodeLeaf, parentEncoded0, parentEncoded1, out var nodeLeafToPush0, out var nodeLeafToPush1, out var nodeLeafCount);
-                LeftPack(crossover, n0Indices, n1Indices, out var crossoverToPush0, out var crossoverToPush1, out var crossoverCount);
-
-                if (leafLeafCount > 0)
-                {
-                    results.Handle(leafleafToPush0[0], leafleafToPush1[0]);
-                    if (leafLeafCount > 1) results.Handle(leafleafToPush0[1], leafleafToPush1[1]);
-                    if (leafLeafCount > 2) results.Handle(leafleafToPush0[2], leafleafToPush1[2]);
-                    if (leafLeafCount > 3) results.Handle(leafleafToPush0[3], leafleafToPush1[3]);
-                }
-                if (nodeLeafCount > 0)
-                {
-                    Vector128.Store(nodeLeafToPush0.AsUInt32(), nodeLeafStackA.Memory + nodeLeafStackCount);
-                    Vector128.Store(nodeLeafToPush1.AsUInt32(), nodeLeafStackB.Memory + nodeLeafStackCount);
-                    nodeLeafStackCount += nodeLeafCount;
-                }
-                if (crossoverCount > 0)
-                {
-                    Vector128.Store(crossoverToPush0, crossoverStackA.Memory + crossoverStackCount);
-                    Vector128.Store(crossoverToPush1, crossoverStackB.Memory + crossoverStackCount);
-                    crossoverStackCount += crossoverCount;
-                }
-
-                //Console.WriteLine($"new stackcounts: nodeleaf {nodeLeafStackCount}, crossover {crossoverStackCount}; new leafleaf {leafleafCount}, nodeleaf {nodeLeafCount}, crossover {crossoverCount}");
-            }
-            //Console.WriteLine("End crossovers");
-
-            pool.Return(ref crossoverStackA);
-            pool.Return(ref crossoverStackB);
-            QuickList<int> stack = new(NodeCount, pool);
-
-            for (int i = 0; i < nodeLeafStackCount; ++i)
-            {
-                ref var childA = ref GetLeafChild(ref this, nodeLeafStackA[i]);
-                ref var childB = ref GetLeafChild(ref this, nodeLeafStackB[i]);
-                Debug.Assert((childA.Index < 0) ^ (childB.Index < 0), "One and only one of the two children must be a leaf.");
-                ref var leafChild = ref childA.Index < 0 ? ref childA : ref childB;
-                stack.AllocateUnsafely() = childA.Index < 0 ? childB.Index : childA.Index;
-                var leafIndex = Encode(leafChild.Index);
-                Debug.Assert(stack.Count == 0);
-                while (stack.TryPop(out var nodeToTest))
-                {
-                    ref var node = ref Nodes[nodeToTest];
-                    var a = node.A.Index;
-                    var b = node.B.Index;
-                    var aIntersected = BoundingBox.IntersectsUnsafe(leafChild, node.A);
-                    var bIntersected = BoundingBox.IntersectsUnsafe(leafChild, node.B);
-
-                    if (bIntersected)
-                    {
-                        if (b >= 0)
-                            stack.AllocateUnsafely() = b;
-                        else
-                            results.Handle(leafIndex, Encode(b));
-                    }
-                    if (aIntersected)
-                    {
-                        if (a >= 0)
-                            stack.AllocateUnsafely() = a;
-                        else
-                            results.Handle(leafIndex, Encode(a));
-                    }
-
-                }
-            }
-            pool.Return(ref nodeLeafStackA);
-            pool.Return(ref nodeLeafStackB);
-            stack.Dispose(pool);
         }
 
+        struct IndexPair
+        {
+            public int A;
+            public int B;
+        }
 
+        unsafe struct NodeLeafPair
+        {
+            public NodeChild* LeafParent;
+            public int NodeIndex;
+        }
+
+        unsafe void AddCrossoverResult(ref NodeChild a, ref NodeChild b, ref QuickList<IndexPair> crossovers, ref QuickList<NodeLeafPair> nodeLeaf, ref QuickList<IndexPair> leafLeaf, BufferPool pool)
+        {
+            if (a.Index >= 0 && b.Index >= 0)
+            {
+                crossovers.Allocate(pool) = new IndexPair { A = a.Index, B = b.Index };
+            }
+            else if (a.Index < 0 && b.Index < 0)
+            {
+                leafLeaf.Allocate(pool) = new IndexPair { A = a.Index, B = b.Index };
+            }
+            else
+            {
+                nodeLeaf.Allocate(pool) = a.Index >= 0
+                    ? new NodeLeafPair { LeafParent = (NodeChild*)Unsafe.AsPointer(ref b), NodeIndex = a.Index }
+                    : new NodeLeafPair { LeafParent = (NodeChild*)Unsafe.AsPointer(ref a), NodeIndex = b.Index };
+            }
+        }
+        unsafe void ExecuteCrossoverBatch(ref QuickList<IndexPair> crossovers, ref QuickList<NodeLeafPair> nodeLeaf, ref QuickList<IndexPair> leafLeaf, BufferPool pool)
+        {
+            while (crossovers.TryPop(out var pair))
+            {
+                ref var a = ref Nodes[pair.A];
+                ref var b = ref Nodes[pair.B];
+                //There are no shared children, so test them all.
+                ref var aa = ref a.A;
+                ref var ab = ref a.B;
+                ref var ba = ref b.A;
+                ref var bb = ref b.B;
+                var aaIntersects = BoundingBox.IntersectsUnsafe(aa, ba);
+                var abIntersects = BoundingBox.IntersectsUnsafe(aa, bb);
+                var baIntersects = BoundingBox.IntersectsUnsafe(ab, ba);
+                var bbIntersects = BoundingBox.IntersectsUnsafe(ab, bb);
+
+                if (aaIntersects)
+                {
+                    AddCrossoverResult(ref aa, ref ba, ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+                }
+                if (abIntersects)
+                {
+                    AddCrossoverResult(ref aa, ref bb, ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+                }
+                if (baIntersects)
+                {
+                    AddCrossoverResult(ref ab, ref ba, ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+                }
+                if (bbIntersects)
+                {
+                    AddCrossoverResult(ref ab, ref bb, ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+                }
+            }
+        }
+        unsafe void ExecuteNodeLeafBatch(ref QuickList<NodeLeafPair> nodeLeaf, ref QuickList<IndexPair> leafLeaf, BufferPool pool)
+        {
+            while (nodeLeaf.TryPop(out var pair))
+            {
+                ref var leafChild = ref *pair.LeafParent;
+                ref var node = ref Nodes[pair.NodeIndex];
+                ref var a = ref node.A;
+                ref var b = ref node.B;
+                var bIndex = b.Index;
+                var aIntersects = BoundingBox.IntersectsUnsafe(leafChild, a);
+                var bIntersects = BoundingBox.IntersectsUnsafe(leafChild, b);
+                if (aIntersects)
+                {
+                    if (a.Index < 0)
+                    {
+                        leafLeaf.Allocate(pool) = new IndexPair { A = leafChild.Index, B = a.Index };
+                    }
+                    else
+                    {
+                        nodeLeaf.Allocate(pool) = new NodeLeafPair { LeafParent = pair.LeafParent, NodeIndex = a.Index };
+                    }
+                }
+                if (bIntersects)
+                {
+                    if (b.Index < 0)
+                    {
+                        leafLeaf.Allocate(pool) = new IndexPair { A = leafChild.Index, B = b.Index };
+                    }
+                    else
+                    {
+                        nodeLeaf.Allocate(pool) = new NodeLeafPair { LeafParent = pair.LeafParent, NodeIndex = b.Index };
+                    }
+                }
+            }
+        }
+
+        unsafe void FlushLeafLeaf<TOverlapHandler>(ref QuickList<IndexPair> leafLeaf, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        {
+            for (int leafLeafIndex = 0; leafLeafIndex < leafLeaf.Count; ++leafLeafIndex)
+            {
+                var pair = leafLeaf[leafLeafIndex];
+                results.Handle(Encode(pair.A), Encode(pair.B));
+            }
+            leafLeaf.Count = 0;
+        }
+
+        public unsafe void GetSelfOverlapsBatched<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
+        {
+            const int crossoverBatchSizeTarget = 8;
+            const int leafLeafBatchSizeTarget = 8;
+            const int nodeLeafBatchSizeTarget = 8;
+            var crossovers = new QuickList<IndexPair>(crossoverBatchSizeTarget * 16, pool);
+            var leafLeaf = new QuickList<IndexPair>(leafLeafBatchSizeTarget * 16, pool);
+            var nodeLeaf = new QuickList<NodeLeafPair>(nodeLeafBatchSizeTarget * 16, pool);
+            for (int i = NodeCount - 1; i >= 0; --i)
+            {
+                ref var node = ref Nodes[i];
+                ref var a = ref node.A;
+                ref var b = ref node.B;
+                if (BoundingBox.IntersectsUnsafe(a, b))
+                {
+                    if (a.Index >= 0 && b.Index >= 0)
+                    {
+                        crossovers.Allocate(pool) = new IndexPair { A = a.Index, B = b.Index };
+                    }
+                    else if (a.Index < 0 && b.Index < 0)
+                    {
+                        leafLeaf.Allocate(pool) = new IndexPair { A = a.Index, B = b.Index };
+                    }
+                    else
+                    {
+                        //Leaf-node.
+                        nodeLeaf.Allocate(pool) = a.Index >= 0
+                            ? new NodeLeafPair { LeafParent = (NodeChild*)Unsafe.AsPointer(ref b), NodeIndex = a.Index }
+                            : new NodeLeafPair { LeafParent = (NodeChild*)Unsafe.AsPointer(ref a), NodeIndex = b.Index };
+                    }
+                }
+                if (crossovers.Count >= crossoverBatchSizeTarget)
+                {
+                    ExecuteCrossoverBatch(ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+                }
+                if (nodeLeaf.Count >= nodeLeafBatchSizeTarget)
+                {
+                    ExecuteNodeLeafBatch(ref nodeLeaf, ref leafLeaf, pool);
+                }
+                if (leafLeaf.Count >= leafLeafBatchSizeTarget)
+                {
+                    FlushLeafLeaf(ref leafLeaf, ref results);
+                }
+            }
+            //Flush any remaining pairs.
+            ExecuteCrossoverBatch(ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+            ExecuteNodeLeafBatch(ref nodeLeaf, ref leafLeaf, pool);
+            FlushLeafLeaf(ref leafLeaf, ref results);
+        }
 
 
     }
