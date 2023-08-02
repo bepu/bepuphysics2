@@ -617,7 +617,7 @@ public partial struct Tree
     /// If the refine is single threaded, it is already deterministic and this flag has no effect.</param>
     /// <param name="taskStack"><see cref="TaskStack"/> that the refine operation will push tasks onto as needed.</param>
     /// <param name="workerIndex">Index of the worker calling the function.</param>
-    /// <param name="targetTaskCount">Number of tasks the refit should try to create during execution. If negative, uses <see cref="IThreadDispatcher.ThreadCount"/>.</param>
+    /// <param name="targetTaskCount">Number of tasks the refinement should try to create during execution. If negative, uses <see cref="IThreadDispatcher.ThreadCount"/>.</param>
     /// <remarks>Nodes will not be refit.</remarks>
     public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, 
         BufferPool pool, IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1, bool deterministic = false)

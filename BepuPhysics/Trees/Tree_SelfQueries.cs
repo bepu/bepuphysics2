@@ -3,6 +3,7 @@ using BepuPhysics.Constraints.Contact;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.TaskScheduling;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -13,17 +14,39 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Security.Cryptography;
 using System.Xml.Linq;
+using static BepuPhysics.Trees.Tree;
 
 namespace BepuPhysics.Trees
 {
+    /// <summary>
+    /// Overlap callback for tree overlap queries.
+    /// </summary>
     public interface IOverlapHandler
     {
+        /// <summary>
+        /// Handles an overlap between leaves.
+        /// </summary>
+        /// <param name="indexA">Index of the first leaf in the overlap.</param>
+        /// <param name="indexB">Index of the second leaf in the overlap.</param>
         void Handle(int indexA, int indexB);
     }
-
+    /// <summary>
+    /// Overlap callback for tree overlap queries. Used in multithreaded contexts.
+    /// </summary>
+    public interface IThreadedOverlapHandler
+    {
+        /// <summary>
+        /// Handles an overlap between leaves.
+        /// </summary>
+        /// <param name="indexA">Index of the first leaf in the overlap.</param>
+        /// <param name="indexB">Index of the second leaf in the overlap.</param>
+        /// <param name="workerIndex">Index of the worker reporting the overlap.</param>
+        void Handle(int indexA, int indexB, int workerIndex);
+    }
 
     partial struct Tree
     {
+
         //TODO: This contains a lot of empirically tested implementations on much older runtimes.
         //I suspect results would be different on modern versions of ryujit. In particular, recursion is very unlikely to be the fastest approach.
         //(I don't immediately recall what made the non-recursive version slower last time- it's possible that it was making use of stackalloc and I hadn't yet realized that it 
@@ -31,7 +54,7 @@ namespace BepuPhysics.Trees
 
         //Note that all of these implementations make use of a fully generic handler. It could be dumping to a list, or it could be directly processing the results- at this
         //level of abstraction we don't know or care. It's up to the user to use a handler which maximizes performance if they want it. We'll be using this in the broad phase.
-        unsafe void DispatchTestForLeaf<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        readonly unsafe void DispatchTestForLeaf<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             if (nodeIndex < 0)
             {
@@ -42,7 +65,7 @@ namespace BepuPhysics.Trees
                 TestLeafAgainstNode(leafIndex, ref leafChild, nodeIndex, ref results);
             }
         }
-        unsafe void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results)
+        readonly unsafe void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results)
             where TOverlapHandler : IOverlapHandler
         {
             ref var node = ref Nodes[nodeIndex];
@@ -66,7 +89,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void DispatchTestForNodes<TOverlapHandler>(ref NodeChild a, ref NodeChild b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        readonly unsafe void DispatchTestForNodes<TOverlapHandler>(ref NodeChild a, ref NodeChild b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             if (a.Index >= 0)
             {
@@ -92,7 +115,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(ref Node a, ref Node b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        readonly unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(ref Node a, ref Node b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             //There are no shared children, so test them all.
             ref var aa = ref a.A;
@@ -122,7 +145,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe void GetOverlapsInNode<TOverlapHandler>(ref Node node, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        readonly unsafe void GetOverlapsInNode<TOverlapHandler>(ref Node node, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
 
             ref var a = ref node.A;
@@ -139,7 +162,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        public unsafe void GetSelfOverlaps<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        public readonly unsafe void GetSelfOverlaps<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             //If there are less than two leaves, there can't be any overlap.
             //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
@@ -294,20 +317,6 @@ namespace BepuPhysics.Trees
             packedB = Avx.PermuteVar(b.AsSingle(), permuteMask).AsInt32();
 
         }
-        public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
-        {
-            for (int i = NodeCount - 1; i >= 0; --i)
-            {
-                ref var node = ref Nodes[i];
-                ref var a = ref node.A;
-                ref var b = ref node.B;
-                var ab = BoundingBox.IntersectsUnsafe(a, b);
-                if (ab)
-                {
-                    DispatchTestForNodes(ref a, ref b, ref results);
-                }
-            }
-        }
 
         struct IndexPair
         {
@@ -321,7 +330,7 @@ namespace BepuPhysics.Trees
             public int NodeIndex;
         }
 
-        unsafe void AddCrossoverResult(ref NodeChild a, ref NodeChild b, ref QuickList<IndexPair> crossovers, ref QuickList<NodeLeafPair> nodeLeaf, ref QuickList<IndexPair> leafLeaf, BufferPool pool)
+        unsafe void AddCrossoverResult<TOverlapHandler>(ref NodeChild a, ref NodeChild b, ref QuickList<IndexPair> crossovers, ref QuickList<NodeLeafPair> nodeLeaf, ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
         {
             if (a.Index >= 0 && b.Index >= 0)
             {
@@ -329,7 +338,7 @@ namespace BepuPhysics.Trees
             }
             else if (a.Index < 0 && b.Index < 0)
             {
-                leafLeaf.Allocate(pool) = new IndexPair { A = a.Index, B = b.Index };
+                results.Handle(Encode(a.Index), Encode(b.Index));
             }
             else
             {
@@ -338,7 +347,7 @@ namespace BepuPhysics.Trees
                     : new NodeLeafPair { LeafParent = (NodeChild*)Unsafe.AsPointer(ref a), NodeIndex = b.Index };
             }
         }
-        unsafe void ExecuteCrossoverBatch(ref QuickList<IndexPair> crossovers, ref QuickList<NodeLeafPair> nodeLeaf, ref QuickList<IndexPair> leafLeaf, BufferPool pool)
+        unsafe void ExecuteCrossoverBatch<TOverlapHandler>(ref QuickList<IndexPair> crossovers, ref QuickList<NodeLeafPair> nodeLeaf, ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
         {
             while (crossovers.TryPop(out var pair))
             {
@@ -356,23 +365,23 @@ namespace BepuPhysics.Trees
 
                 if (aaIntersects)
                 {
-                    AddCrossoverResult(ref aa, ref ba, ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+                    AddCrossoverResult(ref aa, ref ba, ref crossovers, ref nodeLeaf, ref results, pool);
                 }
                 if (abIntersects)
                 {
-                    AddCrossoverResult(ref aa, ref bb, ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+                    AddCrossoverResult(ref aa, ref bb, ref crossovers, ref nodeLeaf, ref results, pool);
                 }
                 if (baIntersects)
                 {
-                    AddCrossoverResult(ref ab, ref ba, ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+                    AddCrossoverResult(ref ab, ref ba, ref crossovers, ref nodeLeaf, ref results, pool);
                 }
                 if (bbIntersects)
                 {
-                    AddCrossoverResult(ref ab, ref bb, ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+                    AddCrossoverResult(ref ab, ref bb, ref crossovers, ref nodeLeaf, ref results, pool);
                 }
             }
         }
-        unsafe void ExecuteNodeLeafBatch(ref QuickList<NodeLeafPair> nodeLeaf, ref QuickList<IndexPair> leafLeaf, BufferPool pool)
+        unsafe void ExecuteNodeLeafBatch<TOverlapHandler>(ref QuickList<NodeLeafPair> nodeLeaf, ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
         {
             while (nodeLeaf.TryPop(out var pair))
             {
@@ -387,7 +396,7 @@ namespace BepuPhysics.Trees
                 {
                     if (a.Index < 0)
                     {
-                        leafLeaf.Allocate(pool) = new IndexPair { A = leafChild.Index, B = a.Index };
+                        results.Handle(Encode(leafChild.Index), Encode(a.Index));
                     }
                     else
                     {
@@ -398,7 +407,7 @@ namespace BepuPhysics.Trees
                 {
                     if (b.Index < 0)
                     {
-                        leafLeaf.Allocate(pool) = new IndexPair { A = leafChild.Index, B = b.Index };
+                        results.Handle(Encode(leafChild.Index), Encode(b.Index));
                     }
                     else
                     {
@@ -420,11 +429,9 @@ namespace BepuPhysics.Trees
 
         public unsafe void GetSelfOverlapsBatched<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
         {
-            const int crossoverBatchSizeTarget = 8;
-            const int leafLeafBatchSizeTarget = 8;
-            const int nodeLeafBatchSizeTarget = 8;
+            const int crossoverBatchSizeTarget = 16;
+            const int nodeLeafBatchSizeTarget = 16;
             var crossovers = new QuickList<IndexPair>(crossoverBatchSizeTarget * 16, pool);
-            var leafLeaf = new QuickList<IndexPair>(leafLeafBatchSizeTarget * 16, pool);
             var nodeLeaf = new QuickList<NodeLeafPair>(nodeLeafBatchSizeTarget * 16, pool);
             for (int i = NodeCount - 1; i >= 0; --i)
             {
@@ -439,7 +446,7 @@ namespace BepuPhysics.Trees
                     }
                     else if (a.Index < 0 && b.Index < 0)
                     {
-                        leafLeaf.Allocate(pool) = new IndexPair { A = a.Index, B = b.Index };
+                        results.Handle(Encode(a.Index), Encode(b.Index));
                     }
                     else
                     {
@@ -451,23 +458,146 @@ namespace BepuPhysics.Trees
                 }
                 if (crossovers.Count >= crossoverBatchSizeTarget)
                 {
-                    ExecuteCrossoverBatch(ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
+                    ExecuteCrossoverBatch(ref crossovers, ref nodeLeaf, ref results, pool);
                 }
                 if (nodeLeaf.Count >= nodeLeafBatchSizeTarget)
                 {
-                    ExecuteNodeLeafBatch(ref nodeLeaf, ref leafLeaf, pool);
-                }
-                if (leafLeaf.Count >= leafLeafBatchSizeTarget)
-                {
-                    FlushLeafLeaf(ref leafLeaf, ref results);
+                    ExecuteNodeLeafBatch(ref nodeLeaf, ref results, pool);
                 }
             }
             //Flush any remaining pairs.
-            ExecuteCrossoverBatch(ref crossovers, ref nodeLeaf, ref leafLeaf, pool);
-            ExecuteNodeLeafBatch(ref nodeLeaf, ref leafLeaf, pool);
-            FlushLeafLeaf(ref leafLeaf, ref results);
+            ExecuteCrossoverBatch(ref crossovers, ref nodeLeaf, ref results, pool);
+            ExecuteNodeLeafBatch(ref nodeLeaf, ref results, pool);
+            crossovers.Dispose(pool);
+            nodeLeaf.Dispose(pool);
         }
 
 
+
+
+
+        readonly unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, int start, int end) where TOverlapHandler : IOverlapHandler
+        {
+            Debug.Assert(end >= 0 && end <= NodeCount && start >= 0 && start < NodeCount);
+            for (int i = end - 1; i >= start; --i)
+            {
+                ref var node = ref Nodes[i];
+                ref var a = ref node.A;
+                ref var b = ref node.B;
+                var ab = BoundingBox.IntersectsUnsafe(a, b);
+                if (ab)
+                {
+                    DispatchTestForNodes(ref a, ref b, ref results);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reports all bounding box overlaps between leaves in the tree to the given <typeparamref name="TOverlapHandler"/>.
+        /// </summary>
+        /// <param name="results">Handler to report results to.</param>
+        public readonly unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        {
+            GetSelfOverlaps2(ref results, 0, NodeCount);
+        }
+
+        unsafe struct SelfTestContext<TOverlapHandler> where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+        {
+            public Tree Tree;
+            public int LoopTaskCount;
+            public int LeafThresholdForTask;
+            public TOverlapHandler* Results;
+        }
+        unsafe struct WrappedOverlapHandler<TOverlapHandler> : IOverlapHandler where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+        {
+            public int WorkerIndex;
+            public TOverlapHandler* Inner;
+            public void Handle(int indexA, int indexB)
+            {
+                Inner->Handle(indexA, indexB, WorkerIndex);
+            }
+        }
+
+        unsafe static void LoopEntryTask<TOverlapHandler>(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+        {
+            var taskStart = (int)taskStartAndEnd;
+            var taskEnd = (int)(taskStartAndEnd >> 32);
+            ref var context = ref *(SelfTestContext<TOverlapHandler>*)untypedContext;
+            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex };
+            context.Tree.GetSelfOverlaps2(ref wrapped, taskStart, taskEnd);
+        }
+
+
+        private unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results,
+            int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+        {
+            targetTaskBudget = int.Min(NodeCount, targetTaskBudget);
+            if (targetTaskBudget < 0)
+                targetTaskBudget = threadDispatcher.ThreadCount;
+            targetTaskBudget *= 2;
+
+            //Crossover tests can generate more overlaps than there are leaves, so the simply dividing the leaf count by the target task count will tend to result in more tasks than necessary.
+            //BUT... it's not feasible to figure out how many tasks you should actually have ahead of time! The critical thing is that we have *enough* tasks, and that the tasks 
+            //aren't so small that pushing them is a complete waste.
+            //Don't have to worry about oversubscription, so the potential overhead isn't *too* bad.
+            var leafThresholdForTask = int.Min(int.Max(LeafCount / targetTaskBudget, 64), LeafCount);
+
+            var resultsCopy = results;
+            var context = new SelfTestContext<TOverlapHandler> { Tree = this, LoopTaskCount = targetTaskBudget, LeafThresholdForTask = leafThresholdForTask, Results = &resultsCopy };
+            var nodesPerTaskBase = NodeCount / context.LoopTaskCount;
+            var remainder = NodeCount - nodesPerTaskBase * context.LoopTaskCount;
+            Span<Task> tasks = stackalloc Task[targetTaskBudget];
+            int previousEnd = 0;
+            for (int i = 0; i < tasks.Length; ++i)
+            {
+                var taskStart = previousEnd;
+                var nodeCountForTask = i < remainder ? nodesPerTaskBase + 1 : nodesPerTaskBase;
+                var taskEnd = previousEnd + nodeCountForTask;
+                previousEnd = taskEnd;
+                tasks[i] = new Task(&LoopEntryTask<TOverlapHandler>, &context, (long)taskStart | (((long)taskEnd) << 32));
+            }
+            if (internallyDispatch)
+            {
+                //There isn't an active dispatch, so we need to do it.
+                taskStack->AllocateContinuationAndPush(tasks, workerIndex, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(taskStack));
+                TaskStack.DispatchWorkers(threadDispatcher, taskStack, workerCount);
+            }
+            else
+            {
+                //We're executing from within a multithreaded dispatch already, so we can simply run the tasks and trust that other threads are ready to steal.
+                taskStack->RunTasks(tasks, workerIndex, threadDispatcher);
+            }
+            //Have to copy back the results; it's a value type.
+            results = resultsCopy;
+        }
+
+
+        /// <summary>
+        /// Reports all bounding box overlaps between leaves in the tree to the given <typeparamref name="TOverlapHandler"/>. Uses the thread dispatcher to parallelize overlap testing.
+        /// </summary>
+        /// <param name="results">Handler to report results to.</param>
+        /// <param name="pool">Pool used for ephemeral allocations.</param>
+        /// <param name="threadDispatcher">Thread dispatcher used during the overlap testing.</param>
+        public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool, IThreadDispatcher threadDispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+        {
+            var taskStack = new TaskStack(pool, threadDispatcher, threadDispatcher.ThreadCount);
+            GetSelfOverlaps2(ref results, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount);
+            taskStack.Dispose(pool, threadDispatcher);
+        }
+
+        /// <summary>
+        /// Reports all bounding box overlaps between leaves in the tree to the given <typeparamref name="TOverlapHandler"/>.
+        /// <para/>Pushes tasks into the provided <see cref="TaskStack"/>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
+        /// </summary>
+        /// <param name="results">Handler to report results to.</param>
+        /// <param name="threadDispatcher">Thread dispatcher used during the overlap test.</param>
+        /// <param name="taskStack"><see cref="TaskStack"/> that the overlap test will push tasks onto as needed.</param>
+        /// <param name="workerIndex">Index of the worker calling the function.</param>
+        /// <param name="targetTaskCount">Number of tasks the overlap testing should try to create during execution. If negative, uses <see cref="IThreadDispatcher.ThreadCount"/>.</param>
+        public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results,
+             IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+        {
+            GetSelfOverlaps2(ref results, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount);
+        }
     }
 }
