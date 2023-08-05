@@ -264,7 +264,6 @@ public unsafe struct TaskStack
         }
     }
 
-
     /// <summary>
     /// Pushes a set of tasks to the stack with a created continuation.
     /// </summary>
@@ -274,7 +273,6 @@ public unsafe struct TaskStack
     /// <param name="tag">User tag associated with the job spanning the submitted tasks.</param>
     /// <param name="onComplete">Task to run upon completion of all the submitted tasks, if any.</param>
     /// <returns>Handle of the continuation created for these tasks.</returns>
-    /// <remarks>Note that this will keep trying until task submission succeeds.</remarks>
     public ContinuationHandle AllocateContinuationAndPush(Span<Task> tasks, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0, Task onComplete = default)
     {
         var continuationHandle = AllocateContinuation(tasks.Length, workerIndex, dispatcher, onComplete);
@@ -286,6 +284,20 @@ public unsafe struct TaskStack
         }
         Push(tasks, workerIndex, dispatcher, tag);
         return continuationHandle;
+    }
+
+    /// <summary>
+    /// Pushes a task to the stack with a created continuation.
+    /// </summary>
+    /// <param name="task">Task composing the job. A continuation will be assigned internally; no continuation should be present on any of the provided task.</param>
+    /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
+    /// <param name="workerIndex">Index of the worker stack to push the task onto.</param>
+    /// <param name="tag">User tag associated with the task's job.</param>
+    /// <param name="onComplete">Task to run upon completion of all the submitted task, if any.</param>
+    /// <returns>Handle of the continuation created for these task.</returns>
+    public ContinuationHandle AllocateContinuationAndPush(Task task, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0, Task onComplete = default)
+    {
+        return AllocateContinuationAndPush(new Span<Task>(ref task), workerIndex, dispatcher, tag, onComplete);
     }
 
     /// <summary>
