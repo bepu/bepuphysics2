@@ -91,7 +91,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="initialSpan">Span to use as backing memory to begin with.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickQueue(ref Buffer<T> initialSpan)
+        public QuickQueue(Buffer<T> initialSpan)
         {
             Span = initialSpan;
             Count = 0;

@@ -719,6 +719,93 @@ namespace BepuPhysics.Trees
         }
 
 
+        private unsafe void GetSelfOverlaps2Poor<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool,
+        int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+        {
+            targetTaskBudget = int.Min(NodeCount, targetTaskBudget);
+            if (targetTaskBudget < 0)
+                targetTaskBudget = threadDispatcher.ThreadCount;
+            targetTaskBudget *= 8;
+
+            //Crossover tests can generate more overlaps than there are leaves, so the simply dividing the leaf count by the target task count will tend to result in more tasks than necessary.
+            //BUT... it's not feasible to figure out how many tasks you should actually have ahead of time! The critical thing is that we have *enough* tasks, and that the tasks 
+            //aren't so small that pushing them is a complete waste.
+            //Don't have to worry about oversubscription, so the potential overhead isn't *too* bad.
+            var leafThresholdForTask = int.Min(int.Max(LeafCount / (targetTaskBudget * 8), 64), LeafCount);
+            leafThresholdForTask = 1024;
+
+            var resultsCopy = results;
+            var context = new SelfTestContext<TOverlapHandler> { Tree = this, LoopTaskCount = targetTaskBudget, LeafThresholdForTask = leafThresholdForTask, Results = &resultsCopy, TaskStack = taskStack };
+
+            //Go ahead and submit very large early nodes as independent tasks to help with load balancing.
+
+            const int maximumIsolatedNodeCapacity = 128;
+            int isolatedNodeCapacity = int.Min(maximumIsolatedNodeCapacity, targetTaskBudget);
+            var earlyQueue = new QuickQueue<int>(isolatedNodeCapacity, pool);
+            var earlyIsolatedNodesMemory = stackalloc int[isolatedNodeCapacity];
+            var earlyIsolatedNodes = new QuickList<int>(new Buffer<int>(earlyIsolatedNodesMemory, isolatedNodeCapacity));
+            earlyQueue.EnqueueUnsafely() = 0;
+            while (earlyQueue.Count < earlyQueue.Span.Length && earlyIsolatedNodes.Count < isolatedNodeCapacity)
+            {
+                var nodeIndex = earlyQueue.DequeueUnsafely();
+                ref var node = ref Nodes[nodeIndex];
+                ref var a = ref node.A;
+                ref var b = ref node.B;
+                if (int.Max(a.LeafCount, b.LeafCount) >= leafThresholdForTask)
+                {
+                    if (BoundingBox.IntersectsUnsafe(a, b))
+                    {
+                        //Note that this technically does double work on the bounds test with the way we're submitting this as a task. Don't care; it's constant bounded nanoseconds.
+                        earlyIsolatedNodes.AllocateUnsafely() = nodeIndex;
+                    }
+                    earlyQueue.EnqueueUnsafely() = a.Index;
+                    earlyQueue.EnqueueUnsafely() = b.Index;
+                }
+            }
+
+            var tasks = new QuickList<Task>(targetTaskBudget, pool);
+            var targetTaskSize = NodeCount / targetTaskBudget;
+            for (int i = 0; i < earlyQueue.Count; ++i)
+            {
+                var nodeIndex = earlyQueue[i];
+                ref var node = ref Nodes[nodeIndex];
+                var regionSize = node.A.LeafCount + node.B.LeafCount - 1;
+                var localTaskCount = (regionSize + targetTaskSize - 1) / targetTaskSize;
+                var baseNodesPerTask = regionSize / localTaskCount;
+                var remainder = regionSize - baseNodesPerTask * localTaskCount;
+                int previousEnd = nodeIndex;
+                for (int j = 0; j < localTaskCount; ++j)
+                {
+                    var taskStart = previousEnd;
+                    var taskSize = j < remainder ? baseNodesPerTask + 1 : baseNodesPerTask;
+                    var taskEnd = previousEnd + taskSize;
+                    tasks.Allocate(pool) = new Task(&LoopEntryTask<TOverlapHandler>, &context, (long)taskStart | (((long)taskEnd) << 32));
+                }
+            }
+            earlyQueue.Dispose(pool);
+            for (int i = earlyIsolatedNodes.Count - 1; i >= 0; --i)
+            {
+                var nodeIndex = earlyIsolatedNodes[i];
+                tasks.Allocate(pool) = new Task(&LoopEntryTask<TOverlapHandler>, &context, (long)nodeIndex | (((long)(nodeIndex + 1)) << 32));
+            }
+
+            if (internallyDispatch)
+            {
+                //There isn't an active dispatch, so we need to do it.
+                taskStack->AllocateContinuationAndPush(tasks, workerIndex, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(taskStack));
+                TaskStack.DispatchWorkers(threadDispatcher, taskStack, workerCount);
+            }
+            else
+            {
+                //We're executing from within a multithreaded dispatch already, so we can simply run the tasks and trust that other threads are ready to steal.
+                taskStack->RunTasks(tasks, workerIndex, threadDispatcher);
+            }
+            tasks.Dispose(pool);
+            //Have to copy back the results; it's a value type.
+            results = resultsCopy;
+        }
+
+
         /// <summary>
         /// Reports all bounding box overlaps between leaves in the tree to the given <typeparamref name="TOverlapHandler"/>. Uses the thread dispatcher to parallelize overlap testing.
         /// </summary>
@@ -728,7 +815,7 @@ namespace BepuPhysics.Trees
         public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool, IThreadDispatcher threadDispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
             var taskStack = new TaskStack(pool, threadDispatcher, threadDispatcher.ThreadCount);
-            GetSelfOverlaps2(ref results, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount);
+            GetSelfOverlaps2Poor(ref results, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount);
             taskStack.Dispose(pool, threadDispatcher);
         }
 
@@ -737,14 +824,15 @@ namespace BepuPhysics.Trees
         /// <para/>Pushes tasks into the provided <see cref="TaskStack"/>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
         /// </summary>
         /// <param name="results">Handler to report results to.</param>
+        /// <param name="pool">Pool used for ephemeral allocations.</param>
         /// <param name="threadDispatcher">Thread dispatcher used during the overlap test.</param>
         /// <param name="taskStack"><see cref="TaskStack"/> that the overlap test will push tasks onto as needed.</param>
         /// <param name="workerIndex">Index of the worker calling the function.</param>
         /// <param name="targetTaskCount">Number of tasks the overlap testing should try to create during execution. If negative, uses <see cref="IThreadDispatcher.ThreadCount"/>.</param>
-        public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results,
+        public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool,
              IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
-            GetSelfOverlaps2(ref results, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount);
+            GetSelfOverlaps2Poor(ref results, pool, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount);
         }
     }
 }
