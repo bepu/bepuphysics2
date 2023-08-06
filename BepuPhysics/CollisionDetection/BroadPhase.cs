@@ -356,7 +356,8 @@ namespace BepuPhysics.CollisionDetection
         {
             ActiveRefinementSchedule(frameIndex, ActiveTree, out var activeRootRefinementSize, out var activeSubtreeRefinementCount, out var activeSubtreeRefinementSize);
             StaticRefinementSchedule(frameIndex, StaticTree, out var staticRootRefinementSize, out var staticSubtreeRefinementCount, out var staticSubtreeRefinementSize);
-            if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
+            const int minimumLeafCountForThreading = 256;
+            if (threadDispatcher != null && threadDispatcher.ThreadCount > 1 && (ActiveTree.LeafCount >= minimumLeafCountForThreading || StaticTree.LeafCount >= minimumLeafCountForThreading))
             {
                 //Distribute tasks for refinement roughly in proportion to their cost.
                 //This doesn't need to be perfect.
@@ -378,7 +379,7 @@ namespace BepuPhysics.CollisionDetection
                     SubtreeRefinementSize = activeSubtreeRefinementSize,
                     SubtreeRefinementStartIndex = activeSubtreeRefinementStartIndex,
                     Deterministic = deterministic,
-                    TargetNodes = new Buffer<Node>(ActiveTree.Nodes.Length, Pool),
+                    TargetNodes = ActiveTree.LeafCount > 2 ? new Buffer<Node>(ActiveTree.Nodes.Length, Pool) : default,
                 };
                 var staticRefineContext = new RefinementContext
                 {
@@ -398,10 +399,13 @@ namespace BepuPhysics.CollisionDetection
                 taskStack.AllocateContinuationAndPush(tasks, 0, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(&taskStack));
                 TaskStack.DispatchWorkers(threadDispatcher, &taskStack);
                 taskStack.Dispose(Pool, threadDispatcher);
-                //When using the cache optimizing refit, the tree is modified. Since passed a copy, we need to copy it back.
-                //Static tree doesn't undergo a refit, so no copy required there.
-                ActiveTree.Nodes.Dispose(Pool);
-                ActiveTree.Nodes = activeRefineContext.TargetNodes;
+                if (ActiveTree.LeafCount > 2) //If no refit was needed, then the target nodes buffer was never allocated.
+                {
+                    //When using the cache optimizing refit, the tree is modified. Since passed a copy, we need to copy it back.
+                    //Static tree doesn't undergo a refit, so no copy required there.
+                    ActiveTree.Nodes.Dispose(Pool);
+                    ActiveTree.Nodes = activeRefineContext.TargetNodes;
+                }
                 //The start indices need to be copied back for both.
                 activeSubtreeRefinementStartIndex = activeRefineContext.SubtreeRefinementStartIndex;
                 staticSubtreeRefinementStartIndex = staticRefineContext.SubtreeRefinementStartIndex;

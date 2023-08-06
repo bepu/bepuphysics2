@@ -225,6 +225,9 @@ partial struct Tree
     /// <param name="disposeOriginalNodes">Whether to dispose of the original nodes buffer. If false, it's up to the caller to dispose of it appropriately.</param>
     public unsafe void Refit2WithCacheOptimization(BufferPool pool, bool disposeOriginalNodes = true)
     {
+        //No point in refitting a tree with no internal nodes!
+        if (LeafCount <= 2)
+            return;
         var oldNodes = Nodes;
         Nodes = new Buffer<Node>(oldNodes.Length, pool);
         Refit2WithCacheOptimization(oldNodes);
