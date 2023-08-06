@@ -353,6 +353,8 @@ partial struct Tree
     /// <param name="disposeOriginalNodes">Whether to dispose of the original nodes buffer. If false, it's up to the caller to dispose of it appropriately.</param>
     public unsafe void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, bool disposeOriginalNodes = true)
     {
+        if (LeafCount <= 2)
+            return;
         var taskStack = new TaskStack(pool, dispatcher, dispatcher.ThreadCount);
         var oldNodes = Nodes;
         Nodes = new Buffer<Node>(oldNodes.Length, pool);
@@ -375,6 +377,8 @@ partial struct Tree
     /// <param name="disposeOriginalNodes">Whether to dispose of the original nodes buffer. If false, it's up to the caller to dispose of it appropriately.</param>
     public unsafe void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1, bool disposeOriginalNodes = true)
     {
+        if (LeafCount <= 2)
+            return;
         var oldNodes = Nodes;
         Nodes = new Buffer<Node>(oldNodes.Length, pool);
         Refit2WithCacheOptimization(pool, dispatcher, taskStack, workerIndex, targetTaskCount, internallyDispatch: false, oldNodes);
