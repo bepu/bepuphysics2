@@ -265,6 +265,19 @@ public unsafe struct TaskStack
     }
 
     /// <summary>
+    /// Pushes a task onto the task stack.
+    /// </summary>
+    /// <param name="task">Task composing the job.</param>
+    /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
+    /// <param name="workerIndex">Index of the worker stack to push the task onto.</param>
+    /// <param name="tag">User-defined tag data for the submitted job.</param>
+    /// <returns>True if the push succeeded, false if it was contested.</returns>
+    public void Push(Task task, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0)
+    {
+        Push(new Span<Task>(ref task), workerIndex, dispatcher, tag);
+    }
+
+    /// <summary>
     /// Pushes a set of tasks to the stack with a created continuation.
     /// </summary>
     /// <param name="tasks">Tasks composing the job. A continuation will be assigned internally; no continuation should be present on any of the provided tasks.</param>
