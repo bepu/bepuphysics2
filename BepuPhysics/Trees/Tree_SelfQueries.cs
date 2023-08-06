@@ -528,105 +528,6 @@ namespace BepuPhysics.Trees
             context.Tree.GetSelfOverlaps2(ref wrapped, taskStart, taskEnd);
         }
 
-        unsafe static void CrossoverTask<TThreadedOverlapHandler, TOverlapHandler>(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
-            where TThreadedOverlapHandler : unmanaged, IThreadedOverlapHandler where TOverlapHandler : unmanaged, IOverlapHandler
-        {
-            var nodeIndex = (int)id;
-            ref var context = ref *(SelfTestContext<TThreadedOverlapHandler>*)untypedContext;
-            ref var node = ref context.Tree.Nodes[nodeIndex];
-            var wrapped = new WrappedOverlapHandler<TThreadedOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex };
-            context.Tree.DispatchTestForNodes(ref node.A, ref node.B, ref wrapped);
-        }
-        unsafe static void LoopEntryTaskWithSubtasks<TOverlapHandler>(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
-        {
-            var taskStart = (int)taskStartAndEnd;
-            var taskEnd = (int)(taskStartAndEnd >> 32);
-            ref var context = ref *(SelfTestContext<TOverlapHandler>*)untypedContext;
-            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex };
-            var nodes = context.Tree.Nodes;
-            var pool = dispatcher.WorkerPools[workerIndex];
-            var puntedNodes = new QuickList<int>(taskEnd - taskStart, pool);
-            for (int i = taskEnd - 1; i >= taskStart; --i)
-            {
-                ref var node = ref nodes[i];
-                ref var a = ref node.A;
-                ref var b = ref node.B;
-                var ab = BoundingBox.IntersectsUnsafe(a, b);
-                if (ab)
-                {
-
-                    if (int.Max(a.LeafCount, b.LeafCount) >= context.LeafThresholdForTask)
-                    {
-                        //The number of potential overlaps is fairly high; push this pair to a subtask.
-                        puntedNodes.AllocateUnsafely() = i;
-                    }
-                    else
-                    {
-                        //DispatchTestForNodesWithSubtasks(ref a, ref b, ref wrapped, ref context);
-                        context.Tree.DispatchTestForNodes(ref a, ref b, ref wrapped);
-                    }
-                }
-            }
-            if (puntedNodes.Count > 0)
-            {
-                var tasks = new Buffer<Task>(puntedNodes.Count, pool);
-                for (int i = 0; i < tasks.Length; ++i)
-                {
-                    tasks[i] = new Task(&CrossoverTask<TOverlapHandler, WrappedOverlapHandler<TOverlapHandler>>, untypedContext, puntedNodes[i]);
-                }
-                puntedNodes.Dispose(pool);
-                context.TaskStack->RunTasks(tasks, workerIndex, dispatcher);
-                tasks.Dispose(pool);
-            }
-            else
-            {
-                puntedNodes.Dispose(pool);
-            }
-        }
-
-        unsafe static void LoopEntryTaskWithSubtasks2<TOverlapHandler>(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
-        {
-            var taskStart = (int)taskStartAndEnd;
-            var taskEnd = (int)(taskStartAndEnd >> 32);
-            ref var context = ref *(SelfTestContext<TOverlapHandler>*)untypedContext;
-            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex };
-            var nodes = context.Tree.Nodes;
-            var pool = dispatcher.WorkerPools[workerIndex];
-            var continuationCountEstimate = int.Max(32, (taskEnd - taskStart) / 64);
-            var subtaskContinuations = new QuickList<ContinuationHandle>(continuationCountEstimate, pool);
-            //for (int i = taskEnd - 1; i >= taskStart; --i)
-            for (int i = taskStart; i < taskEnd; ++i)
-            {
-                ref var node = ref nodes[i];
-                ref var a = ref node.A;
-                ref var b = ref node.B;
-                var ab = BoundingBox.IntersectsUnsafe(a, b);
-                if (ab)
-                {
-
-                    if (int.Max(a.LeafCount, b.LeafCount) >= context.LeafThresholdForTask)
-                    {
-                        //The number of potential overlaps is fairly high; push this pair to a subtask.
-                        var subtask = new Task(&CrossoverTask<TOverlapHandler, WrappedOverlapHandler<TOverlapHandler>>, untypedContext, i);
-                        var continuation = context.TaskStack->AllocateContinuationAndPush(new Span<Task>(ref subtask), workerIndex, dispatcher);
-                        subtaskContinuations.Allocate(pool) = continuation;
-                    }
-                    else
-                    {
-                        //DispatchTestForNodesWithSubtasks(ref a, ref b, ref wrapped, ref context);
-                        context.Tree.DispatchTestForNodes(ref a, ref b, ref wrapped);
-                    }
-                }
-            }
-            for (int i = 0; i < subtaskContinuations.Count; ++i)
-            {
-                context.TaskStack->WaitForCompletion(subtaskContinuations[i], workerIndex, dispatcher);
-            }
-            subtaskContinuations.Dispose(pool);
-
-        }
-
-
         unsafe static void CrossoverWithSubtasksTask<TOverlapHandler>(long encodedNodeIndices, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
             ref var context = ref *(SelfTestContext<TOverlapHandler>*)untypedContext;
@@ -750,21 +651,57 @@ namespace BepuPhysics.Trees
             //aren't so small that pushing them is a complete waste.
             //Don't have to worry about oversubscription, so the potential overhead isn't *too* bad.
             var leafThresholdForTask = int.Min(int.Max(LeafCount / (targetTaskBudget * 8), 64), LeafCount);
-            leafThresholdForTask = 16384;
+            leafThresholdForTask = 32;
 
             var resultsCopy = results;
             var context = new SelfTestContext<TOverlapHandler> { Tree = this, LoopTaskCount = targetTaskBudget, LeafThresholdForTask = leafThresholdForTask, Results = &resultsCopy, TaskStack = taskStack };
-            var nodesPerTaskBase = NodeCount / context.LoopTaskCount;
-            var remainder = NodeCount - nodesPerTaskBase * context.LoopTaskCount;
+
+            //Go ahead and submit very large early nodes as independent tasks to help with load balancing.
+            //(This isn't guaranteed, or even intended, to catch all large individual nodes. It's just an easy way to get some of them.)
+            var earlyIsolatedNodeIntervalEnd = 0;
+            const int maximumIsolatedNodeCapacity = 32;
+            int isolatedNodeCapacity = int.Min(maximumIsolatedNodeCapacity, targetTaskBudget);
+            var earlyIsolatedNodesMemory = stackalloc int[isolatedNodeCapacity];
+            var earlyIsolatedNodes = new QuickList<int>(new Buffer<int>(earlyIsolatedNodesMemory, isolatedNodeCapacity));
+            for (int i = 0; i < NodeCount && earlyIsolatedNodes.Count < isolatedNodeCapacity; ++i)
+            {
+                ref var node = ref Nodes[i];
+                ref var a = ref node.A;
+                ref var b = ref node.B;
+                if (int.Min(a.LeafCount, b.LeafCount) > leafThresholdForTask)
+                {
+                    if (BoundingBox.IntersectsUnsafe(a, b))
+                    {
+                        //Note that this technically does double work on the bounds test with the way we're submitting this as a task. Don't care; it's constant bounded nanoseconds.
+                        earlyIsolatedNodes.AllocateUnsafely() = i;
+                    }
+                }
+                else
+                {
+                    earlyIsolatedNodeIntervalEnd = i;
+                    break;
+                }
+            }
+
+            var remainingNodeCount = NodeCount - earlyIsolatedNodeIntervalEnd;
+            var regularLoopTaskCount = targetTaskBudget - earlyIsolatedNodes.Count;
+            var nodesPerTaskBase = remainingNodeCount / regularLoopTaskCount;
+            var remainder = remainingNodeCount - nodesPerTaskBase * regularLoopTaskCount;
             Span<Task> tasks = stackalloc Task[targetTaskBudget];
-            int previousEnd = 0;
-            for (int i = 0; i < tasks.Length; ++i)
+            int previousEnd = earlyIsolatedNodeIntervalEnd;
+            for (int i = 0; i < regularLoopTaskCount; ++i)
             {
                 var taskStart = previousEnd;
                 var nodeCountForTask = i < remainder ? nodesPerTaskBase + 1 : nodesPerTaskBase;
                 var taskEnd = previousEnd + nodeCountForTask;
                 previousEnd = taskEnd;
-                tasks[i] = new Task(&LoopEntryTaskWithSubtasks3<TOverlapHandler>, &context, (long)taskStart | (((long)taskEnd) << 32));
+                tasks[i] = new Task(&LoopEntryTask<TOverlapHandler>, &context, (long)taskStart | (((long)taskEnd) << 32));
+            }
+            //Stick the early isolated nodes at the end so they're popped first.
+            for (int i = 0; i < earlyIsolatedNodes.Count; ++i)
+            {
+                var taskStart = earlyIsolatedNodes[i];
+                tasks[tasks.Length - i - 1] = new Task(&LoopEntryTask<TOverlapHandler>, &context, (long)taskStart | (((long)(taskStart + 1)) << 32));
             }
             if (internallyDispatch)
             {
@@ -809,8 +746,5 @@ namespace BepuPhysics.Trees
         {
             GetSelfOverlaps2(ref results, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount);
         }
-
-
-        // _______________
     }
 }
