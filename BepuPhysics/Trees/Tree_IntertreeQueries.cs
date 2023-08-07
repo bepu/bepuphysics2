@@ -131,10 +131,10 @@ namespace BepuPhysics.Trees
             }
         }
 
-        bool TryGetOverlapsForDegenerateTrees<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
+        public unsafe void GetOverlaps<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
         {
             if (LeafCount == 0 || treeB.LeafCount == 0)
-                return true;
+                return;
             if (LeafCount == 1 && treeB.LeafCount >= 2)
             {
                 //Tree A is degenerate; needs a special case.
@@ -150,7 +150,7 @@ namespace BepuPhysics.Trees
                 {
                     DispatchTestForNodes(ref a.A, ref b.B, ref treeB, ref overlapHandler);
                 }
-                return true;
+                return;
             }
             if (LeafCount >= 2 && treeB.LeafCount == 1)
             {
@@ -167,7 +167,7 @@ namespace BepuPhysics.Trees
                 {
                     DispatchTestForNodes(ref a.B, ref b.A, ref treeB, ref overlapHandler);
                 }
-                return true;
+                return;
             }
             if (LeafCount == 1 && treeB.LeafCount == 1)
             {
@@ -176,18 +176,11 @@ namespace BepuPhysics.Trees
                 {
                     DispatchTestForNodes(ref Nodes[0].A, ref treeB.Nodes[0].A, ref treeB, ref overlapHandler);
                 }
+                return;
             }
-            return false;
-        }
+            //Both trees have complete nodes; we can use a general case.
+            GetOverlapsBetweenDifferentNodes(ref Nodes[0], ref treeB.Nodes[0], ref treeB, ref overlapHandler);
 
-
-        public unsafe void GetOverlaps<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
-        {
-            if (!TryGetOverlapsForDegenerateTrees(ref treeB, ref overlapHandler))
-            {
-                //Both trees have complete nodes; we can use a general case.
-                GetOverlapsBetweenDifferentNodes(ref Nodes[0], ref treeB.Nodes[0], ref treeB, ref overlapHandler);
-            }
         }
 
     }

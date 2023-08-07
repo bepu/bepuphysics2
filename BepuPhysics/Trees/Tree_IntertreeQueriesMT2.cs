@@ -14,12 +14,6 @@ namespace BepuPhysics.Trees;
 
 partial struct Tree
 {
-    private unsafe void GetOverlapsBetweenDifferentNodes2<TOverlapHandler>(ref Node a, ref Node b, ref Tree treeB, ref IntertreeContext<TOverlapHandler> context, int workerIndex, ThreadDispatcher dispatcher)
-        where TOverlapHandler : unmanaged, IThreadedOverlapHandler
-    {
-
-    }
-
     unsafe struct IntertreeContext<TOverlapHandler> where TOverlapHandler : unmanaged, IThreadedOverlapHandler
     {
         public Tree TreeA;
@@ -29,8 +23,6 @@ partial struct Tree
         public TOverlapHandler* Results;
     }
 
-
-    public static int TasksSpawned;
     static unsafe void IntertreeTask<TOverlapHandler>(long encodedIndices, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
     {
         var indexA = (int)encodedIndices;
@@ -139,42 +131,42 @@ partial struct Tree
     public unsafe void GetOverlaps2<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler results,
         BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
     {
+        if (LeafCount == 0 || treeB.LeafCount == 0)
+            return;
         var resultsCopy = results;
-        var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = &resultsCopy, WorkerIndex = 0 };
-        if (!TryGetOverlapsForDegenerateTrees(ref treeB, ref wrapped))
+        //Both trees have complete nodes; we can use a general case.
+        const int minimumLeafThreshold = 256;
+        if (LeafCount < minimumLeafThreshold && treeB.LeafCount < minimumLeafThreshold)
         {
-            //Both trees have complete nodes; we can use a general case.
-            const int minimumLeafThreshold = 256;
-            if (LeafCount < minimumLeafThreshold && treeB.LeafCount < minimumLeafThreshold)
+            //No point in spawning a bunch of tasks for tiny trees.
+            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = &resultsCopy, WorkerIndex = 0 };
+            GetOverlaps(ref treeB, ref wrapped);
+        }
+        else
+        {
+            if (targetTaskBudget < 0)
+                targetTaskBudget = workerCount;
+            var leafThreshold = int.Max(minimumLeafThreshold, (LeafCount + treeB.LeafCount) / (8 * targetTaskBudget));
+            var context = new IntertreeContext<TOverlapHandler>
             {
-                //No point in spawning a bunch of tasks for tiny trees.
-                GetOverlapsBetweenDifferentNodes(ref Nodes[0], ref treeB.Nodes[0], ref treeB, ref wrapped);
+                TreeA = this,
+                TreeB = treeB,
+                Stack = taskStack,
+                LeafThreshold = leafThreshold,
+                Results = &resultsCopy
+            };
+            //One of the trees *may* be a single leaf. Don't want the task to have to deal with partial nodes, so go ahead and spawn a task for the leaf child in that case. Otherwise, just point at the root.
+            var childA = LeafCount == 1 ? Nodes[0].A.Index : 0;
+            var childB = treeB.LeafCount == 1 ? treeB.Nodes[0].A.Index : 0;
+            var rootTask = new Task(&IntertreeTask<TOverlapHandler>, &context, (uint)childA | ((long)childB << 32));
+            if (internallyDispatch)
+            {
+                taskStack->AllocateContinuationAndPush(rootTask, workerIndex, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(taskStack));
+                TaskStack.DispatchWorkers(threadDispatcher, taskStack, int.Min(threadDispatcher.ThreadCount, targetTaskBudget));
             }
             else
             {
-                if (targetTaskBudget < 0)
-                    targetTaskBudget = workerCount;
-                var leafThreshold = int.Max(minimumLeafThreshold, (LeafCount + treeB.LeafCount) / (8 * targetTaskBudget));
-                var context = new IntertreeContext<TOverlapHandler>
-                {
-                    TreeA = this,
-                    TreeB = treeB,
-                    Stack = taskStack,
-                    LeafThreshold = leafThreshold,
-                    Results = &resultsCopy
-                };
-                TasksSpawned = 0;
-                var rootTask = new Task(&IntertreeTask<TOverlapHandler>, &context, 0);
-                if (internallyDispatch)
-                {
-                    taskStack->AllocateContinuationAndPush(rootTask, workerIndex, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(taskStack));
-                    TaskStack.DispatchWorkers(threadDispatcher, taskStack, int.Min(threadDispatcher.ThreadCount, targetTaskBudget));
-                }
-                else
-                {
-                    taskStack->Push(rootTask, workerIndex, threadDispatcher);
-                }
-                //Console.WriteLine($"Tasks: {TasksSpawned}");
+                taskStack->Push(rootTask, workerIndex, threadDispatcher);
             }
         }
         //Copy back potential changes.
