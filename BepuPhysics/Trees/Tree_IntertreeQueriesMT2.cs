@@ -114,6 +114,7 @@ partial struct Tree
             if (pushCount > 0)
             {
                 Span<Task> tasks = stackalloc Task[pushCount];
+                pushCount = 0;
                 if (pushA) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, (uint)(nodeBelongsToTreeA ? node.A.Index : indexA) | ((long)(nodeBelongsToTreeA ? indexB : node.A.Index) << 32));
                 if (pushB) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, (uint)(nodeBelongsToTreeA ? node.B.Index : indexA) | ((long)(nodeBelongsToTreeA ? indexB : node.B.Index) << 32));
                 handle = context.Stack->AllocateContinuationAndPush(tasks, workerIndex, dispatcher);
