@@ -8,7 +8,6 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-        //TODO: No good reason for recursion. This is holdovers from the prototype.
         unsafe void DispatchTestForNodeAgainstLeaf<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             if (nodeIndex < 0)
@@ -132,17 +131,11 @@ namespace BepuPhysics.Trees
             }
         }
 
-
-        public unsafe void GetOverlaps<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
+        bool TryGetOverlapsForDegenerateTrees<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
         {
             if (LeafCount == 0 || treeB.LeafCount == 0)
-                return;
-            if (LeafCount >= 2 && treeB.LeafCount >= 2)
-            {
-                //Both trees have complete nodes; we can use a general case.
-                GetOverlapsBetweenDifferentNodes(ref Nodes[0], ref treeB.Nodes[0], ref treeB, ref overlapHandler);
-            }
-            else if (LeafCount == 1 && treeB.LeafCount >= 2)
+                return true;
+            if (LeafCount == 1 && treeB.LeafCount >= 2)
             {
                 //Tree A is degenerate; needs a special case.
                 ref var a = ref Nodes[0];
@@ -157,8 +150,9 @@ namespace BepuPhysics.Trees
                 {
                     DispatchTestForNodes(ref a.A, ref b.B, ref treeB, ref overlapHandler);
                 }
+                return true;
             }
-            else if (LeafCount >= 2 && treeB.LeafCount == 1)
+            if (LeafCount >= 2 && treeB.LeafCount == 1)
             {
                 //Tree B is degenerate; needs a special case.
                 ref var a = ref Nodes[0];
@@ -173,14 +167,26 @@ namespace BepuPhysics.Trees
                 {
                     DispatchTestForNodes(ref a.B, ref b.A, ref treeB, ref overlapHandler);
                 }
+                return true;
             }
-            else
+            if (LeafCount == 1 && treeB.LeafCount == 1)
             {
-                Debug.Assert(LeafCount == 1 && treeB.LeafCount == 1);
+                //Both degenerate.
                 if (BoundingBox.IntersectsUnsafe(Nodes[0].A, treeB.Nodes[0].A))
                 {
                     DispatchTestForNodes(ref Nodes[0].A, ref treeB.Nodes[0].A, ref treeB, ref overlapHandler);
                 }
+            }
+            return false;
+        }
+
+
+        public unsafe void GetOverlaps<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
+        {
+            if (!TryGetOverlapsForDegenerateTrees(ref treeB, ref overlapHandler))
+            {
+                //Both trees have complete nodes; we can use a general case.
+                GetOverlapsBetweenDifferentNodes(ref Nodes[0], ref treeB.Nodes[0], ref treeB, ref overlapHandler);
             }
         }
 

@@ -555,19 +555,19 @@ namespace BepuPhysics.Trees
             continuationCount = 0;
             if (aaPushTask)
             {
-                continuations[continuationCount++] = context.TaskStack->AllocateContinuationAndPush(new Task(&CrossoverWithSubtasksTask<TOverlapHandler>, untypedContext, (long)a.A.Index | ((long)b.A.Index << 32)), workerIndex, dispatcher);
+                continuations[continuationCount++] = context.TaskStack->AllocateContinuationAndPush(new Task(&CrossoverWithSubtasksTask<TOverlapHandler>, untypedContext, (uint)a.A.Index | ((long)b.A.Index << 32)), workerIndex, dispatcher);
             }
             if (abPushTask)
             {
-                continuations[continuationCount++] = context.TaskStack->AllocateContinuationAndPush(new Task(&CrossoverWithSubtasksTask<TOverlapHandler>, untypedContext, (long)a.A.Index | ((long)b.B.Index << 32)), workerIndex, dispatcher);
+                continuations[continuationCount++] = context.TaskStack->AllocateContinuationAndPush(new Task(&CrossoverWithSubtasksTask<TOverlapHandler>, untypedContext, (uint)a.A.Index | ((long)b.B.Index << 32)), workerIndex, dispatcher);
             }
             if (baPushTask)
             {
-                continuations[continuationCount++] = context.TaskStack->AllocateContinuationAndPush(new Task(&CrossoverWithSubtasksTask<TOverlapHandler>, untypedContext, (long)a.B.Index | ((long)b.A.Index << 32)), workerIndex, dispatcher);
+                continuations[continuationCount++] = context.TaskStack->AllocateContinuationAndPush(new Task(&CrossoverWithSubtasksTask<TOverlapHandler>, untypedContext, (uint)a.B.Index | ((long)b.A.Index << 32)), workerIndex, dispatcher);
             }
             if (bbPushTask)
             {
-                continuations[continuationCount++] = context.TaskStack->AllocateContinuationAndPush(new Task(&CrossoverWithSubtasksTask<TOverlapHandler>, untypedContext, (long)a.B.Index | ((long)b.B.Index << 32)), workerIndex, dispatcher);
+                continuations[continuationCount++] = context.TaskStack->AllocateContinuationAndPush(new Task(&CrossoverWithSubtasksTask<TOverlapHandler>, untypedContext, (uint)a.B.Index | ((long)b.B.Index << 32)), workerIndex, dispatcher);
             }
             //We've pushed every crossover worthy of further splitting onto the stack. The moment any thread as an opening, it'll be investigated.
             //For anything *not* pushed to a task, we can just run the test directly. 
@@ -617,7 +617,7 @@ namespace BepuPhysics.Trees
                     if (int.Min(a.LeafCount, b.LeafCount) >= context.LeafThresholdForTask)
                     {
                         //The number of potential overlaps is high; push this pair to a subtask.
-                        subtaskContinuations.Allocate(pool) = context.TaskStack->AllocateContinuationAndPush(new Task(&CrossoverWithSubtasksTask<TOverlapHandler>, untypedContext, (long)a.Index | ((long)b.Index << 32)), workerIndex, dispatcher);
+                        subtaskContinuations.Allocate(pool) = context.TaskStack->AllocateContinuationAndPush(new Task(&CrossoverWithSubtasksTask<TOverlapHandler>, untypedContext, (uint)a.Index | ((long)b.Index << 32)), workerIndex, dispatcher);
                     }
                     else
                     {
@@ -641,10 +641,10 @@ namespace BepuPhysics.Trees
         private unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results,
         int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
-            targetTaskBudget = int.Min(NodeCount, targetTaskBudget);
             if (targetTaskBudget < 0)
                 targetTaskBudget = threadDispatcher.ThreadCount;
             targetTaskBudget *= 8;
+            targetTaskBudget = int.Min(NodeCount, targetTaskBudget);
 
             //Crossover tests can generate more overlaps than there are leaves, so the simply dividing the leaf count by the target task count will tend to result in more tasks than necessary.
             //BUT... it's not feasible to figure out how many tasks you should actually have ahead of time! The critical thing is that we have *enough* tasks, and that the tasks 
@@ -695,13 +695,13 @@ namespace BepuPhysics.Trees
                 var nodeCountForTask = i < remainder ? nodesPerTaskBase + 1 : nodesPerTaskBase;
                 var taskEnd = previousEnd + nodeCountForTask;
                 previousEnd = taskEnd;
-                tasks[i] = new Task(&LoopEntryTask<TOverlapHandler>, &context, (long)taskStart | (((long)taskEnd) << 32));
+                tasks[i] = new Task(&LoopEntryTask<TOverlapHandler>, &context, (uint)taskStart | (((long)taskEnd) << 32));
             }
             //Stick the early isolated nodes at the end so they're popped first.
             for (int i = 0; i < earlyIsolatedNodes.Count; ++i)
             {
                 var taskStart = earlyIsolatedNodes[i];
-                tasks[tasks.Length - i - 1] = new Task(&LoopEntryTask<TOverlapHandler>, &context, (long)taskStart | (((long)(taskStart + 1)) << 32));
+                tasks[tasks.Length - i - 1] = new Task(&LoopEntryTask<TOverlapHandler>, &context, (uint)taskStart | (((long)(taskStart + 1)) << 32));
             }
             if (internallyDispatch)
             {
@@ -779,14 +779,14 @@ namespace BepuPhysics.Trees
                     var taskStart = previousEnd;
                     var taskSize = j < remainder ? baseNodesPerTask + 1 : baseNodesPerTask;
                     var taskEnd = previousEnd + taskSize;
-                    tasks.Allocate(pool) = new Task(&LoopEntryTask<TOverlapHandler>, &context, (long)taskStart | (((long)taskEnd) << 32));
+                    tasks.Allocate(pool) = new Task(&LoopEntryTask<TOverlapHandler>, &context, (uint)taskStart | (((long)taskEnd) << 32));
                 }
             }
             earlyQueue.Dispose(pool);
             for (int i = earlyIsolatedNodes.Count - 1; i >= 0; --i)
             {
                 var nodeIndex = earlyIsolatedNodes[i];
-                tasks.Allocate(pool) = new Task(&LoopEntryTask<TOverlapHandler>, &context, (long)nodeIndex | (((long)(nodeIndex + 1)) << 32));
+                tasks.Allocate(pool) = new Task(&LoopEntryTask<TOverlapHandler>, &context, (uint)nodeIndex | (((long)(nodeIndex + 1)) << 32));
             }
 
             if (internallyDispatch)
@@ -815,7 +815,7 @@ namespace BepuPhysics.Trees
         public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool, IThreadDispatcher threadDispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
             var taskStack = new TaskStack(pool, threadDispatcher, threadDispatcher.ThreadCount);
-            GetSelfOverlaps2Poor(ref results, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount);
+            GetSelfOverlaps2(ref results, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount);
             taskStack.Dispose(pool, threadDispatcher);
         }
 
@@ -832,7 +832,7 @@ namespace BepuPhysics.Trees
         public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool,
              IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
-            GetSelfOverlaps2Poor(ref results, pool, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount);
+            GetSelfOverlaps2(ref results, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount);
         }
     }
 }
