@@ -58,7 +58,6 @@ partial struct Tree
                 if (pushBA) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, ((uint)a.B.Index | ((long)b.A.Index << 32)));
                 if (pushBB) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, ((uint)a.B.Index | ((long)b.B.Index << 32)));
                 handle = context.Stack->AllocateContinuationAndPush(tasks, workerIndex, dispatcher);
-                //Interlocked.Add(ref TasksSpawned, pushCount);
             }
 
             var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex };

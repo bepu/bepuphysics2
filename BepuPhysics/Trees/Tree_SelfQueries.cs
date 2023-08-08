@@ -718,77 +718,36 @@ namespace BepuPhysics.Trees
             results = resultsCopy;
         }
 
-
-        private unsafe void GetSelfOverlaps2Poor<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool,
-        int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+        private unsafe void GetSelfOverlaps3<TOverlapHandler>(ref TOverlapHandler results,
+            int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
-            targetTaskBudget = int.Min(NodeCount, targetTaskBudget);
             if (targetTaskBudget < 0)
                 targetTaskBudget = threadDispatcher.ThreadCount;
-            targetTaskBudget *= 8;
+            targetTaskBudget *= 16;
+            targetTaskBudget = int.Min(NodeCount, targetTaskBudget);
 
             //Crossover tests can generate more overlaps than there are leaves, so the simply dividing the leaf count by the target task count will tend to result in more tasks than necessary.
             //BUT... it's not feasible to figure out how many tasks you should actually have ahead of time! The critical thing is that we have *enough* tasks, and that the tasks 
             //aren't so small that pushing them is a complete waste.
             //Don't have to worry about oversubscription, so the potential overhead isn't *too* bad.
             var leafThresholdForTask = int.Min(int.Max(LeafCount / (targetTaskBudget * 8), 64), LeafCount);
-            leafThresholdForTask = 1024;
+            leafThresholdForTask = 8192;
 
             var resultsCopy = results;
             var context = new SelfTestContext<TOverlapHandler> { Tree = this, LoopTaskCount = targetTaskBudget, LeafThresholdForTask = leafThresholdForTask, Results = &resultsCopy, TaskStack = taskStack };
 
-            //Go ahead and submit very large early nodes as independent tasks to help with load balancing.
-
-            const int maximumIsolatedNodeCapacity = 128;
-            int isolatedNodeCapacity = int.Min(maximumIsolatedNodeCapacity, targetTaskBudget);
-            var earlyQueue = new QuickQueue<int>(isolatedNodeCapacity, pool);
-            var earlyIsolatedNodesMemory = stackalloc int[isolatedNodeCapacity];
-            var earlyIsolatedNodes = new QuickList<int>(new Buffer<int>(earlyIsolatedNodesMemory, isolatedNodeCapacity));
-            earlyQueue.EnqueueUnsafely() = 0;
-            while (earlyQueue.Count < earlyQueue.Span.Length && earlyIsolatedNodes.Count < isolatedNodeCapacity)
+            var nodesPerTaskBase = NodeCount / targetTaskBudget;
+            var remainder = NodeCount - nodesPerTaskBase * targetTaskBudget;
+            Span<Task> tasks = stackalloc Task[targetTaskBudget];
+            int previousEnd = 0;
+            for (int i = 0; i < targetTaskBudget; ++i)
             {
-                var nodeIndex = earlyQueue.DequeueUnsafely();
-                ref var node = ref Nodes[nodeIndex];
-                ref var a = ref node.A;
-                ref var b = ref node.B;
-                if (int.Max(a.LeafCount, b.LeafCount) >= leafThresholdForTask)
-                {
-                    if (BoundingBox.IntersectsUnsafe(a, b))
-                    {
-                        //Note that this technically does double work on the bounds test with the way we're submitting this as a task. Don't care; it's constant bounded nanoseconds.
-                        earlyIsolatedNodes.AllocateUnsafely() = nodeIndex;
-                    }
-                    earlyQueue.EnqueueUnsafely() = a.Index;
-                    earlyQueue.EnqueueUnsafely() = b.Index;
-                }
+                var taskStart = previousEnd;
+                var nodeCountForTask = i < remainder ? nodesPerTaskBase + 1 : nodesPerTaskBase;
+                var taskEnd = previousEnd + nodeCountForTask;
+                previousEnd = taskEnd;
+                tasks[i] = new Task(&LoopEntryTaskWithSubtasks4<TOverlapHandler>, &context, (uint)taskStart | (((long)taskEnd) << 32));
             }
-
-            var tasks = new QuickList<Task>(targetTaskBudget, pool);
-            var targetTaskSize = NodeCount / targetTaskBudget;
-            for (int i = 0; i < earlyQueue.Count; ++i)
-            {
-                var nodeIndex = earlyQueue[i];
-                ref var node = ref Nodes[nodeIndex];
-                var regionSize = node.A.LeafCount + node.B.LeafCount - 1;
-                var localTaskCount = (regionSize + targetTaskSize - 1) / targetTaskSize;
-                var baseNodesPerTask = regionSize / localTaskCount;
-                var remainder = regionSize - baseNodesPerTask * localTaskCount;
-                int previousEnd = nodeIndex;
-                for (int j = 0; j < localTaskCount; ++j)
-                {
-                    var taskStart = previousEnd;
-                    var taskSize = j < remainder ? baseNodesPerTask + 1 : baseNodesPerTask;
-                    var taskEnd = previousEnd + taskSize;
-                    tasks.Allocate(pool) = new Task(&LoopEntryTask<TOverlapHandler>, &context, (uint)taskStart | (((long)taskEnd) << 32));
-                }
-            }
-            earlyQueue.Dispose(pool);
-            for (int i = earlyIsolatedNodes.Count - 1; i >= 0; --i)
-            {
-                var nodeIndex = earlyIsolatedNodes[i];
-                tasks.Allocate(pool) = new Task(&LoopEntryTask<TOverlapHandler>, &context, (uint)nodeIndex | (((long)(nodeIndex + 1)) << 32));
-            }
-
             if (internallyDispatch)
             {
                 //There isn't an active dispatch, so we need to do it.
@@ -800,10 +759,11 @@ namespace BepuPhysics.Trees
                 //We're executing from within a multithreaded dispatch already, so we can simply run the tasks and trust that other threads are ready to steal.
                 taskStack->RunTasks(tasks, workerIndex, threadDispatcher);
             }
-            tasks.Dispose(pool);
             //Have to copy back the results; it's a value type.
             results = resultsCopy;
         }
+
+
 
 
         /// <summary>
