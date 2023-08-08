@@ -9,6 +9,7 @@ using System.Numerics;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Xml.Linq;
 
 namespace BepuPhysics.Trees;
 
@@ -21,6 +22,34 @@ partial struct Tree
         public TaskStack* Stack;
         public int LeafThreshold;
         public TOverlapHandler* Results;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static unsafe ContinuationHandle PushIntertreeSubtasks<TOverlapHandler>(int pushCount, in Node a, in Node b, bool pushAA, bool pushAB, bool pushBA, bool pushBB,
+        void* untypedContext, in IntertreeContext<TOverlapHandler> context, int workerIndex, IThreadDispatcher dispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+    {
+        //Stackallocs persist for the duration of the function. Because the intertree test uses a lot of recursion, there's a lot of stack pressure.
+        //Given that IntertreeTask can call IntertreeTask, it can be pretty bad.
+        //To avoid that, we perform the stackalloc and push within this function.
+        Span<Task> tasks = stackalloc Task[pushCount];
+        pushCount = 0;
+        if (pushAA) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, ((uint)a.A.Index | ((long)b.A.Index << 32)));
+        if (pushAB) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, ((uint)a.A.Index | ((long)b.B.Index << 32)));
+        if (pushBA) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, ((uint)a.B.Index | ((long)b.A.Index << 32)));
+        if (pushBB) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, ((uint)a.B.Index | ((long)b.B.Index << 32)));
+        return context.Stack->AllocateContinuationAndPush(tasks, workerIndex, dispatcher);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static unsafe ContinuationHandle PushIntertreeSubtasksForNodeLeaf<TOverlapHandler>(int pushCount, in Node node, int indexA, int indexB, bool nodeBelongsToTreeA, bool pushA, bool pushB,
+    void* untypedContext, in IntertreeContext<TOverlapHandler> context, int workerIndex, IThreadDispatcher dispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+    {
+        //Not as heavy as node-node, but still enough to punt into a frame that gets popped.
+        Span<Task> tasks = stackalloc Task[pushCount];
+        pushCount = 0;
+        if (pushA) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, (uint)(nodeBelongsToTreeA ? node.A.Index : indexA) | ((long)(nodeBelongsToTreeA ? indexB : node.A.Index) << 32));
+        if (pushB) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, (uint)(nodeBelongsToTreeA ? node.B.Index : indexA) | ((long)(nodeBelongsToTreeA ? indexB : node.B.Index) << 32));
+        return context.Stack->AllocateContinuationAndPush(tasks, workerIndex, dispatcher);
     }
 
     static unsafe void IntertreeTask<TOverlapHandler>(long encodedIndices, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
@@ -48,17 +77,7 @@ partial struct Tree
             var pushBA = baIntersects && int.Max(ab.LeafCount, ba.LeafCount) >= context.LeafThreshold;
             var pushBB = bbIntersects && int.Max(ab.LeafCount, bb.LeafCount) >= context.LeafThreshold;
             var pushCount = (pushAA ? 1 : 0) + (pushAB ? 1 : 0) + (pushBA ? 1 : 0) + (pushBB ? 1 : 0);
-            ContinuationHandle handle = default;
-            if (pushCount > 0)
-            {
-                Span<Task> tasks = stackalloc Task[pushCount];
-                pushCount = 0;
-                if (pushAA) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, ((uint)a.A.Index | ((long)b.A.Index << 32)));
-                if (pushAB) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, ((uint)a.A.Index | ((long)b.B.Index << 32)));
-                if (pushBA) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, ((uint)a.B.Index | ((long)b.A.Index << 32)));
-                if (pushBB) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, ((uint)a.B.Index | ((long)b.B.Index << 32)));
-                handle = context.Stack->AllocateContinuationAndPush(tasks, workerIndex, dispatcher);
-            }
+            var handle = pushCount == 0 ? default : PushIntertreeSubtasks(pushCount, a, b, pushAA, pushAB, pushBA, pushBB, untypedContext, context, workerIndex, dispatcher);
 
             var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex };
             if (aaIntersects && !pushAA)
@@ -101,15 +120,7 @@ partial struct Tree
             var pushA = aIntersects && node.A.LeafCount >= context.LeafThreshold;
             var pushB = bIntersects && node.B.LeafCount >= context.LeafThreshold;
             var pushCount = (pushA ? 1 : 0) + (pushB ? 1 : 0);
-            ContinuationHandle handle = default;
-            if (pushCount > 0)
-            {
-                Span<Task> tasks = stackalloc Task[pushCount];
-                pushCount = 0;
-                if (pushA) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, (uint)(nodeBelongsToTreeA ? node.A.Index : indexA) | ((long)(nodeBelongsToTreeA ? indexB : node.A.Index) << 32));
-                if (pushB) tasks[pushCount++] = new Task(&IntertreeTask<TOverlapHandler>, untypedContext, (uint)(nodeBelongsToTreeA ? node.B.Index : indexA) | ((long)(nodeBelongsToTreeA ? indexB : node.B.Index) << 32));
-                handle = context.Stack->AllocateContinuationAndPush(tasks, workerIndex, dispatcher);
-            }
+            var handle = pushCount == 0 ? default : PushIntertreeSubtasksForNodeLeaf(pushCount, node, indexA, indexB, nodeBelongsToTreeA, pushA, pushB, untypedContext, context, workerIndex, dispatcher);
             var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex };
             if (aIntersects && !pushA)
             {

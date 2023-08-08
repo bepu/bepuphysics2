@@ -638,7 +638,7 @@ namespace BepuPhysics.Trees
         }
 
 
-        private unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results,
+        private unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool,
         int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
             if (targetTaskBudget < 0)
@@ -682,7 +682,7 @@ namespace BepuPhysics.Trees
             var regularLoopTaskCount = targetTaskBudget - earlyIsolatedNodes.Count;
             var nodesPerTaskBase = remainingNodeCount / regularLoopTaskCount;
             var remainder = remainingNodeCount - nodesPerTaskBase * regularLoopTaskCount;
-            Span<Task> tasks = stackalloc Task[targetTaskBudget];
+            var tasks = new Buffer<Task>(targetTaskBudget, pool);
             int previousEnd = earlyIsolatedNodeIntervalEnd;
             for (int i = 0; i < regularLoopTaskCount; ++i)
             {
@@ -709,6 +709,7 @@ namespace BepuPhysics.Trees
                 //We're executing from within a multithreaded dispatch already, so we can simply run the tasks and trust that other threads are ready to steal.
                 taskStack->RunTasks(tasks, workerIndex, threadDispatcher);
             }
+            tasks.Dispose(pool);
             //Have to copy back the results; it's a value type.
             results = resultsCopy;
         }
@@ -770,7 +771,7 @@ namespace BepuPhysics.Trees
         public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool, IThreadDispatcher threadDispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
             var taskStack = new TaskStack(pool, threadDispatcher, threadDispatcher.ThreadCount);
-            GetSelfOverlaps2(ref results, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount);
+            GetSelfOverlaps2(ref results, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount);
             taskStack.Dispose(pool, threadDispatcher);
         }
 
@@ -787,7 +788,7 @@ namespace BepuPhysics.Trees
         public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool,
              IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
-            GetSelfOverlaps2(ref results, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount);
+            GetSelfOverlaps2(ref results, pool, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount);
         }
     }
 }
