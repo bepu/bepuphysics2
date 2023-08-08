@@ -643,7 +643,7 @@ namespace BepuPhysics.Trees
         {
             if (targetTaskBudget < 0)
                 targetTaskBudget = threadDispatcher.ThreadCount;
-            targetTaskBudget *= 8;
+            targetTaskBudget *= 16;
             targetTaskBudget = int.Min(NodeCount, targetTaskBudget);
 
             const int leafThresholdForTask = 256;
