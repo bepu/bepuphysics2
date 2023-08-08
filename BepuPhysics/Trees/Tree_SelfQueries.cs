@@ -646,12 +646,7 @@ namespace BepuPhysics.Trees
             targetTaskBudget *= 8;
             targetTaskBudget = int.Min(NodeCount, targetTaskBudget);
 
-            //Crossover tests can generate more overlaps than there are leaves, so the simply dividing the leaf count by the target task count will tend to result in more tasks than necessary.
-            //BUT... it's not feasible to figure out how many tasks you should actually have ahead of time! The critical thing is that we have *enough* tasks, and that the tasks 
-            //aren't so small that pushing them is a complete waste.
-            //Don't have to worry about oversubscription, so the potential overhead isn't *too* bad.
-            var leafThresholdForTask = int.Min(int.Max(LeafCount / (targetTaskBudget * 8), 64), LeafCount);
-            leafThresholdForTask = 32;
+            const int leafThresholdForTask = 256;
 
             var resultsCopy = results;
             var context = new SelfTestContext<TOverlapHandler> { Tree = this, LoopTaskCount = targetTaskBudget, LeafThresholdForTask = leafThresholdForTask, Results = &resultsCopy, TaskStack = taskStack };
@@ -660,7 +655,7 @@ namespace BepuPhysics.Trees
             //(This isn't guaranteed, or even intended, to catch all large individual nodes. It's just an easy way to get some of them.)
             var earlyIsolatedNodeIntervalEnd = 0;
             const int maximumIsolatedNodeCapacity = 32;
-            int isolatedNodeCapacity = int.Min(maximumIsolatedNodeCapacity, targetTaskBudget);
+            int isolatedNodeCapacity = int.Min(maximumIsolatedNodeCapacity, targetTaskBudget / 4);
             var earlyIsolatedNodesMemory = stackalloc int[isolatedNodeCapacity];
             var earlyIsolatedNodes = new QuickList<int>(new Buffer<int>(earlyIsolatedNodesMemory, isolatedNodeCapacity));
             for (int i = 0; i < NodeCount && earlyIsolatedNodes.Count < isolatedNodeCapacity; ++i)
@@ -668,7 +663,7 @@ namespace BepuPhysics.Trees
                 ref var node = ref Nodes[i];
                 ref var a = ref node.A;
                 ref var b = ref node.B;
-                if (int.Min(a.LeafCount, b.LeafCount) > leafThresholdForTask)
+                if (int.Max(a.LeafCount, b.LeafCount) > leafThresholdForTask)
                 {
                     if (BoundingBox.IntersectsUnsafe(a, b))
                     {
