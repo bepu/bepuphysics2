@@ -79,7 +79,7 @@ partial struct Tree
             var pushCount = (pushAA ? 1 : 0) + (pushAB ? 1 : 0) + (pushBA ? 1 : 0) + (pushBB ? 1 : 0);
             var handle = pushCount == 0 ? default : PushIntertreeSubtasks(pushCount, a, b, pushAA, pushAB, pushBA, pushBB, untypedContext, context, workerIndex, dispatcher);
 
-            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex };
+            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex, ManagedContext = dispatcher.ManagedContext };
             if (aaIntersects && !pushAA)
             {
                 context.TreeA.DispatchTestForNodes(ref aa, ref ba, ref context.TreeB, ref wrapped);
@@ -121,7 +121,7 @@ partial struct Tree
             var pushB = bIntersects && node.B.LeafCount >= context.LeafThreshold;
             var pushCount = (pushA ? 1 : 0) + (pushB ? 1 : 0);
             var handle = pushCount == 0 ? default : PushIntertreeSubtasksForNodeLeaf(pushCount, node, indexA, indexB, nodeBelongsToTreeA, pushA, pushB, untypedContext, context, workerIndex, dispatcher);
-            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex };
+            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex, ManagedContext = dispatcher.ManagedContext };
             if (aIntersects && !pushA)
             {
                 context.TreeA.DispatchTestForNodes(ref nodeBelongsToTreeA ? ref node.A : ref leafChild, ref nodeBelongsToTreeA ? ref leafChild : ref node.A, ref context.TreeB, ref wrapped);
@@ -138,8 +138,8 @@ partial struct Tree
 
     }
 
-    public unsafe void GetOverlaps2<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler results,
-        BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+    unsafe void GetOverlaps2<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler results,
+        BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget, object managedContext = null) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
     {
         if (LeafCount == 0 || treeB.LeafCount == 0)
             return;
@@ -149,7 +149,7 @@ partial struct Tree
         if (LeafCount < minimumLeafThreshold && treeB.LeafCount < minimumLeafThreshold)
         {
             //No point in spawning a bunch of tasks for tiny trees.
-            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = &resultsCopy, WorkerIndex = 0 };
+            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = &resultsCopy, WorkerIndex = 0, ManagedContext = threadDispatcher.ManagedContext };
             GetOverlaps(ref treeB, ref wrapped);
         }
         else
@@ -172,7 +172,7 @@ partial struct Tree
             if (internallyDispatch)
             {
                 taskStack->AllocateContinuationAndPush(rootTask, workerIndex, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(taskStack));
-                TaskStack.DispatchWorkers(threadDispatcher, taskStack, int.Min(threadDispatcher.ThreadCount, targetTaskBudget));
+                TaskStack.DispatchWorkers(threadDispatcher, taskStack, int.Min(threadDispatcher.ThreadCount, targetTaskBudget), managedContext);
             }
             else
             {
@@ -183,14 +183,34 @@ partial struct Tree
         results = resultsCopy;
     }
 
-    public unsafe void GetOverlaps2<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler results, BufferPool pool, IThreadDispatcher dispatcher)
+    /// <summary>
+    /// Reports all bounding box overlaps between leaves in the two trees to the given <typeparamref name="TOverlapHandler"/>. Uses the thread dispatcher to parallelize overlap testing.
+    /// </summary>
+    /// <param name="treeB">Other tree to test against.</param>
+    /// <param name="results">Handler to report results to.</param>
+    /// <param name="pool">Pool used for ephemeral allocations.</param>
+    /// <param name="dispatcher">Thread dispatcher used during the overlap testing.</param>
+    /// <param name="managedContext">Managed context to provide to the overlap handler, if any.</param>
+    public unsafe void GetOverlaps2<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler results, BufferPool pool, IThreadDispatcher dispatcher, object managedContext = null)
         where TOverlapHandler : unmanaged, IThreadedOverlapHandler
     {
         var taskStack = new TaskStack(pool, dispatcher, dispatcher.ThreadCount);
-        GetOverlaps2(ref treeB, ref results, pool, 0, &taskStack, dispatcher, true, dispatcher.ThreadCount, -1);
+        GetOverlaps2(ref treeB, ref results, pool, 0, &taskStack, dispatcher, true, dispatcher.ThreadCount, -1, managedContext);
         taskStack.Dispose(pool, dispatcher);
     }
 
+    /// <summary>
+    /// Reports all bounding box overlaps between leaves in the two trees to the given <typeparamref name="TOverlapHandler"/>.
+    /// <para/>Pushes tasks into the provided <see cref="TaskStack"/>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
+    /// </summary>
+    /// <param name="treeB">Other tree to test against.</param>
+    /// <param name="results">Handler to report results to.</param>
+    /// <param name="pool">Pool used for ephemeral allocations.</param>
+    /// <param name="dispatcher">Thread dispatcher used during the overlap test.</param>
+    /// <param name="taskStack"><see cref="TaskStack"/> that the overlap test will push tasks onto as needed.</param>
+    /// <param name="workerIndex">Index of the worker calling the function.</param>
+    /// <param name="targetTaskCount">Number of tasks the overlap testing should try to create during execution. If negative, uses <see cref="IThreadDispatcher.ThreadCount"/>.</param>
+    /// <remarks>This does not dispatch workers on the <see cref="IThreadDispatcher"/> directly. If the overlap handler requires managed context, that should be provided by whatever dispatched the workers.</remarks>
     public unsafe void GetOverlaps2<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler results, BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1)
         where TOverlapHandler : unmanaged, IThreadedOverlapHandler
     {

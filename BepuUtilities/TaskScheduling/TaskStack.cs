@@ -551,8 +551,9 @@ public unsafe struct TaskStack
     /// <param name="taskStack">Task stack to pull work from.</param>
     /// <param name="dispatcher">Thread dispatcher to dispatch workers with.</param>
     /// <param name="maximumWorkerCount">Maximum number of workers to spin up for the dispatch.</param>
-    public static void DispatchWorkers(IThreadDispatcher dispatcher, TaskStack* taskStack, int maximumWorkerCount = int.MaxValue)
+    /// <param name="managedContext">Managed context to include in this dispatch, if any.</param>
+    public static void DispatchWorkers(IThreadDispatcher dispatcher, TaskStack* taskStack, int maximumWorkerCount = int.MaxValue, object managedContext = null)
     {
-        dispatcher.DispatchWorkers(&DispatchWorkerFunction, maximumWorkerCount, taskStack);
+        dispatcher.DispatchWorkers(&DispatchWorkerFunction, maximumWorkerCount, taskStack, managedContext);
     }
 }
