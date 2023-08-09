@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using BepuPhysics.Trees;
+using BepuUtilities.TaskScheduling;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -103,6 +104,10 @@ namespace BepuPhysics.CollisionDetection
 
         public override void DispatchOverlaps(float dt, IThreadDispatcher threadDispatcher = null)
         {
+            DispatchOverlapsOld(dt, threadDispatcher);
+        }
+        public void DispatchOverlapsOld(float dt, IThreadDispatcher threadDispatcher = null)
+        {
             if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
             {
                 narrowPhase.Prepare(dt, threadDispatcher);
@@ -153,6 +158,136 @@ namespace BepuPhysics.CollisionDetection
                 narrowPhase.Prepare(dt);
                 var selfTestHandler = new SelfOverlapHandler(broadPhase.ActiveLeaves, narrowPhase, 0);
                 broadPhase.ActiveTree.GetSelfOverlaps(ref selfTestHandler);
+                var intertreeHandler = new IntertreeOverlapHandler(broadPhase.ActiveLeaves, broadPhase.StaticLeaves, narrowPhase, 0);
+                broadPhase.ActiveTree.GetOverlaps(ref broadPhase.StaticTree, ref intertreeHandler);
+                narrowPhase.overlapWorkers[0].Batcher.Flush();
+
+            }
+
+        }
+
+        struct ThreadedIntertreeOverlapHandler : IThreadedOverlapHandler
+        {
+            public Buffer<CollidableReference> ActiveLeaves;
+            public Buffer<CollidableReference> StaticLeaves;
+            public void Handle(int indexA, int indexB, int workerIndex, object managedContext)
+            {
+                var narrowPhase = (NarrowPhase<TCallbacks>)managedContext;
+                narrowPhase.HandleOverlap(workerIndex, ActiveLeaves[indexA], StaticLeaves[indexB]);
+            }
+        }
+        struct ThreadedSelfOverlapHandler : IThreadedOverlapHandler
+        {
+            public Buffer<CollidableReference> Leaves;
+            public void Handle(int indexA, int indexB, int workerIndex, object managedContext)
+            {
+                var narrowPhase = (NarrowPhase<TCallbacks>)managedContext;
+                narrowPhase.HandleOverlap(workerIndex, Leaves[indexA], Leaves[indexB]);
+            }
+        }
+
+        unsafe struct SelfContext
+        {
+            public TaskStack* Stack;
+            public ThreadedSelfOverlapHandler* Results;
+            public Tree Tree;
+            public int TargetTaskCount;
+        }
+        unsafe struct IntertreeContext
+        {
+            public TaskStack* Stack;
+            public ThreadedIntertreeOverlapHandler* Results;
+            public Tree StaticTree;
+            public Tree ActiveTree;
+            public int TargetTaskCount;
+        }
+        unsafe static void SelfEntryTask(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+        {
+            ref var context = ref *(SelfContext*)untypedContext;
+            var pool = dispatcher.WorkerPools[workerIndex];
+            context.Tree.GetSelfOverlaps2(ref *context.Results, pool, dispatcher, context.Stack, workerIndex, context.TargetTaskCount);
+        }
+        unsafe static void IntertreeEntryTask(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+        {
+            ref var context = ref *(IntertreeContext*)untypedContext;
+            var pool = dispatcher.WorkerPools[workerIndex];
+            context.ActiveTree.GetOverlaps2(ref context.StaticTree, ref *context.Results, pool, dispatcher, context.Stack, workerIndex, context.TargetTaskCount);
+        }
+
+        public static void WorkerTask(int workerIndex, IThreadDispatcher dispatcher)
+        {
+            var taskStack = (TaskStack*)dispatcher.UnmanagedContext;
+            PopTaskResult popTaskResult;
+            var waiter = new SpinWait();
+            while ((popTaskResult = taskStack->TryPopAndRun(workerIndex, dispatcher)) != PopTaskResult.Stop)
+            {
+                waiter.SpinOnce(-1);
+            }
+            ((NarrowPhase<TCallbacks>)dispatcher.ManagedContext).overlapWorkers[workerIndex].Batcher.Flush();
+        }
+        public void DispatchOverlapsNew(float dt, IThreadDispatcher threadDispatcher = null)
+        {
+            //The number of collisions is usually some constant multiple of the number of active leaves.
+            //5-10 collisions per active leaf would represent a very dense simulation.
+            //The number of collisions needed to warrant the existence of a thread varies, too, but it's exceptionally unlikely that any you would need more than one thread for 64 collisions.
+            //(Those would have to be some very messed up pairs!)
+            //So, we'll allow worker counts to scale down with low leaf counts to avoid overhead for tiny simulations.
+            var maximumWorkerCount = int.Min(int.Max(1, broadPhase.ActiveTree.LeafCount / 8), threadDispatcher == null ? 1 : threadDispatcher.ThreadCount);
+            if (maximumWorkerCount > 1)
+            {
+                narrowPhase.Prepare(dt, threadDispatcher);
+
+                if (broadPhase.ActiveTree.LeafCount > 0 && broadPhase.StaticTree.LeafCount > 0)
+                {
+                    var selfResults = new ThreadedSelfOverlapHandler { Leaves = broadPhase.ActiveLeaves };
+                    var intertreeResults = new ThreadedIntertreeOverlapHandler { ActiveLeaves = broadPhase.ActiveLeaves, StaticLeaves = broadPhase.StaticLeaves };
+
+                    //Note that we shouldn't reduce the task budget for testing with smallish trees, because it's very possible for the cost of individual narrow phase pairs to be high.
+                    //The tree test cost is often small compared to the narrow phase costs, so it's worth keeping quite a few tasks around.
+                    var selfTestCostEstimate = broadPhase.ActiveTree.LeafCount;
+                    var intertreeTestCostEstimate = int.Max(broadPhase.ActiveTree.LeafCount, broadPhase.StaticTree.LeafCount);
+
+                    var selfTestAsFraction = (float)selfTestCostEstimate / (selfTestCostEstimate + intertreeTestCostEstimate);
+                    //Regularize the budgets a bit. Don't let either get too small.
+                    const float minimumBudget = 0.25f;
+                    var intertreeTestAsFraction = 1f - (selfTestAsFraction * (1f - minimumBudget) + minimumBudget);
+                    selfTestAsFraction = 1f - intertreeTestAsFraction;
+
+                    var selfTestTaskTarget = (int)float.Round(maximumWorkerCount * selfTestAsFraction);
+                    var intertreeTestTaskTarget = maximumWorkerCount - selfTestTaskTarget;
+                    var taskStack = new TaskStack(broadPhase.Pool, threadDispatcher, maximumWorkerCount);
+                    var selfContext = new SelfContext { Results = &selfResults, Stack = &taskStack, TargetTaskCount = selfTestTaskTarget, Tree = broadPhase.ActiveTree };
+                    var intertreeContext = new IntertreeContext { Results = &intertreeResults, Stack = &taskStack, TargetTaskCount = intertreeTestTaskTarget, ActiveTree = broadPhase.ActiveTree, StaticTree = broadPhase.StaticTree };
+                    Span<Task> tasks = stackalloc Task[2];
+                    tasks[0] = new Task(&SelfEntryTask, &selfContext);
+                    tasks[1] = new Task(&IntertreeEntryTask, &intertreeContext);
+                    taskStack.AllocateContinuationAndPush(tasks, 0, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(&taskStack));
+                    threadDispatcher.DispatchWorkers(&WorkerTask, maximumWorkerCount: maximumWorkerCount, unmanagedContext: &taskStack, managedContext: narrowPhase);
+                    taskStack.Dispose(broadPhase.Pool, threadDispatcher);
+                }
+                else if (broadPhase.ActiveTree.LeafCount > 0)
+                {
+                    var selfResults = new ThreadedSelfOverlapHandler { Leaves = broadPhase.ActiveLeaves };
+                    var intertreeResults = new ThreadedIntertreeOverlapHandler { ActiveLeaves = broadPhase.ActiveLeaves, StaticLeaves = broadPhase.StaticLeaves };
+
+                    var taskStack = new TaskStack(broadPhase.Pool, threadDispatcher, maximumWorkerCount);
+                    var selfContext = new SelfContext { Results = &selfResults, Stack = &taskStack, TargetTaskCount = maximumWorkerCount, Tree = broadPhase.ActiveTree };
+                    taskStack.AllocateContinuationAndPush(new Task(&SelfEntryTask, &selfContext), 0, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(&taskStack));
+                    threadDispatcher.DispatchWorkers(&WorkerTask, maximumWorkerCount: maximumWorkerCount, unmanagedContext: &taskStack, managedContext: narrowPhase);
+                    taskStack.Dispose(broadPhase.Pool, threadDispatcher);
+                }
+#if DEBUG
+                for (int i = 1; i < threadDispatcher.ThreadCount; ++i)
+                {
+                    Debug.Assert(!narrowPhase.overlapWorkers[i].Batcher.batches.Allocated, "After execution, there should be no remaining allocated collision batchers.");
+                }
+#endif
+            }
+            else
+            {
+                narrowPhase.Prepare(dt);
+                var selfTestHandler = new SelfOverlapHandler(broadPhase.ActiveLeaves, narrowPhase, 0);
+                broadPhase.ActiveTree.GetSelfOverlaps2(ref selfTestHandler);
                 var intertreeHandler = new IntertreeOverlapHandler(broadPhase.ActiveLeaves, broadPhase.StaticLeaves, narrowPhase, 0);
                 broadPhase.ActiveTree.GetOverlaps(ref broadPhase.StaticTree, ref intertreeHandler);
                 narrowPhase.overlapWorkers[0].Batcher.Flush();
