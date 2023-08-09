@@ -31,7 +31,7 @@ namespace BepuUtilities
         /// <inheritdoc/>
         public void* UnmanagedContext => unmanagedContext;
         /// <inheritdoc/>
-        public object ManagedContext => managedWorker;
+        public object ManagedContext => managedContext;
 
         /// <summary>
         /// Creates a new thread dispatcher with the given number of threads.
