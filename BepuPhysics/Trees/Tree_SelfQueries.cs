@@ -41,7 +41,8 @@ namespace BepuPhysics.Trees
         /// <param name="indexA">Index of the first leaf in the overlap.</param>
         /// <param name="indexB">Index of the second leaf in the overlap.</param>
         /// <param name="workerIndex">Index of the worker reporting the overlap.</param>
-        void Handle(int indexA, int indexB, int workerIndex);
+        /// <param name="managedContext">Managed context provided by the multithreaded dispatch.</param>
+        void Handle(int indexA, int indexB, int workerIndex, object managedContext);
     }
 
     partial struct Tree
@@ -512,10 +513,11 @@ namespace BepuPhysics.Trees
         unsafe struct WrappedOverlapHandler<TOverlapHandler> : IOverlapHandler where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
             public int WorkerIndex;
+            public object ManagedContext;
             public TOverlapHandler* Inner;
             public void Handle(int indexA, int indexB)
             {
-                Inner->Handle(indexA, indexB, WorkerIndex);
+                Inner->Handle(indexA, indexB, WorkerIndex, ManagedContext);
             }
         }
 
@@ -524,14 +526,14 @@ namespace BepuPhysics.Trees
             var taskStart = (int)taskStartAndEnd;
             var taskEnd = (int)(taskStartAndEnd >> 32);
             ref var context = ref *(SelfTestContext<TOverlapHandler>*)untypedContext;
-            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex };
+            var wrapped = new WrappedOverlapHandler<TOverlapHandler> { Inner = context.Results, WorkerIndex = workerIndex, ManagedContext = dispatcher.ManagedContext };
             context.Tree.GetSelfOverlaps2(ref wrapped, taskStart, taskEnd);
         }
 
 
 
         private unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool,
-        int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+        int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget, object managedContext = null) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
             if (targetTaskBudget < 0)
                 targetTaskBudget = threadDispatcher.ThreadCount;
@@ -594,7 +596,7 @@ namespace BepuPhysics.Trees
             {
                 //There isn't an active dispatch, so we need to do it.
                 taskStack->AllocateContinuationAndPush(tasks, workerIndex, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(taskStack));
-                TaskStack.DispatchWorkers(threadDispatcher, taskStack, workerCount);
+                TaskStack.DispatchWorkers(threadDispatcher, taskStack, workerCount, managedContext);
             }
             else
             {
@@ -606,18 +608,17 @@ namespace BepuPhysics.Trees
             results = resultsCopy;
         }
 
-
-
         /// <summary>
         /// Reports all bounding box overlaps between leaves in the tree to the given <typeparamref name="TOverlapHandler"/>. Uses the thread dispatcher to parallelize overlap testing.
         /// </summary>
         /// <param name="results">Handler to report results to.</param>
         /// <param name="pool">Pool used for ephemeral allocations.</param>
         /// <param name="threadDispatcher">Thread dispatcher used during the overlap testing.</param>
-        public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool, IThreadDispatcher threadDispatcher) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
+        /// <param name="managedContext">Managed context to provide to the overlap handler, if any.</param>
+        public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool, IThreadDispatcher threadDispatcher, object managedContext = null) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
             var taskStack = new TaskStack(pool, threadDispatcher, threadDispatcher.ThreadCount);
-            GetSelfOverlaps2(ref results, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount);
+            GetSelfOverlaps2(ref results, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount, managedContext);
             taskStack.Dispose(pool, threadDispatcher);
         }
 
@@ -631,6 +632,7 @@ namespace BepuPhysics.Trees
         /// <param name="taskStack"><see cref="TaskStack"/> that the overlap test will push tasks onto as needed.</param>
         /// <param name="workerIndex">Index of the worker calling the function.</param>
         /// <param name="targetTaskCount">Number of tasks the overlap testing should try to create during execution. If negative, uses <see cref="IThreadDispatcher.ThreadCount"/>.</param>
+        /// <remarks>This does not dispatch workers on the <see cref="IThreadDispatcher"/> directly. If the overlap handler requires managed context, that should be provided by whatever dispatched the workers.</remarks>
         public unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, BufferPool pool,
              IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1) where TOverlapHandler : unmanaged, IThreadedOverlapHandler
         {
