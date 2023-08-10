@@ -44,7 +44,8 @@ namespace BepuPhysics.Collidables
                 //If this codepath is being used, we're assuming that the children are as given.
                 //so we can go ahead and set the node/leaf counts.
                 //(This is in contrast to creating a tree with a certain capacity, but then relying on incremental adds/removes later.)
-                NodeCount = children.Length - 1,
+                //Note that the tree still has a root node even if there's one leaf; it's a partial node and requires special handling.
+                NodeCount = int.Max(1, children.Length - 1),
                 LeafCount = children.Length
             };
             return compound;

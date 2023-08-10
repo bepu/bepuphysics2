@@ -1507,6 +1507,13 @@ namespace BepuPhysics.Trees
             BufferPool pool = null, IThreadDispatcher dispatcher = null, TaskStack* taskStackPointer = null, int workerIndex = 0, int workerCount = -1, int targetTaskCount = -1,
             int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64, bool deterministic = false)
         {
+            if (subtrees.Length <= 2)
+            {
+                //No need to do anything fancy, all subtrees fit in the root. Requires a special case for the partial root.
+                nodes[0] = new Node { A = subtrees[0], B = subtrees.Length == 2 ? subtrees[1] : default };
+                metanodes[0] = new Metanode { Parent = -1, IndexInParent = -1 };
+                return;
+            }
             if (dispatcher != null && pool == null)
                 throw new ArgumentException("If a ThreadDispatcher has been given to BinnedBuild, a BufferPool must also be provided.");
             Buffer<NodeChild> subtreesPong;
