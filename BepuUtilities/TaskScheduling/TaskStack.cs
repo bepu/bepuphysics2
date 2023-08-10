@@ -418,6 +418,34 @@ public unsafe struct TaskStack
     }
 
     /// <summary>
+    /// Pushes a task to the worker stack and returns when it completes.
+    /// </summary>
+    /// <param name="task">Task composing the job. A continuation will be assigned internally; no continuation should be present on the task.</param>
+    /// <param name="workerIndex">Index of the worker executing this function.</param>
+    /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
+    /// <param name="tag">User tag associated with the job spanning the submitted task.</param>
+    /// <remarks>Note that this will keep working until the task completes. It may execute tasks unrelated to the requested task while waiting on other workers.</remarks>
+    public void RunTask(Task task, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0)
+    {
+        RunTasks(new Span<Task>(ref task), workerIndex, dispatcher, tag);
+    }
+
+    /// <summary>
+    /// Pushes a task to the worker stack and returns when all tasks are complete.
+    /// </summary>
+    /// <param name="task">Task composing the job. A continuation will be assigned internally; no continuation should be present on the task.</param>
+    /// <param name="workerIndex">Index of the worker executing this function.</param>
+    /// <param name="dispatcher">Thread dispatcher to allocate thread data from if necessary.</param>
+    /// <param name="filter">Filter applied to jobs considered for filling the calling thread's wait for other threads to complete.</param>
+    /// <param name="tag">User tag associated with the job spanning the submitted task.</param>
+    /// <typeparam name="TJobFilter">Type of the job filter used in the pop.</typeparam>
+    /// <remarks>Note that this will keep working the task completes. It may execute tasks unrelated to the requested task while waiting on other workers to complete constituent tasks.</remarks>
+    public void RunTask<TJobFilter>(Task task, int workerIndex, IThreadDispatcher dispatcher, ref TJobFilter filter, ulong tag = 0) where TJobFilter : IJobFilter
+    {
+        RunTasks(new Span<Task>(ref task), workerIndex, dispatcher, ref filter, tag);
+    }
+
+    /// <summary>
     /// Requests that all workers stop. The next time a worker runs out of tasks to run, if it sees a stop command, it will be reported.
     /// </summary>
     public void RequestStop()
