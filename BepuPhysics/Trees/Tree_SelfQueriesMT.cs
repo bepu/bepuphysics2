@@ -80,7 +80,7 @@ namespace BepuPhysics.Trees
                     return;
                 }
                 Debug.Assert(overlapHandlers.Length >= threadCount);
-                const float jobMultiplier = 1.5f;
+                const float jobMultiplier = 2.5f;
                 var targetJobCount = Math.Max(1, jobMultiplier * threadCount);
                 leafThreshold = (int)(tree.LeafCount / targetJobCount);
                 jobs = new QuickList<Job>((int)(targetJobCount * 2), Pool);

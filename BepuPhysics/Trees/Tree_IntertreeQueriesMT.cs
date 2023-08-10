@@ -50,7 +50,7 @@ namespace BepuPhysics.Trees
                     return;
                 }
                 Debug.Assert(overlapHandlers.Length >= threadCount);
-                const float jobMultiplier = 1.5f;
+                const float jobMultiplier = 2.5f;
                 var targetJobCount = Math.Max(1, jobMultiplier * threadCount);
                 //TODO: Not a lot of thought was put into this leaf threshold for intertree. Probably better options.
                 leafThreshold = (int)((treeA.LeafCount + treeB.LeafCount) / targetJobCount);

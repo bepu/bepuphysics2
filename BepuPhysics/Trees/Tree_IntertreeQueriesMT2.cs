@@ -176,7 +176,7 @@ partial struct Tree
             }
             else
             {
-                taskStack->Push(rootTask, workerIndex, threadDispatcher);
+                taskStack->RunTask(rootTask, workerIndex, threadDispatcher);
             }
         }
         //Copy back potential changes.

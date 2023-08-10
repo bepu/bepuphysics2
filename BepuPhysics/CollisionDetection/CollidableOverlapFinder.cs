@@ -181,7 +181,8 @@ namespace BepuPhysics.CollisionDetection
             public Buffer<CollidableReference> Leaves;
             public void Handle(int indexA, int indexB, int workerIndex, object managedContext)
             {
-                var narrowPhase = (NarrowPhase<TCallbacks>)managedContext;
+                //var narrowPhase = (NarrowPhase<TCallbacks>)managedContext;
+                var narrowPhase = Unsafe.As<NarrowPhase<TCallbacks>>(managedContext);
                 narrowPhase.HandleOverlap(workerIndex, Leaves[indexA], Leaves[indexB]);
             }
         }
@@ -203,12 +204,14 @@ namespace BepuPhysics.CollisionDetection
         }
         unsafe static void SelfEntryTask(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
         {
+            Debug.Assert(dispatcher.ManagedContext != null);
             ref var context = ref *(SelfContext*)untypedContext;
             var pool = dispatcher.WorkerPools[workerIndex];
             context.Tree.GetSelfOverlaps2(ref *context.Results, pool, dispatcher, context.Stack, workerIndex, context.TargetTaskCount);
         }
         unsafe static void IntertreeEntryTask(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
         {
+            Debug.Assert(dispatcher.ManagedContext != null);
             ref var context = ref *(IntertreeContext*)untypedContext;
             var pool = dispatcher.WorkerPools[workerIndex];
             context.ActiveTree.GetOverlaps2(ref context.StaticTree, ref *context.Results, pool, dispatcher, context.Stack, workerIndex, context.TargetTaskCount);
@@ -216,6 +219,7 @@ namespace BepuPhysics.CollisionDetection
 
         public static void WorkerTask(int workerIndex, IThreadDispatcher dispatcher)
         {
+            Debug.Assert(dispatcher.ManagedContext != null);
             var taskStack = (TaskStack*)dispatcher.UnmanagedContext;
             PopTaskResult popTaskResult;
             var waiter = new SpinWait();
@@ -264,12 +268,17 @@ namespace BepuPhysics.CollisionDetection
                     taskStack.AllocateContinuationAndPush(tasks, 0, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(&taskStack));
                     threadDispatcher.DispatchWorkers(&WorkerTask, maximumWorkerCount: maximumWorkerCount, unmanagedContext: &taskStack, managedContext: narrowPhase);
                     taskStack.Dispose(broadPhase.Pool, threadDispatcher);
+
+                    //var intertreeResults = new ThreadedIntertreeOverlapHandler { ActiveLeaves = broadPhase.ActiveLeaves, StaticLeaves = broadPhase.StaticLeaves };
+                    //var taskStack = new TaskStack(broadPhase.Pool, threadDispatcher, maximumWorkerCount);
+                    //var intertreeContext = new IntertreeContext { Results = &intertreeResults, Stack = &taskStack, TargetTaskCount = maximumWorkerCount, ActiveTree = broadPhase.ActiveTree, StaticTree = broadPhase.StaticTree };
+                    //taskStack.AllocateContinuationAndPush(new Task(&IntertreeEntryTask, &intertreeContext), 0, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(&taskStack));
+                    //threadDispatcher.DispatchWorkers(&WorkerTask, maximumWorkerCount: maximumWorkerCount, unmanagedContext: &taskStack, managedContext: narrowPhase);
+                    //taskStack.Dispose(broadPhase.Pool, threadDispatcher);
                 }
                 else if (broadPhase.ActiveTree.LeafCount > 0)
                 {
                     var selfResults = new ThreadedSelfOverlapHandler { Leaves = broadPhase.ActiveLeaves };
-                    var intertreeResults = new ThreadedIntertreeOverlapHandler { ActiveLeaves = broadPhase.ActiveLeaves, StaticLeaves = broadPhase.StaticLeaves };
-
                     var taskStack = new TaskStack(broadPhase.Pool, threadDispatcher, maximumWorkerCount);
                     var selfContext = new SelfContext { Results = &selfResults, Stack = &taskStack, TargetTaskCount = maximumWorkerCount, Tree = broadPhase.ActiveTree };
                     taskStack.AllocateContinuationAndPush(new Task(&SelfEntryTask, &selfContext), 0, threadDispatcher, onComplete: TaskStack.GetRequestStopTask(&taskStack));
