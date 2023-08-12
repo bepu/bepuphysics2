@@ -246,7 +246,8 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="rootRefinementSize">Size of the root refinement. If zero or negative, no root refinement will be performed.</param>
         /// <param name="subtreeRefinementCount">Number of subtree refinements to perform. Can be zero.</param>
         /// <param name="subtreeRefinementSize">Target size of the subtree refinements.</param>
-        public delegate void RefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize);
+        /// <param name="usePriorityQueue">True if the root refinement should use a priority queue during subtree collection to find larger nodes, false if it should try to collect a more balanced tree.</param>
+        public delegate void RefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize, out bool usePriorityQueue);
 
         /// <summary>
         /// Gets or sets the refinement schedule to use for the active tree.
@@ -264,13 +265,15 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="rootRefinementPeriod">Period, in timesteps, of refinements applied to the root.</param>
         /// <param name="rootRefinementSizeScale">Multiplier to apply to the square root of the leaf count to get the target root refinement size.</param>
         /// <param name="subtreeRefinementSizeScale">Multiplier to apply to the square root of the leaf count to get the target subtree refinement size.</param>
+        /// <param name="nonpriorityPeriod">The period between non-priority queue based root refinements, measured in units of root refinements.</param>
         /// <param name="frameIndex">Index of the frame as tracked by the broad phase.</param>
         /// <param name="tree">Tree being considered for refinement.</param>
         /// <param name="rootRefinementSize">Size of the root refinement. If zero or negative, no root refinement will be performed.</param>
         /// <param name="subtreeRefinementCount">Number of subtree refinements to perform. Can be zero.</param>
         /// <param name="subtreeRefinementSize">Target size of the subtree refinements.</param>
-        public static void DefaultRefinementScheduler(float optimizationFraction, int rootRefinementPeriod, float rootRefinementSizeScale, float subtreeRefinementSizeScale,
-           int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize)
+        /// <param name="usePriorityQueue">True if the root refinement should use a priority queue during subtree collection to find larger nodes, false if it should try to collect a more balanced tree.</param>
+        public static void DefaultRefinementScheduler(float optimizationFraction, int rootRefinementPeriod, float rootRefinementSizeScale, float subtreeRefinementSizeScale, int nonpriorityPeriod,
+           int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize, out bool usePriorityQueue)
         {
             var refineRoot = frameIndex % rootRefinementPeriod == 0;
             var targetOptimizedLeafCount = (int)float.Ceiling(tree.LeafCount * optimizationFraction);
@@ -283,11 +286,13 @@ namespace BepuPhysics.CollisionDetection
             var targetRootRefinementSize = (int)float.Ceiling(sqrtLeafCount * rootRefinementSizeScale);
             subtreeRefinementSize = (int)float.Ceiling(sqrtLeafCount * subtreeRefinementSizeScale);
 
+            //Note that we scale up the cost of the root refinement; it uses a sequentialized priority queue to collect subtrees for refinement and costs more.
             var subtreeRefinementsPerRootRefinement = (int)float.Ceiling(subtreeRefinementSize * float.Log2(subtreeRefinementSize) / (targetRootRefinementSize * float.Log2(targetRootRefinementSize)));
             //If we're refining the root, reduce the number of subtree refinements to avoid cost spikes.
             subtreeRefinementCount = int.Max(0, (int)float.Ceiling((float)targetOptimizedLeafCount / subtreeRefinementSize) - (refineRoot ? subtreeRefinementsPerRootRefinement : 0));
 
             rootRefinementSize = refineRoot ? targetRootRefinementSize : 0;
+            usePriorityQueue = (frameIndex / rootRefinementPeriod) % nonpriorityPeriod != 0;
         }
 
         /// <summary>
@@ -298,9 +303,10 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="rootRefinementSize">Size of the root refinement. If zero or negative, no root refinement will be performed.</param>
         /// <param name="subtreeRefinementCount">Number of subtree refinements to perform. Can be zero.</param>
         /// <param name="subtreeRefinementSize">Target size of the subtree refinements.</param>
-        public static void DefaultActiveRefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize)
+        /// <param name="usePriorityQueue">True if the root refinement should use a priority queue during subtree collection to find larger nodes, false if it should try to collect a more balanced tree.</param>
+        public static void DefaultActiveRefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize, out bool usePriorityQueue)
         {
-            DefaultRefinementScheduler(1f / 20f, 8, 4, 4, frameIndex, tree, out rootRefinementSize, out subtreeRefinementCount, out subtreeRefinementSize);
+            DefaultRefinementScheduler(1f / 20f, 2, 1, 4, 16, frameIndex, tree, out rootRefinementSize, out subtreeRefinementCount, out subtreeRefinementSize, out usePriorityQueue);
         }
 
 
@@ -312,9 +318,10 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="rootRefinementSize">Size of the root refinement. If zero or negative, no root refinement will be performed.</param>
         /// <param name="subtreeRefinementCount">Number of subtree refinements to perform. Can be zero.</param>
         /// <param name="subtreeRefinementSize">Target size of the subtree refinements.</param>
-        public static void DefaultStaticRefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize)
+        /// <param name="usePriorityQueue">True if the root refinement should use a priority queue during subtree collection to find larger nodes, false if it should try to collect a more balanced tree.</param>
+        public static void DefaultStaticRefinementScheduler(int frameIndex, in Tree tree, out int rootRefinementSize, out int subtreeRefinementCount, out int subtreeRefinementSize, out bool usePriorityQueue)
         {
-            DefaultRefinementScheduler(1f / 100f, 32, 4, 4, frameIndex, tree, out rootRefinementSize, out subtreeRefinementCount, out subtreeRefinementSize);
+            DefaultRefinementScheduler(1f / 100f, 2, 1, 4, 16, frameIndex, tree, out rootRefinementSize, out subtreeRefinementCount, out subtreeRefinementSize, out usePriorityQueue);
         }
 
         struct RefinementContext
@@ -328,6 +335,7 @@ namespace BepuPhysics.CollisionDetection
             public int SubtreeRefinementSize;
             public int SubtreeRefinementStartIndex;
             public bool Deterministic;
+            public bool UsePriorityQueue;
 
             //Used for active tree. Didn't split the type because whocares.
             public Buffer<Node> TargetNodes;
@@ -337,7 +345,7 @@ namespace BepuPhysics.CollisionDetection
         {
             ref var context = ref *(RefinementContext*)untypedContext;
             var pool = dispatcher.WorkerPools[workerIndex];
-            context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, targetTaskCount: context.TargetTaskCount, deterministic: context.Deterministic);
+            context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, targetTaskCount: context.TargetTaskCount, deterministic: context.Deterministic, usePriorityQueue: context.UsePriorityQueue);
             //Now refit! Note that we use all but one task. It doesn't affect the performance of a refit much (we're not compute bound), and we can use it to do an incremental cache optimization on the static tree.
             var sourceNodes = context.Tree.Nodes;
             context.Tree.Nodes = context.TargetNodes;
@@ -348,14 +356,14 @@ namespace BepuPhysics.CollisionDetection
         {
             ref var context = ref *(RefinementContext*)untypedContext;
             var pool = dispatcher.WorkerPools[workerIndex];
-            context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, targetTaskCount: context.TargetTaskCount, deterministic: context.Deterministic);
+            context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, targetTaskCount: context.TargetTaskCount, deterministic: context.Deterministic, usePriorityQueue: context.UsePriorityQueue);
         }
 
         int staticSubtreeRefinementStartIndex, activeSubtreeRefinementStartIndex;
         public void Update2(IThreadDispatcher threadDispatcher = null, bool deterministic = false)
         {
-            ActiveRefinementSchedule(frameIndex, ActiveTree, out var activeRootRefinementSize, out var activeSubtreeRefinementCount, out var activeSubtreeRefinementSize);
-            StaticRefinementSchedule(frameIndex, StaticTree, out var staticRootRefinementSize, out var staticSubtreeRefinementCount, out var staticSubtreeRefinementSize);
+            ActiveRefinementSchedule(frameIndex, ActiveTree, out var activeRootRefinementSize, out var activeSubtreeRefinementCount, out var activeSubtreeRefinementSize, out var usePriorityQueueActive);
+            StaticRefinementSchedule(frameIndex, StaticTree, out var staticRootRefinementSize, out var staticSubtreeRefinementCount, out var staticSubtreeRefinementSize, out var usePriorityQueueStatic);
             const int minimumLeafCountForThreading = 256;
             if (threadDispatcher != null && threadDispatcher.ThreadCount > 1 && (ActiveTree.LeafCount >= minimumLeafCountForThreading || StaticTree.LeafCount >= minimumLeafCountForThreading))
             {
@@ -379,6 +387,7 @@ namespace BepuPhysics.CollisionDetection
                     SubtreeRefinementSize = activeSubtreeRefinementSize,
                     SubtreeRefinementStartIndex = activeSubtreeRefinementStartIndex,
                     Deterministic = deterministic,
+                    UsePriorityQueue = usePriorityQueueActive,
                     TargetNodes = ActiveTree.LeafCount > 2 ? new Buffer<Node>(ActiveTree.Nodes.Length, Pool) : default,
                 };
                 var staticRefineContext = new RefinementContext
@@ -392,6 +401,7 @@ namespace BepuPhysics.CollisionDetection
                     SubtreeRefinementSize = staticSubtreeRefinementSize,
                     SubtreeRefinementStartIndex = staticSubtreeRefinementStartIndex,
                     Deterministic = deterministic,
+                    UsePriorityQueue = usePriorityQueueStatic,
                 };
                 Span<Task> tasks = stackalloc Task[2];
                 tasks[0] = new Task(&ActiveEntrypointTask, &activeRefineContext);

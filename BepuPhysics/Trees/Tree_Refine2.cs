@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using static BepuPhysics.Collidables.CompoundBuilder;
 using Task = BepuUtilities.TaskScheduling.Task;
 
 namespace BepuPhysics.Trees;
@@ -306,13 +307,15 @@ public partial struct Tree
         }
     }
 
-
-    static unsafe void CollectSubtreesForRootRefinement(ref QuickList<(int nodeIndex, int subtreeBudget)> stack, int subtreeRefinementSize, BufferPool pool, Buffer<Vector<int>> subtreeRefinementTargetBundles, ref Tree tree, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
+    unsafe void CollectSubtreesForRootRefinement(int rootRefinementSize, int subtreeRefinementSize, BufferPool pool, in QuickList<int> subtreeRefinementTargets, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
     {
-        while (stack.TryPop(out var nodeToVisit))
+        var rootStack = new QuickList<(int nodeIndex, int subtreeBudget)>(rootRefinementSize, pool);
+        rootStack.AllocateUnsafely() = (0, rootRefinementSize);
+        var subtreeRefinementTargetBundles = new Buffer<Vector<int>>(subtreeRefinementTargets.Span.Memory, BundleIndexing.GetBundleCount(subtreeRefinementTargets.Count));
+        while (rootStack.TryPop(out var nodeToVisit))
         {
             rootRefinementNodeIndices.AllocateUnsafely() = nodeToVisit.nodeIndex;
-            ref var node = ref tree.Nodes[nodeToVisit.nodeIndex];
+            ref var node = ref Nodes[nodeToVisit.nodeIndex];
             var nodeTotalLeafCount = node.A.LeafCount + node.B.LeafCount;
             Debug.Assert(nodeToVisit.subtreeBudget <= nodeTotalLeafCount);
             var lowerSubtreeBudget = int.Min((nodeToVisit.subtreeBudget + 1) / 2, int.Min(node.A.LeafCount, node.B.LeafCount));
@@ -321,18 +324,198 @@ public partial struct Tree
             var aSubtreeBudget = useSmallerForA ? lowerSubtreeBudget : higherSubtreeBudget;
             var bSubtreeBudget = useSmallerForA ? higherSubtreeBudget : lowerSubtreeBudget;
 
-            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetBundles, nodeTotalLeafCount, bSubtreeBudget, node.B, ref stack, ref rootRefinementSubtrees);
-            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetBundles, nodeTotalLeafCount, aSubtreeBudget, node.A, ref stack, ref rootRefinementSubtrees);
+            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetBundles, nodeTotalLeafCount, bSubtreeBudget, node.B, ref rootStack, ref rootRefinementSubtrees);
+            TryPushChildForRootRefinement(subtreeRefinementSize, subtreeRefinementTargetBundles, nodeTotalLeafCount, aSubtreeBudget, node.A, ref rootStack, ref rootRefinementSubtrees);
         }
+        rootStack.Dispose(pool);
     }
 
-    unsafe void CollectSubtreesForRootRefinement(int rootRefinementSize, int subtreeRefinementSize, BufferPool pool, in QuickList<int> subtreeRefinementTargets, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
+    internal struct HeapEntry
     {
-        var rootStack = new QuickList<(int nodeIndex, int subtreeBudget)>(rootRefinementSize, pool);
-        rootStack.AllocateUnsafely() = (0, rootRefinementSize);
+        public int Index;
+        public float Cost;
+    }
+    unsafe internal struct BinaryHeap
+    {
+        public Buffer<HeapEntry> Entries;
+        public int Count;
+
+        public BinaryHeap(Buffer<HeapEntry> entries)
+        {
+            Entries = entries;
+            Count = 0;
+        }
+
+        public BinaryHeap(int capacity, BufferPool pool) : this(new Buffer<HeapEntry>(capacity, pool)) { }
+
+        public void Dispose(BufferPool pool)
+        {
+            pool.Return(ref Entries);
+        }
+
+        public unsafe void Insert(int indexToInsert, float cost)
+        {
+            int index = Count;
+            ++Count;
+            //Sift up.
+            while (index > 0)
+            {
+                var parentIndex = (index - 1) >> 1;
+                var parent = Entries[parentIndex];
+                if (parent.Cost < cost)
+                {
+                    //Pull the parent down.
+                    Entries[index] = parent;
+                    index = parentIndex;
+                }
+                else
+                {
+                    //Found the insertion spot.
+                    break;
+                }
+            }
+            ref var entry = ref Entries[index];
+            entry.Index = indexToInsert;
+            entry.Cost = cost;
+        }
+
+
+        public HeapEntry Pop()
+        {
+            var entry = Entries[0];
+            --Count;
+            var cost = Entries[Count].Cost;
+
+            //Pull the elements up to fill in the gap.
+            int index = 0;
+            while (true)
+            {
+                var childIndexA = (index << 1) + 1;
+                var childIndexB = (index << 1) + 2;
+                if (childIndexB < Count)
+                {
+                    //Both children are available.
+                    //Try swapping with the largest one.
+                    var childA = Entries[childIndexA];
+                    var childB = Entries[childIndexB];
+                    if (childA.Cost > childB.Cost)
+                    {
+                        if (cost > childA.Cost)
+                        {
+                            break;
+                        }
+                        Entries[index] = Entries[childIndexA];
+                        index = childIndexA;
+                    }
+                    else
+                    {
+                        if (cost > childB.Cost)
+                        {
+                            break;
+                        }
+                        Entries[index] = Entries[childIndexB];
+                        index = childIndexB;
+                    }
+                }
+                else if (childIndexA < Count)
+                {
+                    //Only one child was available.
+                    ref var childA = ref Entries[childIndexA];
+                    if (cost > childA.Cost)
+                    {
+                        break;
+                    }
+                    Entries[index] = Entries[childIndexA];
+                    index = childIndexA;
+                }
+                else
+                {
+                    //The children were beyond the heap.
+                    break;
+                }
+            }
+            //Move the last entry into position.
+            Entries[index] = Entries[Count];
+            return entry;
+        }
+
+    }
+
+    /// <summary>
+    /// Checks if a child should be a subtree in the root refinement. If so, it's added to the list. Otherwise, it's pushed onto the stack.
+    /// </summary>
+    private void TryPushChildForRootRefinement2(
+         int subtreeRefinementSize, int nodeTotalLeafCount, Buffer<Vector<int>> subtreeRefinementRootBundles, ref NodeChild child, ref BinaryHeap heap, ref QuickList<NodeChild> rootRefinementSubtrees)
+    {
+        if (child.Index < 0)
+        {
+            //It's a leaf node; directly accept it.
+            rootRefinementSubtrees.AllocateUnsafely() = child;
+        }
+        else
+        {
+            //Internal node; is it a subtree refinement?
+            if (IsNodeChildSubtreeRefinementTarget(subtreeRefinementRootBundles, child, nodeTotalLeafCount, subtreeRefinementSize))
+            {
+                //Yup!
+                ref var allocatedChild = ref rootRefinementSubtrees.AllocateUnsafely();
+                allocatedChild = child;
+                //Internal nodes used as subtrees by the root refinement are flagged so that the reification process knows to stop.
+                Debug.Assert(allocatedChild.Index < flagForRootRefinementSubtree, "The use of an upper index bit as flag means the binned refiner cannot handle trees with billions of children.");
+                allocatedChild.Index |= flagForRootRefinementSubtree;
+            }
+            else
+            {
+                //A regular internal node; push it.
+                //TODO: The heuristic for cost is pretty simple: the bounds metric of the child in isolation.
+                //The root collection will always visit the *biggest* nodes. That's often a good idea, but not always.
+                //A couple of potential improvements to consider:
+                //1. Use boundsMetric * leafCount. This will tend to push nodes with lots of leaves to the top of the heap.
+                //2. Dive one step deeper and compute the ratio of the bounds metric of the children to the parent. Nodes that do a poor job of splitting the space will tend to have a higher ratio.
+                //#1 is trivial. #2 requires touching a little more memory. Worth investigating.
+                //(Just doing this for now to match the old implementation.)
+                //var childBoundsMetric = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref child));
+                //ref var childNode = ref Nodes[child.Index];
+                //var grandchildABoundsMetric = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref childNode.A));
+                //var grandchildBBoundsMetric = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref childNode.B));
+                //var cost = (grandchildABoundsMetric * childNode.A.LeafCount + grandchildBBoundsMetric * childNode.B.LeafCount);
+                //heap.Insert(child.Index, cost);
+                heap.Insert(child.Index, ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref child)));
+            }
+        }
+    }
+    unsafe void CollectSubtreesForRootRefinementWithPriorityQueue(int rootRefinementSize, int subtreeRefinementSize, BufferPool pool, in QuickList<int> subtreeRefinementTargets, ref QuickList<int> rootRefinementNodeIndices, ref QuickList<NodeChild> rootRefinementSubtrees)
+    {
+        //Instead of using a breadth first search, we greedily expand the root refinement by looking for the next node with the highest cost.
+        //This will tend to force the root refinement to find pathologically bad subtrees rapidly.
+        var heap = new BinaryHeap(new Buffer<HeapEntry>(rootRefinementSize, pool));
+        heap.Insert(0, 0); //no need to actually calculate the cost for the root; it's gonna get popped.
         var subtreeRefinementTargetBundles = new Buffer<Vector<int>>(subtreeRefinementTargets.Span.Memory, BundleIndexing.GetBundleCount(subtreeRefinementTargets.Count));
-        CollectSubtreesForRootRefinement(ref rootStack, subtreeRefinementSize, pool, subtreeRefinementTargetBundles, ref this, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
-        rootStack.Dispose(pool);
+        while (heap.Count > 0 && heap.Count + rootRefinementSubtrees.Count < rootRefinementSize)
+        {
+            var entry = heap.Pop();
+            rootRefinementNodeIndices.AllocateUnsafely() = entry.Index;
+            ref var node = ref Nodes[entry.Index];
+            var nodeTotalLeafCount = node.A.LeafCount + node.B.LeafCount;
+
+            TryPushChildForRootRefinement2(subtreeRefinementSize, nodeTotalLeafCount, subtreeRefinementTargetBundles, ref node.B, ref heap, ref rootRefinementSubtrees);
+            TryPushChildForRootRefinement2(subtreeRefinementSize, nodeTotalLeafCount, subtreeRefinementTargetBundles, ref node.A, ref heap, ref rootRefinementSubtrees);
+        }
+        //The traversal has added any subtrees that represent either 1. a leaf or 2. a subtree refinement target.
+        //The heap contains all the other subtrees that need to be added in index form; add them all now.
+        for (int i = 0; i < heap.Count; ++i)
+        {
+            var entry = heap.Entries[i];
+            var metanode = Metanodes[entry.Index];
+            Debug.Assert(metanode.Parent >= 0, "The root should never show up in the heap post traversal! Something weird has happened.");
+            ref var parent = ref Nodes[metanode.Parent];
+            ref var childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
+            ref var allocated = ref rootRefinementSubtrees.AllocateUnsafely();
+            Debug.Assert(childInParent.Index >= 0, "Anything in the heap should be an internal node.");
+            allocated = childInParent;
+            allocated.Index |= flagForRootRefinementSubtree;
+        }
+        heap.Entries.Dispose(pool);
     }
 
     void CollectSubtreesForSubtreeRefinement(int refinementTargetRootNodeIndex, Buffer<int> subtreeStackBuffer, ref QuickList<int> subtreeRefinementNodeIndices, ref QuickList<NodeChild> subtreeRefinementLeaves)
@@ -362,9 +545,10 @@ public partial struct Tree
     /// <param name="subtreeRefinementStartIndex">Index used to distribute subtree refinements over multiple executions.</param>
     /// <param name="subtreeRefinementCount">Number of subtree refinements to execute.</param>
     /// <param name="subtreeRefinementSize">Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</param>
-    /// <param name="pool">Pool used for ephemeral allocations during the refinement.</param>
+    /// <param name="pool">Pool used for ephemeral allocations during the refinement.</param> 
+    /// <param name="usePriorityQueue">True if the root refinement should use a priority queue during subtree collection to find larger nodes, false if it should try to collect a more balanced tree.</param>
     /// <remarks>Nodes will not be refit.</remarks>
-    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool)
+    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, bool usePriorityQueue = true)
     {
         //No point refining anything with two leaves. This condition also avoids having to special case for an incomplete root node.
         if (LeafCount <= 2)
@@ -384,7 +568,10 @@ public partial struct Tree
         {
             var rootRefinementSubtrees = new QuickList<NodeChild>(rootRefinementSize, pool);
             var rootRefinementNodeIndices = new QuickList<int>(rootRefinementSize, pool);
-            CollectSubtreesForRootRefinement(rootRefinementSize, subtreeRefinementSize, pool, subtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+            if (usePriorityQueue)
+                CollectSubtreesForRootRefinementWithPriorityQueue(rootRefinementSize, subtreeRefinementSize, pool, subtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+            else
+                CollectSubtreesForRootRefinement(rootRefinementSize, subtreeRefinementSize, pool, subtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
 
             //Now that we have a list of nodes to refine, we can run the root refinement.
             Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
@@ -433,6 +620,7 @@ public partial struct Tree
         public QuickList<int> SubtreeRefinementTargets;
         public TaskStack* TaskStack;
         public bool Deterministic;
+        public bool UsePriorityQueue;
         /// <remarks>
         /// This is a *copy* of the original tree that spawned this refinement. Refinements do not modify the memory stored at the level of the Tree, only memory *pointed* to by the tree.
         /// </remarks>
@@ -455,9 +643,13 @@ public partial struct Tree
         // 1. The cost of the collection phase is pretty cheap. Around the cost of a refit. Multithreading a collection phase of a thousand nodes is probably going to be net slower.
         // 2. It's difficult to do it deterministically without having to do a postpass to copy things into position in the contiguous buffer, and touching all that memory is a big hit.
         // 3. The main use case for refinements is in the broad phase. This will usually be run next to a dynamic refit refine, so we'll already have decent utilization.
-        // 4. I don't wanna.
+        // 4. Doing it for the priority queue variant is even harder.
+        // 5. I don't wanna.
         //So, punting this for later. A nondeterministic implementation wouldn't be too bad. Could always just fall back to ST when deterministic flag is set. 
-        context.Tree.CollectSubtreesForRootRefinement(context.RootRefinementSize, context.SubtreeRefinementSize, pool, context.SubtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+        if (context.UsePriorityQueue)
+            context.Tree.CollectSubtreesForRootRefinementWithPriorityQueue(context.RootRefinementSize, context.SubtreeRefinementSize, pool, context.SubtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
+        else
+            context.Tree.CollectSubtreesForRootRefinement(context.RootRefinementSize, context.SubtreeRefinementSize, pool, context.SubtreeRefinementTargets, ref rootRefinementNodeIndices, ref rootRefinementSubtrees);
 
         //Now that we have a list of nodes to refine, we can run the root refinement.
         Debug.Assert(rootRefinementNodeIndices.Count == rootRefinementSubtrees.Count - 1);
@@ -515,7 +707,7 @@ public partial struct Tree
 
     }
 
-    private unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget, bool deterministic)
+    private unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, int workerIndex, TaskStack* taskStack, IThreadDispatcher threadDispatcher, bool internallyDispatch, int workerCount, int targetTaskBudget, bool deterministic, bool usePriorityQueue)
     {
         //No point refining anything with two leaves. This condition also avoids having to special case for an incomplete root node.
         if (LeafCount <= 2)
@@ -559,6 +751,7 @@ public partial struct Tree
             TaskStack = taskStack,
             WorkerCount = workerCount,
             Deterministic = deterministic,
+            UsePriorityQueue = usePriorityQueue,
             Tree = this
         };
         for (int i = 0; i < subtreeRefinementTargets.Count; ++i)
@@ -594,11 +787,12 @@ public partial struct Tree
     /// <param name="threadDispatcher">Thread dispatcher used during the refinement.</param>
     /// <param name="deterministic">Whether to force determinism at a slightly higher cost when using internally multithreaded execution for an individual refinement operation.<para/>
     /// If the refine is single threaded, it is already deterministic and this flag has no effect.</param>
+    /// <param name="usePriorityQueue">True if the root refinement should use a priority queue during subtree collection to find larger nodes, false if it should try to collect a more balanced tree.</param>
     /// <remarks>Nodes will not be refit.</remarks>
-    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, IThreadDispatcher threadDispatcher, bool deterministic = false)
+    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, IThreadDispatcher threadDispatcher, bool deterministic = false, bool usePriorityQueue = true)
     {
         var taskStack = new TaskStack(pool, threadDispatcher, threadDispatcher.ThreadCount);
-        Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount, deterministic);
+        Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, 0, &taskStack, threadDispatcher, true, threadDispatcher.ThreadCount, threadDispatcher.ThreadCount, deterministic, usePriorityQueue);
         taskStack.Dispose(pool, threadDispatcher);
     }
 
@@ -618,10 +812,11 @@ public partial struct Tree
     /// <param name="taskStack"><see cref="TaskStack"/> that the refine operation will push tasks onto as needed.</param>
     /// <param name="workerIndex">Index of the worker calling the function.</param>
     /// <param name="targetTaskCount">Number of tasks the refinement should try to create during execution. If negative, uses <see cref="IThreadDispatcher.ThreadCount"/>.</param>
+    /// <param name="usePriorityQueue">True if the root refinement should use a priority queue during subtree collection to find larger nodes, false if it should try to collect a more balanced tree.</param>
     /// <remarks>Nodes will not be refit.</remarks>
-    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, 
-        BufferPool pool, IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1, bool deterministic = false)
+    public unsafe void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize,
+        BufferPool pool, IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1, bool deterministic = false, bool usePriorityQueue = true)
     {
-        Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount, deterministic);
+        Refine2(rootRefinementSize, ref subtreeRefinementStartIndex, subtreeRefinementCount, subtreeRefinementSize, pool, workerIndex, taskStack, threadDispatcher, false, threadDispatcher.ThreadCount, targetTaskCount, deterministic, usePriorityQueue);
     }
 }
