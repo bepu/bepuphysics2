@@ -48,6 +48,13 @@ namespace BepuPhysics.Trees
             return LeafCount++;
         }
 
+        int AllocateLeaf()
+        {
+            Debug.Assert(LeafCount < Leaves.Length,
+                "Any attempt to allocate a leaf should not overrun the allocated leaves. For all operations that allocate leaves, capacity should be preallocated.");
+            return LeafCount++;
+        }
+
         /// <summary>
         /// Gets bounds pointerse for a leaf in the tree.
         /// </summary>
