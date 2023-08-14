@@ -63,7 +63,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int Add(CollidableReference collidable, ref BoundingBox bounds, ref Tree tree, BufferPool pool, ref Buffer<CollidableReference> leaves)
         {
-            var leafIndex = tree.Add4(bounds, pool);
+            var leafIndex = tree.Add(bounds, pool);
             if (leafIndex >= leaves.Length)
             {
                 pool.ResizeToAtLeast(ref leaves, tree.LeafCount + 1, leaves.Length);
@@ -364,6 +364,7 @@ namespace BepuPhysics.CollisionDetection
         {
             ActiveRefinementSchedule(frameIndex, ActiveTree, out var activeRootRefinementSize, out var activeSubtreeRefinementCount, out var activeSubtreeRefinementSize, out var usePriorityQueueActive);
             StaticRefinementSchedule(frameIndex, StaticTree, out var staticRootRefinementSize, out var staticSubtreeRefinementCount, out var staticSubtreeRefinementSize, out var usePriorityQueueStatic);
+            Console.WriteLine($"root size: {activeRootRefinementSize}, subtree count: {activeSubtreeRefinementCount}, subtree size: {activeSubtreeRefinementSize}, usePQ: {usePriorityQueueActive}");
             const int minimumLeafCountForThreading = 256;
             if (threadDispatcher != null && threadDispatcher.ThreadCount > 1 && (ActiveTree.LeafCount >= minimumLeafCountForThreading || StaticTree.LeafCount >= minimumLeafCountForThreading))
             {

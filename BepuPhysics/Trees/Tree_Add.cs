@@ -4,192 +4,235 @@ using System.Runtime.CompilerServices;
 using System;
 using System.Diagnostics;
 using BepuUtilities.Memory;
+using BepuUtilities.Collections;
+using System.Collections.Generic;
 
-namespace BepuPhysics.Trees
+namespace BepuPhysics.Trees;
+
+partial struct Tree
 {
-    partial struct Tree
+    private struct InsertShouldNotRotate { }
+    private struct InsertShouldRotateTopDown { }
+    private struct InsertShouldRotateBottomUp { }
+
+    /// <summary>
+    /// Adds a leaf to the tree with the given bounding box and returns the index of the added leaf.
+    /// </summary>
+    /// <param name="bounds">Extents of the leaf bounds.</param>
+    /// <param name="pool">Resource pool to use if resizing is required.</param>
+    /// <returns>Index of the leaf allocated in the tree's leaf array.</returns>
+    /// <remarks>This performs no incremental refinement. When acting on the same tree, it's slightly cheaper than <see cref="Add"/>, 
+    /// but the quality of the tree depends on insertion order.<para/>
+    /// Pathological insertion orders can result in a maximally imbalanced tree, quadratic insertion times across the full tree build, and query performance linear in the number of leaves.<para/>
+    /// This is typically best reserved for cases where the insertion order is known to be randomized or otherwise conducive to building decent trees.</remarks>
+    public unsafe int AddWithoutRefinement(BoundingBox bounds, BufferPool pool)
     {
-        /// <summary>
-        /// Merges a new leaf node with an existing leaf node, producing a new internal node referencing both leaves, and then returns the index of the leaf node.
-        /// </summary>
-        /// <param name="newLeafBounds">Bounding box of the leaf being added.</param>
-        /// <param name="parentIndex">Index of the parent node that the existing leaf belongs to.</param>
-        /// <param name="indexInParent">Index of the child wtihin the parent node that the existing leaf belongs to.</param>
-        /// <param name="merged">Bounding box holding both the new and existing leaves.</param>
-        /// <returns>Index of the leaf </returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe int MergeLeafNodes(ref BoundingBox newLeafBounds, int parentIndex, int indexInParent, ref BoundingBox merged)
+        return Add<InsertShouldNotRotate>(bounds, pool);
+    }
+
+    /// <summary>
+    /// Adds a leaf to the tree with the given bounding box and returns the index of the added leaf.
+    /// </summary>
+    /// <param name="bounds">Extents of the leaf bounds.</param>
+    /// <param name="pool">Resource pool to use if resizing is required.</param>
+    /// <returns>Index of the leaf allocated in the tree's leaf array.</returns>
+    /// <remarks>Performs incrementally refining tree rotations down along the insertion path, unlike <see cref="AddWithoutRefinement"/>.<para/>
+    /// For a given tree, this is slightly slower than <see cref="AddWithoutRefinement"/> and slightly faster than <see cref="AddWithBottomUpRefinement"/>.<para/>
+    /// Trees built with repeated insertions of this kind tend to have decent quality, but slightly worse than <see cref="AddWithBottomUpRefinement"/>.</remarks>
+    public unsafe int Add(BoundingBox bounds, BufferPool pool)
+    {
+        return Add<InsertShouldRotateTopDown>(bounds, pool);
+    }
+
+    /// <summary>
+    /// Adds a leaf to the tree with the given bounding box and returns the index of the added leaf.
+    /// </summary>
+    /// <param name="bounds">Extents of the leaf bounds.</param>
+    /// <param name="pool">Resource pool to use if resizing is required.</param>
+    /// <returns>Index of the leaf allocated in the tree's leaf array.</returns>
+    /// <remarks>Performs incrementally refining tree rotations up along the insertion path, unlike <see cref="AddWithoutRefinement"/>.<para/>
+    /// Trees built with repeated insertions of this kind tend to have slightly better quality than <see cref="Add"/>, but it is also slightly more expensive.</remarks>
+    public unsafe int AddWithBottomUpRefinement(BoundingBox bounds, BufferPool pool)
+    {
+        return Add<InsertShouldRotateBottomUp>(bounds, pool);
+    }
+
+    private unsafe int Add<TShouldRotate>(BoundingBox bounds, BufferPool pool) where TShouldRotate : unmanaged
+    {
+        //The rest of the function assumes we have sufficient room. We don't want to deal with invalidated pointers mid-add.
+        if (Leaves.Length == LeafCount)
         {
-            //It's a leaf node.
-            //Create a new internal node with the new leaf and the old leaf as children.
-            //this is the only place where a new level could potentially be created.
+            //Note that, while we add 1, the underlying pool will request the next higher power of 2 in bytes that can hold it.
+            //Since we're already at capacity, that will be ~double the size.
+            Resize(pool, LeafCount + 1);
+        }
 
-            var newNodeIndex = AllocateNode();
-            ref var newNode = ref Nodes[newNodeIndex];
-            ref var newMetanode = ref Metanodes[newNodeIndex];
-            newMetanode.Parent = parentIndex;
-            newMetanode.IndexInParent = indexInParent;
-            newMetanode.RefineFlag = 0;
-            //The first child of the new node is the old leaf. Insert its bounding box.
-            ref var parentNode = ref Nodes[parentIndex];
-            ref var childInParent = ref Unsafe.Add(ref parentNode.A, indexInParent);
-            newNode.A = childInParent;
-
-            //Insert the new leaf into the second child slot.
-            ref var b = ref newNode.B;
-            b.Min = newLeafBounds.Min;
-            var leafIndex = AddLeaf(newNodeIndex, 1);
-            b.Index = Encode(leafIndex);
-            b.Max = newLeafBounds.Max;
-            b.LeafCount = 1;
-
-            //Update the old leaf node with the new index information.
-            var oldLeafIndex = Encode(newNode.A.Index);
-            Leaves[oldLeafIndex] = new Leaf(newNodeIndex, 0);
-
-            //Update the original node's child pointer and bounding box.
-            childInParent.Index = newNodeIndex;
-            childInParent.Min = merged.Min;
-            childInParent.Max = merged.Max;
-            Debug.Assert(childInParent.LeafCount == 1);
-            childInParent.LeafCount = 2;
+        if (LeafCount < 2)
+        {
+            //The root is partial.
+            ref var leafChild = ref Unsafe.Add(ref Nodes[0].A, LeafCount);
+            leafChild = Unsafe.As<BoundingBox, NodeChild>(ref bounds);
+            var leafIndex = AddLeaf(0, LeafCount);
+            leafChild.Index = Encode(leafIndex);
+            leafChild.LeafCount = 1;
             return leafIndex;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe int InsertLeafIntoEmptySlot(ref BoundingBox leafBox, int nodeIndex, int childIndex, ref Node node)
-        {
-            var leafIndex = AddLeaf(nodeIndex, childIndex);
-            ref var child = ref Unsafe.Add(ref node.A, childIndex);
-            child.Min = leafBox.Min;
-            child.Index = Encode(leafIndex);
-            child.Max = leafBox.Max;
-            child.LeafCount = 1;
-            return leafIndex;
-        }
-        enum BestInsertionChoice
-        {
-            NewInternal,
-            Traverse
-        }
+        //The tree is complete; traverse to find the best place to insert the leaf.
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void CreateMerged(ref Vector3 minA, ref Vector3 maxA, ref Vector3 minB, ref Vector3 maxB, out BoundingBox merged)
+        int nodeIndex = 0;
+        var bounds4 = Unsafe.As<BoundingBox, BoundingBox4>(ref bounds);
+        var newNodeIndex = AllocateNode();
+        //We only ever insert into child A, and it's guaranteed to belong to a new node, so we don't have to wait to add the leaf.
+        var newLeafIndex = AddLeaf(newNodeIndex, 0);
+        while (true)
         {
-            merged.Min = Vector3.Min(minA, minB);
-            merged.Max = Vector3.Max(maxA, maxB);
-        }
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe BestInsertionChoice ComputeBestInsertionChoice(ref BoundingBox bounds, float newLeafCost, ref NodeChild child, out BoundingBox mergedCandidate, out float costChange)
-        {
-            CreateMerged(ref child.Min, ref child.Max, ref bounds.Min, ref bounds.Max, out mergedCandidate);
-            var newCost = ComputeBoundsMetric(ref mergedCandidate);
-            if (child.Index >= 0)
+            //Note: rotating from the top down produces a tree that's lower quality that rotating from the bottom up.
+            //In context, that's fine; insertion just needs to produce a tree that isn't megatrash/stackoverflowy, and refinement will take care of the rest.
+            //The advantage is that top down is a little faster.
+            if (typeof(TShouldRotate) == typeof(InsertShouldRotateTopDown))
+                TryRotateNode(nodeIndex);
+            ref var node = ref Nodes[nodeIndex];
+            //Choose whichever child requires less bounds expansion. If they're tied, choose the one with the least leaf count.
+            BoundingBox.CreateMergedUnsafe(bounds4, node.A, out var mergedA);
+            BoundingBox.CreateMergedUnsafe(bounds4, node.B, out var mergedB);
+            var boundsIncreaseA = ComputeBoundsMetric(mergedA) - ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref node.A));
+            var boundsIncreaseB = ComputeBoundsMetric(mergedB) - ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref node.B));
+            var useA = boundsIncreaseA == boundsIncreaseB ? node.A.LeafCount < node.B.LeafCount : boundsIncreaseA < boundsIncreaseB;
+            ref var merged = ref Unsafe.As<BoundingBox4, NodeChild>(ref useA ? ref mergedA : ref mergedB);
+            ref var chosenChild = ref useA ? ref node.A : ref node.B;
+            if (chosenChild.LeafCount == 1)
             {
-                //Estimate the cost of child node expansions as max(SAH(newLeafBounds), costChange) * log2(child.LeafCount).
-                //We're assuming that the remaining tree is balanced and that each level will expand by at least SAH(newLeafBounds). 
-                //This might not be anywhere close to correct, but it's not a bad estimate.
-                costChange = newCost - ComputeBoundsMetric(ref child.Min, ref child.Max);
-                costChange += SpanHelper.GetContainingPowerOf2(child.LeafCount) * Math.Max(newLeafCost, costChange);
-                return BestInsertionChoice.Traverse;
+                //The merge target is a leaf. We'll need a new internal node.
+                ref var newNode = ref Nodes[newNodeIndex];
+                ref var newMetanode = ref Metanodes[newNodeIndex];
+                //Initialize the metanode of the new node.
+                newMetanode.Parent = nodeIndex;
+                newMetanode.IndexInParent = useA ? 0 : 1;
+                //Create the new child for the inserted leaf.
+                newNode.A = Unsafe.As<BoundingBox, NodeChild>(ref bounds);
+                newNode.A.LeafCount = 1;
+                newNode.A.Index = Encode(newLeafIndex);
+                //Move the leaf that used to be in the parent down into its new slot.
+                newNode.B = chosenChild;
+                //Update the moved leaf's location in the leaves. (Note that AddLeaf handled the leaves for the just-inserted leaf.)
+                Leaves[Encode(chosenChild.Index)] = new Leaf(newNodeIndex, 1);
+                //Update the parent's child reference to point to the new node. Note that the chosenChild still points to the slot we want.
+                chosenChild = merged;
+                chosenChild.LeafCount = 2;
+                chosenChild.Index = newNodeIndex;
+                break;
             }
             else
             {
-                costChange = newCost;
-                return BestInsertionChoice.NewInternal;
+                //Just traversing into an internal node. (This could be microoptimized a wee bit. Similar above.)
+                var index = chosenChild.Index;
+                var leafCount = chosenChild.LeafCount + 1;
+                chosenChild = merged;
+                chosenChild.Index = index;
+                chosenChild.LeafCount = leafCount;
+                nodeIndex = index;
             }
-
         }
 
-        /// <summary>
-        /// Adds a leaf to the tree with the given bounding box and returns the index of the added leaf.
-        /// </summary>
-        /// <param name="bounds">Extents of the leaf bounds.</param>
-        /// <param name="pool">Resource pool to use if resizing is required.</param>
-        /// <returns>Index of the leaf allocated in the tree's leaf array.</returns>
-        public unsafe int Add(BoundingBox bounds, BufferPool pool)
+        if (typeof(TShouldRotate) == typeof(InsertShouldRotateBottomUp))
         {
-            //The rest of the function assumes we have sufficient room. We don't want to deal with invalidated pointers mid-add.
-            if (Leaves.Length == LeafCount)
+            var parentIndex = Leaves[newLeafIndex].NodeIndex;
+            while (parentIndex >= 0)
             {
-                //Note that, while we add 1, the underlying pool will request the next higher power of 2 in bytes that can hold it.
-                //Since we're already at capacity, that will be ~double the size.
-                Resize(pool, LeafCount + 1);
+                TryRotateNode(parentIndex);
+                parentIndex = Metanodes[parentIndex].Parent;
             }
+        }
+        return newLeafIndex;
+    }
 
-            //Assumption: Index 0 is always the root if it exists, and an empty tree will have a 'root' with a child count of 0.
-            int nodeIndex = 0;
-            var newLeafCost = ComputeBoundsMetric(ref bounds);
-            while (true)
+    private unsafe void TryRotateNode(int rotationRootIndex)
+    {
+        ref var root = ref Nodes[rotationRootIndex];
+        var costA = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref root.A));
+        var costB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref root.B));
+        float leftRotationCostChange = 0;
+        bool leftUsesA = false;
+        float rightRotationCostChange = 0;
+        bool rightUsesA = false;
+        if (root.A.Index >= 0)
+        {
+            //Try a right rotation. root.B will merge with the better of A's children, while the worse of A's children will take the place of root.A.
+            ref var a = ref Nodes[root.A.Index];
+            BoundingBox.CreateMergedUnsafe(a.A, root.B, out var aaB);
+            BoundingBox.CreateMergedUnsafe(a.B, root.B, out var abB);
+            var costAAB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref aaB));
+            var costABB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref abB));
+            rightUsesA = costAAB < costABB;
+            rightRotationCostChange = float.Min(costAAB, costABB) - costA;
+        }
+        if (root.B.Index >= 0)
+        {
+            //Try a left rotation. root.A will merge with the better of B's children, while the worse of B's children will take the place of root.B.
+            ref var b = ref Nodes[root.B.Index];
+            BoundingBox.CreateMergedUnsafe(root.A, b.A, out var baB);
+            BoundingBox.CreateMergedUnsafe(root.A, b.B, out var bbB);
+            var costBAB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref baB));
+            var costBBB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref bbB));
+            leftUsesA = costBAB < costBBB;
+            leftRotationCostChange = float.Min(costBAB, costBBB) - costB;
+        }
+        if (float.Min(leftRotationCostChange, rightRotationCostChange) < 0)
+        {
+            //A rotation is worth it.
+            if (leftRotationCostChange < rightRotationCostChange)
             {
-                //Which child should the leaf belong to?
-
-                //Give the leaf to whichever node had the least cost change. 
-                ref var node = ref Nodes[nodeIndex];
-                //This is a binary tree, so the only time a node can have less than full children is when it's the root node.
-                //By convention, an empty tree still has a root node with no children, so we do have to handle this case.
-                if (LeafCount < 2)
-                {
-                    //The best slot will, at best, be tied with inserting it in a leaf node because the change in heuristic cost for filling an empty slot is zero.
-                    return InsertLeafIntoEmptySlot(ref bounds, nodeIndex, LeafCount, ref node);
-                }
-                else
-                {
-                    ref var a = ref node.A;
-                    ref var b = ref node.B;
-                    var choiceA = ComputeBestInsertionChoice(ref bounds, newLeafCost, ref a, out var mergedA, out var costChangeA);
-                    var choiceB = ComputeBestInsertionChoice(ref bounds, newLeafCost, ref b, out var mergedB, out var costChangeB);
-                    if (costChangeA <= costChangeB)
-                    {
-                        if (choiceA == BestInsertionChoice.NewInternal)
-                        {
-                            return MergeLeafNodes(ref bounds, nodeIndex, 0, ref mergedA);
-                        }
-                        else //if (choiceA == BestInsertionChoice.Traverse)
-                        {
-                            a.Min = mergedA.Min;
-                            a.Max = mergedA.Max;
-                            nodeIndex = a.Index;
-                            ++a.LeafCount;
-                        }
-                    }
-                    else
-                    {
-                        if (choiceB == BestInsertionChoice.NewInternal)
-                        {
-                            return MergeLeafNodes(ref bounds, nodeIndex, 1, ref mergedB);
-                        }
-                        else //if (choiceB == BestInsertionChoice.Traverse)
-                        {
-                            b.Min = mergedB.Min;
-                            b.Max = mergedB.Max;
-                            nodeIndex = b.Index;
-                            ++b.LeafCount;
-                        }
-                    }
-                }
-
-
+                //Left rotation wins!
+                var nodeIndexToReplace = root.B.Index;
+                ref var nodeToReplace = ref Nodes[nodeIndexToReplace];
+                var childToShiftUp = leftUsesA ? nodeToReplace.B : nodeToReplace.A;
+                var childToShiftLeft = leftUsesA ? nodeToReplace.A : nodeToReplace.B;
+                nodeToReplace.A = root.A;
+                nodeToReplace.B = childToShiftLeft;
+                BoundingBox.CreateMergedUnsafe(nodeToReplace.A, nodeToReplace.B, out root.A);
+                root.A.Index = nodeIndexToReplace;
+                root.A.LeafCount = nodeToReplace.A.LeafCount + nodeToReplace.B.LeafCount;
+                root.B = childToShiftUp;
+                Metanodes[nodeIndexToReplace] = new Metanode { Parent = rotationRootIndex, IndexInParent = 0 };
+                if (childToShiftUp.Index < 0) Leaves[Encode(childToShiftUp.Index)] = new Leaf(rotationRootIndex, 1); else Metanodes[childToShiftUp.Index] = new Metanode { Parent = rotationRootIndex, IndexInParent = 1 };
+                if (nodeToReplace.A.Index < 0) Leaves[Encode(nodeToReplace.A.Index)] = new Leaf(nodeIndexToReplace, 0); else Metanodes[nodeToReplace.A.Index] = new Metanode { Parent = nodeIndexToReplace, IndexInParent = 0 };
+                if (nodeToReplace.B.Index < 0) Leaves[Encode(nodeToReplace.B.Index)] = new Leaf(nodeIndexToReplace, 1); else Metanodes[nodeToReplace.B.Index] = new Metanode { Parent = nodeIndexToReplace, IndexInParent = 1 };
+            }
+            else
+            {
+                //Right rotation wins!
+                var nodeIndexToReplace = root.A.Index;
+                ref var nodeToReplace = ref Nodes[nodeIndexToReplace];
+                var childToShiftUp = rightUsesA ? nodeToReplace.B : nodeToReplace.A;
+                var childToShiftRight = rightUsesA ? nodeToReplace.A : nodeToReplace.B;
+                nodeToReplace.A = childToShiftRight;
+                nodeToReplace.B = root.B;
+                BoundingBox.CreateMergedUnsafe(nodeToReplace.A, nodeToReplace.B, out root.B);
+                root.B.Index = nodeIndexToReplace;
+                root.B.LeafCount = nodeToReplace.A.LeafCount + nodeToReplace.B.LeafCount;
+                root.A = childToShiftUp;
+                Metanodes[nodeIndexToReplace] = new Metanode { Parent = rotationRootIndex, IndexInParent = 1 };
+                if (childToShiftUp.Index < 0) Leaves[Encode(childToShiftUp.Index)] = new Leaf(rotationRootIndex, 0); else Metanodes[childToShiftUp.Index] = new Metanode { Parent = rotationRootIndex, IndexInParent = 0 };
+                if (nodeToReplace.A.Index < 0) Leaves[Encode(nodeToReplace.A.Index)] = new Leaf(nodeIndexToReplace, 0); else Metanodes[nodeToReplace.A.Index] = new Metanode { Parent = nodeIndexToReplace, IndexInParent = 0 };
+                if (nodeToReplace.B.Index < 0) Leaves[Encode(nodeToReplace.B.Index)] = new Leaf(nodeIndexToReplace, 1); else Metanodes[nodeToReplace.B.Index] = new Metanode { Parent = nodeIndexToReplace, IndexInParent = 1 };
             }
         }
+    }
 
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static float ComputeBoundsMetric(ref BoundingBox bounds)
-        {
-            return ComputeBoundsMetric(ref bounds.Min, ref bounds.Max);
-        }
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static float ComputeBoundsMetric(ref Vector3 min, ref Vector3 max)
-        {
-            //Note that we just use the SAH. While we are primarily interested in volume queries for the purposes of collision detection, the topological difference
-            //between a volume heuristic and surface area heuristic isn't huge. There is, however, one big annoying issue that volume heuristics run into:
-            //all bounding boxes with one extent equal to zero have zero cost. Surface area approaches avoid this hole simply.
-            var offset = max - min;
-            //Note that this is merely proportional to surface area. Being scaled by a constant factor is irrelevant.
-            return offset.X * offset.Y + offset.Y * offset.Z + offset.X * offset.Z;
-        }
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static float ComputeBoundsMetric(ref BoundingBox bounds)
+    {
+        return ComputeBoundsMetric(ref bounds.Min, ref bounds.Max);
+    }
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static float ComputeBoundsMetric(ref Vector3 min, ref Vector3 max)
+    {
+        //Note that we just use the SAH. While we are primarily interested in volume queries for the purposes of collision detection, the topological difference
+        //between a volume heuristic and surface area heuristic isn't huge. There is, however, one big annoying issue that volume heuristics run into:
+        //all bounding boxes with one extent equal to zero have zero cost. Surface area approaches avoid this hole simply.
+        var offset = max - min;
+        //Note that this is merely proportional to surface area. Being scaled by a constant factor is irrelevant.
+        return offset.X * offset.Y + offset.Y * offset.Z + offset.X * offset.Z;
     }
 }
