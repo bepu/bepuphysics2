@@ -720,6 +720,7 @@ public partial struct Tree
             subtreeRefinementCount = 0;
         if (targetTaskBudget < 0)
             targetTaskBudget = threadDispatcher.ThreadCount;
+
         //Clamp refinement sizes to avoid pointless overallocations when the user supplies odd inputs.
         rootRefinementSize = int.Min(rootRefinementSize, LeafCount);
         subtreeRefinementSize = int.Min(subtreeRefinementSize, LeafCount);
