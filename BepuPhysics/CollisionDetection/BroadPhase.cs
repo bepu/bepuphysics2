@@ -63,7 +63,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int Add(CollidableReference collidable, ref BoundingBox bounds, ref Tree tree, BufferPool pool, ref Buffer<CollidableReference> leaves)
         {
-            var leafIndex = tree.Add2(bounds, pool);
+            var leafIndex = tree.Add4(bounds, pool);
             if (leafIndex >= leaves.Length)
             {
                 pool.ResizeToAtLeast(ref leaves, tree.LeafCount + 1, leaves.Length);
@@ -434,6 +434,8 @@ namespace BepuPhysics.CollisionDetection
                 frameIndex = 0;
             else
                 ++frameIndex;
+            //StaticTree.Validate();
+            //ActiveTree.Validate();
         }
 
         /// <summary>
