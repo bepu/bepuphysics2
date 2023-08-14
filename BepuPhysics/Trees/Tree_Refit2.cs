@@ -69,14 +69,20 @@ partial struct Tree
         }
         else
         {
-            //At least one child is too small to warrant a new task. Just recurse on both.
+            //At least one child is too small to warrant a new task. The larger one may still be worth spawning subtasks within, though.
             if (a.Index >= 0)
             {
-                Refit2(ref a);
+                if (a.LeafCount >= context->LeafCountPerTask)
+                    Refit2WithTaskSpawning(ref a, context, workerIndex, dispatcher);
+                else
+                    Refit2(ref a);
             }
             if (b.Index >= 0)
             {
-                Refit2(ref b);
+                if (b.LeafCount >= context->LeafCountPerTask)
+                    Refit2WithTaskSpawning(ref b, context, workerIndex, dispatcher);
+                else
+                    Refit2(ref b);
             }
         }
         BoundingBox.CreateMergedUnsafeWithPreservation(a, b, out childInParent);
@@ -270,12 +276,15 @@ partial struct Tree
         }
         else
         {
-            //At least one child is too small to warrant a new task. Just recurse on both.
+            //At least one child is too small to warrant a new task. The larger one may still be worth spawning subtasks within, though.
             if (sourceA.Index >= 0)
             {
                 targetA.Index = targetIndexA;
                 targetA.LeafCount = sourceA.LeafCount;
-                Refit2WithCacheOptimization(sourceA.Index, targetNodeIndex, 0, ref targetA, ref *context);
+                if (sourceA.LeafCount >= context->LeafCountPerTask)
+                    Refit2WithCacheOptimizationAndTaskSpawning(sourceA.Index, targetNodeIndex, 0, ref targetA, context, workerIndex, dispatcher);
+                else
+                    Refit2WithCacheOptimization(sourceA.Index, targetNodeIndex, 0, ref targetA, ref *context);
             }
             else
             {
@@ -287,7 +296,10 @@ partial struct Tree
             {
                 targetB.Index = targetIndexB;
                 targetB.LeafCount = sourceB.LeafCount;
-                Refit2WithCacheOptimization(sourceB.Index, targetNodeIndex, 1, ref targetB, ref *context);
+                if (sourceB.LeafCount >= context->LeafCountPerTask)
+                    Refit2WithCacheOptimizationAndTaskSpawning(sourceB.Index, targetNodeIndex, 1, ref targetB, context, workerIndex, dispatcher);
+                else
+                    Refit2WithCacheOptimization(sourceB.Index, targetNodeIndex, 1, ref targetB, ref *context);
             }
             else
             {

@@ -6,20 +6,32 @@ using OpenTK.Graphics;
 using OpenTK.Platform;
 using System.Threading;
 using Vector2 = System.Numerics.Vector2;
+using System.Configuration;
+using System.Runtime.Intrinsics.X86;
+using System.Runtime.InteropServices;
+
 
 namespace DemoUtilities
 {
+
+
+
     public enum WindowMode
     {
         FullScreen,
         Windowed
-    }
 
+
+    }
+                   
     /// <summary>
     /// Simple and not-very-general-purpose window management.
     /// </summary>
     public class Window : IDisposable
     {
+
+  
+       
         internal NativeWindow window;
 
         private bool resized;
@@ -84,6 +96,16 @@ namespace DemoUtilities
         /// </summary>
         public bool Focused { get { return window.Focused; } }
 
+            //TODO TEST THIS
+        [DllImport("Shcore.dll")] static extern void SetProcessDpiAwareness(PROCESS_DPI_AWARENESS awareness);  //  //This code contains a dll import statement for the SetProcessDpiAwareness function from Shcore.dll. Please note that you will need to import the namespace for PROCESS_DPI_AWARENESS in order to use this code properly.
+
+        enum PROCESS_DPI_AWARENESS : uint
+        {
+            Process_DPI_Unaware = 0,
+            Process_System_DPI_Aware = 1,
+            Process_Per_Monitor_DPI_Aware = 2
+        }
+
 
         /// <summary>
         /// Constructs a new rendering-capable window.
@@ -94,12 +116,58 @@ namespace DemoUtilities
         /// <param name="windowMode">Initial window mode.</param>
         public Window(string title, Int2 resolution, Int2 location, WindowMode windowMode)
         {
-            window = new NativeWindow(location.X, location.Y, resolution.X, resolution.Y, title, GameWindowFlags.FixedWindow, GraphicsMode.Default, DisplayDevice.Default);
-            window.Visible = true;
-            Resolution = resolution;
-            window.Resize += (form, args) => resized = true;
-            window.Closing += OnClosing;
-            WindowMode = windowMode;
+
+        window=new NativeWindow(location.X, location.Y, resolution.X, resolution.Y, title, GameWindowFlags.FixedWindow, GraphicsMode.Default, DisplayDevice.Default);
+     
+            window.Visible=true;
+            Resolution=resolution;
+
+
+            //save the size to the user settings so that the window will be the same size next time the program is run
+            window.Resize+=(form, args) =>
+            {
+                resized=true;
+
+              
+                var width = window.ClientSize.Width;
+                var height = window.ClientSize.Height;
+                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                config.AppSettings.Settings.Remove("width");
+                config.AppSettings.Settings.Add("width", width.ToString());
+                config.AppSettings.Settings.Remove("height");
+                config.AppSettings.Settings.Add("height", height.ToString());
+                config.Save(ConfigurationSaveMode.Modified);
+                ConfigurationManager.RefreshSection("appSettings");
+                resized=false;
+                   
+               
+            };
+            //try to get the size from the user settings
+            var widthString = ConfigurationManager.AppSettings["width"];
+            var heightString = ConfigurationManager.AppSettings["height"];
+            if (!string.IsNullOrEmpty(widthString)&&!string.IsNullOrEmpty(heightString))
+            {
+                int width, height;
+                if (int.TryParse(widthString, out width)&&int.TryParse(heightString, out height))
+                {
+                    window.ClientSize=new Size(width, height);
+                }
+
+            }
+
+            //2 lines added by chatbot to fix window resize bug??
+            windowUpdateLoopRunning=false;
+            tryToClose=false;
+
+
+            window.Closing+=OnClosing;
+            WindowMode=windowMode;       //todo save this alos and seee if portable or if woks on optrk or win openGL as platfrom independedn.
+                                         //wet as window not console to rid the console box
+
+            //TODO  sset dpi             //TID sset dpi awarneness          if windows or if the api is there?
+        //    SetProcessDpiAwareness(PROCESS_DPI_AWARENESS.Process_Per_Monitor_DPI_Aware);
+            //awarneness
+
 
         }
         /// <summary>

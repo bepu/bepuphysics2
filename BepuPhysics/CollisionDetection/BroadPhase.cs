@@ -287,9 +287,11 @@ namespace BepuPhysics.CollisionDetection
             subtreeRefinementSize = (int)float.Ceiling(sqrtLeafCount * subtreeRefinementSizeScale);
 
             //Note that we scale up the cost of the root refinement; it uses a sequentialized priority queue to collect subtrees for refinement and costs more.
-            var subtreeRefinementsPerRootRefinement = (int)float.Ceiling(subtreeRefinementSize * float.Log2(subtreeRefinementSize) / (targetRootRefinementSize * float.Log2(targetRootRefinementSize)));
+            var subtreeRefinementsPerRootRefinementInCost = targetRootRefinementSize * float.Log2(targetRootRefinementSize) / (subtreeRefinementSize * float.Log2(subtreeRefinementSize));
             //If we're refining the root, reduce the number of subtree refinements to avoid cost spikes.
-            subtreeRefinementCount = int.Max(0, (int)float.Ceiling((float)targetOptimizedLeafCount / subtreeRefinementSize) - (refineRoot ? subtreeRefinementsPerRootRefinement : 0));
+            subtreeRefinementCount = int.Max(0, (int)float.Round((float)targetOptimizedLeafCount / subtreeRefinementSize - (refineRoot ? subtreeRefinementsPerRootRefinementInCost : 0)));
+            if (!refineRoot)
+                subtreeRefinementCount = int.Max(1, subtreeRefinementCount);
 
             rootRefinementSize = refineRoot ? targetRootRefinementSize : 0;
             usePriorityQueue = (frameIndex / rootRefinementPeriod) % nonpriorityPeriod != 0;
@@ -346,7 +348,7 @@ namespace BepuPhysics.CollisionDetection
             ref var context = ref *(RefinementContext*)untypedContext;
             var pool = dispatcher.WorkerPools[workerIndex];
             context.Tree.Refine2(context.RootRefinementSize, ref context.SubtreeRefinementStartIndex, context.SubtreeRefinementCount, context.SubtreeRefinementSize, pool, dispatcher, context.TaskStack, workerIndex, targetTaskCount: context.TargetTaskCount, deterministic: context.Deterministic, usePriorityQueue: context.UsePriorityQueue);
-            //Now refit! Note that we use all but one task. It doesn't affect the performance of a refit much (we're not compute bound), and we can use it to do an incremental cache optimization on the static tree.
+            //Now refit!
             var sourceNodes = context.Tree.Nodes;
             context.Tree.Nodes = context.TargetNodes;
             context.Tree.Refit2WithCacheOptimization(sourceNodes, pool, dispatcher, context.TaskStack, workerIndex, context.TargetTotalTaskCount);
@@ -364,7 +366,6 @@ namespace BepuPhysics.CollisionDetection
         {
             ActiveRefinementSchedule(frameIndex, ActiveTree, out var activeRootRefinementSize, out var activeSubtreeRefinementCount, out var activeSubtreeRefinementSize, out var usePriorityQueueActive);
             StaticRefinementSchedule(frameIndex, StaticTree, out var staticRootRefinementSize, out var staticSubtreeRefinementCount, out var staticSubtreeRefinementSize, out var usePriorityQueueStatic);
-            Console.WriteLine($"root size: {activeRootRefinementSize}, subtree count: {activeSubtreeRefinementCount}, subtree size: {activeSubtreeRefinementSize}, usePQ: {usePriorityQueueActive}");
             const int minimumLeafCountForThreading = 256;
             if (threadDispatcher != null && threadDispatcher.ThreadCount > 1 && (ActiveTree.LeafCount >= minimumLeafCountForThreading || StaticTree.LeafCount >= minimumLeafCountForThreading))
             {

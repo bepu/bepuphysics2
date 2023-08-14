@@ -40,6 +40,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="..\Demos\Demos\SpaceLizardDemo - Copy %282%29.cs" />
+    <Compile Remove="..\Demos\Demos\SpaceLizardDemo - Copy %283%29.cs" />
+    <Compile Remove="..\Demos\Demos\SpaceLizardDemo - Copy.cs" />
+    <Compile Remove="..\Demos\Demos\SpaceLizardDemoSimple.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="../Demos/Demos.contentarchive" Link="%(RecursiveDir)%(FileName)%(Extension)" />
   </ItemGroup>
 </Project>
