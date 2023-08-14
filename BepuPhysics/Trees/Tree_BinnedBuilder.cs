@@ -1511,7 +1511,8 @@ namespace BepuPhysics.Trees
             {
                 //No need to do anything fancy, all subtrees fit in the root. Requires a special case for the partial root.
                 nodes[0] = new Node { A = subtrees[0], B = subtrees.Length == 2 ? subtrees[1] : default };
-                metanodes[0] = new Metanode { Parent = -1, IndexInParent = -1 };
+                if (metanodes.Allocated)
+                    metanodes[0] = new Metanode { Parent = -1, IndexInParent = -1 };
                 return;
             }
             if (dispatcher != null && pool == null)
