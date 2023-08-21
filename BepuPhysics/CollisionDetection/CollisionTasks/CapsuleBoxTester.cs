@@ -8,7 +8,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct CapsuleBoxTester : IPairTester<CapsuleWide, BoxWide, Convex2ContactManifoldWide>
     {
-        public int BatchSize => 32;
+        public static int BatchSize => 32;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void Prepare(
@@ -174,7 +174,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Test(
+        public static void Test(
             ref CapsuleWide a, ref BoxWide b, ref Vector<float> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex2ContactManifoldWide manifold)
@@ -344,12 +344,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.GreaterThan(tMax - tMin, new Vector<float>(1e-7f) * a.HalfLength));
         }
 
-        public void Test(ref CapsuleWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
+        public static void Test(ref CapsuleWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref CapsuleWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex2ContactManifoldWide manifold)
+        public static void Test(ref CapsuleWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

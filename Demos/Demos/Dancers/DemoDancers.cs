@@ -74,7 +74,7 @@ namespace Demos.Demos.Dancers
     /// <typeparam name="TFilter">Type of the callback filters to use.</typeparam>
     public interface IDancerNarrowPhaseCallbacks<TCallbacks, TFilter> where TCallbacks : INarrowPhaseCallbacks, IDancerNarrowPhaseCallbacks<TCallbacks, TFilter> where TFilter : unmanaged
     {
-        TCallbacks Create(CollidableProperty<TFilter> filters, PairMaterialProperties pairMaterialProperties, int minimumDistanceForSelfCollisions);
+        static abstract TCallbacks Create(CollidableProperty<TFilter> filters, PairMaterialProperties pairMaterialProperties, int minimumDistanceForSelfCollisions);
     }
 
     /// <summary>
@@ -244,7 +244,7 @@ namespace Demos.Demos.Dancers
 
                 //If the required detail goes low enough, note that this demo disables cloth self collision to save some extra time.
                 //The ClothCallbacks specify a minimum distance required for self collision, and low detail (higher 'level of detail' values) results in MaxValue minimum distance.
-                var narrowPhaseCallbacks = default(TNarrowPhaseCallbacks).Create(dancerFilters, new PairMaterialProperties(0.4f, 20, new SpringSettings(120, 1)), levelOfDetail <= 0.5f ? 3 : int.MaxValue);
+                var narrowPhaseCallbacks = TNarrowPhaseCallbacks.Create(dancerFilters, new PairMaterialProperties(0.4f, 20, new SpringSettings(120, 1)), levelOfDetail <= 0.5f ? 3 : int.MaxValue);
                 var dancerSimulation = Simulation.Create(new BufferPool(16384), narrowPhaseCallbacks,
                     new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), dancerSolveDescription,
                     //To save some memory, initialize the dancer simulations with smaller starting sizes. For the higher level of detail simulations this could require some resizing. 

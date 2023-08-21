@@ -13,13 +13,13 @@ namespace BepuPhysics
 {
     interface IBodyReferenceGetter
     {
-        int GetBodyReference(Bodies bodies, BodyHandle handle);
+        static abstract int GetBodyReference(Bodies bodies, BodyHandle handle);
     }
 
     struct ActiveSetGetter : IBodyReferenceGetter
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetBodyReference(Bodies bodies, BodyHandle bodyHandle)
+        public static int GetBodyReference(Bodies bodies, BodyHandle bodyHandle)
         {
             ref var bodyLocation = ref bodies.HandleToLocation[bodyHandle.Value];
             Debug.Assert(bodyLocation.SetIndex == 0, "When creating a fallback batch for the active set, all bodies associated with it must be active.");
@@ -29,7 +29,7 @@ namespace BepuPhysics
     struct InactiveSetGetter : IBodyReferenceGetter
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetBodyReference(Bodies bodies, BodyHandle bodyHandle)
+        public static int GetBodyReference(Bodies bodies, BodyHandle bodyHandle)
         {
             return bodyHandle.Value;
         }
@@ -44,7 +44,7 @@ namespace BepuPhysics
         /// <summary>
         /// Gets the number of bodies in the fallback batch.
         /// </summary>
-        public readonly int BodyCount { get { return dynamicBodyConstraintCounts.Count; } }
+        public int BodyCount { get { return dynamicBodyConstraintCounts.Count; } }
 
         //In order to maintain the batch referenced handles for the fallback batch (which can have the same body appear more than once),
         //every body must maintain a count of fallback constraints associated with it.
@@ -60,7 +60,7 @@ namespace BepuPhysics
             EnsureCapacity(Math.Max(dynamicBodyConstraintCounts.Count + dynamicBodyHandles.Length, minimumBodyCapacity), pool);
             for (int i = 0; i < dynamicBodyHandles.Length; ++i)
             {
-                var bodyReference = bodyReferenceGetter.GetBodyReference(bodies, dynamicBodyHandles[i]);
+                var bodyReference = TBodyReferenceGetter.GetBodyReference(bodies, dynamicBodyHandles[i]);
 
                 if (dynamicBodyConstraintCounts.FindOrAllocateSlotUnsafely(bodyReference, out var slotIndex))
                 {

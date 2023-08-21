@@ -176,7 +176,7 @@ namespace BepuPhysics.Collidables
             return inertia;
         }
 
-        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public static ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new ConvexShapeBatch<Cylinder, CylinderWide>(pool, initialCapacity);
         }
@@ -185,7 +185,7 @@ namespace BepuPhysics.Collidables
         /// Type id of cylinder shapes.
         /// </summary>
         public const int Id = 4;
-        public readonly int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public static int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
     public struct CylinderWide : IShapeWide<Cylinder>
@@ -233,7 +233,7 @@ namespace BepuPhysics.Collidables
             maximumAngularExpansion = maximumRadius - Vector.Min(HalfLength, Radius);
         }
 
-        public int MinimumWideRayCount
+        public static int MinimumWideRayCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get

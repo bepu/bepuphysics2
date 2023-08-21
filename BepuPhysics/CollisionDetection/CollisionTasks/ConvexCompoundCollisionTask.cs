@@ -32,8 +32,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public ConvexCompoundCollisionTask()
         {
             BatchSize = 16;
-            ShapeTypeIndexA = default(TConvex).TypeId;
-            ShapeTypeIndexB = default(TCompound).TypeId;
+            ShapeTypeIndexA = TConvex.TypeId;
+            ShapeTypeIndexB = TCompound.TypeId;
             SubtaskGenerator = true;
             PairType = CollisionTaskPairType.BoundsTestedPair;
         }

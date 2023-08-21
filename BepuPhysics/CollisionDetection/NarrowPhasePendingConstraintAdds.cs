@@ -125,7 +125,7 @@ namespace BepuPhysics.CollisionDetection
                 Span<int> encodedBodyIndices = stackalloc int[handles.Length];
                 simulation.Solver.GetBlockingBodyHandles(handles, ref blockingBodyHandles, encodedBodyIndices);
                 while (!simulation.Solver.TryAllocateInBatch(
-                    default(TDescription).ConstraintTypeId, batchIndex,
+                    TDescription.ConstraintTypeId, batchIndex,
                     blockingBodyHandles, encodedBodyIndices, out constraintHandle, out reference))
                 {
                     //If a batch index failed, just try the next one. This is guaranteed to eventually work.

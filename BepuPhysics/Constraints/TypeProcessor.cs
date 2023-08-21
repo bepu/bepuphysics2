@@ -232,7 +232,7 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public interface ISortKeyGenerator<TBodyReferences> where TBodyReferences : unmanaged
     {
-        int GetSortKey(int constraintIndex, ref Buffer<TBodyReferences> bodyReferences);
+        static abstract int GetSortKey(int constraintIndex, ref Buffer<TBodyReferences> bodyReferences);
     }
 
     //Note that the only reason to have generics at the type level here is to avoid the need to specify them for each individual function. It's functionally equivalent, but this just
@@ -827,12 +827,11 @@ namespace BepuPhysics.Constraints
            ref int firstSortKey, ref int firstSourceIndex, ref Buffer<byte> bodyReferencesCache)
             where TSortKeyGenerator : struct, ISortKeyGenerator<TBodyReferences>
         {
-            var sortKeyGenerator = default(TSortKeyGenerator);
             var bodyReferences = typeBatch.BodyReferences.As<TBodyReferences>();
             for (int i = 0; i < constraintCount; ++i)
             {
                 Unsafe.Add(ref firstSourceIndex, i) = localConstraintStart + i;
-                Unsafe.Add(ref firstSortKey, i) = sortKeyGenerator.GetSortKey(constraintStart + i, ref bodyReferences);
+                Unsafe.Add(ref firstSortKey, i) = TSortKeyGenerator.GetSortKey(constraintStart + i, ref bodyReferences);
             }
             var typedBodyReferencesCache = bodyReferencesCache.As<TBodyReferences>();
             bodyReferences.CopyTo(bundleStart, typedBodyReferencesCache, localBundleStart, bundleCount);
@@ -842,7 +841,6 @@ namespace BepuPhysics.Constraints
         protected void VerifySortRegion<TSortKeyGenerator>(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices)
             where TSortKeyGenerator : struct, ISortKeyGenerator<TBodyReferences>
         {
-            var sortKeyGenerator = default(TSortKeyGenerator);
             var previousKey = -1;
             var baseIndex = bundleStartIndex << BundleIndexing.VectorShift;
             var bodyReferences = typeBatch.BodyReferences.As<TBodyReferences>();
@@ -850,7 +848,7 @@ namespace BepuPhysics.Constraints
             {
                 var sourceIndex = sortedSourceIndices[i];
                 var targetIndex = baseIndex + i;
-                var key = sortKeyGenerator.GetSortKey(baseIndex + i, ref bodyReferences);
+                var key = TSortKeyGenerator.GetSortKey(baseIndex + i, ref bodyReferences);
                 //Note that this assert uses >= and not >; in a synchronized constraint batch, it's impossible for body references to be duplicated, but fallback batches CAN have duplicates.
                 Debug.Assert(key >= previousKey, "After the sort and swap completes, all constraints should be in order.");
                 Debug.Assert(key == sortedKeys[i], "After the swap goes through, the rederived sort keys should match the previously sorted ones.");

@@ -93,27 +93,27 @@ public class SolverContactEnumerationDemo : Demo
             where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
         {
             //Note that we narrow from the raw vectorized reference into a more application-convenient AOS representation.
-            Vector3Wide.ReadFirst(prestep.GetNormal(ref prestep), out var normal);
+            Vector3Wide.ReadFirst(TPrestep.GetNormal(ref prestep), out var normal);
 
             //We'll approximate the per-contact friction by allocating the shared friction impulses to contacts weighted by their penetration impulse.
             float totalPenetrationImpulse = 0;
-            for (int i = 0; i < prestep.ContactCount; ++i)
+            for (int i = 0; i < TPrestep.ContactCount; ++i)
             {
-                ref var sourceContact = ref prestep.GetContact(ref prestep, i);
+                ref var sourceContact = ref TPrestep.GetContact(ref prestep, i);
                 ref var targetContact = ref constraintContacts.Contacts.AllocateUnsafely();
                 Vector3Wide.ReadFirst(sourceContact.OffsetA, out targetContact.OffsetA);
                 //We can use [0] to access the slot because the prestep bundle memory reference was already offset for us.
                 targetContact.Depth = sourceContact.Depth[0];
                 targetContact.Normal = normal;
-                targetContact.PenetrationImpulse = impulses.GetPenetrationImpulseForContact(ref impulses, i)[0];
+                targetContact.PenetrationImpulse = TAccumulatedImpulses.GetPenetrationImpulseForContact(ref impulses, i)[0];
                 totalPenetrationImpulse += targetContact.PenetrationImpulse;
             }
-            Vector2Wide.ReadFirst(impulses.GetTangentFriction(ref impulses), out var tangentFriction);
-            var twistFriction = impulses.GetTwistFriction(ref impulses)[0];
+            Vector2Wide.ReadFirst(TAccumulatedImpulses.GetTangentFriction(ref impulses), out var tangentFriction);
+            var twistFriction = TAccumulatedImpulses.GetTwistFriction(ref impulses)[0];
             //This isn't a 'correct' allocation of impulses, we just want a rough sense.
             var frictionMagnitudeApproximation = MathF.Sqrt(tangentFriction.LengthSquared() + twistFriction * twistFriction);
             var impulseScale = totalPenetrationImpulse > 0 ? frictionMagnitudeApproximation / totalPenetrationImpulse : 0;
-            for (int i = 0; i < prestep.ContactCount; ++i)
+            for (int i = 0; i < TPrestep.ContactCount; ++i)
             {
                 ref var contact = ref constraintContacts.Contacts[i];
                 contact.FrictionImpulseMagnitude = contact.PenetrationImpulse * impulseScale;
@@ -143,15 +143,15 @@ public class SolverContactEnumerationDemo : Demo
             where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
         {
             //Nonconvex types require no approximation of friction; we can pull it directly from the solved results.
-            for (int i = 0; i < prestep.ContactCount; ++i)
+            for (int i = 0; i < TPrestep.ContactCount; ++i)
             {
-                ref var sourceContact = ref prestep.GetContact(ref prestep, i);
+                ref var sourceContact = ref TPrestep.GetContact(ref prestep, i);
                 ref var targetContact = ref constraintContacts.Contacts.AllocateUnsafely();
                 Vector3Wide.ReadFirst(sourceContact.Offset, out targetContact.OffsetA);
                 targetContact.Depth = sourceContact.Depth[0];
                 Vector3Wide.ReadFirst(sourceContact.Normal, out targetContact.Normal);
 
-                ref var contactImpulses = ref impulses.GetImpulsesForContact(ref impulses, i);
+                ref var contactImpulses = ref TAccumulatedImpulses.GetImpulsesForContact(ref impulses, i);
                 targetContact.PenetrationImpulse = contactImpulses.Penetration[0];
                 Vector2Wide.ReadFirst(contactImpulses.Tangent, out var tangentImpulses);
                 targetContact.FrictionImpulseMagnitude = tangentImpulses.Length();

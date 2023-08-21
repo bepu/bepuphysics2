@@ -33,7 +33,7 @@ namespace BepuPhysics.CollisionDetection
             for (int i = 0; i < raySource.RayCount; i += Vector<float>.Count)
             {
                 var count = raySource.RayCount - i;
-                if (count < wide.MinimumWideRayCount)
+                if (count < TShapeWide.MinimumWideRayCount)
                 {
                     for (int j = 0; j < count; ++j)
                     {

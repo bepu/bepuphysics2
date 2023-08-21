@@ -91,33 +91,30 @@ public class ConvexCollisionTesterBenchmarks
 
     Vector<float> TestOrientationless1Contact<TTester, TShapeA, TShapeB>(TShapeA a, TShapeB b) where TTester : unmanaged, IPairTester<TShapeA, TShapeB, Convex1ContactManifoldWide>
     {
-        var tester = default(TTester);
         Vector<float> testSum = Vector<float>.Zero;
         for (int i = 0; i < iterationCount; ++i)
         {
-            tester.Test(ref a, ref b, ref speculativeMargins[i], ref offsetsB[i], Vector<float>.Count, out var manifold);
+            TTester.Test(ref a, ref b, ref speculativeMargins[i], ref offsetsB[i], Vector<float>.Count, out var manifold);
             testSum += manifold.Depth + manifold.Normal.X + manifold.Normal.Y + manifold.Normal.Z + manifold.OffsetA.X + manifold.OffsetA.Y + manifold.OffsetA.Z;
         }
         return testSum;
     }
     Vector<float> TestOrientationB1Contact<TTester, TShapeA, TShapeB>(TShapeA a, TShapeB b) where TTester : unmanaged, IPairTester<TShapeA, TShapeB, Convex1ContactManifoldWide>
     {
-        var tester = default(TTester);
         Vector<float> testSum = Vector<float>.Zero;
         for (int i = 0; i < iterationCount; ++i)
         {
-            tester.Test(ref a, ref b, ref speculativeMargins[i], ref offsetsB[i], ref orientationsB[i], Vector<float>.Count, out var manifold);
+            TTester.Test(ref a, ref b, ref speculativeMargins[i], ref offsetsB[i], ref orientationsB[i], Vector<float>.Count, out var manifold);
             testSum += manifold.Depth + manifold.Normal.X + manifold.Normal.Y + manifold.Normal.Z + manifold.OffsetA.X + manifold.OffsetA.Y + manifold.OffsetA.Z;
         }
         return testSum;
     }
     Vector<float> Test2Contact<TTester, TShapeA, TShapeB>(TShapeA a, TShapeB b) where TTester : unmanaged, IPairTester<TShapeA, TShapeB, Convex2ContactManifoldWide>
     {
-        var tester = default(TTester);
         Vector<float> testSum = Vector<float>.Zero;
         for (int i = 0; i < iterationCount; ++i)
         {
-            tester.Test(ref a, ref b, ref speculativeMargins[i], ref offsetsB[i], ref orientationsA[i], ref orientationsB[i], Vector<float>.Count, out var manifold);
+            TTester.Test(ref a, ref b, ref speculativeMargins[i], ref offsetsB[i], ref orientationsA[i], ref orientationsB[i], Vector<float>.Count, out var manifold);
             testSum += manifold.Normal.X + manifold.Normal.Y + manifold.Normal.Z +
                 manifold.OffsetA0.X + manifold.OffsetA0.Y + manifold.OffsetA0.Z + manifold.Depth0 +
                 manifold.OffsetA1.X + manifold.OffsetA1.Y + manifold.OffsetA1.Z + manifold.Depth1;
@@ -126,11 +123,10 @@ public class ConvexCollisionTesterBenchmarks
     }
     Vector<float> Test4Contact<TTester, TShapeA, TShapeB>(TShapeA a, TShapeB b) where TTester : unmanaged, IPairTester<TShapeA, TShapeB, Convex4ContactManifoldWide>
     {
-        var tester = default(TTester);
         Vector<float> testSum = Vector<float>.Zero;
         for (int i = 0; i < iterationCount; ++i)
         {
-            tester.Test(ref a, ref b, ref speculativeMargins[i], ref offsetsB[i], ref orientationsA[i], ref orientationsB[i], Vector<float>.Count, out var manifold);
+            TTester.Test(ref a, ref b, ref speculativeMargins[i], ref offsetsB[i], ref orientationsA[i], ref orientationsB[i], Vector<float>.Count, out var manifold);
             testSum += manifold.Normal.X + manifold.Normal.Y + manifold.Normal.Z +
                 manifold.OffsetA0.X + manifold.OffsetA0.Y + manifold.OffsetA0.Z + manifold.Depth0 +
                 manifold.OffsetA1.X + manifold.OffsetA1.Y + manifold.OffsetA1.Z + manifold.Depth1 +

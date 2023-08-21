@@ -9,9 +9,9 @@ namespace DemoRenderer.Constraints
 {
     struct CenterDistanceLineExtractor : IConstraintLineExtractor<CenterDistancePrestepData>
     {
-        public int LinesPerConstraint => 2;
+        public static int LinesPerConstraint => 2;
 
-        public unsafe void ExtractLines(ref CenterDistancePrestepData prestepBundle, int setIndex, int* bodyIndices,
+        public static unsafe void ExtractLines(ref CenterDistancePrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.

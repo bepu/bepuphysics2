@@ -16,10 +16,9 @@ namespace Demos.SpecializedTests
 {
     public class TriangleTestDemo : Demo
     {
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             {
-                SphereTriangleTester tester;
                 SphereWide sphere = default;
                 sphere.Broadcast(new Sphere(0.5f));
                 TriangleWide triangle = default;
@@ -34,10 +33,9 @@ namespace Demos.SpecializedTests
                 var margin = new Vector<float>(1f);
                 Vector3Wide.Broadcast(new Vector3(1, -1, 0), out var offsetB);
                 QuaternionWide.Broadcast(QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), out var orientationB);
-                tester.Test(ref sphere, ref triangle, ref margin, ref offsetB, ref orientationB, Vector<float>.Count, out var manifold);
+                SphereTriangleTester.Test(ref sphere, ref triangle, ref margin, ref offsetB, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
-                CapsuleTriangleTester tester;
                 CapsuleWide capsule = default;
                 capsule.Broadcast(new Capsule(0.5f, 0.5f));
                 TriangleWide triangle = default;
@@ -53,10 +51,9 @@ namespace Demos.SpecializedTests
                 Vector3Wide.Broadcast(new Vector3(-1f, -0.5f, -1f), out var offsetB);
                 QuaternionWide.Broadcast(QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), MathHelper.PiOver2), out var orientationA);
                 QuaternionWide.Broadcast(QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
-                tester.Test(ref capsule, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
+                CapsuleTriangleTester.Test(ref capsule, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
-                BoxTriangleTester tester;
                 BoxWide shape = default;
                 shape.Broadcast(new Box(1f, 1f, 1f));
                 TriangleWide triangle = default;
@@ -72,10 +69,9 @@ namespace Demos.SpecializedTests
                 Vector3Wide.Broadcast(new Vector3(-1f, -0.5f, -1f), out var offsetB);
                 QuaternionWide.Broadcast(QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), MathHelper.PiOver2), out var orientationA);
                 QuaternionWide.Broadcast(QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
-                tester.Test(ref shape, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
+                BoxTriangleTester.Test(ref shape, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
-                TrianglePairTester tester;
                 TriangleWide a = default, b = default;
                 a.Broadcast(new Triangle(new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1)));
                 b.Broadcast(new Triangle(new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1)));
@@ -84,7 +80,7 @@ namespace Demos.SpecializedTests
                 Vector3Wide.Broadcast(new Vector3(0, -1, 0), out var offsetB);
                 QuaternionWide.Broadcast(QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), 0), out var orientationA);
                 QuaternionWide.Broadcast(QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
-                tester.Test(ref a, ref b, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
+                TrianglePairTester.Test(ref a, ref b, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
                 camera.Position = new Vector3(0, 3, -10);

@@ -56,7 +56,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             ref var triangle = ref continuation.Triangles[triangleAStartIndex++];
             childShapeDataA = Unsafe.AsPointer(ref triangle);
-            childTypeA = triangle.TypeId;
+            childTypeA = Triangle.TypeId;
             Unsafe.AsRef<TMeshA>(pair.A).GetLocalChild(childIndexA, out triangle);
             childPoseA = new RigidPose(default, pair.OrientationA);
         }
@@ -71,7 +71,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //In other words, we can pass a pointer to it to avoid the need for additional batcher shape copying.
             ref var triangle = ref continuation.Triangles[continuationChildIndex];
             childShapeDataB = Unsafe.AsPointer(ref triangle);
-            childTypeB = triangle.TypeId;
+            childTypeB = Triangle.TypeId;
             Unsafe.AsRef<TMeshB>(pair.B).GetLocalChild(childIndexB, out continuation.Triangles[continuationChildIndex]);
             ref var continuationChild = ref continuation.Inner.Children[continuationChildIndex];
             //In meshes, the triangle's vertices already contain the offset, so there is no additional offset.                                 

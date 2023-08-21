@@ -8,20 +8,20 @@ namespace Demos.SpecializedTests
 {
     public interface IRayTester<T> where T : IShape
     {
-        void GetRandomShape(Random random, out T shape);
-        void GetPointInVolume(Random random, float innerMargin, ref T shape, out Vector3 localPointInCapsule);
-        void GetSurface(Random random, ref T shape, out Vector3 localPointOnCapsule, out Vector3 localNormal);
-        bool PointIsOnSurface(ref T shape, ref Vector3 localPoint);
+        static abstract void GetRandomShape(Random random, out T shape);
+        static abstract void GetPointInVolume(Random random, float innerMargin, ref T shape, out Vector3 localPointInCapsule);
+        static abstract void GetSurface(Random random, ref T shape, out Vector3 localPointOnCapsule, out Vector3 localNormal);
+        static abstract bool PointIsOnSurface(ref T shape, ref Vector3 localPoint);
     }
     public struct SphereRayTester : IRayTester<Sphere>
     {
-        public void GetRandomShape(Random random, out Sphere shape)
+        public static void GetRandomShape(Random random, out Sphere shape)
         {
             const float sizeMin = 0.1f;
             const float sizeSpan = 200;
             shape = new Sphere(sizeMin + sizeSpan * random.NextSingle());
         }
-        public void GetPointInVolume(Random random, float innerMargin, ref Sphere shape, out Vector3 localPoint)
+        public static void GetPointInVolume(Random random, float innerMargin, ref Sphere shape, out Vector3 localPoint)
         {
             float effectiveRadius = Math.Max(0, shape.Radius - innerMargin);
             float radiusSquared = effectiveRadius * effectiveRadius;
@@ -35,13 +35,13 @@ namespace Demos.SpecializedTests
             } while (localPoint.LengthSquared() > radiusSquared);
         }
 
-        public void GetSurface(Random random, ref Sphere sphere, out Vector3 localPoint, out Vector3 localNormal)
+        public static void GetSurface(Random random, ref Sphere sphere, out Vector3 localPoint, out Vector3 localNormal)
         {
             RayTesting.GetUnitDirection(random, out localNormal);
             localPoint = localNormal * sphere.Radius;
         }
 
-        public bool PointIsOnSurface(ref Sphere shape, ref Vector3 localPoint)
+        public static bool PointIsOnSurface(ref Sphere shape, ref Vector3 localPoint)
         {
             var surfaceDistance = localPoint.Length() - shape.Radius;
             if (surfaceDistance < 0)
@@ -52,13 +52,13 @@ namespace Demos.SpecializedTests
 
     public struct CapsuleRayTester : IRayTester<Capsule>
     {
-        public void GetRandomShape(Random random, out Capsule shape)
+        public static void GetRandomShape(Random random, out Capsule shape)
         {
             const float sizeMin = 0.1f;
             const float sizeSpan = 200;
             shape = new Capsule(sizeMin + sizeSpan * random.NextSingle(), sizeMin * sizeSpan * random.NextSingle());
         }
-        public void GetPointInVolume(Random random, float innerMargin, ref Capsule capsule, out Vector3 localPointInCapsule)
+        public static void GetPointInVolume(Random random, float innerMargin, ref Capsule capsule, out Vector3 localPointInCapsule)
         {
             float distanceSquared;
             float effectiveRadius = Math.Max(0, capsule.Radius - innerMargin);
@@ -75,7 +75,7 @@ namespace Demos.SpecializedTests
             } while (distanceSquared > radiusSquared);
         }
 
-        public void GetSurface(Random random, ref Capsule capsule, out Vector3 localPointOnCapsule, out Vector3 localNormal)
+        public static void GetSurface(Random random, ref Capsule capsule, out Vector3 localPointOnCapsule, out Vector3 localNormal)
         {
             float distanceSquared;
             float radiusSquared = capsule.Radius * capsule.Radius;
@@ -95,7 +95,7 @@ namespace Demos.SpecializedTests
             localPointOnCapsule = projectedCandidate + localNormal * capsule.Radius;
         }
 
-        public bool PointIsOnSurface(ref Capsule capsule, ref Vector3 localPoint)
+        public static bool PointIsOnSurface(ref Capsule capsule, ref Vector3 localPoint)
         {
             var projected = MathHelper.Clamp(localPoint.Y, -capsule.HalfLength, capsule.HalfLength);
             var surfaceDistance = Vector3.Distance(localPoint, new Vector3(0, projected, 0)) - capsule.Radius;
@@ -107,13 +107,13 @@ namespace Demos.SpecializedTests
 
     public struct CylinderRayTester : IRayTester<Cylinder>
     {
-        public void GetRandomShape(Random random, out Cylinder shape)
+        public static void GetRandomShape(Random random, out Cylinder shape)
         {
             const float sizeMin = 0.1f;
             const float sizeSpan = 200;
             shape = new Cylinder(sizeMin + sizeSpan * random.NextSingle(), sizeMin * sizeSpan * random.NextSingle());
         }
-        public void GetPointInVolume(Random random, float innerMargin, ref Cylinder cylinder, out Vector3 localPointInCylinder)
+        public static void GetPointInVolume(Random random, float innerMargin, ref Cylinder cylinder, out Vector3 localPointInCylinder)
         {
             float distanceSquared;
             float effectiveRadius = Math.Max(0, cylinder.Radius - innerMargin);
@@ -132,7 +132,7 @@ namespace Demos.SpecializedTests
             localPointInCylinder = new Vector3(randomHorizontal.X, -effectiveHalfLength + 2 * effectiveHalfLength * random.NextSingle(), randomHorizontal.Y);
         }
 
-        public void GetSurface(Random random, ref Cylinder cylinder, out Vector3 localPointOnCylinder, out Vector3 localNormal)
+        public static void GetSurface(Random random, ref Cylinder cylinder, out Vector3 localPointOnCylinder, out Vector3 localNormal)
         {
             float distanceSquared;
             var min = new Vector2(cylinder.Radius);
@@ -174,7 +174,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        public bool PointIsOnSurface(ref Cylinder cylinder, ref Vector3 localPoint)
+        public static bool PointIsOnSurface(ref Cylinder cylinder, ref Vector3 localPoint)
         {
             var epsilon = MathF.Max(cylinder.HalfLength, cylinder.Radius) * 1e-3f;
             if (MathF.Abs(localPoint.Y) > cylinder.HalfLength + epsilon)
@@ -202,13 +202,13 @@ namespace Demos.SpecializedTests
 
     public struct BoxRayTester : IRayTester<Box>
     {
-        public void GetRandomShape(Random random, out Box shape)
+        public static void GetRandomShape(Random random, out Box shape)
         {
             const float sizeMin = 0.1f;
             const float sizeSpan = 200;
             shape = new Box(sizeMin + sizeSpan * random.NextSingle(), sizeMin * sizeSpan * random.NextSingle(), sizeMin * sizeSpan * random.NextSingle());
         }
-        public void GetPointInVolume(Random random, float innerMargin, ref Box box, out Vector3 localPoint)
+        public static void GetPointInVolume(Random random, float innerMargin, ref Box box, out Vector3 localPoint)
         {
             var min = new Vector3(box.HalfWidth - innerMargin, box.HalfHeight - innerMargin, box.HalfLength - innerMargin);
             var span = min * 2;
@@ -216,7 +216,7 @@ namespace Demos.SpecializedTests
             localPoint = min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
         }
 
-        public void GetSurface(Random random, ref Box box, out Vector3 localPoint, out Vector3 localNormal)
+        public static void GetSurface(Random random, ref Box box, out Vector3 localPoint, out Vector3 localNormal)
         {
             var a = random.NextSingle();
             var b = random.NextSingle();
@@ -246,7 +246,7 @@ namespace Demos.SpecializedTests
             localPoint = (2 * a - 1) * x + (2 * b - 1) * y + z;
         }
 
-        public bool PointIsOnSurface(ref Box box, ref Vector3 localPoint)
+        public static bool PointIsOnSurface(ref Box box, ref Vector3 localPoint)
         {
             //Cast a ray against the box's bounding planes from the local origin using the local point as the direction.
             //In effect, all we're doing here is making sure that the closest plane impact has an offset similar to its box extent.
@@ -382,12 +382,11 @@ namespace Demos.SpecializedTests
 
             const float outwardPointingSpan = 1000f;
 
-            var tester = default(TTester);
             var random = new Random(5);
             TShapeWide shapeWide = default;
             for (int shapeIteration = 0; shapeIteration < shapeIterations; ++shapeIteration)
             {
-                tester.GetRandomShape(random, out var shape);
+                TTester.GetRandomShape(random, out var shape);
                 shapeWide.Broadcast(shape);
                 for (int transformIteration = 0; transformIteration < transformIterations; ++transformIteration)
                 {
@@ -400,9 +399,9 @@ namespace Demos.SpecializedTests
                     QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);
                     for (int rayIndex = 0; rayIndex < outsideToInsideRays; ++rayIndex)
                     {
-                        tester.GetSurface(random, ref shape, out var pointOnSurface, out var normal);
+                        TTester.GetSurface(random, ref shape, out var pointOnSurface, out var normal);
                         var localSourcePoint = pointOnSurface + normal * (outsideMinimumDistance + random.NextSingle() * outsideDistanceSpan);
-                        tester.GetPointInVolume(random, volumeInnerMargin, ref shape, out var localTargetPoint);
+                        TTester.GetPointInVolume(random, volumeInnerMargin, ref shape, out var localTargetPoint);
 
                         Matrix3x3.Transform(localSourcePoint, orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
@@ -417,7 +416,7 @@ namespace Demos.SpecializedTests
                             var hitLocation = sourcePoint + t * direction;
                             var localHitLocation = hitLocation - pose.Position;
                             Matrix3x3.TransformTranspose(localHitLocation, orientation, out localHitLocation);
-                            if (!tester.PointIsOnSurface(ref shape, ref localHitLocation))
+                            if (!TTester.PointIsOnSurface(ref shape, ref localHitLocation))
                             {
                                 Console.WriteLine("Outside->inside ray detected non-surface impact.");
                             }
@@ -430,7 +429,7 @@ namespace Demos.SpecializedTests
                     }
                     for (int rayIndex = 0; rayIndex < insideRays; ++rayIndex)
                     {
-                        tester.GetPointInVolume(random, volumeInnerMargin, ref shape, out var localSourcePoint);
+                        TTester.GetPointInVolume(random, volumeInnerMargin, ref shape, out var localSourcePoint);
                         Matrix3x3.Transform(localSourcePoint, orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
 
@@ -456,7 +455,7 @@ namespace Demos.SpecializedTests
                     for (int rayIndex = 0; rayIndex < outsideRays; ++rayIndex)
                     {
                         //Create a ray that lies on one of the shape's tangent planes, offset from the surface some amount to avoid numerical limitations.
-                        tester.GetSurface(random, ref shape, out var pointOnSurface, out var localNormal);
+                        TTester.GetSurface(random, ref shape, out var pointOnSurface, out var localNormal);
                         var localTargetPoint = pointOnSurface + localNormal * (tangentMinimumDistance + random.NextSingle() * tangentDistanceSpan);
                         var exclusion = tangentCentralExclusionMin + random.NextSingle() * tangentCentralExclusionSpan;
                         var span = 2 * exclusion + tangentSourceSpanMin + tangentSourceSpanSpan * random.NextSingle();
@@ -475,7 +474,7 @@ namespace Demos.SpecializedTests
                     }
                     for (int rayIndex = 0; rayIndex < outwardPointingRays; ++rayIndex)
                     {
-                        tester.GetSurface(random, ref shape, out var pointOnSurface, out var localNormal);
+                        TTester.GetSurface(random, ref shape, out var pointOnSurface, out var localNormal);
                         var localSourcePoint = pointOnSurface + localNormal * (tangentMinimumDistance + random.NextSingle() * tangentDistanceSpan);
                         Vector3 localTargetPoint;
                         do

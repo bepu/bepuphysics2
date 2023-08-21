@@ -11,7 +11,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public interface ICompoundPairOverlapFinder
     {
-        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps);
+        static abstract void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps);
     }
 
     public unsafe interface ICompoundPairContinuationHandler<TContinuation> where TContinuation : struct, ICollisionTestContinuation
@@ -40,8 +40,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public CompoundPairCollisionTask()
         {
             BatchSize = 16;
-            ShapeTypeIndexA = default(TCompoundA).TypeId;
-            ShapeTypeIndexB = default(TCompoundB).TypeId;
+            ShapeTypeIndexA = TCompoundA.TypeId;
+            ShapeTypeIndexB = TCompoundB.TypeId;
             SubtaskGenerator = true;
             PairType = CollisionTaskPairType.BoundsTestedPair;
         }
@@ -49,11 +49,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
         {
             var pairs = batch.Buffer.As<BoundsTestedPair>();
-            Unsafe.SkipInit(out TOverlapFinder overlapFinder);
             Unsafe.SkipInit(out TContinuationHandler continuationHandler);
             //We perform all necessary bounding box computations and lookups up front. This helps avoid some instruction pipeline pressure at the cost of some extra data cache requirements.
             //Because of this, you need to be careful with the batch size on this collision task.
-            overlapFinder.FindLocalOverlaps(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out var overlaps);
+            TOverlapFinder.FindLocalOverlaps(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out var overlaps);
 
             for (int pairIndex = 0; pairIndex < batch.Count; ++pairIndex)
             {

@@ -23,8 +23,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     {
         public ConvexPairSweepTask()
         {
-            ShapeTypeIndexA = default(TShapeA).TypeId;
-            ShapeTypeIndexB = default(TShapeB).TypeId;
+            ShapeTypeIndexA = TShapeA.TypeId;
+            ShapeTypeIndexB = TShapeB.TypeId;
         }
         protected override unsafe bool PreorderedTypeSweep(
             void* shapeDataA, in RigidPose localPoseA, Quaternion orientationA, in BodyVelocity velocityA,

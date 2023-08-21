@@ -62,7 +62,7 @@ namespace Demos.Demos
             Material = material;
             MinimumDistanceForSelfCollisions = minimumDistanceForSelfCollisions;
         }
-        ClothCallbacks Dancers.IDancerNarrowPhaseCallbacks<ClothCallbacks, ClothCollisionFilter>.Create(CollidableProperty<ClothCollisionFilter> filters, PairMaterialProperties pairMaterialProperties, int minimumDistanceForSelfCollisions)
+        static ClothCallbacks Dancers.IDancerNarrowPhaseCallbacks<ClothCallbacks, ClothCollisionFilter>.Create(CollidableProperty<ClothCollisionFilter> filters, PairMaterialProperties pairMaterialProperties, int minimumDistanceForSelfCollisions)
         {
             return new ClothCallbacks(filters, pairMaterialProperties, minimumDistanceForSelfCollisions);
         }

@@ -18,8 +18,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     {
         public ConvexHomogeneousCompoundSweepTask()
         {
-            ShapeTypeIndexA = default(TConvex).TypeId;
-            ShapeTypeIndexB = default(TCompound).TypeId;
+            ShapeTypeIndexA = TConvex.TypeId;
+            ShapeTypeIndexB = TCompound.TypeId;
         }
 
 
@@ -34,10 +34,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             t1 = float.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
-            var task = sweepTasks.GetTask(ShapeTypeIndexA, default(TChildType).TypeId);
+            var task = sweepTasks.GetTask(ShapeTypeIndexA, TChildType.TypeId);
             if (task != null)
             {
-                default(TOverlapFinder).FindOverlaps(ref Unsafe.AsRef<TConvex>(shapeDataA), orientationA, velocityA, ref compound, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
+                TOverlapFinder.FindOverlaps(ref Unsafe.AsRef<TConvex>(shapeDataA), orientationA, velocityA, ref compound, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
                 for (int i = 0; i < overlaps.Count; ++i)
                 {
                     var childIndex = overlaps.Overlaps[i];

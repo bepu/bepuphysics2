@@ -62,16 +62,16 @@ namespace Demos.Demos.Characters
         /// <summary>
         /// Gets the constraint type id that this description is associated with. 
         /// </summary>
-        public readonly int ConstraintTypeId => StaticCharacterMotionTypeProcessor.BatchTypeId;
+        public static int ConstraintTypeId => StaticCharacterMotionTypeProcessor.BatchTypeId;
 
         /// <summary>
         /// Gets the TypeProcessor type that is associated with this description.
         /// </summary>
-        public readonly Type TypeProcessorType => typeof(StaticCharacterMotionTypeProcessor);    
+        public static Type TypeProcessorType => typeof(StaticCharacterMotionTypeProcessor);    
         /// <summary>
         /// Creates a type processor for this constraint type.
         /// </summary>
-        public readonly TypeProcessor CreateTypeProcessor() => new StaticCharacterMotionTypeProcessor();
+        public static TypeProcessor CreateTypeProcessor() => new StaticCharacterMotionTypeProcessor();
 
         //Note that these mapping functions use a "GetOffsetInstance" function. Each CharacterMotionPrestep is a bundle of multiple constraints;
         //by grabbing an offset instance, we're selecting a specific slot in the bundle to modify. For simplicity and to guarantee consistency of field strides,
@@ -88,7 +88,7 @@ namespace Demos.Demos.Characters
             Vector3Wide.WriteFirst(OffsetFromCharacterToSupportPoint, ref target.OffsetFromCharacter);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out StaticCharacterMotionConstraint description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out StaticCharacterMotionConstraint description)
         {
             ref var source = ref GetOffsetInstance(ref Buffer<StaticCharacterMotionPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             QuaternionWide.ReadFirst(source.SurfaceBasis, out description.SurfaceBasis);
@@ -187,7 +187,7 @@ namespace Demos.Demos.Characters
         }
                
 
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref StaticCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref StaticCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA)
         {            
             ComputeJacobians(prestep.OffsetFromCharacter, prestep.SurfaceBasis,
                 out var basis, out var horizontalAngularJacobianA, out var verticalAngularJacobianA);
@@ -195,7 +195,7 @@ namespace Demos.Demos.Characters
             ApplyVerticalImpulse(basis, verticalAngularJacobianA, accumulatedImpulses.Vertical, inertiaA, ref velocityA);
         }
         
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref StaticCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref StaticCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA)
         {            
             //The motion constraint is split into two parts: the horizontal constraint, and the vertical constraint.
             //The horizontal constraint acts almost exactly like the TangentFriction, but we'll duplicate some of the logic to keep this implementation self-contained.
@@ -263,8 +263,8 @@ namespace Demos.Demos.Characters
         }
 
         
-        public bool RequiresIncrementalSubstepUpdates => true;
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, ref StaticCharacterMotionPrestep prestep)
+        public static bool RequiresIncrementalSubstepUpdates => true;
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, ref StaticCharacterMotionPrestep prestep)
         {
             //Since collision detection doesn't run for every substep, we approximate the change in depth for the vertical motion constraint by integrating the velocity along the support normal.
             //This is pretty subtle. If you disable it entirely (return false from "RequiresIncrementalSubstepUpdates" above), you might not even notice.
@@ -335,16 +335,16 @@ namespace Demos.Demos.Characters
         /// <summary>
         /// Gets the constraint type id that this description is associated with. 
         /// </summary>
-        public readonly int ConstraintTypeId => DynamicCharacterMotionTypeProcessor.BatchTypeId;
+        public static int ConstraintTypeId => DynamicCharacterMotionTypeProcessor.BatchTypeId;
 
         /// <summary>
         /// Gets the TypeProcessor type that is associated with this description.
         /// </summary>
-        public readonly Type TypeProcessorType => typeof(DynamicCharacterMotionTypeProcessor);    
+        public static Type TypeProcessorType => typeof(DynamicCharacterMotionTypeProcessor);    
         /// <summary>
         /// Creates a type processor for this constraint type.
         /// </summary>
-        public readonly TypeProcessor CreateTypeProcessor() => new DynamicCharacterMotionTypeProcessor();
+        public static TypeProcessor CreateTypeProcessor() => new DynamicCharacterMotionTypeProcessor();
 
         //Note that these mapping functions use a "GetOffsetInstance" function. Each CharacterMotionPrestep is a bundle of multiple constraints;
         //by grabbing an offset instance, we're selecting a specific slot in the bundle to modify. For simplicity and to guarantee consistency of field strides,
@@ -362,7 +362,7 @@ namespace Demos.Demos.Characters
             Vector3Wide.WriteFirst(OffsetFromSupportToSupportPoint, ref target.OffsetFromSupport);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out DynamicCharacterMotionConstraint description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out DynamicCharacterMotionConstraint description)
         {
             ref var source = ref GetOffsetInstance(ref Buffer<DynamicCharacterMotionPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             QuaternionWide.ReadFirst(source.SurfaceBasis, out description.SurfaceBasis);
@@ -476,7 +476,7 @@ namespace Demos.Demos.Characters
         }
                
 
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref DynamicCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref DynamicCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
         {            
             ComputeJacobians(prestep.OffsetFromCharacter, prestep.OffsetFromSupport, prestep.SurfaceBasis,
                 out var basis, out var horizontalAngularJacobianA, out var horizontalAngularJacobianB, out var verticalAngularJacobianA, out var verticalAngularJacobianB);
@@ -484,7 +484,7 @@ namespace Demos.Demos.Characters
             ApplyVerticalImpulse(basis, verticalAngularJacobianA, verticalAngularJacobianB, accumulatedImpulses.Vertical, inertiaA, inertiaB, ref velocityA, ref velocityB);
         }
         
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref DynamicCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref DynamicCharacterMotionPrestep prestep, ref CharacterMotionAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
         {            
             //The motion constraint is split into two parts: the horizontal constraint, and the vertical constraint.
             //The horizontal constraint acts almost exactly like the TangentFriction, but we'll duplicate some of the logic to keep this implementation self-contained.
@@ -564,8 +564,8 @@ namespace Demos.Demos.Characters
         }
 
         
-        public bool RequiresIncrementalSubstepUpdates => true;
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref DynamicCharacterMotionPrestep prestep)
+        public static bool RequiresIncrementalSubstepUpdates => true;
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA, in BodyVelocityWide velocityB, ref DynamicCharacterMotionPrestep prestep)
         {
             //Since collision detection doesn't run for every substep, we approximate the change in depth for the vertical motion constraint by integrating the velocity along the support normal.
             //This is pretty subtle. If you disable it entirely (return false from "RequiresIncrementalSubstepUpdates" above), you might not even notice.

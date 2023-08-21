@@ -193,7 +193,7 @@ namespace BepuPhysics
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void Test(CollidableReference reference, ref float maximumT)
+            public void Test(CollidableReference reference, ref float maximumT)
             {
                 if (HitHandler.AllowTest(reference))
                 {
@@ -277,7 +277,7 @@ namespace BepuPhysics
             dispatcher.Velocity = velocity;
             //Note that the shape was passed by copy, and that all shape types are required to be blittable. No GC hole.
             dispatcher.ShapeData = &shape;
-            dispatcher.ShapeType = shape.TypeId;
+            dispatcher.ShapeType = TShape.TypeId;
             dispatcher.Simulation = this;
             dispatcher.Pool = pool;
             dispatcher.CollidableBeingTested = default;

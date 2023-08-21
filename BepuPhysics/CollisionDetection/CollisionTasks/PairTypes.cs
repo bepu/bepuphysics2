@@ -21,8 +21,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         /// <summary>
         /// Gets the enumeration type associated with this pair type.
         /// </summary>
-        CollisionTaskPairType PairType { get; }
-        ref PairContinuation GetContinuation(ref TPair pair);
+        static abstract CollisionTaskPairType PairType { get; }
+        static abstract ref PairContinuation GetContinuation(ref TPair pair);
     }
 
     public unsafe struct CollisionPair : ICollisionPair<CollisionPair>
@@ -39,10 +39,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
-        public readonly CollisionTaskPairType PairType => CollisionTaskPairType.StandardPair;
+        public static CollisionTaskPairType PairType => CollisionTaskPairType.StandardPair;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref PairContinuation GetContinuation(ref CollisionPair pair)
+        public static ref PairContinuation GetContinuation(ref CollisionPair pair)
         {
             return ref pair.Continuation;
         }
@@ -58,10 +58,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
-        public readonly CollisionTaskPairType PairType => CollisionTaskPairType.FliplessPair;
+        public static CollisionTaskPairType PairType => CollisionTaskPairType.FliplessPair;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref PairContinuation GetContinuation(ref FliplessPair pair)
+        public static ref PairContinuation GetContinuation(ref FliplessPair pair)
         {
             return ref pair.Continuation;
         }
@@ -75,10 +75,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
-        public readonly CollisionTaskPairType PairType => CollisionTaskPairType.SpherePair;
+        public static CollisionTaskPairType PairType => CollisionTaskPairType.SpherePair;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref PairContinuation GetContinuation(ref SpherePair pair)
+        public static ref PairContinuation GetContinuation(ref SpherePair pair)
         {
             return ref pair.Continuation;
         }
@@ -97,10 +97,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
-        public readonly CollisionTaskPairType PairType => CollisionTaskPairType.SphereIncludingPair;
+        public static CollisionTaskPairType PairType => CollisionTaskPairType.SphereIncludingPair;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref PairContinuation GetContinuation(ref SphereIncludingPair pair)
+        public static ref PairContinuation GetContinuation(ref SphereIncludingPair pair)
         {
             return ref pair.Continuation;
         }
@@ -125,10 +125,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
-        public readonly CollisionTaskPairType PairType => CollisionTaskPairType.BoundsTestedPair;
+        public static CollisionTaskPairType PairType => CollisionTaskPairType.BoundsTestedPair;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref PairContinuation GetContinuation(ref BoundsTestedPair pair)
+        public static ref PairContinuation GetContinuation(ref BoundsTestedPair pair)
         {
             return ref pair.Continuation;
         }
@@ -138,16 +138,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TShapeA : struct, IShape where TShapeB : struct, IShape
         where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
     {
-        bool HasFlipMask { get; }
-        int OrientationCount { get; }
+        static abstract bool HasFlipMask { get; }
+        static abstract int OrientationCount { get; }
         //Note the pair parameter. This is just to get around the fact that you cannot ref return struct fields like you can with classes, at least right now
-        ref Vector<int> GetFlipMask(ref TPairWide pair);
-        ref Vector<float> GetSpeculativeMargin(ref TPairWide pair);
-        ref TShapeWideA GetShapeA(ref TPairWide pair);
-        ref TShapeWideB GetShapeB(ref TPairWide pair);
-        ref QuaternionWide GetOrientationA(ref TPairWide pair);
-        ref QuaternionWide GetOrientationB(ref TPairWide pair);
-        ref Vector3Wide GetOffsetB(ref TPairWide pair);
+        static abstract ref Vector<int> GetFlipMask(ref TPairWide pair);
+        static abstract ref Vector<float> GetSpeculativeMargin(ref TPairWide pair);
+        static abstract ref TShapeWideA GetShapeA(ref TPairWide pair);
+        static abstract ref TShapeWideB GetShapeB(ref TPairWide pair);
+        static abstract ref QuaternionWide GetOrientationA(ref TPairWide pair);
+        static abstract ref QuaternionWide GetOrientationB(ref TPairWide pair);
+        static abstract ref Vector3Wide GetOffsetB(ref TPairWide pair);
         void WriteSlot(int index, in TPair source);
 
     }
@@ -166,51 +166,51 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public QuaternionWide OrientationB;
         public Vector<float> SpeculativeMargin;
 
-        public bool HasFlipMask
+        public static bool HasFlipMask
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return true; }
         }
 
-        public int OrientationCount
+        public static int OrientationCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return 2; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<int> GetFlipMask(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
+        public static ref Vector<int> GetFlipMask(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
         {
             return ref pair.FlipMask;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
+        public static ref Vector<float> GetSpeculativeMargin(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
         {
             return ref pair.SpeculativeMargin;
         }
         //Little unfortunate that we can't return ref of struct instances.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideA GetShapeA(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
+        public static ref TShapeWideA GetShapeA(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
         {
             return ref pair.A;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideB GetShapeB(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
+        public static ref TShapeWideB GetShapeB(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
         {
             return ref pair.B;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3Wide GetOffsetB(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
+        public static ref Vector3Wide GetOffsetB(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
         {
             return ref pair.OffsetB;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationA(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
+        public static ref QuaternionWide GetOrientationA(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
         {
             return ref pair.OrientationA;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationB(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
+        public static ref QuaternionWide GetOrientationB(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
         {
             return ref pair.OrientationB;
         }
@@ -243,50 +243,50 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public QuaternionWide OrientationB;
         public Vector<float> SpeculativeMargin;
 
-        public bool HasFlipMask
+        public static bool HasFlipMask
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return false; }
         }
 
-        public int OrientationCount
+        public static int OrientationCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return 2; }
         }
 
-        public ref Vector<int> GetFlipMask(ref FliplessPairWide<TShape, TShapeWide> pair)
+        public static ref Vector<int> GetFlipMask(ref FliplessPairWide<TShape, TShapeWide> pair)
         {
             throw new NotImplementedException();
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref FliplessPairWide<TShape, TShapeWide> pair)
+        public static ref Vector<float> GetSpeculativeMargin(ref FliplessPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.SpeculativeMargin;
         }
         //Little unfortunate that we can't return ref of struct instances.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWide GetShapeA(ref FliplessPairWide<TShape, TShapeWide> pair)
+        public static ref TShapeWide GetShapeA(ref FliplessPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.A;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWide GetShapeB(ref FliplessPairWide<TShape, TShapeWide> pair)
+        public static ref TShapeWide GetShapeB(ref FliplessPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.B;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3Wide GetOffsetB(ref FliplessPairWide<TShape, TShapeWide> pair)
+        public static ref Vector3Wide GetOffsetB(ref FliplessPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.OffsetB;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationA(ref FliplessPairWide<TShape, TShapeWide> pair)
+        public static ref QuaternionWide GetOrientationA(ref FliplessPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.OrientationA;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationB(ref FliplessPairWide<TShape, TShapeWide> pair)
+        public static ref QuaternionWide GetOrientationB(ref FliplessPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.OrientationB;
         }
@@ -320,51 +320,51 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public QuaternionWide OrientationB;
         public Vector<float> SpeculativeMargin;
 
-        public bool HasFlipMask
+        public static bool HasFlipMask
         {
             //Because the shapes are guaranteed to be distinct (one is apparently a sphere and the other isn't), there will always be a flip mask.
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return true; }
         }
 
-        public int OrientationCount
+        public static int OrientationCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return 1; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<int> GetFlipMask(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
+        public static ref Vector<int> GetFlipMask(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.FlipMask;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
+        public static ref Vector<float> GetSpeculativeMargin(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.SpeculativeMargin;
         }
         //Little unfortunate that we can't return ref of struct instances.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref SphereWide GetShapeA(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
+        public static ref SphereWide GetShapeA(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.A;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWide GetShapeB(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
+        public static ref TShapeWide GetShapeB(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.B;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3Wide GetOffsetB(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
+        public static ref Vector3Wide GetOffsetB(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.OffsetB;
         }
-        public ref QuaternionWide GetOrientationA(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
+        public static ref QuaternionWide GetOrientationA(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
         {
             throw new NotImplementedException();
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationB(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
+        public static ref QuaternionWide GetOrientationB(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.OrientationB;
         }
@@ -390,47 +390,47 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public Vector3Wide OffsetB;
         public Vector<float> SpeculativeMargin;
 
-        public bool HasFlipMask
+        public static bool HasFlipMask
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return false; }
         }
-        public int OrientationCount
+        public static int OrientationCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return 0; }
         }
 
-        public ref Vector<int> GetFlipMask(ref SpherePairWide pair)
+        public static ref Vector<int> GetFlipMask(ref SpherePairWide pair)
         {
             throw new NotImplementedException();
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref SpherePairWide pair)
+        public static ref Vector<float> GetSpeculativeMargin(ref SpherePairWide pair)
         {
             return ref pair.SpeculativeMargin;
         }
         //Little unfortunate that we can't return ref of struct instances.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref SphereWide GetShapeA(ref SpherePairWide pair)
+        public static ref SphereWide GetShapeA(ref SpherePairWide pair)
         {
             return ref pair.A;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref SphereWide GetShapeB(ref SpherePairWide pair)
+        public static ref SphereWide GetShapeB(ref SpherePairWide pair)
         {
             return ref pair.B;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3Wide GetOffsetB(ref SpherePairWide pair)
+        public static ref Vector3Wide GetOffsetB(ref SpherePairWide pair)
         {
             return ref pair.OffsetB;
         }
-        public ref QuaternionWide GetOrientationA(ref SpherePairWide pair)
+        public static ref QuaternionWide GetOrientationA(ref SpherePairWide pair)
         {
             throw new NotImplementedException();
         }
-        public ref QuaternionWide GetOrientationB(ref SpherePairWide pair)
+        public static ref QuaternionWide GetOrientationB(ref SpherePairWide pair)
         {
             throw new NotImplementedException();
         }

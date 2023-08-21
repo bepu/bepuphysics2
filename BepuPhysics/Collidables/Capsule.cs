@@ -179,7 +179,7 @@ namespace BepuPhysics.Collidables
             return inertia;
         }
 
-        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public static ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new ConvexShapeBatch<Capsule, CapsuleWide>(pool, initialCapacity);
         }
@@ -190,7 +190,7 @@ namespace BepuPhysics.Collidables
         /// Type id of capsule shapes.
         /// </summary>
         public const int Id = 1;
-        public readonly int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public static int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
     public struct CapsuleWide : IShapeWide<Capsule>
@@ -238,7 +238,7 @@ namespace BepuPhysics.Collidables
             maximumAngularExpansion = HalfLength;
         }
 
-        public int MinimumWideRayCount
+        public static int MinimumWideRayCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get

@@ -255,7 +255,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public static ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new HomogeneousCompoundShapeBatch<Mesh, Triangle, TriangleWide>(pool, initialCapacity);
         }
@@ -544,7 +544,7 @@ namespace BepuPhysics.Collidables
         /// Type id of mesh shapes.
         /// </summary>
         public const int Id = 8;
-        public readonly int TypeId => Id;
+        public static int TypeId => Id;
 
     }
 }

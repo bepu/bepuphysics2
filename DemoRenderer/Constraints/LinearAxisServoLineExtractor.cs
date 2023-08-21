@@ -8,9 +8,9 @@ namespace DemoRenderer.Constraints
 {
     struct LinearAxisServoLineExtractor : IConstraintLineExtractor<LinearAxisServoPrestepData>
     {
-        public int LinesPerConstraint => 7;
+        public static int LinesPerConstraint => 7;
 
-        public unsafe void ExtractLines(ref LinearAxisServoPrestepData prestepBundle, int setIndex, int* bodyIndices,
+        public static unsafe void ExtractLines(ref LinearAxisServoPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.

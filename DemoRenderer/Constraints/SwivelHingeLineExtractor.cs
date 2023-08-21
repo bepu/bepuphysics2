@@ -8,9 +8,9 @@ namespace DemoRenderer.Constraints
 {
     struct SwivelHingeLineExtractor : IConstraintLineExtractor<SwivelHingePrestepData>
     {
-        public int LinesPerConstraint => 5;
+        public static int LinesPerConstraint => 5;
 
-        public unsafe void ExtractLines(ref SwivelHingePrestepData prestepBundle, int setIndex, int* bodyIndices,
+        public static unsafe void ExtractLines(ref SwivelHingePrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
