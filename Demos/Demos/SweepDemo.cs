@@ -170,12 +170,12 @@ namespace Demos.Demos
         {
             var filter = new Filter();
 
-            var task = Simulation.NarrowPhase.SweepTaskRegistry.GetTask(a.TypeId, b.TypeId);
+            var task = Simulation.NarrowPhase.SweepTaskRegistry.GetTask(TShapeA.TypeId, TShapeB.TypeId);
             if (task == null)
                 return;
             var intersected = task.Sweep(
-                Unsafe.AsPointer(ref a), a.TypeId, poseA.Orientation, velocityA,
-                Unsafe.AsPointer(ref b), b.TypeId, poseB.Position - poseA.Position, poseB.Orientation, velocityB,
+                Unsafe.AsPointer(ref a), TShapeA.TypeId, poseA.Orientation, velocityA,
+                Unsafe.AsPointer(ref b), TShapeB.TypeId, poseB.Position - poseA.Position, poseB.Orientation, velocityB,
                 maximumT, 1e-2f, 1e-5f, 25, ref filter, Simulation.Shapes, Simulation.NarrowPhase.SweepTaskRegistry, BufferPool,
                 out var t0, out var t1, out var hitLocation, out var hitNormal);
             hitLocation += poseA.Position;

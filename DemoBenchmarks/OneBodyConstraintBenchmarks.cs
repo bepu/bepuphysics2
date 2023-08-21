@@ -19,7 +19,6 @@ public class OneBodyConstraintBenchmarks
     public static BodyVelocityWide BenchmarkOneBodyConstraint<TConstraintFunctions, TPrestep, TAccumulatedImpulse>(Vector3Wide positionA, QuaternionWide orientationA, BodyInertiaWide inertiaA, TPrestep prestep)
         where TConstraintFunctions : unmanaged, IOneBodyConstraintFunctions<TPrestep, TAccumulatedImpulse> where TPrestep : unmanaged where TAccumulatedImpulse : unmanaged
     {
-        var functions = default(TConstraintFunctions);
         var accumulatedImpulse = default(TAccumulatedImpulse);
         var velocityA = default(BodyVelocityWide);
         //Individual constraint iterations are often extremely cheap, so beef the benchmark up a bit.
@@ -28,8 +27,8 @@ public class OneBodyConstraintBenchmarks
         const float dt = 1f / inverseDt;
         for (int i = 0; i < iterations; ++i)
         {
-            functions.WarmStart(positionA, orientationA, inertiaA, ref prestep, ref accumulatedImpulse, ref velocityA);
-            functions.Solve(positionA, orientationA, inertiaA, dt, inverseDt, ref prestep, ref accumulatedImpulse, ref velocityA);
+            TConstraintFunctions.WarmStart(positionA, orientationA, inertiaA, ref prestep, ref accumulatedImpulse, ref velocityA);
+            TConstraintFunctions.Solve(positionA, orientationA, inertiaA, dt, inverseDt, ref prestep, ref accumulatedImpulse, ref velocityA);
         }
         return velocityA;
     }

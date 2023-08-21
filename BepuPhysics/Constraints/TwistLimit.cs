@@ -36,7 +36,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public SpringSettings SpringSettings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -45,8 +45,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(TwistLimitTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new TwistLimitTypeProcessor();
+        public static Type TypeProcessorType => typeof(TwistLimitTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new TwistLimitTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -62,7 +62,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistLimit description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistLimit description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<TwistLimitPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -102,7 +102,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Negate(jacobianA, out var negatedJacobianA);
             Vector3Wide.ConditionalSelect(useMin, negatedJacobianA, jacobianA, out jacobianA);
         }
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TwistLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TwistLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(orientationA, orientationB, prestep.LocalBasisA, prestep.LocalBasisB, prestep.MinimumAngle, prestep.MaximumAngle, out _, out var jacobianA);
             Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out var impulseToVelocityA);
@@ -110,7 +110,7 @@ namespace BepuPhysics.Constraints
             TwistServoFunctions.ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, impulseToVelocityA, negatedImpulseToVelocityB, accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TwistLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TwistLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(orientationA, orientationB, prestep.LocalBasisA, prestep.LocalBasisB, prestep.MinimumAngle, prestep.MaximumAngle, out var error, out var jacobianA);
 
@@ -131,9 +131,9 @@ namespace BepuPhysics.Constraints
             TwistServoFunctions.ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, impulseToVelocityA, negatedImpulseToVelocityB, csi);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TwistLimitPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TwistLimitPrestepData prestepData) { }
     }
 
     public class TwistLimitTypeProcessor : TwoBodyTypeProcessor<TwistLimitPrestepData, Vector<float>, TwistLimitFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>

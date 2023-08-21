@@ -11,7 +11,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     using DepthRefiner = DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Box, BoxWide, BoxSupportFinder>;
     public struct BoxCylinderTester : IPairTester<BoxWide, CylinderWide, Convex4ContactManifoldWide>
     {
-        public int BatchSize => 16;
+        public static int BatchSize => 16;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void IntersectLineCircle(in Vector2Wide linePosition, in Vector2Wide lineDirection, in Vector<float> radius, out Vector<float> tMin, out Vector<float> tMax, out Vector<int> intersected)
@@ -100,7 +100,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Test(
+        public static unsafe void Test(
             ref BoxWide a, ref CylinderWide b, ref Vector<float> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex4ContactManifoldWide manifold)
@@ -386,12 +386,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
 
-        public void Test(ref BoxWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public static void Test(ref BoxWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref BoxWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public static void Test(ref BoxWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

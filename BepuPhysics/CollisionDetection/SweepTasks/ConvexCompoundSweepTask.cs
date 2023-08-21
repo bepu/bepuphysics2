@@ -14,8 +14,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     {
         public ConvexCompoundSweepTask()
         {
-            ShapeTypeIndexA = default(TShapeA).TypeId;
-            ShapeTypeIndexB = default(TCompound).TypeId;
+            ShapeTypeIndexA = TShapeA.TypeId;
+            ShapeTypeIndexB = TCompound.TypeId;
         }
 
         protected override unsafe bool PreorderedTypeSweep<TSweepFilter>(
@@ -30,7 +30,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             t1 = float.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
-            default(TOverlapFinder).FindOverlaps(ref convex, orientationA, velocityA, ref compound, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
+            TOverlapFinder.FindOverlaps(ref convex, orientationA, velocityA, ref compound, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
             for (int i = 0; i < overlaps.Count; ++i)
             {
                 var compoundChildIndex = overlaps.Overlaps[i];
@@ -39,9 +39,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     ref var child = ref compound.GetChild(compoundChildIndex);
                     var childType = child.ShapeIndex.Type;
                     shapes[childType].GetShapeData(child.ShapeIndex.Index, out var childShapeData, out _);
-                    var task = sweepTasks.GetTask(convex.TypeId, childType);
+                    var task = sweepTasks.GetTask(TShapeA.TypeId, childType);
                     if (task != null && task.Sweep(
-                        shapeDataA, convex.TypeId, new RigidPose() { Orientation = Quaternion.Identity }, orientationA, velocityA,
+                        shapeDataA, TShapeA.TypeId, new RigidPose() { Orientation = Quaternion.Identity }, orientationA, velocityA,
                         childShapeData, childType, CompoundChild.AsPose(ref child), offsetB, orientationB, velocityB,
                         maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                         out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))

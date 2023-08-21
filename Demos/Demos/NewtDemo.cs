@@ -552,7 +552,7 @@ namespace Demos.Demos
         {
         }
         //This slightly awkward factory is just here for the dancer demos.
-        DeformableCallbacks Dancers.IDancerNarrowPhaseCallbacks<DeformableCallbacks, DeformableCollisionFilter>.Create(CollidableProperty<DeformableCollisionFilter> filters, PairMaterialProperties pairMaterialProperties, int minimumDistanceForSelfCollisions)
+        static DeformableCallbacks Dancers.IDancerNarrowPhaseCallbacks<DeformableCallbacks, DeformableCollisionFilter>.Create(CollidableProperty<DeformableCollisionFilter> filters, PairMaterialProperties pairMaterialProperties, int minimumDistanceForSelfCollisions)
         {
             return new DeformableCallbacks(filters, pairMaterialProperties, minimumDistanceForSelfCollisions);
         }

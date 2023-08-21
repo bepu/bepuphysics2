@@ -108,7 +108,7 @@ namespace BepuPhysics.Collidables
             return inertia;
         }
 
-        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
+        public static ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
         {
             return new ConvexShapeBatch<Sphere, SphereWide>(pool, initialCapacity);
         }
@@ -118,7 +118,7 @@ namespace BepuPhysics.Collidables
         /// Type id of sphere shapes.
         /// </summary>
         public const int Id = 0;
-        public readonly int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public static int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
     public struct SphereWide : IShapeWide<Sphere>
@@ -163,7 +163,7 @@ namespace BepuPhysics.Collidables
         }
 
 
-        public int MinimumWideRayCount
+        public static int MinimumWideRayCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get

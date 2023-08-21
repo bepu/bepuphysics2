@@ -13,8 +13,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     {
         public CompoundPairSweepTask()
         {
-            ShapeTypeIndexA = default(TCompoundA).TypeId;
-            ShapeTypeIndexB = default(TCompoundB).TypeId;
+            ShapeTypeIndexA = TCompoundA.TypeId;
+            ShapeTypeIndexB = TCompoundB.TypeId;
         }
 
         protected override unsafe bool PreorderedTypeSweep<TSweepFilter>(
@@ -29,7 +29,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             t1 = float.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
-            default(TOverlapFinder).FindOverlaps(
+            TOverlapFinder.FindOverlaps(
                 ref a, orientationA, velocityA,
                 ref b, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
             for (int i = 0; i < overlaps.ChildCount; ++i)

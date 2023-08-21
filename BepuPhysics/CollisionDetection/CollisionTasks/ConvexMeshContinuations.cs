@@ -35,7 +35,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //In other words, we can pass a pointer to it to avoid the need for additional batcher shape copying.
             ref var triangle = ref continuation.Triangles[continuationChildIndex];
             childShapeDataB = Unsafe.AsPointer(ref triangle);
-            childTypeB = triangle.TypeId;
+            childTypeB = Triangle.TypeId;
             Unsafe.AsRef<TMesh>(pair.B).GetLocalChild(childIndex, out continuation.Triangles[continuationChildIndex]);
             ref var continuationChild = ref continuation.Inner.Children[continuationChildIndex];
             //Triangles already have their local pose baked into their vertices, so we just need the orientation.

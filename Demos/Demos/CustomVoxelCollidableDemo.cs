@@ -26,7 +26,7 @@ namespace Demos.Demos
     struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
     {
         //Type ids should be unique across all shape types in a simulation.
-        public readonly int TypeId => 12;
+        public static int TypeId => 12;
 
         //Using an object space tree isn't necessarily ideal for a highly regular data like voxels.
         //We're using it here since it exists already and a voxel-specialized version doesn't.
@@ -70,7 +70,7 @@ namespace Demos.Demos
             pool.Return(ref bounds);
         }
 
-        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public static ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             //Shapes types are responsible for informing the shape system how to create a batch for them.
             //Convex shapes will return a ConvexShapeBatch<TShape>, compound shapes a CompoundShapeBatch<TShape>,

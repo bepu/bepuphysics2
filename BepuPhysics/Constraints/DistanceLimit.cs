@@ -53,7 +53,7 @@ namespace BepuPhysics.Constraints
             SpringSettings = springSettings;
         }
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -62,8 +62,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(DistanceLimitTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new DistanceLimitTypeProcessor();
+        public static Type TypeProcessorType => typeof(DistanceLimitTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new DistanceLimitTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -80,7 +80,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out DistanceLimit description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out DistanceLimit description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<DistanceLimitPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -116,7 +116,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeJacobians(
+        public static void ComputeJacobians(
             in Vector3Wide localOffsetA, in Vector3Wide positionA, in QuaternionWide orientationA, in Vector3Wide localOffsetB, in Vector3Wide positionB, in QuaternionWide orientationB,
             in Vector<float> minimumDistance, in Vector<float> maximumDistance, out Vector<int> useMinimum, out Vector<float> distance, out Vector3Wide direction, out Vector3Wide angularJA, out Vector3Wide angularJB)
         {
@@ -139,14 +139,14 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref DistanceLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref DistanceLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobians(prestep.LocalOffsetA, positionA, orientationA, prestep.LocalOffsetB, positionB, orientationB, prestep.MinimumDistance, prestep.MaximumDistance, out _, out _, out var direction, out var angularJA, out var angularJB);
             ApplyImpulse(direction, angularJA, angularJB, inertiaA, inertiaB, accumulatedImpulses, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref DistanceLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref DistanceLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobians(prestep.LocalOffsetA, positionA, orientationA, prestep.LocalOffsetB, positionB, orientationB, prestep.MinimumDistance, prestep.MaximumDistance, out var useMinimum, out var distance, out var direction, out var angularJA, out var angularJB);
 
@@ -172,9 +172,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(direction, angularJA, angularJB, inertiaA, inertiaB, csi, ref wsvA, ref wsvB);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref DistanceLimitPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref DistanceLimitPrestepData prestepData) { }
     }
 
 

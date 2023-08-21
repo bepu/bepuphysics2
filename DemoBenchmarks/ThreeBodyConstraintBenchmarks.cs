@@ -22,7 +22,6 @@ public class ThreeBodyConstraintBenchmarks
         Vector3Wide positionC, QuaternionWide orientationC, BodyInertiaWide inertiaC, TPrestep prestep)
         where TConstraintFunctions : unmanaged, IThreeBodyConstraintFunctions<TPrestep, TAccumulatedImpulse> where TPrestep : unmanaged where TAccumulatedImpulse : unmanaged
     {
-        var functions = default(TConstraintFunctions);
         var accumulatedImpulse = default(TAccumulatedImpulse);
         var velocityA = default(BodyVelocityWide);
         var velocityB = default(BodyVelocityWide);
@@ -33,8 +32,8 @@ public class ThreeBodyConstraintBenchmarks
         const float dt = 1f / inverseDt;
         for (int i = 0; i < iterations; ++i)
         {
-            functions.WarmStart(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, ref prestep, ref accumulatedImpulse, ref velocityA, ref velocityB, ref velocityC);
-            functions.Solve(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, dt, inverseDt, ref prestep, ref accumulatedImpulse, ref velocityA, ref velocityB, ref velocityC);
+            TConstraintFunctions.WarmStart(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, ref prestep, ref accumulatedImpulse, ref velocityA, ref velocityB, ref velocityC);
+            TConstraintFunctions.Solve(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, dt, inverseDt, ref prestep, ref accumulatedImpulse, ref velocityA, ref velocityB, ref velocityC);
         }
         return (velocityA, velocityB, velocityC);
     }

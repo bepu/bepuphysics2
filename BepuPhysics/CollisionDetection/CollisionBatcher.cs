@@ -281,7 +281,7 @@ namespace BepuPhysics.CollisionDetection
             //that's actually used by the narrowphase (and which will likely be used for most performance sensitive cases).
             //TODO: You could recover the performance and safety once generic pointers exist. By having pointers in the parameter list, we can require that the user handle GC safety.
             //(We could also have an explicit 'unsafe' overload, but that API complexity doesn't seem worthwhile. My guess is nontrivial uses will all use the underlying function directly.)
-            Add(shapeA.TypeId, shapeB.TypeId, Unsafe.SizeOf<TShapeA>(), Unsafe.SizeOf<TShapeB>(), Unsafe.AsPointer(ref shapeA), Unsafe.AsPointer(ref shapeB),
+            Add(TShapeA.TypeId, TShapeB.TypeId, Unsafe.SizeOf<TShapeA>(), Unsafe.SizeOf<TShapeB>(), Unsafe.AsPointer(ref shapeA), Unsafe.AsPointer(ref shapeB),
                 offsetB, orientationA, orientationB, speculativeMargin, pairId);
         }
 

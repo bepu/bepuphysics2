@@ -26,7 +26,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public ServoSettings ServoSettings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -35,8 +35,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(AngularServoTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new AngularServoTypeProcessor();
+        public static Type TypeProcessorType => typeof(AngularServoTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new AngularServoTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -49,7 +49,7 @@ namespace BepuPhysics.Constraints
             ServoSettingsWide.WriteFirst(ServoSettings, ref target.ServoSettings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out AngularServo description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out AngularServo description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<AngularServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -98,12 +98,12 @@ namespace BepuPhysics.Constraints
         //}
 
 
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref AngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref AngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref AngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref AngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Jacobians are just I and -I.
             QuaternionWide.ConcatenateWithoutOverlap(prestep.TargetRelativeRotationLocalA, orientationA, out var targetOrientationB);
@@ -132,9 +132,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, csi);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularServoPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularServoPrestepData prestepData) { }
     }
 
     public class AngularServoTypeProcessor : TwoBodyTypeProcessor<AngularServoPrestepData, Vector3Wide, AngularServoFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngular>

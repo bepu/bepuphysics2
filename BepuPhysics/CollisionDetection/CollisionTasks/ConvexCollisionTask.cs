@@ -15,13 +15,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         /// <summary>
         /// Gets the nubmer of pairs which would ideally be gathered together before executing a wide test.
         /// </summary>
-        int BatchSize { get; }
+        static abstract int BatchSize { get; }
 
         //Note that, while the interface requires all three of these implementations, concrete implementers will only ever have one defined or called.
         //Including the other unused functions is just here to simplify its use in the batch execution loop.
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out TManifoldWideType manifold);
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out TManifoldWideType manifold);
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out TManifoldWideType manifold);
+        static abstract void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out TManifoldWideType manifold);
+        static abstract void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out TManifoldWideType manifold);
+        static abstract void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out TManifoldWideType manifold);
     }
 
     public interface IContactManifoldWide
@@ -40,10 +40,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         public ConvexCollisionTask()
         {
-            BatchSize = default(TPairTester).BatchSize;
-            ShapeTypeIndexA = default(TShapeA).TypeId;
-            ShapeTypeIndexB = default(TShapeB).TypeId;
-            PairType = default(TPair).PairType;
+            BatchSize = TPairTester.BatchSize;
+            ShapeTypeIndexA = TShapeA.TypeId;
+            ShapeTypeIndexB = TShapeB.TypeId;
+            PairType = TPair.PairType;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -53,8 +53,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //With any luck, the compiler will eventually get rid of these unnecessary zero inits. 
             //Might be able to get rid of manifoldWide and defaultPairTester with some megahacks, but it comes with significant forward danger and questionable benefit.
             var pairWide = default(TPairWide);
-            ref var aWide = ref pairWide.GetShapeA(ref pairWide);
-            ref var bWide = ref pairWide.GetShapeB(ref pairWide);
+            ref var aWide = ref TPairWide.GetShapeA(ref pairWide);
+            ref var bWide = ref TPairWide.GetShapeB(ref pairWide);
             if (aWide.InternalAllocationSize > 0)
             {
                 var memory = stackalloc byte[aWide.InternalAllocationSize];
@@ -66,7 +66,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 bWide.Initialize(new Buffer<byte>(memory, bWide.InternalAllocationSize));
             }
             TManifoldWide manifoldWide;
-            var defaultPairTester = default(TPairTester);
             var manifold = default(ConvexContactManifold);
 
             for (int i = 0; i < batch.Count; i += Vector<float>.Count)
@@ -82,59 +81,59 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     pairWide.WriteSlot(j, Unsafe.Add(ref bundleStart, j));
                 }
 
-                if (pairWide.OrientationCount == 2)
+                if (TPairWide.OrientationCount == 2)
                 {
-                    defaultPairTester.Test(
+                    TPairTester.Test(
                         ref aWide,
                         ref bWide,
-                        ref pairWide.GetSpeculativeMargin(ref pairWide),
-                        ref pairWide.GetOffsetB(ref pairWide),
-                        ref pairWide.GetOrientationA(ref pairWide),
-                        ref pairWide.GetOrientationB(ref pairWide),
+                        ref TPairWide.GetSpeculativeMargin(ref pairWide),
+                        ref TPairWide.GetOffsetB(ref pairWide),
+                        ref TPairWide.GetOrientationA(ref pairWide),
+                        ref TPairWide.GetOrientationB(ref pairWide),
                         countInBundle,
                         out manifoldWide);
                 }
-                else if (pairWide.OrientationCount == 1)
+                else if (TPairWide.OrientationCount == 1)
                 {
                     //Note that, in the event that there is only one orientation, it belongs to the second shape.
                     //The only shape that doesn't need orientation is a sphere, and it will be in slot A by convention.
                     Debug.Assert(typeof(TShapeWideA) == typeof(SphereWide));
-                    defaultPairTester.Test(
+                    TPairTester.Test(
                         ref aWide,
                         ref bWide,
-                        ref pairWide.GetSpeculativeMargin(ref pairWide),
-                        ref pairWide.GetOffsetB(ref pairWide),
-                        ref pairWide.GetOrientationB(ref pairWide),
+                        ref TPairWide.GetSpeculativeMargin(ref pairWide),
+                        ref TPairWide.GetOffsetB(ref pairWide),
+                        ref TPairWide.GetOrientationB(ref pairWide),
                         countInBundle,
                         out manifoldWide);
                 }
                 else
                 {
-                    Debug.Assert(pairWide.OrientationCount == 0);
+                    Debug.Assert(TPairWide.OrientationCount == 0);
                     Debug.Assert(typeof(TShapeWideA) == typeof(SphereWide) && typeof(TShapeWideB) == typeof(SphereWide), "No orientation implies a special case involving two spheres.");
                     //Really, this could be made into a direct special case, but eh.
-                    defaultPairTester.Test(
+                    TPairTester.Test(
                         ref aWide,
                         ref bWide,
-                        ref pairWide.GetSpeculativeMargin(ref pairWide),
-                        ref pairWide.GetOffsetB(ref pairWide),
+                        ref TPairWide.GetSpeculativeMargin(ref pairWide),
+                        ref TPairWide.GetOffsetB(ref pairWide),
                         countInBundle,
                         out manifoldWide);
                 }
 
                 //Flip back any contacts associated with pairs which had to be flipped for shape order.
-                if (pairWide.HasFlipMask)
+                if (TPairWide.HasFlipMask)
                 {
-                    manifoldWide.ApplyFlipMask(ref pairWide.GetOffsetB(ref pairWide), pairWide.GetFlipMask(ref pairWide));
+                    manifoldWide.ApplyFlipMask(ref TPairWide.GetOffsetB(ref pairWide), TPairWide.GetFlipMask(ref pairWide));
                 }
 
                 for (int j = 0; j < countInBundle; ++j)
                 {
                     ref var manifoldSource = ref GetOffsetInstance(ref manifoldWide, j);
-                    ref var offsetSource = ref GetOffsetInstance(ref pairWide.GetOffsetB(ref pairWide), j);
+                    ref var offsetSource = ref GetOffsetInstance(ref TPairWide.GetOffsetB(ref pairWide), j);
                     manifoldSource.ReadFirst(offsetSource, ref manifold);
                     ref var pair = ref Unsafe.Add(ref bundleStart, j);
-                    batcher.ProcessConvexResult(ref manifold, ref pair.GetContinuation(ref pair));
+                    batcher.ProcessConvexResult(ref manifold, ref TPair.GetContinuation(ref pair));
                 }
             }
 

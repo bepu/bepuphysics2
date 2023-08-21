@@ -15,8 +15,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     {
         public CompoundHomogeneousCompoundSweepTask()
         {
-            ShapeTypeIndexA = default(TCompoundA).TypeId;
-            ShapeTypeIndexB = default(TCompoundB).TypeId;
+            ShapeTypeIndexA = TCompoundA.TypeId;
+            ShapeTypeIndexB = TCompoundB.TypeId;
         }
 
         protected unsafe override bool PreorderedTypeSweep<TSweepFilter>(
@@ -26,13 +26,12 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
             ref var compoundB = ref Unsafe.AsRef<TCompoundB>(shapeDataB);
-            TOverlapFinder overlapFinder = default;
             t0 = float.MaxValue;
             t1 = float.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
             ref var compoundA = ref Unsafe.AsRef<TCompoundA>(shapeDataA);
-            overlapFinder.FindOverlaps(ref compoundA, orientationA, velocityA, ref compoundB, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
+            TOverlapFinder.FindOverlaps(ref compoundA, orientationA, velocityA, ref compoundB, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
             for (int i = 0; i < overlaps.ChildCount; ++i)
             {
                 ref var childOverlaps = ref overlaps.GetOverlapsForChild(i);

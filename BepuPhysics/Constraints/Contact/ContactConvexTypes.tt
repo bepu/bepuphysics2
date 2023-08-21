@@ -24,23 +24,23 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> Twist;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector2Wide GetTangentFriction(ref Contact<#= contactCount #>AccumulatedImpulses impulses)
+        public static ref Vector2Wide GetTangentFriction(ref Contact<#= contactCount #>AccumulatedImpulses impulses)
         {
             return ref impulses.Tangent;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetTwistFriction(ref Contact<#= contactCount #>AccumulatedImpulses impulses)
+        public static ref Vector<float> GetTwistFriction(ref Contact<#= contactCount #>AccumulatedImpulses impulses)
         {
             return ref impulses.Twist;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetPenetrationImpulseForContact(ref Contact<#= contactCount #>AccumulatedImpulses impulses, int index)
+        public static ref Vector<float> GetPenetrationImpulseForContact(ref Contact<#= contactCount #>AccumulatedImpulses impulses, int index)
         {
             Debug.Assert(index >= 0 && index < <#=contactCount#>);
             return ref Unsafe.Add(ref impulses.Penetration0, index);
         }
-        public int ContactCount => <#=contactCount#>;
+        public static int ContactCount => <#=contactCount#>;
     }
 
 <#}#>
@@ -125,7 +125,7 @@ for (int i = 0; i < contactCount; ++i)
             GetFirst(ref target.MaterialProperties.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact<#= contactCount #><#=suffix#> description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact<#= contactCount #><#=suffix#> description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact<#=contactCount#><#=suffix#>PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -155,19 +155,19 @@ for (int i = 0; i < contactCount; ++i)
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref ConstraintContactData GetFirstContact(ref Contact<#= contactCount #><#=suffix#> description)
+        public static ref ConstraintContactData GetFirstContact(ref Contact<#= contactCount #><#=suffix#> description)
         {
             return ref description.Contact0;
         }
         
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Contact<#= contactCount #><#=suffix#>TypeProcessor.BatchTypeId;
         }
         
-        public readonly Type TypeProcessorType => typeof(Contact<#= contactCount #><#=suffix#>TypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new Contact<#= contactCount #><#=suffix#>TypeProcessor();
+        public static Type TypeProcessorType => typeof(Contact<#= contactCount #><#=suffix#>TypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new Contact<#= contactCount #><#=suffix#>TypeProcessor();
 
     }
 
@@ -186,30 +186,30 @@ for (int i = 0; i < contactCount; ++i)
         public Vector3Wide Normal;
         public MaterialPropertiesWide MaterialProperties;
 		
-        public readonly int BodyCount => <#=bodyCount#>;
-        public readonly int ContactCount => <#=contactCount#>;
+        public static int BodyCount => <#=bodyCount#>;
+        public static int ContactCount => <#=contactCount#>;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3Wide GetNormal(ref Contact<#= contactCount #><#=suffix#>PrestepData prestep)
+        public static ref Vector3Wide GetNormal(ref Contact<#= contactCount #><#=suffix#>PrestepData prestep)
         {
             return ref prestep.Normal;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref ConvexContactWide GetContact(ref Contact<#= contactCount #><#=suffix#>PrestepData prestep, int index)
+        public static ref ConvexContactWide GetContact(ref Contact<#= contactCount #><#=suffix#>PrestepData prestep, int index)
         {
             return ref Unsafe.Add(ref prestep.Contact0, index);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref MaterialPropertiesWide GetMaterialProperties(ref Contact<#= contactCount #><#=suffix#>PrestepData prestep)
+        public static ref MaterialPropertiesWide GetMaterialProperties(ref Contact<#= contactCount #><#=suffix#>PrestepData prestep)
         {
             return ref prestep.MaterialProperties;
         }
 
 <#if (bodyCount == 2){#>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3Wide GetOffsetB(ref Contact<#= contactCount #><#=suffix#>PrestepData prestep)
+        public static ref Vector3Wide GetOffsetB(ref Contact<#= contactCount #><#=suffix#>PrestepData prestep)
         {
             return ref prestep.OffsetB;
         }
@@ -219,10 +219,10 @@ for (int i = 0; i < contactCount; ++i)
 
     public struct Contact<#=contactCount#><#=suffix#>Functions : I<#=bodyCount == 1 ? "OneBody" : "TwoBody"#>ConstraintFunctions<Contact<#=contactCount#><#=suffix#>PrestepData, Contact<#=contactCount#>AccumulatedImpulses>
     {       
-        public bool RequiresIncrementalSubstepUpdates => true;
+        public static bool RequiresIncrementalSubstepUpdates => true;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA,<#if(bodyCount == 2) {#> in BodyVelocityWide velocityB,<#}#> ref Contact<#=contactCount#><#=suffix#>PrestepData prestep)
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA,<#if(bodyCount == 2) {#> in BodyVelocityWide velocityB,<#}#> ref Contact<#=contactCount#><#=suffix#>PrestepData prestep)
         {
 <#for (int i = 0; i < contactCount; ++i) {#>
             PenetrationLimit<#=suffix#>.UpdatePenetrationDepth(dt, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.OffsetB, <#}#>prestep.Normal, velocityA, <#if (bodyCount == 2) {#>velocityB, <#}#>ref prestep.Contact<#=i#>.Depth);
@@ -230,7 +230,7 @@ for (int i = 0; i < contactCount; ++i)
         }
                
         [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(bodyCount == 2) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>ref Contact<#=contactCount#><#=suffix#>PrestepData prestep, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA<#if(bodyCount == 2) {#>, ref BodyVelocityWide wsvB<#}#>)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(bodyCount == 2) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>ref Contact<#=contactCount#><#=suffix#>PrestepData prestep, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA<#if(bodyCount == 2) {#>, ref BodyVelocityWide wsvB<#}#>)
         {
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
 <#if (contactCount > 1) {#>
@@ -249,7 +249,7 @@ for (int i = 0; i < contactCount; ++i)
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(bodyCount == 2) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>float dt, float inverseDt, ref Contact<#=contactCount#><#=suffix#>PrestepData prestep, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA<#if(bodyCount == 2) {#>, ref BodyVelocityWide wsvB<#}#>)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(bodyCount == 2) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>float dt, float inverseDt, ref Contact<#=contactCount#><#=suffix#>PrestepData prestep, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA<#if(bodyCount == 2) {#>, ref BodyVelocityWide wsvB<#}#>)
         {            
             //Note that we solve the penetration constraints before the friction constraints. 
             //This makes the friction constraints more authoritative, since they happen last.

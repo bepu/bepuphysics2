@@ -29,7 +29,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public MotorSettings Settings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -38,8 +38,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(BallSocketMotorTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new BallSocketMotorTypeProcessor();
+        public static Type TypeProcessorType => typeof(BallSocketMotorTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new BallSocketMotorTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -51,7 +51,7 @@ namespace BepuPhysics.Constraints
             MotorSettingsWide.WriteFirst(Settings, ref target.Settings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out BallSocketMotor description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out BallSocketMotor description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<BallSocketMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -70,13 +70,13 @@ namespace BepuPhysics.Constraints
 
     public struct BallSocketMotorFunctions : ITwoBodyConstraintFunctions<BallSocketMotorPrestepData, Vector3Wide>
     {
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref BallSocketMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref BallSocketMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out var targetOffsetB);
             BallSocketShared.ApplyImpulse(ref wsvA, ref wsvB, (positionB - positionA) + targetOffsetB, targetOffsetB, inertiaA, inertiaB, accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref BallSocketMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref BallSocketMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out var targetOffsetB);
             var offsetA = (positionB - positionA) + targetOffsetB;
@@ -90,9 +90,9 @@ namespace BepuPhysics.Constraints
             BallSocketShared.Solve(ref wsvA, ref wsvB, offsetA, targetOffsetB, biasVelocity, effectiveMass, softnessImpulseScale, maximumImpulse, ref accumulatedImpulses, inertiaA, inertiaB);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref BallSocketMotorPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref BallSocketMotorPrestepData prestepData) { }
     }
 
 

@@ -26,7 +26,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public SpringSettings SpringSettings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -35,8 +35,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(AngularSwivelHingeTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new AngularSwivelHingeTypeProcessor();
+        public static Type TypeProcessorType => typeof(AngularSwivelHingeTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new AngularSwivelHingeTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -51,7 +51,7 @@ namespace BepuPhysics.Constraints
             GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out AngularSwivelHinge description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out AngularSwivelHinge description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<AngularSwivelHingePrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -94,7 +94,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.ConditionalSelect(useFallback, fallbackJacobian, jacobianA, out jacobianA);
         }
 
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref AngularSwivelHingePrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref AngularSwivelHingePrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(prestep.LocalSwivelAxisA, prestep.LocalHingeAxisB, orientationA, orientationB, out _, out _, out var jacobianA);
             Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out var impulseToVelocityA);
@@ -102,7 +102,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(impulseToVelocityA, negatedImpulseToVelocityB, accumulatedImpulses, ref wsvA.Angular, ref wsvB.Angular);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref AngularSwivelHingePrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref AngularSwivelHingePrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //The swivel hinge attempts to keep an axis on body A separated 90 degrees from an axis on body B. In other words, this is the same as a hinge joint, but with one fewer DOF.
             //C = dot(swivelA, hingeB) = 0
@@ -143,9 +143,9 @@ namespace BepuPhysics.Constraints
 
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularSwivelHingePrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularSwivelHingePrestepData prestepData) { }
     }
 
     public class AngularSwivelHingeTypeProcessor : TwoBodyTypeProcessor<AngularSwivelHingePrestepData, Vector<float>, AngularSwivelHingeFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>

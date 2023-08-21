@@ -182,7 +182,7 @@ namespace BepuPhysics.CollisionDetection
             where TShapeA : unmanaged, IShape
             where TShapeB : unmanaged, IShape
         {
-            return GetTask(default(TShapeA).TypeId, default(TShapeB).TypeId);
+            return GetTask(TShapeA.TypeId, TShapeB.TypeId);
         }
     }
 }

@@ -36,7 +36,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public ServoSettings ServoSettings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -45,8 +45,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(TwistServoTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new TwistServoTypeProcessor();
+        public static Type TypeProcessorType => typeof(TwistServoTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new TwistServoTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -62,7 +62,7 @@ namespace BepuPhysics.Constraints
             ServoSettingsWide.WriteFirst(ServoSettings, ref target.ServoSettings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistServo description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistServo description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<TwistServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -181,7 +181,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-10f)), basisAZ, jacobianA, out jacobianA);
         }
 
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TwistServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TwistServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(orientationA, orientationB, prestep.LocalBasisA, prestep.LocalBasisB, out var jacobianA);
             Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out var impulseToVelocityA);
@@ -189,7 +189,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, impulseToVelocityA, negatedImpulseToVelocityB, accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TwistServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TwistServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(orientationA, orientationB, prestep.LocalBasisA, prestep.LocalBasisB,
                 out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
@@ -216,9 +216,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, impulseToVelocityA, negatedImpulseToVelocityB, csi);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TwistServoPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TwistServoPrestepData prestepData) { }
     }
 
     public class TwistServoTypeProcessor : TwoBodyTypeProcessor<TwistServoPrestepData, Vector<float>, TwistServoFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>

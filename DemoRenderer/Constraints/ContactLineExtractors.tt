@@ -26,9 +26,9 @@ for (int convexity = 0; convexity <= 1; ++convexity)
 #>
     struct Contact<#=contactCount#><#=convexitySuffix#><#=bodySuffix#>LineExtractor : IConstraintLineExtractor<Contact<#=contactCount#><#=convexitySuffix#><#=bodySuffix#>PrestepData>
     {
-        public int LinesPerConstraint => <#=contactCount * 2#>;
+        public static int LinesPerConstraint => <#=contactCount * 2#>;
 
-        public unsafe void ExtractLines(ref Contact<#=contactCount#><#=convexitySuffix#><#=bodySuffix#>PrestepData prestepBundle, int setIndex, int* bodyIndices,
+        public static unsafe void ExtractLines(ref Contact<#=contactCount#><#=convexitySuffix#><#=bodySuffix#>PrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             ref var poseA = ref bodies.Sets[setIndex].SolverStates[bodyIndices[0]].Motion.Pose;

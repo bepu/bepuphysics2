@@ -9,20 +9,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     //Individual pair testers are designed to be used outside of the narrow phase. They need to be usable for queries and such, so all necessary data must be gathered externally.
     public struct SpherePairTester : IPairTester<SphereWide, SphereWide, Convex1ContactManifoldWide>
     {
-        public int BatchSize => 32;
+        public static int BatchSize => 32;
 
-        public void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public static void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public static void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public static void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             Vector3Wide.Length(offsetB, out var centerDistance);
             //Note the negative 1. By convention, the normal points from B to A.

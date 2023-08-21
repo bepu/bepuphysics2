@@ -21,7 +21,6 @@ public class TwoBodyConstraintBenchmarks
         Vector3Wide positionB, QuaternionWide orientationB, BodyInertiaWide inertiaB, TPrestep prestep)
         where TConstraintFunctions : unmanaged, ITwoBodyConstraintFunctions<TPrestep, TAccumulatedImpulse> where TPrestep : unmanaged where TAccumulatedImpulse : unmanaged
     {
-        var functions = default(TConstraintFunctions);
         var accumulatedImpulse = default(TAccumulatedImpulse);
         var velocityA = default(BodyVelocityWide);
         var velocityB = default(BodyVelocityWide);
@@ -31,8 +30,8 @@ public class TwoBodyConstraintBenchmarks
         const float dt = 1f / inverseDt;
         for (int i = 0; i < iterations; ++i)
         {
-            functions.WarmStart(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, ref prestep, ref accumulatedImpulse, ref velocityA, ref velocityB);
-            functions.Solve(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, dt, inverseDt, ref prestep, ref accumulatedImpulse, ref velocityA, ref velocityB);
+            TConstraintFunctions.WarmStart(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, ref prestep, ref accumulatedImpulse, ref velocityA, ref velocityB);
+            TConstraintFunctions.Solve(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, dt, inverseDt, ref prestep, ref accumulatedImpulse, ref velocityA, ref velocityB);
         }
         return (velocityA, velocityB);
     }

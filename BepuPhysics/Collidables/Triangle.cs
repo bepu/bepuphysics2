@@ -118,7 +118,7 @@ namespace BepuPhysics.Collidables
             return inertia;
         }
 
-        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public static ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new ConvexShapeBatch<Triangle, TriangleWide>(pool, initialCapacity);
         }
@@ -127,7 +127,7 @@ namespace BepuPhysics.Collidables
         /// Type id of triangle shapes.
         /// </summary>
         public const int Id = 3;
-        public readonly int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public static int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
 
@@ -220,7 +220,7 @@ namespace BepuPhysics.Collidables
             maximumAngularExpansion = maximumRadius;
         }
 
-        public int MinimumWideRayCount
+        public static int MinimumWideRayCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get

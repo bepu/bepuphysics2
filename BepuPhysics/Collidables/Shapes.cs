@@ -136,7 +136,7 @@ namespace BepuPhysics.Collidables
         protected ShapeBatch(BufferPool pool, int initialShapeCount)
         {
             this.pool = pool;
-            TypeId = default(TShape).TypeId;
+            TypeId = TShape.TypeId;
             InternalResize(initialShapeCount, 0);
             idPool = new IdPool(initialShapeCount, pool);
         }
@@ -433,14 +433,14 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref TShape GetShape<TShape>(int shapeIndex) where TShape : unmanaged, IShape
         {
-            var typeId = default(TShape).TypeId;
+            var typeId = TShape.TypeId;
             return ref Unsafe.As<ShapeBatch, ShapeBatch<TShape>>(ref batches[typeId])[shapeIndex];
         }
 
 
         public TypedIndex Add<TShape>(in TShape shape) where TShape : unmanaged, IShape
         {
-            var typeId = default(TShape).TypeId;
+            var typeId = TShape.TypeId;
             if (RegisteredTypeSpan <= typeId)
             {
                 registeredTypeSpan = typeId + 1;
@@ -451,7 +451,7 @@ namespace BepuPhysics.Collidables
             }
             if (batches[typeId] == null)
             {
-                batches[typeId] = default(TShape).CreateShapeBatch(pool, InitialCapacityPerTypeBatch, this);
+                batches[typeId] = TShape.CreateShapeBatch(pool, InitialCapacityPerTypeBatch, this);
             }
 
             Debug.Assert(batches[typeId] is ShapeBatch<TShape>);

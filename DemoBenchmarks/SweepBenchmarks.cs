@@ -122,8 +122,8 @@ public class Sweeper
     public unsafe Vector3 Test<TA, TB>() where TA : unmanaged, IShape where TB : unmanaged, IShape
     {
         var task = taskRegistry.GetTask<TA, TB>();
-        var aType = default(TA).TypeId;
-        var bType = default(TB).TypeId;
+        var aType = TA.TypeId;
+        var bType = TB.TypeId;
         shapes[aType].GetShapeData(0, out var aData, out _);
         shapes[bType].GetShapeData(0, out var bData, out _);
         var filter = default(Filter);

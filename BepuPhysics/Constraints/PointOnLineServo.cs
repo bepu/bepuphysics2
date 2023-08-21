@@ -34,7 +34,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public SpringSettings SpringSettings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -43,8 +43,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(PointOnLineServoTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new PointOnLineServoTypeProcessor();
+        public static Type TypeProcessorType => typeof(PointOnLineServoTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new PointOnLineServoTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -59,7 +59,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out PointOnLineServo description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out PointOnLineServo description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<PointOnLineServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -126,13 +126,13 @@ namespace BepuPhysics.Constraints
             Vector3Wide.CrossWithoutOverlap(linearJacobian.X, offsetB, out angularJB.X);
             Vector3Wide.CrossWithoutOverlap(linearJacobian.Y, offsetB, out angularJB.Y);
         }
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref PointOnLineServoPrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref PointOnLineServoPrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalDirection, prestep.LocalOffsetA, prestep.LocalOffsetB, out _, out var linearJacobian, out var angularJA, out var angularJB);
             ApplyImpulse(ref wsvA, ref wsvB, linearJacobian, angularJA, angularJB, inertiaA, inertiaB, ref accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref PointOnLineServoPrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref PointOnLineServoPrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //This constrains a point on B to a line attached to A. It works on two degrees of freedom at the same time; those are the tangent axes to the line direction.
             //The error is measured as closest offset from the line. In other words:
@@ -188,9 +188,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref wsvA, ref wsvB, linearJacobian, angularJA, angularJB, inertiaA, inertiaB, ref csi);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref PointOnLineServoPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref PointOnLineServoPrestepData prestepData) { }
     }
 
     public class PointOnLineServoTypeProcessor : TwoBodyTypeProcessor<PointOnLineServoPrestepData, Vector2Wide, PointOnLineServoFunctions, AccessAll, AccessAll, AccessAll, AccessAll>

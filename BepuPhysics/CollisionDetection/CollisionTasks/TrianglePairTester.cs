@@ -8,7 +8,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct TrianglePairTester : IPairTester<TriangleWide, TriangleWide, Convex4ContactManifoldWide>
     {
-        public int BatchSize => 32;
+        public static int BatchSize => 32;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void GetIntervalForNormal(in Vector3Wide a, in Vector3Wide b, in Vector3Wide c, in Vector3Wide normal, out Vector<float> min, out Vector<float> max)
@@ -258,7 +258,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Test(
+        public static unsafe void Test(
             ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex4ContactManifoldWide manifold)
@@ -523,12 +523,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifoldFeatureId = rawContact.FeatureId;
         }
 
-        public void Test(ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public static void Test(ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public static void Test(ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

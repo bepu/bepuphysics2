@@ -280,7 +280,7 @@ namespace DemoRenderer.ShapeDrawing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void AddShape<TShape>(TShape shape, Shapes shapes, RigidPose pose, Vector3 color) where TShape : IShape
         {
-            AddShape(Unsafe.AsPointer(ref shape), shape.TypeId, shapes, pose, color, ref ShapeCache, pool);
+            AddShape(Unsafe.AsPointer(ref shape), TShape.TypeId, shapes, pose, color, ref ShapeCache, pool);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

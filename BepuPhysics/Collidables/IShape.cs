@@ -14,11 +14,10 @@ namespace BepuPhysics.Collidables
     /// </summary>
     public interface IShape
     {
-        //TODO: Note that these should really be *static* as they do not need any information about an instance, but static abstract interface methods are not yet out of preview.
         /// <summary>
         /// Unique type id for this shape type.
         /// </summary>
-        int TypeId { get; }
+        static abstract int TypeId { get; }
         /// <summary>
         /// Creates a shape batch for this type of shape.
         /// </summary>
@@ -26,9 +25,8 @@ namespace BepuPhysics.Collidables
         /// <param name="initialCapacity">Initial capacity to allocate within the batch.</param>
         /// <param name="shapeBatches">The set of shapes to contain this batch.</param>
         /// <returns>Shape batch for the shape type.</returns>
-        /// <remarks>This is typically used internally to initialize new shape collections in response to shapes being added. It is not likely to be useful outside of the engine.
-        /// Ideally, this would be implemented as a static abstract, but those aren't available yet.</remarks>
-        ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches);
+        /// <remarks>This is typically used internally to initialize new shape collections in response to shapes being added. It is not likely to be useful outside of the engine.</remarks>
+        static abstract ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches);
     }
 
     //Note that the following bounds functions require only an orientation because the effect of the position on the bounding box is the same for all shapes.
@@ -263,7 +261,7 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Gets the lower bound on the number of rays to execute in a wide fashion. Ray bundles with fewer rays will fall back to the single ray code path.
         /// </summary>
-        int MinimumWideRayCount { get; }
+        static abstract int MinimumWideRayCount { get; }
 
         /// <summary>
         /// Tests a ray against the shape.

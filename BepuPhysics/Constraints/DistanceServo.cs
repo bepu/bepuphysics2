@@ -59,7 +59,7 @@ namespace BepuPhysics.Constraints
         {
         }
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -68,8 +68,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(DistanceServoTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new DistanceServoTypeProcessor();
+        public static Type TypeProcessorType => typeof(DistanceServoTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new DistanceServoTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -84,7 +84,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out DistanceServo description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out DistanceServo description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<DistanceServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -183,7 +183,7 @@ namespace BepuPhysics.Constraints
         }
 
 
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref DistanceServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref DistanceServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             GetDistance(orientationA, positionB - positionA, orientationB, prestep.LocalOffsetA, prestep.LocalOffsetB, out var anchorOffsetA, out var anchorOffsetB, out var anchorOffset, out var distance);
             Vector3Wide.Scale(anchorOffset, Vector<float>.One / distance, out var direction);
@@ -193,7 +193,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(inertiaA.InverseMass, inertiaB.InverseMass, direction, angularImpulseToVelocityA, angularImpulseToVelocityB, accumulatedImpulses, ref wsvA, ref wsvB);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref DistanceServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref DistanceServoPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             GetDistance(orientationA, positionB - positionA, orientationB, prestep.LocalOffsetA, prestep.LocalOffsetB, out var anchorOffsetA, out var anchorOffsetB, out var anchorOffset, out var distance);
 
@@ -217,9 +217,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(inertiaA.InverseMass, inertiaB.InverseMass, direction, angularImpulseToVelocityA, angularImpulseToVelocityB, csi, ref wsvA, ref wsvB);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref DistanceServoPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref DistanceServoPrestepData prestepData) { }
     }
 
 

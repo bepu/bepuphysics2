@@ -34,7 +34,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public SpringSettings SpringSettings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -43,8 +43,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(HingeTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new HingeTypeProcessor();
+        public static Type TypeProcessorType => typeof(HingeTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new HingeTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -60,7 +60,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Hinge description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Hinge description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<HingePrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -114,7 +114,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Add(velocityB.Angular, angularChangeB, out velocityB.Angular);
         }
 
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref HingePrestepData prestep, ref HingeAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref HingePrestepData prestep, ref HingeAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var orientationMatrixA);
             Matrix3x3Wide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationMatrixA, out var offsetA);
@@ -126,7 +126,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(offsetA, offsetB, hingeJacobian, inertiaA, inertiaB, accumulatedImpulses, ref wsvA, ref wsvB);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref HingePrestepData prestep, ref HingeAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref HingePrestepData prestep, ref HingeAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //5x12 jacobians, from BallSocket and AngularHinge:
             //[ I, skew(offsetA),   -I, -skew(offsetB)    ]
@@ -217,9 +217,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(offsetA, offsetB, hingeJacobian, inertiaA, inertiaB, csi, ref wsvA, ref wsvB);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref HingePrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref HingePrestepData prestepData) { }
     }
 
     public class HingeTypeProcessor : TwoBodyTypeProcessor<HingePrestepData, HingeAccumulatedImpulses, HingeFunctions, AccessNoPosition, AccessNoPosition, AccessAll, AccessAll>

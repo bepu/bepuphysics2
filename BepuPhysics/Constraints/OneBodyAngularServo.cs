@@ -26,7 +26,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public ServoSettings ServoSettings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -35,8 +35,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(OneBodyAngularServoTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new OneBodyAngularServoTypeProcessor();
+        public static Type TypeProcessorType => typeof(OneBodyAngularServoTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new OneBodyAngularServoTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -49,7 +49,7 @@ namespace BepuPhysics.Constraints
             ServoSettingsWide.WriteFirst(ServoSettings, ref target.ServoSettings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out OneBodyAngularServo description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out OneBodyAngularServo description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<OneBodyAngularServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -76,13 +76,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref OneBodyAngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref OneBodyAngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             ApplyImpulse(inertiaA.InverseInertiaTensor, accumulatedImpulses, ref wsvA.Angular);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref OneBodyAngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref OneBodyAngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             //Jacobians are just the identity matrix.
             QuaternionWide.Conjugate(orientationA, out var inverseOrientation);
@@ -103,9 +103,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(inertiaA.InverseInertiaTensor, csi, ref wsvA.Angular);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyAngularServoPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyAngularServoPrestepData prestepData) { }
     }
 
     public class OneBodyAngularServoTypeProcessor : OneBodyTypeProcessor<OneBodyAngularServoPrestepData, Vector3Wide, OneBodyAngularServoFunctions, AccessOnlyAngular, AccessOnlyAngular>

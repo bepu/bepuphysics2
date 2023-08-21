@@ -162,7 +162,7 @@ namespace BepuPhysics.Collidables
             return inertia;
         }
 
-        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public static ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new ConvexShapeBatch<Box, BoxWide>(pool, initialCapacity);
         }
@@ -171,7 +171,7 @@ namespace BepuPhysics.Collidables
         /// Type id of box shapes.
         /// </summary>
         public const int Id = 2;
-        public readonly int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public static int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
 
@@ -221,7 +221,7 @@ namespace BepuPhysics.Collidables
             maximumAngularExpansion = maximumRadius - Vector.Min(HalfLength, Vector.Min(HalfHeight, HalfLength));
         }
 
-        public int MinimumWideRayCount
+        public static int MinimumWideRayCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get

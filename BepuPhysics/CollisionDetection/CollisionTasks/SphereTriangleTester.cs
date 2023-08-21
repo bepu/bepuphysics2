@@ -9,9 +9,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     //Individual pair testers are designed to be used outside of the narrow phase. They need to be usable for queries and such, so all necessary data must be gathered externally.
     public struct SphereTriangleTester : IPairTester<SphereWide, TriangleWide, Convex1ContactManifoldWide>
     {
-        public int BatchSize => 32;
+        public static int BatchSize => 32;
 
-        public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+        public static void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
@@ -26,7 +26,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount,
+        public static void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount,
             out Convex1ContactManifoldWide manifold)
         {
             Unsafe.SkipInit(out manifold);
@@ -120,7 +120,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector.GreaterThanOrEqual(manifold.Depth, -speculativeMargin)));
         }
 
-        public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public static void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

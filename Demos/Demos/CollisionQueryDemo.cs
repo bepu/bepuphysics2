@@ -175,7 +175,7 @@ namespace Demos.Demos
             shape.ComputeBounds(pose.Orientation, out var boundingBoxMin, out var boundingBoxMax);
             boundingBoxMin += pose.Position;
             boundingBoxMax += pose.Position;
-            AddQueryToBatch(shape.TypeId, queryShapeData, queryShapeSize, boundingBoxMin, boundingBoxMax, pose, queryId, ref batcher);
+            AddQueryToBatch(TShape.TypeId, queryShapeData, queryShapeSize, boundingBoxMin, boundingBoxMax, pose, queryId, ref batcher);
         }
 
         //This version of the query isn't used in the demo, but shows how you could use a simulation-cached shape in a query.

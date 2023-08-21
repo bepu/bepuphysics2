@@ -34,7 +34,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public SpringSettings SpringSettings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -43,8 +43,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(SwivelHingeTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new SwivelHingeTypeProcessor();
+        public static Type TypeProcessorType => typeof(SwivelHingeTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new SwivelHingeTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -60,7 +60,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out SwivelHinge description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out SwivelHinge description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<SwivelHingePrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -125,14 +125,14 @@ namespace BepuPhysics.Constraints
             swivelHingeJacobian = Vector3Wide.ConditionalSelect(useFallbackJacobian, hingeAxis, swivelHingeJacobian);
         }
 
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref SwivelHingePrestepData prestep, ref Vector4Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref SwivelHingePrestepData prestep, ref Vector4Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(prestep.LocalOffsetA, prestep.LocalSwivelAxisA, prestep.LocalOffsetB, prestep.LocalHingeAxisB, orientationA, orientationB,
                 out _, out _, out var offsetA, out var offsetB, out var swivelHingeJacobian);
             ApplyImpulse(offsetA, offsetB, swivelHingeJacobian, inertiaA, inertiaB, ref accumulatedImpulses, ref wsvA, ref wsvB);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref SwivelHingePrestepData prestep, ref Vector4Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref SwivelHingePrestepData prestep, ref Vector4Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //4x12 jacobians, from BallSocket and AngularSwivelHinge:
             //[ I, skew(offsetA),   -I, -skew(offsetB)    ]
@@ -209,9 +209,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(offsetA, offsetB, swivelHingeJacobian, inertiaA, inertiaB, ref csi, ref wsvA, ref wsvB);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref SwivelHingePrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref SwivelHingePrestepData prestepData) { }
     }
 
     public class SwivelHingeTypeProcessor : TwoBodyTypeProcessor<SwivelHingePrestepData, Vector4Wide, SwivelHingeFunctions, AccessNoPosition, AccessNoPosition, AccessAll, AccessAll>

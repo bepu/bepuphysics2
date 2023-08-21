@@ -26,7 +26,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public MotorSettings Settings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -35,8 +35,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(OneBodyLinearMotorTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new OneBodyLinearMotorTypeProcessor();
+        public static Type TypeProcessorType => typeof(OneBodyLinearMotorTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new OneBodyLinearMotorTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -48,7 +48,7 @@ namespace BepuPhysics.Constraints
             MotorSettingsWide.WriteFirst(Settings, ref target.Settings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out OneBodyLinearMotor description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out OneBodyLinearMotor description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<OneBodyLinearMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -67,13 +67,13 @@ namespace BepuPhysics.Constraints
 
     public struct OneBodyLinearMotorFunctions : IOneBodyConstraintFunctions<OneBodyLinearMotorPrestepData, Vector3Wide>
     {
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref OneBodyLinearMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, ref OneBodyLinearMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
             OneBodyLinearServoFunctions.ApplyImpulse(offset, inertiaA, ref wsvA, accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref OneBodyLinearMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref OneBodyLinearMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
             MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out var softnessImpulseScale, out var maximumImpulse);
@@ -96,9 +96,9 @@ namespace BepuPhysics.Constraints
             OneBodyLinearServoFunctions.ApplyImpulse(offset, inertiaA, ref wsvA, csi);
         }
         
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyLinearMotorPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyLinearMotorPrestepData prestepData) { }
     }
     public class OneBodyLinearMotorTypeProcessor : OneBodyTypeProcessor<OneBodyLinearMotorPrestepData, Vector3Wide, OneBodyLinearMotorFunctions, AccessNoPosition, AccessNoPosition>
     {

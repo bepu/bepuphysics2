@@ -203,7 +203,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
+        public static ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
         {
             return new CompoundShapeBatch<BigCompound>(pool, initialCapacity, shapes);
         }
@@ -342,7 +342,7 @@ namespace BepuPhysics.Collidables
         /// Type id of compound shapes.
         /// </summary>
         public const int Id = 7;
-        public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public static int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
 

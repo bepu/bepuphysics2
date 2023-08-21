@@ -35,7 +35,7 @@ namespace BepuPhysics.Constraints
             SpringSettings = springSettings;
         }
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -44,8 +44,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(CenterDistanceLimitTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new CenterDistanceLimitTypeProcessor();
+        public static Type TypeProcessorType => typeof(CenterDistanceLimitTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new CenterDistanceLimitTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -59,7 +59,7 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out CenterDistanceLimit description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out CenterDistanceLimit description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<CenterDistanceLimitPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -96,14 +96,14 @@ namespace BepuPhysics.Constraints
             jacobianA = Vector3Wide.ConditionalSelect(useMinimum, -jacobianA, jacobianA);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             ref CenterDistanceLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(prestep.MinimumDistance, prestep.MaximumDistance, positionA, positionB, out var jacobianA, out _, out _);
             CenterDistanceConstraintFunctions.ApplyImpulse(jacobianA, inertiaA.InverseMass, inertiaB.InverseMass, accumulatedImpulses, ref wsvA, ref wsvB);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
             ref CenterDistanceLimitPrestepData prestep, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(prestep.MinimumDistance, prestep.MaximumDistance, positionA, positionB, out var jacobianA, out var distance, out var useMinimum);
@@ -122,9 +122,9 @@ namespace BepuPhysics.Constraints
             CenterDistanceConstraintFunctions.ApplyImpulse(jacobianA, inertiaA.InverseMass, inertiaB.InverseMass, csi, ref wsvA, ref wsvB);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref CenterDistanceLimitPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref CenterDistanceLimitPrestepData prestepData) { }
 
     }
 

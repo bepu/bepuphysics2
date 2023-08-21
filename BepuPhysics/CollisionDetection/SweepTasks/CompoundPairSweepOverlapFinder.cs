@@ -9,7 +9,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     //At the moment, this is basically an unused abstraction. But, if you wanted, this allows you to use a special cased overlap finder in certain cases.
     public interface ICompoundPairSweepOverlapFinder<TCompoundA, TCompoundB> where TCompoundA : struct, ICompoundShape where TCompoundB : struct, IBoundsQueryableCompound
     {
-        unsafe void FindOverlaps(ref TCompoundA compoundA, Quaternion orientationA, in BodyVelocity velocityA,
+        static abstract void FindOverlaps(ref TCompoundA compoundA, Quaternion orientationA, in BodyVelocity velocityA,
               ref TCompoundB compoundB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
               Shapes shapes, BufferPool pool, out CompoundPairSweepOverlaps overlaps);
     }
@@ -18,7 +18,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         where TCompoundA : struct, ICompoundShape
         where TCompoundB : struct, IBoundsQueryableCompound
     {
-        public unsafe void FindOverlaps(
+        public static unsafe void FindOverlaps(
             ref TCompoundA compoundA, Quaternion orientationA, in BodyVelocity velocityA,
             ref TCompoundB compoundB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             Shapes shapes, BufferPool pool, out CompoundPairSweepOverlaps overlaps)

@@ -8,14 +8,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct SphereConvexHullTester : IPairTester<SphereWide, ConvexHullWide, Convex1ContactManifoldWide>
     {
-        public int BatchSize => 16;
+        public static int BatchSize => 16;
 
-        public void Test(ref SphereWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public static void Test(ref SphereWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref SphereWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public static void Test(ref SphereWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var hullOrientation);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, hullOrientation, out var localOffsetB);
@@ -45,7 +45,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.ContactExists = Vector.GreaterThanOrEqual(manifold.Depth, -speculativeMargin);
         }
 
-        public void Test(ref SphereWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public static void Test(ref SphereWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

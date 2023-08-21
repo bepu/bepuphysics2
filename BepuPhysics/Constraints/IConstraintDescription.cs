@@ -32,20 +32,20 @@ namespace BepuPhysics.Constraints
         /// <param name="bundleIndex">Index of the source constraint's bundle.</param>
         /// <param name="innerIndex">Index of the source constraint within its bundle.</param>
         /// <param name="description">Description of the constraint.</param>
-        void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TDescription description);
+        static abstract void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TDescription description);
         
         /// <summary>
         /// Gets the type id of the constraint that this is a description of.
         /// </summary>
-        int ConstraintTypeId { get; }
+        static abstract int ConstraintTypeId { get; }
         /// <summary>
         /// Gets the type of the type batch which contains described constraints.
         /// </summary>
-        Type TypeProcessorType  { get; }
+        static abstract Type TypeProcessorType  { get; }
         /// <summary>
         /// Creates a type processor for this constraint type.
         /// </summary>
-        TypeProcessor CreateTypeProcessor();
+        static abstract TypeProcessor CreateTypeProcessor();
     }
 
     /// <summary>

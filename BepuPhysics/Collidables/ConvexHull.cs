@@ -193,7 +193,7 @@ namespace BepuPhysics.Collidables
             return inertia;
         }
 
-        public readonly ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        public static ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
             return new ConvexHullShapeBatch(pool, initialCapacity);
         }
@@ -282,7 +282,7 @@ namespace BepuPhysics.Collidables
         /// Type id of convex hull shapes.
         /// </summary>
         public const int Id = 5;
-        public readonly int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+        public static int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
     public struct ConvexHullWide : IShapeWide<ConvexHull>
@@ -291,7 +291,7 @@ namespace BepuPhysics.Collidables
         //The "wide" variant is simply a collection of convex hull instances.
         public Buffer<ConvexHull> Hulls;
 
-        public int MinimumWideRayCount => int.MaxValue; //'Wide' ray tests just fall through to scalar tests anyway.
+        public static int MinimumWideRayCount => int.MaxValue; //'Wide' ray tests just fall through to scalar tests anyway.
 
         public bool AllowOffsetMemoryAccess => false;
         public int InternalAllocationSize => Vector<float>.Count * Unsafe.SizeOf<ConvexHull>();

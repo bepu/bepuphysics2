@@ -15,16 +15,16 @@ namespace BepuPhysics.Constraints
     /// <typeparam name="TAccumulatedImpulse">Type of the accumulated impulses used by the constraint.</typeparam>
     public interface IOneBodyConstraintFunctions<TPrestepData, TAccumulatedImpulse>
     {
-        void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
+        static abstract void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             ref TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA);
-        void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt,
+        static abstract void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt,
             ref TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA);
 
         /// <summary>
         /// Gets whether this constraint type requires incremental updates for each substep taken beyond the first.
         /// </summary>
-        bool RequiresIncrementalSubstepUpdates { get; }
-        void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocity, ref TPrestepData prestepData);
+        static abstract bool RequiresIncrementalSubstepUpdates { get; }
+        static abstract void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocity, ref TPrestepData prestepData);
     }
 
     //Not a big fan of complex generic-filled inheritance hierarchies, but this is the shortest evolutionary step to removing duplicates.
@@ -45,7 +45,7 @@ namespace BepuPhysics.Constraints
         struct OneBodySortKeyGenerator : ISortKeyGenerator<Vector<int>>
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int GetSortKey(int constraintIndex, ref Buffer<Vector<int>> bodyReferences)
+            public static int GetSortKey(int constraintIndex, ref Buffer<Vector<int>> bodyReferences)
             {
                 BundleIndexing.GetBundleIndices(constraintIndex, out var bundleIndex, out var innerIndex);
                 //We sort based on the body references within the constraint. 
@@ -88,8 +88,6 @@ namespace BepuPhysics.Constraints
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<Vector<int>>();
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
-            var function = default(TConstraintFunctions);
-            ref var states = ref bodies.ActiveSet.DynamicsState;
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];
@@ -101,7 +99,7 @@ namespace BepuPhysics.Constraints
                 //if (typeof(TAllowPoseIntegration) == typeof(AllowPoseIntegration))
                 //    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, new Vector<float>(dt), accumulatedImpulses, ref prestep);
 
-                function.WarmStart(positionA, orientationA, inertiaA, ref prestep, ref accumulatedImpulses, ref wsvA);
+                TConstraintFunctions.WarmStart(positionA, orientationA, inertiaA, ref prestep, ref accumulatedImpulses, ref wsvA);
 
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
@@ -121,8 +119,6 @@ namespace BepuPhysics.Constraints
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<Vector<int>>();
             var accumulatedImpulsesBundles = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
-            var function = default(TConstraintFunctions);
-            ref var motionStates = ref bodies.ActiveSet.DynamicsState;
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];
@@ -130,25 +126,24 @@ namespace BepuPhysics.Constraints
                 ref var references = ref bodyReferencesBundles[i];
                 bodies.GatherState<TSolveAccessFilterA>(references, true, out var positionA, out var orientationA, out var wsvA, out var inertiaA);
 
-                function.Solve(positionA, orientationA, inertiaA, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA);
+                TConstraintFunctions.Solve(positionA, orientationA, inertiaA, dt, inverseDt, ref prestep, ref accumulatedImpulses, ref wsvA);
 
                 bodies.ScatterVelocities<TSolveAccessFilterA>(ref wsvA, ref references);
             }
         }
 
-        public override bool RequiresIncrementalSubstepUpdates => default(TConstraintFunctions).RequiresIncrementalSubstepUpdates;
-        public unsafe override void IncrementallyUpdateForSubstep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public override bool RequiresIncrementalSubstepUpdates => TConstraintFunctions.RequiresIncrementalSubstepUpdates;
+        public override void IncrementallyUpdateForSubstep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<Vector<int>>();
-            var function = default(TConstraintFunctions);
             var dtWide = new Vector<float>(dt);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];
                 ref var references = ref bodyReferencesBundles[i];
                 bodies.GatherState<AccessOnlyVelocity>(references, true, out _, out _, out var wsvA, out _);
-                function.IncrementallyUpdateForSubstep(dtWide, wsvA, ref prestep);
+                TConstraintFunctions.IncrementallyUpdateForSubstep(dtWide, wsvA, ref prestep);
             }
         }
     }

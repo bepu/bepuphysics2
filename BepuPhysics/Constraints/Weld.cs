@@ -33,7 +33,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public SpringSettings SpringSettings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -42,8 +42,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(WeldTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new WeldTypeProcessor();
+        public static Type TypeProcessorType => typeof(WeldTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new WeldTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -58,7 +58,7 @@ namespace BepuPhysics.Constraints
             GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Weld description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Weld description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<WeldPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -114,14 +114,14 @@ namespace BepuPhysics.Constraints
         }
 
         //[MethodImpl(MethodImplOptions.NoInlining)]
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
             ref WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             Transform(prestep.LocalOffset, orientationA, out var offset);
             ApplyImpulse(inertiaA, inertiaB, offset, accumulatedImpulses.Orientation, accumulatedImpulses.Offset, ref wsvA, ref wsvB);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
             ref WeldPrestepData prestep, ref WeldAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //The weld constraint handles 6 degrees of freedom simultaneously. The constraints are:
@@ -211,9 +211,9 @@ namespace BepuPhysics.Constraints
         }
 
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref WeldPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref WeldPrestepData prestepData) { }
     }
 
 

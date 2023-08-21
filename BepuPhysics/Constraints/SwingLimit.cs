@@ -35,7 +35,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public float MaximumSwingAngle { readonly get { return (float)Math.Acos(MinimumDot); } set { MinimumDot = (float)Math.Cos(value); } }
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -44,8 +44,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(SwingLimitTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new SwingLimitTypeProcessor();
+        public static Type TypeProcessorType => typeof(SwingLimitTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new SwingLimitTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -66,7 +66,7 @@ namespace BepuPhysics.Constraints
             GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out SwingLimit description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out SwingLimit description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<SwingLimitPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -114,7 +114,7 @@ namespace BepuPhysics.Constraints
             var useFallback = Vector.LessThan(jacobianLengthSquared, new Vector<float>(1e-7f));
             Vector3Wide.ConditionalSelect(useFallback, fallbackJacobian, jacobianA, out jacobianA);
         }
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref SwingLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref SwingLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(prestep.AxisLocalA, prestep.AxisLocalB, orientationA, orientationB, out _, out _, out var jacobianA);
             Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out var impulseToVelocityA);
@@ -122,7 +122,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(impulseToVelocityA, negatedImpulseToVelocityB, accumulatedImpulses, ref wsvA.Angular, ref wsvB.Angular);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref SwingLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref SwingLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //The swing limit attempts to keep an axis on body A within from an axis on body B. In other words, this is the same as a hinge joint, but with one fewer DOF.
             //(Note that the jacobians are extremely similar to the AngularSwivelHinge; the difference is that this is a speculative inequality constraint.)
@@ -164,9 +164,9 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(impulseToVelocityA, negatedImpulseToVelocityB, csi, ref wsvA.Angular, ref wsvB.Angular);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref SwingLimitPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref SwingLimitPrestepData prestepData) { }
     }
 
     public class SwingLimitTypeProcessor : TwoBodyTypeProcessor<SwingLimitPrestepData, Vector<float>, SwingLimitFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>

@@ -34,7 +34,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public MotorSettings Settings;
 
-        public readonly int ConstraintTypeId
+        public static int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -43,8 +43,8 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public readonly Type TypeProcessorType => typeof(LinearAxisMotorTypeProcessor);
-        public readonly TypeProcessor CreateTypeProcessor() => new LinearAxisMotorTypeProcessor();
+        public static Type TypeProcessorType => typeof(LinearAxisMotorTypeProcessor);
+        public static TypeProcessor CreateTypeProcessor() => new LinearAxisMotorTypeProcessor();
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -59,7 +59,7 @@ namespace BepuPhysics.Constraints
             MotorSettingsWide.WriteFirst(Settings, ref target.Settings);
         }
 
-        public readonly void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out LinearAxisMotor description)
+        public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out LinearAxisMotor description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<LinearAxisMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -82,7 +82,7 @@ namespace BepuPhysics.Constraints
 
     public struct LinearAxisMotorFunctions : ITwoBodyConstraintFunctions<LinearAxisMotorPrestepData, Vector<float>>
     {
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref LinearAxisMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref LinearAxisMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             LinearAxisServoFunctions.ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalPlaneNormal, prestep.LocalOffsetA, prestep.LocalOffsetB, out _, out var normal, out var angularJA, out var angularJB);
             Symmetric3x3Wide.TransformWithoutOverlap(angularJA, inertiaA.InverseInertiaTensor, out var angularImpulseToVelocityA);
@@ -90,7 +90,7 @@ namespace BepuPhysics.Constraints
             LinearAxisServoFunctions.ApplyImpulse(normal, angularImpulseToVelocityA, angularImpulseToVelocityB, inertiaA, inertiaB, accumulatedImpulses, ref wsvA, ref wsvB);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref LinearAxisMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref LinearAxisMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             LinearAxisServoFunctions.ComputeJacobians(positionB - positionA, orientationA, orientationB, prestep.LocalPlaneNormal, prestep.LocalOffsetA, prestep.LocalOffsetB, out _, out var normal, out var angularJA, out var angularJB);
             MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out var softnessImpulseScale, out var maximumImpulse);
@@ -105,9 +105,9 @@ namespace BepuPhysics.Constraints
             LinearAxisServoFunctions.ApplyImpulse(normal, angularImpulseToVelocityA, angularImpulseToVelocityB, inertiaA, inertiaB, csi, ref wsvA, ref wsvB);
         }
 
-        public bool RequiresIncrementalSubstepUpdates => false;
+        public static bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref LinearAxisMotorPrestepData prestepData) { }
+        public static void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref LinearAxisMotorPrestepData prestepData) { }
     }
 
     public class LinearAxisMotorTypeProcessor : TwoBodyTypeProcessor<LinearAxisMotorPrestepData, Vector<float>, LinearAxisMotorFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
