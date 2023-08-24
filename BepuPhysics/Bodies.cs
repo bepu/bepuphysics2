@@ -575,6 +575,24 @@ namespace BepuPhysics
             return bodyHandle.Value >= 0 && bodyHandle.Value < HandleToLocation.Length && HandleToLocation[bodyHandle.Value].SetIndex >= 0;
         }
 
+        /// <summary>
+        /// Computes the number of bodies contained in the simulation.
+        /// </summary>
+        /// <returns>Number of bodies contained in the simulation.</returns>
+        /// <remarks>Enumerates all <see cref="BodySet"/> instances in the <see cref="Bodies"/> collection, summing the body counts for every allocated instance. 
+        /// For simulations with very large numbers of sleeping body sets, this is not a trivial operation.</remarks>
+        public int CountBodies()
+        {
+            int count = 0;
+            for (int i = 0; i < Sets.Length; ++i)
+            {
+                ref var set = ref Sets[i];
+                if (set.Allocated)
+                    count += set.Count;
+            }
+            return count;
+        }
+
         [Conditional("DEBUG")]
         internal void ValidateExistingHandle(BodyHandle handle)
         {
