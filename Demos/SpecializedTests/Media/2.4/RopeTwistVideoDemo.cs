@@ -4,12 +4,9 @@ using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using DemoContentLoader;
 using DemoRenderer;
-using DemoRenderer.UI;
 using Demos.Demos;
-using DemoUtilities;
 using System;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 
 namespace Demos.SpecializedTests.Media;
 

@@ -1,14 +1,10 @@
 ﻿using BepuPhysics;
-using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Demos.SpecializedTests
 {

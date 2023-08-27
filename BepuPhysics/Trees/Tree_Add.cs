@@ -1,11 +1,7 @@
 ﻿using BepuUtilities;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System;
-using System.Diagnostics;
 using BepuUtilities.Memory;
-using BepuUtilities.Collections;
-using System.Collections.Generic;
 
 namespace BepuPhysics.Trees;
 

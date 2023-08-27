@@ -1,10 +1,7 @@
 ﻿using BepuUtilities;
 using System.Diagnostics;
-using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 
 namespace BepuPhysics.Trees
 {

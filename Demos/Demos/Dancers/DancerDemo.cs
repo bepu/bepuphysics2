@@ -1,16 +1,13 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
-using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using System.Numerics;
-using System.Runtime.InteropServices;
 
 namespace Demos.Demos.Dancers
 {

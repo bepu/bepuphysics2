@@ -3,9 +3,7 @@ using BepuPhysics.Collidables;
 using BepuUtilities.Collections;
 using Demos.Demos.Characters;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
 
 namespace Demos.Demos.Sponsors
 {

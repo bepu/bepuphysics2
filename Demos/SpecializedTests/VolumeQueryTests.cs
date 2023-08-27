@@ -10,11 +10,8 @@ using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection;
-using BepuPhysics.Trees;
 using DemoRenderer.UI;
-using DemoRenderer.Constraints;
 using System.Threading;
-using Demos.SpecializedTests;
 using DemoContentLoader;
 
 namespace Demos.SpecializedTests

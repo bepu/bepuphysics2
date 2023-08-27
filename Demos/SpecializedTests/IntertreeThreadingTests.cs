@@ -1,12 +1,9 @@
-﻿using BepuPhysics;
-using BepuPhysics.CollisionDetection;
-using BepuUtilities;
+﻿using BepuUtilities;
 using BepuUtilities.Memory;
 using BepuPhysics.Trees;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
 using System.Runtime.CompilerServices;
 
 namespace Demos.SpecializedTests

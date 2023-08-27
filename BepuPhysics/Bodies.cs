@@ -3,11 +3,9 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using BepuPhysics.Constraints;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuUtilities;
-using static BepuUtilities.GatherScatter;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 

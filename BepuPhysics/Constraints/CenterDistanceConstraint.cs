@@ -1,5 +1,4 @@
-﻿using BepuPhysics.CollisionDetection;
-using BepuUtilities;
+﻿using BepuUtilities;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;

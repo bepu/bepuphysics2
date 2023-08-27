@@ -4,9 +4,7 @@ using BepuUtilities.Memory;
 using OpenTK;
 using OpenTK.Input;
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace DemoUtilities
 {

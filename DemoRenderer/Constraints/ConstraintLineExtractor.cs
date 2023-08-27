@@ -4,13 +4,11 @@ using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using BepuUtilities;
 using System.Numerics;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints.Contact;
-using System.Threading;
 
 namespace DemoRenderer.Constraints
 {

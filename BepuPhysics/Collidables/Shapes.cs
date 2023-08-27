@@ -1,5 +1,4 @@
-﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
+﻿using BepuUtilities.Memory;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System;

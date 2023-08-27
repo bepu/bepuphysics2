@@ -1,7 +1,5 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 using BepuPhysics;
-using BepuPhysics.Collidables;
 
 namespace Demos.Demos.Tanks
 {

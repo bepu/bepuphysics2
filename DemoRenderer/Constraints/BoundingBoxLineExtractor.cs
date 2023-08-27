@@ -3,10 +3,6 @@ using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using BepuPhysics;
 using System.Numerics;
-using System.Threading.Tasks;
-using System.Threading;
-using BepuUtilities;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Trees;
 using System.Runtime.CompilerServices;
 

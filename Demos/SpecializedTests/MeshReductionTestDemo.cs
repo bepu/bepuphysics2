@@ -5,12 +5,8 @@ using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
-using DemoRenderer.UI;
-using DemoUtilities;
-using OpenTK.Input;
 
 namespace Demos.SpecializedTests
 {

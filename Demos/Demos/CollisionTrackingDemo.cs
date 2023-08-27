@@ -13,7 +13,6 @@ using BepuUtilities.Memory;
 using System.Runtime.CompilerServices;
 using BepuPhysics.Constraints;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace Demos.Demos;
 

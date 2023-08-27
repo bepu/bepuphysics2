@@ -3,17 +3,13 @@ using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using BepuPhysics.Constraints;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Runtime.Intrinsics.X86;
 using System.Numerics;
 using System.Runtime.Intrinsics;
-using static BepuPhysics.Solver;
-using BepuPhysics.CollisionDetection;
 
 namespace BepuPhysics
 {

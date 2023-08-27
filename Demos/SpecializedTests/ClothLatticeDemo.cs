@@ -1,13 +1,8 @@
 ﻿using BepuUtilities;
 using DemoRenderer;
-using DemoUtilities;
 using BepuPhysics;
 using BepuPhysics.Collidables;
-using System;
 using System.Numerics;
-using System.Diagnostics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
 using BepuPhysics.Constraints;
 using DemoContentLoader;
 

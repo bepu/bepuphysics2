@@ -5,7 +5,6 @@ using BepuPhysics;
 using BepuPhysics.Collidables;
 using System;
 using System.Numerics;
-using System.Diagnostics;
 using DemoContentLoader;
 using DemoRenderer.UI;
 using DemoRenderer.Constraints;

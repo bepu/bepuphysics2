@@ -3,15 +3,9 @@ using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using BepuUtilities.TaskScheduling;
 using System;
-using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using static BepuPhysics.Collidables.CompoundBuilder;
 using Task = BepuUtilities.TaskScheduling.Task;
 
 namespace BepuPhysics.Trees;

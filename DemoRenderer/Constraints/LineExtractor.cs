@@ -2,7 +2,6 @@
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using BepuPhysics;
-using BepuPhysics.CollisionDetection;
 using System;
 
 namespace DemoRenderer.Constraints

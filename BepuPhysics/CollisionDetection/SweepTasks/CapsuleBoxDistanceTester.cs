@@ -1,7 +1,5 @@
 ﻿using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuUtilities;
-using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 

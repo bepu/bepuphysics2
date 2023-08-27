@@ -1,12 +1,9 @@
-﻿using BepuUtilities;
-using DemoRenderer;
+﻿using DemoRenderer;
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using System.Numerics;
 using DemoContentLoader;
 using BepuPhysics.Constraints;
-using Demos.Demos;
-using System;
 
 namespace Demos.SpecializedTests
 {

@@ -2,15 +2,10 @@
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
-using System.IO;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace BepuPhysics.Collidables
 {

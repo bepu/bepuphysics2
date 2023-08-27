@@ -1,5 +1,4 @@
 ﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Numerics;

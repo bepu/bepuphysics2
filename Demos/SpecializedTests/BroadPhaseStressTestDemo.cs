@@ -6,11 +6,7 @@ using BepuPhysics.Collidables;
 using System;
 using System.Numerics;
 using System.Diagnostics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
-using System.Runtime.CompilerServices;
 using DemoContentLoader;
-using BepuPhysics.Constraints;
 using BepuPhysics.CollisionDetection;
 
 namespace Demos.SpecializedTests

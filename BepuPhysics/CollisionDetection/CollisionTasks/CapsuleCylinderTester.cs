@@ -1,5 +1,4 @@
 ﻿using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuUtilities;
 using System;
 using System.Numerics;

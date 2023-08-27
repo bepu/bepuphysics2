@@ -1,13 +1,8 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
-using System.Runtime.Intrinsics.Arm;
 
 namespace BepuPhysics.Constraints
 {

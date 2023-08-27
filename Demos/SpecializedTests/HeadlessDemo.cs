@@ -1,12 +1,6 @@
-﻿using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
-using BepuUtilities.Memory;
-using DemoContentLoader;
-using DemoUtilities;
+﻿using DemoContentLoader;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 
 namespace Demos.SpecializedTests;
 

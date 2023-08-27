@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
+﻿using System.Numerics;
 using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer;
 using BepuPhysics;
 using BepuPhysics.Collidables;
-using System.Runtime.CompilerServices;
 using BepuPhysics.Constraints;
 
 namespace Demos.Demos

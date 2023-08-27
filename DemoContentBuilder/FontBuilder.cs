@@ -1,6 +1,4 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using DemoContentLoader;
 using SharpFont;
 using System;

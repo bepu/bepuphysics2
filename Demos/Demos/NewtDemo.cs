@@ -2,7 +2,6 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
-using BepuPhysics.Constraints.Contact;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
