@@ -9,7 +9,7 @@ namespace BepuPhysics.Constraints
     //There's a lot less room for tricky premultiplication to save memory bandwidth, simply because those quantities are all in registers/L1 cache during a constraint solve in 2.4+.
     //Would be nice to update those parts.
 
-    internal struct TwoBody1DOFJacobians
+    public struct TwoBody1DOFJacobians
     {
         public Vector3Wide LinearA;
         public Vector3Wide AngularA;
@@ -17,7 +17,7 @@ namespace BepuPhysics.Constraints
         public Vector3Wide AngularB;
     }
 
-    internal struct Projection2Body1DOF
+    public struct Projection2Body1DOF
     {
         //Rather than projecting from world space to constraint space *velocity* using JT, we precompute JT * effective mass
         //and go directly from world space velocity to constraint space impulse.
@@ -43,9 +43,8 @@ namespace BepuPhysics.Constraints
         public Vector3Wide CSIToWSVAngularB;
     }
 
-    internal static class Inequality2Body1DOF
+    public static class Inequality2Body1DOF
     {
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Prestep(ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB, ref TwoBody1DOFJacobians jacobians, ref SpringSettingsWide springSettings, ref Vector<float> maximumRecoveryVelocity,
             ref Vector<float> positionError, float dt, float inverseDt, out Projection2Body1DOF projection)
@@ -359,7 +358,6 @@ namespace BepuPhysics.Constraints
             accumulatedImpulse = Vector.Max(Vector<float>.Zero, accumulatedImpulse + csi);
 
             correctiveCSI = accumulatedImpulse - previousAccumulated;
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -367,7 +365,6 @@ namespace BepuPhysics.Constraints
         {
             ComputeCorrectiveImpulse(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulse, out var correctiveCSI);
             ApplyImpulse(ref projection, ref correctiveCSI, ref wsvA, ref wsvB);
-
         }
 
     }
