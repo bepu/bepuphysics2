@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using BepuUtilities;
-using BepuPhysics.Collidables;
+﻿using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 
 namespace BepuPhysics.CollisionDetection

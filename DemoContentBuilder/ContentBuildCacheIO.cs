@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using SharpDX.D3DCompiler;
-using System.Linq;
 using DemoContentLoader;
 
 namespace DemoContentBuilder

@@ -3,15 +3,9 @@ using BepuPhysics.Constraints;
 using BepuPhysics;
 using BepuUtilities;
 using DemoContentLoader;
-using DemoRenderer.UI;
 using DemoRenderer;
-using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 using BepuUtilities.Collections;
 
 namespace Demos.SpecializedTests

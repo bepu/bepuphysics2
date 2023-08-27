@@ -1,5 +1,4 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;

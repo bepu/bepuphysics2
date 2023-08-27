@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using BepuUtilities.Memory;
 using System.Diagnostics;
 using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuPhysics.Trees;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using System.Runtime.InteropServices;

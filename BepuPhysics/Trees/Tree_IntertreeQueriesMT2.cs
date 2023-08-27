@@ -1,15 +1,9 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using BepuUtilities.TaskScheduling;
 using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Xml.Linq;
 
 namespace BepuPhysics.Trees;
 

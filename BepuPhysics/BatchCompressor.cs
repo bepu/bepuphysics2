@@ -4,7 +4,6 @@ using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 

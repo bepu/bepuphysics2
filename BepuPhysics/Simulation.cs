@@ -1,12 +1,9 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
-using BepuPhysics.Constraints;
 using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using BepuPhysics.Trees;
 
 #if !DEBUG

@@ -1,7 +1,6 @@
 ﻿using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuPhysics.Trees;
 using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;

@@ -1,10 +1,8 @@
 ﻿using DemoUtilities;
-using OpenTK.Audio.OpenAL;
 using OpenTK.Input;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Demos
 {

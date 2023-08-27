@@ -1,13 +1,8 @@
-﻿using BepuUtilities;
-using BepuUtilities.Collections;
-using BepuUtilities.Memory;
-using DemoRenderer.UI;
+﻿using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
-using System.Text;
 
 namespace Demos.UI
 {

@@ -3,13 +3,10 @@ using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
-using BepuPhysics.CollisionDetection.CollisionTasks;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuUtilities.Collections;
 

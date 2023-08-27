@@ -1,11 +1,7 @@
-﻿using BepuPhysics.Trees;
-using BepuUtilities;
+﻿using BepuUtilities;
 using DemoContentLoader;
-using Demos.Demos;
-using Demos.SpecializedTests;
 using DemoUtilities;
 using OpenTK;
-using System.Runtime.Intrinsics;
 
 namespace Demos
 {

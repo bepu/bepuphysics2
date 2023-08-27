@@ -1,6 +1,5 @@
 ﻿using BepuUtilities.Memory;
 using System;
-using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
 {

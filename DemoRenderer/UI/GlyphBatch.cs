@@ -1,8 +1,5 @@
-﻿using BepuUtilities;
-using DemoUtilities;
-using System;
+﻿using System;
 using System.Numerics;
-using System.Text;
 
 namespace DemoRenderer.UI
 {

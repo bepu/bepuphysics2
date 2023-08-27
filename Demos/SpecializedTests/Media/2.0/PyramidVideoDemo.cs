@@ -7,9 +7,7 @@ using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
 
 namespace Demos.Demos.Media
 {

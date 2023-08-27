@@ -5,9 +5,6 @@ using BepuPhysics;
 using BepuPhysics.Collidables;
 using System;
 using System.Numerics;
-using System.Diagnostics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
 using DemoContentLoader;
 using BepuPhysics.Constraints;
 

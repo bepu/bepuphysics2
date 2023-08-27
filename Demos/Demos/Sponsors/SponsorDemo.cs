@@ -3,7 +3,6 @@ using DemoRenderer;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
 using BepuPhysics;
 using DemoRenderer.UI;
 using System.IO;

@@ -1,10 +1,7 @@
 ﻿using DemoRenderer;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using BepuUtilities;
-using OpenTK;
 using BepuUtilities.Memory;
 
 namespace Demos

@@ -1,20 +1,13 @@
-﻿using BepuPhysics.CollisionDetection.CollisionTasks;
-using BepuPhysics.Constraints.Contact;
-using BepuUtilities;
+﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using BepuUtilities.TaskScheduling;
 using System;
 using System.Diagnostics;
 using System.Numerics;
-using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
-using System.Security.Cryptography;
-using System.Xml.Linq;
-using static BepuPhysics.Trees.Tree;
 
 namespace BepuPhysics.Trees
 {

@@ -2,7 +2,6 @@
 using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Memory;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 

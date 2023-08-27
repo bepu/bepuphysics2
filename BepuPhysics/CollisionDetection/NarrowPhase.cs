@@ -1,11 +1,8 @@
 ﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using BepuPhysics.Collidables;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System;
-using BepuPhysics.Constraints;
 using System.Diagnostics;
 using System.Threading;
 using BepuUtilities;
