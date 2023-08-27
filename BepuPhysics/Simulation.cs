@@ -4,6 +4,7 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using BepuPhysics.Trees;
 
 #if !DEBUG
