@@ -10,8 +10,6 @@ public class WorkerBufferPools : IDisposable
     BufferPool[] pools;
 
     /// <summary>
-
-    /// <summary>
     /// Gets the pool associated with this worker.
     /// </summary>
     /// <param name="workerIndex">Worker index of the pool to look up.</param>

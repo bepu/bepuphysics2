@@ -93,8 +93,8 @@ namespace BepuUtilities
         /// <summary>
         /// Inverts the given matix.
         /// </summary>
-        /// <param name="matrix">Matrix to be inverted.</param>
-        /// <param name="result">Inverted matrix.</param>
+        /// <param name="m">Matrix to be inverted.</param>
+        /// <param name="inverse">Inverted matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void InvertWithoutOverlap(in Matrix2x2Wide m, out Matrix2x2Wide inverse)
         {

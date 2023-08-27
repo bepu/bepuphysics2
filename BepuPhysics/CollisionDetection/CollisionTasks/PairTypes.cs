@@ -108,8 +108,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     /// <summary>
     /// Pair of objects awaiting collision processing that involves velocities for bounds calculation.
     /// </summary>
-    /// <typeparam name="TA">Type of the first shape in the pair.</typeparam>
-    /// <typeparam name="TB">Type of the second shape in the pair.</typeparam>
     public unsafe struct BoundsTestedPair : ICollisionPair<BoundsTestedPair>
     {
         public void* A;

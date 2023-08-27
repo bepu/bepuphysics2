@@ -167,7 +167,6 @@ public class TreeFiddlingTestDemo : Demo
 
             int refinementState = 0;
             long sum = 0;
-            int cacheOptimizationStart = 0;
             var taskStack = new TaskStack(BufferPool, ThreadDispatcher, ThreadDispatcher.ThreadCount);
             for (int refinementIndex = 0; refinementIndex < 16384; ++refinementIndex)
             {

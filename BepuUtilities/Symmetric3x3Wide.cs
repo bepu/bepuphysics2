@@ -360,7 +360,6 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="a">Matrix to be reinterpreted as symmetric for the multiply.</param>
         /// <param name="b">Second matrix of the pair to multiply.</param>
-        /// <param name="result">Result of multiplying a * b.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Matrix3x3Wide operator *(in Symmetric3x3Wide a, in Matrix3x3Wide b) //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
         {
@@ -425,7 +424,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="m">Matrix to use as the sandwich bread.</param>
         /// <param name="t">Succulent interior symmetric matrix.</param>
-        /// <param name="sandwich">Result of m * t * mT for a symmetric matrix t.</param>
+        /// <param name="result">Result of m * t * mT for a symmetric matrix t.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void MatrixSandwich(in Matrix2x3Wide m, in Symmetric3x3Wide t, out Symmetric2x2Wide result)
         {
