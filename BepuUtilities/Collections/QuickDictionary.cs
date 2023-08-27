@@ -156,7 +156,6 @@ namespace BepuUtilities.Collections
         /// <param name="initialKeySpan">Span to use as backing memory of the dictionary keys.</param>
         /// <param name="initialValueSpan">Span to use as backing memory of the dictionary values.</param>
         /// <param name="initialTableSpan">Span to use as backing memory of the table. Must be zeroed.</param>
-        /// <param name="comparer">Comparer to use for the dictionary.</param>
         /// <param name="tablePowerOffset">Target size of the table relative to the number of stored elements.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public QuickDictionary(ref Buffer<TKey> initialKeySpan, ref Buffer<TValue> initialValueSpan, ref Buffer<int> initialTableSpan, int tablePowerOffset = 2)
@@ -187,7 +186,6 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
         /// <param name="tableSizePower">Target capacity relative to the initial capacity in terms of a power of 2. The size of the initial table buffer will be at least 2^tableSizePower times larger than the initial capacity.</param>
-        /// <param name="comparer">Comparer to use in the dictionary.</param>
         /// <param name="pool">Pool used for spans.</param>   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public QuickDictionary(int initialCapacity, int tableSizePower, IUnmanagedMemoryPool pool)
@@ -199,7 +197,6 @@ namespace BepuUtilities.Collections
         /// Creates a new dictionary with a default constructed comparer.
         /// </summary>
         /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
-        /// <param name="comparer">Comparer to use in the dictionary.</param>
         /// <param name="pool">Pool used for spans.</param>   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public QuickDictionary(int initialCapacity, IUnmanagedMemoryPool pool)
@@ -273,12 +270,6 @@ namespace BepuUtilities.Collections
         /// <summary>
         /// Returns the resources associated with the dictionary to pools.
         /// </summary>
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose(IUnmanagedMemoryPool pool)
         {
@@ -627,7 +618,6 @@ namespace BepuUtilities.Collections
         /// <param name="key">Key of the pair to add.</param>
         /// <param name="value">Value of the pair to add.</param>
         /// <param name="pool">Pool used for spans.</param>   
-        /// <typeparam name="TPool">Type of the pool used for spans.</typeparam>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Add(ref TKey key, in TValue value, IUnmanagedMemoryPool pool)
@@ -652,7 +642,6 @@ namespace BepuUtilities.Collections
         /// <param name="key">Key of the pair to add.</param>
         /// <param name="value">Value of the pair to add.</param>
         /// <param name="pool">Pool to pull resources from and to return resources to.</param>   
-        /// <typeparam name="TPool">Type of the pool to use.</typeparam>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Add(TKey key, in TValue value, IUnmanagedMemoryPool pool)

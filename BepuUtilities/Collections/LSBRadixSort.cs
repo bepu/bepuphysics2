@@ -164,8 +164,6 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <remarks>Only one invocation of the sort can be running at a time on a given instance of the sorter.</remarks>
         /// <typeparam name="TValue">Type of the values to sort.</typeparam>
-        /// <typeparam name="TKeySpan">Type of the span that holds the keys to sort.</typeparam>
-        /// <typeparam name="TValueSpan">Type of the span that holds the values to sort.</typeparam>
         /// <param name="inputKeys">Span containing the keys to sort.</param>
         /// <param name="inputValues">Span containing the values to sort.</param>
         /// <param name="scratchKeys">Scratch array to write temporary results into.</param>
