@@ -16,7 +16,7 @@ namespace BepuPhysics.CollisionDetection
         {
             BufferPool pool;
             [StructLayout(LayoutKind.Sequential)]
-            unsafe struct PendingConstraint<TBodyHandles, TDescription, TContactImpulses> where TBodyHandles : unmanaged where TDescription : unmanaged, IConstraintDescription<TDescription>
+            struct PendingConstraint<TBodyHandles, TDescription, TContactImpulses> where TBodyHandles : unmanaged where TDescription : unmanaged, IConstraintDescription<TDescription>
             {
                 //Note the memory ordering. Collidable pair comes first; deterministic flushes rely the memory layout to sort pending constraints.
                 public CollidablePair Pair;
@@ -255,7 +255,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void AddConstraint<TBodyHandles, TDescription, TContactImpulses>(int workerIndex, int manifoldConstraintType, CollidablePair pair,
+        void AddConstraint<TBodyHandles, TDescription, TContactImpulses>(int workerIndex, int manifoldConstraintType, CollidablePair pair,
             PairCacheChangeIndex pairCacheChange, ref TContactImpulses impulses, TBodyHandles bodyHandles, ref TDescription constraintDescription)
             where TBodyHandles : unmanaged where TDescription : unmanaged, IConstraintDescription<TDescription>
         {

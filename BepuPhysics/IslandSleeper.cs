@@ -331,7 +331,8 @@ namespace BepuPhysics
         }
 
         Action<int> gatherDelegate;
-        unsafe void Gather(int workerIndex)
+
+        void Gather(int workerIndex)
         {
             while (true)
             {
@@ -530,7 +531,7 @@ namespace BepuPhysics
         int scheduleOffset;
 
         [Conditional("DEBUG")]
-        unsafe void PrintIsland(ref IslandScaffold island)
+        void PrintIsland(ref IslandScaffold island)
         {
             Console.Write($"{island.BodyIndices.Count} body handles: ");
             for (int i = 0; i < island.BodyIndices.Count; ++i)
@@ -589,7 +590,7 @@ namespace BepuPhysics
         }
 
 
-        unsafe void Sleep(ref QuickList<int> traversalStartBodyIndices, IThreadDispatcher threadDispatcher, bool deterministic, int targetSleptBodyCount, int targetTraversedBodyCount, bool forceSleep)
+        void Sleep(ref QuickList<int> traversalStartBodyIndices, IThreadDispatcher threadDispatcher, bool deterministic, int targetSleptBodyCount, int targetTraversedBodyCount, bool forceSleep)
         {
             //There are four threaded phases to sleep:
             //1) Traversing the constraint graph to identify 'simulation islands' that satisfy the sleep conditions.

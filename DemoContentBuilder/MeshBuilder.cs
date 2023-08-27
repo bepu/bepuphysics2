@@ -16,7 +16,7 @@ namespace DemoContentBuilder
             }
         }
 
-        public unsafe static MeshContent Build(Stream dataStream)
+        public static MeshContent Build(Stream dataStream)
         {
             var result = new ObjLoaderFactory().Create(new MaterialStubLoader()).Load(dataStream);
             var triangles = new List<TriangleContent>();

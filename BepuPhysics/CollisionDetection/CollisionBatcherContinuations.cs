@@ -23,7 +23,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="report">Continuation instance being considered.</param>
         /// <param name="manifold">Contact manifold for the child pair.</param>
         /// <param name="batcher">Collision batcher processing the pair.</param>
-        unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
+        void OnChildCompleted<TCallbacks>(ref PairContinuation report, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
         /// <summary>
         /// Handles what to do next when the child pair was rejected for testing, and no manifold exists.
@@ -31,7 +31,7 @@ namespace BepuPhysics.CollisionDetection
         /// <typeparam name="TCallbacks">Type of the callbacks used in the batcher.</typeparam>
         /// <param name="report">Continuation instance being considered.</param>
         /// <param name="batcher">Collision batcher processing the pair.</param>
-        unsafe void OnUntestedChildCompleted<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher)
+        void OnUntestedChildCompleted<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="pairId">Id of the pair to attempt to flush.</param>
         /// <param name="batcher">Collision batcher processing the pair.</param>
         /// <returns>True if the pair was done and got flushed, false otherwise.</returns>
-        unsafe bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher)
+        bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
 
 
@@ -157,7 +157,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ContributeChildToContinuation<TCallbacks>(ref PairContinuation continuation, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
+        public void ContributeChildToContinuation<TCallbacks>(ref PairContinuation continuation, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
             ref var slot = ref Continuations[continuation.Index];
@@ -170,7 +170,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ContributeUntestedChildToContinuation<TCallbacks>(ref PairContinuation continuation, ref CollisionBatcher<TCallbacks> batcher)
+        public void ContributeUntestedChildToContinuation<TCallbacks>(ref PairContinuation continuation, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
             ref var slot = ref Continuations[continuation.Index];

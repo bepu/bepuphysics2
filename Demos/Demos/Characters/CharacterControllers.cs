@@ -233,7 +233,7 @@ namespace Demos.Demos.Characters
         {
             public Buffer<SupportCandidate> SupportCandidates;
 
-            public unsafe ContactCollectionWorkerCache(int maximumCharacterCount, BufferPool pool)
+            public ContactCollectionWorkerCache(int maximumCharacterCount, BufferPool pool)
             {
                 pool.Take(maximumCharacterCount, out SupportCandidates);
                 for (int i = 0; i < maximumCharacterCount; ++i)
@@ -414,7 +414,8 @@ namespace Demos.Demos.Characters
         }
 
         Buffer<(int Start, int Count)> boundingBoxExpansionJobs;
-        unsafe void ExpandBoundingBoxes(int start, int count)
+
+        void ExpandBoundingBoxes(int start, int count)
         {
             var end = start + count;
             for (int i = start; i < end; ++i)
@@ -434,7 +435,8 @@ namespace Demos.Demos.Characters
 
         int boundingBoxExpansionJobIndex;
         Action<int> expandBoundingBoxesWorker;
-        unsafe void ExpandBoundingBoxesWorker(int workerIndex)
+
+        void ExpandBoundingBoxesWorker(int workerIndex)
         {
             while (true)
             {
@@ -736,7 +738,8 @@ namespace Demos.Demos.Characters
         int analysisJobCount;
         Buffer<AnalyzeContactsJob> jobs;
         Action<int> analyzeContactsWorker;
-        unsafe void AnalyzeContactsWorker(int workerIndex)
+
+        void AnalyzeContactsWorker(int workerIndex)
         {
             int jobIndex;
             while ((jobIndex = Interlocked.Increment(ref analysisJobIndex)) < analysisJobCount)

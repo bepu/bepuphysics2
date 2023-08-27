@@ -192,7 +192,7 @@ namespace BepuPhysics
             solver.EnumerateConnectedRawBodyReferences(ref TypeBatches[typeBatchIndex], indexInTypeBatch, ref handleRemover);
         }
 
-        public unsafe void Remove(int constraintTypeId, int indexInTypeBatch, bool isFallback, Solver solver)
+        public void Remove(int constraintTypeId, int indexInTypeBatch, bool isFallback, Solver solver)
         {
             var typeBatchIndex = TypeIndexToTypeBatchIndex[constraintTypeId];
             ref var typeBatch = ref TypeBatches[typeBatchIndex];

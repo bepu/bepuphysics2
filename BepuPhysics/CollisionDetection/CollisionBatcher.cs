@@ -54,7 +54,7 @@ namespace BepuPhysics.CollisionDetection
         public BatcherContinuations<MeshReduction> MeshReductions;
         public BatcherContinuations<CompoundMeshReduction> CompoundMeshReductions;
 
-        public unsafe CollisionBatcher(BufferPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, float dt, TCallbacks callbacks)
+        public CollisionBatcher(BufferPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, float dt, TCallbacks callbacks)
         {
             Pool = pool;
             Shapes = shapes;
@@ -72,7 +72,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe ref TPair AllocatePair<TPair>(ref CollisionBatch batch, ref CollisionTaskReference reference) where TPair : ICollisionPair<TPair>
+        ref TPair AllocatePair<TPair>(ref CollisionBatch batch, ref CollisionTaskReference reference) where TPair : ICollisionPair<TPair>
         {
             if (!batch.Pairs.Buffer.Allocated)
             {
@@ -226,7 +226,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, Vector3 offsetB, Quaternion orientationA, Quaternion orientationB,
+        public void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, Vector3 offsetB, Quaternion orientationA, Quaternion orientationB,
             float speculativeMargin, in PairContinuation continuation)
         {
             Add(shapeIndexA, shapeIndexB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, continuation);
@@ -331,7 +331,7 @@ namespace BepuPhysics.CollisionDetection
         /// <remarks>Unless you're building custom compound collision pairs or adding new contact processing continuations, you can safely ignore this.</remarks>
         /// <param name="manifold">Contacts detected for the pair.</param>
         /// <param name="continuation">Continuation describing the pair and what to do with it.</param>
-        public unsafe void ProcessConvexResult(ref ConvexContactManifold manifold, ref PairContinuation continuation)
+        public void ProcessConvexResult(ref ConvexContactManifold manifold, ref PairContinuation continuation)
         {
 #if DEBUG
             if (manifold.Count > 0)
@@ -376,7 +376,7 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         /// <remarks>Unless you're building custom compound collision pairs or adding new contact processing continuations, you can safely ignore this.</remarks>
         /// <param name="continuation">Continuation describing the pair and what to do with it.</param>
-        public unsafe void ProcessEmptyResult(ref PairContinuation continuation)
+        public void ProcessEmptyResult(ref PairContinuation continuation)
         {
             Unsafe.SkipInit(out ConvexContactManifold manifold);
             manifold.Count = 0;
@@ -389,7 +389,7 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         /// <remarks>Unless you're building custom compound collision pairs or adding new contact processing continuations, you can safely ignore this.</remarks>
         /// <param name="continuation">Continuation describing the pair and what to do with it.</param>
-        public unsafe void ProcessUntestedSubpairConvexResult(ref PairContinuation continuation)
+        public void ProcessUntestedSubpairConvexResult(ref PairContinuation continuation)
         {
             //Note that we do not call OnChildPairCompleted. A callback is only invoked if a child is actually tested. 
             //If a child isn't considered- because acceleration structure pruned it, or a callback said to ignore it- there is no callback report.

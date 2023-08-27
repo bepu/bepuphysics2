@@ -55,7 +55,7 @@ namespace BepuPhysics.Constraints
         /// <param name="encodedBodyIndices">List of body indices (not handles!) with count equal to the type batch's expected number of involved bodies.</param>
         /// <param name="pool">Allocation provider to use if the type batch has to be resized.</param>
         /// <returns>Index of the slot in the batch.</returns>
-        public unsafe abstract int AllocateInTypeBatch(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> encodedBodyIndices, BufferPool pool);
+        public abstract int AllocateInTypeBatch(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> encodedBodyIndices, BufferPool pool);
 
         /// <summary>
         /// Allocates a slot in the batch, assuming the batch is a fallback batch.
@@ -65,7 +65,7 @@ namespace BepuPhysics.Constraints
         /// <param name="encodedBodyIndices">List of body indices (not handles!) with count equal to the type batch's expected number of involved bodies.</param>
         /// <param name="pool">Allocation provider to use if the type batch has to be resized.</param>
         /// <returns>Index of the slot in the batch.</returns>
-        public unsafe abstract int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> encodedBodyIndices, BufferPool pool);
+        public abstract int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> encodedBodyIndices, BufferPool pool);
         public abstract void Remove(ref TypeBatch typeBatch, int index, ref Buffer<ConstraintLocation> handlesToConstraints, bool isFallback);
 
 
@@ -130,7 +130,7 @@ namespace BepuPhysics.Constraints
         /// <param name="targetBatchIndex">Index of the ConstraintBatch in the solver to copy the constraint into.</param>
         /// <param name="dynamicBodyHandles">Set of body handles in the constraint referring to dynamic bodies.</param>
         /// <param name="encodedBodyIndices">Set of encoded body indices to use in the new constraint allocation.</param>
-        public unsafe abstract void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex, Span<BodyHandle> dynamicBodyHandles, Span<int> encodedBodyIndices);
+        public abstract void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex, Span<BodyHandle> dynamicBodyHandles, Span<int> encodedBodyIndices);
 
         [Conditional("DEBUG")]
         protected abstract void ValidateAccumulatedImpulsesSizeInBytes(int sizeInBytes);
@@ -181,17 +181,17 @@ namespace BepuPhysics.Constraints
             ref Buffer<ConstraintHandle> indexToHandleCache, ref Buffer<byte> bodyReferencesCache, ref Buffer<byte> prestepCache, ref Buffer<byte> accumulatedImpulsesCache,
             ref Buffer<ConstraintLocation> handlesToConstraints);
 
-        internal unsafe abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<ConstraintHandle> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
+        internal abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<ConstraintHandle> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
 
-        internal unsafe abstract void AddSleepingToActiveForFallback(
+        internal abstract void AddSleepingToActiveForFallback(
             int sourceSet, int sourceTypeBatchIndex, int targetTypeBatchIndex, Bodies bodies, Solver solver);
 
-        internal unsafe abstract void CopySleepingToActive(
+        internal abstract void CopySleepingToActive(
             int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetTypeBatchIndex,
             int sourceStart, int targetStart, int count, Bodies bodies, Solver solver);
 
 
-        internal unsafe abstract void AddWakingBodyHandlesToBatchReferences(ref TypeBatch typeBatch, ref IndexSet targetBatchReferencedHandles);
+        internal abstract void AddWakingBodyHandlesToBatchReferences(ref TypeBatch typeBatch, ref IndexSet targetBatchReferencedHandles);
 
         [Conditional("DEBUG")]
         internal abstract void VerifySortRegion(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices);
@@ -266,7 +266,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void SetBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, Span<int> bodyIndices)
+        public static void SetBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, Span<int> bodyIndices)
         {
             //We assume that the body references struct is organized in memory like Bundle0, Inner0, ... BundleN, InnerN, Count
             //Assuming contiguous storage, Count is then located at start + stride * BodyCount.
@@ -280,7 +280,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void AddBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, Span<int> bodyIndices)
+        public static void AddBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, Span<int> bodyIndices)
         {
             //The jit should be able to fold almost all of the size-related calculations and address fiddling.
             var bodyCount = Unsafe.SizeOf<TBodyReferences>() / (Vector<int>.Count * sizeof(int));
@@ -298,7 +298,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void RemoveBodyReferencesLane(ref TBodyReferences bundle, int innerIndex)
+        public static void RemoveBodyReferencesLane(ref TBodyReferences bundle, int innerIndex)
         {
             var bodyCount = Unsafe.SizeOf<TBodyReferences>() / (Vector<int>.Count * sizeof(int));
             ref var start = ref Unsafe.As<TBodyReferences, int>(ref bundle);
@@ -311,7 +311,7 @@ namespace BepuPhysics.Constraints
         }
 
 
-        public unsafe sealed override int AllocateInTypeBatch(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> bodyIndices, BufferPool pool)
+        public sealed override int AllocateInTypeBatch(ref TypeBatch typeBatch, ConstraintHandle handle, Span<int> bodyIndices, BufferPool pool)
         {
             Debug.Assert(typeBatch.BodyReferences.Allocated, "Should initialize the batch before allocating anything from it.");
             if (typeBatch.ConstraintCount == typeBatch.IndexToHandle.Length)
@@ -359,7 +359,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe static int GetInnerIndexForFallbackAllocation(ref TBodyReferences bundle)
+        private static int GetInnerIndexForFallbackAllocation(ref TBodyReferences bundle)
         {
             //The type batches are always held in pinned memory, this is not a GC hole.
             var bundleBodyIndices = Unsafe.As<TBodyReferences, Vector<int>>(ref bundle);
@@ -591,7 +591,7 @@ namespace BepuPhysics.Constraints
 
 
 
-        public sealed override unsafe void Scramble(ref TypeBatch typeBatch, Random random, ref Buffer<ConstraintLocation> handlesToConstraints)
+        public sealed override void Scramble(ref TypeBatch typeBatch, Random random, ref Buffer<ConstraintLocation> handlesToConstraints)
         {
             //This is a pure debug function used to compare cache optimization strategies. Performance doesn't matter. 
             TPrestepData aPrestep = default;
@@ -730,7 +730,7 @@ namespace BepuPhysics.Constraints
         /// <param name="targetBatchIndex">Index of the ConstraintBatch in the solver to copy the constraint into.</param>
         /// <param name="dynamicBodyHandles">Set of body handles in the constraint referring to dynamic bodies.</param>
         /// <param name="encodedBodyIndices">Set of encoded body indices to use in the new constraint allocation.</param>
-        public unsafe override sealed void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex, Span<BodyHandle> dynamicBodyHandles, Span<int> encodedBodyIndices)
+        public override sealed void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex, Span<BodyHandle> dynamicBodyHandles, Span<int> encodedBodyIndices)
         {
             var constraintHandle = sourceTypeBatch.IndexToHandle[indexInTypeBatch];
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
@@ -904,7 +904,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        internal unsafe sealed override void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<ConstraintHandle> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch)
+        internal sealed override void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<ConstraintHandle> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch)
         {
             ref var activeConstraintSet = ref solver.ActiveSet;
             ref var activeBodySet = ref bodies.ActiveSet;
@@ -1016,7 +1016,7 @@ namespace BepuPhysics.Constraints
             //solver.ValidateConstraintMaps(0, batchIndex, targetTypeBatchIndex);
         }
 
-        internal unsafe sealed override void CopySleepingToActive(
+        internal sealed override void CopySleepingToActive(
             int sourceSet, int batchIndex, int sourceTypeBatchIndex, int targetTypeBatchIndex,
             int sourceStart, int targetStart, int count, Bodies bodies, Solver solver)
         {
@@ -1094,7 +1094,7 @@ namespace BepuPhysics.Constraints
         }
 
 
-        internal unsafe sealed override void AddWakingBodyHandlesToBatchReferences(ref TypeBatch typeBatch, ref IndexSet targetBatchReferencedHandles)
+        internal sealed override void AddWakingBodyHandlesToBatchReferences(ref TypeBatch typeBatch, ref IndexSet targetBatchReferencedHandles)
         {
             for (int i = 0; i < typeBatch.ConstraintCount; ++i)
             {
@@ -1201,7 +1201,7 @@ namespace BepuPhysics.Constraints
             return BundleIntegrationMode.None;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void IntegratePoseAndVelocity<TIntegratorCallbacks>(
+        public static void IntegratePoseAndVelocity<TIntegratorCallbacks>(
             ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, in BodyInertiaWide localInertia, float dt, in Vector<int> integrationMask,
             ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity,
             int workerIndex,
@@ -1248,7 +1248,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(
+        public static void IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(
             ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, in BodyInertiaWide localInertia, float dt, in Vector<int> integrationMask,
             in Vector3Wide position, in QuaternionWide orientation, ref BodyVelocityWide velocity,
             int workerIndex,
@@ -1283,7 +1283,7 @@ namespace BepuPhysics.Constraints
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TAccessFilter, TShouldIntegratePoses>(
+        public static void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TAccessFilter, TShouldIntegratePoses>(
             Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref Buffer<IndexSet> integrationFlags, int bodyIndexInConstraint, float dt, int workerIndex, int bundleIndex,
             ref Vector<int> bodyIndices, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks

@@ -11,7 +11,7 @@ namespace Demos.SpecializedTests
 {
     public class MeshTestDemo : Demo
     {
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-10, 0, -10);
             //camera.Yaw = MathHelper.Pi ; 

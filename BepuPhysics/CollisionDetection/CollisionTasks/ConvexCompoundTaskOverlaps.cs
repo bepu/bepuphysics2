@@ -4,13 +4,13 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public unsafe struct ConvexCompoundOverlaps : ICollisionTaskSubpairOverlaps
+    public struct ConvexCompoundOverlaps : ICollisionTaskSubpairOverlaps
     {
         public Buffer<int> Overlaps;
         public int Count;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe ref int Allocate(BufferPool pool)
+        public ref int Allocate(BufferPool pool)
         {
             if (Overlaps.Length == Count)
             {

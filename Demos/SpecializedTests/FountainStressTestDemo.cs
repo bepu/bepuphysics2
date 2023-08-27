@@ -18,7 +18,7 @@ namespace Demos.SpecializedTests
         QuickQueue<StaticDescription> removedStatics;
         QuickQueue<BodyHandle> dynamicHandles;
         Random random;
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-15f, 20, -15f);
             camera.Yaw = MathHelper.Pi * 3f / 4;

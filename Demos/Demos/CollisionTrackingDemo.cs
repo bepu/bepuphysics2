@@ -371,7 +371,7 @@ public class CollisionTrackingDemo : Demo
     /// Callbacks invoked by the simulation's narrow phase.
     /// In this demo, we'll collect all contact data associated with tracked objects for later processing.
     /// </summary>
-    public unsafe struct CollisionTrackingCallbacks : INarrowPhaseCallbacks
+    public struct CollisionTrackingCallbacks : INarrowPhaseCallbacks
     {
         CollisionTracker collisionTracker;
         public CollisionTrackingCallbacks(CollisionTracker collisionTracker)
@@ -392,7 +392,7 @@ public class CollisionTrackingDemo : Demo
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+        public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
             pairMaterial.FrictionCoefficient = 1f;
             pairMaterial.MaximumRecoveryVelocity = 2f;

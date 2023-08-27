@@ -48,7 +48,7 @@ namespace BepuPhysics
         internal QuickDictionary<int, int, PrimitiveComparer<int>> dynamicBodyConstraintCounts;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void Allocate<TBodyReferenceGetter>(Span<BodyHandle> dynamicBodyHandles, Bodies bodies,
+        void Allocate<TBodyReferenceGetter>(Span<BodyHandle> dynamicBodyHandles, Bodies bodies,
             BufferPool pool, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity)
             where TBodyReferenceGetter : struct, IBodyReferenceGetter
         {
@@ -71,7 +71,7 @@ namespace BepuPhysics
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe void AllocateForActive(Span<BodyHandle> dynamicBodyHandles, Bodies bodies,
+        internal void AllocateForActive(Span<BodyHandle> dynamicBodyHandles, Bodies bodies,
            BufferPool pool, int minimumBodyCapacity = 8)
         {
             Allocate(dynamicBodyHandles, bodies, pool, new ActiveSetGetter(), minimumBodyCapacity);
@@ -91,7 +91,7 @@ namespace BepuPhysics
         /// <param name="bodyReference">Body associated with a constraint in the fallback batch.</param>
         /// <param name="allocationIdsToFree">Allocations that should be freed once execution is back in a safe context.</param>
         /// <returns>True if the body was dynamic and no longer has any constraints associated with it in the fallback batch, false otherwise.</returns>
-        internal unsafe bool RemoveOneBodyReferenceFromDynamicsSet(int bodyReference, ref QuickList<int> allocationIdsToFree)
+        internal bool RemoveOneBodyReferenceFromDynamicsSet(int bodyReference, ref QuickList<int> allocationIdsToFree)
         {
             if (!dynamicBodyConstraintCounts.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
                 return false;
@@ -121,7 +121,7 @@ namespace BepuPhysics
         /// <param name="bodyReference">Reference to the body to remove from the fallback batch.</param>
         /// <param name="allocationIdsToFree">Allocations that should be freed once execution is back in a safe context.</param>
         /// <returns>True if the body was present in the fallback batch and was removed, false otherwise.</returns>
-        internal unsafe bool TryRemoveDynamicBodyFromTracking(int bodyReference, ref QuickList<int> allocationIdsToFree)
+        internal bool TryRemoveDynamicBodyFromTracking(int bodyReference, ref QuickList<int> allocationIdsToFree)
         {
             if (dynamicBodyConstraintCounts.Keys.Allocated && dynamicBodyConstraintCounts.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
             {
@@ -209,7 +209,7 @@ namespace BepuPhysics
             }
         }
         [Conditional("DEBUG")]
-        public static unsafe void ValidateReferences(Solver solver)
+        public static void ValidateReferences(Solver solver)
         {
             for (int i = 0; i < solver.Sets.Length; ++i)
             {

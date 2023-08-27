@@ -121,7 +121,7 @@ namespace BepuUtilities
         /// <returns>Whether the bounding boxes intersected.</returns>
         /// <remarks>When possible, prefer using the <see cref="IntersectsUnsafe{TA, TB}(in TA, in TB)"/> variant for slightly better performance.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static bool Intersects(BoundingBox a, BoundingBox b)
+        public static bool Intersects(BoundingBox a, BoundingBox b)
         {
             return IntersectsUnsafe(a, b);
         }
@@ -153,7 +153,7 @@ namespace BepuUtilities
         /// <param name="box">Bounding box to measure.</param>
         /// <returns>Volume of the bounding box.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe float ComputeVolume(ref BoundingBox box)
+        public static float ComputeVolume(ref BoundingBox box)
         {
             var diagonal = (box.Max - box.Min);
             return diagonal.X * diagonal.Y * diagonal.Z;
@@ -199,7 +199,7 @@ namespace BepuUtilities
         /// <typeparam name="TA">Type of the first bounding box-like parameter.</typeparam>
         /// <typeparam name="TB">Type of the second bounding box-like parameter.</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void CreateMergedUnsafeWithPreservation<TA, TB>(in TA boundingBoxA, in TB boundingBoxB, out TA merged) where TA : unmanaged where TB : unmanaged
+        public static void CreateMergedUnsafeWithPreservation<TA, TB>(in TA boundingBoxA, in TB boundingBoxB, out TA merged) where TA : unmanaged where TB : unmanaged
         {
             if (Vector128.IsHardwareAccelerated)
             {
@@ -245,7 +245,7 @@ namespace BepuUtilities
         /// <typeparam name="TA">Type of the first bounding box-like parameter.</typeparam>
         /// <typeparam name="TB">Type of the second bounding box-like parameter.</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void CreateMergedUnsafe<TA, TB>(in TA boundingBoxA, in TB boundingBoxB, out TA merged) where TA : unmanaged where TB : unmanaged
+        public static void CreateMergedUnsafe<TA, TB>(in TA boundingBoxA, in TB boundingBoxB, out TA merged) where TA : unmanaged where TB : unmanaged
         {
             if (Vector128.IsHardwareAccelerated)
             {

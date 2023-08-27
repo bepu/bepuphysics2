@@ -9,7 +9,7 @@ namespace Demos.SpecializedTests
 {
     public class ConstrainedKinematicIntegrationTest : Demo
     {
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(25, 4, 40);
             camera.Yaw = 0;

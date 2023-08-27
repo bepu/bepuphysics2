@@ -276,7 +276,7 @@ namespace BepuPhysics.CollisionDetection
     /// Contains the data associated with a convex contact manifold.
     /// </summary>
     [StructLayout(LayoutKind.Explicit, Size = 108)]
-    public unsafe struct ConvexContactManifold : IContactManifold<ConvexContactManifold>
+    public struct ConvexContactManifold : IContactManifold<ConvexContactManifold>
     {
         /// <summary>
         /// Offset from collidable A to collidable B.

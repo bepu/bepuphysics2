@@ -157,7 +157,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void EnqueueStaleRemoval(int workerIndex, int pairIndex)
+        void EnqueueStaleRemoval(int workerIndex, int pairIndex)
         {
             //Note that we have to grab the *old* handle, because the current frame's set of constraint caches do not contain this pair.
             //If they DID contain this pair, then it wouldn't be stale!

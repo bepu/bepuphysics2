@@ -26,7 +26,7 @@ namespace Demos.Demos
             public float FrictionCoefficient;
             public float MaximumRecoveryVelocity;
         }
-        public unsafe struct FrictionCallbacks : INarrowPhaseCallbacks
+        public struct FrictionCallbacks : INarrowPhaseCallbacks
         {
             /// <summary>
             /// Maps <see cref="CollidableReference"/> entries to their <see cref="SimpleMaterial"/>.
@@ -59,7 +59,7 @@ namespace Demos.Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+            public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 //For the purposes of this demo, we'll use multiplicative blending for the friction and choose spring properties according to which collidable has a higher maximum recovery velocity.
                 var a = CollidableMaterials[pair.A];
@@ -81,7 +81,7 @@ namespace Demos.Demos
             }
         }
 
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 20, 200);
             camera.Yaw = 0;

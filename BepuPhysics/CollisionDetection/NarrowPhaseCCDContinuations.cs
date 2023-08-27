@@ -121,7 +121,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifoldReference) where TManifold : unmanaged, IContactManifold<TManifold>
+            public void OnPairCompleted<TManifold>(int pairId, ref TManifold manifoldReference) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 CCDContinuationIndex continuationId = new CCDContinuationIndex(pairId);
                 Debug.Assert(continuationId.Exists);
@@ -210,7 +210,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ref ConvexContactManifold manifold)
+            public void OnChildPairCompleted(int pairId, int childA, int childB, ref ConvexContactManifold manifold)
             {
                 var keepManifold = narrowPhase.Callbacks.ConfigureContactManifold(workerIndex, GetCollidablePair(pairId), childA, childB, ref manifold);
                 //This looks a little weird because it is. 

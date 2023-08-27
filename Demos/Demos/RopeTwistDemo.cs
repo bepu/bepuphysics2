@@ -24,7 +24,7 @@ namespace Demos.Demos
     /// <summary>
     /// Narrow phase callbacks that include collision filters designed for ropes. Adjacent bodies in a rope do not collide with each other.
     /// </summary>
-    unsafe struct RopeNarrowPhaseCallbacks : INarrowPhaseCallbacks
+    struct RopeNarrowPhaseCallbacks : INarrowPhaseCallbacks
     {
         public CollidableProperty<RopeFilter> Filters;
         public PairMaterialProperties Material;
@@ -60,7 +60,7 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+        public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
             pairMaterial = Material;
             return true;
@@ -82,7 +82,7 @@ namespace Demos.Demos
     /// </summary>
     public class RopeTwistDemo : Demo
     {
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 20, 20);
             camera.Yaw = 0;

@@ -150,7 +150,7 @@ namespace Demos.Demos
     /// <summary>
     /// Watches a set of bodies and statics for contact changes and reports events.
     /// </summary>
-    public unsafe class ContactEvents : IDisposable
+    public class ContactEvents : IDisposable
     {
         //To know what events to emit, we have to track the previous state of a collision. We don't need to keep around old positions/offets/normals/depths, so it's quite a bit lighter.
         [StructLayout(LayoutKind.Sequential)]
@@ -598,7 +598,7 @@ namespace Demos.Demos
     }
 
     //The narrow phase needs a way to tell our contact events system about changes to contacts, so they'll need to be a part of the INarrowPhaseCallbacks.
-    public unsafe struct ContactEventCallbacks : INarrowPhaseCallbacks
+    public struct ContactEventCallbacks : INarrowPhaseCallbacks
     {
         ContactEvents events;
 
@@ -620,7 +620,7 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+        public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
             pairMaterial.FrictionCoefficient = 1f;
             pairMaterial.MaximumRecoveryVelocity = 2f;

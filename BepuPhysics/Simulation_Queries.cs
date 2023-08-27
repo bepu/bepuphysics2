@@ -158,7 +158,7 @@ namespace BepuPhysics
         /// <param name="maximumT">Maximum length of the ray traversal in units of the direction's length.</param>
         /// <param name="hitHandler">callbacks to execute on ray-object intersections.</param>
         /// <param name="id">User specified id of the ray.</param>
-        public unsafe void RayCast<THitHandler>(Vector3 origin, Vector3 direction, float maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
+        public void RayCast<THitHandler>(Vector3 origin, Vector3 direction, float maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
         {
             RayHitDispatcher<THitHandler> dispatcher;
             dispatcher.ShapeHitHandler.HitHandler = hitHandler;
@@ -299,7 +299,7 @@ namespace BepuPhysics
         /// <param name="pool">Pool to allocate any temporary resources in during execution.</param>
         /// <param name="hitHandler">Callbacks executed when a sweep impacts an object in the scene.</param>
         /// <remarks>Simulation objects are treated as stationary during the sweep.</remarks>
-        public unsafe void Sweep<TShape, TSweepHitHandler>(in TShape shape, in RigidPose pose, in BodyVelocity velocity, float maximumT, BufferPool pool, ref TSweepHitHandler hitHandler)
+        public void Sweep<TShape, TSweepHitHandler>(in TShape shape, in RigidPose pose, in BodyVelocity velocity, float maximumT, BufferPool pool, ref TSweepHitHandler hitHandler)
             where TShape : unmanaged, IConvexShape where TSweepHitHandler : ISweepHitHandler
         {
             //Estimate some reasonable termination conditions for iterative sweeps based on the input shape size.

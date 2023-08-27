@@ -213,7 +213,7 @@ namespace Demos.Demos
             public RigidPose Pose;
         }
 
-        public unsafe override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             //The collision batcher vectorizes over multiple tests at once, so for optimal performance, you'll want to feed it a bunch of tests.
             var collisionBatcher = new CollisionBatcher<BatcherCallbacks>(BufferPool, Simulation.Shapes, Simulation.NarrowPhase.CollisionTaskRegistry, 0, new BatcherCallbacks());

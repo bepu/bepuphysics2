@@ -48,7 +48,7 @@ namespace BepuPhysics.Trees
 
         //Note that all of these implementations make use of a fully generic handler. It could be dumping to a list, or it could be directly processing the results- at this
         //level of abstraction we don't know or care. It's up to the user to use a handler which maximizes performance if they want it. We'll be using this in the broad phase.
-        readonly unsafe void DispatchTestForLeaf<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        readonly void DispatchTestForLeaf<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             if (nodeIndex < 0)
             {
@@ -59,7 +59,7 @@ namespace BepuPhysics.Trees
                 TestLeafAgainstNode(leafIndex, ref leafChild, nodeIndex, ref results);
             }
         }
-        readonly unsafe void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results)
+        readonly void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results)
             where TOverlapHandler : IOverlapHandler
         {
             ref var node = ref Nodes[nodeIndex];
@@ -83,7 +83,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        readonly unsafe void DispatchTestForNodes<TOverlapHandler>(ref NodeChild a, ref NodeChild b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        readonly void DispatchTestForNodes<TOverlapHandler>(ref NodeChild a, ref NodeChild b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             if (a.Index >= 0)
             {
@@ -109,7 +109,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        readonly unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(ref Node a, ref Node b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        readonly void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(ref Node a, ref Node b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             //There are no shared children, so test them all.
             ref var aa = ref a.A;
@@ -139,7 +139,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        readonly unsafe void GetOverlapsInNode<TOverlapHandler>(ref Node node, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        readonly void GetOverlapsInNode<TOverlapHandler>(ref Node node, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
 
             ref var a = ref node.A;
@@ -156,7 +156,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        public readonly unsafe void GetSelfOverlaps<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        public readonly void GetSelfOverlaps<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             //If there are less than two leaves, there can't be any overlap.
             //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
@@ -166,7 +166,7 @@ namespace BepuPhysics.Trees
             GetOverlapsInNode(ref Nodes[0], ref results);
         }
 
-        unsafe void GetOverlapsWithLeaf<TOverlapHandler>(ref TOverlapHandler results, NodeChild leaf, int nodeToTest, ref QuickList<int> stack) where TOverlapHandler : IOverlapHandler
+        void GetOverlapsWithLeaf<TOverlapHandler>(ref TOverlapHandler results, NodeChild leaf, int nodeToTest, ref QuickList<int> stack) where TOverlapHandler : IOverlapHandler
         {
             var leafIndex = Encode(leaf.Index);
             Debug.Assert(stack.Count == 0);
@@ -341,7 +341,8 @@ namespace BepuPhysics.Trees
                     : new NodeLeafPair { LeafParent = (NodeChild*)Unsafe.AsPointer(ref a), NodeIndex = b.Index };
             }
         }
-        unsafe void ExecuteCrossoverBatch<TOverlapHandler>(ref QuickList<IndexPair> crossovers, ref QuickList<NodeLeafPair> nodeLeaf, ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
+
+        void ExecuteCrossoverBatch<TOverlapHandler>(ref QuickList<IndexPair> crossovers, ref QuickList<NodeLeafPair> nodeLeaf, ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler
         {
             while (crossovers.TryPop(out var pair))
             {
@@ -411,7 +412,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe void FlushLeafLeaf<TOverlapHandler>(ref QuickList<IndexPair> leafLeaf, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        void FlushLeafLeaf<TOverlapHandler>(ref QuickList<IndexPair> leafLeaf, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             for (int leafLeafIndex = 0; leafLeafIndex < leafLeaf.Count; ++leafLeafIndex)
             {
@@ -470,7 +471,7 @@ namespace BepuPhysics.Trees
 
 
 
-        readonly unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, int start, int end) where TOverlapHandler : IOverlapHandler
+        readonly void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results, int start, int end) where TOverlapHandler : IOverlapHandler
         {
             Debug.Assert(end >= 0 && end <= NodeCount && start >= 0 && start < NodeCount);
             for (int i = end - 1; i >= start; --i)
@@ -490,7 +491,7 @@ namespace BepuPhysics.Trees
         /// Reports all bounding box overlaps between leaves in the tree to the given <typeparamref name="TOverlapHandler"/>.
         /// </summary>
         /// <param name="results">Handler to report results to.</param>
-        public readonly unsafe void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        public readonly void GetSelfOverlaps2<TOverlapHandler>(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             GetSelfOverlaps2(ref results, 0, NodeCount);
         }

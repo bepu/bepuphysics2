@@ -92,7 +92,7 @@ namespace BepuPhysics
         /// <param name="initialBodyCapacity">Initial number of bodies to allocate space for in the active set.</param>
         /// <param name="initialIslandCapacity">Initial number of islands to allocate space for in the Sets buffer.</param>
         /// <param name="initialConstraintCapacityPerBody">Expected number of constraint references per body to allocate space for.</param>
-        public unsafe Bodies(BufferPool pool, Shapes shapes, BroadPhase broadPhase,
+        public Bodies(BufferPool pool, Shapes shapes, BroadPhase broadPhase,
             int initialBodyCapacity, int initialIslandCapacity, int initialConstraintCapacityPerBody)
         {
             this.Pool = pool;
@@ -180,7 +180,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="description">Description of the body to add.</param>
         /// <returns>Handle of the created body.</returns>
-        public unsafe BodyHandle Add(in BodyDescription description)
+        public BodyHandle Add(in BodyDescription description)
         {
             Debug.Assert(HandleToLocation.Allocated, "The backing memory of the bodies set should be initialized before use.");
             var handleIndex = HandlePool.Take();
@@ -387,7 +387,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void UpdateForKinematicStateChange(BodyHandle handle, ref BodyMemoryLocation location, ref BodySet set, bool previouslyKinematic, bool currentlyKinematic)
+        void UpdateForKinematicStateChange(BodyHandle handle, ref BodyMemoryLocation location, ref BodySet set, bool previouslyKinematic, bool currentlyKinematic)
         {
             Debug.Assert(location.SetIndex == 0, "If we're changing kinematic state, we should have already awoken the body.");
             if (previouslyKinematic != currentlyKinematic)

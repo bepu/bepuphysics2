@@ -13,7 +13,7 @@ namespace Demos.SpecializedTests.Media
 {
     public class ShrinkwrappedNewtsVideoDemo : Demo
     {
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(25f, 1.5f, 15f);
             camera.Yaw = 3 * MathHelper.Pi / 4;

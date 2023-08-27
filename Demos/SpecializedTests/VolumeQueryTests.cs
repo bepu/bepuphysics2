@@ -18,7 +18,7 @@ namespace Demos.SpecializedTests
 {
     public class VolumeQueryTests : Demo
     {
-        public unsafe struct NoCollisionCallbacks : INarrowPhaseCallbacks
+        public struct NoCollisionCallbacks : INarrowPhaseCallbacks
         {
             public void Initialize(Simulation simulation)
             {
@@ -37,7 +37,7 @@ namespace Demos.SpecializedTests
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+            public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 pairMaterial = new PairMaterialProperties();
                 return false;
@@ -53,7 +53,7 @@ namespace Demos.SpecializedTests
             {
             }
         }
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20f, 13, -20f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
@@ -145,7 +145,7 @@ namespace Demos.SpecializedTests
                 internalWorker = ExecuteWorker;
             }
 
-            unsafe void ExecuteWorker(int workerIndex)
+            void ExecuteWorker(int workerIndex)
             {
                 var intersectionCount = worker(workerIndex, this);
                 Interlocked.Add(ref IntersectionCount, intersectionCount);
@@ -214,7 +214,7 @@ namespace Demos.SpecializedTests
 
         bool shouldUseMultithreading = true;
 
-        public unsafe override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
             base.Update(window, camera, input, dt);
 

@@ -199,7 +199,7 @@ namespace DemoRenderer
         /// <param name="source">Orientation to pack.</param>
         /// <param name="packed">Packed orientation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static ulong PackOrientationU64(Quaternion source)
+        public static ulong PackOrientationU64(Quaternion source)
         {
             //This isn't exactly a clever packing, but with 64 bits, cleverness isn't required.
             ref var vectorSource = ref Unsafe.As<float, Vector4>(ref source.X);
@@ -214,7 +214,7 @@ namespace DemoRenderer
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static unsafe float UnpackDuplicateZeroSNORM(ushort packed)
+        static float UnpackDuplicateZeroSNORM(ushort packed)
         {
             var unpacked = (packed & ((1 << 15) - 1)) * (1f / ((1 << 15) - 1));
             ref var reinterpreted = ref Unsafe.As<float, uint>(ref unpacked);

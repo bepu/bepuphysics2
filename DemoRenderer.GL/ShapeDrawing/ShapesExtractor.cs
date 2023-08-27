@@ -68,7 +68,7 @@ namespace DemoRenderer.ShapeDrawing
             ShapeCache.Clear();
         }
 
-        private unsafe void AddCompoundChildren(ref Buffer<CompoundChild> children, Shapes shapes, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, BufferPool pool)
+        private void AddCompoundChildren(ref Buffer<CompoundChild> children, Shapes shapes, RigidPose pose, Vector3 color, ref ShapeCache shapeCache, BufferPool pool)
         {
             for (int i = 0; i < children.Length; ++i)
             {

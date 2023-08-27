@@ -234,7 +234,7 @@ public unsafe struct TaskStack
     /// <param name="workerIndex">Index of the worker stack to push the tasks onto.</param>
     /// <param name="tag">User tag associated with the job spanning the submitted tasks.</param>
     /// <remarks>This must not be used while other threads could be performing task pushes or pops that could affect the specified worker.</remarks>
-    public unsafe void PushUnsafely(Task task, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0)
+    public void PushUnsafely(Task task, int workerIndex, IThreadDispatcher dispatcher, ulong tag = 0)
     {
         PushUnsafely(new Span<Task>(&task, 1), workerIndex, dispatcher, tag);
     }
@@ -457,7 +457,7 @@ public unsafe struct TaskStack
     /// <param name="untypedContext"><see cref="TaskStack"/> to be stopped.</param>
     /// <param name="workerIndex">Index of the worker executing this task.</param>
     /// <param name="dispatcher">Dispatcher associated with the execution.</param>
-    public static unsafe void RequestStopTaskFunction(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+    public static void RequestStopTaskFunction(long id, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
     {
         ((TaskStack*)untypedContext)->RequestStop();
     }

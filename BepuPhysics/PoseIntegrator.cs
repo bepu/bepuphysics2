@@ -253,7 +253,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
+        public static void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
         {
             Integrate(pose.Position, velocity.Linear, dt, out integratedPose.Position);
             Integrate(pose.Orientation, velocity.Angular, dt, out integratedPose.Orientation);
@@ -304,7 +304,7 @@ namespace BepuPhysics
             }
         }
 
-        unsafe void PredictBoundingBoxes(int startBundleIndex, int endBundleIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
+        void PredictBoundingBoxes(int startBundleIndex, int endBundleIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
             var activities = bodies.ActiveSet.Activity;
             var collidables = bodies.ActiveSet.Collidables;
@@ -446,7 +446,7 @@ namespace BepuPhysics
         /// Integrates the velocities of kinematic bodies as a prepass to the first substep during solving.
         /// Kinematics have to be integrated ahead of time since they don't block constraint batch membership; the same kinematic could appear in the batch multiple times.
         /// </summary>
-        internal unsafe void IntegrateKinematicVelocities(Buffer<int> bodyHandles, int bundleStartIndex, int bundleEndIndex, float substepDt, int workerIndex)
+        internal void IntegrateKinematicVelocities(Buffer<int> bodyHandles, int bundleStartIndex, int bundleEndIndex, float substepDt, int workerIndex)
         {
             var bodyCount = bodyHandles.Length;
             var bundleCount = BundleIndexing.GetBundleCount(bodyCount);
@@ -488,7 +488,7 @@ namespace BepuPhysics
         /// Integrates the poses *then* velocities of kinematic bodies as a prepass to the second or later substeps during solving.
         /// Kinematics have to be integrated ahead of time since they don't block constraint batch membership; the same kinematic could appear in the batch multiple times.
         /// </summary>
-        internal unsafe void IntegrateKinematicPosesAndVelocities(Buffer<int> bodyHandles, int bundleStartIndex, int bundleEndIndex, float substepDt, int workerIndex)
+        internal void IntegrateKinematicPosesAndVelocities(Buffer<int> bodyHandles, int bundleStartIndex, int bundleEndIndex, float substepDt, int workerIndex)
         {
             var bodyCount = bodyHandles.Length;
             var bundleCount = BundleIndexing.GetBundleCount(bodyCount);
@@ -532,7 +532,7 @@ namespace BepuPhysics
             }
         }
 
-        unsafe void IntegrateBundlesAfterSubstepping(ref IndexSet mergedConstrainedBodyHandles, int bundleStartIndex, int bundleEndIndex, float dt, float substepDt, int substepCount, int workerIndex)
+        void IntegrateBundlesAfterSubstepping(ref IndexSet mergedConstrainedBodyHandles, int bundleStartIndex, int bundleEndIndex, float dt, float substepDt, int substepCount, int workerIndex)
         {
             var bodyCount = bodies.ActiveSet.Count;
             var bundleCount = BundleIndexing.GetBundleCount(bodyCount);

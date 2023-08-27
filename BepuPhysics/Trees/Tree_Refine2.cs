@@ -46,7 +46,7 @@ public partial struct Tree
         }
     }
 
-    static unsafe void ReifyRootRefinement(int startIndex, int endIndex, QuickList<int> nodeIndices, Buffer<Node> refinementNodes, Tree tree)
+    static void ReifyRootRefinement(int startIndex, int endIndex, QuickList<int> nodeIndices, Buffer<Node> refinementNodes, Tree tree)
     {
         for (int i = startIndex; i < endIndex; ++i)
         {
@@ -128,7 +128,7 @@ public partial struct Tree
         }
     }
 
-    static unsafe void ReifySubtreeRefinement(int startIndex, int endIndex, QuickList<int> nodeIndices, Buffer<Node> refinementNodes, Tree tree)
+    static void ReifySubtreeRefinement(int startIndex, int endIndex, QuickList<int> nodeIndices, Buffer<Node> refinementNodes, Tree tree)
     {
         for (int i = startIndex; i < endIndex; ++i)
         {
@@ -329,7 +329,8 @@ public partial struct Tree
         public int Index;
         public float Cost;
     }
-    unsafe internal struct BinaryHeap
+
+    internal struct BinaryHeap
     {
         public Buffer<HeapEntry> Entries;
         public int Count;
@@ -347,7 +348,7 @@ public partial struct Tree
             pool.Return(ref Entries);
         }
 
-        public unsafe void Insert(int indexToInsert, float cost)
+        public void Insert(int indexToInsert, float cost)
         {
             int index = Count;
             ++Count;

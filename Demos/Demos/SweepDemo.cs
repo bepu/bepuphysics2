@@ -27,7 +27,7 @@ namespace Demos.Demos
 
         ConvexHull hull;
 
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 10, 40);
             camera.Yaw = 0;
@@ -132,7 +132,7 @@ namespace Demos.Demos
             }
         }
 
-        unsafe void DrawSweep<TShape>(TShape shape, in RigidPose pose, in BodyVelocity velocity, int steps,
+        void DrawSweep<TShape>(TShape shape, in RigidPose pose, in BodyVelocity velocity, int steps,
             float t, Renderer renderer, Vector3 color)
             where TShape : struct, IShape
         {
@@ -154,7 +154,7 @@ namespace Demos.Demos
             }
         }
 
-        unsafe void DrawImpact(Renderer renderer, ref Vector3 hitLocation, ref Vector3 hitNormal)
+        void DrawImpact(Renderer renderer, ref Vector3 hitLocation, ref Vector3 hitNormal)
         {
             //The normal itself will tend to be obscured by the shapes, so instead draw two lines representing the plane.
             DemoRenderer.Constraints.ContactLines.BuildOrthonormalBasis(hitNormal, out var tangent1, out var tangent2);

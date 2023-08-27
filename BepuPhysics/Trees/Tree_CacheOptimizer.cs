@@ -5,7 +5,7 @@ namespace BepuPhysics.Trees;
 
 partial struct Tree
 {
-    unsafe void SwapNodes(int indexA, int indexB)
+    void SwapNodes(int indexA, int indexB)
     {
         ref var a = ref Nodes[indexA];
         ref var b = ref Nodes[indexB];
@@ -89,7 +89,7 @@ partial struct Tree
         return leftNodeCount;
     }
 
-    unsafe void CacheOptimize(int nodeIndex, ref int nextIndex)
+    void CacheOptimize(int nodeIndex, ref int nextIndex)
     {
         ref var node = ref Nodes[nodeIndex];
         ref var children = ref node.A;
@@ -114,7 +114,7 @@ partial struct Tree
     /// Requires that the targeted node is already at the global optimum position.
     /// </summary>
     /// <param name="nodeIndex">Node to begin the optimization process at.</param>
-    public unsafe void CacheOptimize(int nodeIndex)
+    public void CacheOptimize(int nodeIndex)
     {
         if (LeafCount <= 2)
         {
@@ -127,7 +127,7 @@ partial struct Tree
         CacheOptimize(nodeIndex, ref targetIndex);
     }
 
-    private unsafe void CacheOptimizedLimitedSubtreeInternal(int sourceNodeIndex, int targetNodeIndex, int nodeOptimizationCount)
+    private void CacheOptimizedLimitedSubtreeInternal(int sourceNodeIndex, int targetNodeIndex, int nodeOptimizationCount)
     {
         if (sourceNodeIndex != targetNodeIndex)
             SwapNodes(targetNodeIndex, sourceNodeIndex);
@@ -153,7 +153,7 @@ partial struct Tree
     /// <param name="nodeIndex">Node index to start the optimization process at.</param>
     /// <param name="nodeOptimizationCount">Number of nodes to move.</param>
     /// <remarks>This optimizer will move the targeted node index to the globally optimal location if necessary.</remarks>
-    public unsafe void CacheOptimizeLimitedSubtree(int nodeIndex, int nodeOptimizationCount)
+    public void CacheOptimizeLimitedSubtree(int nodeIndex, int nodeOptimizationCount)
     {
         if (LeafCount <= 2)
             return;
@@ -170,7 +170,7 @@ partial struct Tree
     /// <param name="startingNodeIndex">Node index to start the optimization at.</param>
     /// <param name="targetCount">Number of nodes to try to optimize.</param>
     /// <returns>Number of nodes optimized.</returns>
-    public unsafe int CacheOptimizeRegion(int startingNodeIndex, int targetCount)
+    public int CacheOptimizeRegion(int startingNodeIndex, int targetCount)
     {
         if (LeafCount <= 2)
             return 0;

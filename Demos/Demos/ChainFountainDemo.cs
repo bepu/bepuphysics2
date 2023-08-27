@@ -17,7 +17,7 @@ namespace Demos.Demos
     /// </summary>
     public class ChainFountainDemo : Demo
     {
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(5.65f, 3, -23);
             camera.Yaw = MathF.PI;

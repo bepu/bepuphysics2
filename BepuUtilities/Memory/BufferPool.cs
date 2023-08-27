@@ -102,14 +102,14 @@ namespace BepuUtilities.Memory
 
             }
 
-            public unsafe readonly byte* GetStartPointerForSlot(int slot)
+            public readonly byte* GetStartPointerForSlot(int slot)
             {
                 var blockIndex = slot >> SuballocationsPerBlockShift;
                 var indexInBlock = slot & SuballocationsPerBlockMask;
                 return Blocks[blockIndex] + indexInBlock * SuballocationSize;
             }
 
-            public unsafe void Take(out Buffer<byte> buffer)
+            public void Take(out Buffer<byte> buffer)
             {
                 var slot = Slots.Take();
                 var blockIndex = slot >> SuballocationsPerBlockShift;
@@ -145,7 +145,7 @@ namespace BepuUtilities.Memory
             }
 
             [Conditional("DEBUG")]
-            internal unsafe void ValidateBufferIsContained<T>(ref Buffer<T> typedBuffer) where T : unmanaged
+            internal void ValidateBufferIsContained<T>(ref Buffer<T> typedBuffer) where T : unmanaged
             {
                 var buffer = typedBuffer.As<byte>();
                 //There are a lot of ways to screw this up. Try to catch as many as possible!
@@ -165,7 +165,7 @@ namespace BepuUtilities.Memory
                     "The extent of the buffer should fit within the block.");
             }
 
-            public readonly unsafe void Return(int slotIndex)
+            public readonly void Return(int slotIndex)
             {
 #if DEBUG 
                 Debug.Assert(outstandingIds.Remove(slotIndex),
@@ -319,7 +319,7 @@ namespace BepuUtilities.Memory
 
         /// <inheritdoc/>       
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ReturnUnsafely(int id)
+        public void ReturnUnsafely(int id)
         {
             DecomposeId(id, out var powerIndex, out var slotIndex);
             pools[powerIndex].Return(slotIndex);
@@ -327,7 +327,7 @@ namespace BepuUtilities.Memory
 
         /// <inheritdoc/>  
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Return<T>(ref Buffer<T> buffer) where T : unmanaged
+        public void Return<T>(ref Buffer<T> buffer) where T : unmanaged
         {
 #if DEBUG
             DecomposeId(buffer.Id, out var powerIndex, out var slotIndex);

@@ -20,7 +20,7 @@ namespace Demos.Demos
         //If you're wondering why the callbacks are interface implementing structs rather than classes or events, it's because 
         //the compiler can specialize the implementation using the compile time type information. That avoids dispatch overhead associated
         //with delegates or virtual dispatch and allows inlining, which is valuable for extremely high frequency logic like contact callbacks.
-        unsafe struct NarrowPhaseCallbacks : INarrowPhaseCallbacks
+        struct NarrowPhaseCallbacks : INarrowPhaseCallbacks
         {
             /// <summary>
             /// Performs any required initialization logic after the Simulation instance has been constructed.
@@ -85,7 +85,7 @@ namespace Demos.Demos
             /// <param name="pairMaterial">Material properties of the manifold.</param>
             /// <returns>True if a constraint should be created for the manifold, false otherwise.</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+            public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 //The IContactManifold parameter includes functions for accessing contact data regardless of what the underlying type of the manifold is.
                 //If you want to have direct access to the underlying type, you can use the manifold.Convex property and a cast like Unsafe.As<TManifold, ConvexContactManifold or NonconvexContactManifold>(ref manifold).

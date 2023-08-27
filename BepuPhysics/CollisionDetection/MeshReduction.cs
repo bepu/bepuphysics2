@@ -37,7 +37,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
+        public void OnChildCompleted<TCallbacks>(ref PairContinuation report, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
             Inner.OnChildCompleted(ref report, ref manifold, ref batcher);
@@ -50,7 +50,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void ComputeMeshSpaceContact(ref ConvexContactManifold manifold, in Matrix3x3 inverseMeshOrientation, bool requiresFlip, out Vector3 meshSpaceContact, out Vector3 meshSpaceNormal)
+        private static void ComputeMeshSpaceContact(ref ConvexContactManifold manifold, in Matrix3x3 inverseMeshOrientation, bool requiresFlip, out Vector3 meshSpaceContact, out Vector3 meshSpaceNormal)
         {
             //Select the deepest contact out of the manifold. Our goal is to find a contact on the representative feature of the source triangle.
             //Recall that triangle collision tests will generate speculative contacts elsewhere on the triangle, both on the face and potentially on edges
@@ -143,7 +143,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe bool ShouldBlockNormal(in TestTriangle triangle, Vector3 meshSpaceContact, Vector3 meshSpaceNormal)
+        private static bool ShouldBlockNormal(in TestTriangle triangle, Vector3 meshSpaceContact, Vector3 meshSpaceNormal)
         {
             //While we don't have a decent way to do truly scaling SIMD operations within the context of a single manifold vs triangle test, we can at least use 4-wide operations
             //to accelerate each individual contact test. 
@@ -291,7 +291,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        public unsafe static void ReduceManifolds(ref Buffer<Triangle> continuationTriangles, ref Buffer<NonconvexReductionChild> continuationChildren, int start, int count,
+        public static void ReduceManifolds(ref Buffer<Triangle> continuationTriangles, ref Buffer<NonconvexReductionChild> continuationChildren, int start, int count,
            bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation, Mesh* mesh, BufferPool pool)
         {
             //Before handing responsibility off to the nonconvex reduction, make sure that no contacts create nasty 'bumps' at the border of triangles.
@@ -507,7 +507,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
+        public bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
             Debug.Assert(Inner.ChildCount > 0);
             if (Inner.CompletedChildCount == Inner.ChildCount)

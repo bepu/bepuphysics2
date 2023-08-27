@@ -15,14 +15,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         ref TSubpairOverlaps GetOverlapsForPair(int subpairIndex);
     }
 
-    public unsafe struct ChildOverlapsCollection : ICollisionTaskSubpairOverlaps
+    public struct ChildOverlapsCollection : ICollisionTaskSubpairOverlaps
     {
         public Buffer<int> Overlaps;
         public int Count;
         public int ChildIndex;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe ref int Allocate(BufferPool pool)
+        public ref int Allocate(BufferPool pool)
         {
             if (Overlaps.Length == Count)
             {

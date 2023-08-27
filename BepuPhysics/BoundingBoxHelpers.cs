@@ -173,7 +173,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void ExpandBoundingBox(in Vector3Wide expansion, ref Vector3Wide min, ref Vector3Wide max)
+        public static void ExpandBoundingBox(in Vector3Wide expansion, ref Vector3Wide min, ref Vector3Wide max)
         {
             Vector3Wide.Min(Vector<float>.Zero, expansion, out var minExpansion);
             Vector3Wide.Max(Vector<float>.Zero, expansion, out var maxExpansion);
@@ -188,7 +188,7 @@ namespace BepuPhysics
         /// Expands the bounding box surrounding a shape A in the local space of some other collidable B.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void ExpandLocalBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max,
+        public static void ExpandLocalBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max,
             in Vector<float> radiusA, in Vector3Wide localPositionA, in Vector3Wide localRelativeLinearVelocityA, in Vector3Wide angularVelocityA, in Vector3Wide angularVelocityB, float dt,
             in Vector<float> maximumRadius, in Vector<float> maximumAngularExpansion, in Vector<float> maximumAllowedExpansion)
         {
@@ -218,7 +218,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void ExpandBoundingBox(Vector3 expansion, ref Vector3 min, ref Vector3 max)
+        public static void ExpandBoundingBox(Vector3 expansion, ref Vector3 min, ref Vector3 max)
         {
             var minExpansion = Vector3.Min(default, expansion);
             var maxExpansion = Vector3.Max(default, expansion);
@@ -229,7 +229,7 @@ namespace BepuPhysics
         /// <summary>
         /// Computes the bounding box of a child shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
         /// </summary>
-        public static unsafe void GetLocalBoundingBoxForSweep(TypedIndex shapeIndex, Shapes shapes, in RigidPose shapePoseLocalToA, Quaternion orientationA, in BodyVelocity velocityA,
+        public static void GetLocalBoundingBoxForSweep(TypedIndex shapeIndex, Shapes shapes, in RigidPose shapePoseLocalToA, Quaternion orientationA, in BodyVelocity velocityA,
             Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
         {
             //TODO: For any significant amount of B angular velocity, the resulting bounding boxes can be enormous in local space.
@@ -259,7 +259,7 @@ namespace BepuPhysics
         /// <summary>
         /// Computes the bounding box of shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
         /// </summary>
-        public static unsafe void GetLocalBoundingBoxForSweep<TConvex>(ref TConvex shape, Quaternion orientationA, in BodyVelocity velocityA,
+        public static void GetLocalBoundingBoxForSweep<TConvex>(ref TConvex shape, Quaternion orientationA, in BodyVelocity velocityA,
             Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max) where TConvex : struct, IConvexShape
         {
             //TODO: For any significant amount of B angular velocity, the resulting bounding boxes can be enormous in local space.

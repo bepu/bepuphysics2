@@ -11,7 +11,7 @@ namespace BepuUtilities
         /// Gets a reference to an element from a vector without using pointers, bypassing direct vector access for codegen reasons. This performs no bounds testing!
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe ref T Get<T>(ref Vector<T> vector, int index) where T : struct
+        public static ref T Get<T>(ref Vector<T> vector, int index) where T : struct
         {
             //TODO: This is a very compiler specific implementation which should be revisited as time goes on. Good chance it will become unnecessary, suboptimal, or counterproductive.
             return ref Unsafe.Add(ref Unsafe.As<Vector<T>, T>(ref vector), index);

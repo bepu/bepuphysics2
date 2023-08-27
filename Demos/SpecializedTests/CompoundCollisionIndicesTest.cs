@@ -11,7 +11,7 @@ using BepuPhysics.Constraints;
 
 namespace Demos.SpecializedTests
 {
-    public unsafe struct IndexReportingNarrowPhaseCallbacks : INarrowPhaseCallbacks
+    public struct IndexReportingNarrowPhaseCallbacks : INarrowPhaseCallbacks
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
@@ -26,7 +26,7 @@ namespace Demos.SpecializedTests
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+        public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
             if (manifold.Count > 0)
             {
