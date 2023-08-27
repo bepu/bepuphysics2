@@ -84,6 +84,7 @@ namespace Demos.Demos.Sponsors
             Add(sponsors1, "demiurghg", @"Content\Sponsors\ifiwereatardigrade.png", content, surface);
             Add(sponsors1, "JohnGert", @"Content\Sponsors\bedtimeforopossum.png", content, surface);
             Add(sponsors1, "Claytonious", @"Content\Sponsors\beaverboss.png", content, surface);
+            Add(sponsors1, "Damian", @"Content\Sponsors\marmottourism.png", content, surface);
 
             //These supporters are those who gave 50 dollars a month (or historical backers of roughly equivalent or greater total contribution).
             //They get a larger entry, a bit more text if desired, and a physically simulated entry in this demo.
