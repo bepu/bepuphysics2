@@ -107,8 +107,7 @@ namespace BepuPhysics
         }
 
 
-
-        unsafe void AnalysisWorker(int workerIndex)
+        void AnalysisWorker(int workerIndex)
         {
             int jobIndex;
             while ((jobIndex = Interlocked.Increment(ref analysisJobIndex)) < analysisJobs.Count)
@@ -126,7 +125,7 @@ namespace BepuPhysics
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void TryToFindBetterBatchForConstraint(
+        private void TryToFindBetterBatchForConstraint(
             BufferPool pool, ref QuickList<Compression> compressions, ref TypeBatch typeBatch, int* bodyHandles, ref ActiveConstraintDynamicBodyHandleCollector handleAccumulator, TypeProcessor typeProcessor, int constraintIndex)
         {
             handleAccumulator.Count = 0;
@@ -144,7 +143,7 @@ namespace BepuPhysics
         }
 
 
-        unsafe void DoJob(ref AnalysisRegion region, int workerIndex, BufferPool pool)
+        void DoJob(ref AnalysisRegion region, int workerIndex, BufferPool pool)
         {
             ref var compressions = ref this.workerCompressions[workerIndex];
             ref var batch = ref Solver.ActiveSet.Batches[nextBatchIndex];
@@ -196,7 +195,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void ApplyCompression(int sourceBatchIndex, ref ConstraintBatch sourceBatch, ref Compression compression)
+        private void ApplyCompression(int sourceBatchIndex, ref ConstraintBatch sourceBatch, ref Compression compression)
         {
             var constraintLocation = Solver.HandleToConstraint[compression.ConstraintHandle.Value];
             var typeProcessor = Solver.TypeProcessors[constraintLocation.TypeId];

@@ -13,7 +13,7 @@ namespace Demos.SpecializedTests.Media
     public class NewtDemandingSacrificeVideoDemo : Demo
     {
         CollidableProperty<SubgroupCollisionFilter> filters;
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-32f, 20.5f, 61f);
             camera.Yaw = MathHelper.Pi * 0.3f;

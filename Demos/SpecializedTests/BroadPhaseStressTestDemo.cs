@@ -14,7 +14,7 @@ namespace Demos.SpecializedTests
     public class BroadPhaseStressTestDemo : Demo
     {
 
-        public unsafe struct NoNarrowphaseTestingCallbacks : INarrowPhaseCallbacks
+        public struct NoNarrowphaseTestingCallbacks : INarrowPhaseCallbacks
         {
 
             public NoNarrowphaseTestingCallbacks()
@@ -35,7 +35,7 @@ namespace Demos.SpecializedTests
                 return false;
             }
 
-            public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+            public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 pairMaterial = default;
                 return false;
@@ -53,7 +53,7 @@ namespace Demos.SpecializedTests
 
         Vector3[] startingLocations;
 
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20f, 13, -20f);
             camera.Yaw = MathHelper.Pi * 3f / 4;

@@ -130,7 +130,7 @@ namespace BepuPhysics.CollisionDetection
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public unsafe void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex)
+                public void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex)
                 {
                     HitHandler.OnRayHit(ray, ref maximumT, t, normal, Reference, childIndex);
                 }

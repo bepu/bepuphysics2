@@ -18,7 +18,7 @@ namespace Demos.Demos.Characters
     public class CharacterDemo : Demo
     {
         CharacterControllers characters;
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(20, 10, 20);
             camera.Yaw = MathF.PI;

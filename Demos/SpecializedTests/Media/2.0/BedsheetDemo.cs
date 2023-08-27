@@ -103,7 +103,7 @@ namespace Demos.Demos.Media
 
         RolloverInfo rolloverInfo;
 
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(70, 40, -80);
             camera.Yaw = -MathF.PI * 0.8f;

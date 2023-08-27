@@ -205,7 +205,7 @@ namespace BepuPhysics
         /// <summary>
         /// Gets whether the body is kinematic, meaning its inverse inertia and mass are all zero.
         /// </summary>
-        public unsafe bool Kinematic { get { return Bodies.IsKinematicUnsafeGCHole(ref LocalInertia); } }
+        public bool Kinematic { get { return Bodies.IsKinematicUnsafeGCHole(ref LocalInertia); } }
 
         /// <summary>
         /// Gets whether the body has locked inertia, meaning its inverse inertia tensor is zero.

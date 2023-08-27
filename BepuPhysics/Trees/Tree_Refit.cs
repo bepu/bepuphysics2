@@ -11,7 +11,7 @@ namespace BepuPhysics.Trees
         /// Refits the bounding box of every parent of the node recursively to the root.
         /// </summary>
         /// <param name="nodeIndex">Node to propagate a node change for.</param>
-        public unsafe readonly void RefitForNodeBoundsChange(int nodeIndex)
+        public readonly void RefitForNodeBoundsChange(int nodeIndex)
         {
             //Note that no attempt is made to refit the root node. Note that the root node is the only node that can have a number of children less than 2.
             ref var node = ref Nodes[nodeIndex];
@@ -29,7 +29,7 @@ namespace BepuPhysics.Trees
         //TODO: Recursive approach is a bit silly. Our earlier nonrecursive implementations weren't great, but we could do better.
         //This is especially true if we end up changing the memory layout. If we go back to a contiguous array per level, refit becomes trivial.
         //That would only happen if it turns out useful for other parts of the execution, though- optimizing refits at the cost of self-tests would be a terrible idea.
-        readonly unsafe void Refit(int nodeIndex, out Vector3 min, out Vector3 max)
+        readonly void Refit(int nodeIndex, out Vector3 min, out Vector3 max)
         {
             Debug.Assert(LeafCount >= 2);
             ref var node = ref Nodes[nodeIndex];
@@ -48,7 +48,7 @@ namespace BepuPhysics.Trees
         /// <summary>
         /// Updates the bounding boxes of all internal nodes in the tree.
         /// </summary>
-        public unsafe readonly void Refit()
+        public readonly void Refit()
         {
             //No point in refitting a tree with no internal nodes!
             if (LeafCount <= 2)

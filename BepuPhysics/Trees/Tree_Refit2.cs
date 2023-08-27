@@ -8,7 +8,7 @@ namespace BepuPhysics.Trees;
 
 partial struct Tree
 {
-    readonly unsafe void Refit2(ref NodeChild childInParent)
+    readonly void Refit2(ref NodeChild childInParent)
     {
         Debug.Assert(LeafCount >= 2);
         ref var node = ref Nodes[childInParent.Index];
@@ -27,7 +27,7 @@ partial struct Tree
     /// <summary>
     /// Updates the bounding boxes of all internal nodes in the tree.
     /// </summary>
-    public unsafe readonly void Refit2()
+    public readonly void Refit2()
     {
         //No point in refitting a tree with no internal nodes!
         if (LeafCount <= 2)
@@ -151,7 +151,7 @@ partial struct Tree
         public TaskStack* TaskStack;
     }
 
-    static unsafe void Refit2WithCacheOptimization(int sourceNodeIndex, int parentIndex, int childIndexInParent, ref NodeChild childInParent, ref RefitWithCacheOptimizationContext context)
+    static void Refit2WithCacheOptimization(int sourceNodeIndex, int parentIndex, int childIndexInParent, ref NodeChild childInParent, ref RefitWithCacheOptimizationContext context)
     {
         Debug.Assert(context.Tree.LeafCount >= 2);
 
@@ -201,7 +201,7 @@ partial struct Tree
     /// The input source buffer is not modified.
     /// </summary>
     /// <param name="sourceNodes">Nodes to base the refit on.</param>
-    public unsafe void Refit2WithCacheOptimization(Buffer<Node> sourceNodes)
+    public void Refit2WithCacheOptimization(Buffer<Node> sourceNodes)
     {
         //No point in refitting a tree with no internal nodes!
         if (LeafCount <= 2)
@@ -222,7 +222,7 @@ partial struct Tree
     /// </summary>
     /// <param name="pool">Pool to allocate from. If disposeOriginals is true, this must be the same pool from which the <see cref="Nodes"/> buffer was allocated from.</param>
     /// <param name="disposeOriginalNodes">Whether to dispose of the original nodes buffer. If false, it's up to the caller to dispose of it appropriately.</param>
-    public unsafe void Refit2WithCacheOptimization(BufferPool pool, bool disposeOriginalNodes = true)
+    public void Refit2WithCacheOptimization(BufferPool pool, bool disposeOriginalNodes = true)
     {
         //No point in refitting a tree with no internal nodes!
         if (LeafCount <= 2)

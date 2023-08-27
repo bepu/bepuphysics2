@@ -15,7 +15,7 @@ namespace Demos.SpecializedTests.Media;
 /// </summary>
 public class RopeTwistVideoDemo : Demo
 {
-    public unsafe override void Initialize(ContentArchive content, Camera camera)
+    public override void Initialize(ContentArchive content, Camera camera)
     {
         camera.Position = new Vector3(0, 20, 20);
         camera.Yaw = 0;

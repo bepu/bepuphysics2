@@ -150,7 +150,7 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe Statics(BufferPool pool, Shapes shapes, Bodies bodies, BroadPhase broadPhase, int initialCapacity = 4096)
+        public Statics(BufferPool pool, Shapes shapes, Bodies bodies, BroadPhase broadPhase, int initialCapacity = 4096)
         {
             this.pool = pool;
             InternalResize(Math.Max(1, initialCapacity));
@@ -456,7 +456,7 @@ namespace BepuPhysics
         /// <param name="description">Description to apply to the static.</param>
         /// <param name="filter">Filter to apply to sleeping bodies near the static to see if they should be awoken.</param>
         /// <typeparam name="TAwakeningFilter">Type of the filter to apply to sleeping bodies.</typeparam>
-        public unsafe void ApplyDescription<TAwakeningFilter>(StaticHandle handle, in StaticDescription description, ref TAwakeningFilter filter) where TAwakeningFilter : struct, IStaticChangeAwakeningFilter
+        public void ApplyDescription<TAwakeningFilter>(StaticHandle handle, in StaticDescription description, ref TAwakeningFilter filter) where TAwakeningFilter : struct, IStaticChangeAwakeningFilter
         {
             ValidateExistingHandle(handle);
             var index = HandleToIndex[handle.Value];
@@ -475,7 +475,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the static to apply the description to.</param>
         /// <param name="description">Description to apply to the static.</param>
-        public unsafe void ApplyDescription(StaticHandle handle, in StaticDescription description)
+        public void ApplyDescription(StaticHandle handle, in StaticDescription description)
         {
             var defaultFilter = default(StaticsShouldntAwakenKinematics);
             ApplyDescription(handle, description, ref defaultFilter);

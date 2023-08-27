@@ -24,7 +24,7 @@ namespace BepuPhysics.Trees
     /// 2-wide tree node.
     /// </summary>
     [StructLayout(LayoutKind.Explicit)]
-    public unsafe struct Node
+    public struct Node
     {
         [FieldOffset(0)]
         public NodeChild A;
@@ -38,7 +38,7 @@ namespace BepuPhysics.Trees
     /// Metadata associated with a 2-child tree node.
     /// </summary>
     [StructLayout(LayoutKind.Explicit)]
-    public unsafe struct Metanode
+    public struct Metanode
     {
         [FieldOffset(0)]
         public int Parent;

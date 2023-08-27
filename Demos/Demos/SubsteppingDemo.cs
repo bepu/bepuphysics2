@@ -19,7 +19,7 @@ namespace Demos.Demos
     {
         RolloverInfo rolloverInfo;
 
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 25, 80);
             camera.Yaw = 0;

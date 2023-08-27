@@ -67,7 +67,7 @@ namespace BepuUtilities.Collections
         /// <param name="indexList">List of indices to check for in the batch.</param>
         /// <returns>True if none of the indices are present in the set, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool CanFit(Span<int> indexList)
+        public bool CanFit(Span<int> indexList)
         {
             for (int i = 0; i < indexList.Length; ++i)
             {

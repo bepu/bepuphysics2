@@ -15,7 +15,7 @@ namespace Demos.SpecializedTests.Media
     /// </summary>
     public class ExcessivePyramidVideoDemo : Demo
     {
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-120, 32, 1045);
             camera.Yaw = MathHelper.Pi * 1f / 4;

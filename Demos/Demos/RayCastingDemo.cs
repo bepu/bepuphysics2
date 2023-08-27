@@ -22,7 +22,7 @@ namespace Demos
 {
     public class RayCastingDemo : Demo
     {
-        public unsafe struct NoCollisionCallbacks : INarrowPhaseCallbacks
+        public struct NoCollisionCallbacks : INarrowPhaseCallbacks
         {
             public void Initialize(Simulation simulation)
             {
@@ -41,7 +41,7 @@ namespace Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+            public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 pairMaterial = new PairMaterialProperties();
                 return false;
@@ -57,7 +57,7 @@ namespace Demos
             {
             }
         }
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20f, 13, -20f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
@@ -262,7 +262,7 @@ namespace Demos
                 pool.Take(largestRayCount, out Results);
             }
 
-            unsafe void ExecuteWorker(int workerIndex)
+            void ExecuteWorker(int workerIndex)
             {
                 var intersectionCount = worker(workerIndex, this);
                 Interlocked.Add(ref IntersectionCount, intersectionCount);
@@ -395,7 +395,7 @@ namespace Demos
             }
         }
 
-        public unsafe override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
             base.Update(window, camera, input, dt);
 

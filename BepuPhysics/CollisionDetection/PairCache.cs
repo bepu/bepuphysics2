@@ -202,7 +202,7 @@ namespace BepuPhysics.CollisionDetection
             jobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.FlushPairCacheChanges }, pool);
         }
 
-        public unsafe void FlushMappingChanges()
+        public void FlushMappingChanges()
         {
             //Flush all pending adds from the new set.
             //Note that this phase accesses no shared memory- it's all pair cache local, and no pool accesses are made.
@@ -308,14 +308,14 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe PairCacheChangeIndex Add(int workerIndex, CollidablePair pair, in ConstraintCache constraintCache)
+        internal PairCacheChangeIndex Add(int workerIndex, CollidablePair pair, in ConstraintCache constraintCache)
         {
             //Note that we do not have to set any freshness bytes here; using this path means there exists no previous overlap to remove anyway.            
             return new PairCacheChangeIndex { WorkerIndex = workerIndex, Index = WorkerPendingChanges[workerIndex].Add(cachedDispatcher == null ? pool : cachedDispatcher.WorkerPools[workerIndex], pair, constraintCache) };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe PairCacheChangeIndex Update(int pairIndex, in ConstraintCache cache)
+        internal PairCacheChangeIndex Update(int pairIndex, in ConstraintCache cache)
         {
             //We're updating an existing pair, so we should prevent this pair from being removed.
             PairFreshness[pairIndex] = 0xFF;
@@ -329,7 +329,7 @@ namespace BepuPhysics.CollisionDetection
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe ConstraintHandle GetOldConstraintHandle(int pairIndex)
+        internal ConstraintHandle GetOldConstraintHandle(int pairIndex)
         {
             return Mapping.Values[pairIndex].ConstraintHandle;
         }
@@ -345,7 +345,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="constraintHandle">Constraint handle associated with the constraint cache being updated.</param>
         /// <param name="pair">Collidable pair associated with the new constraint.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe void CompleteConstraintAdd<TContactImpulses>(NarrowPhase narrowPhase, Solver solver, ref TContactImpulses impulses, PairCacheChangeIndex pairCacheChangeIndex,
+        internal void CompleteConstraintAdd<TContactImpulses>(NarrowPhase narrowPhase, Solver solver, ref TContactImpulses impulses, PairCacheChangeIndex pairCacheChangeIndex,
             ConstraintHandle constraintHandle, ref CollidablePair pair)
         {
             if (pairCacheChangeIndex.IsPending)

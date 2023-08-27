@@ -229,7 +229,7 @@ namespace BepuPhysics
             return false;
         }
 
-        internal unsafe void InternalResize(int targetBodyCapacity, BufferPool pool)
+        internal void InternalResize(int targetBodyCapacity, BufferPool pool)
         {
             Debug.Assert(targetBodyCapacity > 0, "Resize is not meant to be used as Dispose. If you want to return everything to the pool, use Dispose instead.");
             //Note that we base the bundle capacities on post-resize capacity of the IndexToHandle array. This simplifies the conditions on allocation, but increases memory use.
@@ -243,7 +243,7 @@ namespace BepuPhysics
             pool.ResizeToAtLeast(ref Constraints, targetBodyCapacity, Count);
         }
 
-        public unsafe void Clear(BufferPool pool)
+        public void Clear(BufferPool pool)
         {
             for (int i = 0; i < Count; ++i)
             {

@@ -48,7 +48,7 @@ namespace Demos.Demos
         }
 
 
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(110, -80, 12);
             camera.Yaw = 0;

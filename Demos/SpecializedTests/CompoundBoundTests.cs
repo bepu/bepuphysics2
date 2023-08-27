@@ -14,7 +14,7 @@ namespace Demos.Demos
 {
     public class CompoundBoundTests : Demo
     {
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-10, 0, -10);
             camera.Yaw = MathHelper.Pi * 3f / 4;
@@ -140,7 +140,7 @@ namespace Demos.Demos
             return new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * width - new Vector3(width * 0.5f);
         }
         Random random = new Random(5);
-        public unsafe override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             Vector3 basePosition = new Vector3();
             for (int testIndex = 0; testIndex < 16; ++testIndex)

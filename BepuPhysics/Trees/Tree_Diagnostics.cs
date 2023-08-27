@@ -13,7 +13,7 @@ namespace BepuPhysics.Trees
         //While this may be closer to true that it appears at first glance due to the very high cost of cache misses versus trivial ALU work,
         //it's probably not *identical*.
         //The builders also use this approximation.
-        public unsafe float MeasureCostMetric()
+        public float MeasureCostMetric()
         {
             //Assumption: Index 0 is always the root if it exists, and an empty tree will have a 'root' with a child count of 0.
             ref var rootNode = ref Nodes[0];
@@ -59,7 +59,7 @@ namespace BepuPhysics.Trees
 
         }
 
-        readonly unsafe void Validate(int nodeIndex, int expectedParentIndex, int expectedIndexInParent, ref Vector3 expectedMin, ref Vector3 expectedMax, out int foundLeafCount)
+        readonly void Validate(int nodeIndex, int expectedParentIndex, int expectedIndexInParent, ref Vector3 expectedMin, ref Vector3 expectedMax, out int foundLeafCount)
         {
             ref var node = ref Nodes[nodeIndex];
             ref var metanode = ref Metanodes[nodeIndex];
@@ -125,7 +125,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        readonly unsafe void ValidateLeafNodeIndices()
+        readonly void ValidateLeafNodeIndices()
         {
             for (int i = 0; i < LeafCount; ++i)
             {
@@ -140,7 +140,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        readonly unsafe void ValidateLeaves()
+        readonly void ValidateLeaves()
         {
             ValidateLeafNodeIndices();
 
@@ -153,7 +153,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        public readonly unsafe void Validate()
+        public readonly void Validate()
         {
             if (NodeCount < 0)
             {
@@ -182,7 +182,7 @@ namespace BepuPhysics.Trees
 
         }
 
-        readonly unsafe int ComputeMaximumDepth(ref Node node, int currentDepth)
+        readonly int ComputeMaximumDepth(ref Node node, int currentDepth)
         {
             ref var children = ref node.A;
             int maximum = currentDepth;
@@ -201,12 +201,12 @@ namespace BepuPhysics.Trees
             return maximum;
         }
 
-        public readonly unsafe int ComputeMaximumDepth()
+        public readonly int ComputeMaximumDepth()
         {
             return ComputeMaximumDepth(ref Nodes[0], 0);
         }
 
-        readonly unsafe void MeasureCacheQuality(int nodeIndex, out int foundNodes, out float nodeScore, out int scorableNodeCount)
+        readonly void MeasureCacheQuality(int nodeIndex, out int foundNodes, out float nodeScore, out int scorableNodeCount)
         {
             ref var node = ref Nodes[nodeIndex];
             ref var children = ref node.A;
@@ -244,14 +244,14 @@ namespace BepuPhysics.Trees
                 ++scorableNodeCount;
             }
         }
-        public readonly unsafe float MeasureCacheQuality()
+        public readonly float MeasureCacheQuality()
         {
             MeasureCacheQuality(0, out int foundNodes, out float nodeScore, out int scorableNodeCount);
             return scorableNodeCount > 0 ? nodeScore / scorableNodeCount : 1;
 
         }
 
-        public readonly unsafe float MeasureCacheQuality(int nodeIndex)
+        public readonly float MeasureCacheQuality(int nodeIndex)
         {
             if (nodeIndex < 0 || nodeIndex >= NodeCount)
                 throw new ArgumentException("Measurement target index must be nonnegative and less than node count.");

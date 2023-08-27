@@ -69,7 +69,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe ref T AllocateUnsafely<T>()
+        public ref T AllocateUnsafely<T>()
         {
             Validate();
             Debug.Assert(Unsafe.SizeOf<T>() == ElementSizeInBytes);
@@ -123,14 +123,14 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe int Allocate<T>(int minimumElementCount, BufferPool pool)
+        public int Allocate<T>(int minimumElementCount, BufferPool pool)
         {
             var elementSizeInBytes = Unsafe.SizeOf<T>();
             return Allocate(elementSizeInBytes, minimumElementCount, pool);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe int Add<T>(ref T data, int minimumCount, BufferPool pool)
+        public int Add<T>(ref T data, int minimumCount, BufferPool pool)
         {
             var byteIndex = Allocate<T>(minimumCount, pool);
             GetFromBytes<T>(byteIndex) = data;

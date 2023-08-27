@@ -16,7 +16,7 @@ namespace Demos.SpecializedTests
     /// </summary>
     public class NewtonsCradleDemo : Demo
     {
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Yaw = 0;
             camera.Pitch = 0;

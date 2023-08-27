@@ -14,7 +14,7 @@ using BepuUtilities.TaskScheduling;
 
 namespace Demos.SpecializedTests;
 
-public unsafe class TreeFiddlingTestDemo : Demo
+public class TreeFiddlingTestDemo : Demo
 {
     struct Pair : IEquatable<Pair>
     {

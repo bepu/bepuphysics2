@@ -125,7 +125,7 @@ namespace BepuPhysics
         /// </summary>
         public const int CollidablesPerFlush = 16;
 
-        public unsafe BoundingBoxBatcher(Bodies bodies, Shapes shapes, BroadPhase broadPhase, BufferPool pool, float dt)
+        public BoundingBoxBatcher(Bodies bodies, Shapes shapes, BroadPhase broadPhase, BufferPool pool, float dt)
         {
             this.bodies = bodies;
             this.shapes = shapes;

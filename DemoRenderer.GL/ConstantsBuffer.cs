@@ -37,7 +37,7 @@ namespace DemoRenderer
         /// Updates the buffer with the given data.
         /// </summary>
         /// <param name="bufferData">Data to load into the buffer.</param>
-        public unsafe void Update(ref T bufferData) =>
+        public void Update(ref T bufferData) =>
             GL.NamedBufferSubData(buffer, IntPtr.Zero, alignedSize, ref bufferData);
         public void Bind(int index) => GL.BindBufferBase((BufferRangeTarget)target, index, buffer);
         protected override void DoDispose() => GL.DeleteBuffer(buffer);

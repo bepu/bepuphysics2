@@ -7,7 +7,7 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-        unsafe void RemoveNodeAt(int nodeIndex)
+        void RemoveNodeAt(int nodeIndex)
         {
             //Note that this function is a cache scrambling influence. That's okay- the cache optimization routines will take care of it later.
             Debug.Assert(nodeIndex < NodeCount && nodeIndex >= 0);
@@ -48,7 +48,7 @@ namespace BepuPhysics.Trees
         }
 
 
-        unsafe void RefitForRemoval(int nodeIndex)
+        void RefitForRemoval(int nodeIndex)
         {
             //Note that no attempt is made to refit the root node. Note that the root node is the only node that can have a number of children less than 2.
             ref var node = ref Nodes[nodeIndex];
@@ -71,7 +71,7 @@ namespace BepuPhysics.Trees
         /// <param name="leafIndex">Index of the leaf to remove.</param>
         /// <returns>Former index of the leaf that was moved into the removed leaf's slot, if any.
         /// If leafIndex pointed at the last slot in the list, then this returns -1 since no leaf was moved.</returns>
-        public unsafe int RemoveAt(int leafIndex)
+        public int RemoveAt(int leafIndex)
         {
             if (leafIndex < 0 || leafIndex >= LeafCount)
                 throw new ArgumentOutOfRangeException("Leaf index must be a valid index in the tree's leaf array.");

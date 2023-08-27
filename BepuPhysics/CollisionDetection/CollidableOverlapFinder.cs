@@ -187,14 +187,15 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        unsafe struct SelfContext
+        struct SelfContext
         {
             public TaskStack* Stack;
             public ThreadedSelfOverlapHandler* Results;
             public Tree Tree;
             public int TargetTaskCount;
         }
-        unsafe struct IntertreeContext
+
+        struct IntertreeContext
         {
             public TaskStack* Stack;
             public ThreadedIntertreeOverlapHandler* Results;
@@ -202,14 +203,16 @@ namespace BepuPhysics.CollisionDetection
             public Tree ActiveTree;
             public int TargetTaskCount;
         }
-        unsafe static void SelfEntryTask(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+
+        static void SelfEntryTask(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
         {
             Debug.Assert(dispatcher.ManagedContext != null);
             ref var context = ref *(SelfContext*)untypedContext;
             var pool = dispatcher.WorkerPools[workerIndex];
             context.Tree.GetSelfOverlaps2(ref *context.Results, pool, dispatcher, context.Stack, workerIndex, context.TargetTaskCount);
         }
-        unsafe static void IntertreeEntryTask(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
+
+        static void IntertreeEntryTask(long taskStartAndEnd, void* untypedContext, int workerIndex, IThreadDispatcher dispatcher)
         {
             Debug.Assert(dispatcher.ManagedContext != null);
             ref var context = ref *(IntertreeContext*)untypedContext;

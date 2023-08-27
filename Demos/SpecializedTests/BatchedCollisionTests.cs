@@ -18,7 +18,7 @@ namespace Demos.SpecializedTests
         {
             public int* Count;
 
-            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : unmanaged, IContactManifold<TManifold>
+            public void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 if (manifold.Count > 0)
                 {
@@ -32,7 +32,7 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ref ConvexContactManifold manifold)
+            public void OnChildPairCompleted(int pairId, int childA, int childB, ref ConvexContactManifold manifold)
             {
             }
 
@@ -96,7 +96,7 @@ namespace Demos.SpecializedTests
             return distanceSum[0];
         }
 
-        unsafe static void Test<TA, TAWide, TB, TBWide, TDistanceTester>(in TA a, in TB b,
+        static void Test<TA, TAWide, TB, TBWide, TDistanceTester>(in TA a, in TB b,
             ref Buffer<RigidPose> posesA, ref Buffer<RigidPose> posesB, int iterationCount)
             where TA : unmanaged, IShape where TB : unmanaged, IShape
             where TAWide : unmanaged, IShapeWide<TA> where TBWide : unmanaged, IShapeWide<TB>

@@ -77,7 +77,7 @@ namespace BepuPhysics.Trees
         /// <param name="min">New minimum bounds for the leaf.</param>
         /// <param name="max">New maximum bounds for the leaf.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe readonly void UpdateBounds(int leafIndex, Vector3 min, Vector3 max)
+        public readonly void UpdateBounds(int leafIndex, Vector3 min, Vector3 max)
         {
             GetBoundsPointers(leafIndex, out var minPointer, out var maxPointer);
             *minPointer = min;
@@ -90,7 +90,7 @@ namespace BepuPhysics.Trees
         /// </summary>
         /// <param name="pool">Buffer pool to use to allocate resources in the tree.</param>
         /// <param name="initialLeafCapacity">Initial number of leaves to allocate room for.</param>
-        public unsafe Tree(BufferPool pool, int initialLeafCapacity = 4096) : this()
+        public Tree(BufferPool pool, int initialLeafCapacity = 4096) : this()
         {
             if (initialLeafCapacity <= 0)
                 throw new ArgumentException("Initial leaf capacity must be positive.");

@@ -38,7 +38,7 @@ namespace BepuPhysics.CollisionDetection
 
 
         [Conditional("DEBUG")]
-        internal unsafe void ValidateHandleCountInMapping(ConstraintHandle constraintHandle, int expectedCount)
+        internal void ValidateHandleCountInMapping(ConstraintHandle constraintHandle, int expectedCount)
         {
             int count = 0;
             for (int i = 0; i < Mapping.Count; ++i)
@@ -53,7 +53,7 @@ namespace BepuPhysics.CollisionDetection
             Debug.Assert(count == expectedCount, "Expected count for this handle not found!");
         }
 
-        internal unsafe void SleepTypeBatchPairs(ref SleepingSetBuilder builder, int setIndex, Solver solver)
+        internal void SleepTypeBatchPairs(ref SleepingSetBuilder builder, int setIndex, Solver solver)
         {
             ref var constraintSet = ref solver.Sets[setIndex];
             for (int batchIndex = 0; batchIndex < constraintSet.Batches.Count; ++batchIndex)
@@ -83,7 +83,7 @@ namespace BepuPhysics.CollisionDetection
             builder.FinalizeSet(pool, out SleepingSets[setIndex]);
         }
 
-        internal unsafe void AwakenSet(int setIndex)
+        internal void AwakenSet(int setIndex)
         {
             ref var sleepingSet = ref SleepingSets[setIndex];
             //If there are no pairs, there is no need for an inactive set, so it's not guaranteed to be allocated.

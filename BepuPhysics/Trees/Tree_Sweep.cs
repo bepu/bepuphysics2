@@ -7,7 +7,7 @@ namespace BepuPhysics.Trees
 {
     public interface ISweepLeafTester
     {
-        unsafe void TestLeaf(int leafIndex, ref float maximumT);
+        void TestLeaf(int leafIndex, ref float maximumT);
     }
     partial struct Tree
     {
@@ -116,7 +116,7 @@ namespace BepuPhysics.Trees
             Sweep(expansion, origin, direction, &treeRay, ref sweepTester);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly unsafe void Sweep<TLeafTester>(in BoundingBox boundingBox, Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
+        public readonly void Sweep<TLeafTester>(in BoundingBox boundingBox, Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
         {
             Sweep(boundingBox.Min, boundingBox.Max, direction, maximumT, ref sweepTester);
         }

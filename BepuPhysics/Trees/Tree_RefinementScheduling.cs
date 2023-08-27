@@ -10,8 +10,7 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-
-        unsafe float RefitAndMeasure(ref NodeChild child)
+        float RefitAndMeasure(ref NodeChild child)
         {
             ref var node = ref Nodes[child.Index];
 
@@ -37,7 +36,7 @@ namespace BepuPhysics.Trees
 
         }
 
-        unsafe float RefitAndMark(ref NodeChild child, int leafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool)
+        float RefitAndMark(ref NodeChild child, int leafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool)
         {
             Debug.Assert(leafCountThreshold > 1);
 
@@ -87,7 +86,7 @@ namespace BepuPhysics.Trees
 
         }
 
-        unsafe float RefitAndMark(int leafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool)
+        float RefitAndMark(int leafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool)
         {
             Debug.Assert(LeafCount > 2, "There's no reason to refit a tree with 2 or less elements. Nothing would happen.");
 
@@ -131,9 +130,7 @@ namespace BepuPhysics.Trees
         }
 
 
-
-
-        unsafe void ValidateRefineFlags(int index)
+        void ValidateRefineFlags(int index)
         {
             ref var metanode = ref Metanodes[index];
             if (metanode.RefineFlag != 0)
@@ -178,7 +175,7 @@ namespace BepuPhysics.Trees
             targetRefinementCount = Math.Min(refinementCandidatesCount, (int)targetRefinementScale);
         }
 
-        public unsafe void RefitAndRefine(BufferPool pool, int frameIndex, float refineAggressivenessScale = 1)
+        public void RefitAndRefine(BufferPool pool, int frameIndex, float refineAggressivenessScale = 1)
         {
             //Don't proceed if the tree has no refitting or refinement required. This also guarantees that any nodes that do exist have two children.
             if (LeafCount <= 2)

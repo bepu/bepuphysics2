@@ -12,7 +12,7 @@ namespace Demos.SpecializedTests
 {
     public class ShapePileTestDemo : Demo
     {
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-30, 10, -30);
             //camera.Yaw = MathHelper.Pi ; 

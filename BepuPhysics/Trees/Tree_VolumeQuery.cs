@@ -80,7 +80,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly unsafe void GetOverlaps<TEnumerator>(Vector3 min, Vector3 max, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
+        public readonly void GetOverlaps<TEnumerator>(Vector3 min, Vector3 max, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
             GetOverlaps(new BoundingBox(min, max), ref leafEnumerator);
         }

@@ -152,7 +152,7 @@ namespace BepuPhysics.Collidables
 
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            public void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
             {
                 if (Handler.AllowTest(leafIndex))
                 {

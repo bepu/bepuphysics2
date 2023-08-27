@@ -65,7 +65,7 @@ namespace Demos.SpecializedTests
             velocity->Linear += new Vector3(0, -10 / 60f, 0);
         }
 
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-30, 10, -30);
             //camera.Yaw = MathHelper.Pi ; 

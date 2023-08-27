@@ -272,7 +272,7 @@ namespace BepuPhysics.Trees
             int this[int rayIndex] { get; }
         }
 
-        unsafe struct RootRaySource : ITreeRaySource
+        struct RootRaySource : ITreeRaySource
         {
             int rayCount;
 
@@ -327,7 +327,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe void TestNode<TRaySource>(ref Node node, byte depth, ref TRaySource raySource) where TRaySource : struct, ITreeRaySource
+        void TestNode<TRaySource>(ref Node node, byte depth, ref TRaySource raySource) where TRaySource : struct, ITreeRaySource
         {
             int a0Start = stackPointerA0;
             int bStart = stackPointerB;

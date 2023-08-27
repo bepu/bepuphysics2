@@ -201,7 +201,7 @@ namespace BepuPhysics.Collidables
         public readonly int ChildCount => Triangles.Length;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly unsafe void GetLocalChild(int triangleIndex, out Triangle target)
+        public readonly void GetLocalChild(int triangleIndex, out Triangle target)
         {
             ref var source = ref Triangles[triangleIndex];
             target.A = scale * source.A;
@@ -210,7 +210,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly unsafe void GetPosedLocalChild(int triangleIndex, out Triangle target, out RigidPose childPose)
+        public readonly void GetPosedLocalChild(int triangleIndex, out Triangle target, out RigidPose childPose)
         {
             GetLocalChild(triangleIndex, out target);
             childPose = (target.A + target.B + target.C) * (1f / 3f);
@@ -220,7 +220,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly unsafe void GetLocalChild(int triangleIndex, ref TriangleWide target)
+        public readonly void GetLocalChild(int triangleIndex, ref TriangleWide target)
         {
             //This inserts a triangle into the first slot of the given wide instance.
             ref var source = ref Triangles[triangleIndex];
@@ -268,7 +268,7 @@ namespace BepuPhysics.Collidables
             public RayData OriginalRay;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            public void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
             {
                 ref var triangle = ref Triangles[leafIndex];
                 if (Triangle.RayTest(triangle.A, triangle.B, triangle.C, rayData->Origin, rayData->Direction, out var t, out var normal) && t <= *maximumT)
@@ -402,7 +402,7 @@ namespace BepuPhysics.Collidables
         /// Subtracts the newCenter from all points in the mesh hull.
         /// </summary>
         /// <param name="newCenter">New center that all points will be made relative to.</param>
-        public unsafe void Recenter(Vector3 newCenter)
+        public void Recenter(Vector3 newCenter)
         {
             var scaledOffset = newCenter * inverseScale;
             for (int i = 0; i < Triangles.Length; ++i)

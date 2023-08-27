@@ -40,7 +40,7 @@ namespace BepuPhysics.Trees
             }
 
 
-            public unsafe void CreateRefitAndMarkJobs(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher)
+            public void CreateRefitAndMarkJobs(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher)
             {
                 if (tree.LeafCount <= 2)
                 {
@@ -73,7 +73,7 @@ namespace BepuPhysics.Trees
                 RefitNodeIndex = -1;
             }
 
-            public unsafe void CreateRefinementJobs(BufferPool pool, int frameIndex, float refineAggressivenessScale = 1)
+            public void CreateRefinementJobs(BufferPool pool, int frameIndex, float refineAggressivenessScale = 1)
             {
                 if (Tree.LeafCount <= 2)
                 {
@@ -125,7 +125,7 @@ namespace BepuPhysics.Trees
                 RefineIndex = -1;
             }
 
-            public unsafe void CleanUpForRefitAndRefine(BufferPool pool)
+            public void CleanUpForRefitAndRefine(BufferPool pool)
             {
                 if (Tree.LeafCount <= 2)
                 {
@@ -151,7 +151,7 @@ namespace BepuPhysics.Trees
                 this.threadDispatcher = null;
             }
 
-            public unsafe void RefitAndRefine(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher, int frameIndex,
+            public void RefitAndRefine(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher, int frameIndex,
                 float refineAggressivenessScale = 1)
             {
                 CreateRefitAndMarkJobs(ref tree, pool, threadDispatcher);
@@ -161,7 +161,7 @@ namespace BepuPhysics.Trees
                 CleanUpForRefitAndRefine(pool);
             }
 
-            unsafe void CollectNodesForMultithreadedRefit(int nodeIndex,
+            void CollectNodesForMultithreadedRefit(int nodeIndex,
                 int multithreadingLeafCountThreshold, ref QuickList<int> refitAndMarkTargets,
                 int refinementLeafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool, BufferPool threadPool)
             {
@@ -200,7 +200,7 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            public unsafe void ExecuteRefitAndMarkJob(BufferPool threadPool, int workerIndex, int refitIndex)
+            public void ExecuteRefitAndMarkJob(BufferPool threadPool, int workerIndex, int refitIndex)
             {
                 var nodeIndex = RefitNodes[refitIndex];
                 bool shouldUseMark;
@@ -309,7 +309,7 @@ namespace BepuPhysics.Trees
                     }
                 }
             }
-            public unsafe void RefitAndMarkForWorker(int workerIndex)
+            public void RefitAndMarkForWorker(int workerIndex)
             {
                 if (RefitNodes.Count == 0)
                     return;
@@ -326,14 +326,14 @@ namespace BepuPhysics.Trees
 
             }
 
-            public unsafe void ExecuteRefineJob(ref QuickList<int> subtreeReferences, ref QuickList<int> treeletInternalNodes, ref BinnedResources resources, BufferPool threadPool, int refineIndex)
+            public void ExecuteRefineJob(ref QuickList<int> subtreeReferences, ref QuickList<int> treeletInternalNodes, ref BinnedResources resources, BufferPool threadPool, int refineIndex)
             {
                 Tree.BinnedRefine(RefinementTargets[refineIndex], ref subtreeReferences, MaximumSubtrees, ref treeletInternalNodes, ref resources, threadPool);
                 subtreeReferences.Count = 0;
                 treeletInternalNodes.Count = 0;
             }
 
-            public unsafe void RefineForWorker(int workerIndex)
+            public void RefineForWorker(int workerIndex)
             {
                 if (RefinementTargets.Count == 0)
                     return;
@@ -358,7 +358,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe void CheckForRefinementOverlaps(int nodeIndex, ref QuickList<int> refinementTargets)
+        void CheckForRefinementOverlaps(int nodeIndex, ref QuickList<int> refinementTargets)
         {
             ref var node = ref Nodes[nodeIndex];
             ref var children = ref node.A;

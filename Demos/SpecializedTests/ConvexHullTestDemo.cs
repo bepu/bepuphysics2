@@ -18,7 +18,7 @@ namespace Demos.SpecializedTests;
 
 public class ConvexHullTestDemo : Demo
 {
-    unsafe Buffer<Vector3> CreateRandomConvexHullPoints()
+    Buffer<Vector3> CreateRandomConvexHullPoints()
     {
         const int pointCount = 50;
         BufferPool.Take<Vector3>(pointCount, out var points);
@@ -32,7 +32,7 @@ public class ConvexHullTestDemo : Demo
         return points;
     }
 
-    unsafe Buffer<Vector3> CreateMeshConvexHull(MeshContent meshContent, Vector3 scale)
+    Buffer<Vector3> CreateMeshConvexHull(MeshContent meshContent, Vector3 scale)
     {
         //This is actually a pretty good example of how *not* to make a convex hull shape.
         //Generating it directly from a graphical data source tends to have way more surface complexity than needed,
@@ -50,7 +50,7 @@ public class ConvexHullTestDemo : Demo
         return points;
     }
 
-    unsafe Buffer<Vector3> CreateBoxConvexHull(float boxScale)
+    Buffer<Vector3> CreateBoxConvexHull(float boxScale)
     {
         BufferPool.Take<Vector3>(8, out var points);
         points[0] = new Vector3(0, 0, 0);
@@ -65,7 +65,7 @@ public class ConvexHullTestDemo : Demo
     }
 
     //A couple of test point sets from PEEL: https://github.com/Pierre-Terdiman/PEEL_PhysX_Edition
-    unsafe Buffer<Vector3> CreateTestConvexHull()
+    Buffer<Vector3> CreateTestConvexHull()
     {
         BufferPool.Take<Vector3>(50, out var vertices);
         vertices[0] = new Vector3(-0.000000f, -0.297120f, -0.000000f);
@@ -121,7 +121,7 @@ public class ConvexHullTestDemo : Demo
         return vertices;
     }
 
-    unsafe Buffer<Vector3> CreateTestConvexHull2()
+    Buffer<Vector3> CreateTestConvexHull2()
     {
         BufferPool.Take<Vector3>(120, out var vertices);
         vertices[0] = new Vector3(0.153478f, 0.993671f, 0.124687f);
@@ -248,7 +248,7 @@ public class ConvexHullTestDemo : Demo
     }
 
 
-    unsafe Buffer<Vector3> CreateTestConvexHull3()
+    Buffer<Vector3> CreateTestConvexHull3()
     {
         BufferPool.Take<Vector3>(22, out var vertices);
         vertices[0] = new Vector3(-0.103558f, 1.000000f, -0.490575f);
@@ -276,7 +276,7 @@ public class ConvexHullTestDemo : Demo
         return vertices;
     }
 
-    unsafe Buffer<Vector3> CreateJSONSourcedConvexHull(string filePath)
+    Buffer<Vector3> CreateJSONSourcedConvexHull(string filePath)
     {
         //ChatGPT wrote this, of course.
         List<Vector3> points = new List<Vector3>();
@@ -306,7 +306,7 @@ public class ConvexHullTestDemo : Demo
         return buffer;
     }
 
-    public unsafe override void Initialize(ContentArchive content, Camera camera)
+    public override void Initialize(ContentArchive content, Camera camera)
     {
         camera.Position = new Vector3(0, -2.5f, 10);
         camera.Yaw = 0;

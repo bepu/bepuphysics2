@@ -23,7 +23,7 @@ namespace BepuPhysics.Trees
         }
 
 
-        public unsafe void Insert(ref Node node, ref QuickList<int> subtrees)
+        public void Insert(ref Node node, ref QuickList<int> subtrees)
         {
             ref var children = ref node.A;
             for (int childIndex = 0; childIndex < 2; ++childIndex)

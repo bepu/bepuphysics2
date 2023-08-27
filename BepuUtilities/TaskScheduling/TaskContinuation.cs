@@ -3,7 +3,7 @@
 /// <summary>
 /// Stores data relevant to tracking task completion and reporting completion for a continuation.
 /// </summary>
-public unsafe struct TaskContinuation
+public struct TaskContinuation
 {
     /// <summary>
     /// Task to run upon completion of the associated task.

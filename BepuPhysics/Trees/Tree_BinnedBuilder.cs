@@ -334,7 +334,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe int ComputeBinIndex(Vector4 centroidMin, bool useX, bool useY, Vector128<int> permuteMask, int axisIndex, Vector4 offsetToBinIndex, Vector4 maximumBinIndex, in BoundingBox4 box)
+        private static int ComputeBinIndex(Vector4 centroidMin, bool useX, bool useY, Vector128<int> permuteMask, int axisIndex, Vector4 offsetToBinIndex, Vector4 maximumBinIndex, in BoundingBox4 box)
         {
             var centroid = box.Min + box.Max;
             //Note the clamp against zero as well as maximumBinIndex; going negative *can* happen when the bounding box is corrupted. We'd rather not crash with an access violation.
@@ -395,7 +395,7 @@ namespace BepuPhysics.Trees
         /// Some of the resources cached here are technically redundant with the storage used for workers and ends up involving an extra bin scan on a multithreaded test,
         /// but the cost associated with doing so is... low. The complexity cost of trying to use the memory allocated for workers is not low.
         /// </remarks>
-        unsafe struct BinnedBuildWorkerContext
+        struct BinnedBuildWorkerContext
         {
             /// <summary>
             /// Bins associated with this worker for the duration of a node. This allocation will persist across the build.
@@ -524,7 +524,8 @@ namespace BepuPhysics.Trees
                 count = taskId >= SlotRemainder ? SlotsPerTaskBase : SlotsPerTaskBase + 1;
             }
         }
-        unsafe struct CentroidPrepassTaskContext
+
+        struct CentroidPrepassTaskContext
         {
             public SharedTaskData TaskData;
             /// <summary>
@@ -824,7 +825,8 @@ namespace BepuPhysics.Trees
             [FieldOffset(134)]
             public int SubtreeCountB;
         }
-        unsafe struct PartitionTaskContext
+
+        struct PartitionTaskContext
         {
             public SharedTaskData TaskData;
 

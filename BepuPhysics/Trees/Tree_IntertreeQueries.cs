@@ -5,7 +5,7 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-        unsafe void DispatchTestForNodeAgainstLeaf<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        void DispatchTestForNodeAgainstLeaf<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             if (nodeIndex < 0)
             {
@@ -16,7 +16,7 @@ namespace BepuPhysics.Trees
                 TestNodeAgainstLeaf(nodeIndex, leafIndex, ref leafChild, ref results);
             }
         }
-        private unsafe void TestNodeAgainstLeaf<TOverlapHandler>(int nodeIndex, int leafIndex, ref NodeChild leafChild, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        private void TestNodeAgainstLeaf<TOverlapHandler>(int nodeIndex, int leafIndex, ref NodeChild leafChild, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             ref var node = ref Nodes[nodeIndex];
             ref var a = ref node.A;
@@ -38,7 +38,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe void DispatchTestForLeafAgainstNode<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref Tree treeB, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        void DispatchTestForLeafAgainstNode<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref Tree treeB, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             if (nodeIndex < 0)
             {
@@ -49,7 +49,8 @@ namespace BepuPhysics.Trees
                 TestLeafAgainstNode(leafIndex, ref leafChild, nodeIndex, ref treeB, ref results);
             }
         }
-        unsafe void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref Tree treeB, ref TOverlapHandler results)
+
+        void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref NodeChild leafChild, int nodeIndex, ref Tree treeB, ref TOverlapHandler results)
             where TOverlapHandler : IOverlapHandler
         {
             ref var node = ref treeB.Nodes[nodeIndex];
@@ -73,7 +74,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void DispatchTestForNodes<TOverlapHandler>(ref NodeChild a, ref NodeChild b, ref Tree treeB, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        void DispatchTestForNodes<TOverlapHandler>(ref NodeChild a, ref NodeChild b, ref Tree treeB, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             if (a.Index >= 0)
             {
@@ -99,7 +100,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        private unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(ref Node a, ref Node b, ref Tree treeB, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        private void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(ref Node a, ref Node b, ref Tree treeB, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             ref var aa = ref a.A;
             ref var ab = ref a.B;
@@ -128,7 +129,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        public unsafe void GetOverlaps<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
+        public void GetOverlaps<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
         {
             if (LeafCount == 0 || treeB.LeafCount == 0)
                 return;

@@ -32,7 +32,7 @@ namespace BepuPhysics.CollisionDetection
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe int Add(BufferPool pool, CollidablePair pair, in ConstraintCache cache)
+        public int Add(BufferPool pool, CollidablePair pair, in ConstraintCache cache)
         {
             int index = PendingAdds.Count;
             ref var pendingAdd = ref PendingAdds.Allocate(pool);

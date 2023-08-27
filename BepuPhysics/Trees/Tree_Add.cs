@@ -21,7 +21,7 @@ partial struct Tree
     /// but the quality of the tree depends on insertion order.<para/>
     /// Pathological insertion orders can result in a maximally imbalanced tree, quadratic insertion times across the full tree build, and query performance linear in the number of leaves.<para/>
     /// This is typically best reserved for cases where the insertion order is known to be randomized or otherwise conducive to building decent trees.</remarks>
-    public unsafe int AddWithoutRefinement(BoundingBox bounds, BufferPool pool)
+    public int AddWithoutRefinement(BoundingBox bounds, BufferPool pool)
     {
         return Add<InsertShouldNotRotate>(bounds, pool);
     }
@@ -35,7 +35,7 @@ partial struct Tree
     /// <remarks>Performs incrementally refining tree rotations down along the insertion path, unlike <see cref="AddWithoutRefinement"/>.<para/>
     /// For a given tree, this is slightly slower than <see cref="AddWithoutRefinement"/> and slightly faster than <see cref="AddWithBottomUpRefinement"/>.<para/>
     /// Trees built with repeated insertions of this kind tend to have decent quality, but slightly worse than <see cref="AddWithBottomUpRefinement"/>.</remarks>
-    public unsafe int Add(BoundingBox bounds, BufferPool pool)
+    public int Add(BoundingBox bounds, BufferPool pool)
     {
         return Add<InsertShouldRotateTopDown>(bounds, pool);
     }
@@ -48,12 +48,12 @@ partial struct Tree
     /// <returns>Index of the leaf allocated in the tree's leaf array.</returns>
     /// <remarks>Performs incrementally refining tree rotations up along the insertion path, unlike <see cref="AddWithoutRefinement"/>.<para/>
     /// Trees built with repeated insertions of this kind tend to have slightly better quality than <see cref="Add"/>, but it is also slightly more expensive.</remarks>
-    public unsafe int AddWithBottomUpRefinement(BoundingBox bounds, BufferPool pool)
+    public int AddWithBottomUpRefinement(BoundingBox bounds, BufferPool pool)
     {
         return Add<InsertShouldRotateBottomUp>(bounds, pool);
     }
 
-    private unsafe int Add<TShouldRotate>(BoundingBox bounds, BufferPool pool) where TShouldRotate : unmanaged
+    private int Add<TShouldRotate>(BoundingBox bounds, BufferPool pool) where TShouldRotate : unmanaged
     {
         //The rest of the function assumes we have sufficient room. We don't want to deal with invalidated pointers mid-add.
         if (Leaves.Length == LeafCount)
@@ -143,7 +143,7 @@ partial struct Tree
         return newLeafIndex;
     }
 
-    private unsafe void TryRotateNode(int rotationRootIndex)
+    private void TryRotateNode(int rotationRootIndex)
     {
         ref var root = ref Nodes[rotationRootIndex];
         var costA = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref root.A));

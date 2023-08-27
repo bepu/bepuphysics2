@@ -21,7 +21,7 @@ namespace DemoContentBuilder
         }
 
 
-        unsafe static void CollectContentPaths(string projectPath, out string workingPath,
+        static void CollectContentPaths(string projectPath, out string workingPath,
             out List<string> shaderPaths,
             out List<ContentBuildInput> contentToBuild)
         {

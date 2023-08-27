@@ -4,7 +4,7 @@ namespace DemoContentLoader
 {
     public class Texture2DIO
     {
-        public unsafe static Texture2DContent Load(BinaryReader reader)
+        public static Texture2DContent Load(BinaryReader reader)
         {
             var width = reader.ReadInt32();
             var height = reader.ReadInt32();
