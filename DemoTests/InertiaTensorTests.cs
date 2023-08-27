@@ -250,7 +250,7 @@ namespace DemoTests
         }
 
 
-        public static void TestCompound(Random random, BufferPool pool)
+        private static void TestCompound(Random random, BufferPool pool)
         {
             var shapes = new Shapes(pool, 8);
             var treeCompoundBoxShape = new Box(0.5f, 1.5f, 1f);
