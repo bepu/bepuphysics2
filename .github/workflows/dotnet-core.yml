@@ -24,6 +24,7 @@ jobs:
     - name: Test
       run: dotnet test DemoTests -c Release --verbosity normal
     - name: Publish
+      if: github.event_name != 'pull_request'
       run: |
         dotnet nuget add source "https://nuget.pkg.github.com/bepu/index.json" --name "github" --username "rossnordby" --password "${{secrets.GITHUB_TOKEN}}"
         dotnet pack "BepuPhysics" -c Release
