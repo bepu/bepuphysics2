@@ -562,11 +562,23 @@ public unsafe struct TaskStack
     public static void DispatchWorkerFunction(int workerIndex, IThreadDispatcher dispatcher)
     {
         var taskStack = (TaskStack*)dispatcher.UnmanagedContext;
-        PopTaskResult popTaskResult;
         var waiter = new SpinWait();
-        while ((popTaskResult = taskStack->TryPopAndRun(workerIndex, dispatcher)) != PopTaskResult.Stop)
+        while (true)
         {
-            waiter.SpinOnce(-1);
+            switch (taskStack->TryPopAndRun(workerIndex, dispatcher))
+            {
+                case PopTaskResult.Stop:
+                    //Done!
+                    return;
+                case PopTaskResult.Success:
+                    //If we ran a task, then the waiter should return to an aggressive spin because more work may be immediately available.
+                    waiter.Reset();
+                    break;
+                default:
+                    //No work available, but we should keep going.
+                    waiter.SpinOnce(-1);
+                    break;
+            }
         }
     }
 
