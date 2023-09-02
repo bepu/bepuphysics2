@@ -11,6 +11,7 @@ using BepuPhysics;
 using BepuPhysics.Constraints;
 using BepuPhysics.Collidables;
 using BepuUtilities.TaskScheduling;
+using System.Threading;
 
 namespace Demos.SpecializedTests;
 
@@ -45,7 +46,7 @@ public class TreeFiddlingTestDemo : Demo
             return $"{A}, {B}";
         }
     }
-    struct OverlapHandler : IOverlapHandler
+    public struct OverlapHandler : IOverlapHandler
     {
         public int OverlapCount;
         public int OverlapSum;
@@ -61,6 +62,56 @@ public class TreeFiddlingTestDemo : Demo
             ++OverlapCount;
             OverlapSum += indexA + indexB;
             OverlapHash += (indexA + (indexB * OverlapCount)) * OverlapCount;
+        }
+    }
+
+
+    public struct ThreadedOverlapHandler : IThreadedOverlapHandler
+    {
+        public struct Worker
+        {
+            public int OverlapCount;
+            public int OverlapSum;
+        }
+        public Buffer<Worker> Workers;
+
+        public ThreadedOverlapHandler(BufferPool pool, int workerCount)
+        {
+            Workers = new Buffer<Worker>(workerCount, pool);
+            Workers.Clear(0, Workers.Length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Handle(int indexA, int indexB, int workerIndex, object managedContext)
+        {
+            ref var worker = ref Workers[workerIndex];
+            worker.OverlapSum += indexA + indexB;
+            ++worker.OverlapCount;
+        }
+
+        public void Reset()
+        {
+            for (int i = 0; i < Workers.Length; ++i)
+            {
+                Workers[i] = default;
+            }
+        }
+        public (int overlapCount, int overlapSum) SumResults()
+        {
+            int overlapCount = 0;
+            int overlapSum = 0;
+            for (int i = 0; i < Workers.Length; ++i)
+            {
+                ref var worker = ref Workers[i];
+                overlapCount += worker.OverlapCount;
+                overlapSum += worker.OverlapSum;
+            }
+            return (overlapCount, overlapSum);
+        }
+
+        public void Dispose(BufferPool pool)
+        {
+            Workers.Dispose(pool);
         }
     }
 
@@ -153,6 +204,33 @@ public class TreeFiddlingTestDemo : Demo
             ThreadDispatcher.WorkerPools.Clear();
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
 
+            // @ @ @ @ @ @ DIRECT INSERTION TESTING @ @ @ @ @ @
+            Random random = new Random(5);
+            for (int p = 0; p < 16; ++p)
+            {
+                var insertStart = Stopwatch.GetTimestamp();
+                const int insertionCount = 1 << 22;
+                var tree = new Tree(BufferPool, insertionCount);
+                for (int k = 0; k < insertionCount; ++k)
+                {
+                    //var position = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * new Vector3(1000);
+                    var position = new Vector3(k * 4, 0, 0);
+                    var bounds = new BoundingBox { Min = position + new Vector3(-1), Max = position + new Vector3(1) };
+                    tree.Add(bounds, BufferPool);
+                    //if (k % 128 == 0)
+                    //    tree.Validate();
+                }
+                //tree.Validate();
+                var insertEnd = Stopwatch.GetTimestamp();
+                if (p > 0)
+                {
+                    Console.WriteLine($"Total insertion time (ms): {(insertEnd - insertStart) * 1e3 / Stopwatch.Frequency}");
+                    Console.WriteLine($"Average time (ns):         {(insertEnd - insertStart) * 1e9 / (insertionCount * Stopwatch.Frequency)}");
+                    Console.WriteLine($"SAH:                       {tree.MeasureCostMetric()}");
+                }
+                tree.Dispose(BufferPool);
+            }
+
             //Create a mesh.
             var width = 1024;
             var height = 1024;
@@ -160,46 +238,108 @@ public class TreeFiddlingTestDemo : Demo
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
 
+
             //var triangles = CreateDeformedPlaneTriangles(width, height, scale);
             var triangles = CreateRandomSoupTriangles(new BoundingBox(new(width / -2f, scale.Y * -2, height / -2f), new(width / 2f, scale.Y * 2, height / 2f)), (width - 1) * (height - 1) * 2, 0.5f, 100f);
             //var mesh = new Mesh(triangles, Vector3.One, BufferPool);
             var mesh = DemoMeshHelper.CreateGiantMeshFast(triangles, Vector3.One, BufferPool);
 
-            int refinementState = 0;
-            long sum = 0;
-            var taskStack = new TaskStack(BufferPool, ThreadDispatcher, ThreadDispatcher.ThreadCount);
-            for (int refinementIndex = 0; refinementIndex < 16384; ++refinementIndex)
-            {
-                //mesh.Tree.CacheOptimizeLimitedSubtree(0, 4096);
-                //mesh.Tree.CacheOptimize(0);
-                //var optimizedCount = mesh.Tree.CacheOptimizeRegion(0, int.MaxValue);
-                //int localOptimizationCount = 0;
-                //const int targetOptimizationCount = 8192;
-                //while (localOptimizationCount < targetOptimizationCount)
-                //{
-                //    var optimizedCount = mesh.Tree.CacheOptimizeRegion(cacheOptimizationStart, targetOptimizationCount);
-                //    localOptimizationCount += optimizedCount;
-                //    cacheOptimizationStart += optimizedCount;
-                //    if (cacheOptimizationStart >= mesh.Tree.NodeCount)
-                //        cacheOptimizationStart -= mesh.Tree.NodeCount;
-                //}
 
+            // @ @ @ @ @ @ REFINEMENT TESTING @ @ @ @ @ @
+
+            //int refinementState = 0;
+            //long sum = 0;
+            //int cacheOptimizationStart = 0;
+            //for (int refinementIndex = 0; refinementIndex < 16384; ++refinementIndex)
+            //{
+            //    //mesh.Tree.CacheOptimizeLimitedSubtree(0, 4096);
+            //    //mesh.Tree.CacheOptimize(0);
+            //    //var optimizedCount = mesh.Tree.CacheOptimizeRegion(0, int.MaxValue);
+            //    //int localOptimizationCount = 0;
+            //    //const int targetOptimizationCount = 8192;
+            //    //while (localOptimizationCount < targetOptimizationCount)
+            //    //{
+            //    //    var optimizedCount = mesh.Tree.CacheOptimizeRegion(cacheOptimizationStart, targetOptimizationCount);
+            //    //    localOptimizationCount += optimizedCount;
+            //    //    cacheOptimizationStart += optimizedCount;
+            //    //    if (cacheOptimizationStart >= mesh.Tree.NodeCount)
+            //    //        cacheOptimizationStart -= mesh.Tree.NodeCount;
+            //    //}
+            //    //for (int j = 0; j < mesh.Tree.NodeCount; ++j)
+            //    //{
+            //    //    ref var node = ref mesh.Tree.Nodes[j];
+            //    //    if (node.A.Index >= 0)
+            //    //    {
+            //    //        node.A.Min = new Vector3(float.MaxValue);
+            //    //        node.A.Max = new Vector3(float.MinValue);
+            //    //    }
+            //    //    if (node.B.Index >= 0)
+            //    //    {
+            //    //        node.B.Min = new Vector3(float.MaxValue);
+            //    //        node.B.Max = new Vector3(float.MinValue);
+            //    //    }
+            //    //}
+
+            //    mesh.Tree.Refine2(refinementIndex % 1 == 0 ? 65536 : 0, ref refinementState, 32, 1024, BufferPool);
+            //    //mesh.Tree.Refine2(1024, ref refinementState, 1, 131072, BufferPool);
+            //    //var useRoot = refinementIndex % 32 == 0;
+            //    //var rootSize = 5800;
+            //    //var subtreeSize = 5800;
+            //    //var subtreeCount = 8;
+            //    //var subtreeReductionOnRoot = (int)float.Round(rootSize / subtreeSize);
+            //    //var effectiveRootSize = useRoot ? rootSize : 0;
+            //    //var effectiveSubtreeCount = useRoot ? int.Max(0, subtreeCount - subtreeReductionOnRoot) : subtreeCount;
+            //    //mesh.Tree.Refine2(effectiveRootSize, ref refinementState, effectiveSubtreeCount, subtreeSize, BufferPool, ThreadDispatcher);
+            //    //mesh.Tree.Refine2(effectiveRootSize, ref refinementState, effectiveSubtreeCount, subtreeSize, BufferPool);
+            //    var start = Stopwatch.GetTimestamp();
+            //    //mesh.Tree.Refit2WithCacheOptimization(BufferPool, ThreadDispatcher);
+            //    //mesh.Tree.Refit2WithCacheOptimization(BufferPool);
+            //    //mesh.Tree.Refit2();
+            //    //mesh.Tree.Refit2(BufferPool, ThreadDispatcher);
+            //    var end = Stopwatch.GetTimestamp();
+            //    sum += end - start;
+            //    if ((refinementIndex + 1) % 512 == 0)
+            //    {
+            //        mesh.Tree.Validate();
+            //        var cacheQuality = mesh.Tree.MeasureCacheQuality();
+            //        var costMetric = mesh.Tree.MeasureCostMetric();
+            //        Console.WriteLine($"cost, cache for {refinementIndex}: {costMetric}, {cacheQuality}");
+            //        //Console.WriteLine($"Time (average) (ms): {(end - start) * 1e3 / Stopwatch.Frequency}, {sum * 1e3 / ((refinementIndex + 1) * Stopwatch.Frequency)}");
+            //    }
+            //}
+
+
+            // @ @ @ @ @ @ SELF TEST TESTING @ @ @ @ @ @
+            var handler = new OverlapHandler();
+            var threadedHandler = new ThreadedOverlapHandler(BufferPool, ThreadDispatcher.ThreadCount);
+            long sum = 0;
+            long intervalSum = 0;
+            for (int testIndex = 0; testIndex < 16384; ++testIndex)
+            {
+                handler.OverlapCount = 0;
+                threadedHandler.Reset();
                 var start = Stopwatch.GetTimestamp();
-                //mesh.Tree.Refine2(8192, ref refinementState, 0, 8192, BufferPool);
-                //mesh.Tree.Refine2(1024, ref refinementState, 1, 131072, BufferPool);
-                mesh.Tree.Refine2(8192, ref refinementState, 16, 2048, BufferPool, ThreadDispatcher);
+                //mesh.Tree.GetSelfOverlaps(ref handler);
+                //mesh.Tree.GetSelfOverlapsBatched(ref handler, BufferPool);
+                //mesh.Tree.GetSelfOverlaps2(ref handler);
+                mesh.Tree.GetSelfOverlaps2(ref threadedHandler, BufferPool, ThreadDispatcher);
                 var end = Stopwatch.GetTimestamp();
+                var (overlapCount, overlapSum) = threadedHandler.SumResults();
+
                 sum += end - start;
-                if ((refinementIndex + 1) % 128 == 0)
+                intervalSum += end - start;
+                const int intervalSize = 128;
+                if ((testIndex + 1) % intervalSize == 0)
                 {
                     mesh.Tree.Validate();
-                    var cacheQuality = mesh.Tree.MeasureCacheQuality();
                     var costMetric = mesh.Tree.MeasureCostMetric();
-                    Console.WriteLine($"cost, cache for {refinementIndex}: {costMetric}, {cacheQuality}");
-                    Console.WriteLine($"Time (average) (ms): {(end - start) * 1e3 / Stopwatch.Frequency}, {sum * 1e3 / ((refinementIndex + 1) * Stopwatch.Frequency)}");
+                    Console.WriteLine($"cost for {testIndex}: {costMetric}");
+                    Console.WriteLine($"{testIndex}: Time (interval average) (average) (ms): {(end - start) * 1e3 / Stopwatch.Frequency}, {intervalSum * 1e3 / (intervalSize * Stopwatch.Frequency)}, {sum * 1e3 / ((testIndex + 1) * Stopwatch.Frequency)}");
+                    intervalSum = 0;
                 }
             }
-            taskStack.Dispose(BufferPool, ThreadDispatcher);
+            threadedHandler.Dispose(BufferPool);
+
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
 
             Console.WriteLine($"node count: {mesh.Tree.NodeCount}");
