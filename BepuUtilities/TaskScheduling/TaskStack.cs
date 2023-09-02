@@ -451,7 +451,7 @@ public unsafe struct TaskStack
     }
 
     /// <summary>
-    /// Convenience function for requesting a stop. Requires the context to be the expected <see cref="TaskStack"/>.
+    /// Convenience function for requesting a stop. Requires the context to be a pointer to the expected <see cref="TaskStack"/>.
     /// </summary>
     /// <param name="id">Id of the task.</param>
     /// <param name="untypedContext"><see cref="TaskStack"/> to be stopped.</param>

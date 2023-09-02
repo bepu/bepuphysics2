@@ -43,7 +43,6 @@ internal unsafe struct Job
     /// <returns>True if a task was available to pop, false otherwise.</returns>
     internal bool TryPop(out Task task)
     {
-
         var newCount = Interlocked.Decrement(ref Counter);
         if (newCount >= 0)
         {
