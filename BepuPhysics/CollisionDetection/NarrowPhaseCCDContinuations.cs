@@ -130,11 +130,11 @@ namespace BepuPhysics.CollisionDetection
                 //Check all contact data for invalid data early so that we don't end up spewing NaNs all over the engine and catching in the broad phase or some other highly indirect location.
                 for (int i = 0; i < manifoldReference.Count; ++i)
                 {
-                    manifoldReference.GetDepth(ref manifoldReference, i).Validate();
-                    ref var normal = ref manifoldReference.GetNormal(ref manifoldReference, i);
+                    manifoldReference.GetDepth(i).Validate();
+                    var normal = manifoldReference.GetNormal(i);
                     normal.Validate();
                     Debug.Assert(Math.Abs(normal.LengthSquared() - 1) < 1e-5f, "Normals should be unit length. Something's gone wrong!");
-                    manifoldReference.GetOffset(ref manifoldReference, i).Validate();
+                    manifoldReference.GetOffset(i).Validate();
                 }
 #endif
                 switch ((ConstraintGeneratorType)continuationId.Type)
