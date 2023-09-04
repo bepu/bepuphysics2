@@ -62,7 +62,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static float ComputeDistinctiveness(in ConvexContact candidate, Vector3 contactNormal, in NonconvexContact reducedContact, float distanceSquaredInterpolationMin, float inverseDistanceSquaredInterpolationSpan, float depthScale)
+        static float ComputeDistinctiveness(in ConvexContact candidate, Vector3 contactNormal, in Contact reducedContact, float distanceSquaredInterpolationMin, float inverseDistanceSquaredInterpolationSpan, float depthScale)
         {
             //The more distant a contact is from another contact, or the more different its normal is, the more distinct it is considered.
             //The goal is for distinctiveness to range from around 0 to 2. The exact values aren't extremely important- we just want a rough range

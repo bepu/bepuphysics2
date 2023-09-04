@@ -80,10 +80,7 @@ namespace Demos.Demos
                 //And if you find yourself wanting contact data, well, you've got it handy!)
                 for (int i = 0; i < manifold.Count; ++i)
                 {
-                    //This probably looks a bit odd, but it addresses a limitation of returning references to the struct 'this' instance.
-                    //(What we really want here is either the lifting of that restriction, or allowing interfaces to require a static member so that we could call the static function and pass the instance, 
-                    //instead of invoking the function on the instance AND passing the instance.)
-                    if (manifold.GetDepth(ref manifold, i) >= 0)
+                    if (manifold.GetDepth(i) >= 0)
                     {
                         QueryWasTouched[pairId] = true;
                         break;

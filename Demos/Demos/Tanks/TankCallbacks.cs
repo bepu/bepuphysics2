@@ -140,7 +140,7 @@ namespace Demos.Demos.Tanks
                     //In most cases, this isn't a problem at all, but tank projectiles are moving very quickly and a single missed frame might be enough to not trigger an explosion.
                     //A nonzero epsilon helps catch those cases.
                     //(An alternative would be to check each projectile's contact constraints and cause an explosion if any contact has nonzero penetration impulse.)
-                    if (manifold.GetDepth(ref manifold, i) >= -1e-3f)
+                    if (manifold.GetDepth(i) >= -1e-3f)
                     {
                         //An actual collision was found. 
                         if (propertiesA.Projectile)

@@ -133,7 +133,7 @@ public class CollisionBatcherTaskBenchmarks
             var count = manifold.Count;
             for (int i = 0; i < count; ++i)
             {
-                ResultSum += manifold.GetNormal(ref manifold, i) + manifold.GetOffset(ref manifold, i) + new Vector3(manifold.GetDepth(ref manifold, i));
+                ResultSum += TManifold.GetNormalReference(ref manifold, i) + TManifold.GetOffsetReference(ref manifold, i) + new Vector3(TManifold.GetDepthReference(ref manifold, i));
             }
         }
     }

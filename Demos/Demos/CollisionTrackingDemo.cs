@@ -470,7 +470,7 @@ public class CollisionTrackingDemo : Demo
     {
         for (int i = 0; i < pair.Contacts.Count; ++i)
         {
-            if (pair.Contacts.GetFeatureId(i) == featureId && pair.Contacts.GetDepth(ref pair.Contacts, i) >= 0)
+            if (pair.Contacts.GetFeatureId(i) == featureId && pair.Contacts.GetDepth(i) >= 0)
                 return true;
         }
         return false;
@@ -500,11 +500,11 @@ public class CollisionTrackingDemo : Demo
                     ref var previous = ref collisions.PreviousPairs.Values[otherIndexInPrevious];
                     for (int i = 0; i < pair.Contacts.Count; ++i)
                     {
-                        if (pair.Contacts.GetDepth(ref pair.Contacts, i) >= 0)
+                        if (pair.Contacts.GetDepth(i) >= 0)
                         {
                             //This contact is touching. Does there exist a contact with the same feature id that was touching in the previous timestep?
                             if (!PreviousContainsTouchingFeatureId(ref previous, pair.Contacts.GetFeatureId(i)))
-                                AddParticle(pair.Contacts.GetOffset(ref pair.Contacts, i), pair.Contacts.GetNormal(ref pair.Contacts, i), pair.OtherIsAInPair ? other.Collidable : self.Collidable);
+                                AddParticle(pair.Contacts.GetOffset(i), pair.Contacts.GetNormal(i), pair.OtherIsAInPair ? other.Collidable : self.Collidable);
                         }
                     }
                 }
@@ -513,7 +513,7 @@ public class CollisionTrackingDemo : Demo
                     //No previous collision, so all contacts are new.
                     for (int i = 0; i < pair.Contacts.Count; ++i)
                     {
-                        AddParticle(pair.Contacts.GetOffset(ref pair.Contacts, i), pair.Contacts.GetNormal(ref pair.Contacts, i), pair.OtherIsAInPair ? other.Collidable : self.Collidable);
+                        AddParticle(pair.Contacts.GetOffset(i), pair.Contacts.GetNormal(i), pair.OtherIsAInPair ? other.Collidable : self.Collidable);
                     }
                 }
             }

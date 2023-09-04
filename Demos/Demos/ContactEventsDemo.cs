@@ -439,7 +439,7 @@ namespace Demos.Demos
                                 manifold.GetContact(contactIndex, out var offset, out var normal, out var depth, out _);
                                 listener.Handler.OnContactAdded(source, pair, ref manifold, offset, normal, depth, featureId, contactIndex, workerIndex);
                             }
-                            if (manifold.GetDepth(ref manifold, contactIndex) >= 0)
+                            if (manifold.GetDepth(contactIndex) >= 0)
                                 isTouching = true;
                         }
                         if (previousContactsStillExist != (1 << collision.ContactCount) - 1)
@@ -512,12 +512,19 @@ namespace Demos.Demos
             public int Count => 0;
             public bool Convex => true;
             //This type never has any contacts, so there's no need for any property grabbers.
-            public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId) { throw new NotImplementedException(); }
-            public ref float GetDepth(ref EmptyManifold manifold, int contactIndex) { throw new NotImplementedException(); }
-            public int GetFeatureId(int contactIndex) { throw new NotImplementedException(); }
-            public ref int GetFeatureId(ref EmptyManifold manifold, int contactIndex) { throw new NotImplementedException(); }
-            public ref Vector3 GetNormal(ref EmptyManifold manifold, int contactIndex) { throw new NotImplementedException(); }
-            public ref Vector3 GetOffset(ref EmptyManifold manifold, int contactIndex) { throw new NotImplementedException(); }
+            public Contact this[int contactIndex] { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+            public static ref ConvexContact GetConvexContactReference(ref EmptyManifold manifold, int contactIndex) => throw new NotImplementedException();
+            public static ref float GetDepthReference(ref EmptyManifold manifold, int contactIndex) => throw new NotImplementedException();
+            public static ref int GetFeatureIdReference(ref EmptyManifold manifold, int contactIndex) => throw new NotImplementedException();
+            public static ref Contact GetNonconvexContactReference(ref EmptyManifold manifold, int contactIndex) => throw new NotImplementedException();
+            public static ref Vector3 GetNormalReference(ref EmptyManifold manifold, int contactIndex) => throw new NotImplementedException();
+            public static ref Vector3 GetOffsetReference(ref EmptyManifold manifold, int contactIndex) => throw new NotImplementedException();
+            public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId) => throw new NotImplementedException();
+            public void GetContact(int contactIndex, out Contact contactData) => throw new NotImplementedException();
+            public float GetDepth(int contactIndex) => throw new NotImplementedException();
+            public int GetFeatureId(int contactIndex) => throw new NotImplementedException();
+            public Vector3 GetNormal(int contactIndex) => throw new NotImplementedException();
+            public Vector3 GetOffset(int contactIndex) => throw new NotImplementedException();
         }
 
         public void Flush()
