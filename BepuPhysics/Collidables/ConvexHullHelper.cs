@@ -130,7 +130,7 @@ namespace BepuPhysics.Collidables
                 var candidateIndices = indexOffsets + new Vector<int>(i << BundleIndexing.VectorShift);
                 ignoreSlot = Vector.BitwiseOr(
                     Vector.BitwiseOr(
-                        Vector.OnesComplement(allowVertexBundles[i]), 
+                        Vector.OnesComplement(allowVertexBundles[i]),
                         Vector.BitwiseAnd(Vector.LessThanOrEqual(x, planeEpsilon), Vector.LessThanOrEqual(y, planeEpsilon))),
                     Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
                 var useCandidate = Vector.AndNot(Vector.GreaterThan(y * bestX, bestY * x), ignoreSlot);
@@ -810,7 +810,7 @@ namespace BepuPhysics.Collidables
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
                 ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices);
-              
+
                 if (reducedFaceIndices.Count < 3)
                 {
                     //steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertices, ref faces, default, -1));
@@ -1078,11 +1078,38 @@ namespace BepuPhysics.Collidables
                     var c = points[face[subtriangleIndex]];
                     var volumeContribution = MeshInertiaHelper.ComputeTetrahedronVolume(a, b, c);
                     volume += volumeContribution;
-                    center += (a + b + c) * volumeContribution;
+                    var centroid = a + b + c;
+                    center += centroid * volumeContribution;
                 }
             }
             //Division by 4 since we accumulated (a + b + c), rather than the actual tetrahedral center (a + b + c + 0) / 4.
             center /= volume * 4;
+            if (float.IsNaN(center.X) || float.IsNaN(center.Y) || float.IsNaN(center.Z))
+            {
+                //The convex hull seems to have no volume. Treat it as coplanar and retry.
+                center = default;
+                float scaledSurfaceArea = 0;
+                for (int faceIndex = 0; faceIndex < hullData.FaceStartIndices.Length; ++faceIndex)
+                {
+                    hullData.GetFace(faceIndex, out var face);
+                    for (int subtriangleIndex = 2; subtriangleIndex < face.VertexCount; ++subtriangleIndex)
+                    {
+                        var a = points[face[0]];
+                        var b = points[face[subtriangleIndex - 1]];
+                        var c = points[face[subtriangleIndex]];
+                        var areaContribution = Vector3.Cross(b - a, c - a).Length();
+                        scaledSurfaceArea += areaContribution;
+                        var centroid = a + b + c;
+                        center += centroid * areaContribution;
+                    }
+                }
+                center /= scaledSurfaceArea * 3;
+                if (float.IsNaN(center.X) || float.IsNaN(center.Y) || float.IsNaN(center.Z))
+                {
+                    throw new ArgumentException("Convex hull has no volume or surface area. This is not a valid convex hull.");
+                }
+            }
+
 
             var lastIndex = hullData.OriginalVertexMapping.Length - 1;
             for (int bundleIndex = 0; bundleIndex < hullShape.Points.Length; ++bundleIndex)

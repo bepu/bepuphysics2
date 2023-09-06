@@ -187,6 +187,17 @@ namespace BepuPhysics.Collidables
         {
             var triangleSource = new ConvexHullTriangleSource(this);
             MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor);
+            if (float.IsNaN(inertiaTensor.XX) ||
+                float.IsNaN(inertiaTensor.YX) ||
+                float.IsNaN(inertiaTensor.YY) ||
+                float.IsNaN(inertiaTensor.ZX) ||
+                float.IsNaN(inertiaTensor.ZY) ||
+                float.IsNaN(inertiaTensor.ZZ))
+            {
+                //The convex hull has no volume; we can't use the closed inertia calculation.
+                triangleSource = new ConvexHullTriangleSource(this);
+                MeshInertiaHelper.ComputeOpenInertia(ref triangleSource, mass, out inertiaTensor);
+            }
             BodyInertia inertia;
             inertia.InverseMass = 1f / mass;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);

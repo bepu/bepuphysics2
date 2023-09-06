@@ -32,6 +32,24 @@ public class ConvexHullTestDemo : Demo
         return points;
     }
 
+    Buffer<Vector3> CreatePlaneish()
+    {
+        var points = new Buffer<Vector3>(12, BufferPool);
+        points[0] = new Vector3(-13.82f, 16.79f, 13.83f);
+        points[1] = new Vector3(13.82f, -16.79f, -13.83f);
+        points[2] = new Vector3(13.82f, 16.79f, -13.83f);
+        points[3] = new Vector3(-13.82f, 16.79f, 13.83f);
+        points[4] = new Vector3(13.82f, 16.79f, -13.83f);
+        points[5] = new Vector3(-13.82f, -16.79f, 13.83f);
+        points[6] = new Vector3(13.82f, 16.79f, -13.83f);
+        points[7] = new Vector3(13.82f, -16.79f, -13.83f);
+        points[8] = new Vector3(-13.82f, -16.79f, 13.83f);
+        points[9] = new Vector3(-13.82f, 16.79f, 13.83f);
+        points[10] = new Vector3(-13.82f, -16.79f, 13.83f);
+        points[11] = new Vector3(13.82f, -16.79f, -13.83f);
+        return points;
+    }
+
     Buffer<Vector3> CreateMeshConvexHull(MeshContent meshContent, Vector3 scale)
     {
         //This is actually a pretty good example of how *not* to make a convex hull shape.
@@ -320,6 +338,7 @@ public class ConvexHullTestDemo : Demo
         //}
         //var hullPoints = CreateRandomConvexHullPoints();
         var hullPoints = CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f));
+        //var hullPoints = CreatePlaneish();
         //var hullPoints = CreateTestConvexHull2();
         //var hullPoints = CreateBoxConvexHull(2);
         var hullShape = new ConvexHull(hullPoints, BufferPool, out _);
