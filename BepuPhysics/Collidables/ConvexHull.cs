@@ -60,7 +60,8 @@ namespace BepuPhysics.Collidables
         /// <param name="center">Computed center of the convex hull before the hull was recentered.</param>
         public ConvexHull(Span<Vector3> points, BufferPool pool, out Vector3 center)
         {
-            ConvexHullHelper.CreateShape(points, pool, out center, out this);
+            if (!ConvexHullHelper.CreateShape(points, pool, out center, out this))
+                throw new ArgumentException("Could not create a convex hull from the point set; is it degenerate? Convex hull shapes must have volume.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -186,18 +187,13 @@ namespace BepuPhysics.Collidables
         public readonly BodyInertia ComputeInertia(float mass)
         {
             var triangleSource = new ConvexHullTriangleSource(this);
-            MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor);
-            if (float.IsNaN(inertiaTensor.XX) ||
-                float.IsNaN(inertiaTensor.YX) ||
-                float.IsNaN(inertiaTensor.YY) ||
-                float.IsNaN(inertiaTensor.ZX) ||
-                float.IsNaN(inertiaTensor.ZY) ||
-                float.IsNaN(inertiaTensor.ZZ))
-            {
-                //The convex hull has no volume; we can't use the closed inertia calculation.
-                triangleSource = new ConvexHullTriangleSource(this);
-                MeshInertiaHelper.ComputeOpenInertia(ref triangleSource, mass, out inertiaTensor);
-            }
+            MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out var volume, out var inertiaTensor);
+            //While it's possible to go through the construction process on a convex hull with no volume, it'll very likely break ray tests which rely on bounding planes, so we don't support it.
+            Debug.Assert(
+                FaceToVertexIndicesStart.Length > 2 &&
+                volume > 0 && !float.IsNaN(inertiaTensor.XX) &&
+                !float.IsNaN(inertiaTensor.YX) && !float.IsNaN(inertiaTensor.YY) && !float.IsNaN(inertiaTensor.ZX) && !float.IsNaN(inertiaTensor.ZY) && !float.IsNaN(inertiaTensor.ZZ),
+                "Convex hull must have volume.");
             BodyInertia inertia;
             inertia.InverseMass = 1f / mass;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
@@ -211,6 +207,7 @@ namespace BepuPhysics.Collidables
 
         public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
         {
+            Debug.Assert(FaceToVertexIndicesStart.Length > 2, "Convex hull appears to be degenerate; convex hull must have volume or ray tests will fail.");
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             var shapeToRay = origin - pose.Position;
             Matrix3x3.TransformTranspose(shapeToRay, orientation, out var localOrigin);

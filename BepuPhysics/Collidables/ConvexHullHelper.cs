@@ -70,8 +70,11 @@ namespace BepuPhysics.Collidables
         public void Dispose(BufferPool pool)
         {
             pool.Return(ref OriginalVertexMapping);
-            pool.Return(ref FaceVertexIndices);
-            pool.Return(ref FaceStartIndices);
+            //The other allocations may not exist if the hull is degenerate.
+            if (FaceVertexIndices.Allocated)
+                pool.Return(ref FaceVertexIndices);
+            if (FaceStartIndices.Allocated)
+                pool.Return(ref FaceStartIndices);
         }
     }
 
@@ -1046,23 +1049,11 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Pool used to allocate resources for the hullShape.</param>
         /// <param name="hullShape">Convex hull shape created from the input data.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
-        public static void CreateShape(Span<Vector3> points, HullData hullData, BufferPool pool, out Vector3 center, out ConvexHull hullShape)
+        /// <returns>True if the shape was created successfully, false otherwise. If false, the hull probably had no volume and would not have worked properly as a shape.</returns>
+        public static bool CreateShape(Span<Vector3> points, HullData hullData, BufferPool pool, out Vector3 center, out ConvexHull hullShape)
         {
             Debug.Assert(points.Length > 0, "Convex hulls need to have a nonzero number of points!");
             hullShape = default;
-            if (hullData.OriginalVertexMapping.Length < 3)
-            {
-                center = default;
-                if (hullData.OriginalVertexMapping.Length > 0)
-                {
-                    for (int i = 0; i < hullData.OriginalVertexMapping.Length; ++i)
-                    {
-                        center += points[hullData.OriginalVertexMapping[i]];
-                    }
-                    center /= hullData.OriginalVertexMapping.Length;
-                }
-                return;
-            }
             var pointBundleCount = BundleIndexing.GetBundleCount(hullData.OriginalVertexMapping.Length);
             pool.Take(pointBundleCount, out hullShape.Points);
 
@@ -1086,30 +1077,17 @@ namespace BepuPhysics.Collidables
             center /= volume * 4;
             if (float.IsNaN(center.X) || float.IsNaN(center.Y) || float.IsNaN(center.Z))
             {
-                //The convex hull seems to have no volume. Treat it as coplanar and retry.
+                //The convex hull seems to have no volume.
+                //While you could try treating it as coplanar (like we once tried; see commit history just prior to the commit that added this message):
+                //1. Ray tests won't work. They rely on bounding planes. It would require a special case for degenerate hulls.
+                //2. Inertia won't work. You could resolve that with a special case, but it doesn't fix ray tests.
+                //3. Edge-on contact generation may produce lower quality contacts.
+                //So, pretty worthless overall without major changes.
+                hullShape.Points.Dispose(pool);
                 center = default;
-                float scaledSurfaceArea = 0;
-                for (int faceIndex = 0; faceIndex < hullData.FaceStartIndices.Length; ++faceIndex)
-                {
-                    hullData.GetFace(faceIndex, out var face);
-                    for (int subtriangleIndex = 2; subtriangleIndex < face.VertexCount; ++subtriangleIndex)
-                    {
-                        var a = points[face[0]];
-                        var b = points[face[subtriangleIndex - 1]];
-                        var c = points[face[subtriangleIndex]];
-                        var areaContribution = Vector3.Cross(b - a, c - a).Length();
-                        scaledSurfaceArea += areaContribution;
-                        var centroid = a + b + c;
-                        center += centroid * areaContribution;
-                    }
-                }
-                center /= scaledSurfaceArea * 3;
-                if (float.IsNaN(center.X) || float.IsNaN(center.Y) || float.IsNaN(center.Z))
-                {
-                    throw new ArgumentException("Convex hull has no volume or surface area. This is not a valid convex hull.");
-                }
+                Debug.Assert(!hullShape.Points.Allocated && !hullShape.FaceToVertexIndicesStart.Allocated && !hullShape.BoundingPlanes.Allocated && !hullShape.FaceVertexIndices.Allocated, "Hey! You moved something around and forgot to dispose!");
+                return false;
             }
-
 
             var lastIndex = hullData.OriginalVertexMapping.Length - 1;
             for (int bundleIndex = 0; bundleIndex < hullShape.Points.Length; ++bundleIndex)
@@ -1179,6 +1157,7 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.WriteFirst(default, ref offsetInstance.Normal);
                 GatherScatter.GetFirst(ref offsetInstance.Offset) = float.MinValue;
             }
+            return true;
         }
 
         /// <summary>
@@ -1189,10 +1168,11 @@ namespace BepuPhysics.Collidables
         /// <param name="hullData">Intermediate hull data that got processed into the convex hull.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
         /// <param name="convexHull">Convex hull shape of the input point set.</param>
-        public static void CreateShape(Span<Vector3> points, BufferPool pool, out HullData hullData, out Vector3 center, out ConvexHull convexHull)
+        /// <returns>True if the shape was created successfully, false otherwise. If false, the hull probably had no volume and would not have worked properly as a shape.</returns>
+        public static bool CreateShape(Span<Vector3> points, BufferPool pool, out HullData hullData, out Vector3 center, out ConvexHull convexHull)
         {
             ComputeHull(points, pool, out hullData);
-            CreateShape(points, hullData, pool, out center, out convexHull);
+            return CreateShape(points, hullData, pool, out center, out convexHull);
         }
 
         /// <summary>
@@ -1202,13 +1182,15 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Buffer pool used for temporary allocations and the output data structures.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
         /// <param name="convexHull">Convex hull shape of the input point set.</param>
-        public static void CreateShape(Span<Vector3> points, BufferPool pool, out Vector3 center, out ConvexHull convexHull)
+        /// <returns>True if the shape was created successfully, false otherwise. If false, the hull probably had no volume and would not have worked properly as a shape.</returns>
+        public static bool CreateShape(Span<Vector3> points, BufferPool pool, out Vector3 center, out ConvexHull convexHull)
         {
             ComputeHull(points, pool, out var hullData);
-            CreateShape(points, hullData, pool, out center, out convexHull);
-            //Empty input point sets won't allocate.
+            var result = CreateShape(points, hullData, pool, out center, out convexHull);
+            //Empty input point sets won't allocate; don't try to dispose them.
             if (hullData.OriginalVertexMapping.Allocated)
                 hullData.Dispose(pool);
+            return result;
         }
 
 
