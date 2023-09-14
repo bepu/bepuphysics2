@@ -129,6 +129,12 @@ namespace BepuPhysics.Trees
             }
         }
 
+        /// <summary>
+        /// Gets pairs of leaf indices with bounding boxes which overlap.
+        /// </summary>
+        /// <typeparam name="TOverlapHandler">Type of the <see cref="IOverlapHandler"/> implementation to report pairs to.</typeparam>
+        /// <param name="treeB">Tree to test this tree against.</param>
+        /// <param name="overlapHandler">Handler to report pairs to.</param>
         public void GetOverlaps<TOverlapHandler>(ref Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
         {
             if (LeafCount == 0 || treeB.LeafCount == 0)
