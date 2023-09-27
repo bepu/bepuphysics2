@@ -332,6 +332,8 @@ namespace BepuPhysics
                 {
                     integrationMask = Vector.AndNot(BundleIndexing.CreateMaskForCountInBundle(countInBundle), Bodies.IsKinematic(inertia));
                 }
+                //When the solver calls IntegrateVelocity, empty lanes are filled with -1. For consistent behavior at a trivial cost, we'll do the same here.
+                laneIndices = Vector.BitwiseOr(Vector.OnesComplement(integrationMask), laneIndices);
                 var sleepEnergy = velocity.Linear.LengthSquared() + velocity.Angular.LengthSquared();
 
                 //Note that we're not storing out the integrated velocities. The integrated velocities are only used for bounding box prediction.
@@ -612,7 +614,8 @@ namespace BepuPhysics
                     unconstrainedVelocityIntegrationMask = Vector.AndNot(unconstrainedMask, isKinematic);
                     anyBodyInBundleNeedsVelocityIntegration = Vector.LessThanAny(unconstrainedVelocityIntegrationMask, Vector<int>.Zero);
                 }
-                //We don't want to scatter velocities into any slots that don't want velocity writes. By setting all the bits in such lanes, velocity scatter will skip them.
+                //We don't want to scatter velocities into any slots that don't want velocity writes. By setting all the bits in such lanes, scatter will skip them.
+                //This will also keep the body indices passed into callbacks.IntegrateVelocity consistent with those provided during PredictBoundingBoxes and the solver (-1 for ignored slots).
                 var velocityMaskedBodyIndices = Vector.BitwiseOr(bodyIndices, Vector.OnesComplement(unconstrainedVelocityIntegrationMask));
 
                 if (anyBodyInBundleIsUnconstrained)
@@ -633,7 +636,7 @@ namespace BepuPhysics
 
                         if (anyBodyInBundleNeedsVelocityIntegration)
                         {
-                            callbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, unconstrainedVelocityIntegrationMask, workerIndex, bundleEffectiveDt, ref velocity);
+                            callbacks.IntegrateVelocity(velocityMaskedBodyIndices, position, orientation, localInertia, unconstrainedVelocityIntegrationMask, workerIndex, bundleEffectiveDt, ref velocity);
                             //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
                             Vector3Wide.ConditionalSelect(unconstrainedVelocityIntegrationMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
                             Vector3Wide.ConditionalSelect(unconstrainedVelocityIntegrationMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);

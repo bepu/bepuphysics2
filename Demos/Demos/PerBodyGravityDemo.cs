@@ -70,6 +70,7 @@ namespace Demos.Demos
                 {
                     var bodyIndex = bodyIndices[bundleSlotIndex];
                     //Not every slot in the SIMD vector is guaranteed to be filled.
+                    //The integration mask tells us which ones are active in a way that's convenient for vectorized operations, but the bodyIndex for empty lanes will also be -1.
                     if (bodyIndex >= 0)
                     {
                         var bodyHandle = bodies.ActiveSet.IndexToHandle[bodyIndex];
@@ -106,12 +107,13 @@ namespace Demos.Demos
             var boxInertia = boxShape.ComputeInertia(1);
             var boxShapeIndex = Simulation.Shapes.Add(boxShape);
             var spacing = new Vector3(4);
-            const int length = 20;
+            const int length = 1;
+            const int width = 1;
+            const int height = 1;
             for (int i = 0; i < length; ++i)
             {
-                for (int j = 0; j < 20; ++j)
+                for (int j = 0; j < height; ++j)
                 {
-                    const int width = 20;
                     var origin = new Vector3(0, 40, 0) + spacing * new Vector3(length * -0.5f, 0, width * -0.5f);
                     for (int k = 0; k < width; ++k)
                     {
