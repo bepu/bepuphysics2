@@ -33,7 +33,7 @@ namespace BepuPhysics.Collidables
         }
     }
 
-    public struct ConvexHull : IConvexShape
+    public struct ConvexHull : IConvexShape, IDisposableShape
     {
         /// <summary>
         /// Bundled points of the convex hull.

@@ -82,7 +82,7 @@ namespace BepuPhysics.Collidables
     /// <summary>
     /// Defines a compound shape type that has children of potentially different types.
     /// </summary>
-    public interface ICompoundShape : IShape, IBoundsQueryableCompound
+    public interface ICompoundShape : IDisposableShape, IBoundsQueryableCompound
     {
         //Note that compound shapes have no wide GetBounds function. Compounds, by virtue of containing shapes of different types, cannot be usefully vectorized over.
         //Instead, their children are added to other computation batches.
@@ -135,11 +135,6 @@ namespace BepuPhysics.Collidables
         /// <param name="compoundChildIndex">Index of the child to look up.</param>
         /// <returns>Reference to the requested compound child.</returns>
         ref CompoundChild GetChild(int compoundChildIndex);
-        /// <summary>
-        /// Returns all resources used by the shape instance to the given pool.
-        /// </summary>
-        /// <param name="pool">Pool to return shape resources to.</param>
-        void Dispose(BufferPool pool);
     }
 
     /// <summary>
@@ -147,7 +142,7 @@ namespace BepuPhysics.Collidables
     /// </summary>
     /// <typeparam name="TChildShape">Type of the child shapes.</typeparam>
     /// <typeparam name="TChildShapeWide">Type of the child shapes, formatted in AOSOA layout.</typeparam>
-    public interface IHomogeneousCompoundShape<TChildShape, TChildShapeWide> : IShape, IBoundsQueryableCompound
+    public interface IHomogeneousCompoundShape<TChildShape, TChildShapeWide> : IDisposableShape, IBoundsQueryableCompound
         where TChildShape : unmanaged, IConvexShape
         where TChildShapeWide : unmanaged, IShapeWide<TChildShape>
     {
@@ -199,11 +194,6 @@ namespace BepuPhysics.Collidables
         /// <param name="childIndex">Index of the child in the compound parent.</param>
         /// <param name="childData">Reference to an AOSOA slot.</param>
         void GetLocalChild(int childIndex, ref TChildShapeWide childData);
-        /// <summary>
-        /// Returns all resources used by the shape instance to the given pool.
-        /// </summary>
-        /// <param name="pool">Pool to return shape resources to.</param>
-        void Dispose(BufferPool pool);
     }
 
     /// <summary>
