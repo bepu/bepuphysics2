@@ -161,7 +161,11 @@ namespace BepuPhysics.Collidables
             //(This isn't wonderfully fast, but it's fairly simple. The alternatives are things like incrementally combining coplanar triangles as they are discovered
             //or using a postpass that looks for coplanar triangles after they've been created.)
             //Rotate the offset to point outward.
-            var projectedPlaneNormalNarrow = Vector2.Normalize(new Vector2(-bestYNarrow, bestXNarrow));
+            //Note: in unusual corner cases, the above may have accepted zero candidates resulting in a bestXNarrow = 1 and bestYNarrow = float.MinValue.
+            //Catching that and ensuring that a reasonable face normal is output avoids a bad face.
+            var candidateNormalDirection = new Vector2(-bestYNarrow, bestXNarrow);
+            var length = candidateNormalDirection.Length();
+            var projectedPlaneNormalNarrow = float.IsFinite(length) ? candidateNormalDirection / length : new Vector2(1, 0);
             Vector2Wide.Broadcast(projectedPlaneNormalNarrow, out var projectedPlaneNormal);
             Vector3Wide.ReadFirst(basisX, out var basisXNarrow);
             Vector3Wide.ReadFirst(basisY, out var basisYNarrow);
@@ -1075,7 +1079,7 @@ namespace BepuPhysics.Collidables
             }
             //Division by 4 since we accumulated (a + b + c), rather than the actual tetrahedral center (a + b + c + 0) / 4.
             center /= volume * 4;
-            if (float.IsNaN(center.X) || float.IsNaN(center.Y) || float.IsNaN(center.Z))
+            if (float.IsNaN(center.X) || float.IsNaN(center.Y) || float.IsNaN(center.Z) || hullData.FaceStartIndices.Length == 2)
             {
                 //The convex hull seems to have no volume.
                 //While you could try treating it as coplanar (like we once tried; see commit history just prior to the commit that added this message):
