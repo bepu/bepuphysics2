@@ -28,7 +28,7 @@ namespace BepuPhysics.Trees
                     var leafIndex = Encode(nodeIndex);
                     leafTester.TestLeaf(leafIndex, ref treeRay->MaximumT);
                     //Leaves have no children; have to pull from the stack to get a new target.
-                    if (stackEnd == 0)
+                    if (stackEnd == 0 || treeRay->MaximumT < 0)
                         return;
                     nodeIndex = stack[--stackEnd];
                 }
@@ -47,6 +47,8 @@ namespace BepuPhysics.Trees
                         if (bIntersected)
                         {
                             //Visit the earlier AABB intersection first.
+                            if (stackEnd >= TraversalStackCapacity - 1)
+                                throw new Exception("Exceeded maximum depth!");
                             Debug.Assert(stackEnd < TraversalStackCapacity - 1, "At the moment, we use a fixed size stack. Until we have explicitly tracked depths, watch out for excessive depth traversals.");
                             if (tA < tB)
                             {

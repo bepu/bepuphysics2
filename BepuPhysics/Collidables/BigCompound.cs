@@ -193,13 +193,11 @@ namespace BepuPhysics.Collidables
                 Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
             }
         }
-        public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
-            where TOverlaps : ICollisionTaskSubpairOverlaps
+
+        public unsafe void FindLocalOverlaps<TLeafTester>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, ref TLeafTester leafTester)
+            where TLeafTester : ISweepLeafTester
         {
-            SweepLeafTester<TOverlaps> enumerator;
-            enumerator.Pool = pool;
-            enumerator.Overlaps = overlaps;
-            Tree.Sweep(min, max, sweep, maximumT, ref enumerator);
+            Tree.Sweep(min, max, sweep, maximumT, ref leafTester);
         }
 
         public void Dispose(BufferPool bufferPool)

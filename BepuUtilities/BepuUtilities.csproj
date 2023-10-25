@@ -2,8 +2,8 @@
   <PropertyGroup>
     <AssemblyName>BepuUtilities</AssemblyName>
     <RootNamespace>BepuUtilities</RootNamespace>
-    <TargetFramework>net5.0</TargetFramework>
-    <Version>2.4.0-beta6</Version>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Version>2.4.0-frooxengine</Version>
     <Company>Bepu Entertainment LLC</Company>
     <Authors>Ross Nordby</Authors>
     <Description>Supporting utilities library for BEPUphysics v2.</Description>
@@ -12,26 +12,43 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/bepu/bepuphysics2</RepositoryUrl>
     <PackageIcon>bepuphysicslogo256.png</PackageIcon>
-    <Configurations>Debug;Release</Configurations>
+    <Configurations>Debug;Release;ReleaseStrip</Configurations>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     
     <SignAssembly>true</SignAssembly>
     <DelaySign>false</DelaySign>
     <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
+    <AssemblyVersion>2.4.0.1</AssemblyVersion>
+    <FileVersion>2.4.0.1</FileVersion>
   </PropertyGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Condition="'$(Configuration)'=='ReleaseStrip'" Command="dotnet &quot;$(ProjectDir)..\Dependencies\ilopt\ilopt.dll&quot; &quot;$(TargetPath)&quot;" />
+  </Target>
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <Optimize>false</Optimize>
-    <DefineConstants>TRACE;DEBUG;CHECKMATH</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;CHECKMATH;NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE</DefineConstants>
+    <DefineConstants>TRACE;RELEASE;NETSTANDARD2_0</DefineConstants>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='ReleaseStrip'">
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;RELEASE;NETSTANDARD2_0;RELEASESTRIP</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Memory" Version="4.5.4" />
+    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
+  </ItemGroup>
         
   <ItemGroup>
     <None Include="..\Documentation\images\bepuphysicslogo256.png">

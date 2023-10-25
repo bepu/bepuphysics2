@@ -259,12 +259,11 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlapsPointer)
-            where TOverlaps : ICollisionTaskSubpairOverlaps
+        public unsafe void FindLocalOverlaps<TLeafTester>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, ref TLeafTester leafTester)
+            where TLeafTester : ISweepLeafTester
         {
             Tree.ConvertBoxToCentroidWithExtent(min, max, out var sweepOrigin, out var expansion);
             TreeRay.CreateFrom(sweepOrigin, sweep, maximumT, out var ray);
-            ref var overlaps = ref Unsafe.AsRef<TOverlaps>(overlapsPointer);
             for (int i = 0; i < Children.Length; ++i)
             {
                 ref var child = ref Children[i];
@@ -273,10 +272,9 @@ namespace BepuPhysics.Collidables
                 childMax = childMax + child.LocalPose.Position + expansion;
                 if (Tree.Intersects(childMin, childMax, &ray, out _))
                 {
-                    overlaps.Allocate(pool) = i;
+                    leafTester.TestLeaf(i, ref maximumT);
                 }
             }
-
         }
 
         public void Dispose(BufferPool bufferPool)

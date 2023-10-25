@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using BepuPhysics.Trees;
 
-#if !DEBUG
+#if !DEBUG && !NETSTANDARD2_0
 [module: SkipLocalsInit]
 #endif
 

@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection.CollisionTasks;
+using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
@@ -15,6 +16,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         unsafe void FindOverlaps(ref TShapeA shapeA, in Quaternion orientationA, in BodyVelocity velocityA,
               ref TCompoundB compoundB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
               Shapes shapes, BufferPool pool, out ChildOverlapsCollection overlaps);
+
+        unsafe void FindOverlaps<TLeafTester>(ref TShapeA shapeA, in Quaternion orientationA, in BodyVelocity velocityA,
+            ref TCompoundB compoundB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            Shapes shapes, BufferPool pool, ref TLeafTester leafTester)
+            where TLeafTester : ISweepLeafTester;
     }
 
     public struct ConvexCompoundSweepOverlapFinder<TShapeA, TCompoundB> : IConvexCompoundSweepOverlapFinder<TShapeA, TCompoundB>
@@ -24,10 +30,27 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ref TCompoundB compoundB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             Shapes shapes, BufferPool pool, out ChildOverlapsCollection overlaps)
         {
-            BoundingBoxHelpers.GetLocalBoundingBoxForSweep(ref shapeA, orientationA, velocityA, offsetB, orientationB, velocityB, maximumT, out var sweep, out var min, out var max);
-            
             overlaps = default;
-            compoundB.FindLocalOverlaps<ChildOverlapsCollection>(min, max, sweep, maximumT, pool, shapes, Unsafe.AsPointer(ref overlaps));
+
+            ShapeTreeSweepLeafTester<ChildOverlapsCollection> enumerator;
+            enumerator.Pool = pool;
+            enumerator.Overlaps = Unsafe.AsPointer(ref overlaps);
+
+            BoundingBoxHelpers.GetLocalBoundingBoxForSweep(ref shapeA, orientationA, velocityA, offsetB, orientationB, velocityB, maximumT, out var sweep, out var min, out var max);
+
+            FindOverlaps(ref shapeA, orientationA, velocityA,
+                ref compoundB, offsetB, orientationB, velocityB, maximumT,
+                shapes, pool, ref enumerator);
+        }
+
+        public unsafe void FindOverlaps<TLeafTester>(ref TShapeA shapeA, in Quaternion orientationA, in BodyVelocity velocityA,
+            ref TCompoundB compoundB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            Shapes shapes, BufferPool pool, ref TLeafTester leafTester)
+            where TLeafTester : ISweepLeafTester
+        {
+            BoundingBoxHelpers.GetLocalBoundingBoxForSweep(ref shapeA, orientationA, velocityA, offsetB, orientationB, velocityB, maximumT, out var sweep, out var min, out var max);
+
+            compoundB.FindLocalOverlaps(min, max, sweep, maximumT, pool, shapes, ref leafTester);
         }
     }
 }
