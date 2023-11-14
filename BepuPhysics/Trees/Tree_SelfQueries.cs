@@ -296,7 +296,7 @@ namespace BepuPhysics.Trees
                 0b1110_0100, 0b1110_0100, 0b1110_0101, 0b1110_0100, 0b1110_0110, 0b1110_1000, 0b1110_1001, 0b1110_0100,
                 //1000       1001         1010         1011         1100         1101         1110         1111
                 0b1110_0111, 0b1110_1100, 0b1110_1101, 0b1111_0100, 0b1110_1110, 0b1111_1000, 0b1111_1001, 0b1110_0100 };
-            var encodedLeftPackMask = Unsafe.Add(ref Unsafe.AsRef(lookupTable[0]), bitmask);
+            var encodedLeftPackMask = Unsafe.Add(ref Unsafe.AsRef(in lookupTable[0]), bitmask);
 
             count = BitOperations.PopCount(bitmask);
             //Broadcast, variable shift.
