@@ -5,6 +5,7 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <Configurations>Debug;Release</Configurations>
     <LangVersion>latest</LangVersion>
+    <Platforms>AnyCPU;x86;x64</Platforms>
     <!--<TieredCompilation>false</TieredCompilation>-->
   </PropertyGroup>
 
