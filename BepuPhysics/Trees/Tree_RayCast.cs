@@ -6,7 +6,10 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //Working around https://github.com/dotnet/runtime/issues/95043:
+        //Under x86 with optimizations, forcing inlining seems to cause problems for sweeps. It also harms performance.
+        //Under x64, though, there's not really any cost to letting the JIT decide. TODO: Probably should look into ARM eventually.
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static bool Intersects(Vector3 min, Vector3 max, TreeRay* ray, out float t)
         {
             var t0 = min * ray->InverseDirection - ray->OriginOverDirection;
