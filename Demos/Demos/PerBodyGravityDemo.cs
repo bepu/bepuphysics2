@@ -107,9 +107,9 @@ namespace Demos.Demos
             var boxInertia = boxShape.ComputeInertia(1);
             var boxShapeIndex = Simulation.Shapes.Add(boxShape);
             var spacing = new Vector3(4);
-            const int length = 1;
-            const int width = 1;
-            const int height = 1;
+            const int length = 20;
+            const int width = 20;
+            const int height = 20;
             for (int i = 0; i < length; ++i)
             {
                 for (int j = 0; j < height; ++j)
