@@ -6,13 +6,14 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BepuPhysics.CollisionDetection
 {
-    using OverlapMapping = QuickDictionary<CollidablePair, ConstraintCache, CollidablePairComparer>;
+    using OverlapMapping = QuickDictionary<CollidablePair, ConstraintCache, CollidablePair>;
 
     [StructLayout(LayoutKind.Explicit, Size = 8)]
-    public struct CollidablePair
+    public struct CollidablePair : IEqualityComparerRef<CollidablePair>
     {
         [FieldOffset(0)]
         public CollidableReference A;
@@ -30,10 +31,8 @@ namespace BepuPhysics.CollisionDetection
         {
             return $"<{A}, {B}>";
         }
-    }
 
-    public struct CollidablePairComparer : IEqualityComparerRef<CollidablePair>
-    {
+
         //Note that pairs are sorted by handle, so we can assume order matters.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(ref CollidablePair a, ref CollidablePair b)
@@ -48,6 +47,16 @@ namespace BepuPhysics.CollisionDetection
             const ulong p2 = 899809343UL;
             var hash64 = (ulong)item.A.Packed * (p1 * p2) + (ulong)item.B.Packed * (p2);
             return (int)(hash64 ^ (hash64 >> 32));
+        }
+
+        public override int GetHashCode()
+        {
+            return Hash(ref this);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is CollidablePair pair && Equals(ref this, ref pair);
         }
     }
 
