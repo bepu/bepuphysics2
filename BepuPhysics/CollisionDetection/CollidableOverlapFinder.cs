@@ -82,6 +82,10 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
         //VERSION 2
         selfTestContext2 = new Tree.MultithreadedSelfTest<PairCollector>(narrowPhase.Pool);
         intertreeTestContext2 = new Tree.MultithreadedIntertreeTest<PairCollector>(narrowPhase.Pool);
+
+        //VERSION 3
+        selfTestContext3 = new Tree.MultithreadedSelfTest<PairCollector3>(narrowPhase.Pool);
+        intertreeTestContext3 = new Tree.MultithreadedIntertreeTest<PairCollector3>(narrowPhase.Pool);
     }
 
     void Worker(int workerIndex)
@@ -114,8 +118,9 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
 
     public override void DispatchOverlaps(float dt, IThreadDispatcher threadDispatcher = null)
     {
+        DispatchOverlaps3(dt, threadDispatcher);
         //DispatchOverlaps2(dt, threadDispatcher);
-        //return;
+        return;
         if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
         {
             narrowPhase.Prepare(dt, threadDispatcher);
@@ -542,6 +547,322 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
             broadPhase.ActiveTree.GetOverlaps(ref broadPhase.StaticTree, ref intertreeHandler);
             narrowPhase.overlapWorkers[0].Batcher.Flush();
 
+        }
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+    unsafe static void SelfTestJob3(long id, void* context, int workerIndex, IThreadDispatcher threadDispatcher)
+    {
+        var overlapFinder = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
+        overlapFinder.selfTestContext3.ExecuteJob((int)id, workerIndex);
+
+        overlapFinder.taskAccumulators[workerIndex].FlushToStack(workerIndex, threadDispatcher);
+
+    }
+    unsafe static void IntertreeTestJob3(long id, void* context, int workerIndex, IThreadDispatcher threadDispatcher)
+    {
+        var overlapFinder = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
+        overlapFinder.intertreeTestContext3.ExecuteJob((int)id, workerIndex);
+
+        overlapFinder.taskAccumulators[workerIndex].FlushToStack(workerIndex, threadDispatcher);
+    }
+
+    unsafe static void NarrowPhaseJob3(long id, void* untypedContext, int workerIndex, IThreadDispatcher threadDispatcher)
+    {
+        ref var pairsToTest = ref *(QuickList<CollidablePair>*)untypedContext;
+        var overlapFinder = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
+
+        var narrowPhase = overlapFinder.narrowPhase;
+        for (int i = 0; i < pairsToTest.Count; ++i)
+        {
+            var pair = pairsToTest[i];
+            narrowPhase.HandleOverlap(workerIndex, pair.A, pair.B);
+        }
+
+        overlapFinder.taskAccumulators[workerIndex].PairsTestedOnThread += pairsToTest.Count;
+    }
+
+    unsafe static void Worker3(int workerIndex, IThreadDispatcher threadDispatcher)
+    {
+        var overlapFinder = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
+        var broadPhase = overlapFinder.broadPhase;
+        var broadStack = overlapFinder.broadStack;
+        if (workerIndex == 0)
+        {
+            //The worker 0 is responsible for getting everything set up.
+            //We'll run the job preparation on this thread while the other threads are getting into position.
+            //Note that the job preparation phase can generate narrow phase tests, so those other threads may end up doing something even before we push anything here.
+            var selfTest = overlapFinder.selfTestContext3;
+            var intertreeTest = overlapFinder.intertreeTestContext3;
+            selfTest.PrepareJobs(ref broadPhase.ActiveTree, overlapFinder.selfTestHandlers3, threadDispatcher.ThreadCount);
+            intertreeTest.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, overlapFinder.intertreeTestHandlers3, threadDispatcher.ThreadCount);
+            var broadTaskCount = selfTest.JobCount + intertreeTest.JobCount;
+            //We'll use a continuation to notify us when all broad jobs are complete by stopping the broad stack.
+            ContinuationHandle broadPhaseCompleteContinuation = default;
+            if (broadTaskCount > 0)
+                broadPhaseCompleteContinuation = broadStack->AllocateContinuation(broadTaskCount, workerIndex, threadDispatcher, TaskStack.GetRequestStopTask(broadStack));
+            if (selfTest.JobCount > 0)
+                broadStack->PushFor(&SelfTestJob3, null, 0, selfTest.JobCount, workerIndex, threadDispatcher, continuation: broadPhaseCompleteContinuation);
+            if (intertreeTest.JobCount > 0)
+                broadStack->PushFor(&IntertreeTestJob3, null, 0, intertreeTest.JobCount, workerIndex, threadDispatcher, continuation: broadPhaseCompleteContinuation);
+
+            //Go ahead and flush the narrow phase work that the preparation phase generated, if any. If there is any left, then it's not full sized (because that would have been flushed), but that's fine.
+            //This is mostly free. At this point, we almost certainly have idling workers.
+            overlapFinder.taskAccumulators[workerIndex].FlushToStack(workerIndex, threadDispatcher);
+
+            if (broadTaskCount == 0)
+            {
+                //The broad phase didn't actually have work to do, so we can just stop it now.
+                //Note that this stop was submitted *after* we flushed the stack! That's because the stop is a sync point, and we want to make sure that all the narrow phase work created by the preparation phase is submitted to the narrow phase stack.
+                broadStack->RequestStop();
+            }
+        }
+        //The worker stays active for the duration of the dispatch that covers both the broad phase and narrow phase.
+        //We'll grab tree testing jobs with priority since those generate the narrow phase jobs.
+        var waiter = new SpinWait();
+        var narrowStack = overlapFinder.narrowStack;
+        while (true)
+        {
+            var broadResult = broadStack->TryPopAndRun(workerIndex, threadDispatcher);
+            if (broadResult == PopTaskResult.Stop)
+            {
+                //We don't want to keep suffering the communication overhead associated with the broad phase stack if we know there will never be any work left; just decay to narrow only.
+                break;
+            }
+            if (broadResult == PopTaskResult.Success)
+            {
+                //We only want to continue to the narrow phase test if there are no pending broad phase tests. Broad phase tests generate narrow phase work.
+                waiter.Reset();
+                continue;
+            }
+            //Broad phase had no work, but it's not done. Chomp some narrow phase work if it exists.
+            var narrowResult = narrowStack->TryPopAndRun(workerIndex, threadDispatcher);
+            //Note that it's impossible for broadResult to be Stop here, so we can't use a lack of narrow phase work to terminate.
+            Debug.Assert(narrowResult != PopTaskResult.Stop, "Hey, we assumed that the narrow phase will never get stopped; did you modify something?");
+            if (narrowResult == PopTaskResult.Success)
+            {
+                //We got some narrow phase work. Keep going.
+                waiter.Reset();
+                continue;
+            }
+            else
+            {
+                //There was no broad phase OR narrow phase work available. Rest a moment before sampling again.
+                waiter.SpinOnce(-1);
+            }
+
+        }
+        //All broad phase jobs are completely done now.
+        //Go ahead and push any unflushed pairs into the narrow phase without bothering to submit them to the narrow phase stack; this thread clearly has some free time.
+        //Note that by submitting these pairs to the narrow phase inline, the next loop doesn't need to wait on a sync.
+        //(Consider the alternative: if these pairs were submitted to the narrow phase stack, then the next loop can't know that there are no more narrow phase tasks unless we inserted another sync point.
+        //The termination of the broad phase stack with the Stop command serves as the sync point for all narrow phase stack work created by the broad phase.)
+        if (overlapFinder.taskAccumulators[workerIndex].Pairs.Count > 0)
+        {
+            NarrowPhaseJob3(0, &overlapFinder.taskAccumulators.GetPointer(workerIndex)->Pairs, workerIndex, threadDispatcher);
+        }
+
+        //So, at this point, the narrow phase stack will receive no further jobs. Just keep chomping until it's empty.
+        while (true)
+        {
+            //Chomp some narrow phase work if it exists.
+            var narrowResult = narrowStack->TryPopAndRun(workerIndex, threadDispatcher);
+            //Note that it's impossible for broadResult to be Stop here, so we can't use a lack of narrow phase work to terminate.
+            Debug.Assert(narrowResult != PopTaskResult.Stop, "Hey, we assumed that the narrow phase will never get stopped; did you modify something?");
+            if (narrowResult != PopTaskResult.Success)
+            {
+                //Done!
+                break;
+            }
+        }
+
+        //Flush any remaining batches for this worker inside the narrow phase.
+        //Note that this captures every single worker that could have done anything; there will be no need for a postpass that flushes batches.
+        //(Even the 'prepare jobs' phase is included within this worker.)
+        if (overlapFinder.narrowPhase.overlapWorkers[workerIndex].Batcher.batches.Allocated)
+            overlapFinder.narrowPhase.overlapWorkers[workerIndex].Batcher.Flush();
+    }
+
+
+    //TODO: Forcing the struct layout to be larger on the task accumulator reduces false sharing risk.
+    [StructLayout(LayoutKind.Sequential, Size = 256)]
+    public struct TaskAccumulator(BufferPool threadPool, int maximumTaskSize, int estimatedMaximumTaskCount, TaskStack* narrowPhaseTaskStack)
+    {
+
+        public QuickList<CollidablePair> Pairs = new(maximumTaskSize, threadPool);
+        /// <summary>
+        /// Stores task pair lists in the thread heap for use as task context.
+        /// </summary>
+        public ChunkedList<QuickList<CollidablePair>> TaskContexts = new(threadPool, estimatedMaximumTaskCount);
+        public int MaximumTaskSize = maximumTaskSize;
+        public TaskStack* NarrowPhaseTaskStack = narrowPhaseTaskStack;
+        /// <summary>
+        /// Accumulates the number of pairs tested on this thread. Note that this is not the same thing as the number of pairs submitted to the accumulator; this is added to *after* the submission to the narrow phase.
+        /// Those are two different numbers because the narrow phase test may be performed on a different thread than the one that submitted the pair.
+        /// It's convenient to track this here because the accumulator is already thread local.
+        /// </summary>
+        public int PairsTestedOnThread;
+
+        public void Accumulate(CollidablePair pair, int workerIndex, IThreadDispatcher dispatcher)
+        {
+            Pairs.AllocateUnsafely() = pair;
+            if (Pairs.Count == MaximumTaskSize)
+            {
+                //The pair list is full. Push a task to handle it.
+                FlushToStack(workerIndex, dispatcher);
+            }
+        }
+        public void FlushToStack(int workerIndex, IThreadDispatcher dispatcher)
+        {
+            if (Pairs.Count > 0)
+            {
+                var pool = dispatcher.WorkerPools[workerIndex];
+                ref var taskContext = ref TaskContexts.Allocate(pool);
+                taskContext = Pairs;
+                var task = new Task(&NarrowPhaseJob3, Unsafe.AsPointer(ref taskContext));
+                NarrowPhaseTaskStack->Push(task, workerIndex, dispatcher);
+                Pairs = new QuickList<CollidablePair>(MaximumTaskSize, pool);
+            }
+        }
+
+        public void Dispose(BufferPool pool)
+        {
+            for (int i = 0; i < TaskContexts.Chunks.Count; ++i)
+            {
+                ref var chunk = ref TaskContexts.Chunks[i];
+                for (int j = 0; j < chunk.Count; ++j)
+                {
+                    chunk[j].Dispose(pool);
+                }
+            }
+            TaskContexts.Dispose(pool);
+            Pairs.Dispose(pool);
+        }
+
+    }
+
+
+    /// <summary>
+    /// Collects pairs of leaf indices which overlap for a given thread in the broad phase test.
+    /// </summary>
+    unsafe struct PairCollector3(IThreadDispatcher dispatcher, TaskAccumulator* tasks, int workerIndex, Buffer<CollidableReference> leavesA, Buffer<CollidableReference> leavesB) : IOverlapHandler
+    {
+        public IThreadDispatcher Dispatcher = dispatcher;
+        public TaskAccumulator* Tasks = tasks;
+        public Buffer<CollidableReference> LeavesA = leavesA;
+        public Buffer<CollidableReference> LeavesB = leavesB;
+        public int WorkerIndex = workerIndex;
+
+        public void Handle(int indexA, int indexB)
+        {
+            Tasks->Accumulate(new CollidablePair(LeavesA[indexA], LeavesB[indexB]), WorkerIndex, Dispatcher);
+        }
+
+    }
+
+
+
+
+    PairCollector3[] selfTestHandlers3, intertreeTestHandlers3;
+    Buffer<TaskAccumulator> taskAccumulators;
+    int previousPairCount3;
+    int taskSize;
+    Tree.MultithreadedSelfTest<PairCollector3> selfTestContext3;
+    Tree.MultithreadedIntertreeTest<PairCollector3> intertreeTestContext3;
+    TaskStack* broadStack, narrowStack;
+
+
+    public void DispatchOverlaps3(float dt, IThreadDispatcher threadDispatcher = null)
+    {
+        if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
+        {
+            narrowPhase.Prepare(dt, threadDispatcher);
+            if (selfTestHandlers3 == null || selfTestHandlers3.Length < threadDispatcher.ThreadCount)
+            {
+                //This initialization/resize should occur extremely rarely.
+                selfTestHandlers3 = new PairCollector3[threadDispatcher.ThreadCount];
+                intertreeTestHandlers3 = new PairCollector3[threadDispatcher.ThreadCount];
+            }
+            //Decay the initial capacity for chunks slowly over time.
+            taskAccumulators = new Buffer<TaskAccumulator>(threadDispatcher.ThreadCount, narrowPhase.Pool);
+            var broadTaskStack = new TaskStack(narrowPhase.Pool, threadDispatcher, threadDispatcher.ThreadCount);
+            var narrowTaskStack = new TaskStack(narrowPhase.Pool, threadDispatcher, threadDispatcher.ThreadCount);
+            broadStack = &broadTaskStack;
+            narrowStack = &narrowTaskStack;
+            const int targetJobsPerThread = 4;
+            int maximumTaskSize = int.Max(1, previousPairCount3 / (threadDispatcher.ThreadCount * targetJobsPerThread));
+            var estimatedMaximumTaskCountPerThread = targetJobsPerThread * 2;
+            for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
+            {
+                //Note that we create pairs 
+                var threadAccumulator = taskAccumulators.GetPointer(i);
+                var threadPool = threadDispatcher.WorkerPools[i];
+                *threadAccumulator = new TaskAccumulator(threadPool, maximumTaskSize, estimatedMaximumTaskCountPerThread, narrowStack);
+                selfTestHandlers3[i] = new PairCollector3(threadDispatcher, threadAccumulator, i, broadPhase.ActiveLeaves, broadPhase.ActiveLeaves);
+                intertreeTestHandlers3[i] = new PairCollector3(threadDispatcher, threadAccumulator, i, broadPhase.ActiveLeaves, broadPhase.StaticLeaves);
+            }
+            Debug.Assert(intertreeTestHandlers3.Length >= threadDispatcher.ThreadCount);
+            threadDispatcher.DispatchWorkers(&Worker3, managedContext: this);
+
+            narrowTaskStack.Dispose(narrowPhase.Pool, threadDispatcher);
+            broadTaskStack.Dispose(narrowPhase.Pool, threadDispatcher);
+            int totalPairCount = 0;
+            var debugMin = int.MaxValue;
+            var debugMinIndex = 0;
+            var debugMax = 0;
+            var debugMaxIndex = 0;
+            for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
+            {
+                ref var accumulator = ref taskAccumulators[i];
+                totalPairCount += accumulator.PairsTestedOnThread;
+
+                if (debugMin > accumulator.PairsTestedOnThread)
+                {
+                    debugMin = accumulator.PairsTestedOnThread;
+                    debugMinIndex = i;
+                }
+                if (debugMax < accumulator.PairsTestedOnThread)
+                {
+                    debugMax = accumulator.PairsTestedOnThread;
+                    debugMaxIndex = i;
+                }
+                accumulator.Dispose(threadDispatcher.WorkerPools[i]);
+            }
+            previousPairCount3 = totalPairCount;
+            taskAccumulators.Dispose(narrowPhase.Pool);
+
+            Console.WriteLine();
+            Console.WriteLine($"min: {debugMinIndex}, {debugMin / (double)totalPairCount}");
+            Console.WriteLine($"max: {debugMaxIndex}, {debugMax / (double)totalPairCount}");
+            Console.WriteLine($"sum: {totalPairCount}");
+
+#if DEBUG
+            for (int i = 1; i < threadDispatcher.ThreadCount; ++i)
+            {
+                Debug.Assert(!narrowPhase.overlapWorkers[i].Batcher.batches.Allocated, "After execution, there should be no remaining allocated collision batchers.");
+            }
+#endif
+            selfTestContext3.CompleteSelfTest();
+            intertreeTestContext3.CompleteTest();
+        }
+        else
+        {
+            narrowPhase.Prepare(dt);
+            var selfTestHandler = new SelfOverlapHandler(broadPhase.ActiveLeaves, narrowPhase, 0);
+            broadPhase.ActiveTree.GetSelfOverlaps(ref selfTestHandler);
+            var intertreeHandler = new IntertreeOverlapHandler(broadPhase.ActiveLeaves, broadPhase.StaticLeaves, narrowPhase, 0);
+            broadPhase.ActiveTree.GetOverlaps(ref broadPhase.StaticTree, ref intertreeHandler);
+            narrowPhase.overlapWorkers[0].Batcher.Flush();
         }
 
     }
