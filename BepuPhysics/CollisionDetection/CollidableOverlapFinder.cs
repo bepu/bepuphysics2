@@ -566,7 +566,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
         var overlapFinder = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
         overlapFinder.selfTestContext3.ExecuteJob((int)id, workerIndex);
 
-        overlapFinder.taskAccumulators[workerIndex].FlushToStack(workerIndex, threadDispatcher);
+        //overlapFinder.taskAccumulators[workerIndex].FlushToStack(workerIndex, threadDispatcher);
 
     }
     unsafe static void IntertreeTestJob3(long id, void* context, int workerIndex, IThreadDispatcher threadDispatcher)
@@ -574,7 +574,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
         var overlapFinder = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
         overlapFinder.intertreeTestContext3.ExecuteJob((int)id, workerIndex);
 
-        overlapFinder.taskAccumulators[workerIndex].FlushToStack(workerIndex, threadDispatcher);
+        //overlapFinder.taskAccumulators[workerIndex].FlushToStack(workerIndex, threadDispatcher);
     }
 
     unsafe static void NarrowPhaseJob3(long id, void* untypedContext, int workerIndex, IThreadDispatcher threadDispatcher)
@@ -590,6 +590,19 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
         }
 
         overlapFinder.taskAccumulators[workerIndex].PairsTestedOnThread += pairsToTest.Count;
+    }
+
+    unsafe static bool TryExecuteNarrowPhaseJobInline(CollidableOverlapFinder<TCallbacks> overlapFinder, int workerIndex, IThreadDispatcher dispatcher)
+    {
+        var pairs = &overlapFinder.taskAccumulators.GetPointer(workerIndex)->Pairs;
+        if (pairs->Count > 0)
+        {
+            NarrowPhaseJob3(0, pairs, workerIndex, dispatcher);
+            //If this is invoked while the broad phase is still working, the already processed pairs should not be double counted, so zero it.
+            pairs->Count = 0;
+            return true;
+        }
+        return false;
     }
 
     unsafe static void Worker3(int workerIndex, IThreadDispatcher threadDispatcher)
@@ -639,6 +652,12 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
                 //We don't want to keep suffering the communication overhead associated with the broad phase stack if we know there will never be any work left; just decay to narrow only.
                 break;
             }
+            if (TryExecuteNarrowPhaseJobInline(overlapFinder, workerIndex, threadDispatcher))
+            {
+                //The thread has a moment. Go ahead and eat inline narrow phase work if it exists.
+                waiter.Reset();
+                continue;
+            }
             if (broadResult == PopTaskResult.Success)
             {
                 //We only want to continue to the narrow phase test if there are no pending broad phase tests. Broad phase tests generate narrow phase work.
@@ -667,10 +686,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
         //Note that by submitting these pairs to the narrow phase inline, the next loop doesn't need to wait on a sync.
         //(Consider the alternative: if these pairs were submitted to the narrow phase stack, then the next loop can't know that there are no more narrow phase tasks unless we inserted another sync point.
         //The termination of the broad phase stack with the Stop command serves as the sync point for all narrow phase stack work created by the broad phase.)
-        if (overlapFinder.taskAccumulators[workerIndex].Pairs.Count > 0)
-        {
-            NarrowPhaseJob3(0, &overlapFinder.taskAccumulators.GetPointer(workerIndex)->Pairs, workerIndex, threadDispatcher);
-        }
+        TryExecuteNarrowPhaseJobInline(overlapFinder, workerIndex, threadDispatcher);
 
         //So, at this point, the narrow phase stack will receive no further jobs. Just keep chomping until it's empty.
         while (true)
@@ -712,6 +728,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
         /// It's convenient to track this here because the accumulator is already thread local.
         /// </summary>
         public int PairsTestedOnThread;
+        public int FlushCount;
 
         public void Accumulate(CollidablePair pair, int workerIndex, IThreadDispatcher dispatcher)
         {
@@ -726,6 +743,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
         {
             if (Pairs.Count > 0)
             {
+                ++FlushCount;
                 var pool = dispatcher.WorkerPools[workerIndex];
                 ref var taskContext = ref TaskContexts.Allocate(pool);
                 taskContext = Pairs;
@@ -793,7 +811,6 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
                 selfTestHandlers3 = new PairCollector3[threadDispatcher.ThreadCount];
                 intertreeTestHandlers3 = new PairCollector3[threadDispatcher.ThreadCount];
             }
-            //Decay the initial capacity for chunks slowly over time.
             taskAccumulators = new Buffer<TaskAccumulator>(threadDispatcher.ThreadCount, narrowPhase.Pool);
             var broadTaskStack = new TaskStack(narrowPhase.Pool, threadDispatcher, threadDispatcher.ThreadCount);
             var narrowTaskStack = new TaskStack(narrowPhase.Pool, threadDispatcher, threadDispatcher.ThreadCount);
@@ -801,6 +818,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
             narrowStack = &narrowTaskStack;
             const int targetJobsPerThread = 4;
             int maximumTaskSize = int.Max(1, previousPairCount3 / (threadDispatcher.ThreadCount * targetJobsPerThread));
+            //Console.WriteLine($"maixmum taskese: {maximumTaskSize}");
             var estimatedMaximumTaskCountPerThread = targetJobsPerThread * 2;
             for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
             {
@@ -821,6 +839,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
             var debugMinIndex = 0;
             var debugMax = 0;
             var debugMaxIndex = 0;
+            int totalFlushCount = 0;
             for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
             {
                 ref var accumulator = ref taskAccumulators[i];
@@ -836,6 +855,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
                     debugMax = accumulator.PairsTestedOnThread;
                     debugMaxIndex = i;
                 }
+                totalFlushCount += accumulator.FlushCount;
                 accumulator.Dispose(threadDispatcher.WorkerPools[i]);
             }
             previousPairCount3 = totalPairCount;
@@ -845,6 +865,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
             Console.WriteLine($"min: {debugMinIndex}, {debugMin / (double)totalPairCount}");
             Console.WriteLine($"max: {debugMaxIndex}, {debugMax / (double)totalPairCount}");
             Console.WriteLine($"sum: {totalPairCount}");
+            Console.WriteLine($"TFC: {totalFlushCount}");
 
 #if DEBUG
             for (int i = 1; i < threadDispatcher.ThreadCount; ++i)
