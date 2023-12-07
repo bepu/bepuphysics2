@@ -73,19 +73,19 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
     int nextJobIndex;
     public CollidableOverlapFinder(NarrowPhase<TCallbacks> narrowPhase, BroadPhase broadPhase)
     {
-        selfTestContext = new Tree.MultithreadedSelfTest<SelfOverlapHandler>(narrowPhase.Pool);
-        intertreeTestContext = new Tree.MultithreadedIntertreeTest<IntertreeOverlapHandler>(narrowPhase.Pool);
+        selfTestContext = new Tree.MultithreadedSelfTest<SelfOverlapHandler>();
+        intertreeTestContext = new Tree.MultithreadedIntertreeTest<IntertreeOverlapHandler>();
         this.narrowPhase = narrowPhase;
         this.broadPhase = broadPhase;
         workerAction = Worker;
 
         //VERSION 2
-        selfTestContext2 = new Tree.MultithreadedSelfTest<PairCollector>(narrowPhase.Pool);
-        intertreeTestContext2 = new Tree.MultithreadedIntertreeTest<PairCollector>(narrowPhase.Pool);
+        selfTestContext2 = new Tree.MultithreadedSelfTest<PairCollector>();
+        intertreeTestContext2 = new Tree.MultithreadedIntertreeTest<PairCollector>();
 
         //VERSION 3
-        selfTestContext3 = new Tree.MultithreadedSelfTest<PairCollector3>(narrowPhase.Pool);
-        intertreeTestContext3 = new Tree.MultithreadedIntertreeTest<PairCollector3>(narrowPhase.Pool);
+        selfTestContext3 = new Tree.MultithreadedSelfTest<PairCollector3>();
+        intertreeTestContext3 = new Tree.MultithreadedIntertreeTest<PairCollector3>();
     }
 
     void Worker(int workerIndex)
@@ -142,8 +142,8 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
                 intertreeHandlers[i] = new IntertreeOverlapHandler(broadPhase.ActiveLeaves, broadPhase.StaticLeaves, narrowPhase, i);
             }
             Debug.Assert(intertreeHandlers.Length >= threadDispatcher.ThreadCount);
-            selfTestContext.PrepareJobs(ref broadPhase.ActiveTree, selfHandlers, threadDispatcher.ThreadCount);
-            intertreeTestContext.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, intertreeHandlers, threadDispatcher.ThreadCount);
+            selfTestContext.PrepareJobs(ref broadPhase.ActiveTree, selfHandlers, threadDispatcher.ThreadCount, 0, narrowPhase.Pool);
+            intertreeTestContext.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, intertreeHandlers, threadDispatcher.ThreadCount, 0, narrowPhase.Pool);
             nextJobIndex = -1;
             var totalJobCount = selfTestContext.JobCount + intertreeTestContext.JobCount;
             threadDispatcher.DispatchWorkers(workerAction, totalJobCount);
@@ -452,8 +452,8 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
                 intertreeTestHandlers[i] = new PairCollector(threadPool, pairs, broadPhase.ActiveLeaves, broadPhase.StaticLeaves);
             }
             Debug.Assert(intertreeTestHandlers.Length >= threadDispatcher.ThreadCount);
-            selfTestContext2.PrepareJobs(ref broadPhase.ActiveTree, selfTestHandlers, threadDispatcher.ThreadCount);
-            intertreeTestContext2.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, intertreeTestHandlers, threadDispatcher.ThreadCount);
+            selfTestContext2.PrepareJobs(ref broadPhase.ActiveTree, selfTestHandlers, threadDispatcher.ThreadCount, 0, narrowPhase.Pool);
+            intertreeTestContext2.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, intertreeTestHandlers, threadDispatcher.ThreadCount, 0, narrowPhase.Pool);
             var testTaskCount = selfTestContext2.JobCount + intertreeTestContext2.JobCount;
             var effectiveJobCount = int.Max(1, int.Max(previousPairCount, testTaskCount));
             var taskStack = new TaskStack(narrowPhase.Pool, threadDispatcher, threadDispatcher.ThreadCount);
@@ -559,7 +559,44 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
 
 
 
+    unsafe static void PrepareSelfTestJob3(long id, void* context, int workerIndex, IThreadDispatcher threadDispatcher)
+    {
+        var overlapFinder = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
+        overlapFinder.selfTestContext3.PrepareJobs(ref overlapFinder.broadPhase.ActiveTree, overlapFinder.selfTestHandlers3, threadDispatcher.ThreadCount, workerIndex, threadDispatcher.WorkerPools[workerIndex]);
+    }
+    unsafe static void PrepareIntertreeTestJob3(long id, void* context, int workerIndex, IThreadDispatcher threadDispatcher)
+    {
+        var overlapFinder = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
+        var broadPhase = overlapFinder.broadPhase;
+        overlapFinder.intertreeTestContext3.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, overlapFinder.intertreeTestHandlers3, threadDispatcher.ThreadCount, workerIndex, threadDispatcher.WorkerPools[workerIndex]);
+    }
+    unsafe static void CompletedPreparation3(long id, void* context, int workerIndex, IThreadDispatcher threadDispatcher)
+    {
+        var overlapFinder = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
+        var selfTest = overlapFinder.selfTestContext3;
+        var intertreeTest = overlapFinder.intertreeTestContext3;
+        var broadTaskCount = selfTest.JobCount + intertreeTest.JobCount;
+        //We'll use a continuation to notify us when all broad jobs are complete by stopping the broad stack.
+        ContinuationHandle broadPhaseCompleteContinuation = default;
+        var broadStack = overlapFinder.broadStack;
+        if (broadTaskCount > 0)
+            broadPhaseCompleteContinuation = broadStack->AllocateContinuation(broadTaskCount, workerIndex, threadDispatcher, TaskStack.GetRequestStopTask(broadStack));
+        if (selfTest.JobCount > 0)
+            broadStack->PushFor(&SelfTestJob3, null, 0, selfTest.JobCount, workerIndex, threadDispatcher, continuation: broadPhaseCompleteContinuation);
+        if (intertreeTest.JobCount > 0)
+            broadStack->PushFor(&IntertreeTestJob3, null, 0, intertreeTest.JobCount, workerIndex, threadDispatcher, continuation: broadPhaseCompleteContinuation);
 
+        //Go ahead and flush the narrow phase work that the preparation phase generated, if any. If there is any left, then it's not full sized (because that would have been flushed), but that's fine.
+        //This is mostly free. At this point, we almost certainly have idling workers.
+        overlapFinder.taskAccumulators[workerIndex].FlushToStack(workerIndex, threadDispatcher);
+
+        if (broadTaskCount == 0)
+        {
+            //The broad phase didn't actually have work to do, so we can just stop it now.
+            //Note that this stop was submitted *after* we flushed the stack! That's because the stop is a sync point, and we want to make sure that all the narrow phase work created by the preparation phase is submitted to the narrow phase stack.
+            broadStack->RequestStop();
+        }
+    }
 
     unsafe static void SelfTestJob3(long id, void* context, int workerIndex, IThreadDispatcher threadDispatcher)
     {
@@ -610,36 +647,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
         var overlapFinder = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
         var broadPhase = overlapFinder.broadPhase;
         var broadStack = overlapFinder.broadStack;
-        if (workerIndex == 0)
-        {
-            //The worker 0 is responsible for getting everything set up.
-            //We'll run the job preparation on this thread while the other threads are getting into position.
-            //Note that the job preparation phase can generate narrow phase tests, so those other threads may end up doing something even before we push anything here.
-            var selfTest = overlapFinder.selfTestContext3;
-            var intertreeTest = overlapFinder.intertreeTestContext3;
-            selfTest.PrepareJobs(ref broadPhase.ActiveTree, overlapFinder.selfTestHandlers3, threadDispatcher.ThreadCount);
-            intertreeTest.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, overlapFinder.intertreeTestHandlers3, threadDispatcher.ThreadCount);
-            var broadTaskCount = selfTest.JobCount + intertreeTest.JobCount;
-            //We'll use a continuation to notify us when all broad jobs are complete by stopping the broad stack.
-            ContinuationHandle broadPhaseCompleteContinuation = default;
-            if (broadTaskCount > 0)
-                broadPhaseCompleteContinuation = broadStack->AllocateContinuation(broadTaskCount, workerIndex, threadDispatcher, TaskStack.GetRequestStopTask(broadStack));
-            if (selfTest.JobCount > 0)
-                broadStack->PushFor(&SelfTestJob3, null, 0, selfTest.JobCount, workerIndex, threadDispatcher, continuation: broadPhaseCompleteContinuation);
-            if (intertreeTest.JobCount > 0)
-                broadStack->PushFor(&IntertreeTestJob3, null, 0, intertreeTest.JobCount, workerIndex, threadDispatcher, continuation: broadPhaseCompleteContinuation);
 
-            //Go ahead and flush the narrow phase work that the preparation phase generated, if any. If there is any left, then it's not full sized (because that would have been flushed), but that's fine.
-            //This is mostly free. At this point, we almost certainly have idling workers.
-            overlapFinder.taskAccumulators[workerIndex].FlushToStack(workerIndex, threadDispatcher);
-
-            if (broadTaskCount == 0)
-            {
-                //The broad phase didn't actually have work to do, so we can just stop it now.
-                //Note that this stop was submitted *after* we flushed the stack! That's because the stop is a sync point, and we want to make sure that all the narrow phase work created by the preparation phase is submitted to the narrow phase stack.
-                broadStack->RequestStop();
-            }
-        }
         //The worker stays active for the duration of the dispatch that covers both the broad phase and narrow phase.
         //We'll grab tree testing jobs with priority since those generate the narrow phase jobs.
         var waiter = new SpinWait();
@@ -830,6 +838,11 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
                 intertreeTestHandlers3[i] = new PairCollector3(threadDispatcher, threadAccumulator, i, broadPhase.ActiveLeaves, broadPhase.StaticLeaves);
             }
             Debug.Assert(intertreeTestHandlers3.Length >= threadDispatcher.ThreadCount);
+            //Submit both self test and intertree test jobs to the broad phase stack; they can run in parallel.
+            //They're pretty cheap, but since we've got the fork infrastructure, we might as well use it.
+            var completedPreparationContinuation = broadStack->AllocateContinuation(2, 0, threadDispatcher, new Task(&CompletedPreparation3));
+            broadStack->PushUnsafely(new Task(&PrepareSelfTestJob3, continuation: completedPreparationContinuation), 0, threadDispatcher);
+            broadStack->PushUnsafely(new Task(&PrepareIntertreeTestJob3, continuation: completedPreparationContinuation), 0, threadDispatcher);
             threadDispatcher.DispatchWorkers(&Worker3, managedContext: this);
 
             narrowTaskStack.Dispose(narrowPhase.Pool, threadDispatcher);

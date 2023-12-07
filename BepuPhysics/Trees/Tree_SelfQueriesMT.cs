@@ -56,19 +56,17 @@ namespace BepuPhysics.Trees
             public Tree Tree;
             public TOverlapHandler[] OverlapHandlers;
 
-            public MultithreadedSelfTest(BufferPool pool)
-            {
-                Pool = pool;
-            }
-
             /// <summary>
             /// Prepares the jobs associated with a self test. Must be called before a dispatch over PairTest.
             /// </summary>
             /// <param name="tree">Tree to test against itself.</param>
             /// <param name="overlapHandlers">Callbacks used to handle individual overlaps detected by the self test.</param>
             /// <param name="threadCount">Number of threads to prepare jobs for.</param>
-            public void PrepareJobs(ref Tree tree, TOverlapHandler[] overlapHandlers, int threadCount)
+            /// <param name="workerIndex">Index of the worker executing the preparation job.</param>
+            /// <param name="pool">Pool to allocate from.</param>
+            public void PrepareJobs(ref Tree tree, TOverlapHandler[] overlapHandlers, int threadCount, int workerIndex, BufferPool pool)
             {
+                Pool = pool;
                 //If there are not multiple children, there's no need to recurse.
                 //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.
                 if (tree.LeafCount < 2)
@@ -86,17 +84,18 @@ namespace BepuPhysics.Trees
                 this.OverlapHandlers = overlapHandlers;
                 this.Tree = tree;
                 //Collect jobs.
-                CollectJobsInNode(0, tree.LeafCount, ref OverlapHandlers[0]);
+                CollectJobsInNode(0, tree.LeafCount, ref OverlapHandlers[workerIndex]);
             }
 
             /// <summary>
-            /// Cleans up after a multithreaded self test.
+            /// Cleans up after a multithreaded self test. Returns resources to the pool used by <see cref="PrepareJobs"/>.
             /// </summary>
             public void CompleteSelfTest()
             {
                 //Note that a tree with 0 or 1 entries won't have any jobs.
                 if (jobs.Span.Allocated)
                     jobs.Dispose(Pool);
+                Pool = null;
             }
 
             public void ExecuteJob(int jobIndex, int workerIndex)
