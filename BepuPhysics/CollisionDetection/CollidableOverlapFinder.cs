@@ -816,7 +816,7 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
             var narrowTaskStack = new TaskStack(narrowPhase.Pool, threadDispatcher, threadDispatcher.ThreadCount);
             broadStack = &broadTaskStack;
             narrowStack = &narrowTaskStack;
-            const int targetJobsPerThread = 4;
+            const int targetJobsPerThread = 1;
             int maximumTaskSize = int.Max(1, previousPairCount3 / (threadDispatcher.ThreadCount * targetJobsPerThread));
             //Console.WriteLine($"maixmum taskese: {maximumTaskSize}");
             var estimatedMaximumTaskCountPerThread = targetJobsPerThread * 2;
@@ -861,11 +861,11 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
             previousPairCount3 = totalPairCount;
             taskAccumulators.Dispose(narrowPhase.Pool);
 
-            Console.WriteLine();
-            Console.WriteLine($"min: {debugMinIndex}, {debugMin / (double)totalPairCount}");
-            Console.WriteLine($"max: {debugMaxIndex}, {debugMax / (double)totalPairCount}");
-            Console.WriteLine($"sum: {totalPairCount}");
-            Console.WriteLine($"TFC: {totalFlushCount}");
+            //Console.WriteLine();
+            //Console.WriteLine($"min: {debugMinIndex}, {debugMin / (double)totalPairCount}");
+            //Console.WriteLine($"max: {debugMaxIndex}, {debugMax / (double)totalPairCount}");
+            //Console.WriteLine($"sum: {totalPairCount}");
+            //Console.WriteLine($"TFC: {totalFlushCount}");
 
 #if DEBUG
             for (int i = 1; i < threadDispatcher.ThreadCount; ++i)
