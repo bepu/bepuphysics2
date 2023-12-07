@@ -28,18 +28,16 @@ namespace BepuPhysics.Trees
             public Tree TreeB;
             public TOverlapHandler[] OverlapHandlers;
 
-            public MultithreadedIntertreeTest(BufferPool pool)
-            {
-                Pool = pool;
-            }
-
             /// <summary>
             /// Prepares the jobs associated with a self test. Must be called before a dispatch over PairTest.
             /// </summary>
             /// <param name="overlapHandlers">Callbacks used to handle individual overlaps detected by the self test.</param>
             /// <param name="threadCount">Number of threads to prepare jobs for.</param>
-            public void PrepareJobs(ref Tree treeA, ref Tree treeB, TOverlapHandler[] overlapHandlers, int threadCount)
+            /// <param name="workerIndex">Index of the worker executing the preparation job.</param>
+            /// <param name="pool">Pool to allocate from.</param>
+            public void PrepareJobs(ref Tree treeA, ref Tree treeB, TOverlapHandler[] overlapHandlers, int threadCount, int workerIndex, BufferPool pool)
             {
+                Pool = pool;
                 if (treeA.LeafCount == 0 || treeB.LeafCount == 0)
                 {
                     //If either tree has zero leaves, no intertree test is required.
@@ -58,10 +56,11 @@ namespace BepuPhysics.Trees
                 this.TreeA = treeA;
                 this.TreeB = treeB;
                 //Collect jobs.
+                ref var handler = ref OverlapHandlers[workerIndex];
                 if (treeA.LeafCount >= 2 && treeB.LeafCount >= 2)
                 {
                     //Both trees have complete nodes; we can use a general case.
-                    GetJobsBetweenDifferentNodes(ref treeA.Nodes[0], ref treeB.Nodes[0], ref OverlapHandlers[0]);
+                    GetJobsBetweenDifferentNodes(ref treeA.Nodes[0], ref treeB.Nodes[0], ref handler);
                 }
                 else if (treeA.LeafCount == 1 && treeB.LeafCount >= 2)
                 {
@@ -72,11 +71,11 @@ namespace BepuPhysics.Trees
                     var abIntersects = BoundingBox.IntersectsUnsafe(a.A, b.B);
                     if (aaIntersects)
                     {
-                        DispatchTestForNodes(ref a.A, ref b.A, ref OverlapHandlers[0]);
+                        DispatchTestForNodes(ref a.A, ref b.A, ref handler);
                     }
                     if (abIntersects)
                     {
-                        DispatchTestForNodes(ref a.A, ref b.B, ref OverlapHandlers[0]);
+                        DispatchTestForNodes(ref a.A, ref b.B, ref handler);
                     }
                 }
                 else if (treeA.LeafCount >= 2 && treeB.LeafCount == 1)
@@ -88,11 +87,11 @@ namespace BepuPhysics.Trees
                     var baIntersects = BoundingBox.IntersectsUnsafe(a.B, b.A);
                     if (aaIntersects)
                     {
-                        DispatchTestForNodes(ref a.A, ref b.A, ref OverlapHandlers[0]);
+                        DispatchTestForNodes(ref a.A, ref b.A, ref handler);
                     }
                     if (baIntersects)
                     {
-                        DispatchTestForNodes(ref a.B, ref b.A, ref OverlapHandlers[0]);
+                        DispatchTestForNodes(ref a.B, ref b.A, ref handler);
                     }
                 }
                 else
@@ -100,20 +99,21 @@ namespace BepuPhysics.Trees
                     Debug.Assert(treeA.LeafCount == 1 && treeB.LeafCount == 1);
                     if (BoundingBox.IntersectsUnsafe(treeA.Nodes[0].A, treeB.Nodes[0].A))
                     {
-                        DispatchTestForNodes(ref treeA.Nodes[0].A, ref treeB.Nodes[0].A, ref OverlapHandlers[0]);
+                        DispatchTestForNodes(ref treeA.Nodes[0].A, ref treeB.Nodes[0].A, ref handler);
                     }
                 }
 
             }
 
             /// <summary>
-            /// Cleans up after a multithreaded self test.
+            /// Cleans up after a multithreaded self test. Returns resources to the pool used by <see cref="PrepareJobs"/>.
             /// </summary>
             public void CompleteTest()
             {
                 //Note that we don't allocate a job list if there aren't any jobs.
                 if (jobs.Span.Allocated)
                     jobs.Dispose(Pool);
+                Pool = null;
             }
 
             public void ExecuteJob(int jobIndex, int workerIndex)
