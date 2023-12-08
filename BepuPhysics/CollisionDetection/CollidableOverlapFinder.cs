@@ -822,7 +822,6 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
             narrowStack = &narrowTaskStack;
             const int targetJobsPerThread = 1;
             int maximumTaskSize = int.Max(1, previousPairCount3 / (threadDispatcher.ThreadCount * targetJobsPerThread));
-            //Console.WriteLine($"maixmum taskese: {maximumTaskSize}");
             var estimatedMaximumTaskCountPerThread = targetJobsPerThread * 2;
             for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
             {
