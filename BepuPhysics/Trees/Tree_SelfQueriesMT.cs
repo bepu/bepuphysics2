@@ -90,7 +90,7 @@ namespace BepuPhysics.Trees
             /// <summary>
             /// Cleans up after a multithreaded self test. Returns resources to the pool used by <see cref="PrepareJobs"/>.
             /// </summary>
-            public void CompleteSelfTest()
+            public void CompleteTest()
             {
                 //Note that a tree with 0 or 1 entries won't have any jobs.
                 if (jobs.Span.Allocated)
