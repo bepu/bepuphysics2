@@ -131,7 +131,7 @@ namespace Demos.SpecializedTests
                 }
                 selfTestContext.PrepareJobs(ref tree, overlapHandlers, threadDispatcher.ThreadCount, 0, pool);
                 threadDispatcher.DispatchWorkers(pairTestAction);
-                selfTestContext.CompleteSelfTest();
+                selfTestContext.CompleteTest();
                 tree.Validate();
 
                 if (i % 50 == 0)
