@@ -2,12 +2,10 @@
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace BepuPhysics.Collidables
 {
@@ -72,8 +70,11 @@ namespace BepuPhysics.Collidables
         public void Dispose(BufferPool pool)
         {
             pool.Return(ref OriginalVertexMapping);
-            pool.Return(ref FaceVertexIndices);
-            pool.Return(ref FaceStartIndices);
+            //The other allocations may not exist if the hull is degenerate.
+            if (FaceVertexIndices.Allocated)
+                pool.Return(ref FaceVertexIndices);
+            if (FaceStartIndices.Allocated)
+                pool.Return(ref FaceStartIndices);
         }
     }
 
@@ -82,7 +83,8 @@ namespace BepuPhysics.Collidables
     /// </summary>
     public static class ConvexHullHelper
     {
-        static void FindExtremeFace(in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, in EdgeEndpoints sourceEdgeEndpoints, ref Buffer<Vector3Wide> pointBundles, in Vector<int> indexOffsets, int pointCount,
+        static void FindExtremeFace(
+            in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, in EdgeEndpoints sourceEdgeEndpoints, ref Buffer<Vector3Wide> pointBundles, in Vector<int> indexOffsets, Buffer<int> allowVertices, int pointCount,
             ref Buffer<Vector<float>> projectedOnX, ref Buffer<Vector<float>> projectedOnY, in Vector<float> planeEpsilon, ref QuickList<int> vertexIndices, out Vector3 faceNormal)
         {
             Debug.Assert(projectedOnX.Length >= pointBundles.Length && projectedOnY.Length >= pointBundles.Length && vertexIndices.Count == 0 && vertexIndices.Span.Length >= pointBundles.Length * Vector<float>.Count);
@@ -100,7 +102,7 @@ namespace BepuPhysics.Collidables
             ref var y = ref projectedOnY[0];
             Vector3Wide.Dot(basisX, toCandidate, out x);
             //If x is negative, that means some numerical issue has resulted in a point beyond the bounding plane that generated this face request.
-            //We'll treat it as if it's on the plane.
+            //We'll treat it as if it's on the plane. (The reason we bother with this clamp is the sign assumption built into our angle comparison, detailed above.)
             x = Vector.Max(Vector<float>.Zero, x);
             Vector3Wide.Dot(basisY, toCandidate, out y);
             var bestY = y;
@@ -108,13 +110,17 @@ namespace BepuPhysics.Collidables
             //Ignore the source edge.
             var edgeIndexA = new Vector<int>(sourceEdgeEndpoints.A);
             var edgeIndexB = new Vector<int>(sourceEdgeEndpoints.B);
-            var pointCountBundle = new Vector<int>(pointCount);
-            //Note that any slot that would have been considered coplanar with the edge triggering this test is ignored by the plane epsilon.
+            //Note that any slot that would have been coplanar with the generating face *and* behind the edge (that is, a vertex almost certainly associated with the generating face) is ignored.
+            //Without this condition, it's possible for numerical cycles to occur where a face finds itself over and over again.
+            var allowVertexBundles = allowVertices.As<Vector<int>>();
             var ignoreSlot = Vector.BitwiseOr(
-                Vector.BitwiseOr(Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle), Vector.LessThan(bestX, planeEpsilon)),
+                Vector.BitwiseOr(
+                    Vector.OnesComplement(allowVertexBundles[0]),
+                    Vector.BitwiseAnd(Vector.LessThanOrEqual(bestX, planeEpsilon), Vector.LessThanOrEqual(bestY, planeEpsilon))),
                 Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
             bestX = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestX);
             bestY = Vector.ConditionalSelect(ignoreSlot, new Vector<float>(float.MinValue), bestY);
+            var bestIndices = indexOffsets;
             for (int i = 1; i < pointBundles.Length; ++i)
             {
                 Vector3Wide.Subtract(pointBundles[i], basisOrigin, out toCandidate);
@@ -126,14 +132,19 @@ namespace BepuPhysics.Collidables
 
                 var candidateIndices = indexOffsets + new Vector<int>(i << BundleIndexing.VectorShift);
                 ignoreSlot = Vector.BitwiseOr(
-                    Vector.BitwiseOr(Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle), Vector.LessThan(x, planeEpsilon)),
+                    Vector.BitwiseOr(
+                        Vector.OnesComplement(allowVertexBundles[i]),
+                        Vector.BitwiseAnd(Vector.LessThanOrEqual(x, planeEpsilon), Vector.LessThanOrEqual(y, planeEpsilon))),
                     Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
                 var useCandidate = Vector.AndNot(Vector.GreaterThan(y * bestX, bestY * x), ignoreSlot);
+
                 bestY = Vector.ConditionalSelect(useCandidate, y, bestY);
                 bestX = Vector.ConditionalSelect(useCandidate, x, bestX);
+                bestIndices = Vector.ConditionalSelect(useCandidate, candidateIndices, bestIndices);
             }
             var bestYNarrow = bestY[0];
             var bestXNarrow = bestX[0];
+            var bestIndexNarrow = bestIndices[0];
             for (int i = 1; i < Vector<float>.Count; ++i)
             {
                 var candidateNumerator = bestY[i];
@@ -142,6 +153,7 @@ namespace BepuPhysics.Collidables
                 {
                     bestYNarrow = candidateNumerator;
                     bestXNarrow = candidateDenominator;
+                    bestIndexNarrow = bestIndices[i];
                 }
             }
             //We now have the best index, but there may have been multiple vertices on the same plane. Capture all of them at once by doing a second pass over the results.
@@ -149,11 +161,46 @@ namespace BepuPhysics.Collidables
             //(This isn't wonderfully fast, but it's fairly simple. The alternatives are things like incrementally combining coplanar triangles as they are discovered
             //or using a postpass that looks for coplanar triangles after they've been created.)
             //Rotate the offset to point outward.
-            var projectedPlaneNormalNarrow = Vector2.Normalize(new Vector2(-bestYNarrow, bestXNarrow));
+            //Note: in unusual corner cases, the above may have accepted zero candidates resulting in a bestXNarrow = 1 and bestYNarrow = float.MinValue.
+            //Catching that and ensuring that a reasonable face normal is output avoids a bad face.
+            var candidateNormalDirection = new Vector2(-bestYNarrow, bestXNarrow);
+            var length = candidateNormalDirection.Length();
+            var projectedPlaneNormalNarrow = (!float.IsNaN(length) && !float.IsInfinity(length)) ? candidateNormalDirection / length : new Vector2(1, 0);
             Vector2Wide.Broadcast(projectedPlaneNormalNarrow, out var projectedPlaneNormal);
+            Vector3Wide.ReadFirst(basisX, out var basisXNarrow);
+            Vector3Wide.ReadFirst(basisY, out var basisYNarrow);
+            faceNormal = basisXNarrow * projectedPlaneNormalNarrow.X + basisYNarrow * projectedPlaneNormalNarrow.Y;
+
+            //if (sourceEdgeEndpoints.A != sourceEdgeEndpoints.B)
+            //{
+            //    BundleIndexing.GetBundleIndices(sourceEdgeEndpoints.A, out var bundleA, out var innerA);
+            //    BundleIndexing.GetBundleIndices(sourceEdgeEndpoints.B, out var bundleB, out var innerB);
+            //    BundleIndexing.GetBundleIndices(bestIndexNarrow, out var bundleC, out var innerC);
+            //    Vector3Wide.ReadSlot(ref pointBundles[bundleA], innerA, out var a);
+            //    Vector3Wide.ReadSlot(ref pointBundles[bundleB], innerB, out var b);
+            //    Vector3Wide.ReadSlot(ref pointBundles[bundleC], innerC, out var c);
+            //    var faceNormalFromCross = Vector3.Normalize(Vector3.Cross(c - a, b - a));
+            //    var testDot = Vector3.Dot(faceNormalFromCross, faceNormal);
+            //    var faceNormalError = faceNormal - faceNormalFromCross;
+            //    faceNormal = faceNormalFromCross;
+            //}
+
+            Vector3Wide.Broadcast(faceNormal, out var faceNormalWide);
             for (int i = 0; i < pointBundles.Length; ++i)
             {
                 var dot = projectedOnX[i] * projectedPlaneNormal.X + projectedOnY[i] * projectedPlaneNormal.Y;
+                //var dot2 = Vector3Wide.Dot(pointBundles[i] - basisOrigin, faceNormalWide);
+                //var error = dot2 - dot;
+                //if (Vector.GreaterThanAny(Vector.Abs(error), planeEpsilon))
+                //{
+                //    for (int j = 0; j < Vector<float>.Count; ++j)
+                //    {
+                //        if ((float)Math.Abs(error[j]) > planeEpsilon[j])
+                //        {
+                //            Console.WriteLine($"error: {error[j]}");
+                //        }
+                //    }
+                //}
                 var coplanar = Vector.LessThanOrEqual(Vector.Abs(dot), planeEpsilon);
                 if (Vector.LessThanAny(coplanar, Vector<int>.Zero))
                 {
@@ -163,16 +210,17 @@ namespace BepuPhysics.Collidables
                         localIndexMaximum = Vector<int>.Count;
                     for (int j = 0; j < localIndexMaximum; ++j)
                     {
-                        if (coplanar[j] < 0)
+                        var vertexIndex = bundleBaseIndex + j;
+                        if (coplanar[j] < 0 && allowVertices[vertexIndex] != 0)
                         {
-                            vertexIndices.AllocateUnsafely() = bundleBaseIndex + j;
+                            vertexIndices.AllocateUnsafely() = vertexIndex;
                         }
                     }
                 }
             }
-            Vector3Wide.ReadFirst(basisX, out var basisXNarrow);
-            Vector3Wide.ReadFirst(basisY, out var basisYNarrow);
-            faceNormal = basisXNarrow * projectedPlaneNormalNarrow.X + basisYNarrow * projectedPlaneNormalNarrow.Y;
+            //Vector3Wide.ReadFirst(basisX, out var basisXNarrow);
+            //Vector3Wide.ReadFirst(basisY, out var basisYNarrow);
+            //faceNormal = basisXNarrow * projectedPlaneNormalNarrow.X + basisYNarrow * projectedPlaneNormalNarrow.Y;
         }
 
 
@@ -208,7 +256,7 @@ namespace BepuPhysics.Collidables
                 {
                     Debug.Assert(candidateY <= 0,
                         "Previous edge should include any collinear points, so this edge should not see any further collinear points beyond its start." +
-                        "If you run into this, it implies you've found some content that violates the convex huller's assumptions, and I'd appreciate it if you reported it on github.com/bepu/bepuphysics2/issues!" + 
+                        "If you run into this, it implies you've found some content that violates the convex huller's assumptions, and I'd appreciate it if you reported it on github.com/bepu/bepuphysics2/issues!" +
                         "A .obj or other simple demos-compatible reproduction case would help me fix it.");
                     continue;
                 }
@@ -216,7 +264,7 @@ namespace BepuPhysics.Collidables
                 //1) collinear with the previous best by the plane epsilon test BUT is more distant, or
                 //2) has a greater angle than the previous best.
                 var planeOffset = -candidateX * currentEdgeDirectionY + candidateY * currentEdgeDirectionX;
-                if (Math.Abs(planeOffset) < planeEpsilon)
+                if ((float)Math.Abs(planeOffset) < planeEpsilon)
                 {
                     //The candidate is collinear. Only accept it if it's further away.
                     if (candidateX * candidateX + candidateY * candidateY <= bestDistanceSquared)
@@ -240,12 +288,17 @@ namespace BepuPhysics.Collidables
             return bestIndex;
         }
 
-        static void ReduceFace(ref QuickList<int> faceVertexIndices, in Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<bool> allowVertex, ref QuickList<int> reducedIndices)
+        static void ReduceFace(ref QuickList<int> faceVertexIndices, Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<int> allowVertex, ref QuickList<int> reducedIndices)
         {
             Debug.Assert(facePoints.Count == 0 && reducedIndices.Count == 0 && facePoints.Span.Length >= faceVertexIndices.Count && reducedIndices.Span.Length >= faceVertexIndices.Count);
             for (int i = faceVertexIndices.Count - 1; i >= 0; --i)
             {
-                if (!allowVertex[faceVertexIndices[i]])
+                //TODO: This isn't really necessary (conditioning on a small change).
+                //Face merges may see this codepath because the original rawFaceVertexIndices may contain now-disallowed vertices.
+                //We don't really need to *track* those, though; we could just use the reducedIndices and then this would never be required.
+                //It's mostly a matter of legacy- previously, we accumulated everything without asking about whether it was allowed, and relied on ReduceFace to clean it up.
+                //That opened a door for an infinite loop, so it got changed.
+                if (allowVertex[faceVertexIndices[i]] == 0)
                     faceVertexIndices.RemoveAt(i);
             }
             if (faceVertexIndices.Count <= 3)
@@ -270,18 +323,18 @@ namespace BepuPhysics.Collidables
                         //The face is degenerate.
                         if (ab.LengthSquared() > 1e-14f)
                         {
-                            allowVertex[reducedIndices[2]] = false;
+                            allowVertex[reducedIndices[2]] = 0;
                             reducedIndices.FastRemoveAt(2);
                         }
                         else if (ac.LengthSquared() > 1e-14f)
                         {
-                            allowVertex[reducedIndices[1]] = false;
+                            allowVertex[reducedIndices[1]] = 0;
                             reducedIndices.FastRemoveAt(1);
                         }
                         else
                         {
-                            allowVertex[reducedIndices[1]] = false;
-                            allowVertex[reducedIndices[2]] = false;
+                            allowVertex[reducedIndices[1]] = 0;
+                            allowVertex[reducedIndices[2]] = 0;
                             reducedIndices.Count = 1;
                         }
                     }
@@ -321,7 +374,7 @@ namespace BepuPhysics.Collidables
                 //The face is degenerate.
                 for (int i = 0; i < faceVertexIndices.Count; ++i)
                 {
-                    allowVertex[faceVertexIndices[i]] = false;
+                    allowVertex[faceVertexIndices[i]] = 0;
                 }
                 return;
             }
@@ -350,7 +403,7 @@ namespace BepuPhysics.Collidables
                 var index = faceVertexIndices[i];
                 if (!reducedIndices.Contains(index))
                 {
-                    allowVertex[index] = false;
+                    allowVertex[index] = 0;
                 }
             }
         }
@@ -380,11 +433,125 @@ namespace BepuPhysics.Collidables
                 return $"({A}, {B})";
             }
         }
+
+        /// <summary>
+        /// Tracks the faces associated with a detected surface edge. 
+        /// During hull calculation, surface edges that have only one face associated with them should have an outstanding entry in the edges to visit set.
+        /// Surface edges can never validly have more than two faces associated with them. Two means that an edge is 'complete', or should be.
+        /// Detecting a third edge implies an error condition. By tracking *which* faces were associated with an edge, we can attempt to fix the error.
+        /// This type of error tends to occur when there is a numerical disagreement about what vertices are coplanar with a face.
+        /// One iteration could find what it thinks is a complete face, and a later iteration ends up finding more vertices *including* the ones already contained in the previous face.
+        /// That's a recipe for excessive edge faces, but it's also a direct indicator that we should merge the involved faces for being close enough to coplanar that the error happened in the first place.
+        /// </summary>
+        struct EdgeFaceIndices
+        {
+            public int FaceA;
+            public int FaceB;
+            public bool Complete => FaceA >= 0 && FaceB >= 0;
+
+            public EdgeFaceIndices(int initialFaceIndex)
+            {
+                FaceA = initialFaceIndex;
+                FaceB = -1;
+            }
+
+
+        }
+
+        static void RemoveFaceFromEdge(int a, int b, int faceIndex, ref QuickDictionary<EdgeEndpoints, EdgeFaceIndices, EdgeEndpoints> facesForEdges)
+        {
+            EdgeEndpoints edge;
+            edge.A = a;
+            edge.B = b;
+            var exists = facesForEdges.GetTableIndices(ref edge, out _, out var index);
+            Debug.Assert(exists, "Whoa something weird happened here! A face was created, but there's a missing edge for its face?");
+            ref var facesForEdge = ref facesForEdges.Values[index];
+            Debug.Assert(faceIndex == facesForEdge.FaceA || faceIndex == facesForEdge.FaceB, "If you're trying to remove a face index from the edge, it better be in the edge!");
+            if (facesForEdge.FaceA == faceIndex)
+            {
+                facesForEdge.FaceA = facesForEdge.FaceB;
+                facesForEdge.FaceB = -1;
+                if (facesForEdge.FaceA == -1)
+                {
+                    //This edge no longer has any faces associated with it. 
+                    facesForEdges.FastRemoveRef(ref edge);
+                }
+            }
+            else
+            {
+                facesForEdge.FaceB = -1;
+            }
+            //Note that we do *not* add the edge back into the 'edges to test' list when transitioning from 2 faces to 1 face for the edge.
+            //This function is invoked when an edge is being deleted because it's related to a deleted face.
+            //There are two possible outcomes:
+            //1. The completion of the merge will see a face added back to this edge,
+            //2. it's an orphaned internal edge that should not be tested.
+        }
+
+        internal struct EarlyFace
+        {
+            public QuickList<int> VertexIndices;
+            public bool Deleted;
+            public Vector3 Normal;
+        }
+
         struct EdgeToTest
         {
             public EdgeEndpoints Endpoints;
             public Vector3 FaceNormal;
             public int FaceIndex;
+        }
+
+
+        static void AddFace(ref QuickList<EarlyFace> faces, BufferPool pool, Vector3 normal, QuickList<int> vertexIndices)
+        {
+            ref var face = ref faces.Allocate(pool);
+            face = new EarlyFace { Normal = normal, VertexIndices = new QuickList<int>(vertexIndices.Count, pool) };
+            face.VertexIndices.AddRangeUnsafely(vertexIndices);
+        }
+
+        static void AddFaceToEdgesAndTestList(BufferPool pool,
+            ref QuickList<int> reducedFaceIndices,
+            ref QuickList<EdgeToTest> edgesToTest,
+            ref QuickDictionary<EdgeEndpoints, EdgeFaceIndices, EdgeEndpoints> facesForEdges,
+            Vector3 faceNormal, int newFaceIndex)
+        {
+            facesForEdges.EnsureCapacity(facesForEdges.Count + reducedFaceIndices.Count, pool);
+            var previousIndex = reducedFaceIndices[reducedFaceIndices.Count - 1];
+            for (int i = 0; i < reducedFaceIndices.Count; ++i)
+            {
+                EdgeEndpoints endpoints;
+                endpoints.A = previousIndex;
+                endpoints.B = reducedFaceIndices[i];
+                previousIndex = endpoints.B;
+                if (facesForEdges.GetTableIndices(ref endpoints, out var tableIndex, out var elementIndex))
+                {
+                    ref var edgeFaceCount = ref facesForEdges.Values[elementIndex];
+                    Debug.Assert(edgeFaceCount.FaceB == -1,
+                        "While we let execution continue, this is an error condition and implies overlapping triangles are being generated." +
+                        "This tends to happen when there are many near-coplanar vertices, so numerical tolerances across different faces cannot consistently agree.");
+                    edgeFaceCount.FaceB = newFaceIndex;
+                }
+                else
+                {
+                    //This edge is not yet claimed by any edge. Claim it for the new face and add the edge for further testing.
+                    EdgeToTest nextEdgeToTest;
+                    nextEdgeToTest.Endpoints = endpoints;
+                    nextEdgeToTest.FaceNormal = faceNormal;
+                    nextEdgeToTest.FaceIndex = newFaceIndex;
+                    facesForEdges.Keys[facesForEdges.Count] = nextEdgeToTest.Endpoints;
+                    facesForEdges.Values[facesForEdges.Count] = new EdgeFaceIndices(newFaceIndex);
+                    //Use the encoding- all indices are offset by 1 since 0 represents 'empty'.
+                    facesForEdges.Table[tableIndex] = ++facesForEdges.Count;
+                    edgesToTest.Allocate(pool) = nextEdgeToTest;
+                }
+            }
+        }
+
+        static void AddIfNotPresent(ref QuickList<int> list, int value, BufferPool pool)
+        {
+            if (!list.Contains(value))
+                list.Allocate(pool) = value;
         }
 
         //public struct DebugStep
@@ -396,8 +563,14 @@ namespace BepuPhysics.Collidables
         //    public Vector3 FaceNormal;
         //    public Vector3 BasisX;
         //    public Vector3 BasisY;
+        //    public List<int> FaceStarts;
+        //    public List<int> FaceIndices;
+        //    public bool[] FaceDeleted;
+        //    public int[] MergedFaceIndices;
+        //    public int FaceIndex;
+        //    public Vector3[] FaceNormals;
 
-        //    public DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, in Vector3 faceNormal, in Vector3 basisX, in Vector3 basisY)
+        //    internal DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, Vector3 faceNormal, Vector3 basisX, Vector3 basisY, ref QuickList<int> reduced, ref Buffer<int> allowVertex, ref QuickList<EarlyFace> faces, Span<int> mergedFaceIndices, int faceIndex)
         //    {
         //        SourceEdge = sourceEdge;
         //        FaceNormal = faceNormal;
@@ -408,12 +581,6 @@ namespace BepuPhysics.Collidables
         //        {
         //            Raw.Add(raw[i]);
         //        }
-        //        Reduced = default;
-        //        AllowVertex = default;
-        //    }
-
-        //    public void AddReduced(ref QuickList<int> reduced, ref Buffer<bool> allowVertex)
-        //    {
         //        Reduced = new List<int>();
         //        for (int i = 0; i < reduced.Count; ++i)
         //        {
@@ -422,11 +589,24 @@ namespace BepuPhysics.Collidables
         //        AllowVertex = new bool[allowVertex.Length];
         //        for (int i = 0; i < allowVertex.Length; ++i)
         //        {
-        //            AllowVertex[i] = allowVertex[i];
+        //            AllowVertex[i] = allowVertex[i] != 0;
         //        }
+        //        FaceStarts = new List<int>(faces.Count);
+        //        FaceIndices = new List<int>();
+        //        FaceDeleted = new bool[faces.Count];
+        //        FaceNormals = new Vector3[faces.Count];
+        //        for (int i = 0; i < faces.Count; ++i)
+        //        {
+        //            ref var face = ref faces[i];
+        //            FaceStarts.Add(FaceIndices.Count);
+        //            for (int j = 0; j < face.VertexIndices.Count; ++j)
+        //                FaceIndices.Add(face.VertexIndices[j]);
+        //            FaceDeleted[i] = face.Deleted;
+        //            FaceNormals[i] = face.Normal;
+        //        }
+        //        MergedFaceIndices = mergedFaceIndices.ToArray();
+        //        FaceIndex = faceIndex;
         //    }
-
-
         //}
         ///// <summary>
         ///// Computes the convex hull of a set of points.
@@ -438,18 +618,20 @@ namespace BepuPhysics.Collidables
         //{
         //    ComputeHull(points, pool, out hullData, out _);
         //}
+
+
         /// <summary>
         /// Computes the convex hull of a set of points.
         /// </summary>
         /// <param name="points">Point set to compute the convex hull of.</param>
         /// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
         /// <param name="hullData">Convex hull of the input point set.</param>
-        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
+        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)//, out List<DebugStep> steps)
         {
+            //steps = new List<DebugStep>();
             if (points.Length <= 0)
             {
                 hullData = default;
-                //steps = new List<DebugStep>();
                 return;
             }
             if (points.Length <= 3)
@@ -475,7 +657,6 @@ namespace BepuPhysics.Collidables
                     hullData.FaceStartIndices = default;
                     hullData.FaceVertexIndices = default;
                 }
-                //steps = new List<DebugStep>();
                 return;
             }
             var pointBundleCount = BundleIndexing.GetBundleCount(points.Length);
@@ -537,7 +718,6 @@ namespace BepuPhysics.Collidables
                 hullData.OriginalVertexMapping[0] = 0;
                 hullData.FaceStartIndices = default;
                 hullData.FaceVertexIndices = default;
-                //steps = new List<DebugStep>();
                 pool.Return(ref pointBundles);
                 return;
             }
@@ -547,33 +727,32 @@ namespace BepuPhysics.Collidables
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
             var planeEpsilonNarrow = (float)Math.Sqrt(bestDistanceSquared) * 1e-6f;
+            var normalCoplanarityEpsilon = 1f - 1e-6f;
             var planeEpsilon = new Vector<float>(planeEpsilonNarrow);
             var rawFaceVertexIndices = new QuickList<int>(pointBundles.Length * Vector<float>.Count, pool);
             var initialSourceEdge = new EdgeEndpoints { A = initialIndex, B = initialIndex };
-            FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, initialSourceEdge, ref pointBundles, indexOffsetBundle, points.Length,
+
+            //Points found to not be on the face hull are ignored by future executions.
+            //Note that it's stored in integers instead of bools; it can be directly loaded as a mask during vectorized operations.
+            //0 means the vertex is disallowed, -1 means the vertex is allowed.
+            pool.Take<int>(pointBundleCount * Vector<int>.Count, out var allowVertices);
+            ((Span<int>)allowVertices).Slice(0, points.Length).Fill(-1);
+            for (int i = points.Length; i < allowVertices.Length; ++i)
+                allowVertices[i] = 0;
+
+            FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, initialSourceEdge, ref pointBundles, indexOffsetBundle, allowVertices, points.Length,
                ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var initialFaceNormal);
             Debug.Assert(rawFaceVertexIndices.Count >= 2);
             var facePoints = new QuickList<Vector2>(points.Length, pool);
             var reducedFaceIndices = new QuickList<int>(points.Length, pool);
-            //Points found to not be on the face hull are ignored by future executions. 
-            pool.Take<bool>(points.Length, out var allowVertex);
-            for (int i = 0; i < points.Length; ++i)
-                allowVertex[i] = true;
 
-            Vector3Wide.ReadFirst(initialBasisX, out var debugInitialBasisX);
-            Vector3Wide.ReadFirst(initialBasisY, out var debugInitialBasisY);
-            //steps = new List<DebugStep>();
-            //var step = new DebugStep(initialSourceEdge, ref rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY);
 
-            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
-            //step.AddReduced(ref reducedFaceIndices, ref allowVertex);
-            //steps.Add(step);
+            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices);
 
-            var earlyFaceIndices = new QuickList<int>(points.Length, pool);
-            var earlyFaceStartIndices = new QuickList<int>(points.Length, pool);
-
+            var faces = new QuickList<EarlyFace>(points.Length, pool);
             var edgesToTest = new QuickList<EdgeToTest>(points.Length, pool);
-            var edgeFaceCounts = new QuickDictionary<EdgeEndpoints, int, EdgeEndpoints>(points.Length, pool);
+            var facesForEdges = new QuickDictionary<EdgeEndpoints, EdgeFaceIndices, EdgeEndpoints>(points.Length, pool);
+            var facesNeedingMerge = new QuickList<int>(32, pool);
             if (reducedFaceIndices.Count >= 3)
             {
                 //The initial face search found an actual face! That's a bit surprising since we didn't start from an edge offset, but rather an arbitrary direction.
@@ -585,11 +764,10 @@ namespace BepuPhysics.Collidables
                     edgeToAdd.Endpoints.B = reducedFaceIndices[i];
                     edgeToAdd.FaceNormal = initialFaceNormal;
                     edgeToAdd.FaceIndex = 0;
-                    edgeFaceCounts.AddRef(ref edgeToAdd.Endpoints, 1, pool);
+                    facesForEdges.AddRef(ref edgeToAdd.Endpoints, new EdgeFaceIndices(0), pool);
                 }
                 //Since an actual face was found, we go ahead and output it into the face set.
-                earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
-                earlyFaceIndices.AddRange(reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
+                AddFace(ref faces, pool, initialFaceNormal, reducedFaceIndices);
             }
             else
             {
@@ -607,13 +785,18 @@ namespace BepuPhysics.Collidables
                 if (Vector3.Dot(basisX, edgeToAdd.FaceNormal) > 0)
                     Helpers.Swap(ref edgeToAdd.Endpoints.A, ref edgeToAdd.Endpoints.B);
             }
+            //Vector3Wide.ReadFirst(initialBasisX, out var debugInitialBasisX);
+            //Vector3Wide.ReadFirst(initialBasisY, out var debugInitialBasisY);
+            //steps.Add(new DebugStep(initialSourceEdge, ref rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY, ref reducedFaceIndices, ref allowVertices, ref faces, default, reducedFaceIndices.Count >= 3 ? 0 : -1));
+
+            int facesDeletedCount = 0;
 
             while (edgesToTest.Count > 0)
             {
                 edgesToTest.Pop(out var edgeToTest);
                 //Make sure the new edge hasn't already been filled by another traversal.
-                var faceCountIndex = edgeFaceCounts.IndexOf(edgeToTest.Endpoints);
-                if (faceCountIndex >= 0 && edgeFaceCounts.Values[faceCountIndex] >= 2)
+                var faceCountIndex = facesForEdges.IndexOf(edgeToTest.Endpoints);
+                if (faceCountIndex >= 0 && facesForEdges.Values[faceCountIndex].Complete)
                     continue;
 
                 ref var edgeA = ref points[edgeToTest.Endpoints.A];
@@ -630,79 +813,212 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Broadcast(basisY, out var basisYBundle);
                 Vector3Wide.Broadcast(edgeA, out var basisOrigin);
                 rawFaceVertexIndices.Count = 0;
-                FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, points.Length, ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
-                //step = new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY);
+                FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, allowVertices, points.Length, ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
-                ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertex, ref reducedFaceIndices);
+                ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices);
+
                 if (reducedFaceIndices.Count < 3)
                 {
+                    //steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertices, ref faces, default, -1));
                     //Degenerate face found; don't bother creating work for it.
                     continue;
                 }
-                //step.AddReduced(ref reducedFaceIndices, ref allowVertex);
-                //steps.Add(step);
+                var faceCountPriorToAdd = faces.Count;
 
-                var newFaceIndex = earlyFaceStartIndices.Count;
-                earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
-                earlyFaceIndices.AddRange(reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
-
-                edgeFaceCounts.EnsureCapacity(edgeFaceCounts.Count + reducedFaceIndices.Count, pool);
-                for (int i = 0; i < reducedFaceIndices.Count; ++i)
+                facesNeedingMerge.Count = 0;
+                while (true)
                 {
-                    EdgeToTest nextEdgeToTest;
-                    nextEdgeToTest.Endpoints.A = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
-                    nextEdgeToTest.Endpoints.B = reducedFaceIndices[i];
-                    nextEdgeToTest.FaceNormal = faceNormal;
-                    nextEdgeToTest.FaceIndex = newFaceIndex;
-                    if (edgeFaceCounts.GetTableIndices(ref nextEdgeToTest.Endpoints, out var tableIndex, out var elementIndex))
+                    //This implementation bites the bullet pretty hard on numerical problems. They most frequently arise from near coplanar vertices.
+                    //It's possible that two iterations see different subsets of 'coplanar' vertices, either causing two faces with near equal normal or
+                    //even causing an edge to have more than two faces associated with it.
+                    //Before making any modifications to the existing data, iterate over all the edges in the current face to check for any such edges.
+
+                    //While the usual flow here will be to reduce the vertices we just found and accept the result immediately,
+                    //it's possible for the just-detected face to end up coplanar with an existing face because of numerical issues that prevented detecting the whole face earlier.
+                    //Rather than using more precise math, we detect the failure and merge faces after the fact.
+                    //Unfortunately, this can happen recursively! Merging two redundant faces could reveal a third face that also needs to be merged.
+                    //This is uncommon, but it needs to be covered.
+                    //So, we just stick everything into a while loop and let it iterate until it's done.
+                    //The good news is that the merging process won't loop forever- every merge results in a face that is at least as large as any contributor, and any internal points
+                    //that get reduced out of consideration are marked with allowVertex[whateverInteriorPointIndex] = false.
+                    int previousFaceMergeCount = facesNeedingMerge.Count;
+                    var previousEndpointIndex = reducedFaceIndices[reducedFaceIndices.Count - 1];
+                    for (int i = 0; i < reducedFaceIndices.Count; ++i)
                     {
-                        ref var edgeFaceCount = ref edgeFaceCounts.Values[elementIndex];
-                        //Debug.Assert(edgeFaceCount == 1, 
-                        //    "While we let execution continue, this is an error condition and implies overlapping triangles are being generated." + 
-                        //    "This tends to happen when there are many near-coplanar vertices, so numerical tolerances across different faces cannot consistently agree.");
-                        ++edgeFaceCount;
+                        EdgeEndpoints edgeEndpoints;
+                        edgeEndpoints.A = previousEndpointIndex;
+                        edgeEndpoints.B = reducedFaceIndices[i];
+                        previousEndpointIndex = edgeEndpoints.B;
+
+                        if (facesForEdges.GetTableIndices(ref edgeEndpoints, out var tableIndex, out var elementIndex))
+                        {
+                            //There is already at least one face associated with this edge. Do we need to merge?
+                            ref var edgeFaces = ref facesForEdges.Values[elementIndex];
+                            Debug.Assert(edgeFaces.FaceA >= 0);
+                            var aDot = Vector3.Dot(faces[edgeFaces.FaceA].Normal, faceNormal);
+                            if (edgeFaces.FaceB >= 0)
+                            {
+                                //The edge already has two faces associated with it. This is definitely a numerical error; separate coplanar faces were generated.
+                                //We *must* merge at least one pair of faces.
+                                //Note that technically both faces can end up being included, even though we've already tested A and B;
+                                //the new face could be a bridge that's close enough to both, even if they were barely too far from each other.
+                                var bDot = Vector3.Dot(faces[edgeFaces.FaceB].Normal, faceNormal);
+                                if (aDot >= normalCoplanarityEpsilon && bDot >= normalCoplanarityEpsilon)
+                                {
+                                    AddIfNotPresent(ref facesNeedingMerge, edgeFaces.FaceA, pool);
+                                    AddIfNotPresent(ref facesNeedingMerge, edgeFaces.FaceB, pool);
+                                }
+                                else
+                                {
+                                    //If both aren't merge candidates, then just pick the one that's closer.
+                                    AddIfNotPresent(ref facesNeedingMerge, aDot > bDot ? edgeFaces.FaceA : edgeFaces.FaceB, pool);
+                                }
+                            }
+                            else
+                            {
+                                //Only one face already present. Check if it's coplanar.
+                                if (aDot >= normalCoplanarityEpsilon)
+                                    AddIfNotPresent(ref facesNeedingMerge, edgeFaces.FaceA, pool);
+                            }
+                        }
+                    }
+
+                    if (facesNeedingMerge.Count > previousFaceMergeCount)
+                    {
+                        //This iteration has found more faces which should be merged together.
+                        //Accumulate the vertices.
+                        for (int i = previousFaceMergeCount; i < facesNeedingMerge.Count; ++i)
+                        {
+                            ref var sourceFace = ref faces[facesNeedingMerge[i]];
+                            for (int j = 0; j < sourceFace.VertexIndices.Count; ++j)
+                            {
+                                var vertexIndex = sourceFace.VertexIndices[j];
+                                if (allowVertices[vertexIndex] != 0 && !rawFaceVertexIndices.Contains(vertexIndex))
+                                {
+                                    rawFaceVertexIndices.Allocate(pool) = vertexIndex;
+                                }
+                            }
+                        }
+
+                        //Re-reduce.
+                        reducedFaceIndices.Count = 0;
+                        facePoints.Count = 0;
+                        ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices);
                     }
                     else
                     {
-                        //This edge is not yet claimed by any edge. Claim it for the new face and add the edge for further testing.
-                        edgeFaceCounts.Keys[edgeFaceCounts.Count] = nextEdgeToTest.Endpoints;
-                        edgeFaceCounts.Values[edgeFaceCounts.Count] = 1;
-                        //Use the encoding- all indices are offset by 1 since 0 represents 'empty'.
-                        edgeFaceCounts.Table[tableIndex] = ++edgeFaceCounts.Count;
-                        edgesToTest.Allocate(pool) = nextEdgeToTest;
+                        //No more faces need to be merged! Go ahead and apply the changes.
+                        for (int i = 0; i < facesNeedingMerge.Count; ++i)
+                        {
+                            //Note that we do not merge into an existing face; for simplicity, we just merge into the face we're going to append and mark the old faces as being deleted.
+                            //Note that we do *not* remove deleted faces from the faces list. That would break all the face indices that we've accumulated.
+                            var faceIndex = facesNeedingMerge[i];
+                            ref var faceToRemove = ref faces[faceIndex];
+                            faceToRemove.Deleted = true;
+
+                            //For every edge of any face we're merging, remove the face from the edge lists.
+                            var previousIndex = faceToRemove.VertexIndices[faceToRemove.VertexIndices.Count - 1];
+                            for (int j = 0; j < faceToRemove.VertexIndices.Count; ++j)
+                            {
+                                RemoveFaceFromEdge(previousIndex, faceToRemove.VertexIndices[j], faceIndex, ref facesForEdges);
+                                previousIndex = faceToRemove.VertexIndices[j];
+                            }
+                            //Remove any references to this face in the edges to test.
+                            int removedEdgesToTestCount = 0;
+                            for (int j = 0; j < edgesToTest.Count; ++j)
+                            {
+                                if (edgesToTest[j].FaceIndex == faceIndex)
+                                {
+                                    ++removedEdgesToTestCount;
+                                }
+                                else if (removedEdgesToTestCount > 0)
+                                {
+                                    //Scoot edges to test back.
+                                    edgesToTest[j - removedEdgesToTestCount] = edgesToTest[j];
+                                }
+                            }
+                            edgesToTest.Count -= removedEdgesToTestCount;
+                        }
+
+                        //Retain a count of the deleted faces so the post process can handle them more easily.
+                        facesDeletedCount += facesNeedingMerge.Count;
+
+                        AddFace(ref faces, pool, faceNormal, reducedFaceIndices);
+                        AddFaceToEdgesAndTestList(pool, ref reducedFaceIndices, ref edgesToTest, ref facesForEdges, faceNormal, faceCountPriorToAdd);
+                        //steps.Add(new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY, ref reducedFaceIndices, ref allowVertices, ref faces, facesNeedingMerge, faceCountPriorToAdd));
+                        break;
                     }
                 }
             }
 
             edgesToTest.Dispose(pool);
-            edgeFaceCounts.Dispose(pool);
+            facesForEdges.Dispose(pool);
             facePoints.Dispose(pool);
             reducedFaceIndices.Dispose(pool);
             rawFaceVertexIndices.Dispose(pool);
-            pool.Return(ref allowVertex);
+            pool.Return(ref allowVertices);
             pool.Return(ref projectedOnX);
             pool.Return(ref projectedOnY);
             pool.Return(ref pointBundles);
 
+            //for (int i = 0; i < faces.Count; ++i)
+            //{
+            //    for (int j = i + 1; j < faces.Count; ++j)
+            //    {
+            //        var dot = Vector3.Dot(faces[i].Normal, faces[j].Normal);
+            //        var bothFacesExist = !faces[i].Deleted && !faces[j].Deleted;
+            //        if (dot >= normalCoplanarityEpsilon && bothFacesExist)
+            //        {
+            //            Console.WriteLine($"Dot {dot} on faces {i} and {j}");
+            //        }
+            //    }
+            //}
+
+            if (facesDeletedCount > 0)
+            {
+                //During execution, some faces were found to be coplanar and got merged. To avoid breaking face index references during execution, we left those triangles in place.
+                //Now, though, we need to get rid of any faces that are marked deleted!
+                int shift = 0;
+                for (int i = 0; i < faces.Count; ++i)
+                {
+                    if (faces[i].Deleted)
+                    {
+                        //Removing the face from the list, so we gotta dispose it now rather than later.
+                        faces[i].VertexIndices.Dispose(pool);
+                        ++shift;
+                    }
+                    else if (shift > 0)
+                    {
+                        faces[i - shift] = faces[i];
+                    }
+                }
+                Debug.Assert(facesDeletedCount == shift);
+                faces.Count -= facesDeletedCount;
+            }
+
             //Create a reduced hull point set from the face vertex references.
-            pool.Take(earlyFaceStartIndices.Count, out hullData.FaceStartIndices);
-            pool.Take(earlyFaceIndices.Count, out hullData.FaceVertexIndices);
-            earlyFaceStartIndices.Span.CopyTo(0, hullData.FaceStartIndices, 0, earlyFaceStartIndices.Count);
+            int totalIndexCount = 0;
+            for (int i = 0; i < faces.Count; ++i)
+            {
+                totalIndexCount += faces[i].VertexIndices.Count;
+            }
+            pool.Take(faces.Count, out hullData.FaceStartIndices);
+            pool.Take(totalIndexCount, out hullData.FaceVertexIndices);
+            var nextStartIndex = 0;
             pool.Take<int>(points.Length, out var originalToHullIndexMapping);
             var hullToOriginalIndexMapping = new QuickList<int>(points.Length, pool);
             for (int i = 0; i < points.Length; ++i)
             {
                 originalToHullIndexMapping[i] = -1;
             }
-            for (int i = 0; i < earlyFaceStartIndices.Count; ++i)
+            for (int i = 0; i < faces.Count; ++i)
             {
-                var start = earlyFaceStartIndices[i];
-                var nextIndex = i + 1;
-                var end = earlyFaceStartIndices.Count == nextIndex ? earlyFaceIndices.Count : earlyFaceStartIndices[nextIndex];
-                for (int j = start; j < end; ++j)
+                var source = faces[i].VertexIndices;
+                hullData.FaceStartIndices[i] = nextStartIndex;
+                for (int j = 0; j < source.Count; ++j)
                 {
-                    var originalVertexIndex = earlyFaceIndices[j];
+                    var originalVertexIndex = source[j];
                     ref var originalToHull = ref originalToHullIndexMapping[originalVertexIndex];
                     if (originalToHull < 0)
                     {
@@ -710,8 +1026,9 @@ namespace BepuPhysics.Collidables
                         originalToHull = hullToOriginalIndexMapping.Count;
                         hullToOriginalIndexMapping.AllocateUnsafely() = originalVertexIndex;
                     }
-                    hullData.FaceVertexIndices[j] = originalToHull;
+                    hullData.FaceVertexIndices[nextStartIndex + j] = originalToHull;
                 }
+                nextStartIndex += source.Count;
             }
 
             pool.Take(hullToOriginalIndexMapping.Count, out hullData.OriginalVertexMapping);
@@ -719,9 +1036,14 @@ namespace BepuPhysics.Collidables
 
             pool.Return(ref originalToHullIndexMapping);
             hullToOriginalIndexMapping.Dispose(pool);
-            earlyFaceIndices.Dispose(pool);
-            earlyFaceStartIndices.Dispose(pool);
+            for (int i = 0; i < faces.Count; ++i)
+            {
+                faces[i].VertexIndices.Dispose(pool);
+            }
+            faces.Dispose(pool);
+            facesNeedingMerge.Dispose(pool);
         }
+
 
         /// <summary>
         /// Processes hull data into a runtime usable convex hull shape. Recenters the convex hull's points around its center of mass.
@@ -731,22 +1053,11 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Pool used to allocate resources for the hullShape.</param>
         /// <param name="hullShape">Convex hull shape created from the input data.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
-        public static void CreateShape(Span<Vector3> points, HullData hullData, BufferPool pool, out Vector3 center, out ConvexHull hullShape)
+        /// <returns>True if the shape was created successfully, false otherwise. If false, the hull probably had no volume and would not have worked properly as a shape.</returns>
+        public static bool CreateShape(Span<Vector3> points, HullData hullData, BufferPool pool, out Vector3 center, out ConvexHull hullShape)
         {
+            Debug.Assert(points.Length > 0, "Convex hulls need to have a nonzero number of points!");
             hullShape = default;
-            if (hullData.OriginalVertexMapping.Length < 3)
-            {
-                center = default;
-                if (hullData.OriginalVertexMapping.Length > 0)
-                {
-                    for (int i = 0; i < hullData.OriginalVertexMapping.Length; ++i)
-                    {
-                        center += points[hullData.OriginalVertexMapping[i]];
-                    }
-                    center /= hullData.OriginalVertexMapping.Length;
-                }
-                return;
-            }
             var pointBundleCount = BundleIndexing.GetBundleCount(hullData.OriginalVertexMapping.Length);
             pool.Take(pointBundleCount, out hullShape.Points);
 
@@ -762,11 +1073,25 @@ namespace BepuPhysics.Collidables
                     var c = points[face[subtriangleIndex]];
                     var volumeContribution = MeshInertiaHelper.ComputeTetrahedronVolume(a, b, c);
                     volume += volumeContribution;
-                    center += (a + b + c) * volumeContribution;
+                    var centroid = a + b + c;
+                    center += centroid * volumeContribution;
                 }
             }
             //Division by 4 since we accumulated (a + b + c), rather than the actual tetrahedral center (a + b + c + 0) / 4.
             center /= volume * 4;
+            if (float.IsNaN(center.X) || float.IsNaN(center.Y) || float.IsNaN(center.Z) || hullData.FaceStartIndices.Length == 2)
+            {
+                //The convex hull seems to have no volume.
+                //While you could try treating it as coplanar (like we once tried; see commit history just prior to the commit that added this message):
+                //1. Ray tests won't work. They rely on bounding planes. It would require a special case for degenerate hulls.
+                //2. Inertia won't work. You could resolve that with a special case, but it doesn't fix ray tests.
+                //3. Edge-on contact generation may produce lower quality contacts.
+                //So, pretty worthless overall without major changes.
+                hullShape.Points.Dispose(pool);
+                center = default;
+                Debug.Assert(!hullShape.Points.Allocated && !hullShape.FaceToVertexIndicesStart.Allocated && !hullShape.BoundingPlanes.Allocated && !hullShape.FaceVertexIndices.Allocated, "Hey! You moved something around and forgot to dispose!");
+                return false;
+            }
 
             var lastIndex = hullData.OriginalVertexMapping.Length - 1;
             for (int bundleIndex = 0; bundleIndex < hullShape.Points.Length; ++bundleIndex)
@@ -836,6 +1161,7 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.WriteFirst(default, ref offsetInstance.Normal);
                 GatherScatter.GetFirst(ref offsetInstance.Offset) = float.MinValue;
             }
+            return true;
         }
 
         /// <summary>
@@ -846,10 +1172,11 @@ namespace BepuPhysics.Collidables
         /// <param name="hullData">Intermediate hull data that got processed into the convex hull.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
         /// <param name="convexHull">Convex hull shape of the input point set.</param>
-        public static void CreateShape(Span<Vector3> points, BufferPool pool, out HullData hullData, out Vector3 center, out ConvexHull convexHull)
+        /// <returns>True if the shape was created successfully, false otherwise. If false, the hull probably had no volume and would not have worked properly as a shape.</returns>
+        public static bool CreateShape(Span<Vector3> points, BufferPool pool, out HullData hullData, out Vector3 center, out ConvexHull convexHull)
         {
             ComputeHull(points, pool, out hullData);
-            CreateShape(points, hullData, pool, out center, out convexHull);
+            return CreateShape(points, hullData, pool, out center, out convexHull);
         }
 
         /// <summary>
@@ -859,13 +1186,15 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Buffer pool used for temporary allocations and the output data structures.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
         /// <param name="convexHull">Convex hull shape of the input point set.</param>
-        public static void CreateShape(Span<Vector3> points, BufferPool pool, out Vector3 center, out ConvexHull convexHull)
+        /// <returns>True if the shape was created successfully, false otherwise. If false, the hull probably had no volume and would not have worked properly as a shape.</returns>
+        public static bool CreateShape(Span<Vector3> points, BufferPool pool, out Vector3 center, out ConvexHull convexHull)
         {
             ComputeHull(points, pool, out var hullData);
-            CreateShape(points, hullData, pool, out center, out convexHull);
-            //Empty input point sets won't allocate.
+            var result = CreateShape(points, hullData, pool, out center, out convexHull);
+            //Empty input point sets won't allocate; don't try to dispose them.
             if (hullData.OriginalVertexMapping.Allocated)
                 hullData.Dispose(pool);
+            return result;
         }
 
 
