@@ -34,6 +34,15 @@ namespace BepuUtilities.Memory
             Id = id;
         }
 
+        /// <summary>
+        /// Returns a buffer to a pool. This should only be used if the specified pool is the same as the one used to allocate the buffer.
+        /// </summary>
+        /// <param name="pool">Pool to return the buffer to.</param>
+        public void Dispose(IUnmanagedMemoryPool pool)
+        {
+            pool.Return(ref this);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref T Get(byte* memory, int index)
         {
@@ -283,6 +292,18 @@ namespace BepuUtilities.Memory
             buffer.Length = length * Unsafe.SizeOf<T>();
             buffer.Id = Id;
             return buffer;
+        }
+
+        /// <summary>
+        /// Creates a typed region from the raw buffer with the largest capacity that can fit within the allocated bytes.
+        /// </summary>
+        /// <typeparam name="TCast">Type of the buffer.</typeparam>
+        /// <returns>Typed buffer of maximum extent within the current buffer.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Buffer<TCast> As<TCast>() where TCast : unmanaged
+        {
+            var count = Length * Unsafe.SizeOf<T>() / Unsafe.SizeOf<TCast>();
+            return new Buffer<TCast>(Memory, count, Id);
         }
 
         [Conditional("DEBUG")]
