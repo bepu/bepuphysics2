@@ -202,7 +202,7 @@ namespace BepuPhysics.Collidables
                 //        }
                 //    }
                 //}
-                var coplanar = Vector.LessThanOrEqual(Vector.Abs(dot), planeEpsilon);
+                var coplanar = Vector.GreaterThan(dot, -planeEpsilon);
                 if (Vector.LessThanAny(coplanar, Vector<int>.Zero))
                 {
                     var bundleBaseIndex = i << BundleIndexing.VectorShift;
@@ -318,8 +318,7 @@ namespace BepuPhysics.Collidables
                 if (alongNormal > planeEpsilon && !ignoreSlot)
                     Console.WriteLine("It looks like we've found a point significantly beyond the bounding plane we just identified; how's that possible?");
 
-                //TODO: Here and in the 3d variant: should you really be using the abs? That rejects anything that is numerically too far outside the face, which... should be rare, but we shouldn't let that point just corrupt things later.
-                if (float.Abs(alongNormal) <= planeEpsilon)
+                if (alongNormal > -planeEpsilon)
                 {
                     var alongEdge = Vector2.Dot(toCandidate, edgeDirection);
                     var rawDistance = float.Sqrt(alongEdge * alongEdge + alongNormal * alongNormal);
