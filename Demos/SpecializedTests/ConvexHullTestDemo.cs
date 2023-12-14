@@ -342,6 +342,43 @@ public class ConvexHullTestDemo : Demo
         return buffer;
     }
 
+    void CreateHellCubeFace(int widthInPoints, float step, Buffer<Vector3> facePoints, Matrix3x3 transform, float localFaceOffset)
+    {
+        var offset = step * (widthInPoints - 1) * 0.5f;
+        for (int i = 0; i < widthInPoints; ++i)
+        {
+            var x = i * step - offset;
+            for (int j = 0; j < widthInPoints; ++j)
+            {
+                var y = j * step - offset;
+                var localOffset = new Vector3(x, y, localFaceOffset);
+                Matrix3x3.Transform(localOffset, transform, out var worldOffset);
+                facePoints[i * widthInPoints + j] = worldOffset;
+            }
+        }
+    }
+    Buffer<Vector3> CreateHellCube(int widthInPoints)
+    {
+        var facePointCount = widthInPoints * widthInPoints;
+        BufferPool.Take(facePointCount * 6, out Buffer<Vector3> buffer);
+        var size = 8f;
+        var halfSize = size / 2;
+        var step = size / (widthInPoints - 1);
+        Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1f, 1, 1f)), float.Pi / 2, out var cubeTransform);
+        Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), float.Pi / 2, out var zFace);
+        zFace *= cubeTransform;
+        Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), float.Pi, out var localFace2);
+        Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), -float.Pi / 2, out var yFace);
+        yFace *= cubeTransform;
+        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 0, facePointCount), cubeTransform, halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 1, facePointCount), zFace, halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 2, facePointCount), cubeTransform, -halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 3, facePointCount), zFace, -halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 4, facePointCount), yFace, halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 5, facePointCount), yFace, -halfSize);
+        return buffer;
+    }
+
     public override void Initialize(ContentArchive content, Camera camera)
     {
         camera.Position = new Vector3(0, -2.5f, 10);
@@ -355,10 +392,13 @@ public class ConvexHullTestDemo : Demo
         //    hullPoints[i] *= 0.03f;
         //}
         //var hullPoints = CreateRandomConvexHullPoints();
-        var hullPoints = CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f));
+        //var hullPoints = CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f));
+        var hullPoints = CreateHellCube(200);
         //var hullPoints = CreatePlaneish();
         //var hullPoints = CreateDistantPlane();
+        //var hullPoints = CreateTestConvexHull();
         //var hullPoints = CreateTestConvexHull2();
+        //var hullPoints = CreateTestConvexHull3();
         //var hullPoints = CreateBoxConvexHull(2);
         var hullShape = new ConvexHull(hullPoints, BufferPool, out _);
         //float largestError = 0;
@@ -528,8 +568,8 @@ public class ConvexHullTestDemo : Demo
     //public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
     //{
     //    var step = debugSteps[stepIndex];
-    //    var scale = 10f;
-    //    var renderOffset = new Vector3(0, 15, 0);
+    //    var scale = 5f;
+    //    var renderOffset = new Vector3(-15, 25, 0);
     //    for (int i = 0; i < points.Length; ++i)
     //    {
     //        var pose = new RigidPose(renderOffset + points[i] * scale);

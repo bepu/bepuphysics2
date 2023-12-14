@@ -232,7 +232,7 @@ namespace BepuPhysics.Collidables
         /// <param name="planeEpsilon">Epsilon within which to consider points to be coplanar (or here, in the 2D case, collinear).</param>
         /// <param name="facePoints">Points composing the hull face projected onto the face's 2D basis.</param>
         /// <returns>Index of the point in facePoints which is the end point for the next edge segment as identified by gift wrapping.</returns>
-        static int FindNextIndexForFaceHull2(Vector2 start, Vector2 previousEdgeDirection, float planeEpsilon, ref QuickList<Vector2> facePoints)
+        static int FindNextIndexForFaceHull(Vector2 start, Vector2 previousEdgeDirection, float planeEpsilon, ref QuickList<Vector2> facePoints)
         {
             //Find the candidate-basisOrigin which has the smallest angle with basisY when projected onto the plane spanned by basisX and basisY.
             //angle = atan(y / x)
@@ -248,7 +248,6 @@ namespace BepuPhysics.Collidables
             var bestX = 1f;
             var bestY = float.MaxValue;
             int bestIndex = -1;
-            var bestAngle = float.Atan(bestY / bestX);
             for (int i = 0; i < facePoints.Count; ++i)
             {
                 var candidate = facePoints[i];
@@ -262,23 +261,15 @@ namespace BepuPhysics.Collidables
                 //Without this condition, it's possible for numerical cycles to occur where a face finds itself over and over again.
                 var ignoreSlot = x <= planeEpsilon && y >= -planeEpsilon;
                 var useCandidate = (y * bestX < bestY * x) && !ignoreSlot;
-                var candidateAngle = float.Atan(y / x);
-                var useCandidateTest = candidateAngle < bestAngle && !ignoreSlot;
-                if (useCandidateTest != useCandidate && float.Abs(candidateAngle - bestAngle) > 1e-5f)
-                {
-                    Console.WriteLine("dd");
-                }
                 if (useCandidate)
                 {
                     bestY = y;
                     bestX = x;
                     bestIndex = i;
-                    bestAngle = candidateAngle;
                 }
             }
             //If no next index was identified, then the face is degenerate.
             //Stop now to prevent the postpass from identifying some nonsense derived from a garbage plane.
-            Console.WriteLine($"Best index: {bestIndex}, progress along PREVIOUS: {-bestY}, best angle: {bestAngle + float.Pi / 2}");
             if (bestIndex == -1)
                 return -1;
 
@@ -304,27 +295,9 @@ namespace BepuPhysics.Collidables
                 var candidate = facePoints[i];
                 var toCandidate = candidate - start;
                 var alongNormal = Vector2.Dot(toCandidate, faceNormal);
-
-                //# DEBUG
-                var x = float.Max(0, Vector2.Dot(toCandidate, basisX));
-                var y = Vector2.Dot(toCandidate, basisY);
-                var ignoreSlot = x <= planeEpsilon && y >= -planeEpsilon;
-                var useCandidate = (y * bestX < bestY * x) && !ignoreSlot;
-                var candidateAngle = float.Atan(y / x);
-                var useCandidateTest = candidateAngle < bestAngle && !ignoreSlot;
-                //# DEBUG
-                if (alongNormal > planeEpsilon && useCandidateTest)
-                    Console.WriteLine("Okay, so we definitely should have selected this one earlier.");
-                if (alongNormal > planeEpsilon && !ignoreSlot)
-                    Console.WriteLine("It looks like we've found a point significantly beyond the bounding plane we just identified; how's that possible?");
-
                 if (alongNormal > -planeEpsilon)
                 {
                     var alongEdge = Vector2.Dot(toCandidate, edgeDirection);
-                    var rawDistance = float.Sqrt(alongEdge * alongEdge + alongNormal * alongNormal);
-                    //if (float.Abs(rawDistance) - float.Abs(alongEdge) > 1e-6f)
-                    //    Console.WriteLine("dd");
-
                     if (alongEdge > distance)
                     {
                         distance = alongEdge;
@@ -332,111 +305,9 @@ namespace BepuPhysics.Collidables
                     }
                 }
             }
-            if (mostDistantIndex >= 0)
-            {
-                var mostDistantX = Vector2.Dot(basisX, facePoints[mostDistantIndex] - start);
-                var mostDistantY = Vector2.Dot(basisY, facePoints[mostDistantIndex] - start);
-
-                var testProjectedBestEdgeDirection = new Vector2(bestX, bestY);
-                var testLength = projectedBestEdgeDirection.Length();
-                //Note that the projected face normal is in terms of basisX and basisY, not the original basis facePoints are built on.
-                testProjectedBestEdgeDirection = float.IsFinite(length) ? testProjectedBestEdgeDirection / length : new Vector2(1, 0);
-                //Transform the projected normal back into the basis of facePoints.
-                var testEdgeDirection = basisX * testProjectedBestEdgeDirection.X + basisY * testProjectedBestEdgeDirection.Y;
-                var testFaceNormal = new Vector2(-testEdgeDirection.Y, testEdgeDirection.X);
-                var testDot = Vector2.Dot(edgeDirection, testEdgeDirection);
-                if (testDot < 1 - 1e-6f)
-                {
-                    Console.WriteLine("Sdf");
-                }
-                var mostDistance = float.Sqrt(mostDistantX * mostDistantX + mostDistantY * mostDistantY);
-                var bestDistance = float.Sqrt(bestX * bestX + bestY * bestY);
-                if (mostDistance < bestDistance)
-                    Console.WriteLine("uh");
-
-                var mostDistantNormal = Vector2.Dot(faceNormal, facePoints[mostDistantIndex] - start);
-                var mostDistantEdge = Vector2.Dot(edgeDirection, facePoints[mostDistantIndex] - start);
-                var bestNormal = Vector2.Dot(faceNormal, facePoints[bestIndex] - start);
-                var bestEdge = Vector2.Dot(edgeDirection, facePoints[bestIndex] - start);
-
-                if (mostDistantEdge < bestEdge)
-                    Console.WriteLine("uh");
-
-                Console.WriteLine($"Progress along CURRENT edge: {distance}");
-            }
-            else
-            {
-            }
             return mostDistantIndex == -1 ? bestIndex : mostDistantIndex;
 
 
-        }
-
-
-        static int FindNextIndexForFaceHull(Vector2 start, Vector2 previousEdgeDirection, float planeEpsilon, ref QuickList<Vector2> facePoints)
-        {
-            //Use a AOS version since the number of points on a given face will tend to be very small in most cases.
-            //Same idea as the 3d version- find the next edge which is closest to the previous edge. Not going to worry about collinear points here for now.
-            var bestIndex = -1;
-            float best = -float.MaxValue;
-            float bestDistanceSquared = 0;
-            var startToCandidate = facePoints[0] - start;
-            var xDirection = new Vector2(previousEdgeDirection.Y, -previousEdgeDirection.X);
-            var candidateX = Vector2.Dot(startToCandidate, xDirection);
-            var candidateY = Vector2.Dot(startToCandidate, previousEdgeDirection);
-            var currentEdgeDirectionX = previousEdgeDirection.X;
-            var currentEdgeDirectionY = previousEdgeDirection.Y;
-            if (candidateX > 0)
-            {
-                best = candidateY / candidateX;
-                bestIndex = 0;
-                bestDistanceSquared = candidateX * candidateX + candidateY * candidateY;
-                var inverseBestDistance = 1f / MathF.Sqrt(bestDistanceSquared);
-                currentEdgeDirectionX = candidateX * inverseBestDistance;
-                currentEdgeDirectionY = candidateY * inverseBestDistance;
-            }
-            for (int i = 1; i < facePoints.Count; ++i)
-            {
-                startToCandidate = facePoints[i] - start;
-                candidateY = Vector2.Dot(startToCandidate, previousEdgeDirection);
-                candidateX = Vector2.Dot(startToCandidate, xDirection);
-                //Any points that are collinear *with the previous edge* cannot be a part of the current edge without numerical failure; the previous edge should include them.
-                if (candidateX <= 0)
-                {
-                    if (candidateY > 0)
-                        Console.WriteLine("Violation of expectation");
-                    //Debug.Assert(candidateY <= 0,
-                    //    "Previous edge should include any collinear points, so this edge should not see any further collinear points beyond its start." +
-                    //    "If you run into this, it implies you've found some content that violates the convex huller's assumptions, and I'd appreciate it if you reported it on github.com/bepu/bepuphysics2/issues!" +
-                    //    "A .obj or other simple demos-compatible reproduction case would help me fix it.");
-                    continue;
-                }
-                //We accept a candidate if it is either:
-                //1) collinear with the previous best by the plane epsilon test BUT is more distant, or
-                //2) has a greater angle than the previous best.
-                var planeOffset = -candidateX * currentEdgeDirectionY + candidateY * currentEdgeDirectionX;
-                if (MathF.Abs(planeOffset) < planeEpsilon)
-                {
-                    //The candidate is collinear. Only accept it if it's further away.
-                    if (candidateX * candidateX + candidateY * candidateY <= bestDistanceSquared)
-                    {
-                        continue;
-                    }
-                }
-                else if (candidateY < best * candidateX) //candidateY / candidateX < best, given candidate X > 0; just avoiding a division for bulk testing.
-                {
-                    //Candidate is a smaller angle. Rejected.
-                    continue;
-                }
-                best = candidateY / candidateX;
-                bestDistanceSquared = candidateX * candidateX + candidateY * candidateY;
-                var inverseBestDistance = 1f / MathF.Sqrt(bestDistanceSquared);
-                currentEdgeDirectionX = candidateX * inverseBestDistance;
-                currentEdgeDirectionY = candidateY * inverseBestDistance;
-                bestIndex = i;
-            }
-            //Note that this can return -1 if all points were on top of the start.
-            return bestIndex;
         }
 
         static void ReduceFace(ref QuickList<int> faceVertexIndices, Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<int> allowVertex, ref QuickList<int> reducedIndices)
@@ -535,17 +406,12 @@ namespace BepuPhysics.Collidables
             reducedIndices.AllocateUnsafely() = faceVertexIndices[initialIndex];
 
             var previousEndIndex = initialIndex;
-            Console.WriteLine("Entering reduce face loop.");
-            bool reductionTerminatedSuccessfully = false;
             for (int i = 0; i < facePoints.Count; ++i)
             {
-                Console.WriteLine($"Reduce face loop iteration start. Previous end index: {previousEndIndex}, previous edge dir: {previousEdgeDirection}.");
-                Console.WriteLine($"World edge dir: {previousEdgeDirection.X * basisX + previousEdgeDirection.Y * basisY}");
-                var nextIndex = FindNextIndexForFaceHull2(facePoints[previousEndIndex], previousEdgeDirection, planeEpsilon, ref facePoints);
+                var nextIndex = FindNextIndexForFaceHull(facePoints[previousEndIndex], previousEdgeDirection, planeEpsilon, ref facePoints);
                 //This can return -1 in the event of a completely degenerate face.
                 if (nextIndex == -1 || reducedIndices.Contains(faceVertexIndices[nextIndex]))
                 {
-                    reductionTerminatedSuccessfully = true;
                     if (nextIndex >= 0)
                     {
                         //Wrapped around to a repeated index.
@@ -567,11 +433,6 @@ namespace BepuPhysics.Collidables
                 previousEdgeDirection = Vector2.Normalize(facePoints[nextIndex] - facePoints[previousEndIndex]);
                 previousEndIndex = nextIndex;
             }
-            if (!reductionTerminatedSuccessfully)
-            {
-                throw new Exception("Hull face reduction failed to terminate. This should not happen; please report it on github.com/bepu/bepuphysics2/issues, ideally with a point set that triggered this exception!");
-            }
-            Console.WriteLine("finished reduce face loop.");
 
             //Ignore any vertices which were not on the outer boundary of the face.
             for (int i = 0; i < faceVertexIndices.Count; ++i)
@@ -1006,7 +867,6 @@ namespace BepuPhysics.Collidables
                 facesNeedingMerge.Count = 0;
                 while (true)
                 {
-                    Console.WriteLine($"Face count: {faces.Count}");
                     //This implementation bites the bullet pretty hard on numerical problems. They most frequently arise from near coplanar vertices.
                     //It's possible that two iterations see different subsets of 'coplanar' vertices, either causing two faces with near equal normal or
                     //even causing an edge to have more than two faces associated with it.
