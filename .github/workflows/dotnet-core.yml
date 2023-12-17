@@ -2,9 +2,15 @@ name: .NET Core
 
 on:
   push:
-    branches: [ master ]
+    paths-ignore:
+      - '**/*.md'
+    branches:
+      - main
   pull_request:
-    branches: [ master ]
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
 
 jobs:
   build:
@@ -13,20 +19,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Install dependencies
+    - name: Setup .NET 7
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.x
+    - name: build
       run: |
-        dotnet restore DemoContentBuilder
-        dotnet restore Demos
-    - name: Build
-      run: |
-        dotnet build DemoContentBuilder --configuration Release --no-restore /p:Platform=x64
-        dotnet build Demos --configuration Release --no-restore
-    - name: Test
-      run: dotnet test DemoTests -c Release --verbosity normal
-    - name: Publish
-      run: |
-        dotnet nuget add source "https://nuget.pkg.github.com/bepu/index.json" --name "github" --username "rossnordby" --password "${{secrets.GITHUB_TOKEN}}"
-        dotnet pack "BepuPhysics" -c Release
-        dotnet pack "BepuUtilities" -c Release
-        dotnet nuget push "**/*.nupkg" -s "github" -k "${{secrets.GITHUB_TOKEN}}" --skip-duplicate
-        dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k "${{secrets.NUGET_KEY}}" --skip-duplicate
+        dotnet build "BepuPhysics" -c ReleaseStrip
+        dotnet build "BepuUtilities" -c ReleaseStrip

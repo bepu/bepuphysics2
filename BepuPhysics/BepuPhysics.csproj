@@ -1,14 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>YellowDogMan.BepuPhysics</PackageId>
     <Version>2.4.0.2-frooxengine</Version>
     <Company>Bepu Entertainment LLC</Company>
-    <Authors>Ross Nordby</Authors>
-    <Description>Speedy real time physics simulation library.</Description>
+    <Authors>Ross Nordby, Yellow Dog Man Studios s.r.o.</Authors>
+    <Description>Fork of Speedy real time physics simulation library.</Description>
     <Copyright>© Bepu Entertainment LLC</Copyright>
-    <PackageProjectUrl>https://github.com/bepu/bepuphysics2</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/Yellow-Dog-Man/bepuphysics2</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/bepu/bepuphysics2</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Yellow-Dog-Man/bepuphysics2</RepositoryUrl>
     <PackageIcon>bepuphysicslogo256.png</PackageIcon>
     <Configurations>Debug;Release;ReleaseStrip;ReleaseStripNoProfiling</Configurations>
     <LangVersion>latest</LangVersion>

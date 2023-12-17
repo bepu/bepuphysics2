@@ -1,0 +1,28 @@
+name: Publish Library
+
+# When a release is published
+on:
+  release:
+    types: [published]
+jobs:
+  publish:
+    # 2019, has our .NET needs, latest does not
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ github.event.release.tag_name }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Get version
+      run: echo "Building with ${{ env.VERSION }}"
+    - name: Setup .NET 7
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.x
+    - name: Install dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build BepuPhysics --configuration ReleaseStrip --no-restore -p:Version=${{ env.VERSION }}
+    - name: Pack
+      run: dotnet pack BepuPhysics --output nupkgs --configuration ReleaseStrip -p:Version=${{ env.VERSION }}
+    - name: Nuget Publish
+      run: dotnet nuget push nupkgs\*.nupkg -k ${{ secrets.NUGET_TOKEN }} -s https://api.nuget.org/v3/index.json
