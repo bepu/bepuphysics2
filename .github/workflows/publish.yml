@@ -18,9 +18,9 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '2.0'
-    - name: Build
-      run: dotnet build BepuPhysics --configuration ReleaseStrip -p:Version=${{ env.VERSION }}
-    - name: Pack
+    - name: Build & Pack BEPU Physics
       run: dotnet pack BepuPhysics --output nupkgs --configuration ReleaseStrip -p:Version=${{ env.VERSION }}
+    - name: Build & Pack BEPU Utilities
+      run: dotnet pack BepuUtilities --output nupkgs --configuration ReleaseStrip -p:Version=${{ env.VERSION }}
     - name: Nuget Publish
       run: dotnet nuget push nupkgs\*.nupkg -k ${{ secrets.NUGET_TOKEN }} -s https://api.nuget.org/v3/index.json
