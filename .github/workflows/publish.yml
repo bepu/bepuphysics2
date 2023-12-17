@@ -7,7 +7,7 @@ on:
 jobs:
   publish:
     # 2019, has our .NET needs, latest does not
-    runs-on: windows-latest
+    runs-on: windows-2019
     env:
       VERSION: ${{ github.event.release.tag_name }}
     steps:
