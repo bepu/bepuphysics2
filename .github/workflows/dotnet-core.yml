@@ -5,10 +5,10 @@ on:
     paths-ignore:
       - '**/*.md'
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
     paths-ignore:
       - '**/*.md'
 
