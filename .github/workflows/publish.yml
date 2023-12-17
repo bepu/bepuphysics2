@@ -18,8 +18,6 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '2.0'
-    - name: Install dependencies
-      run: dotnet restore
     - name: Build
       run: dotnet build BepuPhysics --configuration ReleaseStrip --no-restore -p:Version=${{ env.VERSION }}
     - name: Pack
