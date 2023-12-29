@@ -63,6 +63,7 @@ namespace Demos.Demos.Sponsors
             sponsors0.Add("R. W.");
             sponsors0.Add("AshleighAdams");
             sponsors0.Add("LoicBaumann");
+            sponsors0.Add("Slayuh9");
 
             //These supporters are those who gave 10 dollars a month (or historical backers of roughly equivalent or greater total contribution).
             //They get a poorly drawn animal!
