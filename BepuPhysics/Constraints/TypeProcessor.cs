@@ -1282,10 +1282,22 @@ namespace BepuPhysics.Constraints
             }
         }
 
+        /// <summary>
+        /// Takes body indices that could include metadata like kinematic flags in their upper bits and returns indices
+        /// with those flags stripped and with any lanes masked out by the integrationMask set to -1.
+        /// </summary>
+        /// <param name="encodedBodyIndices">Encoded body indices to decode.</param>
+        /// <param name="integrationMask">Mask to apply to the body indices.</param>
+        /// <returns>Body indices suitable for sending to to the IntegrateVelocity callback.</returns>
+        static Vector<int> DecodeBodyIndices(Vector<int> encodedBodyIndices, Vector<int> integrationMask)
+        {
+            return (encodedBodyIndices & new Vector<int>(Bodies.BodyReferenceMask)) | Vector.OnesComplement(integrationMask);
+        }
+
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TAccessFilter, TShouldIntegratePoses>(
             Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref Buffer<IndexSet> integrationFlags, int bodyIndexInConstraint, float dt, int workerIndex, int bundleIndex,
-            ref Vector<int> bodyIndices, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
+            ref Vector<int> encodedBodyIndices, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
             where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode
             where TAccessFilter : unmanaged, IBodyAccessFilter
@@ -1297,15 +1309,16 @@ namespace BepuPhysics.Constraints
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                 {
                     //Avoid slots that are empty (-1) or slots that are kinematic. Both can be tested by checking the unsigned magnitude against the flag lower limit.
-                    var integrationMask = Vector.AsVectorInt32(Vector.LessThan(Vector.AsVectorUInt32(bodyIndices), new Vector<uint>(Bodies.DynamicLimit)));
-                    bodies.GatherState<AccessAll>(bodyIndices, false, out position, out orientation, out velocity, out var localInertia);
-                    IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, localInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-                    bodies.ScatterPose(ref position, ref orientation, bodyIndices, integrationMask);
-                    bodies.ScatterInertia(ref inertia, bodyIndices, integrationMask);
+                    var integrationMask = Vector.AsVectorInt32(Vector.LessThan(Vector.AsVectorUInt32(encodedBodyIndices), new Vector<uint>(Bodies.DynamicLimit)));
+                    bodies.GatherState<AccessAll>(encodedBodyIndices, false, out position, out orientation, out velocity, out var localInertia);
+                    var decodedBodyIndices = DecodeBodyIndices(encodedBodyIndices, integrationMask);
+                    IntegratePoseAndVelocity(ref integratorCallbacks, ref decodedBodyIndices, localInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
+                    bodies.ScatterPose(ref position, ref orientation, encodedBodyIndices, integrationMask);
+                    bodies.ScatterInertia(ref inertia, encodedBodyIndices, integrationMask);
                 }
                 else if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
-                    bodies.GatherState<TAccessFilter>(bodyIndices, true, out position, out orientation, out velocity, out inertia);
+                    bodies.GatherState<TAccessFilter>(encodedBodyIndices, true, out position, out orientation, out velocity, out inertia);
                 }
                 else
                 {
@@ -1317,15 +1330,16 @@ namespace BepuPhysics.Constraints
                     //This avoids complexity around later velocity scattering- we don't have to condition on whether the bundle is integrating.
                     //In practice, since the access filters are only reducing instruction counts and not memory bandwidth,
                     //the slightly increased unnecessary gathering is no worse than the more complex scatter condition in performance, and remains simpler.
-                    bodies.GatherState<AccessAll>(bodyIndices, bundleIntegrationMode == BundleIntegrationMode.None, out position, out orientation, out velocity, out var gatheredInertia);
+                    bodies.GatherState<AccessAll>(encodedBodyIndices, bundleIntegrationMode == BundleIntegrationMode.None, out position, out orientation, out velocity, out var gatheredInertia);
                     if (bundleIntegrationMode != BundleIntegrationMode.None)
                     {
                         //Note that if we take this codepath, the integration routine will reconstruct the world inertias from local inertia given the current pose.
                         //The changes to pose and velocity for integration inactive lanes will be masked out, so it'll just be identical to the world inertia if we had gathered it.
                         //Given that we're running the instructions in a bundle to build it, there's no reason to go out of our way to gather the world inertia.
-                        IntegratePoseAndVelocity(ref integratorCallbacks, ref bodyIndices, gatheredInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
-                        bodies.ScatterPose(ref position, ref orientation, bodyIndices, integrationMask);
-                        bodies.ScatterInertia(ref inertia, bodyIndices, integrationMask);
+                        var decodedBodyIndices = DecodeBodyIndices(encodedBodyIndices, integrationMask);
+                        IntegratePoseAndVelocity(ref integratorCallbacks, ref decodedBodyIndices, gatheredInertia, dt, integrationMask, ref position, ref orientation, ref velocity, workerIndex, out inertia);
+                        bodies.ScatterPose(ref position, ref orientation, encodedBodyIndices, integrationMask);
+                        bodies.ScatterInertia(ref inertia, encodedBodyIndices, integrationMask);
                     }
                     else
                     {
@@ -1346,24 +1360,27 @@ namespace BepuPhysics.Constraints
                 if (typeof(TBatchIntegrationMode) == typeof(BatchShouldAlwaysIntegrate))
                 {
                     //Avoid slots that are empty (-1) or slots that are kinematic. Both can be tested by checking the unsigned magnitude against the flag lower limit.
-                    var integrationMask = Vector.AsVectorInt32(Vector.LessThan(Vector.AsVectorUInt32(bodyIndices), new Vector<uint>(Bodies.DynamicLimit)));
-                    bodies.GatherState<AccessAll>(bodyIndices, false, out position, out orientation, out velocity, out var localInertia);
-                    IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(ref integratorCallbacks, ref bodyIndices, localInertia, dt, integrationMask, position, orientation, ref velocity, workerIndex, out inertia);
-                    bodies.ScatterInertia(ref inertia, bodyIndices, integrationMask);
+                    var integrationMask = Vector.AsVectorInt32(Vector.LessThan(Vector.AsVectorUInt32(encodedBodyIndices), new Vector<uint>(Bodies.DynamicLimit)));
+                    bodies.GatherState<AccessAll>(encodedBodyIndices, false, out position, out orientation, out velocity, out var localInertia);
+                    var decodedBodyIndices = DecodeBodyIndices(encodedBodyIndices, integrationMask);
+                    IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(ref integratorCallbacks, ref decodedBodyIndices, localInertia, dt, integrationMask, position, orientation, ref velocity, workerIndex, out inertia);
+                    bodies.ScatterInertia(ref inertia, encodedBodyIndices, integrationMask);
+
                 }
                 else if (typeof(TBatchIntegrationMode) == typeof(BatchShouldNeverIntegrate))
                 {
-                    bodies.GatherState<TAccessFilter>(bodyIndices, true, out position, out orientation, out velocity, out inertia);
+                    bodies.GatherState<TAccessFilter>(encodedBodyIndices, true, out position, out orientation, out velocity, out inertia);
                 }
                 else
                 {
                     Debug.Assert(typeof(TBatchIntegrationMode) == typeof(BatchShouldConditionallyIntegrate));
                     var bundleIntegrationMode = BundleShouldIntegrate(bundleIndex, integrationFlags[bodyIndexInConstraint], out var integrationMask);
-                    bodies.GatherState<AccessAll>(bodyIndices, bundleIntegrationMode == BundleIntegrationMode.None, out position, out orientation, out velocity, out var gatheredInertia);
+                    bodies.GatherState<AccessAll>(encodedBodyIndices, bundleIntegrationMode == BundleIntegrationMode.None, out position, out orientation, out velocity, out var gatheredInertia);
                     if (bundleIntegrationMode != BundleIntegrationMode.None)
                     {
-                        IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(ref integratorCallbacks, ref bodyIndices, gatheredInertia, dt, integrationMask, position, orientation, ref velocity, workerIndex, out inertia);
-                        bodies.ScatterInertia(ref inertia, bodyIndices, integrationMask);
+                        var decodedBodyIndices = DecodeBodyIndices(encodedBodyIndices, integrationMask);
+                        IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(ref integratorCallbacks, ref decodedBodyIndices, gatheredInertia, dt, integrationMask, position, orientation, ref velocity, workerIndex, out inertia);
+                        bodies.ScatterInertia(ref inertia, encodedBodyIndices, integrationMask);
                     }
                     else
                     {
