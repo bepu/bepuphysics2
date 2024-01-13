@@ -26,7 +26,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             overlaps = new CompoundPairOverlaps(pool, pairCount, totalCompoundChildCount);
             ref var pairsToTest = ref overlaps.pairQueries;
-            var subpairData = stackalloc SubpairData[totalCompoundChildCount];
+            //Stack overflows are very possible with larger compounds! Guard against it.
+            Buffer<SubpairData> subpairData;
+            const int stackallocThreshold = 1024;
+            if (totalCompoundChildCount <= stackallocThreshold)
+            {
+                var memory = stackalloc SubpairData[totalCompoundChildCount];
+                subpairData = new Buffer<SubpairData>(memory, totalCompoundChildCount);
+            }
+            else
+            {
+                subpairData = new Buffer<SubpairData>(totalCompoundChildCount, pool);
+            }
             int nextSubpairIndex = 0;
             for (int i = 0; i < pairCount; ++i)
             {
@@ -114,6 +125,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Debug.Assert(totalCompoundChildCount > 0);
             Unsafe.AsRef<TCompoundB>(pairsToTest[0].Container).FindLocalOverlaps<CompoundPairOverlaps, ChildOverlapsCollection>(ref pairsToTest, pool, shapes, ref overlaps);
 
+            if (subpairData.Length > stackallocThreshold)
+                subpairData.Dispose(pool);
         }
 
     }
