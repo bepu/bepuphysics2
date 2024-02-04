@@ -135,10 +135,10 @@ namespace Demos.Demos.Characters
                 pose.Orientation = Quaternion.Identity;
                 return pose;
             };
-            var platormShapeIndex = Simulation.Shapes.Add(new Box(5, 1, 5));
+            var platformShapeIndex = Simulation.Shapes.Add(new Box(5, 1, 5));
             for (int i = 0; i < movingPlatforms.Length; ++i)
             {
-                movingPlatforms[i] = new MovingPlatform(platormShapeIndex, i * 3559, 1f / 60f, Simulation, poseCreator);
+                movingPlatforms[i] = new MovingPlatform(platformShapeIndex, i * 3559, 1f / 60f, Simulation, poseCreator);
             }
             var box = new Box(4, 1, 4);
             var boxShapeIndex = Simulation.Shapes.Add(box);
