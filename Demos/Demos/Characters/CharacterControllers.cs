@@ -85,7 +85,7 @@ namespace Demos.Demos.Characters
     public unsafe class CharacterControllers : IDisposable
     {
         /// <summary>
-        /// Gets the simulation to which this set of chracters belongs.
+        /// Gets the simulation to which this set of characters belongs.
         /// </summary>
         public Simulation Simulation { get; private set; }
         BufferPool pool;
@@ -99,7 +99,7 @@ namespace Demos.Demos.Characters
         public int CharacterCount { get { return characters.Count; } }
 
         /// <summary>
-        /// Creates a character controller systme.
+        /// Creates a character controller system.
         /// </summary>
         /// <param name="pool">Pool to allocate resources from.</param>
         /// <param name="initialCharacterCapacity">Number of characters to initially allocate space for.</param>
