@@ -205,3 +205,6 @@ ModelManifest.xml
 
 # Don't ignore content files that happen to use the .obj extension.
 !Demos/Content/*.obj
+
+# JetBrains Rider
+.idea/
