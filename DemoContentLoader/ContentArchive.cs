@@ -121,7 +121,7 @@ namespace DemoContentLoader
         /// <param name="stream">Output stream to save to.</param>
         public static void Save(Dictionary<string, IContent> pathsToContent, Stream stream)
         {
-            using (var writer = new BinaryWriter(stream))
+            using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
             {
                 writer.Write(pathsToContent.Count);
                 foreach (var pair in pathsToContent)
