@@ -73,18 +73,18 @@ public class BuoyancyDemo : Demo
 
     private void CreateBuoyantCylinder(Vector3 pos, Quaternion orientation, float radius, float length, float mass)
     {
-        var box = new Cylinder(radius, length);
-        var boxInertia = box.ComputeInertia(mass);
+        var cylinder = new Cylinder(radius, length);
+        var boxInertia = cylinder.ComputeInertia(mass);
         var boxHandle = Simulation.Bodies.Add(BodyDescription.CreateDynamic(
             new RigidPose(pos, orientation), boxInertia,
-            Simulation.Shapes.Add(box), 0.01f));
+            Simulation.Shapes.Add(cylinder), 0.01f));
         var gridElementSize = MathF.Min(radius * 2, length) / 2;
 
         BuoyantBodies.Add(new BuoyantBody
         {
             GridElementSize = gridElementSize,
             Handle = boxHandle,
-            Shape = box
+            Shape = cylinder
         });
     }
 
