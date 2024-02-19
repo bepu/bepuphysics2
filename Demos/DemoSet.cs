@@ -72,6 +72,7 @@ namespace Demos
             AddOption<CustomVoxelCollidableDemo>();
             AddOption<BlockChainDemo>();
             AddOption<SponsorDemo>();
+            AddOption<BuoyancyDemo>();
         }
 
         public int Count { get { return options.Count; } }
