@@ -21,10 +21,10 @@ public class BuoyancyDemo : Demo
     {
         camera.Position = new Vector3(0, 30, 100);
 
-        var gravityY = 10f;
-        BuoyancyConstant = WaterDensity * gravityY;
+        var gravity = new Vector3(0, -10f, 0);
+        BuoyancyConstant = WaterDensity * gravity.Y;
         Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), 
-            new DemoPoseIntegratorCallbacks(new Vector3(0, -gravityY, 0)), new SolveDescription(8, 1));
+            new DemoPoseIntegratorCallbacks(gravity), new SolveDescription(8, 1));
 
         BuoyantBodies = new List<BuoyantBody>();
 
