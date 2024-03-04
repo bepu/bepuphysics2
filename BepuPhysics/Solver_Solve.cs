@@ -1130,7 +1130,8 @@ namespace BepuPhysics
                 pool.Take((bodies.HandlePool.HighestPossiblyClaimedId + 64) / 64, out mergedConstrainedBodyHandles.Flags);
                 var copyLength = Math.Min(mergedConstrainedBodyHandles.Flags.Length, batchReferencedHandles[0].Flags.Length);
                 batchReferencedHandles[0].Flags.CopyTo(0, mergedConstrainedBodyHandles.Flags, 0, copyLength);
-                batchReferencedHandles[0].Flags.Clear(copyLength, batchReferencedHandles[0].Flags.Length - copyLength);
+                mergedConstrainedBodyHandles.Flags.Clear(copyLength, mergedConstrainedBodyHandles.Flags.Length - copyLength);
+
 
                 //Yup, we're just leaving the first slot unallocated to avoid having to offset indices all over the place. Slight wonk, but not a big deal.
                 bodiesFirstObservedInBatches[0] = default;
