@@ -1153,52 +1153,59 @@ namespace BepuPhysics
                     ref var firstObservedInBatch = ref bodiesFirstObservedInBatches[batchIndex];
                     var flagBundleCount = Math.Min(mergedConstrainedBodyHandles.Flags.Length, batchHandles.Flags.Length);
 
-                    if (Avx2.IsSupported)
+                    var scalarLoopStartIndex = 0;
+                    ulong horizontalMerge = 0;
+                    if (Vector512.IsHardwareAccelerated)
                     {
-                        var avxBundleCount = flagBundleCount / 4;
-                        var horizontalAvxMerge = Vector256<ulong>.Zero;
-                        for (int avxBundleIndex = 0; avxBundleIndex < avxBundleCount; ++avxBundleIndex)
+                        var bundleCount512 = flagBundleCount / 8;
+                        var horizontal512Merge = Vector512<ulong>.Zero;
+                        for (int bundleIndex256 = 0; bundleIndex256 < bundleCount512; ++bundleIndex256)
                         {
                             //These will *almost* always be aligned, but guaranteeing it is not worth the complexity.
-                            var mergeBundle = Avx2.LoadVector256((ulong*)((Vector256<ulong>*)mergedConstrainedBodyHandles.Flags.Memory + avxBundleIndex));
-                            var batchBundle = Avx2.LoadVector256((ulong*)((Vector256<ulong>*)batchHandles.Flags.Memory + avxBundleIndex));
-                            Avx.Store((ulong*)((Vector256<ulong>*)mergedConstrainedBodyHandles.Flags.Memory + avxBundleIndex), Avx2.Or(mergeBundle, batchBundle));
+                            var mergeBundle = Vector512.Load((ulong*)((Vector512<ulong>*)mergedConstrainedBodyHandles.Flags.Memory + bundleIndex256));
+                            var batchBundle = Vector512.Load((ulong*)((Vector512<ulong>*)batchHandles.Flags.Memory + bundleIndex256));
+                            Vector512.BitwiseOr(mergeBundle, batchBundle).Store((ulong*)((Vector512<ulong>*)mergedConstrainedBodyHandles.Flags.Memory + bundleIndex256));
                             //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
-                            var firstObservedBundle = Avx2.AndNot(mergeBundle, batchBundle);
-                            horizontalAvxMerge = Avx2.Or(firstObservedBundle, horizontalAvxMerge);
-                            Avx.Store((ulong*)((Vector256<ulong>*)firstObservedInBatch.Flags.Memory + avxBundleIndex), firstObservedBundle);
+                            var firstObservedBundle = Vector512.AndNot(batchBundle, mergeBundle);
+                            horizontal512Merge = Vector512.BitwiseOr(firstObservedBundle, horizontal512Merge);
+                            firstObservedBundle.Store((ulong*)((Vector512<ulong>*)firstObservedInBatch.Flags.Memory + bundleIndex256));
                         }
-                        var notEqual = Avx2.Xor(Avx2.CompareEqual(horizontalAvxMerge, Vector256<ulong>.Zero), Vector256<ulong>.AllBitsSet);
-                        ulong horizontalMerge = (ulong)Avx2.MoveMask(notEqual.AsDouble());
+                        var notEqual = Vector512.Xor(Vector512.Equals(horizontal512Merge, Vector512<ulong>.Zero), Vector512<ulong>.AllBitsSet);
+                        horizontalMerge = Vector512.ExtractMostSignificantBits(notEqual);
 
-                        //Cleanup loop.
-                        for (int flagBundleIndex = avxBundleCount * 4; flagBundleIndex < flagBundleCount; ++flagBundleIndex)
-                        {
-                            var mergeBundle = mergedConstrainedBodyHandles.Flags[flagBundleIndex];
-                            var batchBundle = batchHandles.Flags[flagBundleIndex];
-                            mergedConstrainedBodyHandles.Flags[flagBundleIndex] = mergeBundle | batchBundle;
-                            //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
-                            var firstObservedBundle = ~mergeBundle & batchBundle;
-                            horizontalMerge |= firstObservedBundle;
-                            firstObservedInBatch.Flags[flagBundleIndex] = firstObservedBundle;
-                        }
-                        batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
+                        scalarLoopStartIndex = bundleCount512 * 8;
                     }
-                    else
+                    else if (Vector256.IsHardwareAccelerated)
                     {
-                        ulong horizontalMerge = 0;
-                        for (int flagBundleIndex = 0; flagBundleIndex < flagBundleCount; ++flagBundleIndex)
+                        var bundleCount256 = flagBundleCount / 4;
+                        var horizontal256Merge = Vector256<ulong>.Zero;
+                        for (int bundleIndex256 = 0; bundleIndex256 < bundleCount256; ++bundleIndex256)
                         {
-                            var mergeBundle = mergedConstrainedBodyHandles.Flags[flagBundleIndex];
-                            var batchBundle = batchHandles.Flags[flagBundleIndex];
-                            mergedConstrainedBodyHandles.Flags[flagBundleIndex] = mergeBundle | batchBundle;
+                            //These will *almost* always be aligned, but guaranteeing it is not worth the complexity.
+                            var mergeBundle = Vector256.Load((ulong*)((Vector256<ulong>*)mergedConstrainedBodyHandles.Flags.Memory + bundleIndex256));
+                            var batchBundle = Vector256.Load((ulong*)((Vector256<ulong>*)batchHandles.Flags.Memory + bundleIndex256));
+                            Vector256.BitwiseOr(mergeBundle, batchBundle).Store((ulong*)((Vector256<ulong>*)mergedConstrainedBodyHandles.Flags.Memory + bundleIndex256));
                             //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
-                            var firstObservedBundle = ~mergeBundle & batchBundle;
-                            horizontalMerge |= firstObservedBundle;
-                            firstObservedInBatch.Flags[flagBundleIndex] = firstObservedBundle;
+                            var firstObservedBundle = Vector256.AndNot(batchBundle, mergeBundle);
+                            horizontal256Merge = Vector256.BitwiseOr(firstObservedBundle, horizontal256Merge);
+                            firstObservedBundle.Store((ulong*)((Vector256<ulong>*)firstObservedInBatch.Flags.Memory + bundleIndex256));
                         }
-                        batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
+                        var notEqual = Vector256.Xor(Vector256.Equals(horizontal256Merge, Vector256<ulong>.Zero), Vector256<ulong>.AllBitsSet);
+                        horizontalMerge = Vector256.ExtractMostSignificantBits(notEqual);
+
+                        scalarLoopStartIndex = bundleCount256 * 4;
                     }
+                    for (int flagBundleIndex = scalarLoopStartIndex; flagBundleIndex < flagBundleCount; ++flagBundleIndex)
+                    {
+                        var mergeBundle = mergedConstrainedBodyHandles.Flags[flagBundleIndex];
+                        var batchBundle = batchHandles.Flags[flagBundleIndex];
+                        mergedConstrainedBodyHandles.Flags[flagBundleIndex] = mergeBundle | batchBundle;
+                        //If this batch contains a body, and the merged set does not, then it's the first batch that sees a body and it will have integration responsibility.
+                        var firstObservedBundle = ~mergeBundle & batchBundle;
+                        horizontalMerge |= firstObservedBundle;
+                        firstObservedInBatch.Flags[flagBundleIndex] = firstObservedBundle;
+                    }
+                    batchHasAnyIntegrationResponsibilities[batchIndex] = horizontalMerge != 0;
                 }
 
                 //var start = Stopwatch.GetTimestamp();
