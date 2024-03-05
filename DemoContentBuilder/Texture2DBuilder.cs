@@ -17,12 +17,15 @@ namespace DemoContentBuilder
             var content = new Texture2DContent(image.Width, image.Height, 1, sizeof(Rgba32));
             var data = (Rgba32*)content.Pin();
             //Copy the image data into the Texture2DContent.
-            for (int rowIndex = 0; rowIndex < image.Height; ++rowIndex)
+            image.ProcessPixelRows(accessor =>
             {
-                var sourceRow = image.GetPixelRowSpan(rowIndex);
-                var targetRow = data + content.GetRowOffsetForMip0(rowIndex);
-                Unsafe.CopyBlockUnaligned(ref *(byte*)targetRow, ref Unsafe.As<Rgba32, byte>(ref sourceRow[0]), (uint)(sizeof(Rgba32) * image.Width));
-            }
+                for (int rowIndex = 0; rowIndex < image.Height; ++rowIndex)
+                {
+                    var sourceRow = accessor.GetRowSpan(rowIndex);
+                    var targetRow = data + content.GetRowOffsetForMip0(rowIndex);
+                    Unsafe.CopyBlockUnaligned(ref *(byte*)targetRow, ref Unsafe.As<Rgba32, byte>(ref sourceRow[0]), (uint)(sizeof(Rgba32) * image.Width));
+                }
+            });
             content.Unpin();
             return content;
         }
