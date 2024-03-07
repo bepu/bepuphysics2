@@ -245,13 +245,26 @@ namespace BepuPhysics.Trees
         {
             return Vector128<int>.AllBitsSet - indices;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static ref NodeChild GetLeafChild(ref Tree tree, uint encodedLeafParentIndex)
+
+        /// <summary>
+        /// Gets a reference to the node child representing the leaf within the tree.
+        /// </summary>
+        /// <param name="leaf">Leaf to look up in the tree.</param>
+        /// <returns>A reference to the node child within the tree.</returns>
+        public readonly ref NodeChild GetNodeChildForLeaf(Leaf leaf)
         {
-            var parentNodeIndex = encodedLeafParentIndex & 0x7FFF_FFFF;
-            var leafIsChildB = encodedLeafParentIndex > 0x7FFF_FFFF;
-            ref var parent = ref tree.Nodes[parentNodeIndex];
-            return ref leafIsChildB ? ref parent.B : ref parent.A;
+            Debug.Assert(leaf.ChildIndex == 0 || leaf.ChildIndex == 1);
+            return ref Unsafe.Add(ref Nodes[leaf.NodeIndex].A, leaf.ChildIndex);
+        }
+
+        /// <summary>
+        /// Gets a reference to the node child representing the leaf within the tree.
+        /// </summary>
+        /// <param name="leafIndex">Index of the leaf to look up in the tree.</param>
+        /// <returns>A reference to the node child within the tree.</returns>
+        public readonly ref NodeChild GetNodeChildForLeaf(int leafIndex)
+        {
+            return ref GetNodeChildForLeaf(Leaves[leafIndex]);
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
