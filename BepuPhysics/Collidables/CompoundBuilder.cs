@@ -69,6 +69,18 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
+        /// Adds a new shape to the accumulator.
+        /// </summary>
+        /// <param name="shape">Index of the shape to add.</param>
+        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
+        /// <param name="childInertia">Inverse inertia tensor and inverse mass of the shape being added in the child's local space. The inverse mass is used as the inverse weight for building the compound.</param>
+        public void Add(TypedIndex shape, in RigidPose localPose, in BodyInertia childInertia)
+        {
+            Debug.Assert(childInertia.InverseMass > 0, "Child masses should be finite.");
+            Add(shape, localPose, childInertia.InverseInertiaTensor, 1f / childInertia.InverseMass);
+        }
+
+        /// <summary>
         /// Adds a new shape to the accumulator, assuming it has infinite inertia.
         /// </summary>
         /// <param name="shape">Index of the shape to add.</param>
