@@ -31,6 +31,18 @@ public struct CompoundChild
     public TypedIndex ShapeIndex;
 
     /// <summary>
+    /// Creates a compound child.
+    /// </summary>
+    /// <param name="pose">Pose of the compound child in the local space of the parent shape.</param>
+    /// <param name="shapeIndex">Index of the shape used by the child.</param>
+    public CompoundChild(in RigidPose pose, TypedIndex shapeIndex)
+    {
+        LocalOrientation = pose.Orientation;
+        LocalPosition = pose.Position;
+        ShapeIndex = shapeIndex;
+    }
+
+    /// <summary>
     /// Returns a reference to the memory of the <see cref="CompoundChild"/> as a <see cref="RigidPose"/>.
     /// </summary>
     /// <returns>Reference to this compound child as a pose.</returns>
