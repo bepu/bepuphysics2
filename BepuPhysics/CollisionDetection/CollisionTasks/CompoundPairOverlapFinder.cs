@@ -87,7 +87,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.WriteFirst(subpair.Pair->AngularVelocityB, ref GatherScatter.GetOffsetInstance(ref angularVelocityB, j));
                     Unsafe.Add(ref Unsafe.As<Vector<float>, float>(ref maximumAllowedExpansion), j) = subpair.Pair->MaximumExpansion;
 
-                    RigidPoseWide.WriteFirst(CompoundChild.AsPose(ref *subpair.Child), ref GatherScatter.GetOffsetInstance(ref localPosesA, j));
+                    RigidPoseWide.WriteFirst((*subpair.Child).AsPose(), ref GatherScatter.GetOffsetInstance(ref localPosesA, j));
                 }
 
                 QuaternionWide.Conjugate(orientationB, out var toLocalB);
