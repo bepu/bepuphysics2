@@ -327,7 +327,15 @@ namespace BepuPhysics.Collidables
         {
             var bodyInertia = CompoundBuilder.ComputeInertia(Children, childMasses, shapes, out centerOfMass);
             //Recentering moves the children around, so the tree needs to be updated.
-            Tree.Refit();
+            //Scanning through and explicitly shifting the nodes is slightly more efficient than updating leaf bounds and refitting.
+            for (int i = 0; i < Tree.NodeCount; ++i)
+            {
+                ref var node = ref Tree.Nodes[i];
+                node.A.Min -= centerOfMass;
+                node.A.Max -= centerOfMass;
+                node.B.Min -= centerOfMass;
+                node.B.Max -= centerOfMass;
+            }
             return bodyInertia;
         }
 
