@@ -333,7 +333,7 @@ namespace Demos.Demos
         {
             ref var compoundA = ref Unsafe.AsRef<TCompoundA>(pair.A);
             ref var compoundChildA = ref compoundA.GetChild(childIndexA);
-            Compound.GetRotatedChildPose(CompoundChild.AsPose(ref compoundChildA), pair.OrientationA, out childPoseA);
+            Compound.GetRotatedChildPose(compoundChildA.AsPose(), pair.OrientationA, out childPoseA);
             childTypeA = compoundChildA.ShapeIndex.Type;
             collisionBatcher.Shapes[childTypeA].GetShapeData(compoundChildA.ShapeIndex.Index, out childShapeDataA, out _);
         }
