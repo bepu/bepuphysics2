@@ -1,13 +1,12 @@
 ﻿using BepuPhysics;
 
-namespace Demos.Demos.Cars
+namespace Demos.Demos.Cars;
+
+struct WheelHandles
 {
-    struct WheelHandles
-    {
-        public BodyHandle Wheel;
-        public ConstraintHandle SuspensionSpring;
-        public ConstraintHandle SuspensionTrack;
-        public ConstraintHandle Hinge;
-        public ConstraintHandle Motor;
-    }
+    public BodyHandle Wheel;
+    public ConstraintHandle SuspensionSpring;
+    public ConstraintHandle SuspensionTrack;
+    public ConstraintHandle Hinge;
+    public ConstraintHandle Motor;
 }

@@ -4,66 +4,65 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 
-namespace Demos.Demos.Cars
+namespace Demos.Demos.Cars;
+
+struct CarBodyProperties
 {
-    struct CarBodyProperties
+    public SubgroupCollisionFilter Filter;
+    public float Friction;
+}
+
+/// <summary>
+/// For the car demo, we want both wheel-body collision filtering and different friction for wheels versus the car body.
+/// </summary>
+struct CarCallbacks : INarrowPhaseCallbacks
+{
+    public CollidableProperty<CarBodyProperties> Properties;
+    public void Initialize(Simulation simulation)
     {
-        public SubgroupCollisionFilter Filter;
-        public float Friction;
+        Properties.Initialize(simulation);
     }
 
-    /// <summary>
-    /// For the car demo, we want both wheel-body collision filtering and different friction for wheels versus the car body.
-    /// </summary>
-    struct CarCallbacks : INarrowPhaseCallbacks
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
     {
-        public CollidableProperty<CarBodyProperties> Properties;
-        public void Initialize(Simulation simulation)
+        //It's impossible for two statics to collide, and pairs are sorted such that bodies always come before statics.
+        if (b.Mobility != CollidableMobility.Static)
         {
-            Properties.Initialize(simulation);
+            return SubgroupCollisionFilter.AllowCollision(Properties[a.BodyHandle].Filter, Properties[b.BodyHandle].Filter);
         }
+        return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
+    }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
-        {
-            //It's impossible for two statics to collide, and pairs are sorted such that bodies always come before statics.
-            if (b.Mobility != CollidableMobility.Static)
-            {
-                return SubgroupCollisionFilter.AllowCollision(Properties[a.BodyHandle].Filter, Properties[b.BodyHandle].Filter);
-            }
-            return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
-        }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool AllowContactGeneration(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB)
+    {
+        return true;
+    }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
+    {
+        pairMaterial.FrictionCoefficient = Properties[pair.A.BodyHandle].Friction;
+        if (pair.B.Mobility != CollidableMobility.Static)
         {
-            return true;
+            //If two bodies collide, just average the friction.
+            pairMaterial.FrictionCoefficient = (pairMaterial.FrictionCoefficient + Properties[pair.B.BodyHandle].Friction) * 0.5f;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
-        {
-            pairMaterial.FrictionCoefficient = Properties[pair.A.BodyHandle].Friction;
-            if (pair.B.Mobility != CollidableMobility.Static)
-            {
-                //If two bodies collide, just average the friction.
-                pairMaterial.FrictionCoefficient = (pairMaterial.FrictionCoefficient + Properties[pair.B.BodyHandle].Friction) * 0.5f;
-            }
-            pairMaterial.MaximumRecoveryVelocity = 2f;
-            pairMaterial.SpringSettings = new SpringSettings(30, 1);
-            return true;
-        }
+        pairMaterial.MaximumRecoveryVelocity = 2f;
+        pairMaterial.SpringSettings = new SpringSettings(30, 1);
+        return true;
+    }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
-        {
-            return true;
-        }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
+    {
+        return true;
+    }
 
-        public void Dispose()
-        {
-            Properties.Dispose();
-        }
+    public void Dispose()
+    {
+        Properties.Dispose();
     }
 }
