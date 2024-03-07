@@ -50,8 +50,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     {
                         var task = sweepTasks.GetTask(childTypeA, childTypeB);
                         if (task != null && task.Sweep(
-                                childShapeDataA, childTypeA, CompoundChild.AsPose(ref childA), orientationA, velocityA,
-                                childShapeDataB, childTypeB, CompoundChild.AsPose(ref childB), offsetB, orientationB, velocityB,
+                                childShapeDataA, childTypeA, childA.AsPose(), orientationA, velocityA,
+                                childShapeDataB, childTypeB, childB.AsPose(), offsetB, orientationB, velocityB,
                                 maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                                 out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))
                         {

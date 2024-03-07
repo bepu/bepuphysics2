@@ -160,7 +160,7 @@ namespace BepuPhysics.Collidables
                     CompoundChildShapeTester tester;
                     tester.T = -1;
                     tester.Normal = default;
-                    Shapes[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, CompoundChild.AsPose(ref child), *rayData, ref *maximumT, ref tester);
+                    Shapes[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, child.AsPose(), *rayData, ref *maximumT, ref tester);
                     if (tester.T >= 0)
                     {
                         Debug.Assert(*maximumT >= tester.T, "Whatever generated this ray hit should have obeyed the current maximumT value.");

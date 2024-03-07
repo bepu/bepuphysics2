@@ -28,7 +28,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             {
                 ref var child = ref compoundA.GetChild(i);
                 BoundingBoxHelpers.GetLocalBoundingBoxForSweep(
-                    child.ShapeIndex, shapes, CompoundChild.AsPose(ref child), orientationA, velocityA,
+                    child.ShapeIndex, shapes, child.AsPose(), orientationA, velocityA,
                     offsetB, orientationB, velocityB, maximumT, out var sweep, out var min, out var max);
                 ref var childOverlaps = ref overlaps.GetOverlapsForChild(i);
                 childOverlaps.ChildIndex = i;
