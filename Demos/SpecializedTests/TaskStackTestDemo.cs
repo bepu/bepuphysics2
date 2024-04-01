@@ -13,7 +13,7 @@ using BepuUtilities.TaskScheduling;
 namespace Demos.SpecializedTests;
 
 
-public unsafe class TaskQueueTestDemo : Demo
+public unsafe class TaskStackTestDemo : Demo
 {
     static int DoSomeWork(int iterations, int sum)
     {
