@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using BepuPhysics.Collidables;
+using System.Runtime.InteropServices;
 
 namespace BepuPhysics
 {
@@ -23,6 +24,9 @@ namespace BepuPhysics
         /// <summary>
         /// Minimum number of shapes to allocate space for in each shape type batch.
         /// </summary>
+        /// <remarks>
+        /// Unused if a <see cref="Shapes"/> instance was directly provided to the <see cref="Simulation"/> constructor.
+        /// </remarks>
         public int ShapesPerType;
         /// <summary>
         /// The number of constraints to allocate bookkeeping space for. This does not affect actual type batch allocation sizes, only the solver-level constraint handle storage.
@@ -47,7 +51,7 @@ namespace BepuPhysics
         /// <param name="bodies">The number of bodies to allocate space for.</param>
         /// <param name="statics">The number of statics to allocate space for.</param>
         /// <param name="islands">The number of inactive islands to allocate space for.</param>
-        /// <param name="shapesPerType">Minimum number of shapes to allocate space for in each shape type batch.</param>
+        /// <param name="shapesPerType">Minimum number of shapes to allocate space for in each shape type batch. Unused if a <see cref="Shapes"/> instance was directly provided to the <see cref="Simulation"/> constructor.</param>
         /// <param name="constraints">The number of constraints to allocate bookkeeping space for. This does not affect actual type batch allocation sizes, only the solver-level constraint handle storage.</param>
         /// <param name="constraintsPerTypeBatch">The minimum number of constraints to allocate space for in each individual type batch.
         /// New type batches will be given enough memory for this number of constraints, and any compaction will not reduce the allocations below it.
