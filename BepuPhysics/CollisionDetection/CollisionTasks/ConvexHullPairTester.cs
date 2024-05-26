@@ -153,46 +153,38 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             if (numerator < earliestExit * denominator)
                                 earliestExit = numerator / denominator;
                         }
-                        else if (numerator < 0)
-                        {
-                            //The B edge is parallel and outside the edge A, so there can be no intersection.
-                            earliestExit = float.MinValue;
-                            latestEntry = float.MaxValue;
-                        }
+                        //Parallel edges are ignored. If the edge is parallel, it will not contribute to the contact manifold.
                     }
-                    //We now have bounds on B's edge.
-                    //Denominator signs are opposed; comparison flipped.
-                    if (latestEntry <= earliestExit)
+
+                    //This edge of B was actually contained in A's face. Add contacts for it.
+                    latestEntry = latestEntry < 0 ? 0 : latestEntry;
+                    earliestExit = earliestExit > 1 ? 1 : earliestExit;
+                    //Create max contact if max >= min.
+                    //Create min if min < max and min > 0.
+                    var startId = (previousIndexB.BundleIndex << BundleIndexing.VectorShift) + previousIndexB.InnerIndex;
+                    var endId = (indexB.BundleIndex << BundleIndexing.VectorShift) + indexB.InnerIndex;
+                    var baseFeatureId = (startId ^ endId) << 8;
+                    if (earliestExit >= latestEntry && candidateCount < maximumCandidateCount)
                     {
-                        //This edge of B was actually contained in A's face. Add contacts for it.
-                        latestEntry = latestEntry < 0 ? 0 : latestEntry;
-                        earliestExit = earliestExit > 1 ? 1 : earliestExit;
-                        //Create max contact if max >= min.
-                        //Create min if min < max and min > 0.
-                        var startId = (previousIndexB.BundleIndex << BundleIndexing.VectorShift) + previousIndexB.InnerIndex;
-                        var endId = (indexB.BundleIndex << BundleIndexing.VectorShift) + indexB.InnerIndex;
-                        var baseFeatureId = (startId ^ endId) << 8;
-                        if (earliestExit >= latestEntry && candidateCount < maximumCandidateCount)
-                        {
-                            //Create max contact.
-                            var point = edgeOffsetB * earliestExit + previousVertexB - bFaceOrigin;
-                            var newContactIndex = candidateCount++;
-                            ref var candidate = ref candidates[newContactIndex];
-                            candidate.X = Vector3.Dot(point, bFaceX);
-                            candidate.Y = Vector3.Dot(point, bFaceY);
-                            candidate.FeatureId = baseFeatureId + endId;
-                        }
-                        if (latestEntry < earliestExit && latestEntry > 0 && candidateCount < maximumCandidateCount)
-                        {
-                            //Create min contact.
-                            var point = edgeOffsetB * latestEntry + previousVertexB - bFaceOrigin;
-                            var newContactIndex = candidateCount++;
-                            ref var candidate = ref candidates[newContactIndex];
-                            candidate.X = Vector3.Dot(point, bFaceX);
-                            candidate.Y = Vector3.Dot(point, bFaceY);
-                            candidate.FeatureId = baseFeatureId + startId;
-                        }
+                        //Create max contact.
+                        var point = edgeOffsetB * earliestExit + previousVertexB - bFaceOrigin;
+                        var newContactIndex = candidateCount++;
+                        ref var candidate = ref candidates[newContactIndex];
+                        candidate.X = Vector3.Dot(point, bFaceX);
+                        candidate.Y = Vector3.Dot(point, bFaceY);
+                        candidate.FeatureId = baseFeatureId + endId;
                     }
+                    if (latestEntry < earliestExit && latestEntry > 0 && candidateCount < maximumCandidateCount)
+                    {
+                        //Create min contact.
+                        var point = edgeOffsetB * latestEntry + previousVertexB - bFaceOrigin;
+                        var newContactIndex = candidateCount++;
+                        ref var candidate = ref candidates[newContactIndex];
+                        candidate.X = Vector3.Dot(point, bFaceX);
+                        candidate.Y = Vector3.Dot(point, bFaceY);
+                        candidate.FeatureId = baseFeatureId + startId;
+                    }
+
                     previousIndexB = indexB;
                     previousVertexB = vertexB;
                 }
