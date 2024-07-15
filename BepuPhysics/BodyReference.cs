@@ -396,7 +396,7 @@ namespace BepuPhysics
 
 
         /// <summary>
-        /// Applies an impulse to a body at the given world space position. Does not modify activity states.
+        /// Applies an impulse to a body at the given world space offset. Does not modify activity states.
         /// </summary>
         /// <param name="impulse">Impulse to apply to the body.</param>
         /// <param name="impulseOffset">World space offset to apply the impulse at.</param>
@@ -421,9 +421,9 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Computes the velocity of an offset point attached to the body.
+        /// Computes the velocity of a world space offset point attached to the body.
         /// </summary>
-        /// <param name="offset">Offset from the body's center to </param>
+        /// <param name="offset">World space offset from the body's center to the point to measure.</param>
         /// <param name="velocity">Effective velocity of the point if it were attached to the body.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetVelocityForOffset(Vector3 offset, out Vector3 velocity)
