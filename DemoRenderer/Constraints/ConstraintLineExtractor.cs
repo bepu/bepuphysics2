@@ -212,7 +212,8 @@ namespace DemoRenderer.Constraints
                     }
                 }
             }
-            lines.Allocate(newLineCount, pool);
+            if (newLineCount > 0)
+                lines.Allocate(newLineCount, pool);
         }
 
     }

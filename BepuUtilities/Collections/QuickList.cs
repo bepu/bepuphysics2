@@ -372,6 +372,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref T Allocate(int count, IUnmanagedMemoryPool pool)
         {
+            Debug.Assert(count > 0, "Allocating a count returns a reference to the allocated region, and so must allocate at least one element.");
             var newCount = Count + count;
             if (newCount > Span.Length)
                 Resize(Math.Max(Count * 2, newCount), pool);
