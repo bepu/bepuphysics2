@@ -13,6 +13,9 @@ using BepuPhysics.Constraints;
 using BepuUtilities.Memory;
 using System.Text.Json;
 using System.IO;
+using DemoRenderer.Constraints;
+using DemoUtilities;
+using DemoRenderer.UI;
 
 namespace Demos.SpecializedTests;
 
@@ -29,6 +32,140 @@ public class ConvexHullTestDemo : Demo
             points[i] = new Vector3(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
         }
 
+        return points;
+    }
+
+
+
+    Vector3[] CreateBwaa()
+    {
+        var points = new Vector3[]
+        {
+             new(-0.637357891f, 0.347849399f, -0.303436399f),
+             new(-0.636290252f, 0.345867455f, -0.301366687f),
+             new(-0.992014945f, 0.348357588f, -0.3031407f),
+             new(-1.00909662f, 0.386065364f, -0.303337872f),
+             new(0.637357891f, 0.347849399f, -0.303436399f),
+             new(-0.636290252f, 0.345918268f, 0.701366544f),
+             new(-0.636503756f, 0.345918268f, 0.700873733f),
+             new(-0.992655516f, 0.346578926f, 0.701070845f),
+             new(-0.992655516f, 0.346578926f, -0.301070988f),
+             new(0.636290252f, 0.345867455f, -0.301366687f),
+             new(-0.995858312f, 0.348510057f, -0.301859498f),
+             new(-1.01272643f, 0.385912925f, -0.302056611f),
+             new(-1.01037765f, 0.390029252f, -0.302746475f),
+             new(-0.637357891f, 0.389521062f, -0.302845061f),
+             new(1.00909662f, 0.386065364f, -0.303337872f),
+             new(0.992014945f, 0.348357588f, -0.3031407f),
+             new(-0.637357891f, 0.347849399f, 0.703436255f),
+             new(-0.992014945f, 0.348357588f, 0.703140557f),
+             new(0.636290252f, 0.345918268f, 0.701366544f),
+             new(-0.995858312f, 0.348510057f, 0.701859355f),
+             new(-1.02553761f, 0.351406753f, 0.678599536f),
+             new(-1.0251106f, 0.35013628f, 0.675938487f),
+             new(-1.0251106f, 0.35013628f, -0.2759386f),
+             new(-1.02553761f, 0.351406753f, -0.278599679f),
+             new(0.992655516f, 0.346578926f, -0.301070988f),
+             new(0.992655516f, 0.346578926f, 0.701070845f),
+             new(0.636503756f, 0.345918268f, 0.700873733f),
+             new(-1.04432738f, 0.37869662f, -0.274558783f),
+             new(-1.01400757f, 0.389673531f, -0.301465213f),
+             new(-1.04582202f, 0.382304758f, -0.273770332f),
+             new(-1.0582062f, 0.67344743f, -0.220745891f),
+             new(-1.0545764f, 0.674260557f, -0.22183004f),
+             new(-0.637144327f, 0.674158931f, -0.221928596f),
+             new(1.01037765f, 0.390029252f, -0.302746475f),
+             new(0.637357891f, 0.389521062f, -0.302845061f),
+             new(1.01272643f, 0.385912925f, -0.302056611f),
+             new(0.995858312f, 0.348510057f, -0.301859498f),
+             new(-1.00909662f, 0.386065364f, 0.703337729f),
+             new(0.637357891f, 0.347849399f, 0.703436255f),
+             new(0.992014945f, 0.348357588f, 0.703140557f),
+             new(-1.01272643f, 0.385912925f, 0.702056468f),
+             new(-1.04432738f, 0.37869662f, 0.67455864f),
+             new(-1.04582202f, 0.380170345f, 0.671404779f),
+             new(-1.04582202f, 0.380170345f, -0.271404922f),
+             new(1.02553761f, 0.351406753f, -0.278599679f),
+             new(1.0251106f, 0.35013628f, -0.2759386f),
+             new(1.0251106f, 0.35013628f, 0.675938487f),
+             new(1.02553761f, 0.351406753f, 0.678599536f),
+             new(0.995858312f, 0.348510057f, 0.701859355f),
+             new(-1.08980727f, 0.656575501f, -0.196303427f),
+             new(-1.09023428f, 0.656982064f, -0.193346679f),
+             new(-1.0584197f, 0.67675066f, -0.21867618f),
+             new(-1.0550034f, 0.677512944f, -0.219858885f),
+             new(-1.09023428f, 0.659827888f, -0.194233686f),
+             new(0.637144327f, 0.674158931f, -0.221928596f),
+             new(1.01400757f, 0.389673531f, -0.301465213f),
+             new(1.0545764f, 0.674260557f, -0.22183004f),
+             new(1.0582062f, 0.67344743f, -0.220745891f),
+             new(1.04582202f, 0.382304758f, -0.273770332f),
+             new(1.04432738f, 0.37869662f, -0.274558783f),
+             new(-0.637357891f, 0.389521062f, 0.702844918f),
+             new(-1.01037765f, 0.390029252f, 0.702746332f),
+             new(1.00909662f, 0.386065364f, 0.703337729f),
+             new(-1.01400757f, 0.389673531f, 0.70146507f),
+             new(-1.04582202f, 0.382304758f, 0.673770189f),
+             new(-1.09023428f, 0.656982064f, 0.593346536f),
+             new(1.04582202f, 0.380170345f, -0.271404922f),
+             new(1.04582202f, 0.380170345f, 0.671404779f),
+             new(1.04432738f, 0.37869662f, 0.67455864f),
+             new(1.01272643f, 0.385912925f, 0.702056468f),
+             new(-1.09066129f, 0.832155526f, 0.199999928f),
+             new(-1.0584197f, 0.86234206f, -0.0161386579f),
+             new(-1.0550034f, 0.863663316f, -0.0167300105f),
+             new(1.0550034f, 0.677512944f, -0.219858885f),
+             new(-1.09023428f, 0.833781719f, -0.00135488808f),
+             new(1.08980727f, 0.656575501f, -0.196303427f),
+             new(1.0584197f, 0.67675066f, -0.21867618f),
+             new(1.09023428f, 0.659827888f, -0.194233686f),
+             new(1.09023428f, 0.656982064f, -0.193346679f),
+             new(0.637357891f, 0.389521062f, 0.702844918f),
+             new(1.01037765f, 0.390029252f, 0.702746332f),
+             new(-0.637144327f, 0.674158931f, 0.621928453f),
+             new(-1.0545764f, 0.674260557f, 0.621829867f),
+             new(-1.0582062f, 0.67344743f, 0.620745778f),
+             new(-1.08980727f, 0.656575501f, 0.596303284f),
+             new(-1.09023428f, 0.659827888f, 0.594233513f),
+             new(1.04582202f, 0.382304758f, 0.673770189f),
+             new(1.09023428f, 0.656982064f, 0.593346536f),
+             new(1.01400757f, 0.389673531f, 0.70146507f),
+             new(-1.09044778f, 0.834950566f, 0.199999928f),
+             new(-1.09023428f, 0.833781719f, 0.40135473f),
+             new(-1.0584197f, 0.863663316f, -0.0124919862f),
+             new(-1.0550034f, 0.865035474f, -0.0132804662f),
+             new(1.0550034f, 0.863663316f, -0.0167300105f),
+             new(-1.09002078f, 0.835204661f, 0.00219321251f),
+             new(1.0584197f, 0.86234206f, -0.0161386579f),
+             new(1.09023428f, 0.833781719f, -0.00135488808f),
+             new(1.09066129f, 0.832155526f, 0.199999928f),
+             new(1.0582062f, 0.67344743f, 0.620745778f),
+             new(1.0545764f, 0.674260557f, 0.621829867f),
+             new(0.637144327f, 0.674158931f, 0.621928453f),
+             new(-1.0550034f, 0.677512944f, 0.619858742f),
+             new(-1.0584197f, 0.67675066f, 0.618676066f),
+             new(-1.0584197f, 0.86234206f, 0.41613853f),
+             new(1.08980727f, 0.656575501f, 0.596303284f),
+             new(1.09023428f, 0.659827888f, 0.594233513f),
+             new(-1.09002078f, 0.835204661f, 0.397806644f),
+             new(-1.05863321f, 0.863612533f, 0.199999928f),
+             new(-1.0584197f, 0.863663316f, 0.412491858f),
+             new(-1.0550034f, 0.865035474f, 0.413280308f),
+             new(1.0550034f, 0.865035474f, -0.0132804662f),
+             new(1.0584197f, 0.863663316f, -0.0124919862f),
+             new(1.09002078f, 0.835204661f, 0.00219321251f),
+             new(1.09044778f, 0.834950566f, 0.199999928f),
+             new(1.09023428f, 0.833781719f, 0.40135473f),
+             new(1.0584197f, 0.67675066f, 0.618676066f),
+             new(1.0550034f, 0.677512944f, 0.619858742f),
+             new(-1.0550034f, 0.863663316f, 0.416729867f),
+             new(1.0584197f, 0.86234206f, 0.41613853f),
+             new(1.0550034f, 0.865035474f, 0.413280308f),
+             new(1.05863321f, 0.863612533f, 0.199999928f),
+             new(1.09002078f, 0.835204661f, 0.397806644f),
+             new(1.0584197f, 0.863663316f, 0.412491858f),
+             new(1.0550034f, 0.8636633f, 0.41672987f),
+        };
         return points;
     }
 
@@ -385,7 +522,7 @@ public class ConvexHullTestDemo : Demo
         camera.Yaw = 0;
         camera.Pitch = 0;
 
-        Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
+        Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -0, 0)), new SolveDescription(8, 1));
         //var hullPoints = CreateJSONSourcedConvexHull(@"Content/testHull.json");
         //for (int i = 0; i < hullPoints.Length; ++i)
         //{
@@ -393,7 +530,8 @@ public class ConvexHullTestDemo : Demo
         //}
         //var hullPoints = CreateRandomConvexHullPoints();
         //var hullPoints = CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f));
-        var hullPoints = CreateHellCube(200);
+        //var hullPoints = CreateHellCube(200);
+        var hullPoints = CreateBwaa();
         //var hullPoints = CreatePlaneish();
         //var hullPoints = CreateDistantPlane();
         //var hullPoints = CreateTestConvexHull();
@@ -419,52 +557,52 @@ public class ConvexHullTestDemo : Demo
         //}
         //Console.WriteLine($"Largest error: {largestError}");
 
-        //ConvexHullHelper.ComputeHull(hullPoints, BufferPool, out var hullData, out debugSteps);
-        //this.points = hullPoints;
+        ConvexHullHelper.ComputeHull(hullPoints, BufferPool, out var hullData, out debugSteps);
+        this.points = hullPoints;
 
         var boxHullPoints = CreateBoxConvexHull(2);
         var boxHullShape = new ConvexHull(boxHullPoints, BufferPool, out _);
 
-        Matrix3x3.CreateScale(new Vector3(5, 0.5f, 3), out var scale);
-        var transform = Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(3, 2, 1)), 1207) * scale;
-        const int transformCount = 10000;
-        var transformStart = Stopwatch.GetTimestamp();
-        for (int i = 0; i < transformCount; ++i)
-        {
-            CreateTransformedCopy(hullShape, transform, BufferPool, out var transformedHullShape);
-            transformedHullShape.Dispose(BufferPool);
-        }
-        var transformEnd = Stopwatch.GetTimestamp();
-        Console.WriteLine($"Transform hull computation time (us): {(transformEnd - transformStart) * 1e6 / (transformCount * Stopwatch.Frequency)}");
+        //Matrix3x3.CreateScale(new Vector3(5, 0.5f, 3), out var scale);
+        //var transform = Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(3, 2, 1)), 1207) * scale;
+        //const int transformCount = 10000;
+        //var transformStart = Stopwatch.GetTimestamp();
+        //for (int i = 0; i < transformCount; ++i)
+        //{
+        //    CreateTransformedCopy(hullShape, transform, BufferPool, out var transformedHullShape);
+        //    transformedHullShape.Dispose(BufferPool);
+        //}
+        //var transformEnd = Stopwatch.GetTimestamp();
+        //Console.WriteLine($"Transform hull computation time (us): {(transformEnd - transformStart) * 1e6 / (transformCount * Stopwatch.Frequency)}");
 
-        hullShape.RayTest(RigidPose.Identity, new Vector3(0, 1, 0), -Vector3.UnitY, out var t, out var normal);
+        //hullShape.RayTest(RigidPose.Identity, new Vector3(0, 1, 0), -Vector3.UnitY, out var t, out var normal);
 
-        const int rayIterationCount = 10000;
-        var rayPose = RigidPose.Identity;
-        var rayOrigin = new Vector3(0, 2, 0);
-        var rayDirection = new Vector3(0, -1, 0);
+        //const int rayIterationCount = 10000;
+        //var rayPose = RigidPose.Identity;
+        //var rayOrigin = new Vector3(0, 2, 0);
+        //var rayDirection = new Vector3(0, -1, 0);
 
-        int hitCounter = 0;
-        var start = Stopwatch.GetTimestamp();
-        for (int i = 0; i < rayIterationCount; ++i)
-        {
-            if (hullShape.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
-            {
-                ++hitCounter;
-            }
-        }
-        var end = Stopwatch.GetTimestamp();
-        Console.WriteLine($"Hit counter: {hitCounter}, computation time (us): {(end - start) * 1e6 / (rayIterationCount * Stopwatch.Frequency)}");
+        //int hitCounter = 0;
+        //var start = Stopwatch.GetTimestamp();
+        //for (int i = 0; i < rayIterationCount; ++i)
+        //{
+        //    if (hullShape.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
+        //    {
+        //        ++hitCounter;
+        //    }
+        //}
+        //var end = Stopwatch.GetTimestamp();
+        //Console.WriteLine($"Hit counter: {hitCounter}, computation time (us): {(end - start) * 1e6 / (rayIterationCount * Stopwatch.Frequency)}");
 
-        const int iterationCount = 100;
-        start = Stopwatch.GetTimestamp();
-        for (int i = 0; i < iterationCount; ++i)
-        {
-            CreateShape(hullPoints, BufferPool, out _, out var perfTestShape);
-            perfTestShape.Dispose(BufferPool);
-        }
-        end = Stopwatch.GetTimestamp();
-        Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
+        //const int iterationCount = 100;
+        //start = Stopwatch.GetTimestamp();
+        //for (int i = 0; i < iterationCount; ++i)
+        //{
+        //    CreateShape(hullPoints, BufferPool, out _, out var perfTestShape);
+        //    perfTestShape.Dispose(BufferPool);
+        //}
+        //end = Stopwatch.GetTimestamp();
+        //Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
 
         var hullShapeIndex = Simulation.Shapes.Add(hullShape);
         var boxHullShapeIndex = Simulation.Shapes.Add(boxHullShape);
@@ -528,132 +666,158 @@ public class ConvexHullTestDemo : Demo
     }
 
     //Buffer<Vector3> points;
-    //List<DebugStep> debugSteps;
+    Vector3[] points;
+    List<DebugStep> debugSteps;
 
-    //int stepIndex = 0;
+    int stepIndex = 0;
 
-    //public override void Update(Window window, Camera camera, Input input, float dt)
-    //{
-    //    if (input.TypedCharacters.Contains('x'))
-    //    {
-    //        stepIndex = Math.Max(stepIndex - 1, 0);
-    //    }
-    //    if (input.TypedCharacters.Contains('c'))
-    //    {
-    //        stepIndex = Math.Min(stepIndex + 1, debugSteps.Count - 1);
-    //    }
-    //    if (input.WasPushed(OpenTK.Input.Key.P))
-    //    {
-    //        showWireframe = !showWireframe;
-    //    }
-    //    if (input.WasPushed(OpenTK.Input.Key.U))
-    //    {
-    //        showDeleted = !showDeleted;
-    //    }
-    //    if (input.WasPushed(OpenTK.Input.Key.Y))
-    //    {
-    //        showVertexIndices = !showVertexIndices;
-    //    }
-    //    if (input.WasPushed(OpenTK.Input.Key.H))
-    //    {
-    //        showFaceVertexStatuses = !showFaceVertexStatuses;
-    //    }
-    //    base.Update(window, camera, input, dt);
-    //}
+    public override void Update(Window window, Camera camera, Input input, float dt)
+    {
+        if (input.TypedCharacters.Contains('x'))
+        {
+            stepIndex = Math.Max(stepIndex - 1, 0);
+        }
+        if (input.TypedCharacters.Contains('c'))
+        {
+            stepIndex = Math.Min(stepIndex + 1, debugSteps.Count - 1);
+        }
+        if (input.WasPushed(OpenTK.Input.Key.P))
+        {
+            showWireframe = !showWireframe;
+        }
+        if (input.WasPushed(OpenTK.Input.Key.U))
+        {
+            showDeleted = !showDeleted;
+        }
+        if (input.WasPushed(OpenTK.Input.Key.Y))
+        {
+            showVertexIndices = !showVertexIndices;
+        }
+        if (input.WasPushed(OpenTK.Input.Key.H))
+        {
+            showFaceVertexStatuses = !showFaceVertexStatuses;
+        }
+        base.Update(window, camera, input, dt);
+    }
 
-    //bool showWireframe;
-    //bool showDeleted;
-    //bool showVertexIndices;
-    //bool showFaceVertexStatuses = true;
-    //public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
-    //{
-    //    var step = debugSteps[stepIndex];
-    //    var scale = 5f;
-    //    var renderOffset = new Vector3(-15, 25, 0);
-    //    for (int i = 0; i < points.Length; ++i)
-    //    {
-    //        var pose = new RigidPose(renderOffset + points[i] * scale);
-    //        renderer.Shapes.AddShape(new Box(0.1f, 0.1f, 0.1f), Simulation.Shapes, pose, new Vector3(0.5f, 0.5f, 0.5f));
-    //        if (!step.AllowVertex[i] && showFaceVertexStatuses)
-    //            renderer.Shapes.AddShape(new Box(0.6f, 0.25f, 0.25f), Simulation.Shapes, pose, new Vector3(1, 0, 0));
-    //    }
-    //    if (showFaceVertexStatuses)
-    //    {
-    //        for (int i = 0; i < step.Raw.Count; ++i)
-    //        {
-    //            var pose = new RigidPose(renderOffset + points[step.Raw[i]] * scale);
-    //            renderer.Shapes.AddShape(new Box(0.25f, 0.6f, 0.25f), Simulation.Shapes, pose, new Vector3(0, 0, 1));
-    //        }
-    //        for (int i = 0; i < step.Reduced.Count; ++i)
-    //        {
-    //            var pose = new RigidPose(renderOffset + points[step.Reduced[i]] * scale);
-    //            renderer.Shapes.AddShape(new Box(0.25f, 0.25f, 0.6f), Simulation.Shapes, pose, new Vector3(0, 1, 0));
-    //        }
-    //    }
+    bool showWireframe;
+    bool showDeleted;
+    bool showVertexIndices;
+    bool showFaceVertexStatuses = true;
+    public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+    {
+        var step = debugSteps[stepIndex];
+        var scale = 15f;
+        var renderOffset = new Vector3(-15, 25, 0);
 
-    //    {
-    //        var pose = new RigidPose(renderOffset);
-    //        for (int i = 0; i < step.FaceStarts.Count; ++i)
-    //        {
-    //            if (showDeleted || !step.FaceDeleted[i])
-    //            {
-    //                var faceStart = step.FaceStarts[i];
-    //                var faceEnd = i + 1 < step.FaceStarts.Count ? step.FaceStarts[i + 1] : step.FaceIndices.Count;
-    //                var count = faceEnd - faceStart;
-    //                var color = step.FaceDeleted[i] ? new Vector3(0.25f, 0.25f, 0.25f) : step.FaceIndex == i ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1);
-    //                var deletionInducedScale = step.FaceDeleted[i] ? new Vector3(1.1f) : new Vector3(1f);
+        void DrawVertexIndex(int i, Vector3 color, Vector2 offset = default)
+        {
+            if (DemoRenderer.Helpers.GetScreenLocation(points[i] * scale + renderOffset, camera.ViewProjection, renderer.Surface.Resolution, out var location))
+            {
+                float fontSize = 10;
+                float spacing = 12;
+                renderer.TextBatcher.Write(text.Clear().Append(i), location + offset * spacing, fontSize, color, font);
+            }
+        }
 
-    //                var offset = step.FaceDeleted[i] ? step.FaceNormals[i] * 0.25f : new Vector3();
-    //                if (showWireframe)
-    //                {
-    //                    var previousIndex = faceEnd - 1;
-    //                    for (int q = faceStart; q < faceEnd; ++q)
-    //                    {
-    //                        var a = points[step.FaceIndices[q]] * scale + pose.Position + offset;
-    //                        var b = points[step.FaceIndices[previousIndex]] * scale + pose.Position + offset;
-    //                        previousIndex = q;
-    //                        renderer.Lines.Allocate() = new LineInstance(a, b, color, Vector3.Zero);
-    //                    }
-    //                }
-    //                else
-    //                {
-    //                    for (int k = faceStart + 2; k < faceEnd; ++k)
-    //                    {
-    //                        renderer.Shapes.AddShape(new Triangle
-    //                        {
-    //                            A = points[step.FaceIndices[faceStart]] * scale + offset,
-    //                            B = points[step.FaceIndices[k]] * scale + offset,
-    //                            C = points[step.FaceIndices[k - 1]] * scale + offset
-    //                        }, Simulation.Shapes, pose, color);
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
+        for (int i = 0; i < points.Length; ++i)
+        {
+            var pose = new RigidPose(renderOffset + points[i] * scale);
+            renderer.Shapes.AddShape(new Box(0.1f, 0.1f, 0.1f), Simulation.Shapes, pose, new Vector3(0.5f, 0.5f, 0.5f));
+            if (!step.AllowVertex[i] && showFaceVertexStatuses)
+            {
+                var color = new Vector3(1, 0, 0);
+                renderer.Shapes.AddShape(new Box(0.6f, 0.25f, 0.25f), Simulation.Shapes, pose, color);
+                if (showVertexIndices)
+                    DrawVertexIndex(i, color, new Vector2(0, 1));
+            }
+        }
+        if (showFaceVertexStatuses)
+        {
+            for (int i = 0; i < step.Raw.Count; ++i)
+            {
+                var color = new Vector3(0.3f, 0.3f, 1);
+                var pose = new RigidPose(renderOffset + points[step.Raw[i]] * scale);
+                renderer.Shapes.AddShape(new Box(0.25f, 0.6f, 0.25f), Simulation.Shapes, pose, color);
+                if (showVertexIndices)
+                    DrawVertexIndex(step.Raw[i], color, new Vector2(0, 2));
+            }
+            for (int i = 0; i < step.Reduced.Count; ++i)
+            {
+                var color = new Vector3(0, 1, 0);
+                var pose = new RigidPose(renderOffset + points[step.Reduced[i]] * scale);
+                renderer.Shapes.AddShape(new Box(0.25f, 0.25f, 0.6f), Simulation.Shapes, pose, color);
+                if (showVertexIndices)
+                    DrawVertexIndex(step.Reduced[i], color, new Vector2(0, 3));
+            }
+        }
 
-    //    if (showVertexIndices)
-    //    {
-    //        for (int i = 0; i < points.Length; ++i)
-    //        {
-    //            if (DemoRenderer.Helpers.GetScreenLocation(points[i] * scale + renderOffset, camera.ViewProjection, renderer.Surface.Resolution, out var location))
-    //            {
-    //                renderer.TextBatcher.Write(text.Clear().Append(i), location, 10, new Vector3(1), font);
-    //            }
-    //        }
-    //    }
+        {
+            var pose = new RigidPose(renderOffset);
+            for (int i = 0; i < step.FaceStarts.Count; ++i)
+            {
+                if (showDeleted || !step.FaceDeleted[i])
+                {
+                    var faceStart = step.FaceStarts[i];
+                    var faceEnd = i + 1 < step.FaceStarts.Count ? step.FaceStarts[i + 1] : step.FaceIndices.Count;
+                    var count = faceEnd - faceStart;
+                    var color = step.FaceDeleted[i] ? new Vector3(0.25f, 0.25f, 0.25f) : step.FaceIndex == i ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1);
+                    var deletionInducedScale = step.FaceDeleted[i] ? new Vector3(1.1f) : new Vector3(1f);
 
-    //    var edgeMidpoint = renderOffset + (points[step.SourceEdge.A] + points[step.SourceEdge.B]) * scale * 0.5f;
-    //    renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisX * scale * 0.5f, new Vector3(1, 1, 0), new Vector3());
-    //    renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisY * scale * 0.5f, new Vector3(0, 1, 0), new Vector3());
-    //    renderer.TextBatcher.Write(
-    //        text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count),
-    //        new Vector2(32, renderer.Surface.Resolution.Y - 140), 20, new Vector3(1), font);
-    //    renderer.TextBatcher.Write(text.Clear().Append("Show wireframe: P ").Append(showWireframe ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 120), 20, new Vector3(1), font);
-    //    renderer.TextBatcher.Write(text.Clear().Append("Show deleted: U ").Append(showDeleted ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
-    //    renderer.TextBatcher.Write(text.Clear().Append("Show vertex indices: Y ").Append(showVertexIndices ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
-    //    renderer.TextBatcher.Write(text.Clear().Append("Show face vertex statuses: H ").Append(showFaceVertexStatuses ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 60), 20, new Vector3(1), font);
+                    var offset = step.FaceDeleted[i] ? step.FaceNormals[i] * 0.25f : new Vector3();
+                    if (showWireframe)
+                    {
+                        var previousIndex = faceEnd - 1;
+                        for (int q = faceStart; q < faceEnd; ++q)
+                        {
+                            var a = points[step.FaceIndices[q]] * scale + pose.Position + offset;
+                            var b = points[step.FaceIndices[previousIndex]] * scale + pose.Position + offset;
+                            previousIndex = q;
+                            renderer.Lines.Allocate() = new LineInstance(a, b, color, Vector3.Zero);
+                        }
+                    }
+                    else
+                    {
+                        for (int k = faceStart + 2; k < faceEnd; ++k)
+                        {
+                            renderer.Shapes.AddShape(new Triangle
+                            {
+                                A = points[step.FaceIndices[faceStart]] * scale + offset,
+                                B = points[step.FaceIndices[k]] * scale + offset,
+                                C = points[step.FaceIndices[k - 1]] * scale + offset
+                            }, Simulation.Shapes, pose, color);
+                        }
+                    }
+                }
+            }
+        }
+        //Console.WriteLine("Current step edges: ");
+        //for (int i = 0; i < step.Reduced.Count; ++i)
+        //{
+        //    Console.WriteLine($"  Edge {i}: ({step.Reduced[i]}, {step.Reduced[(i + 1) % step.Reduced.Count]})");
+        //}
 
 
-    //    base.Render(renderer, camera, input, text, font);
-    //}
+        if (showVertexIndices)
+        {
+            for (int i = 0; i < points.Length; ++i)
+            {
+                DrawVertexIndex(i, Vector3.One);
+            }
+        }
+
+        var edgeMidpoint = renderOffset + (points[step.SourceEdge.A] + points[step.SourceEdge.B]) * scale * 0.5f;
+        renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisX * scale * 0.5f, new Vector3(1, 1, 0), new Vector3());
+        renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisY * scale * 0.5f, new Vector3(0, 1, 0), new Vector3());
+        renderer.TextBatcher.Write(
+            text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count),
+            new Vector2(32, renderer.Surface.Resolution.Y - 140), 20, new Vector3(1), font);
+        renderer.TextBatcher.Write(text.Clear().Append("Show wireframe: P ").Append(showWireframe ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 120), 20, new Vector3(1), font);
+        renderer.TextBatcher.Write(text.Clear().Append("Show deleted: U ").Append(showDeleted ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
+        renderer.TextBatcher.Write(text.Clear().Append("Show vertex indices: Y ").Append(showVertexIndices ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
+        renderer.TextBatcher.Write(text.Clear().Append("Show face vertex statuses: H ").Append(showFaceVertexStatuses ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 60), 20, new Vector3(1), font);
+
+
+        base.Render(renderer, camera, input, text, font);
+    }
 }
