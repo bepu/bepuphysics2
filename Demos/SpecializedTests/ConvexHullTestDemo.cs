@@ -528,10 +528,10 @@ public class ConvexHullTestDemo : Demo
         //{
         //    hullPoints[i] *= 0.03f;
         //}
-        //var hullPoints = CreateRandomConvexHullPoints();
+        var hullPoints = CreateRandomConvexHullPoints();
         //var hullPoints = CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f));
         //var hullPoints = CreateHellCube(200);
-        var hullPoints = CreateBwaa();
+        //var hullPoints = CreateBwaa();
         //var hullPoints = CreatePlaneish();
         //var hullPoints = CreateDistantPlane();
         //var hullPoints = CreateTestConvexHull();
@@ -558,7 +558,9 @@ public class ConvexHullTestDemo : Demo
         //Console.WriteLine($"Largest error: {largestError}");
 
         ConvexHullHelper.ComputeHull(hullPoints, BufferPool, out var hullData, out debugSteps);
-        this.points = hullPoints;
+        this.points = new Vector3[hullPoints.Length];
+        hullPoints.CopyTo(0, this.points, 0, this.points.Length);
+        //this.points = hullPoints;
 
         var boxHullPoints = CreateBoxConvexHull(2);
         var boxHullShape = new ConvexHull(boxHullPoints, BufferPool, out _);
