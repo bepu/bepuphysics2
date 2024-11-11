@@ -736,7 +736,18 @@ public class ConvexHullTestDemo : Demo
         }
         if (showFaceVertexStatuses)
         {
-            for (int i = 0; i < step.Raw.Count; ++i)
+            int[] raw, reduced;
+            if (step.MergedRaw == null)
+            {
+                raw = step.Raw;
+                reduced = step.Reduced;
+            }
+            else
+            {
+                raw = step.MergedRaw;
+                reduced = step.MergedReduced;
+            }
+            for (int i = 0; i < raw.Length; ++i)
             {
                 var color = new Vector3(0.3f, 0.3f, 1);
                 var pose = new RigidPose(renderOffset + points[step.Raw[i]] * scale);
@@ -744,7 +755,7 @@ public class ConvexHullTestDemo : Demo
                 if (showVertexIndices)
                     DrawVertexIndex(step.Raw[i], color, new Vector2(0, 2));
             }
-            for (int i = 0; i < step.Reduced.Count; ++i)
+            for (int i = 0; i < reduced.Length; ++i)
             {
                 var color = new Vector3(0, 1, 0);
                 var pose = new RigidPose(renderOffset + points[step.Reduced[i]] * scale);
