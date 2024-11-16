@@ -136,7 +136,8 @@ namespace BepuPhysics.Collidables
             else
             {
                 //The ray is parallel to the axis; the impact is on a disc or nothing.
-                discY = d.Y > 0 ? -HalfLength : HalfLength;
+                //If the ray is inside the cylinder, we want t = 0, so just set the discY to match the ray's origin in that case and it'll shake out like we want.
+                discY = float.MinMagnitude(d.Y > 0 ? -HalfLength : HalfLength, o.Y);
             }
 
             //Intersect the ray with the plane anchored at discY with normal equal to (0,1,0).
