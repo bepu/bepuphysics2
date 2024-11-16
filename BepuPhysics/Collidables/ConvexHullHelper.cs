@@ -526,8 +526,8 @@ namespace BepuPhysics.Collidables
             public EdgeEndpoints SourceEdge;
             public int[] Raw;
             public int[] Reduced;
-            public int[] MergedRaw;
-            public int[] MergedReduced;
+            public int[] RawOverwrittenByMerge;
+            public int[] ReducedOverwrittenByMerge;
             public bool[] AllowVertex;
             public Vector3 FaceNormal;
             public Vector3 BasisX;
@@ -537,25 +537,22 @@ namespace BepuPhysics.Collidables
             public int FaceIndex;
             public Vector3[] FaceNormals;
 
-            void FillAllowVertex(Buffer<int> allowVertex)
-            {
-                for (int i = 0; i < allowVertex.Length; ++i)
-                {
-                    AllowVertex[i] = allowVertex[i] != 0;
-                }
-            }
-            internal DebugStep(EdgeEndpoints sourceEdge, QuickList<int> rawVertexIndices, Vector3 faceNormal, Vector3 basisX, Vector3 basisY, QuickList<int> reducedVertexIndices, Buffer<int> allowVertex, QuickList<EarlyFace> faces, int faceIndex)
+
+            internal DebugStep(EdgeEndpoints sourceEdge, QuickList<int> rawVertexIndices, Vector3 faceNormal, Vector3 basisX, Vector3 basisY, QuickList<int> reducedVertexIndices, int faceIndex)
             {
                 SourceEdge = sourceEdge;
                 FaceNormal = faceNormal;
                 BasisX = basisX;
                 BasisY = basisY;
-                ((Span<int>)rawVertexIndices).ToArray();
-                ((Span<int>)reducedVertexIndices).ToArray();
-                MergedRaw = null;
-                MergedReduced = null;
-                AllowVertex = new bool[allowVertex.Length];
-                FillAllowVertex(allowVertex);
+                Raw = ((Span<int>)rawVertexIndices).ToArray();
+                Reduced = ((Span<int>)reducedVertexIndices).ToArray();
+                RawOverwrittenByMerge = null;
+                ReducedOverwrittenByMerge = null;      
+                FaceIndex = faceIndex;
+            }
+
+            internal DebugStep FillHistory(Buffer<int> allowVertex, QuickList<EarlyFace> faces)
+            {
                 FaceStarts = new List<int>(faces.Count);
                 FaceIndices = new List<int>();
                 FaceNormals = new Vector3[faces.Count];
@@ -567,14 +564,20 @@ namespace BepuPhysics.Collidables
                         FaceIndices.Add(face.VertexIndices[j]);
                     FaceNormals[i] = face.Normal;
                 }
-                FaceIndex = faceIndex;
+                AllowVertex = new bool[allowVertex.Length]; 
+                for (int i = 0; i < allowVertex.Length; ++i)
+                {
+                    AllowVertex[i] = allowVertex[i] != 0;
+                }
+                return this;
             }
 
             internal void UpdateForFaceMerge(QuickList<int> rawFaceVertexIndices, QuickList<int> reducedVertexIndices, Buffer<int> allowVertex, int mergedFaceIndex)
             {
-                MergedRaw = ((Span<int>)rawFaceVertexIndices).ToArray();
-                MergedReduced = ((Span<int>)reducedVertexIndices).ToArray();
-                FillAllowVertex(allowVertex);
+                RawOverwrittenByMerge = Raw;
+                ReducedOverwrittenByMerge = Reduced;
+                Raw = ((Span<int>)rawFaceVertexIndices).ToArray();
+                Reduced = ((Span<int>)reducedVertexIndices).ToArray();
                 FaceIndex = mergedFaceIndex;
             }
         }
@@ -755,7 +758,7 @@ namespace BepuPhysics.Collidables
             }
             Vector3Wide.ReadFirst(initialBasisX, out var debugInitialBasisX);
             Vector3Wide.ReadFirst(initialBasisY, out var debugInitialBasisY);
-            steps.Add(new DebugStep(initialSourceEdge, rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY, reducedFaceIndices, allowVertices, faces, reducedFaceIndices.Count >= 3 ? 0 : -1));
+            steps.Add(new DebugStep(initialSourceEdge, rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY, reducedFaceIndices, reducedFaceIndices.Count >= 3 ? 0 : -1).FillHistory(allowVertices, faces));
 
             while (edgesToTest.Count > 0)
             {
@@ -782,14 +785,13 @@ namespace BepuPhysics.Collidables
 
                 if (reducedFaceIndices.Count < 3)
                 {
-                    steps.Add(new DebugStep(edgeToTest.Endpoints, rawFaceVertexIndices, faceNormal, basisX, basisY, reducedFaceIndices, allowVertices, faces, -1));
+                    steps.Add(new DebugStep(edgeToTest.Endpoints, rawFaceVertexIndices, faceNormal, basisX, basisY, reducedFaceIndices, -1).FillHistory(allowVertices, faces));
                     //Degenerate face found; don't bother creating work for it.
                     continue;
                 }
                 // Brute force scan all the faces to see if the new face is coplanar with any of them.
+                var step = new DebugStep(edgeToTest.Endpoints, rawFaceVertexIndices, faceNormal, basisX, basisY, reducedFaceIndices, faces.Count);
                 Console.WriteLine($"step count: {steps.Count}");
-                var step = new DebugStep(edgeToTest.Endpoints, rawFaceVertexIndices, faceNormal, basisX, basisY, reducedFaceIndices, allowVertices, faces, faces.Count);
-                steps.Add(step);
                 bool mergedFace = false;
                 for (int i = 0; i < faces.Count; ++i)
                 {
@@ -828,6 +830,8 @@ namespace BepuPhysics.Collidables
                     AddFace(ref faces, pool, faceNormal, reducedFaceIndices);
                     AddFaceEdgesToTestList(pool, ref reducedFaceIndices, ref edgesToTest, ref submittedEdgeTests, faceNormal, faceCountPriorToAdd);
                 }
+                step.FillHistory(allowVertices, faces);
+                steps.Add(step);
 
                 if (steps.Count > 500)
                     break;
