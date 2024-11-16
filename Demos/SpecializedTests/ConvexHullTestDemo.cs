@@ -736,18 +736,7 @@ public class ConvexHullTestDemo : Demo
         }
         if (showFaceVertexStatuses)
         {
-            int[] raw, reduced;
-            if (step.MergedRaw == null)
-            {
-                raw = step.Raw;
-                reduced = step.Reduced;
-            }
-            else
-            {
-                raw = step.MergedRaw;
-                reduced = step.MergedReduced;
-            }
-            for (int i = 0; i < raw.Length; ++i)
+            for (int i = 0; i < step.Raw.Length; ++i)
             {
                 var color = new Vector3(0.3f, 0.3f, 1);
                 var pose = new RigidPose(renderOffset + points[step.Raw[i]] * scale);
@@ -755,7 +744,7 @@ public class ConvexHullTestDemo : Demo
                 if (showVertexIndices)
                     DrawVertexIndex(step.Raw[i], color, new Vector2(0, 2));
             }
-            for (int i = 0; i < reduced.Length; ++i)
+            for (int i = 0; i < step.Reduced.Length; ++i)
             {
                 var color = new Vector3(0, 1, 0);
                 var pose = new RigidPose(renderOffset + points[step.Reduced[i]] * scale);
@@ -767,49 +756,48 @@ public class ConvexHullTestDemo : Demo
 
         {
             var pose = new RigidPose(renderOffset);
-            for (int i = 0; i < step.FaceStarts.Count; ++i)
+            void DrawFace(DebugStep step, int[] raw, int[] reduced, bool deleted, int i)
             {
-                if (showDeleted || !step.FaceDeleted[i])
-                {
-                    var faceStart = step.FaceStarts[i];
-                    var faceEnd = i + 1 < step.FaceStarts.Count ? step.FaceStarts[i + 1] : step.FaceIndices.Count;
-                    var count = faceEnd - faceStart;
-                    var color = step.FaceDeleted[i] ? new Vector3(0.25f, 0.25f, 0.25f) : step.FaceIndex == i ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1);
-                    var deletionInducedScale = step.FaceDeleted[i] ? new Vector3(1.1f) : new Vector3(1f);
+                var color = deleted ? new Vector3(0.25f, 0.25f, 0.25f) : stepIndex == i ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1);
+                var deletionInducedScale = deleted ? new Vector3(1.1f) : new Vector3(1f);
 
-                    var offset = step.FaceDeleted[i] ? step.FaceNormals[i] * 0.25f : new Vector3();
-                    if (showWireframe)
+                var offset = deleted ? step.FaceNormal * 0.25f : new Vector3();
+                if (showWireframe)
+                {
+                    var previousIndex = reduced.Length - 1;
+                    for (int q = 0; q < reduced.Length; ++q)
                     {
-                        var previousIndex = faceEnd - 1;
-                        for (int q = faceStart; q < faceEnd; ++q)
-                        {
-                            var a = points[step.FaceIndices[q]] * scale + pose.Position + offset;
-                            var b = points[step.FaceIndices[previousIndex]] * scale + pose.Position + offset;
-                            previousIndex = q;
-                            renderer.Lines.Allocate() = new LineInstance(a, b, color, Vector3.Zero);
-                        }
+                        var a = points[reduced[q]] * scale + pose.Position + offset;
+                        var b = points[reduced[previousIndex]] * scale + pose.Position + offset;
+                        previousIndex = q;
+                        renderer.Lines.Allocate() = new LineInstance(a, b, color, Vector3.Zero);
                     }
-                    else
+                }
+                else
+                {
+                    for (int k = 2; k < reduced.Length; ++k)
                     {
-                        for (int k = faceStart + 2; k < faceEnd; ++k)
+                        renderer.Shapes.AddShape(new Triangle
                         {
-                            renderer.Shapes.AddShape(new Triangle
-                            {
-                                A = points[step.FaceIndices[faceStart]] * scale + offset,
-                                B = points[step.FaceIndices[k]] * scale + offset,
-                                C = points[step.FaceIndices[k - 1]] * scale + offset
-                            }, Simulation.Shapes, pose, color);
-                        }
+                            A = points[reduced[0]] * scale + offset,
+                            B = points[reduced[k]] * scale + offset,
+                            C = points[reduced[k - 1]] * scale + offset
+                        }, Simulation.Shapes, pose, color);
                     }
                 }
             }
-        }
-        //Console.WriteLine("Current step edges: ");
-        //for (int i = 0; i < step.Reduced.Count; ++i)
-        //{
-        //    Console.WriteLine($"  Edge {i}: ({step.Reduced[i]}, {step.Reduced[(i + 1) % step.Reduced.Count]})");
-        //}
+            for (int i = 0; i <= stepIndex; ++i)
+            {
+                var localStep = debugSteps[i];
+                DrawFace(localStep, localStep.Raw, localStep.Reduced, false, i);
+                if (localStep.RawOverwrittenByMerge != null)
+                {
+                    DrawFace(localStep, localStep.RawOverwrittenByMerge, localStep.ReducedOverwrittenByMerge, true, i);
+                }
 
+            }
+        }
+        Console.WriteLine($"face count: {step.FaceStarts.Count}");
 
         if (showVertexIndices)
         {
@@ -829,6 +817,7 @@ public class ConvexHullTestDemo : Demo
         renderer.TextBatcher.Write(text.Clear().Append("Show deleted: U ").Append(showDeleted ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
         renderer.TextBatcher.Write(text.Clear().Append("Show vertex indices: Y ").Append(showVertexIndices ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
         renderer.TextBatcher.Write(text.Clear().Append("Show face vertex statuses: H ").Append(showFaceVertexStatuses ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 60), 20, new Vector3(1), font);
+        renderer.TextBatcher.Write(text.Clear().Append("Face count: ").Append(step.FaceStarts.Count), new Vector2(32, renderer.Surface.Resolution.Y - 20), 20, new Vector3(1), font);
 
 
         base.Render(renderer, camera, input, text, font);
