@@ -756,7 +756,7 @@ public class ConvexHullTestDemo : Demo
 
         {
             var pose = new RigidPose(renderOffset);
-            void DrawFace(DebugStep step, int[] raw, int[] reduced, bool deleted, int i)
+            void DrawFace(DebugStep step, int[] reduced, bool deleted, int i)
             {
                 var color = deleted ? new Vector3(0.25f, 0.25f, 0.25f) : stepIndex == i ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1);
                 var deletionInducedScale = deleted ? new Vector3(1.1f) : new Vector3(1f);
@@ -789,10 +789,10 @@ public class ConvexHullTestDemo : Demo
             for (int i = 0; i <= stepIndex; ++i)
             {
                 var localStep = debugSteps[i];
-                DrawFace(localStep, localStep.Raw, localStep.Reduced, false, i);
-                if (localStep.RawOverwrittenByMerge != null)
+                DrawFace(localStep, localStep.Reduced, false, i);
+                if (localStep.OverwrittenOriginal != null)
                 {
-                    DrawFace(localStep, localStep.RawOverwrittenByMerge, localStep.ReducedOverwrittenByMerge, true, i);
+                    DrawFace(localStep, localStep.OverwrittenOriginal, true, i);
                 }
 
             }
