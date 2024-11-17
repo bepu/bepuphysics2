@@ -1,4 +1,5 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics.Constraints.Contact;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
@@ -506,12 +507,15 @@ namespace BepuPhysics.Collidables
                 endpoints.A = previousIndex;
                 endpoints.B = reducedFaceIndices[i];
                 previousIndex = endpoints.B;
-                EdgeToTest nextEdgeToTest;
-                nextEdgeToTest.Endpoints = endpoints;
-                nextEdgeToTest.FaceNormal = faceNormal;
-                nextEdgeToTest.FaceIndex = newFaceIndex;
-                edgesToTest.Allocate(pool) = nextEdgeToTest;
-                submittedEdgeTests.Add(endpoints, pool);
+                if (!submittedEdgeTests.Contains(endpoints))
+                {
+                    EdgeToTest nextEdgeToTest;
+                    nextEdgeToTest.Endpoints = endpoints;
+                    nextEdgeToTest.FaceNormal = faceNormal;
+                    nextEdgeToTest.FaceIndex = newFaceIndex;
+                    edgesToTest.Allocate(pool) = nextEdgeToTest;
+                    submittedEdgeTests.Add(endpoints, pool);
+                }
             }
         }
 
@@ -526,8 +530,7 @@ namespace BepuPhysics.Collidables
             public EdgeEndpoints SourceEdge;
             public int[] Raw;
             public int[] Reduced;
-            public int[] RawOverwrittenByMerge;
-            public int[] ReducedOverwrittenByMerge;
+            public int[] OverwrittenOriginal;
             public bool[] AllowVertex;
             public Vector3 FaceNormal;
             public Vector3 BasisX;
@@ -546,8 +549,7 @@ namespace BepuPhysics.Collidables
                 BasisY = basisY;
                 Raw = ((Span<int>)rawVertexIndices).ToArray();
                 Reduced = ((Span<int>)reducedVertexIndices).ToArray();
-                RawOverwrittenByMerge = null;
-                ReducedOverwrittenByMerge = null;      
+                OverwrittenOriginal = null;    
                 FaceIndex = faceIndex;
             }
 
@@ -572,10 +574,13 @@ namespace BepuPhysics.Collidables
                 return this;
             }
 
+            internal void RecordDeletedFace(QuickList<int> faceVertexIndices)
+            {
+                OverwrittenOriginal = ((Span<int>)faceVertexIndices).ToArray();
+            }
+
             internal void UpdateForFaceMerge(QuickList<int> rawFaceVertexIndices, QuickList<int> reducedVertexIndices, Buffer<int> allowVertex, int mergedFaceIndex)
             {
-                RawOverwrittenByMerge = Raw;
-                ReducedOverwrittenByMerge = Reduced;
                 Raw = ((Span<int>)rawFaceVertexIndices).ToArray();
                 Reduced = ((Span<int>)reducedVertexIndices).ToArray();
                 FaceIndex = mergedFaceIndex;
@@ -815,12 +820,15 @@ namespace BepuPhysics.Collidables
                             }
                         }
                         // Rerun reduction for the merged face.
+                        step.RecordDeletedFace(face.VertexIndices);
                         face.VertexIndices.Count = 0;
                         facePoints.Count = 0;
                         face.VertexIndices.EnsureCapacity(rawFaceVertexIndices.Count, pool);
                         ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertices, ref face.VertexIndices);
                         step.UpdateForFaceMerge(rawFaceVertexIndices, face.VertexIndices, allowVertices, i);
                         mergedFace = true;
+                        
+                        // It's possible for the merged face to have invalidated a previous face that wouldn't necessarily be detected as something to merge.
                         break;
                     }
                 }
