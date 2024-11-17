@@ -497,7 +497,7 @@ namespace BepuPhysics.Collidables
         static void AddFaceEdgesToTestList(BufferPool pool,
             ref QuickList<int> reducedFaceIndices,
             ref QuickList<EdgeToTest> edgesToTest,
-            ref QuickSet<EdgeEndpoints, EdgeEndpoints> submittedEdgeTests,
+            ref QuickDictionary<EdgeEndpoints, int, EdgeEndpoints> edgeFaceCounts,
             Vector3 faceNormal, int newFaceIndex)
         {
             var previousIndex = reducedFaceIndices[reducedFaceIndices.Count - 1];
@@ -507,14 +507,19 @@ namespace BepuPhysics.Collidables
                 endpoints.A = previousIndex;
                 endpoints.B = reducedFaceIndices[i];
                 previousIndex = endpoints.B;
-                if (!submittedEdgeTests.Contains(endpoints))
+                if (!edgeFaceCounts.FindOrAllocateSlot(ref endpoints, pool, out var slotIndex))
                 {
                     EdgeToTest nextEdgeToTest;
                     nextEdgeToTest.Endpoints = endpoints;
                     nextEdgeToTest.FaceNormal = faceNormal;
                     nextEdgeToTest.FaceIndex = newFaceIndex;
                     edgesToTest.Allocate(pool) = nextEdgeToTest;
-                    submittedEdgeTests.Add(endpoints, pool);
+                    edgeFaceCounts.Values[slotIndex] = 1;
+                }
+                else
+                {
+                    //No need to test this edge; it's already been submitted by a different face.
+                    edgeFaceCounts.Values[slotIndex]++;
                 }
             }
         }
@@ -549,7 +554,7 @@ namespace BepuPhysics.Collidables
                 BasisY = basisY;
                 Raw = ((Span<int>)rawVertexIndices).ToArray();
                 Reduced = ((Span<int>)reducedVertexIndices).ToArray();
-                OverwrittenOriginal = null;    
+                OverwrittenOriginal = null;
                 FaceIndex = faceIndex;
             }
 
@@ -566,7 +571,7 @@ namespace BepuPhysics.Collidables
                         FaceIndices.Add(face.VertexIndices[j]);
                     FaceNormals[i] = face.Normal;
                 }
-                AllowVertex = new bool[allowVertex.Length]; 
+                AllowVertex = new bool[allowVertex.Length];
                 for (int i = 0; i < allowVertex.Length; ++i)
                 {
                     AllowVertex[i] = allowVertex[i] != 0;
@@ -729,7 +734,7 @@ namespace BepuPhysics.Collidables
 
             var faces = new QuickList<EarlyFace>(points.Length, pool);
             var edgesToTest = new QuickList<EdgeToTest>(points.Length, pool);
-            var submittedEdgeTests = new QuickSet<EdgeEndpoints, EdgeEndpoints>(points.Length, pool);
+            var edgeFaceCounts = new QuickDictionary<EdgeEndpoints, int, EdgeEndpoints>(points.Length, pool);
             if (reducedFaceIndices.Count >= 3)
             {
                 //The initial face search found an actual face! That's a bit surprising since we didn't start from an edge offset, but rather an arbitrary direction.
@@ -768,6 +773,11 @@ namespace BepuPhysics.Collidables
             while (edgesToTest.Count > 0)
             {
                 edgesToTest.Pop(out var edgeToTest);
+                if (edgeFaceCounts.TryGetValue(ref edgeToTest.Endpoints, out var edgeFaceCount) && edgeFaceCount >= 2)
+                {
+                    //This edge is already part of two faces; no need to test it further.
+                    continue;
+                }
 
                 ref var edgeA = ref points[edgeToTest.Endpoints.A];
                 ref var edgeB = ref points[edgeToTest.Endpoints.B];
@@ -827,7 +837,7 @@ namespace BepuPhysics.Collidables
                         ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertices, ref face.VertexIndices);
                         step.UpdateForFaceMerge(rawFaceVertexIndices, face.VertexIndices, allowVertices, i);
                         mergedFace = true;
-                        
+
                         // It's possible for the merged face to have invalidated a previous face that wouldn't necessarily be detected as something to merge.
                         break;
                     }
@@ -836,7 +846,7 @@ namespace BepuPhysics.Collidables
                 {
                     var faceCountPriorToAdd = faces.Count;
                     AddFace(ref faces, pool, faceNormal, reducedFaceIndices);
-                    AddFaceEdgesToTestList(pool, ref reducedFaceIndices, ref edgesToTest, ref submittedEdgeTests, faceNormal, faceCountPriorToAdd);
+                    AddFaceEdgesToTestList(pool, ref reducedFaceIndices, ref edgesToTest, ref edgeFaceCounts, faceNormal, faceCountPriorToAdd);
                 }
                 step.FillHistory(allowVertices, faces);
                 steps.Add(step);

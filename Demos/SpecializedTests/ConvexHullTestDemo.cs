@@ -790,7 +790,7 @@ public class ConvexHullTestDemo : Demo
             {
                 var localStep = debugSteps[i];
                 DrawFace(localStep, localStep.Reduced, false, i);
-                if (localStep.OverwrittenOriginal != null)
+                if (showDeleted && localStep.OverwrittenOriginal != null)
                 {
                     DrawFace(localStep, localStep.OverwrittenOriginal, true, i);
                 }
