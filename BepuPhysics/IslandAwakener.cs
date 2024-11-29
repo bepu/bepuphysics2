@@ -587,8 +587,7 @@ namespace BepuPhysics
             //and the narrow phase pair cache.
             pairCache.Mapping.EnsureCapacity(pairCache.Mapping.Count + newPairCount, pool);
 
-            phaseOneJobs = new QuickList<PhaseOneJob>(Math.Max(32, highestNewBatchCount + 1), pool);
-            phaseTwoJobs = new QuickList<PhaseTwoJob>(32, pool);
+            phaseOneJobs = new QuickList<PhaseOneJob>(Math.Max(32, highestNewBatchCount + 2), pool);
             //Finally, create actual jobs. Note that this involves actually allocating space in the bodies set and in type batches for the workers to fill in.
             //(Pair caches are currently handled in a locally sequential way and do not require preallocation.)
             phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.PairCache };
@@ -597,6 +596,7 @@ namespace BepuPhysics
             {
                 phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.UpdateBatchReferencedHandles, BatchIndex = batchIndex };
             }
+            phaseTwoJobs = new QuickList<PhaseTwoJob>(32, pool);
             phaseTwoJobs.AllocateUnsafely() = new PhaseTwoJob { Type = PhaseTwoJobType.BroadPhase };
 
             ref var activeBodySet = ref bodies.ActiveSet;
