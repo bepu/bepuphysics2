@@ -1,0 +1,31 @@
+# .github/release.yml
+
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - dependabot
+  categories:
+    - title: 💥 Breaking Changes
+      labels:
+        - breaking-change
+    - title: 🎉 New Features
+      labels:
+        - enhancement
+        - new-feature
+    - title: 🚀 Performance
+      labels:
+        - performance
+    - title: 🧠 Fiddling
+      labels:
+        - fiddling
+    - title: 🎮 Demos App
+      labels:
+        - demos
+    - title: 📄 Documentation
+      labels:
+        - documentation
+    - title: 💪 Other Changes
+      labels:
+        - "*"
