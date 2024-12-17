@@ -1,34 +1,17 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Version>2.5.0-beta.24</Version>
-    <Company>Bepu Entertainment LLC</Company>
-    <Authors>Ross Nordby</Authors>
     <Description>Speedy real time physics simulation library.</Description>
-    <Copyright>© Bepu Entertainment LLC</Copyright>
-    <PackageProjectUrl>https://github.com/bepu/bepuphysics2</PackageProjectUrl>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/bepu/bepuphysics2</RepositoryUrl>
-    <PackageIcon>bepuphysicslogo256.png</PackageIcon>
     <Configurations>Debug;Release;ReleaseNoProfiling</Configurations>
-    <LangVersion>latest</LangVersion>
     <PackageTags>physics;3d;rigid body;real time;simulation</PackageTags>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    <DebugSymbols>true</DebugSymbols>
-    <!--<DebugType>full</DebugType>-->
-    <SignAssembly>true</SignAssembly>
-    <DelaySign>false</DelaySign>
     <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!--<TieredCompilation>false</TieredCompilation>-->
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
     <!-- CS1573 Parameter has no matching param tag in the XML comment for (but other parameters do) -->
     <!-- CS1591 Missing XML comment for publicly visible type or member -->
     <!-- CA2014 Stackalloc in loop -->
     <NoWarn>1573;1591;CA2014</NoWarn>
   </PropertyGroup>
+
+  <Import Project="..\CommonSettings.props" />
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <Optimize>false</Optimize>
@@ -84,15 +67,6 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>ContactNonconvexTypes.cs</LastGenOutput>
     </None>
-    <None Include="..\Documentation\images\bepuphysicslogo256.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-  </ItemGroup>
-
-  <!-- Needed for Source Link package debugging, see https://github.com/dotnet/sourcelink -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
   </ItemGroup>
 
 </Project>
