@@ -1,0 +1,56 @@
+name: .NET Core - Publish NuGet Packages
+
+env:
+  COMMON_SETTINGS_PATH: CommonSettings.props
+  BASE_RUN_NUMBER: 25
+
+on: [workflow_dispatch]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - name: Print run_number
+      run: echo ${{ github.run_number }}
+    - name: Set version number
+      run: |
+        $version = "2.5.0-beta.$(${{ github.run_number }} + $env:BASE_RUN_NUMBER)"
+        echo "VERSION=$version" >> $env:GITHUB_ENV
+      shell: powershell
+    - name: Print VERSION
+      run: echo "VERSION is $env:VERSION"
+    - uses: actions/checkout@v4
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.x'
+        include-prerelease: true
+    - name: Set Version in CommonSettings.props
+      run: |
+        $settingsContent = Get-Content -Path ${{ env.COMMON_SETTINGS_PATH }} -Raw
+        $updatedContent = $settingsContent -replace '<Version>.*?</Version>', "<Version>${{ env.VERSION }}</Version>"
+        Set-Content -Path ${{ env.COMMON_SETTINGS_PATH }} -Value $updatedContent
+    - name: Install dependencies
+      run: |
+        dotnet restore DemoContentBuilder
+        dotnet restore Demos
+    - name: Build
+      run: |
+        dotnet build DemoContentBuilder --configuration Release --no-restore /p:Platform=x64
+        dotnet build Demos --configuration Release --no-restore
+    - name: Test
+      run: dotnet test DemoTests -c Release --verbosity normal
+    - name: Publish
+      if: github.event_name != 'pull_request'
+      run: |
+        dotnet nuget add source "https://nuget.pkg.github.com/bepu/index.json" --name "github" --username "rossnordby" --password "${{secrets.GITHUB_TOKEN}}"
+        dotnet pack "BepuPhysics" -c Release
+        dotnet pack "BepuUtilities" -c Release
+        dotnet nuget push "**/*.nupkg" -s "github" -k "${{secrets.GITHUB_TOKEN}}" --skip-duplicate
+        dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k "${{secrets.NUGET_KEY}}" --skip-duplicate
+    - name: Create GitHub Release Draft
+      run: |
+        gh release create ${{ env.VERSION }} --title "v${{ env.VERSION }}" --notes "Release notes for ${{ env.VERSION }}" --draft
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
