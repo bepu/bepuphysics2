@@ -1,0 +1,57 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "..",
+          "files": [
+            "BepuPhysics/BepuPhysics.csproj",
+            "BepuPhysics/BepuUtilities.csproj"
+          ]
+        }
+      ],
+      "dest": "api"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "**/*.{md,yml}"
+        ],
+        "exclude": [
+          "_site/**"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "favicon.ico",
+          "favicon.png",
+          "images/**"
+        ]
+      }
+    ],
+    "output": "_site",
+    "template": [
+      "default",
+      "modern",
+      "template"
+    ],
+    "fileMetadata": {
+      "_appTitle": {
+        "api/**/*.md": "Bepu API",
+        "api/**/*.yml": "Bepu API"
+      }
+    },
+    "globalMetadata": {
+      "_appName": "",
+      "_appTitle": "Bepu Docs",
+      "_appLogoPath": "images/bepuphysicslogo256.png",
+      "_enableSearch": true,
+      "pdf": false
+    }
+  }
+}

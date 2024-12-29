@@ -1,0 +1,41 @@
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build Bepu Docs for GitHub Pages
+
+env:
+  COMMON_SETTINGS_PATH: Documentation/docfx.json
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-docs:
+    runs-on: windows-latest
+
+    steps:
+    - name: .NET SDK Setup
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.x
+
+    - name: Checkout Bepu
+      uses: actions/checkout@v4
+
+    - name: Install DocFX
+      # This installs the latest version of DocFX and may introduce breaking changes
+      # run: dotnet tool update -g docfx
+      # This installs a specific, tested version of DocFX.
+      run: dotnet tool update -g docfx --version 2.78.2
+
+    - name: Build Bepu API Docs
+      run: docfx metadata ${{ env.COMMON_SETTINGS_PATH }}
+
+    - name: Build Bepu Docs
+      run: docfx build ${{ env.COMMON_SETTINGS_PATH }}
+
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v4.0.0
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ${{ env.COMMON_SETTINGS_PATH }}/_site
+        publish_branch: gh-pages
