@@ -483,7 +483,6 @@ namespace BepuPhysics.Collidables
         {
             public EdgeEndpoints Endpoints;
             public Vector3 FaceNormal;
-            public int FaceIndex;
         }
 
 
@@ -512,7 +511,6 @@ namespace BepuPhysics.Collidables
                     EdgeToTest nextEdgeToTest;
                     nextEdgeToTest.Endpoints = endpoints;
                     nextEdgeToTest.FaceNormal = faceNormal;
-                    nextEdgeToTest.FaceIndex = newFaceIndex;
                     edgesToTest.Allocate(pool) = nextEdgeToTest;
                     edgeFaceCounts.Values[slotIndex] = 1;
                 }
@@ -536,6 +534,7 @@ namespace BepuPhysics.Collidables
             public int[] Raw;
             public int[] Reduced;
             public int[] OverwrittenOriginal;
+            public List<int[]> DeletedFaces;
             public bool[] AllowVertex;
             public Vector3 FaceNormal;
             public Vector3 BasisX;
@@ -556,6 +555,7 @@ namespace BepuPhysics.Collidables
                 Reduced = ((Span<int>)reducedVertexIndices).ToArray();
                 OverwrittenOriginal = null;
                 FaceIndex = faceIndex;
+                DeletedFaces = new List<int[]>();
             }
 
             internal DebugStep FillHistory(Buffer<int> allowVertex, QuickList<EarlyFace> faces)
@@ -579,9 +579,22 @@ namespace BepuPhysics.Collidables
                 return this;
             }
 
-            internal void RecordDeletedFace(QuickList<int> faceVertexIndices)
+            /// <summary>
+            /// Records the vertex indices corresponding to a face that was overwritten by a new face created by merging a newly-discovered face and an existing face due to normal similarity.
+            /// </summary>
+            /// <param name="faceVertexIndices">Face vertex indices of the original face that's being overwritten.</param>
+            internal void RecordOverwrittenFace(QuickList<int> faceVertexIndices)
             {
                 OverwrittenOriginal = ((Span<int>)faceVertexIndices).ToArray();
+            }
+
+            /// <summary>
+            /// Records the vertex indices corresponding to a face that was deleted for being associated with now-disallowed vertices downstream of a face merge.
+            /// </summary>
+            /// <param name="faceVertexIndices">Vertices of the face that was deleted.</param>
+            internal void RecordDeletedFace(QuickList<int> faceVertexIndices)
+            {
+                DeletedFaces.Add(((Span<int>)faceVertexIndices).ToArray());
             }
 
             internal void UpdateForFaceMerge(QuickList<int> rawFaceVertexIndices, QuickList<int> reducedVertexIndices, Buffer<int> allowVertex, int mergedFaceIndex)
@@ -745,7 +758,6 @@ namespace BepuPhysics.Collidables
                     edgeToAdd.Endpoints.A = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
                     edgeToAdd.Endpoints.B = reducedFaceIndices[i];
                     edgeToAdd.FaceNormal = initialFaceNormal;
-                    edgeToAdd.FaceIndex = 0;
                 }
                 //Since an actual face was found, we go ahead and output it into the face set.
                 AddFace(ref faces, pool, initialFaceNormal, reducedFaceIndices);
@@ -759,7 +771,6 @@ namespace BepuPhysics.Collidables
                 edgeToAdd.Endpoints.A = reducedFaceIndices[0];
                 edgeToAdd.Endpoints.B = reducedFaceIndices[1];
                 edgeToAdd.FaceNormal = initialFaceNormal;
-                edgeToAdd.FaceIndex = -1;
                 var edgeOffset = points[edgeToAdd.Endpoints.B] - points[edgeToAdd.Endpoints.A];
                 var basisY = Vector3.Cross(edgeOffset, edgeToAdd.FaceNormal);
                 var basisX = Vector3.Cross(edgeOffset, basisY);
@@ -830,7 +841,7 @@ namespace BepuPhysics.Collidables
                             }
                         }
                         // Rerun reduction for the merged face.
-                        step.RecordDeletedFace(face.VertexIndices);
+                        step.RecordOverwrittenFace(face.VertexIndices);
                         face.VertexIndices.Count = 0;
                         facePoints.Count = 0;
                         face.VertexIndices.EnsureCapacity(rawFaceVertexIndices.Count, pool);
@@ -848,6 +859,58 @@ namespace BepuPhysics.Collidables
                     AddFace(ref faces, pool, faceNormal, reducedFaceIndices);
                     AddFaceEdgesToTestList(pool, ref reducedFaceIndices, ref edgesToTest, ref edgeFaceCounts, faceNormal, faceCountPriorToAdd);
                 }
+                // Check all faces for use of disallowed vertices.
+                var deletedFaceCount = 0;
+                for (int i = 0; i < faces.Count; ++i)
+                {
+                    ref var face = ref faces[i];
+                    bool deletedFace = false;
+                    for (int j = 0; j < face.VertexIndices.Count; ++j)
+                    {
+                        if (allowVertices[face.VertexIndices[j]] == 0)
+                        {
+                            ++deletedFaceCount;
+                            deletedFace = true;
+                            break;
+                        }
+                    }
+                    if (deletedFace)
+                    {
+                        Console.WriteLine($"Deleting face {i}");
+                        step.RecordDeletedFace(face.VertexIndices);
+                        // Edges may have been exposed by the deletion of the face.
+                        // Adjust the edge-face counts.
+                        for (int j = 0; j < face.VertexIndices.Count; ++j)
+                        {
+                            var previousIndex = face.VertexIndices[j == 0 ? face.VertexIndices.Count - 1 : j - 1];
+                            var nextIndex = face.VertexIndices[j];
+                            // NOTE A CRITICAL SUBTLETY:
+                            // The edge endpoints are flipped from the usual submission order.
+                            // That's because the usual submission is trying to find faces *outside* the current face (since it just got added).
+                            // Here, we're leaving a void and we want to fill it.
+                            var endpoints = new EdgeEndpoints { A = nextIndex, B = previousIndex };
+                            if (edgeFaceCounts.GetTableIndices(ref endpoints, out var tableIndex, out var elementIndex))
+                            {
+                                ref var countForEdge = ref edgeFaceCounts.Values[elementIndex];
+                                if (allowVertices[endpoints.A] != 0 && allowVertices[endpoints.B] != 0)
+                                {
+                                    // This edge connects still-valid vertices, and by removing a face from it, it's conceivable that we've opened a hole.
+                                    // Note that the face normal we're using here is not actually 'correct'; it should be the face normal of the *other* face on this edge.
+                                    // We're shrugging about this because the deleted face should still be able to offer a normal that fills the hole...
+                                    edgesToTest.Add(new EdgeToTest { Endpoints = endpoints, FaceNormal = face.Normal }, pool);
+                                }
+                            }
+                        }
+
+                        face.VertexIndices.Dispose(pool);
+                    }
+                    if (!deletedFace && deletedFaceCount > 0)
+                    {
+                        // Shift the face back to fill in the gap.
+                        faces[i - deletedFaceCount] = faces[i];
+                    }
+                }
+                faces.Count -= deletedFaceCount;
                 step.FillHistory(allowVertices, faces);
                 steps.Add(step);
 
