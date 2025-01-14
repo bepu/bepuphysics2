@@ -754,50 +754,81 @@ public class ConvexHullTestDemo : Demo
             }
         }
 
+        void DrawFace(DebugStep step, int[] reduced, Vector3 color, float offsetScale)
         {
-            var pose = new RigidPose(renderOffset);
-            void DrawFace(DebugStep step, int[] reduced, bool deleted, int i)
+            var offset = step.FaceNormal * offsetScale;
+            if (showWireframe)
             {
-                var color = deleted ? new Vector3(0.25f, 0.25f, 0.25f) : stepIndex == i ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1);
-                var deletionInducedScale = deleted ? new Vector3(1.1f) : new Vector3(1f);
-
-                var offset = deleted ? step.FaceNormal * 0.25f : new Vector3();
-                if (showWireframe)
+                var previousIndex = reduced.Length - 1;
+                for (int q = 0; q < reduced.Length; ++q)
                 {
-                    var previousIndex = reduced.Length - 1;
-                    for (int q = 0; q < reduced.Length; ++q)
-                    {
-                        var a = points[reduced[q]] * scale + pose.Position + offset;
-                        var b = points[reduced[previousIndex]] * scale + pose.Position + offset;
-                        previousIndex = q;
-                        renderer.Lines.Allocate() = new LineInstance(a, b, color, Vector3.Zero);
-                    }
-                }
-                else
-                {
-                    for (int k = 2; k < reduced.Length; ++k)
-                    {
-                        renderer.Shapes.AddShape(new Triangle
-                        {
-                            A = points[reduced[0]] * scale + offset,
-                            B = points[reduced[k]] * scale + offset,
-                            C = points[reduced[k - 1]] * scale + offset
-                        }, Simulation.Shapes, pose, color);
-                    }
+                    var a = points[reduced[q]] * scale + renderOffset + offset;
+                    var b = points[reduced[previousIndex]] * scale + renderOffset + offset;
+                    previousIndex = q;
+                    renderer.Lines.Allocate() = new LineInstance(a, b, color, Vector3.Zero);
                 }
             }
-            for (int i = 0; i <= stepIndex; ++i)
+            else
             {
-                var localStep = debugSteps[i];
-                DrawFace(localStep, localStep.Reduced, false, i);
-                if (showDeleted && localStep.OverwrittenOriginal != null)
+                for (int k = 2; k < reduced.Length; ++k)
                 {
-                    DrawFace(localStep, localStep.OverwrittenOriginal, true, i);
+                    renderer.Shapes.AddShape(new Triangle
+                    {
+                        A = points[reduced[0]] * scale + offset,
+                        B = points[reduced[k]] * scale + offset,
+                        C = points[reduced[k - 1]] * scale + offset
+                    }, Simulation.Shapes, renderOffset, color);
                 }
-
             }
         }
-        Console.WriteLine($"face count: {step.FaceStarts.Count}");
+
+        if (showDeleted && step.OverwrittenOriginal != null)
+        {
+            DrawFace(step, step.OverwrittenOriginal, new Vector3(0.5f, 0.1f, 0.1f), 0.25f);
+            for (int j = 0; j < step.DeletedFaces.Count; ++j)
+                DrawFace(step, step.DeletedFaces[j], new Vector3(0.1f, 0.1f, 0.1f), 0.25f);
+        }
+
+        // Render all current faces in the step
+        for (int faceIndex = 0; faceIndex < step.FaceStarts.Count; ++faceIndex)
+        {
+            var startIndex = step.FaceStarts[faceIndex];
+            var endIndex = faceIndex < step.FaceStarts.Count - 1 ? step.FaceStarts[faceIndex + 1] : step.FaceIndices.Count;
+            var faceVertexCount = endIndex - startIndex;
+            var faceNormal = step.FaceNormals[faceIndex];
+
+            var color = step.FaceIndex == faceIndex ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1); 
+
+            if (showWireframe)
+            {
+                // Draw wireframe edges for the face
+                var previousIndex = endIndex - 1;
+                for (int vertexIndex = startIndex; vertexIndex < endIndex; ++vertexIndex)
+                {
+                    var a = points[step.FaceIndices[vertexIndex]] * scale + renderOffset;
+                    var b = points[step.FaceIndices[previousIndex]] * scale + renderOffset;
+                    previousIndex = vertexIndex;
+                    renderer.Lines.Allocate() = new LineInstance(a, b, color, Vector3.Zero);
+                }             
+            }
+            else
+            {
+                // Draw filled triangles for the face
+                var baseIndex = step.FaceIndices[startIndex];
+                var basePoint = points[baseIndex] * scale;
+                for (int vertexIndex = startIndex + 2; vertexIndex < endIndex; ++vertexIndex)
+                {
+                    renderer.Shapes.AddShape(new Triangle
+                    {
+                        A = basePoint,
+                        B = points[step.FaceIndices[vertexIndex]] * scale,
+                        C = points[step.FaceIndices[vertexIndex - 1]] * scale
+                    }, Simulation.Shapes, renderOffset, color);
+                }
+            }
+        }
+
+        //Console.WriteLine($"face count: {step.FaceStarts.Count}");
 
         if (showVertexIndices)
         {
