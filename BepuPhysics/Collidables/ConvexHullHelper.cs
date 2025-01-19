@@ -1,4 +1,4 @@
-﻿using BepuPhysics.Constraints.Contact;
+﻿#define DEBUG_STEPS
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
 
 namespace BepuPhysics.Collidables
 {
@@ -522,12 +523,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        static void AddIfNotPresent(ref QuickList<int> list, int value, BufferPool pool)
-        {
-            if (!list.Contains(value))
-                list.Allocate(pool) = value;
-        }
-
+#if DEBUG_STEPS
         public struct DebugStep
         {
             public EdgeEndpoints SourceEdge;
@@ -614,7 +610,7 @@ namespace BepuPhysics.Collidables
         {
             ComputeHull(points, pool, out hullData, out _);
         }
-
+#endif
 
         /// <summary>
         /// Computes the convex hull of a set of points.
@@ -622,7 +618,11 @@ namespace BepuPhysics.Collidables
         /// <param name="points">Point set to compute the convex hull of.</param>
         /// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
         /// <param name="hullData">Convex hull of the input point set.</param>
+#if DEBUG_STEPS
         public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData, out List<DebugStep> steps)
+#else
+        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
+#endif
         {
             steps = new List<DebugStep>();
             if (points.Length <= 0)
@@ -777,9 +777,11 @@ namespace BepuPhysics.Collidables
                 if (Vector3.Dot(basisX, edgeToAdd.FaceNormal) > 0)
                     Helpers.Swap(ref edgeToAdd.Endpoints.A, ref edgeToAdd.Endpoints.B);
             }
+#if DEBUG_STEPS
             Vector3Wide.ReadFirst(initialBasisX, out var debugInitialBasisX);
             Vector3Wide.ReadFirst(initialBasisY, out var debugInitialBasisY);
             steps.Add(new DebugStep(initialSourceEdge, rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY, reducedFaceIndices, reducedFaceIndices.Count >= 3 ? 0 : -1).FillHistory(allowVertices, faces));
+#endif
 
             while (edgesToTest.Count > 0)
             {
@@ -811,13 +813,17 @@ namespace BepuPhysics.Collidables
 
                 if (reducedFaceIndices.Count < 3)
                 {
+#if DEBUG_STEPS
                     steps.Add(new DebugStep(edgeToTest.Endpoints, rawFaceVertexIndices, faceNormal, basisX, basisY, reducedFaceIndices, -1).FillHistory(allowVertices, faces));
+#endif
                     //Degenerate face found; don't bother creating work for it.
                     continue;
                 }
                 // Brute force scan all the faces to see if the new face is coplanar with any of them.
+#if DEBUG_STEPS
                 var step = new DebugStep(edgeToTest.Endpoints, rawFaceVertexIndices, faceNormal, basisX, basisY, reducedFaceIndices, faces.Count);
                 Console.WriteLine($"step count: {steps.Count}");
+#endif
                 bool mergedFace = false;
                 for (int i = 0; i < faces.Count; ++i)
                 {
@@ -841,12 +847,16 @@ namespace BepuPhysics.Collidables
                             }
                         }
                         // Rerun reduction for the merged face.
+#if DEBUG_STEPS
                         step.RecordOverwrittenFace(face.VertexIndices);
+#endif
                         face.VertexIndices.Count = 0;
                         facePoints.Count = 0;
                         face.VertexIndices.EnsureCapacity(rawFaceVertexIndices.Count, pool);
                         ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeEpsilonNarrow, ref facePoints, ref allowVertices, ref face.VertexIndices);
+#if DEBUG_STEPS
                         step.UpdateForFaceMerge(rawFaceVertexIndices, face.VertexIndices, allowVertices, i);
+#endif
                         mergedFace = true;
 
                         // It's possible for the merged face to have invalidated a previous face that wouldn't necessarily be detected as something to merge.
@@ -876,8 +886,10 @@ namespace BepuPhysics.Collidables
                     }
                     if (deletedFace)
                     {
+#if DEBUG_STEPS
                         Console.WriteLine($"Deleting face {i}");
                         step.RecordDeletedFace(face.VertexIndices);
+#endif
                         // Edges may have been exposed by the deletion of the face.
                         // Adjust the edge-face counts.
                         for (int j = 0; j < face.VertexIndices.Count; ++j)
@@ -911,11 +923,12 @@ namespace BepuPhysics.Collidables
                     }
                 }
                 faces.Count -= deletedFaceCount;
+#if DEBUG_STEPS
                 step.FillHistory(allowVertices, faces);
                 steps.Add(step);
-
                 if (steps.Count > 500)
                     break;
+#endif
             }
 
             edgesToTest.Dispose(pool);

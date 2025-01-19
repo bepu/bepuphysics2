@@ -1,4 +1,5 @@
-﻿using System;
+﻿#define DEBUG_STEPS
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using BepuPhysics.Collidables;
@@ -7,7 +8,6 @@ using DemoContentLoader;
 using DemoRenderer;
 using BepuPhysics;
 using static BepuPhysics.Collidables.ConvexHullHelper;
-using System.Diagnostics;
 using BepuUtilities;
 using BepuPhysics.Constraints;
 using BepuUtilities.Memory;
@@ -17,25 +17,23 @@ using DemoRenderer.Constraints;
 using DemoUtilities;
 using DemoRenderer.UI;
 
+
+
 namespace Demos.SpecializedTests;
 
 public class ConvexHullTestDemo : Demo
 {
-    Buffer<Vector3> CreateRandomConvexHullPoints()
+    Vector3[] CreateRandomConvexHullPoints()
     {
-        const int pointCount = 50;
-        BufferPool.Take<Vector3>(pointCount, out var points);
-
+        var points = new Vector3[50];
         var random = new Random(5);
-        for (int i = 0; i < pointCount; ++i)
+        for (int i = 0; i < points.Length; ++i)
         {
-            points[i] = new Vector3(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
+            points[i] = new(3 * random.NextSingle(), 1 * random.NextSingle(), 3 * random.NextSingle());
         }
 
         return points;
     }
-
-
 
     Vector3[] CreateBwaa()
     {
@@ -169,49 +167,53 @@ public class ConvexHullTestDemo : Demo
         return points;
     }
 
-    Buffer<Vector3> CreatePlaneish()
+    Vector3[] CreatePlaneish()
     {
-        var points = new Buffer<Vector3>(12, BufferPool);
-        points[0] = new Vector3(-13.82f, 16.79f, 13.83f);
-        points[1] = new Vector3(13.82f, -16.79f, -13.83f);
-        points[2] = new Vector3(13.82f, 16.79f, -13.83f);
-        points[3] = new Vector3(-13.82f, 16.79f, 13.83f);
-        points[4] = new Vector3(13.82f, 16.79f, -13.83f);
-        points[5] = new Vector3(-13.82f, -16.79f, 13.83f);
-        points[6] = new Vector3(13.82f, 16.79f, -13.83f);
-        points[7] = new Vector3(13.82f, -16.79f, -13.83f);
-        points[8] = new Vector3(-13.82f, -16.79f, 13.83f);
-        points[9] = new Vector3(-13.82f, 16.79f, 13.83f);
-        points[10] = new Vector3(-13.82f, -16.79f, 13.83f);
-        points[11] = new Vector3(13.82f, -16.79f, -13.83f);
+        var points = new Vector3[]
+        {
+            new(-13.82f, 16.79f, 13.83f),
+            new(13.82f, -16.79f, -13.83f),
+            new(13.82f, 16.79f, -13.83f),
+            new(-13.82f, 16.79f, 13.83f),
+            new(13.82f, 16.79f, -13.83f),
+            new(-13.82f, -16.79f, 13.83f),
+            new(13.82f, 16.79f, -13.83f),
+            new(13.82f, -16.79f, -13.83f),
+            new(-13.82f, -16.79f, 13.83f),
+            new(-13.82f, 16.79f, 13.83f),
+            new(-13.82f, -16.79f, 13.83f),
+            new(13.82f, -16.79f, -13.83f),
+        };
         return points;
     }
 
-    Buffer<Vector3> CreateDistantPlane()
+    Vector3[] CreateDistantPlane()
     {
-        var points = new Buffer<Vector3>(12, BufferPool);
-        points[0] = new(-151.0875f, -2.2505488f, 102.17515f);
-        points[1] = new(-151.10571f, 2.1121342f, -17.699797f);
-        points[2] = new(-151.08746f, -2.2504745f, -17.699797f);
-        points[3] = new(-151.10571f, 2.1121342f, -17.699797f);
-        points[4] = new(-151.0875f, -2.2505488f, 102.17515f);
-        points[5] = new(-151.10574f, 2.1120775f, 102.17517f);
-        points[6] = new(-151.10571f, 2.1121342f, -17.699797f);
-        points[7] = new(-151.10574f, 2.1120775f, 102.17517f);
-        points[8] = new(-151.08746f, -2.2504745f, -17.699797f);
-        points[9] = new(-151.08746f, -2.2504745f, -17.699797f);
-        points[10] = new(-151.10574f, 2.1120775f, 102.17517f);
-        points[11] = new(-151.0875f, -2.2505488f, 102.17515f);
+        var points = new Vector3[]
+        {
+            new(-151.0875f, -2.2505488f, 102.17515f),
+            new(-151.10571f, 2.1121342f, -17.699797f),
+            new(-151.08746f, -2.2504745f, -17.699797f),
+            new(-151.10571f, 2.1121342f, -17.699797f),
+            new(-151.0875f, -2.2505488f, 102.17515f),
+            new(-151.10574f, 2.1120775f, 102.17517f),
+            new(-151.10571f, 2.1121342f, -17.699797f),
+            new(-151.10574f, 2.1120775f, 102.17517f),
+            new(-151.08746f, -2.2504745f, -17.699797f),
+            new(-151.08746f, -2.2504745f, -17.699797f),
+            new(-151.10574f, 2.1120775f, 102.17517f),
+            new(-151.0875f, -2.2505488f, 102.17515f),
+        };
         return points;
     }
 
-    Buffer<Vector3> CreateMeshConvexHull(MeshContent meshContent, Vector3 scale)
+    Vector3[] CreateMeshConvexHull(MeshContent meshContent, Vector3 scale)
     {
         //This is actually a pretty good example of how *not* to make a convex hull shape.
         //Generating it directly from a graphical data source tends to have way more surface complexity than needed,
         //and it tends to have a lot of near-but-not-quite-coplanar surfaces which can make the contact manifold less stable.
         //Prefer a simpler source with more distinct features, possibly created with an automated content-time tool.
-        BufferPool.Take<Vector3>(meshContent.Triangles.Length * 3, out var points);
+        var points = new Vector3[meshContent.Triangles.Length * 3];
         for (int i = 0; i < meshContent.Triangles.Length; ++i)
         {
             ref var triangle = ref meshContent.Triangles[i];
@@ -223,233 +225,241 @@ public class ConvexHullTestDemo : Demo
         return points;
     }
 
-    Buffer<Vector3> CreateBoxConvexHull(float boxScale)
+    Vector3[] CreateBoxConvexHull(float boxScale)
     {
-        BufferPool.Take<Vector3>(8, out var points);
-        points[0] = new Vector3(0, 0, 0);
-        points[1] = new Vector3(0, 0, boxScale);
-        points[2] = new Vector3(0, boxScale, 0);
-        points[3] = new Vector3(0, boxScale, boxScale);
-        points[4] = new Vector3(boxScale, 0, 0);
-        points[5] = new Vector3(boxScale, 0, boxScale);
-        points[6] = new Vector3(boxScale, boxScale, 0);
-        points[7] = new Vector3(boxScale, boxScale, boxScale);
+        var points = new Vector3[]
+        {
+            new(0, 0, 0),
+            new(0, 0, boxScale),
+            new(0, boxScale, 0),
+            new(0, boxScale, boxScale),
+            new(boxScale, 0, 0),
+            new(boxScale, 0, boxScale),
+            new(boxScale, boxScale, 0),
+            new(boxScale, boxScale, boxScale),
+        };
         return points;
     }
 
     //A couple of test point sets from PEEL: https://github.com/Pierre-Terdiman/PEEL_PhysX_Edition
-    Buffer<Vector3> CreateTestConvexHull()
+    Vector3[] CreateTestConvexHull()
     {
-        BufferPool.Take<Vector3>(50, out var vertices);
-        vertices[0] = new Vector3(-0.000000f, -0.297120f, -0.000000f);
-        vertices[1] = new Vector3(0.258819f, -0.297120f, 0.965926f);
-        vertices[2] = new Vector3(-0.000000f, -0.297120f, 1.000000f);
-        vertices[3] = new Vector3(0.500000f, -0.297120f, 0.866026f);
-        vertices[4] = new Vector3(0.707107f, -0.297120f, 0.707107f);
-        vertices[5] = new Vector3(0.866026f, -0.297120f, 0.500000f);
-        vertices[6] = new Vector3(0.965926f, -0.297120f, 0.258819f);
-        vertices[7] = new Vector3(1.000000f, -0.297120f, -0.000000f);
-        vertices[8] = new Vector3(0.965926f, -0.297120f, -0.258819f);
-        vertices[9] = new Vector3(0.866026f, -0.297120f, -0.500000f);
-        vertices[10] = new Vector3(0.707107f, -0.297120f, -0.707107f);
-        vertices[11] = new Vector3(0.500000f, -0.297120f, -0.866026f);
-        vertices[12] = new Vector3(0.258819f, -0.297120f, -0.965926f);
-        vertices[13] = new Vector3(-0.000000f, -0.297120f, -1.000000f);
-        vertices[14] = new Vector3(-0.258819f, -0.297120f, -0.965926f);
-        vertices[15] = new Vector3(-0.500000f, -0.297120f, -0.866025f);
-        vertices[16] = new Vector3(-0.707107f, -0.297120f, -0.707107f);
-        vertices[17] = new Vector3(-0.866026f, -0.297120f, -0.500000f);
-        vertices[18] = new Vector3(-0.965926f, -0.297120f, -0.258819f);
-        vertices[19] = new Vector3(-1.000000f, -0.297120f, 0.000000f);
-        vertices[20] = new Vector3(-0.965926f, -0.297120f, 0.258819f);
-        vertices[21] = new Vector3(-0.866025f, -0.297120f, 0.500000f);
-        vertices[22] = new Vector3(-0.707107f, -0.297120f, 0.707107f);
-        vertices[23] = new Vector3(-0.500000f, -0.297120f, 0.866026f);
-        vertices[24] = new Vector3(-0.258819f, -0.297120f, 0.965926f);
-        vertices[25] = new Vector3(-0.000000f, 0.297120f, -0.000000f);
-        vertices[26] = new Vector3(-0.000000f, 0.297120f, 0.537813f);
-        vertices[27] = new Vector3(0.139196f, 0.297120f, 0.519487f);
-        vertices[28] = new Vector3(0.268907f, 0.297120f, 0.465760f);
-        vertices[29] = new Vector3(0.380291f, 0.297120f, 0.380291f);
-        vertices[30] = new Vector3(0.465760f, 0.297120f, 0.268907f);
-        vertices[31] = new Vector3(0.519487f, 0.297120f, 0.139196f);
-        vertices[32] = new Vector3(0.537813f, 0.297120f, -0.000000f);
-        vertices[33] = new Vector3(0.519487f, 0.297120f, -0.139196f);
-        vertices[34] = new Vector3(0.465760f, 0.297120f, -0.268907f);
-        vertices[35] = new Vector3(0.380291f, 0.297120f, -0.380291f);
-        vertices[36] = new Vector3(0.268907f, 0.297120f, -0.465760f);
-        vertices[37] = new Vector3(0.139196f, 0.297120f, -0.519487f);
-        vertices[38] = new Vector3(-0.000000f, 0.297120f, -0.537813f);
-        vertices[39] = new Vector3(-0.139196f, 0.297120f, -0.519487f);
-        vertices[40] = new Vector3(-0.268907f, 0.297120f, -0.465760f);
-        vertices[41] = new Vector3(-0.380291f, 0.297120f, -0.380291f);
-        vertices[42] = new Vector3(-0.465760f, 0.297120f, -0.268907f);
-        vertices[43] = new Vector3(-0.519487f, 0.297120f, -0.139196f);
-        vertices[44] = new Vector3(-0.537813f, 0.297120f, 0.000000f);
-        vertices[45] = new Vector3(-0.519487f, 0.297120f, 0.139196f);
-        vertices[46] = new Vector3(-0.465760f, 0.297120f, 0.268907f);
-        vertices[47] = new Vector3(-0.380291f, 0.297120f, 0.380291f);
-        vertices[48] = new Vector3(-0.268907f, 0.297120f, 0.465760f);
-        vertices[49] = new Vector3(-0.139196f, 0.297120f, 0.519487f);
+        var vertices = new Vector3[]
+        {
+            new(-0.000000f, -0.297120f, -0.000000f),
+            new(0.258819f, -0.297120f, 0.965926f),
+            new(-0.000000f, -0.297120f, 1.000000f),
+            new(0.500000f, -0.297120f, 0.866026f),
+            new(0.707107f, -0.297120f, 0.707107f),
+            new(0.866026f, -0.297120f, 0.500000f),
+            new(0.965926f, -0.297120f, 0.258819f),
+            new(1.000000f, -0.297120f, -0.000000f),
+            new(0.965926f, -0.297120f, -0.258819f),
+            new(0.866026f, -0.297120f, -0.500000f),
+            new(0.707107f, -0.297120f, -0.707107f),
+            new(0.500000f, -0.297120f, -0.866026f),
+            new(0.258819f, -0.297120f, -0.965926f),
+            new(-0.000000f, -0.297120f, -1.000000f),
+            new(-0.258819f, -0.297120f, -0.965926f),
+            new(-0.500000f, -0.297120f, -0.866025f),
+            new(-0.707107f, -0.297120f, -0.707107f),
+            new(-0.866026f, -0.297120f, -0.500000f),
+            new(-0.965926f, -0.297120f, -0.258819f),
+            new(-1.000000f, -0.297120f, 0.000000f),
+            new(-0.965926f, -0.297120f, 0.258819f),
+            new(-0.866025f, -0.297120f, 0.500000f),
+            new(-0.707107f, -0.297120f, 0.707107f),
+            new(-0.500000f, -0.297120f, 0.866026f),
+            new(-0.258819f, -0.297120f, 0.965926f),
+            new(-0.000000f, 0.297120f, -0.000000f),
+            new(-0.000000f, 0.297120f, 0.537813f),
+            new(0.139196f, 0.297120f, 0.519487f),
+            new(0.268907f, 0.297120f, 0.465760f),
+            new(0.380291f, 0.297120f, 0.380291f),
+            new(0.465760f, 0.297120f, 0.268907f),
+            new(0.519487f, 0.297120f, 0.139196f),
+            new(0.537813f, 0.297120f, -0.000000f),
+            new(0.519487f, 0.297120f, -0.139196f),
+            new(0.465760f, 0.297120f, -0.268907f),
+            new(0.380291f, 0.297120f, -0.380291f),
+            new(0.268907f, 0.297120f, -0.465760f),
+            new(0.139196f, 0.297120f, -0.519487f),
+            new(-0.000000f, 0.297120f, -0.537813f),
+            new(-0.139196f, 0.297120f, -0.519487f),
+            new(-0.268907f, 0.297120f, -0.465760f),
+            new(-0.380291f, 0.297120f, -0.380291f),
+            new(-0.465760f, 0.297120f, -0.268907f),
+            new(-0.519487f, 0.297120f, -0.139196f),
+            new(-0.537813f, 0.297120f, 0.000000f),
+            new(-0.519487f, 0.297120f, 0.139196f),
+            new(-0.465760f, 0.297120f, 0.268907f),
+            new(-0.380291f, 0.297120f, 0.380291f),
+            new(-0.268907f, 0.297120f, 0.465760f),
+            new(-0.139196f, 0.297120f, 0.519487f),
+        };
         return vertices;
     }
 
-    Buffer<Vector3> CreateTestConvexHull2()
+    Vector3[] CreateTestConvexHull2()
     {
-        BufferPool.Take<Vector3>(120, out var vertices);
-        vertices[0] = new Vector3(0.153478f, 0.993671f, 0.124687f);
-        vertices[1] = new Vector3(0.153478f, 0.993671f, -0.117774f);
-        vertices[2] = new Vector3(-0.147939f, 0.993671f, -0.117774f);
-        vertices[3] = new Vector3(-0.147939f, 0.993671f, 0.124687f);
-        vertices[4] = new Vector3(0.137286f, 0.817392f, 0.586192f);
-        vertices[5] = new Vector3(0.333441f, 0.696161f, 0.661116f);
-        vertices[6] = new Vector3(0.484149f, 0.789305f, 0.417265f);
-        vertices[7] = new Vector3(0.287995f, 0.910536f, 0.342339f);
-        vertices[8] = new Vector3(0.794945f, 0.410936f, 0.484838f);
-        vertices[9] = new Vector3(0.916176f, 0.336012f, 0.288682f);
-        vertices[10] = new Vector3(0.823033f, 0.579863f, 0.137973f);
-        vertices[11] = new Vector3(0.701803f, 0.654787f, 0.334128f);
-        vertices[12] = new Vector3(0.916176f, 0.336012f, -0.281770f);
-        vertices[13] = new Vector3(0.794945f, 0.410936f, -0.477925f);
-        vertices[14] = new Vector3(0.701803f, 0.654787f, -0.327216f);
-        vertices[15] = new Vector3(0.823033f, 0.579863f, -0.131060f);
-        vertices[16] = new Vector3(0.333441f, 0.696161f, -0.654204f);
-        vertices[17] = new Vector3(0.137286f, 0.817392f, -0.579280f);
-        vertices[18] = new Vector3(0.287995f, 0.910536f, -0.335426f);
-        vertices[19] = new Vector3(0.484149f, 0.789305f, -0.410352f);
-        vertices[20] = new Vector3(-0.131747f, 0.817392f, -0.579280f);
-        vertices[21] = new Vector3(-0.327903f, 0.696161f, -0.654204f);
-        vertices[22] = new Vector3(-0.478612f, 0.789305f, -0.410352f);
-        vertices[23] = new Vector3(-0.282457f, 0.910536f, -0.335426f);
-        vertices[24] = new Vector3(-0.789408f, 0.410936f, -0.477925f);
-        vertices[25] = new Vector3(-0.910638f, 0.336012f, -0.281770f);
-        vertices[26] = new Vector3(-0.817496f, 0.579863f, -0.131060f);
-        vertices[27] = new Vector3(-0.696265f, 0.654787f, -0.327216f);
-        vertices[28] = new Vector3(-0.910638f, 0.336012f, 0.288682f);
-        vertices[29] = new Vector3(-0.789408f, 0.410936f, 0.484838f);
-        vertices[30] = new Vector3(-0.696265f, 0.654787f, 0.334128f);
-        vertices[31] = new Vector3(-0.817496f, 0.579863f, 0.137973f);
-        vertices[32] = new Vector3(-0.327903f, 0.696161f, 0.661116f);
-        vertices[33] = new Vector3(-0.131747f, 0.817392f, 0.586192f);
-        vertices[34] = new Vector3(-0.282457f, 0.910536f, 0.342339f);
-        vertices[35] = new Vector3(-0.478612f, 0.789305f, 0.417265f);
-        vertices[36] = new Vector3(0.416578f, 0.478508f, 0.795634f);
-        vertices[37] = new Vector3(0.341652f, 0.282353f, 0.916863f);
-        vertices[38] = new Vector3(0.585505f, 0.131646f, 0.823721f);
-        vertices[39] = new Vector3(0.660429f, 0.327801f, 0.702490f);
-        vertices[40] = new Vector3(0.124000f, 0.147837f, 1.000000f);
-        vertices[41] = new Vector3(-0.118461f, 0.147837f, 1.000000f);
-        vertices[42] = new Vector3(-0.118461f, -0.153580f, 1.000000f);
-        vertices[43] = new Vector3(0.124000f, -0.153580f, 1.000000f);
-        vertices[44] = new Vector3(-0.336113f, 0.282353f, 0.916863f);
-        vertices[45] = new Vector3(-0.411039f, 0.478508f, 0.795634f);
-        vertices[46] = new Vector3(-0.654891f, 0.327801f, 0.702490f);
-        vertices[47] = new Vector3(-0.579966f, 0.131646f, 0.823721f);
-        vertices[48] = new Vector3(-0.993774f, 0.118359f, -0.147252f);
-        vertices[49] = new Vector3(-0.993774f, -0.124103f, -0.147252f);
-        vertices[50] = new Vector3(-0.993774f, -0.124103f, 0.154165f);
-        vertices[51] = new Vector3(-0.993774f, 0.118359f, 0.154165f);
-        vertices[52] = new Vector3(-0.817496f, -0.585607f, 0.137973f);
-        vertices[53] = new Vector3(-0.696265f, -0.660531f, 0.334128f);
-        vertices[54] = new Vector3(-0.789408f, -0.416680f, 0.484838f);
-        vertices[55] = new Vector3(-0.910638f, -0.341756f, 0.288682f);
-        vertices[56] = new Vector3(-0.411039f, -0.484253f, 0.795634f);
-        vertices[57] = new Vector3(-0.336113f, -0.288097f, 0.916863f);
-        vertices[58] = new Vector3(-0.579966f, -0.137388f, 0.823721f);
-        vertices[59] = new Vector3(-0.654891f, -0.333543f, 0.702490f);
-        vertices[60] = new Vector3(0.341652f, -0.288097f, 0.916863f);
-        vertices[61] = new Vector3(0.416578f, -0.484253f, 0.795634f);
-        vertices[62] = new Vector3(0.660429f, -0.333543f, 0.702490f);
-        vertices[63] = new Vector3(0.585505f, -0.137388f, 0.823721f);
-        vertices[64] = new Vector3(0.333441f, -0.701905f, 0.661116f);
-        vertices[65] = new Vector3(0.137286f, -0.823136f, 0.586192f);
-        vertices[66] = new Vector3(0.287995f, -0.916278f, 0.342339f);
-        vertices[67] = new Vector3(0.484149f, -0.795049f, 0.417265f);
-        vertices[68] = new Vector3(-0.131747f, -0.823136f, 0.586192f);
-        vertices[69] = new Vector3(-0.327903f, -0.701905f, 0.661116f);
-        vertices[70] = new Vector3(-0.478612f, -0.795049f, 0.417265f);
-        vertices[71] = new Vector3(-0.282457f, -0.916278f, 0.342339f);
-        vertices[72] = new Vector3(-0.910638f, -0.341756f, -0.281770f);
-        vertices[73] = new Vector3(-0.789408f, -0.416680f, -0.477925f);
-        vertices[74] = new Vector3(-0.696265f, -0.660531f, -0.327216f);
-        vertices[75] = new Vector3(-0.817496f, -0.585607f, -0.131060f);
-        vertices[76] = new Vector3(-0.327903f, -0.701905f, -0.654204f);
-        vertices[77] = new Vector3(-0.131747f, -0.823136f, -0.579280f);
-        vertices[78] = new Vector3(-0.282457f, -0.916278f, -0.335426f);
-        vertices[79] = new Vector3(-0.478612f, -0.795049f, -0.410352f);
-        vertices[80] = new Vector3(0.153478f, -0.999415f, -0.117774f);
-        vertices[81] = new Vector3(0.153478f, -0.999415f, 0.124687f);
-        vertices[82] = new Vector3(-0.147939f, -0.999415f, 0.124687f);
-        vertices[83] = new Vector3(-0.147939f, -0.999415f, -0.117774f);
-        vertices[84] = new Vector3(0.701803f, -0.660531f, 0.334128f);
-        vertices[85] = new Vector3(0.823033f, -0.585607f, 0.137973f);
-        vertices[86] = new Vector3(0.916176f, -0.341756f, 0.288682f);
-        vertices[87] = new Vector3(0.794945f, -0.416680f, 0.484838f);
-        vertices[88] = new Vector3(0.823033f, -0.585607f, -0.131060f);
-        vertices[89] = new Vector3(0.701803f, -0.660531f, -0.327216f);
-        vertices[90] = new Vector3(0.794945f, -0.416680f, -0.477925f);
-        vertices[91] = new Vector3(0.916176f, -0.341756f, -0.281770f);
-        vertices[92] = new Vector3(0.484149f, -0.795049f, -0.410352f);
-        vertices[93] = new Vector3(0.287995f, -0.916278f, -0.335426f);
-        vertices[94] = new Vector3(0.137286f, -0.823136f, -0.579280f);
-        vertices[95] = new Vector3(0.333441f, -0.701905f, -0.654204f);
-        vertices[96] = new Vector3(-0.654891f, -0.333543f, -0.695578f);
-        vertices[97] = new Vector3(-0.579966f, -0.137388f, -0.816807f);
-        vertices[98] = new Vector3(-0.336113f, -0.288097f, -0.909951f);
-        vertices[99] = new Vector3(-0.411039f, -0.484253f, -0.788719f);
-        vertices[100] = new Vector3(-0.118461f, 0.147837f, -0.993087f);
-        vertices[101] = new Vector3(0.124000f, 0.147837f, -0.993087f);
-        vertices[102] = new Vector3(0.124000f, -0.153580f, -0.993087f);
-        vertices[103] = new Vector3(-0.118461f, -0.153580f, -0.993087f);
-        vertices[104] = new Vector3(0.585505f, -0.137388f, -0.816807f);
-        vertices[105] = new Vector3(0.660429f, -0.333543f, -0.695578f);
-        vertices[106] = new Vector3(0.416578f, -0.484253f, -0.788719f);
-        vertices[107] = new Vector3(0.341652f, -0.288097f, -0.909951f);
-        vertices[108] = new Vector3(0.999313f, -0.124103f, -0.147252f);
-        vertices[109] = new Vector3(0.999313f, 0.118359f, -0.147252f);
-        vertices[110] = new Vector3(0.999313f, 0.118359f, 0.154165f);
-        vertices[111] = new Vector3(0.999313f, -0.124103f, 0.154165f);
-        vertices[112] = new Vector3(0.660429f, 0.327801f, -0.695578f);
-        vertices[113] = new Vector3(0.585505f, 0.131646f, -0.816807f);
-        vertices[114] = new Vector3(0.341652f, 0.282353f, -0.909951f);
-        vertices[115] = new Vector3(0.416578f, 0.478508f, -0.788719f);
-        vertices[116] = new Vector3(-0.579966f, 0.131646f, -0.816807f);
-        vertices[117] = new Vector3(-0.654891f, 0.327801f, -0.695578f);
-        vertices[118] = new Vector3(-0.411039f, 0.478508f, -0.788719f);
-        vertices[119] = new Vector3(-0.336113f, 0.282353f, -0.909951f);
+        var vertices = new Vector3[]
+        {
+            new(0.153478f, 0.993671f, 0.124687f),
+            new(0.153478f, 0.993671f, -0.117774f),
+            new(-0.147939f, 0.993671f, -0.117774f),
+            new(-0.147939f, 0.993671f, 0.124687f),
+            new(0.137286f, 0.817392f, 0.586192f),
+            new(0.333441f, 0.696161f, 0.661116f),
+            new(0.484149f, 0.789305f, 0.417265f),
+            new(0.287995f, 0.910536f, 0.342339f),
+            new(0.794945f, 0.410936f, 0.484838f),
+            new(0.916176f, 0.336012f, 0.288682f),
+            new(0.823033f, 0.579863f, 0.137973f),
+            new(0.701803f, 0.654787f, 0.334128f),
+            new(0.916176f, 0.336012f, -0.281770f),
+            new(0.794945f, 0.410936f, -0.477925f),
+            new(0.701803f, 0.654787f, -0.327216f),
+            new(0.823033f, 0.579863f, -0.131060f),
+            new(0.333441f, 0.696161f, -0.654204f),
+            new(0.137286f, 0.817392f, -0.579280f),
+            new(0.287995f, 0.910536f, -0.335426f),
+            new(0.484149f, 0.789305f, -0.410352f),
+            new(-0.131747f, 0.817392f, -0.579280f),
+            new(-0.327903f, 0.696161f, -0.654204f),
+            new(-0.478612f, 0.789305f, -0.410352f),
+            new(-0.282457f, 0.910536f, -0.335426f),
+            new(-0.789408f, 0.410936f, -0.477925f),
+            new(-0.910638f, 0.336012f, -0.281770f),
+            new(-0.817496f, 0.579863f, -0.131060f),
+            new(-0.696265f, 0.654787f, -0.327216f),
+            new(-0.910638f, 0.336012f, 0.288682f),
+            new(-0.789408f, 0.410936f, 0.484838f),
+            new(-0.696265f, 0.654787f, 0.334128f),
+            new(-0.817496f, 0.579863f, 0.137973f),
+            new(-0.327903f, 0.696161f, 0.661116f),
+            new(-0.131747f, 0.817392f, 0.586192f),
+            new(-0.282457f, 0.910536f, 0.342339f),
+            new(-0.478612f, 0.789305f, 0.417265f),
+            new(0.416578f, 0.478508f, 0.795634f),
+            new(0.341652f, 0.282353f, 0.916863f),
+            new(0.585505f, 0.131646f, 0.823721f),
+            new(0.660429f, 0.327801f, 0.702490f),
+            new(0.124000f, 0.147837f, 1.000000f),
+            new(-0.118461f, 0.147837f, 1.000000f),
+            new(-0.118461f, -0.153580f, 1.000000f),
+            new(0.124000f, -0.153580f, 1.000000f),
+            new(-0.336113f, 0.282353f, 0.916863f),
+            new(-0.411039f, 0.478508f, 0.795634f),
+            new(-0.654891f, 0.327801f, 0.702490f),
+            new(-0.579966f, 0.131646f, 0.823721f),
+            new(-0.993774f, 0.118359f, -0.147252f),
+            new(-0.993774f, -0.124103f, -0.147252f),
+            new(-0.993774f, -0.124103f, 0.154165f),
+            new(-0.993774f, 0.118359f, 0.154165f),
+            new(-0.817496f, -0.585607f, 0.137973f),
+            new(-0.696265f, -0.660531f, 0.334128f),
+            new(-0.789408f, -0.416680f, 0.484838f),
+            new(-0.910638f, -0.341756f, 0.288682f),
+            new(-0.411039f, -0.484253f, 0.795634f),
+            new(-0.336113f, -0.288097f, 0.916863f),
+            new(-0.579966f, -0.137388f, 0.823721f),
+            new(-0.654891f, -0.333543f, 0.702490f),
+            new(0.341652f, -0.288097f, 0.916863f),
+            new(0.416578f, -0.484253f, 0.795634f),
+            new(0.660429f, -0.333543f, 0.702490f),
+            new(0.585505f, -0.137388f, 0.823721f),
+            new(0.333441f, -0.701905f, 0.661116f),
+            new(0.137286f, -0.823136f, 0.586192f),
+            new(0.287995f, -0.916278f, 0.342339f),
+            new(0.484149f, -0.795049f, 0.417265f),
+            new(-0.131747f, -0.823136f, 0.586192f),
+            new(-0.327903f, -0.701905f, 0.661116f),
+            new(-0.478612f, -0.795049f, 0.417265f),
+            new(-0.282457f, -0.916278f, 0.342339f),
+            new(-0.910638f, -0.341756f, -0.281770f),
+            new(-0.789408f, -0.416680f, -0.477925f),
+            new(-0.696265f, -0.660531f, -0.327216f),
+            new(-0.817496f, -0.585607f, -0.131060f),
+            new(-0.327903f, -0.701905f, -0.654204f),
+            new(-0.131747f, -0.823136f, -0.579280f),
+            new(-0.282457f, -0.916278f, -0.335426f),
+            new(-0.478612f, -0.795049f, -0.410352f),
+            new(0.153478f, -0.999415f, -0.117774f),
+            new(0.153478f, -0.999415f, 0.124687f),
+            new(-0.147939f, -0.999415f, 0.124687f),
+            new(-0.147939f, -0.999415f, -0.117774f),
+            new(0.701803f, -0.660531f, 0.334128f),
+            new(0.823033f, -0.585607f, 0.137973f),
+            new(0.916176f, -0.341756f, 0.288682f),
+            new(0.794945f, -0.416680f, 0.484838f),
+            new(0.823033f, -0.585607f, -0.131060f),
+            new(0.701803f, -0.660531f, -0.327216f),
+            new(0.794945f, -0.416680f, -0.477925f),
+            new(0.916176f, -0.341756f, -0.281770f),
+            new(0.484149f, -0.795049f, -0.410352f),
+            new(0.287995f, -0.916278f, -0.335426f),
+            new(0.137286f, -0.823136f, -0.579280f),
+            new(0.333441f, -0.701905f, -0.654204f),
+            new(-0.654891f, -0.333543f, -0.695578f),
+            new(-0.579966f, -0.137388f, -0.816807f),
+            new(-0.336113f, -0.288097f, -0.909951f),
+            new(-0.411039f, -0.484253f, -0.788719f),
+            new(-0.118461f, 0.147837f, -0.993087f),
+            new(0.124000f, 0.147837f, -0.993087f),
+            new(0.124000f, -0.153580f, -0.993087f),
+            new(-0.118461f, -0.153580f, -0.993087f),
+            new(0.585505f, -0.137388f, -0.816807f),
+            new(0.660429f, -0.333543f, -0.695578f),
+            new(0.416578f, -0.484253f, -0.788719f),
+            new(0.341652f, -0.288097f, -0.909951f),
+            new(0.999313f, -0.124103f, -0.147252f),
+            new(0.999313f, 0.118359f, -0.147252f),
+            new(0.999313f, 0.118359f, 0.154165f),
+            new(0.999313f, -0.124103f, 0.154165f),
+            new(0.660429f, 0.327801f, -0.695578f),
+            new(0.585505f, 0.131646f, -0.816807f),
+            new(0.341652f, 0.282353f, -0.909951f),
+            new(0.416578f, 0.478508f, -0.788719f),
+            new(-0.579966f, 0.131646f, -0.816807f),
+            new(-0.654891f, 0.327801f, -0.695578f),
+            new(-0.411039f, 0.478508f, -0.788719f),
+            new(-0.336113f, 0.282353f, -0.909951f),
+        };
         return vertices;
     }
 
 
-    Buffer<Vector3> CreateTestConvexHull3()
+    Vector3[] CreateTestConvexHull3()
     {
-        BufferPool.Take<Vector3>(22, out var vertices);
-        vertices[0] = new Vector3(-0.103558f, 1.000000f, -0.490575f);
-        vertices[1] = new Vector3(0.266493f, 0.659794f, -0.363751f);
-        vertices[2] = new Vector3(-0.245774f, 0.762636f, -0.615304f);
-        vertices[3] = new Vector3(0.164688f, -0.777634f, -0.365919f);
-        vertices[4] = new Vector3(0.503268f, -0.846406f, -0.131286f);
-        vertices[5] = new Vector3(0.171066f, -0.931723f, -0.140738f);
-        vertices[6] = new Vector3(-0.247963f, -0.738059f, -0.413146f);
-        vertices[7] = new Vector3(-0.319203f, -0.260078f, -0.609331f);
-        vertices[8] = new Vector3(0.469624f, -0.747848f, -0.286486f);
-        vertices[9] = new Vector3(0.398526f, -0.238233f, -0.435281f);
-        vertices[10] = new Vector3(0.448274f, 0.295416f, -0.246327f);
-        vertices[11] = new Vector3(-0.245774f, 0.762636f, 0.596521f);
-        vertices[12] = new Vector3(0.266493f, 0.659794f, 0.344974f);
-        vertices[13] = new Vector3(-0.103558f, 1.000000f, 0.471792f);
-        vertices[14] = new Vector3(0.171066f, -0.931723f, 0.121961f);
-        vertices[15] = new Vector3(0.503268f, -0.846406f, 0.112509f);
-        vertices[16] = new Vector3(0.164688f, -0.777634f, 0.347137f);
-        vertices[17] = new Vector3(-0.319203f, -0.260078f, 0.590548f);
-        vertices[18] = new Vector3(-0.247963f, -0.738059f, 0.394364f);
-        vertices[19] = new Vector3(0.469624f, -0.747848f, 0.267709f);
-        vertices[20] = new Vector3(0.398526f, -0.238233f, 0.416498f);
-        vertices[21] = new Vector3(0.448274f, 0.295411f, 0.227550f);
+        var vertices = new Vector3[]
+        {
+            new(-0.103558f, 1.000000f, -0.490575f),
+            new(0.266493f, 0.659794f, -0.363751f),
+            new(-0.245774f, 0.762636f, -0.615304f),
+            new(0.164688f, -0.777634f, -0.365919f),
+            new(0.503268f, -0.846406f, -0.131286f),
+            new(0.171066f, -0.931723f, -0.140738f),
+            new(-0.247963f, -0.738059f, -0.413146f),
+            new(-0.319203f, -0.260078f, -0.609331f),
+            new(0.469624f, -0.747848f, -0.286486f),
+            new(0.398526f, -0.238233f, -0.435281f),
+            new(0.448274f, 0.295416f, -0.246327f),
+            new(-0.245774f, 0.762636f, 0.596521f),
+            new(0.266493f, 0.659794f, 0.344974f),
+            new(-0.103558f, 1.000000f, 0.471792f),
+            new(0.171066f, -0.931723f, 0.121961f),
+            new(0.503268f, -0.846406f, 0.112509f),
+            new(0.164688f, -0.777634f, 0.347137f),
+            new(-0.319203f, -0.260078f, 0.590548f),
+            new(-0.247963f, -0.738059f, 0.394364f),
+            new(0.469624f, -0.747848f, 0.267709f),
+            new(0.398526f, -0.238233f, 0.416498f),
+            new(0.448274f, 0.295411f, 0.227550f),
+        };
         return vertices;
     }
 
-    Buffer<Vector3> CreateJSONSourcedConvexHull(string filePath)
+    Vector3[] CreateJSONSourcedConvexHull(string filePath)
     {
         //ChatGPT wrote this, of course.
         List<Vector3> points = new List<Vector3>();
@@ -469,17 +479,11 @@ public class ConvexHullTestDemo : Demo
         else
         {
             Console.Error.WriteLine("File not found: " + filePath);
-        }
-
-        BufferPool.Take(points.Count, out Buffer<Vector3> buffer);
-        for (int i = 0; i < buffer.Length; ++i)
-        {
-            buffer[i] = points[i];
-        }
-        return buffer;
+        }       
+        return points.ToArray();
     }
 
-    void CreateHellCubeFace(int widthInPoints, float step, Buffer<Vector3> facePoints, Matrix3x3 transform, float localFaceOffset)
+    void CreateHellCubeFace(int widthInPoints, float step, Span<Vector3> facePoints, Matrix3x3 transform, float localFaceOffset)
     {
         var offset = step * (widthInPoints - 1) * 0.5f;
         for (int i = 0; i < widthInPoints; ++i)
@@ -494,10 +498,10 @@ public class ConvexHullTestDemo : Demo
             }
         }
     }
-    Buffer<Vector3> CreateHellCube(int widthInPoints)
+    Vector3[] CreateHellCube(int widthInPoints)
     {
         var facePointCount = widthInPoints * widthInPoints;
-        BufferPool.Take(facePointCount * 6, out Buffer<Vector3> buffer);
+        var buffer = new Vector3[facePointCount * 6];
         var size = 8f;
         var halfSize = size / 2;
         var step = size / (widthInPoints - 1);
@@ -507,12 +511,12 @@ public class ConvexHullTestDemo : Demo
         Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), float.Pi, out var localFace2);
         Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), -float.Pi / 2, out var yFace);
         yFace *= cubeTransform;
-        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 0, facePointCount), cubeTransform, halfSize);
-        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 1, facePointCount), zFace, halfSize);
-        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 2, facePointCount), cubeTransform, -halfSize);
-        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 3, facePointCount), zFace, -halfSize);
-        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 4, facePointCount), yFace, halfSize);
-        CreateHellCubeFace(widthInPoints, step, buffer.Slice(facePointCount * 5, facePointCount), yFace, -halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.AsSpan(facePointCount * 0, facePointCount), cubeTransform, halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.AsSpan(facePointCount * 1, facePointCount), zFace, halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.AsSpan(facePointCount * 2, facePointCount), cubeTransform, -halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.AsSpan(facePointCount * 3, facePointCount), zFace, -halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.AsSpan(facePointCount * 4, facePointCount), yFace, halfSize);
+        CreateHellCubeFace(widthInPoints, step, buffer.AsSpan(facePointCount * 5, facePointCount), yFace, -halfSize);
         return buffer;
     }
 
@@ -667,7 +671,6 @@ public class ConvexHullTestDemo : Demo
         }
     }
 
-    //Buffer<Vector3> points;
     Vector3[] points;
     List<DebugStep> debugSteps;
 
@@ -797,7 +800,7 @@ public class ConvexHullTestDemo : Demo
             var faceVertexCount = endIndex - startIndex;
             var faceNormal = step.FaceNormals[faceIndex];
 
-            var color = step.FaceIndex == faceIndex ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1); 
+            var color = step.FaceIndex == faceIndex ? new Vector3(1, 0, 0.5f) : new Vector3(1, 0, 1);
 
             if (showWireframe)
             {
@@ -809,7 +812,7 @@ public class ConvexHullTestDemo : Demo
                     var b = points[step.FaceIndices[previousIndex]] * scale + renderOffset;
                     previousIndex = vertexIndex;
                     renderer.Lines.Allocate() = new LineInstance(a, b, color, Vector3.Zero);
-                }             
+                }
             }
             else
             {
