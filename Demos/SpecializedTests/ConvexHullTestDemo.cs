@@ -1,4 +1,5 @@
-﻿#define DEBUG_STEPS
+﻿// Enabling DEBUG_STEPS on this test requires the same define within ConvexHullHelper.cs.
+#define DEBUG_STEPS
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -16,6 +17,7 @@ using System.IO;
 using DemoRenderer.Constraints;
 using DemoUtilities;
 using DemoRenderer.UI;
+using System.Diagnostics;
 
 
 
@@ -520,6 +522,19 @@ public class ConvexHullTestDemo : Demo
         return buffer;
     }
 
+    struct HullTestData
+    {
+        public Vector3[] Points;
+        public HullData HullData;
+#if DEBUG_STEPS
+        public List<DebugStep> DebugSteps;
+#endif
+        public ConvexHull Hull;
+        public TypedIndex ShapeIndex;
+    }
+
+    HullTestData[] hullTests;
+
     public override void Initialize(ContentArchive content, Camera camera)
     {
         camera.Position = new Vector3(0, -2.5f, 10);
@@ -527,88 +542,99 @@ public class ConvexHullTestDemo : Demo
         camera.Pitch = 0;
 
         Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -0, 0)), new SolveDescription(8, 1));
-        //var hullPoints = CreateJSONSourcedConvexHull(@"Content/testHull.json");
-        //for (int i = 0; i < hullPoints.Length; ++i)
-        //{
-        //    hullPoints[i] *= 0.03f;
-        //}
-        var hullPoints = CreateRandomConvexHullPoints();
-        //var hullPoints = CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f));
-        //var hullPoints = CreateHellCube(200);
-        //var hullPoints = CreateBwaa();
-        //var hullPoints = CreatePlaneish();
-        //var hullPoints = CreateDistantPlane();
-        //var hullPoints = CreateTestConvexHull();
-        //var hullPoints = CreateTestConvexHull2();
-        //var hullPoints = CreateTestConvexHull3();
-        //var hullPoints = CreateBoxConvexHull(2);
-        var hullShape = new ConvexHull(hullPoints, BufferPool, out _);
-        //float largestError = 0;
-        //for (int i = 0; i < hullShape.FaceToVertexIndicesStart.Length; ++i)
-        //{
-        //    hullShape.GetVertexIndicesForFace(i, out var faceVertices);
-        //    BundleIndexing.GetBundleIndices(i, out var normalBundleIndex, out var normalIndexInBundle);
-        //    Vector3Wide.ReadSlot(ref hullShape.BoundingPlanes[normalBundleIndex].Normal, normalIndexInBundle, out var faceNormal);
-        //    var offset = hullShape.BoundingPlanes[normalBundleIndex].Offset[normalIndexInBundle];
-        //    Console.WriteLine($"Face {i} errors:");
-        //    for (int j = 0; j < faceVertices.Length; ++j)
-        //    {
-        //        hullShape.GetPoint(faceVertices[j], out var point);
-        //        var error = Vector3.Dot(point, faceNormal) - offset;
-        //        Console.WriteLine($"v{j}: {error}");
-        //        largestError = MathF.Max(MathF.Abs(error), largestError);
-        //    }
-        //}
-        //Console.WriteLine($"Largest error: {largestError}");
 
-        ConvexHullHelper.ComputeHull(hullPoints, BufferPool, out var hullData, out debugSteps);
-        this.points = new Vector3[hullPoints.Length];
-        hullPoints.CopyTo(0, this.points, 0, this.points.Length);
-        //this.points = hullPoints;
+        var hullPointSets = new Vector3[][]
+        {
+            CreateRandomConvexHullPoints(),
+            CreateMeshConvexHull(content.Load<MeshContent>(@"Content\newt.obj"), new Vector3(1, 1.5f, 1f)),
+            CreateHellCube(200),
+            CreateBwaa(),
+            CreateTestConvexHull(),
+            CreateTestConvexHull2(),
+            CreateTestConvexHull3(),
+            CreateBoxConvexHull(2),
+            //CreateJSONSourcedConvexHull(@"Content/testHull.json"),
+            //CreateDistantPlane(),
+            //CreatePlaneish(),
+        };
 
-        var boxHullPoints = CreateBoxConvexHull(2);
-        var boxHullShape = new ConvexHull(boxHullPoints, BufferPool, out _);
+        hullTests = new HullTestData[hullPointSets.Length];
+        for (int i = 0; i < hullPointSets.Length; ++i)
+        {
+            ref var test = ref hullTests[i];
+            test.Points = hullPointSets[i];
+#if DEBUG_STEPS
+            ComputeHull(hullPointSets[i], BufferPool, out test.HullData, out test.DebugSteps);
+#else
+            ComputeHull(hullPointSets[i], BufferPool, out test.HullData);
+#endif
+            CreateShape(hullPointSets[i], test.HullData, BufferPool, out _, out test.Hull);
+            test.ShapeIndex = Simulation.Shapes.Add(test.Hull);
 
-        //Matrix3x3.CreateScale(new Vector3(5, 0.5f, 3), out var scale);
-        //var transform = Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(3, 2, 1)), 1207) * scale;
-        //const int transformCount = 10000;
-        //var transformStart = Stopwatch.GetTimestamp();
-        //for (int i = 0; i < transformCount; ++i)
-        //{
-        //    CreateTransformedCopy(hullShape, transform, BufferPool, out var transformedHullShape);
-        //    transformedHullShape.Dispose(BufferPool);
-        //}
-        //var transformEnd = Stopwatch.GetTimestamp();
-        //Console.WriteLine($"Transform hull computation time (us): {(transformEnd - transformStart) * 1e6 / (transformCount * Stopwatch.Frequency)}");
+            //// Check divergence between face planes and vertices.
+            //float largestError = 0;
+            //for (int j = 0; j < test.Hull.FaceToVertexIndicesStart.Length; ++j)
+            //{
+            //    test.Hull.GetVertexIndicesForFace(j, out var faceVertices);
+            //    BundleIndexing.GetBundleIndices(j, out var normalBundleIndex, out var normalIndexInBundle);
+            //    Vector3Wide.ReadSlot(ref test.Hull.BoundingPlanes[normalBundleIndex].Normal, normalIndexInBundle, out var faceNormal);
+            //    var offset = test.Hull.BoundingPlanes[normalBundleIndex].Offset[normalIndexInBundle];
+            //    Console.WriteLine($"Face {j} errors:");
+            //    for (int k = 0; k < faceVertices.Length; ++k)
+            //    {
+            //        test.Hull.GetPoint(faceVertices[k], out var point);
+            //        var error = Vector3.Dot(point, faceNormal) - offset;
+            //        Console.WriteLine($"v{k}: {error}");
+            //        largestError = MathF.Max(MathF.Abs(error), largestError);
+            //    }
+            //}
+            //Console.WriteLine($"Largest error: {largestError}");
 
-        //hullShape.RayTest(RigidPose.Identity, new Vector3(0, 1, 0), -Vector3.UnitY, out var t, out var normal);
 
-        //const int rayIterationCount = 10000;
-        //var rayPose = RigidPose.Identity;
-        //var rayOrigin = new Vector3(0, 2, 0);
-        //var rayDirection = new Vector3(0, -1, 0);
+            Matrix3x3.CreateScale(new Vector3(5, 0.5f, 3), out var scale);
+            var transform = Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(3, 2, 1)), 1207) * scale;
+            const int transformCount = 10000;
+            var transformStart = Stopwatch.GetTimestamp();
+            for (int i = 0; i < transformCount; ++i)
+            {
+                CreateTransformedCopy(test.Hull, transform, BufferPool, out var transformedHullShape);
+                transformedHullShape.Dispose(BufferPool);
+            }
+            var transformEnd = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Transform hull computation time (us): {(transformEnd - transformStart) * 1e6 / (transformCount * Stopwatch.Frequency)}");
 
-        //int hitCounter = 0;
-        //var start = Stopwatch.GetTimestamp();
-        //for (int i = 0; i < rayIterationCount; ++i)
-        //{
-        //    if (hullShape.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
-        //    {
-        //        ++hitCounter;
-        //    }
-        //}
-        //var end = Stopwatch.GetTimestamp();
-        //Console.WriteLine($"Hit counter: {hitCounter}, computation time (us): {(end - start) * 1e6 / (rayIterationCount * Stopwatch.Frequency)}");
+            test.Hull.RayTest(RigidPose.Identity, new Vector3(0, 1, 0), -Vector3.UnitY, out var t, out var normal);
+            const int rayIterationCount = 10000;
+            var rayPose = RigidPose.Identity;
+            var rayOrigin = new Vector3(0, 2, 0);
+            var rayDirection = new Vector3(0, -1, 0);
 
-        //const int iterationCount = 100;
-        //start = Stopwatch.GetTimestamp();
-        //for (int i = 0; i < iterationCount; ++i)
-        //{
-        //    CreateShape(hullPoints, BufferPool, out _, out var perfTestShape);
-        //    perfTestShape.Dispose(BufferPool);
-        //}
-        //end = Stopwatch.GetTimestamp();
-        //Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
+            int hitCounter = 0;
+            var start = Stopwatch.GetTimestamp();
+            for (int j = 0; j < rayIterationCount; ++j)
+            {
+                if (test.Hull.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
+                {
+                    ++hitCounter;
+                }
+            }
+            var end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Hit counter: {hitCounter}, computation time (us): {(end - start) * 1e6 / (rayIterationCount * Stopwatch.Frequency)}");
+
+            const int iterationCount = 100;
+            start = Stopwatch.GetTimestamp();
+            for (int j = 0; j < iterationCount; ++j)
+            {
+                CreateShape(test.Points, BufferPool, out _, out var perfTestShape);
+                perfTestShape.Dispose(BufferPool);
+            }
+            end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
+        }
+
+        var boxHullShape = new ConvexHull(CreateBoxConvexHull(2), BufferPool, out _);
+
+
 
         var hullShapeIndex = Simulation.Shapes.Add(hullShape);
         var boxHullShapeIndex = Simulation.Shapes.Add(boxHullShape);
@@ -671,8 +697,6 @@ public class ConvexHullTestDemo : Demo
         }
     }
 
-    Vector3[] points;
-    List<DebugStep> debugSteps;
 
     int stepIndex = 0;
 
