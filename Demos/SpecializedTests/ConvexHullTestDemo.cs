@@ -541,7 +541,7 @@ public class ConvexHullTestDemo : Demo
         camera.Yaw = 0;
         camera.Pitch = 0;
 
-        Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -0, 0)), new SolveDescription(8, 1));
+        Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
         var hullPointSets = new Vector3[][]
         {
@@ -591,71 +591,95 @@ public class ConvexHullTestDemo : Demo
             //Console.WriteLine($"Largest error: {largestError}");
 
 
-            Matrix3x3.CreateScale(new Vector3(5, 0.5f, 3), out var scale);
-            var transform = Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(3, 2, 1)), 1207) * scale;
-            const int transformCount = 10000;
-            var transformStart = Stopwatch.GetTimestamp();
-            for (int i = 0; i < transformCount; ++i)
-            {
-                CreateTransformedCopy(test.Hull, transform, BufferPool, out var transformedHullShape);
-                transformedHullShape.Dispose(BufferPool);
-            }
-            var transformEnd = Stopwatch.GetTimestamp();
-            Console.WriteLine($"Transform hull computation time (us): {(transformEnd - transformStart) * 1e6 / (transformCount * Stopwatch.Frequency)}");
+            //Matrix3x3.CreateScale(new Vector3(5, 0.5f, 3), out var scale);
+            //var transform = Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(3, 2, 1)), 1207) * scale;
+            //const int transformCount = 10000;
+            //var transformStart = Stopwatch.GetTimestamp();
+            //for (int j = 0; j < transformCount; ++j)
+            //{
+            //    CreateTransformedCopy(test.Hull, transform, BufferPool, out var transformedHullShape);
+            //    transformedHullShape.Dispose(BufferPool);
+            //}
+            //var transformEnd = Stopwatch.GetTimestamp();
+            //Console.WriteLine($"Transform hull computation time (us): {(transformEnd - transformStart) * 1e6 / (transformCount * Stopwatch.Frequency)}");
 
-            test.Hull.RayTest(RigidPose.Identity, new Vector3(0, 1, 0), -Vector3.UnitY, out var t, out var normal);
-            const int rayIterationCount = 10000;
-            var rayPose = RigidPose.Identity;
-            var rayOrigin = new Vector3(0, 2, 0);
-            var rayDirection = new Vector3(0, -1, 0);
+            //test.Hull.RayTest(RigidPose.Identity, new Vector3(0, 1, 0), -Vector3.UnitY, out var t, out var normal);
+            //const int rayIterationCount = 10000;
+            //var rayPose = RigidPose.Identity;
+            //var rayOrigin = new Vector3(0, 2, 0);
+            //var rayDirection = new Vector3(0, -1, 0);
 
-            int hitCounter = 0;
-            var start = Stopwatch.GetTimestamp();
-            for (int j = 0; j < rayIterationCount; ++j)
-            {
-                if (test.Hull.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
-                {
-                    ++hitCounter;
-                }
-            }
-            var end = Stopwatch.GetTimestamp();
-            Console.WriteLine($"Hit counter: {hitCounter}, computation time (us): {(end - start) * 1e6 / (rayIterationCount * Stopwatch.Frequency)}");
+            //int hitCounter = 0;
+            //var start = Stopwatch.GetTimestamp();
+            //for (int j = 0; j < rayIterationCount; ++j)
+            //{
+            //    if (test.Hull.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
+            //    {
+            //        ++hitCounter;
+            //    }
+            //}
+            //var end = Stopwatch.GetTimestamp();
+            //Console.WriteLine($"Hit counter: {hitCounter}, computation time (us): {(end - start) * 1e6 / (rayIterationCount * Stopwatch.Frequency)}");
 
-            const int iterationCount = 100;
-            start = Stopwatch.GetTimestamp();
-            for (int j = 0; j < iterationCount; ++j)
-            {
-                CreateShape(test.Points, BufferPool, out _, out var perfTestShape);
-                perfTestShape.Dispose(BufferPool);
-            }
-            end = Stopwatch.GetTimestamp();
-            Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
+            //const int iterationCount = 100;
+            //start = Stopwatch.GetTimestamp();
+            //for (int j = 0; j < iterationCount; ++j)
+            //{
+            //    CreateShape(test.Points, BufferPool, out _, out var perfTestShape);
+            //    perfTestShape.Dispose(BufferPool);
+            //}
+            //end = Stopwatch.GetTimestamp();
+            //Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
         }
 
         var boxHullShape = new ConvexHull(CreateBoxConvexHull(2), BufferPool, out _);
 
 
 
-        var hullShapeIndex = Simulation.Shapes.Add(hullShape);
-        var boxHullShapeIndex = Simulation.Shapes.Add(boxHullShape);
-        var inertia = hullShape.ComputeInertia(1);
-        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 5), inertia, new(hullShapeIndex, 20, 20), -0.01f));
-        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 3), boxHullShape.ComputeInertia(1), new(boxHullShapeIndex, 20, 20), -0.01f));
 
-        Simulation.Statics.Add(new StaticDescription(new Vector3(-25, -5, 0), Simulation.Shapes.Add(new Sphere(2))));
-        Simulation.Statics.Add(new StaticDescription(new Vector3(-20, -5, 0), Simulation.Shapes.Add(new Capsule(0.5f, 2))));
-        Simulation.Statics.Add(new StaticDescription(new Vector3(-15, -5, 0), Simulation.Shapes.Add(new Box(2f, 2f, 2f))));
-        Simulation.Statics.Add(new StaticDescription(new Vector3(-10, -5, 5), Simulation.Shapes.Add(new Triangle { A = new Vector3(0, 0, -10), B = new Vector3(5, 0, -10), C = new Vector3(0, 0, -5) })));
-        Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 0), Simulation.Shapes.Add(new Cylinder(1, 1))));
-        Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 5), Simulation.Shapes.Add(new Cylinder(1, 1))));
-        Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), hullShapeIndex));
-        Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 5), Simulation.Shapes.Add(boxHullShape)));
+        TypedIndex[] otherShapes =
+        [
+            Simulation.Shapes.Add(new Sphere(2)),
+            Simulation.Shapes.Add(new Capsule(0.5f, 2)),
+            Simulation.Shapes.Add(new Box(2f, 2f, 2f)),
+            Simulation.Shapes.Add(new Triangle { A = new Vector3(0, 0, -10), B = new Vector3(5, 0, -10), C = new Vector3(0, 0, -5) }),
+            Simulation.Shapes.Add(new Cylinder(1, 1)),
+            Simulation.Shapes.Add(boxHullShape),
+        ];
+        float spacing = 2.5f;
+        float z = 0;
+        for (int otherShapeIndex = 0; otherShapeIndex < otherShapes.Length; ++otherShapeIndex)
+        {
+            Simulation.Shapes.UpdateBounds(RigidPose.Identity, otherShapes[otherShapeIndex], out var bounds);
+            var otherShapeSpan = bounds.Max - bounds.Min;
+            var staticOffset = (bounds.Max + bounds.Min) * -0.5f + new Vector3(0, -5f, 0);
+            var staticTop = bounds.Max.Y + staticOffset.Y;
+            float x = 0;
+            float effectiveZSpan = otherShapeSpan.Z;
+            for (int hullIndex = 0; hullIndex < hullTests.Length; ++hullIndex)
+            {
+                ref var test = ref hullTests[hullIndex];
+                test.Hull.ComputeBounds(Quaternion.Identity, out var min, out var max);
+                var span = max - min;
+                effectiveZSpan = MathF.Max(span.Z, effectiveZSpan);
 
-        var spacing = new Vector3(3f, 3f, 3);
+                var spanX = MathF.Max(otherShapeSpan.X, span.X);
+                var shapeX = x + spanX * 0.5f;
+                var shapeY = staticTop + span.Y * 0.5f;
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(shapeX, shapeY, z), test.Hull.ComputeInertia(1), new(test.ShapeIndex, 20, 20), -0.01f));
+                Simulation.Statics.Add(new StaticDescription(new Vector3(shapeX, 0, z) + staticOffset, otherShapes[otherShapeIndex]));
+                x += spanX + spacing;
+            }
+            z += effectiveZSpan + spacing;
+        }
+
+        var pileSpacing = new Vector3(3f, 3f, 3);
         int width = 16;
         int height = 16;
         int length = 0;
         var origin = -0.5f * spacing * new Vector3(width, 0, length) + new Vector3(40, 0.2f, -40);
+        var pileInertia = hullTests[0].Hull.ComputeInertia(1);
+        var pileShape = hullTests[0].ShapeIndex;
         for (int i = 0; i < width; ++i)
         {
             for (int j = 0; j < height; ++j)
@@ -663,8 +687,8 @@ public class ConvexHullTestDemo : Demo
                 for (int k = 0; k < length; ++k)
                 {
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(
-                        (origin + spacing * new Vector3(i, j, k), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f)),
-                        inertia, hullShapeIndex, 0.01f));
+                        (origin + pileSpacing * new Vector3(i, j, k), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f)),
+                        pileInertia, pileShape, 0.01f));
                 }
             }
         }
@@ -675,7 +699,9 @@ public class ConvexHullTestDemo : Demo
             x + 8,
             2f * MathF.Sin(x * 0.125f) * MathF.Sin(y * 0.125f) + 0.1f * random.NextSingle() - 3,
             y - 8), new Vector3(1, 1, 1), BufferPool);
-        Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
+        Simulation.Statics.Add(new StaticDescription(new Vector3(64, 0, 0), Simulation.Shapes.Add(mesh)));
+
+        stepIndices = new int[hullTests.Length];
     }
 
     void TestConvexHullCreation()
@@ -697,18 +723,19 @@ public class ConvexHullTestDemo : Demo
         }
     }
 
-
-    int stepIndex = 0;
+    int testIndex;
+    int[] stepIndices;
 
     public override void Update(Window window, Camera camera, Input input, float dt)
     {
+        ref var stepIndex = ref stepIndices[testIndex];
         if (input.TypedCharacters.Contains('x'))
         {
             stepIndex = Math.Max(stepIndex - 1, 0);
         }
         if (input.TypedCharacters.Contains('c'))
         {
-            stepIndex = Math.Min(stepIndex + 1, debugSteps.Count - 1);
+            stepIndex = Math.Min(stepIndex + 1, hullTests[testIndex].DebugSteps.Count - 1);
         }
         if (input.WasPushed(OpenTK.Input.Key.P))
         {
@@ -735,6 +762,11 @@ public class ConvexHullTestDemo : Demo
     bool showFaceVertexStatuses = true;
     public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
     {
+        var hullTest = hullTests[testIndex];
+        var points = hullTest.Points;
+        var debugSteps = hullTest.DebugSteps;
+        var stepIndex = stepIndices[testIndex];
+
         var step = debugSteps[stepIndex];
         var scale = 15f;
         var renderOffset = new Vector3(-15, 25, 0);
