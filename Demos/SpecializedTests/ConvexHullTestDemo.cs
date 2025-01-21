@@ -701,7 +701,9 @@ public class ConvexHullTestDemo : Demo
             y - 8), new Vector3(1, 1, 1), BufferPool);
         Simulation.Statics.Add(new StaticDescription(new Vector3(64, 0, 0), Simulation.Shapes.Add(mesh)));
 
+#if DEBUG_STEPS
         stepIndices = new int[hullTests.Length];
+#endif
     }
 
     void TestConvexHullCreation()
@@ -723,6 +725,7 @@ public class ConvexHullTestDemo : Demo
         }
     }
 
+#if DEBUG_STEPS
     int testIndex;
     int[] stepIndices;
 
@@ -736,6 +739,14 @@ public class ConvexHullTestDemo : Demo
         if (input.TypedCharacters.Contains('c'))
         {
             stepIndex = Math.Min(stepIndex + 1, hullTests[testIndex].DebugSteps.Count - 1);
+        }
+        if (input.TypedCharacters.Contains('n'))
+        {
+            testIndex = Math.Max(testIndex - 1, 0);
+        }
+        if (input.TypedCharacters.Contains('m'))
+        {
+            testIndex = Math.Min(testIndex + 1, hullTests.Length - 1);
         }
         if (input.WasPushed(OpenTK.Input.Key.P))
         {
@@ -901,7 +912,11 @@ public class ConvexHullTestDemo : Demo
         renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisX * scale * 0.5f, new Vector3(1, 1, 0), new Vector3());
         renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisY * scale * 0.5f, new Vector3(0, 1, 0), new Vector3());
         renderer.TextBatcher.Write(
-            text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count),
+            text.Clear().Append("Step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count).Append(" for test ").Append(testIndex).Append("."),
+            new Vector2(32, renderer.Surface.Resolution.Y - 170), 20, new Vector3(1), font);
+       
+        renderer.TextBatcher.Write(
+            text.Clear().Append($"Enumerate step with X and C, change test with N and M."),
             new Vector2(32, renderer.Surface.Resolution.Y - 140), 20, new Vector3(1), font);
         renderer.TextBatcher.Write(text.Clear().Append("Show wireframe: P ").Append(showWireframe ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 120), 20, new Vector3(1), font);
         renderer.TextBatcher.Write(text.Clear().Append("Show deleted: U ").Append(showDeleted ? "(on)" : "(off)"), new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
@@ -912,4 +927,5 @@ public class ConvexHullTestDemo : Demo
 
         base.Render(renderer, camera, input, text, font);
     }
+#endif
 }
