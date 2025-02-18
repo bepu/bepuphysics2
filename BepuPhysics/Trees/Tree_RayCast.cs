@@ -87,7 +87,7 @@ namespace BepuPhysics.Trees
 
         }
 
-        internal const int TraversalStackCapacity = 256;
+        internal const int TraversalStackCapacity = 1024;
 
         internal readonly unsafe void RayCast<TLeafTester>(TreeRay* treeRay, RayData* rayData, ref TLeafTester leafTester) where TLeafTester : IRayLeafTester
         {
