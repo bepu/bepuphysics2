@@ -1,5 +1,5 @@
 ﻿// Enabling DEBUG_STEPS on this test requires the same define within ConvexHullHelper.cs.
-#define DEBUG_STEPS
+//#define DEBUG_STEPS
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -571,65 +571,67 @@ public class ConvexHullTestDemo : Demo
             CreateShape(hullPointSets[i], test.HullData, BufferPool, out _, out test.Hull);
             test.ShapeIndex = Simulation.Shapes.Add(test.Hull);
 
-            //// Check divergence between face planes and vertices.
-            //float largestError = 0;
-            //for (int j = 0; j < test.Hull.FaceToVertexIndicesStart.Length; ++j)
-            //{
-            //    test.Hull.GetVertexIndicesForFace(j, out var faceVertices);
-            //    BundleIndexing.GetBundleIndices(j, out var normalBundleIndex, out var normalIndexInBundle);
-            //    Vector3Wide.ReadSlot(ref test.Hull.BoundingPlanes[normalBundleIndex].Normal, normalIndexInBundle, out var faceNormal);
-            //    var offset = test.Hull.BoundingPlanes[normalBundleIndex].Offset[normalIndexInBundle];
-            //    Console.WriteLine($"Face {j} errors:");
-            //    for (int k = 0; k < faceVertices.Length; ++k)
-            //    {
-            //        test.Hull.GetPoint(faceVertices[k], out var point);
-            //        var error = Vector3.Dot(point, faceNormal) - offset;
-            //        Console.WriteLine($"v{k}: {error}");
-            //        largestError = MathF.Max(MathF.Abs(error), largestError);
-            //    }
-            //}
-            //Console.WriteLine($"Largest error: {largestError}");
+            Console.WriteLine($"  Hull {i}");
+            Console.WriteLine($"Point set count: {test.Points.Length}");
+            Console.WriteLine($"Face count: {test.Hull.FaceToVertexIndicesStart.Length}");
+            // Check divergence between face planes and vertices.
+            float largestError = 0;
+            for (int j = 0; j < test.Hull.FaceToVertexIndicesStart.Length; ++j)
+            {
+                test.Hull.GetVertexIndicesForFace(j, out var faceVertices);
+                BundleIndexing.GetBundleIndices(j, out var normalBundleIndex, out var normalIndexInBundle);
+                Vector3Wide.ReadSlot(ref test.Hull.BoundingPlanes[normalBundleIndex].Normal, normalIndexInBundle, out var faceNormal);
+                var offset = test.Hull.BoundingPlanes[normalBundleIndex].Offset[normalIndexInBundle];
+                //Console.WriteLine($"Face {j} errors:");
+                for (int k = 0; k < faceVertices.Length; ++k)
+                {
+                    test.Hull.GetPoint(faceVertices[k], out var point);
+                    var error = Vector3.Dot(point, faceNormal) - offset;
+                    //Console.WriteLine($"v{k}: {error}");
+                    largestError = MathF.Max(MathF.Abs(error), largestError);
+                }
+            }
+            Console.WriteLine($"Largest error: {largestError}");
 
+            Matrix3x3.CreateScale(new Vector3(5, 0.5f, 3), out var scale);
+            var transform = Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(3, 2, 1)), 1207) * scale;
+            const int transformCount = 10000;
+            var transformStart = Stopwatch.GetTimestamp();
+            for (int j = 0; j < transformCount; ++j)
+            {
+                CreateTransformedCopy(test.Hull, transform, BufferPool, out var transformedHullShape);
+                transformedHullShape.Dispose(BufferPool);
+            }
+            var transformEnd = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Transform hull computation time (us): {(transformEnd - transformStart) * 1e6 / (transformCount * Stopwatch.Frequency)}");
 
-            //Matrix3x3.CreateScale(new Vector3(5, 0.5f, 3), out var scale);
-            //var transform = Matrix3x3.CreateFromAxisAngle(Vector3.Normalize(new Vector3(3, 2, 1)), 1207) * scale;
-            //const int transformCount = 10000;
-            //var transformStart = Stopwatch.GetTimestamp();
-            //for (int j = 0; j < transformCount; ++j)
-            //{
-            //    CreateTransformedCopy(test.Hull, transform, BufferPool, out var transformedHullShape);
-            //    transformedHullShape.Dispose(BufferPool);
-            //}
-            //var transformEnd = Stopwatch.GetTimestamp();
-            //Console.WriteLine($"Transform hull computation time (us): {(transformEnd - transformStart) * 1e6 / (transformCount * Stopwatch.Frequency)}");
+            test.Hull.RayTest(RigidPose.Identity, new Vector3(0, 1, 0), -Vector3.UnitY, out var t, out var normal);
+            const int rayIterationCount = 10000;
+            var rayPose = RigidPose.Identity;
+            var rayOrigin = new Vector3(0, 2, 0);
+            var rayDirection = new Vector3(0, -1, 0);
 
-            //test.Hull.RayTest(RigidPose.Identity, new Vector3(0, 1, 0), -Vector3.UnitY, out var t, out var normal);
-            //const int rayIterationCount = 10000;
-            //var rayPose = RigidPose.Identity;
-            //var rayOrigin = new Vector3(0, 2, 0);
-            //var rayDirection = new Vector3(0, -1, 0);
+            int hitCounter = 0;
+            var start = Stopwatch.GetTimestamp();
+            for (int j = 0; j < rayIterationCount; ++j)
+            {
+                if (test.Hull.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
+                {
+                    ++hitCounter;
+                }
+            }
+            var end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Hit counter: {hitCounter}, computation time (us): {(end - start) * 1e6 / (rayIterationCount * Stopwatch.Frequency)}");
 
-            //int hitCounter = 0;
-            //var start = Stopwatch.GetTimestamp();
-            //for (int j = 0; j < rayIterationCount; ++j)
-            //{
-            //    if (test.Hull.RayTest(rayPose, rayOrigin, rayDirection, out _, out _))
-            //    {
-            //        ++hitCounter;
-            //    }
-            //}
-            //var end = Stopwatch.GetTimestamp();
-            //Console.WriteLine($"Hit counter: {hitCounter}, computation time (us): {(end - start) * 1e6 / (rayIterationCount * Stopwatch.Frequency)}");
-
-            //const int iterationCount = 100;
-            //start = Stopwatch.GetTimestamp();
-            //for (int j = 0; j < iterationCount; ++j)
-            //{
-            //    CreateShape(test.Points, BufferPool, out _, out var perfTestShape);
-            //    perfTestShape.Dispose(BufferPool);
-            //}
-            //end = Stopwatch.GetTimestamp();
-            //Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
+            const int iterationCount = 100;
+            start = Stopwatch.GetTimestamp();
+            for (int j = 0; j < iterationCount; ++j)
+            {
+                CreateShape(test.Points, BufferPool, out _, out var perfTestShape);
+                perfTestShape.Dispose(BufferPool);
+            }
+            end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
         }
 
         var boxHullShape = new ConvexHull(CreateBoxConvexHull(2), BufferPool, out _);

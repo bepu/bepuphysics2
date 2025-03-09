@@ -1,4 +1,4 @@
-﻿#define DEBUG_STEPS
+﻿//#define DEBUG_STEPS
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
@@ -613,7 +613,9 @@ namespace BepuPhysics.Collidables
         public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
 #endif
         {
+#if DEBUG_STEPS
             steps = new List<DebugStep>();
+#endif
             if (points.Length <= 0)
             {
                 hullData = default;
