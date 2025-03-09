@@ -539,7 +539,7 @@ public class ConvexHullTestDemo : Demo
     {
         camera.Position = new Vector3(0, -2.5f, 10);
         camera.Yaw = 0;
-        camera.Pitch = 0;
+        camera.Pitch = 0;         
 
         Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
