@@ -88,7 +88,7 @@ namespace BepuPhysics.Collidables
     {
         static void FindExtremeFace(
             in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, in EdgeEndpoints sourceEdgeEndpoints, ref Buffer<Vector3Wide> pointBundles, in Vector<int> indexOffsets, Buffer<int> allowVertices, int pointCount,
-            ref Buffer<Vector<float>> projectedOnX, ref Buffer<Vector<float>> projectedOnY, Vector<float> planeEpsilon, Vector<float> normalChangePerTangentChange, ref QuickList<int> vertexIndices, out Vector3 faceNormal)
+            ref Buffer<Vector<float>> projectedOnX, ref Buffer<Vector<float>> projectedOnY, Vector<float> planeEpsilon, ref QuickList<int> vertexIndices, out Vector3 faceNormal)
         {
             Debug.Assert(projectedOnX.Length >= pointBundles.Length && projectedOnY.Length >= pointBundles.Length && vertexIndices.Count == 0 && vertexIndices.Span.Length >= pointBundles.Length * Vector<float>.Count);
             //Find the candidate-basisOrigin which has the smallest angle with basisY when projected onto the plane spanned by basisX and basisY.
@@ -189,11 +189,11 @@ namespace BepuPhysics.Collidables
             //}
 
             Vector3Wide.Broadcast(faceNormal, out var faceNormalWide);
+            var negatedPlaneEpsilon = -planeEpsilon;
             for (int i = 0; i < pointBundles.Length; ++i)
             {
                 var dot = projectedOnX[i] * projectedPlaneNormal.X + projectedOnY[i] * projectedPlaneNormal.Y;
-                var tangentDot = Vector.Abs(projectedOnX[i] * projectedPlaneNormal.Y - projectedOnY[i] * projectedPlaneNormal.X);
-                var coplanar = Vector.GreaterThan(dot, -planeEpsilon - tangentDot * normalChangePerTangentChange);
+                var coplanar = Vector.GreaterThan(dot, negatedPlaneEpsilon);
                 if (Vector.LessThanAny(coplanar, Vector<int>.Zero))
                 {
                     var bundleBaseIndex = i << BundleIndexing.VectorShift;
@@ -717,7 +717,7 @@ namespace BepuPhysics.Collidables
             // The face coplanarity epsilon captures points which could be member of faces that will be considered coplanar by the later face merging phase.
             // If we expect they're going to show up as coplanar later, there's not much reason to create separate faces for them now.
             // (This can simplify away microgeometry, but that's often actually desirable.)
-            var planeSlabEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-5f;
+            var planeSlabEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-4f;
             var normalCoplanarityEpsilon = 1f - 1e-6f;
             var planeSlabEpsilon = new Vector<float>(planeSlabEpsilonNarrow);
             var rawFaceVertexIndices = new QuickList<int>(pointBundles.Length * Vector<float>.Count, pool);
@@ -731,22 +731,8 @@ namespace BepuPhysics.Collidables
             for (int i = points.Length; i < allowVertices.Length; ++i)
                 allowVertices[i] = 0;
 
-            // Note that the coplanarity test becomes more lax with distance from the edge.
-            // This allows the early coplanarity test to capture faces which would otherwise later be merged
-            // due to having face normals that are too similar.
-            // Consider two normals, N and M, where M is a normal maximally far from N that is still mergeable.
-            // Tn is the tangent to N, and Tm is the tangent to M.
-            // dot(N, M) == mergeThreshold == dot(Tn, Tm)
-            // We want the rate of change of dot(p, N) per unit change along dot(p, Tn).
-            // theta = acos(dot(N, M))
-            // tan(theta) = normalChangePerTangentChange
-            // normalChangePerTangentChange = tan(acos(dot(N, M)))
-            // normalChangePerTangentChange = sqrt(1 - dot(N, M)^2) / dot(N, M)
-            // normalChangePerTangentChange = sqrt(1 - mergeThreshold^2) / mergeThreshold
-            var normalChangePerTangentChange = new Vector<float>(MathF.Sqrt(1f - normalCoplanarityEpsilon * normalCoplanarityEpsilon) / normalCoplanarityEpsilon);
-
             FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, initialSourceEdge, ref pointBundles, indexOffsetBundle, allowVertices, points.Length,
-               ref projectedOnX, ref projectedOnY, planeSlabEpsilon, normalChangePerTangentChange, ref rawFaceVertexIndices, out var initialFaceNormal);
+               ref projectedOnX, ref projectedOnY, planeSlabEpsilon, ref rawFaceVertexIndices, out var initialFaceNormal);
             Debug.Assert(rawFaceVertexIndices.Count >= 2);
             var facePoints = new QuickList<Vector2>(points.Length, pool);
             var reducedFaceIndices = new QuickList<int>(points.Length, pool);
@@ -815,7 +801,7 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Broadcast(basisY, out var basisYBundle);
                 Vector3Wide.Broadcast(edgeA, out var basisOrigin);
                 rawFaceVertexIndices.Count = 0;
-                FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, allowVertices, points.Length, ref projectedOnX, ref projectedOnY, planeSlabEpsilon, normalChangePerTangentChange, ref rawFaceVertexIndices, out var faceNormal);
+                FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, allowVertices, points.Length, ref projectedOnX, ref projectedOnY, planeSlabEpsilon, ref rawFaceVertexIndices, out var faceNormal);
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
                 ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeSlabEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices);
