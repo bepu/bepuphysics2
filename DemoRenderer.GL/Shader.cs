@@ -15,8 +15,12 @@ namespace DemoRenderer
             {
                 GL.ShaderSource(handle, source);
                 GL.CompileShader(handle);
-                var error = GL.GetShaderInfoLog(handle);
-                if (error != string.Empty) throw new Exception(error);
+                GL.GetShader(handle, ShaderParameter.CompileStatus, out var compileStatus);
+                if(compileStatus == 0)
+                {
+                    var error = GL.GetShaderInfoLog(handle);
+                    throw new Exception(error);
+                }
                 GL.AttachShader(program, handle);
                 try
                 {
@@ -38,8 +42,12 @@ namespace DemoRenderer
             Compile(ShaderType.FragmentShader, fragment, () =>
             {
                 GL.LinkProgram(program);
-                var error = GL.GetProgramInfoLog(program);
-                if (error != string.Empty) throw new Exception(error);
+                GL.GetProgram(program, GetProgramParameterName.LinkStatus, out var linkStatus);
+                if(linkStatus == 0)
+                {
+                    var error = GL.GetProgramInfoLog(program);
+                    throw new Exception(error);
+                }
             }));
         public void Use()
         {
