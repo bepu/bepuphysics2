@@ -2,7 +2,7 @@ name: .NET Core - Publish NuGet Packages
 
 env:
   COMMON_SETTINGS_PATH: CommonSettings.props
-  BASE_RUN_NUMBER: 25
+  BASE_RUN_NUMBER: 23
 
 on: [workflow_dispatch]
 
