@@ -208,3 +208,7 @@ ModelManifest.xml
 
 # JetBrains Rider
 .idea/
+
+# DocFX API Generated Pages
+Documentation/api/*
+Documentation/_site/*
