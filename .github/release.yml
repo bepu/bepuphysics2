@@ -23,8 +23,11 @@ changelog:
     - title: 🎮 Demos App
       labels:
         - demos
-    - title: 📄 Documentation
+    - title: 🪲 Bug Fixes
       labels:
+        - bug
+    - title: 📄 Documentation
+    labels:
         - documentation
     - title: 💪 Other Changes
       labels:
