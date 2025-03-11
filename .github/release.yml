@@ -27,7 +27,7 @@ changelog:
       labels:
         - bug
     - title: 📄 Documentation
-    labels:
+      labels:
         - documentation
     - title: 💪 Other Changes
       labels:
