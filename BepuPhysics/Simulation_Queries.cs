@@ -13,7 +13,8 @@ namespace BepuPhysics
         /// <summary>
         /// Checks whether the child of a collidable should be tested against a ray. Only called by shape types that can have more than one child.
         /// </summary>
-        /// <param name="childIndex">Index of the candidate in the parent collidable.</param>
+        /// <param name="childIndex">Index of the candidate in the parent collidable.
+        /// <para>For compounds, this is the index of the child in the child array. For meshes, this is the triangle index. For convex shapes or other types that don't have multiple children, this is always zero.</para></param>
         /// <returns>True if the child should be tested by the ray, false otherwise.</returns>
         bool AllowTest(int childIndex);
         /// <summary>
@@ -23,7 +24,8 @@ namespace BepuPhysics
         /// <param name="maximumT">Maximum distance along the ray that the traversal is allowed to go in units of ray direction length. Can be set to limit future tests.</param>
         /// <param name="t">Distance along the ray to the impact in units of ray direction length. In other words, hitLocation = ray.Origin + ray.Direction * t.</param>
         /// <param name="normal">Surface normal at the hit location.</param>
-        /// <param name="childIndex">Index of the hit child. For convex shapes or other types that don't have multiple children, this is always zero.</param>
+        /// <param name="childIndex">Index of the hit child. 
+        /// <para>For compounds, this is the index of the child in the child array. For meshes, this is the triangle index. For convex shapes or other types that don't have multiple children, this is always zero.</para></param>
         void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex);
     }
 
@@ -42,7 +44,8 @@ namespace BepuPhysics
         /// Checks whether the child of a collidable should be tested against a ray. Only called by shape types that can have more than one child.
         /// </summary>
         /// <param name="collidable">Parent of the candidate.</param>
-        /// <param name="childIndex">Index of the candidate in the parent collidable.</param>
+        /// <param name="childIndex">Index of the candidate child in its parent collidable.
+        /// <para>For compounds, this is the index of the child in the child array. For meshes, this is the triangle index. For convex shapes or other types that don't have multiple children, this is always zero.</para></param>
         /// <returns>True if the child should be tested by the ray, false otherwise.</returns>
         bool AllowTest(CollidableReference collidable, int childIndex);
         /// <summary>
@@ -53,7 +56,8 @@ namespace BepuPhysics
         /// <param name="t">Distance along the ray to the impact in units of ray direction length. In other words, hitLocation = ray.Origin + ray.Direction * t.</param>
         /// <param name="normal">Surface normal at the hit location.</param>
         /// <param name="collidable">Collidable hit by the ray.</param>
-        /// <param name="childIndex">Index of the hit child. For convex shapes or other types that don't have multiple children, this is always zero.</param>
+        /// <param name="childIndex">Index of the hit child in its parent collidable.
+        /// <para>For compounds, this is the index of the child in the child array. For meshes, this is the triangle index. For convex shapes or other types that don't have multiple children, this is always zero.</para></param>
         void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, CollidableReference collidable, int childIndex);
     }
 
@@ -72,9 +76,10 @@ namespace BepuPhysics
         /// Checks whether to run a detailed sweep test against a target collidable's child.
         /// </summary>
         /// <param name="collidable">Collidable to check.</param>
-        /// <param name="child">Index of the child in the collidable to check.</param>
+        /// <param name="childIndex">Index of the child in the collidable to check.
+        /// <para>For compounds, this is the index of the child in the child array. For meshes, this is the triangle index. For convex shapes or other types that don't have multiple children, this is always zero.</para></param>
         /// <returns>True if the sweep test should be attempted, false otherwise.</returns>
-        bool AllowTest(CollidableReference collidable, int child);
+        bool AllowTest(CollidableReference collidable, int childIndex);
         /// <summary>
         /// Called when a sweep test detects a hit with nonzero T value.
         /// </summary>
