@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Interface IConvexCompoundSweepOverlapFinder&lt;TShapeA, TCompoundB&gt; | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Interface IConvexCompoundSweepOverlapFinder&lt;TShapeA, TCompoundB&gt; | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_CollisionDetection_SweepTasks_IConvexCompoundSweepOverlapFinder_2.md&amp;value=---%0Auid%3A%20BepuPhysics.CollisionDetection.SweepTasks.IConvexCompoundSweepOverlapFinder%602%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.CollisionDetection.SweepTasks.IConvexCompoundSweepOverlapFinder`2">
+
+
+
+  <h1 id="BepuPhysics_CollisionDetection_SweepTasks_IConvexCompoundSweepOverlapFinder_2" data-uid="BepuPhysics.CollisionDetection.SweepTasks.IConvexCompoundSweepOverlapFinder`2" class="text-break">
+Interface IConvexCompoundSweepOverlapFinder&lt;TShapeA, TCompoundB&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/SweepTasks/ConvexCompoundSweepOverlapFinder.cs/#L10"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.CollisionDetection.html">CollisionDetection</a>.<a class="xref" href="BepuPhysics.CollisionDetection.SweepTasks.html">SweepTasks</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public interface IConvexCompoundSweepOverlapFinder&lt;TShapeA, TCompoundB&gt; where TShapeA : struct, IConvexShape where TCompoundB : struct, IBoundsQueryableCompound</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TShapeA</code></dt>
+    <dd></dd>
+    <dt><code>TCompoundB</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_SweepTasks_IConvexCompoundSweepOverlapFinder_2_FindOverlaps_" data-uid="BepuPhysics.CollisionDetection.SweepTasks.IConvexCompoundSweepOverlapFinder`2.FindOverlaps*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_SweepTasks_IConvexCompoundSweepOverlapFinder_2_FindOverlaps__0__System_Numerics_Quaternion_BepuPhysics_BodyVelocity___1__System_Numerics_Vector3_System_Numerics_Quaternion_BepuPhysics_BodyVelocity__System_Single_BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool_BepuPhysics_CollisionDetection_CollisionTasks_ChildOverlapsCollection__" data-uid="BepuPhysics.CollisionDetection.SweepTasks.IConvexCompoundSweepOverlapFinder`2.FindOverlaps(`0@,System.Numerics.Quaternion,BepuPhysics.BodyVelocity@,`1@,System.Numerics.Vector3,System.Numerics.Quaternion,BepuPhysics.BodyVelocity@,System.Single,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,BepuPhysics.CollisionDetection.CollisionTasks.ChildOverlapsCollection@)">
+  FindOverlaps(ref TShapeA, Quaternion, in BodyVelocity, ref TCompoundB, Vector3, Quaternion, in BodyVelocity, float, Shapes, BufferPool, out ChildOverlapsCollection)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/SweepTasks/ConvexCompoundSweepOverlapFinder.cs/#L12"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static abstract void FindOverlaps(ref TShapeA shapeA, Quaternion orientationA, in BodyVelocity velocityA, ref TCompoundB compoundB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT, Shapes shapes, BufferPool pool, out ChildOverlapsCollection overlaps)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shapeA</code> <span class="xref">TShapeA</span></dt>
+    <dd></dd>
+    <dt><code>orientationA</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.quaternion">Quaternion</a></dt>
+    <dd></dd>
+    <dt><code>velocityA</code> <a class="xref" href="BepuPhysics.BodyVelocity.html">BodyVelocity</a></dt>
+    <dd></dd>
+    <dt><code>compoundB</code> <span class="xref">TCompoundB</span></dt>
+    <dd></dd>
+    <dt><code>offsetB</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>orientationB</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.quaternion">Quaternion</a></dt>
+    <dd></dd>
+    <dt><code>velocityB</code> <a class="xref" href="BepuPhysics.BodyVelocity.html">BodyVelocity</a></dt>
+    <dd></dd>
+    <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>shapes</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>overlaps</code> <a class="xref" href="BepuPhysics.CollisionDetection.CollisionTasks.ChildOverlapsCollection.html">ChildOverlapsCollection</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/SweepTasks/ConvexCompoundSweepOverlapFinder.cs/#L10" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

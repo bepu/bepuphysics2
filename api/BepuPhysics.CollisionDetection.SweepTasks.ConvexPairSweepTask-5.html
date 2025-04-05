@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class ConvexPairSweepTask&lt;TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester&gt; | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class ConvexPairSweepTask&lt;TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester&gt; | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_CollisionDetection_SweepTasks_ConvexPairSweepTask_5.md&amp;value=---%0Auid%3A%20BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask%605%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask`5">
+
+
+
+  <h1 id="BepuPhysics_CollisionDetection_SweepTasks_ConvexPairSweepTask_5" data-uid="BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask`5" class="text-break">
+Class ConvexPairSweepTask&lt;TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/SweepTasks/ConvexSweepTaskCommon.cs/#L17"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.CollisionDetection.html">CollisionDetection</a>.<a class="xref" href="BepuPhysics.CollisionDetection.SweepTasks.html">SweepTasks</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public class ConvexPairSweepTask&lt;TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester&gt; : SweepTask where TShapeA : unmanaged, IConvexShape where TShapeWideA : unmanaged, IShapeWide&lt;TShapeA&gt; where TShapeB : unmanaged, IConvexShape where TShapeWideB : unmanaged, IShapeWide&lt;TShapeB&gt; where TPairDistanceTester : struct, IPairDistanceTester&lt;TShapeWideA, TShapeWideB&gt;</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TShapeA</code></dt>
+    <dd></dd>
+    <dt><code>TShapeWideA</code></dt>
+    <dd></dd>
+    <dt><code>TShapeB</code></dt>
+    <dd></dd>
+    <dt><code>TShapeWideB</code></dt>
+    <dd></dd>
+    <dt><code>TPairDistanceTester</code></dt>
+    <dd></dd>
+  </dl>
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><a class="xref" href="BepuPhysics.CollisionDetection.SweepTask.html">SweepTask</a></div>
+      <div><span class="xref">ConvexPairSweepTask&lt;TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester&gt;</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.SweepTask.html#BepuPhysics_CollisionDetection_SweepTask_ShapeTypeIndexA">SweepTask.ShapeTypeIndexA</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.SweepTask.html#BepuPhysics_CollisionDetection_SweepTask_ShapeTypeIndexB">SweepTask.ShapeTypeIndexB</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.SweepTask.html#BepuPhysics_CollisionDetection_SweepTask_Sweep_System_Void__System_Int32_BepuPhysics_RigidPose__System_Numerics_Quaternion_BepuPhysics_BodyVelocity__System_Void__System_Int32_BepuPhysics_RigidPose__System_Numerics_Vector3_System_Numerics_Quaternion_BepuPhysics_BodyVelocity__System_Single_System_Single_System_Single_System_Int32_System_Single__System_Single__System_Numerics_Vector3__System_Numerics_Vector3__">SweepTask.Sweep(void*, int, in RigidPose, Quaternion, in BodyVelocity, void*, int, in RigidPose, Vector3, Quaternion, in BodyVelocity, float, float, float, int, out float, out float, out Vector3, out Vector3)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.SweepTask.html#BepuPhysics_CollisionDetection_SweepTask_Sweep__1_System_Void__System_Int32_System_Numerics_Quaternion_BepuPhysics_BodyVelocity__System_Void__System_Int32_System_Numerics_Vector3_System_Numerics_Quaternion_BepuPhysics_BodyVelocity__System_Single_System_Single_System_Single_System_Int32___0__BepuPhysics_Collidables_Shapes_BepuPhysics_CollisionDetection_SweepTaskRegistry_BepuUtilities_Memory_BufferPool_System_Single__System_Single__System_Numerics_Vector3__System_Numerics_Vector3__">SweepTask.Sweep&lt;TSweepFilter&gt;(void*, int, Quaternion, in BodyVelocity, void*, int, Vector3, Quaternion, in BodyVelocity, float, float, float, int, ref TSweepFilter, Shapes, SweepTaskRegistry, BufferPool, out float, out float, out Vector3, out Vector3)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_SweepTasks_ConvexPairSweepTask_5__ctor_" data-uid="BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask`5.#ctor*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_SweepTasks_ConvexPairSweepTask_5__ctor" data-uid="BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask`5.#ctor">
+  ConvexPairSweepTask()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/SweepTasks/ConvexSweepTaskCommon.cs/#L24"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConvexPairSweepTask()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_SweepTasks_ConvexPairSweepTask_5_PreorderedTypeSweep_" data-uid="BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask`5.PreorderedTypeSweep*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_SweepTasks_ConvexPairSweepTask_5_PreorderedTypeSweep_System_Void__BepuPhysics_RigidPose__System_Numerics_Quaternion_BepuPhysics_BodyVelocity__System_Void__BepuPhysics_RigidPose__System_Numerics_Vector3_System_Numerics_Quaternion_BepuPhysics_BodyVelocity__System_Single_System_Single_System_Single_System_Int32_System_Single__System_Single__System_Numerics_Vector3__System_Numerics_Vector3__" data-uid="BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask`5.PreorderedTypeSweep(System.Void*,BepuPhysics.RigidPose@,System.Numerics.Quaternion,BepuPhysics.BodyVelocity@,System.Void*,BepuPhysics.RigidPose@,System.Numerics.Vector3,System.Numerics.Quaternion,BepuPhysics.BodyVelocity@,System.Single,System.Single,System.Single,System.Int32,System.Single@,System.Single@,System.Numerics.Vector3@,System.Numerics.Vector3@)">
+  PreorderedTypeSweep(void*, in RigidPose, Quaternion, in BodyVelocity, void*, in RigidPose, Vector3, Quaternion, in BodyVelocity, float, float, float, int, out float, out float, out Vector3, out Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/SweepTasks/ConvexSweepTaskCommon.cs/#L29"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected override bool PreorderedTypeSweep(void* shapeDataA, in RigidPose localPoseA, Quaternion orientationA, in BodyVelocity velocityA, void* shapeDataB, in RigidPose localPoseB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shapeDataA</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>*</dt>
+    <dd></dd>
+    <dt><code>localPoseA</code> <a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
+    <dd></dd>
+    <dt><code>orientationA</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.quaternion">Quaternion</a></dt>
+    <dd></dd>
+    <dt><code>velocityA</code> <a class="xref" href="BepuPhysics.BodyVelocity.html">BodyVelocity</a></dt>
+    <dd></dd>
+    <dt><code>shapeDataB</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>*</dt>
+    <dd></dd>
+    <dt><code>localPoseB</code> <a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
+    <dd></dd>
+    <dt><code>offsetB</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>orientationB</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.quaternion">Quaternion</a></dt>
+    <dd></dd>
+    <dt><code>velocityB</code> <a class="xref" href="BepuPhysics.BodyVelocity.html">BodyVelocity</a></dt>
+    <dd></dd>
+    <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>minimumProgression</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>convergenceThreshold</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>maximumIterationCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>t0</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>t1</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>hitLocation</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>hitNormal</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_SweepTasks_ConvexPairSweepTask_5_PreorderedTypeSweep_" data-uid="BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask`5.PreorderedTypeSweep*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_SweepTasks_ConvexPairSweepTask_5_PreorderedTypeSweep__1_System_Void__System_Numerics_Quaternion_BepuPhysics_BodyVelocity__System_Void__System_Numerics_Vector3_System_Numerics_Quaternion_BepuPhysics_BodyVelocity__System_Single_System_Single_System_Single_System_Int32_System_Boolean___0__BepuPhysics_Collidables_Shapes_BepuPhysics_CollisionDetection_SweepTaskRegistry_BepuUtilities_Memory_BufferPool_System_Single__System_Single__System_Numerics_Vector3__System_Numerics_Vector3__" data-uid="BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask`5.PreorderedTypeSweep``1(System.Void*,System.Numerics.Quaternion,BepuPhysics.BodyVelocity@,System.Void*,System.Numerics.Vector3,System.Numerics.Quaternion,BepuPhysics.BodyVelocity@,System.Single,System.Single,System.Single,System.Int32,System.Boolean,``0@,BepuPhysics.Collidables.Shapes,BepuPhysics.CollisionDetection.SweepTaskRegistry,BepuUtilities.Memory.BufferPool,System.Single@,System.Single@,System.Numerics.Vector3@,System.Numerics.Vector3@)">
+  PreorderedTypeSweep&lt;TSweepFilter&gt;(void*, Quaternion, in BodyVelocity, void*, Vector3, Quaternion, in BodyVelocity, float, float, float, int, bool, ref TSweepFilter, Shapes, SweepTaskRegistry, BufferPool, out float, out float, out Vector3, out Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/SweepTasks/ConvexSweepTaskCommon.cs/#L45"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected override bool PreorderedTypeSweep&lt;TSweepFilter&gt;(void* shapeDataA, Quaternion orientationA, in BodyVelocity velocityA, void* shapeDataB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount, bool requiresFlip, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal) where TSweepFilter : ISweepFilter</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shapeDataA</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>*</dt>
+    <dd></dd>
+    <dt><code>orientationA</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.quaternion">Quaternion</a></dt>
+    <dd></dd>
+    <dt><code>velocityA</code> <a class="xref" href="BepuPhysics.BodyVelocity.html">BodyVelocity</a></dt>
+    <dd></dd>
+    <dt><code>shapeDataB</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>*</dt>
+    <dd></dd>
+    <dt><code>offsetB</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>orientationB</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.quaternion">Quaternion</a></dt>
+    <dd></dd>
+    <dt><code>velocityB</code> <a class="xref" href="BepuPhysics.BodyVelocity.html">BodyVelocity</a></dt>
+    <dd></dd>
+    <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>minimumProgression</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>convergenceThreshold</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>maximumIterationCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>requiresFlip</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+    <dt><code>filter</code> <span class="xref">TSweepFilter</span></dt>
+    <dd></dd>
+    <dt><code>shapes</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
+    <dd></dd>
+    <dt><code>sweepTasks</code> <a class="xref" href="BepuPhysics.CollisionDetection.SweepTaskRegistry.html">SweepTaskRegistry</a></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>t0</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>t1</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>hitLocation</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>hitNormal</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TSweepFilter</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/SweepTasks/ConvexSweepTaskCommon.cs/#L17" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,2817 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct Tree | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct Tree | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Trees_Tree.md&amp;value=---%0Auid%3A%20BepuPhysics.Trees.Tree%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Trees.Tree">
+
+
+
+  <h1 id="BepuPhysics_Trees_Tree" data-uid="BepuPhysics.Trees.Tree" class="text-break">
+Struct Tree  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_VolumeQuery.cs/#L8"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Trees.html">Trees</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public struct Tree</code></pre>
+  </div>
+
+
+
+
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="BepuPhysics_Trees_Tree__ctor_" data-uid="BepuPhysics.Trees.Tree.#ctor*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree__ctor_BepuUtilities_Memory_BufferPool_System_Int32_" data-uid="BepuPhysics.Trees.Tree.#ctor(BepuUtilities.Memory.BufferPool,System.Int32)">
+  Tree(BufferPool, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L93"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Constructs an empty tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Tree(BufferPool pool, int initialLeafCapacity = 4096)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool to use to allocate resources in the tree.</p>
+</dd>
+    <dt><code>initialLeafCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Initial number of leaves to allocate room for.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree__ctor_" data-uid="BepuPhysics.Trees.Tree.#ctor*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree__ctor_System_Span_System_Byte__BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Trees.Tree.#ctor(System.Span{System.Byte},BepuUtilities.Memory.BufferPool)">
+  Tree(Span&lt;byte&gt;, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L107"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Loads a tree from a byte buffer created by the Serialize function.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Tree(Span&lt;byte&gt; data, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>data</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>Data to load into the tree.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool to use to create the tree.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="BepuPhysics_Trees_Tree_LeafCount" data-uid="BepuPhysics.Trees.Tree.LeafCount">
+  LeafCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L32"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Number of leaves in the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int LeafCount</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Trees_Tree_Leaves" data-uid="BepuPhysics.Trees.Tree.Leaves">
+  Leaves
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L24"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Buffer of leaves in the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Buffer&lt;Leaf&gt; Leaves</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Trees.Leaf.html">Leaf</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Trees_Tree_Metanodes" data-uid="BepuPhysics.Trees.Tree.Metanodes">
+  Metanodes
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L20"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Buffer of metanodes in the tree. Metanodes contain metadata that aren't read during most query operations but are useful for bookkeeping.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Buffer&lt;Metanode&gt; Metanodes</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Trees.Metanode.html">Metanode</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Trees_Tree_NodeCount" data-uid="BepuPhysics.Trees.Tree.NodeCount">
+  NodeCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L28"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Number of nodes in the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int NodeCount</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Trees_Tree_Nodes" data-uid="BepuPhysics.Trees.Tree.Nodes">
+  Nodes
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L16"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Buffer of nodes in the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Buffer&lt;Node&gt; Nodes</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Trees.Node.html">Node</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Trees_Tree_Times" data-uid="BepuPhysics.Trees.Tree.Times">
+  Times
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_BinnedBuilder.cs/#L152"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Tree.NodeTimes[] Times</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Trees.Tree.NodeTimes.html">NodeTimes</a>[]</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Trees_Tree_Add_" data-uid="BepuPhysics.Trees.Tree.Add*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Add_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Trees.Tree.Add(BepuUtilities.BoundingBox,BepuUtilities.Memory.BufferPool)">
+  Add(BoundingBox, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Add.cs/#L38"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Adds a leaf to the tree with the given bounding box and returns the index of the added leaf.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Add(BoundingBox bounds, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bounds</code> <span class="xref">BoundingBox</span></dt>
+    <dd><p>Extents of the leaf bounds.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Resource pool to use if resizing is required.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the leaf allocated in the tree's leaf array.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Trees_Tree_Add_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Performs incrementally refining tree rotations down along the insertion path, unlike <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_AddWithoutRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_">AddWithoutRefinement(BoundingBox, BufferPool)</a>.<p></p>
+For a given tree, this is slightly slower than <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_AddWithoutRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_">AddWithoutRefinement(BoundingBox, BufferPool)</a> and slightly faster than <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_AddWithBottomUpRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_">AddWithBottomUpRefinement(BoundingBox, BufferPool)</a>.<p></p>
+Trees built with repeated insertions of this kind tend to have decent quality, but slightly worse than <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_AddWithBottomUpRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_">AddWithBottomUpRefinement(BoundingBox, BufferPool)</a>.
+</div>
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_AddWithBottomUpRefinement_" data-uid="BepuPhysics.Trees.Tree.AddWithBottomUpRefinement*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_AddWithBottomUpRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Trees.Tree.AddWithBottomUpRefinement(BepuUtilities.BoundingBox,BepuUtilities.Memory.BufferPool)">
+  AddWithBottomUpRefinement(BoundingBox, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Add.cs/#L51"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Adds a leaf to the tree with the given bounding box and returns the index of the added leaf.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int AddWithBottomUpRefinement(BoundingBox bounds, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bounds</code> <span class="xref">BoundingBox</span></dt>
+    <dd><p>Extents of the leaf bounds.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Resource pool to use if resizing is required.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the leaf allocated in the tree's leaf array.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Trees_Tree_AddWithBottomUpRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Performs incrementally refining tree rotations up along the insertion path, unlike <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_AddWithoutRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_">AddWithoutRefinement(BoundingBox, BufferPool)</a>.<p></p>
+Trees built with repeated insertions of this kind tend to have slightly better quality than <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Add_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_">Add(BoundingBox, BufferPool)</a>, but it is also slightly more expensive.
+</div>
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_AddWithoutRefinement_" data-uid="BepuPhysics.Trees.Tree.AddWithoutRefinement*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_AddWithoutRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Trees.Tree.AddWithoutRefinement(BepuUtilities.BoundingBox,BepuUtilities.Memory.BufferPool)">
+  AddWithoutRefinement(BoundingBox, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Add.cs/#L24"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Adds a leaf to the tree with the given bounding box and returns the index of the added leaf.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int AddWithoutRefinement(BoundingBox bounds, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bounds</code> <span class="xref">BoundingBox</span></dt>
+    <dd><p>Extents of the leaf bounds.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Resource pool to use if resizing is required.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the leaf allocated in the tree's leaf array.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Trees_Tree_AddWithoutRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This performs no incremental refinement. When acting on the same tree, it's slightly cheaper than <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Add_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_">Add(BoundingBox, BufferPool)</a>,
+but the quality of the tree depends on insertion order.<p></p>
+Pathological insertion orders can result in a maximally imbalanced tree, quadratic insertion times across the full tree build, and query performance linear in the number of leaves.<p></p>
+This is typically best reserved for cases where the insertion order is known to be randomized or otherwise conducive to building decent trees.
+</div>
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_BinnedBuild_" data-uid="BepuPhysics.Trees.Tree.BinnedBuild*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_BinnedBuild_BepuUtilities_Memory_Buffer_BepuPhysics_Trees_NodeChild__BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_BepuUtilities_TaskScheduling_TaskStack__System_Int32_System_Int32_System_Int32_System_Int32_System_Int32_System_Int32_System_Single_System_Int32_System_Boolean_" data-uid="BepuPhysics.Trees.Tree.BinnedBuild(BepuUtilities.Memory.Buffer{BepuPhysics.Trees.NodeChild},BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,BepuUtilities.TaskScheduling.TaskStack*,System.Int32,System.Int32,System.Int32,System.Int32,System.Int32,System.Int32,System.Single,System.Int32,System.Boolean)">
+  BinnedBuild(Buffer&lt;NodeChild&gt;, BufferPool, IThreadDispatcher, TaskStack*, int, int, int, int, int, int, float, int, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_BinnedBuilder.cs/#L1576"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Runs a binned build across the subtrees buffer.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void BinnedBuild(Buffer&lt;NodeChild&gt; subtrees, BufferPool pool = null, IThreadDispatcher dispatcher = null, TaskStack* taskStackPointer = null, int workerIndex = 0, int workerCount = -1, int targetTaskCount = -1, int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 0.0625, int microsweepThreshold = 64, bool deterministic = false)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>subtrees</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Trees.NodeChild.html">NodeChild</a>&gt;</dt>
+    <dd><p>Subtrees (either leaves or nodes) to run the builder over. The builder may make in-place modifications to the input buffer; the input buffer should not be assumed to be in a valid state after the builder runs.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool used to preallocate a pingpong buffer if the number of subtrees exceeds maximumSubtreeStackAllocationCount. If null, stack allocation or a slower in-place partitioning will be used.
+<p></p>A pool must be provided if a thread dispatcher is given.
+</dd>
+    <dt><code>dispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Dispatcher used to multithread the execution of the build. If the dispatcher is not null, pool must also not be null.</p>
+</dd>
+    <dt><code>taskStackPointer</code> <span class="xref">TaskStack</span>*</dt>
+    <dd><p>Task stack being used to run the build process, if any.
+If provided, the builder assumes the refinement is running within an existing multithreaded dispatch and will not call IThreadDispatcher.DispatchWorkers.
+If null, the builder will create its own task stack and call IThreadDispatcher.DispatchWorkers internally.</p>
+</dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the currently executing worker. If not running within a dispatch, 0 is valid.</p>
+</dd>
+    <dt><code>workerCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of workers that may be used in the builder. This should span all worker indices that may contribute to the build process even only a subset are expected to be used at any one time.
+If negative, the dispatcher's thread count will be used.</p>
+</dd>
+    <dt><code>targetTaskCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of tasks to try to use in the builder. If negative, the dispatcher's thread count will be used.</p>
+</dd>
+    <dt><code>maximumSubtreeStackAllocationCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Maximum number of subtrees to try putting on the stack for the binned builder's pong buffers.<p></p>
+Subtree counts larger than this threshold will either resort to a buffer pool allocation (if available) or slower in-place partition operations.
+</dd>
+    <dt><code>minimumBinCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Minimum number of bins the builder should use per node.</p>
+</dd>
+    <dt><code>maximumBinCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Maximum number of bins the builder should use per node.</p>
+</dd>
+    <dt><code>leafToBinMultiplier</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Multiplier to apply to the subtree count within a node to decide the bin count. Resulting value will then be clamped by the minimum/maximum bin counts.</p>
+</dd>
+    <dt><code>microsweepThreshold</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Threshold at or under which the binned builder resorts to local counting sort sweeps.</p>
+</dd>
+    <dt><code>deterministic</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether to force determinism at a slightly higher cost when using internally multithreaded execution.<p></p>
+If the build is single threaded, it is already deterministic and this flag has no effect.
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_BinnedBuild_" data-uid="BepuPhysics.Trees.Tree.BinnedBuild*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_BinnedBuild_BepuUtilities_Memory_Buffer_BepuPhysics_Trees_NodeChild__BepuUtilities_Memory_Buffer_BepuPhysics_Trees_Node__BepuUtilities_Memory_Buffer_BepuPhysics_Trees_Metanode__BepuUtilities_Memory_Buffer_BepuPhysics_Trees_Leaf__BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_BepuUtilities_TaskScheduling_TaskStack__System_Int32_System_Int32_System_Int32_System_Int32_System_Int32_System_Int32_System_Single_System_Int32_System_Boolean_" data-uid="BepuPhysics.Trees.Tree.BinnedBuild(BepuUtilities.Memory.Buffer{BepuPhysics.Trees.NodeChild},BepuUtilities.Memory.Buffer{BepuPhysics.Trees.Node},BepuUtilities.Memory.Buffer{BepuPhysics.Trees.Metanode},BepuUtilities.Memory.Buffer{BepuPhysics.Trees.Leaf},BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,BepuUtilities.TaskScheduling.TaskStack*,System.Int32,System.Int32,System.Int32,System.Int32,System.Int32,System.Int32,System.Single,System.Int32,System.Boolean)">
+  BinnedBuild(Buffer&lt;NodeChild&gt;, Buffer&lt;Node&gt;, Buffer&lt;Metanode&gt;, Buffer&lt;Leaf&gt;, BufferPool, IThreadDispatcher, TaskStack*, int, int, int, int, int, int, float, int, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_BinnedBuilder.cs/#L1507"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Runs a multithreaded binned build across the subtrees buffer.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void BinnedBuild(Buffer&lt;NodeChild&gt; subtrees, Buffer&lt;Node&gt; nodes, Buffer&lt;Metanode&gt; metanodes, Buffer&lt;Leaf&gt; leaves, BufferPool pool = null, IThreadDispatcher dispatcher = null, TaskStack* taskStackPointer = null, int workerIndex = 0, int workerCount = -1, int targetTaskCount = -1, int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 0.0625, int microsweepThreshold = 64, bool deterministic = false)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>subtrees</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Trees.NodeChild.html">NodeChild</a>&gt;</dt>
+    <dd><p>Subtrees (either leaves or nodes) to run the builder over. The builder may make in-place modifications to the input buffer; the input buffer should not be assumed to be in a valid state after the builder runs.</p>
+</dd>
+    <dt><code>nodes</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Trees.Node.html">Node</a>&gt;</dt>
+    <dd><p>Buffer holding the nodes created by the build process.<p></p>
+Nodes are created in a depth first ordering with respect to the input buffer.
+</dd>
+    <dt><code>metanodes</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Trees.Metanode.html">Metanode</a>&gt;</dt>
+    <dd><p>Buffer holding the metanodes created by the build process.<p></p>
+Metanodes, like nodes, are created in a depth first ordering with respect to the input buffer.
+Metanodes are in the same order and in the same slots; they simply contain data about nodes that most traversals don't need to know about.
+</dd>
+    <dt><code>leaves</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Trees.Leaf.html">Leaf</a>&gt;</dt>
+    <dd><p>Buffer holding the leaf references created by the build process.<p></p>
+The indices written by the build process are those defined in the inputs; any <a class="xref" href="BepuPhysics.Trees.NodeChild.html#BepuPhysics_Trees_NodeChild_Index">Index</a> that is negative is encoded according to <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Encode_System_Int32_">Encode(int)</a> and points into the leaf buffer.
+If a default-valued (unallocated) buffer is passed in, the binned builder will ignore leaves.
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool used to preallocate a pingpong buffer if the number of subtrees exceeds maximumSubtreeStackAllocationCount. If null, stack allocation or a slower in-place partitioning will be used.
+<param name="dispatcher">Dispatcher used to multithread the execution of the build. If the dispatcher is not null, pool must also not be null.<param name="taskStackPointer">Task stack being used to run the build process, if any.
+If provided, the builder assumes the refinement is running within an existing multithreaded dispatch and will not call IThreadDispatcher.DispatchWorkers.
+If null, the builder will create its own task stack and call IThreadDispatcher.DispatchWorkers internally.<p></p>A pool must be provided if a thread dispatcher is given.
+</dd>
+    <dt><code>dispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd></dd>
+    <dt><code>taskStackPointer</code> <span class="xref">TaskStack</span>*</dt>
+    <dd></dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the currently executing worker. If not running within a dispatch, 0 is valid.</p>
+</dd>
+    <dt><code>workerCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of workers that may be used in the builder. This should span all worker indices that may contribute to the build process even only a subset are expected to be used at any one time.
+If negative, the dispatcher's thread count will be used.</p>
+</dd>
+    <dt><code>targetTaskCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of tasks to try to use in the builder. If negative, the dispatcher's thread count will be used.</p>
+</dd>
+    <dt><code>maximumSubtreeStackAllocationCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Maximum number of subtrees to try putting on the stack for the binned builder's pong buffers.<p></p>
+Subtree counts larger than this threshold will either resort to a buffer pool allocation (if available) or slower in-place partition operations.
+</dd>
+    <dt><code>minimumBinCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Minimum number of bins the builder should use per node.</p>
+</dd>
+    <dt><code>maximumBinCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Maximum number of bins the builder should use per node.</p>
+</dd>
+    <dt><code>leafToBinMultiplier</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Multiplier to apply to the subtree count within a node to decide the bin count. Resulting value will then be clamped by the minimum/maximum bin counts.</p>
+</dd>
+    <dt><code>microsweepThreshold</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Threshold at or under which the binned builder resorts to local counting sort sweeps.</p>
+</dd>
+    <dt><code>deterministic</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether to force determinism at a slightly higher cost when using internally multithreaded execution.<p></p>
+If the build is single threaded, it is already deterministic and this flag has no effect.
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_BinnedRefine_" data-uid="BepuPhysics.Trees.Tree.BinnedRefine*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_BinnedRefine_System_Int32_BepuUtilities_Collections_QuickList_System_Int32___System_Int32_BepuUtilities_Collections_QuickList_System_Int32___BepuPhysics_Trees_BinnedResources__BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Trees.Tree.BinnedRefine(System.Int32,BepuUtilities.Collections.QuickList{System.Int32}@,System.Int32,BepuUtilities.Collections.QuickList{System.Int32}@,BepuPhysics.Trees.BinnedResources@,BepuUtilities.Memory.BufferPool)">
+  BinnedRefine(int, ref QuickList&lt;int&gt;, int, ref QuickList&lt;int&gt;, ref BinnedResources, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_BinnedRefine.cs/#L576"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void BinnedRefine(int nodeIndex, ref QuickList&lt;int&gt; subtreeReferences, int maximumSubtrees, ref QuickList&lt;int&gt; treeletInternalNodes, ref BinnedResources resources, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>nodeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>subtreeReferences</code> <span class="xref">QuickList</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>maximumSubtrees</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>treeletInternalNodes</code> <span class="xref">QuickList</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>resources</code> <a class="xref" href="BepuPhysics.Trees.BinnedResources.html">BinnedResources</a></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_CacheOptimize_" data-uid="BepuPhysics.Trees.Tree.CacheOptimize*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_CacheOptimize_System_Int32_" data-uid="BepuPhysics.Trees.Tree.CacheOptimize(System.Int32)">
+  CacheOptimize(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_CacheOptimizer.cs/#L117"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Begins a cache optimization at the given node and proceeds all the way to the bottom of the tree.
+Requires that the targeted node is already at the global optimum position.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void CacheOptimize(int nodeIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>nodeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Node to begin the optimization process at.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_CacheOptimizeLimitedSubtree_" data-uid="BepuPhysics.Trees.Tree.CacheOptimizeLimitedSubtree*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_CacheOptimizeLimitedSubtree_System_Int32_System_Int32_" data-uid="BepuPhysics.Trees.Tree.CacheOptimizeLimitedSubtree(System.Int32,System.Int32)">
+  CacheOptimizeLimitedSubtree(int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_CacheOptimizer.cs/#L156"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Starts a cache optimization process at the target node index and the nodeOptimizationCount closest nodes in the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void CacheOptimizeLimitedSubtree(int nodeIndex, int nodeOptimizationCount)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>nodeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Node index to start the optimization process at.</p>
+</dd>
+    <dt><code>nodeOptimizationCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of nodes to move.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Trees_Tree_CacheOptimizeLimitedSubtree_System_Int32_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This optimizer will move the targeted node index to the globally optimal location if necessary.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_CacheOptimizeRegion_" data-uid="BepuPhysics.Trees.Tree.CacheOptimizeRegion*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_CacheOptimizeRegion_System_Int32_System_Int32_" data-uid="BepuPhysics.Trees.Tree.CacheOptimizeRegion(System.Int32,System.Int32)">
+  CacheOptimizeRegion(int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_CacheOptimizer.cs/#L173"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Puts all nodes starting from the given node index into depth first traversal order.
+If the count is larger than the number of nodes beneath the starting node, the optimization will stop early.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int CacheOptimizeRegion(int startingNodeIndex, int targetCount)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>startingNodeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Node index to start the optimization at.</p>
+</dd>
+    <dt><code>targetCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of nodes to try to optimize.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of nodes optimized.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Clear_" data-uid="BepuPhysics.Trees.Tree.Clear*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Clear" data-uid="BepuPhysics.Trees.Tree.Clear">
+  Clear()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L216"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Resets the tree to a fresh post-construction state, clearing out leaves and nodes but leaving the backing resources intact.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Clear()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_CollectSubtrees_" data-uid="BepuPhysics.Trees.Tree.CollectSubtrees*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_CollectSubtrees_System_Int32_System_Int32_BepuPhysics_Trees_SubtreeHeapEntry__BepuUtilities_Collections_QuickList_System_Int32___BepuUtilities_Collections_QuickList_System_Int32___System_Single__" data-uid="BepuPhysics.Trees.Tree.CollectSubtrees(System.Int32,System.Int32,BepuPhysics.Trees.SubtreeHeapEntry*,BepuUtilities.Collections.QuickList{System.Int32}@,BepuUtilities.Collections.QuickList{System.Int32}@,System.Single@)">
+  CollectSubtrees(int, int, SubtreeHeapEntry*, ref QuickList&lt;int&gt;, ref QuickList&lt;int&gt;, out float)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_RefineCommon.cs/#L170"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void CollectSubtrees(int nodeIndex, int maximumSubtrees, SubtreeHeapEntry* entries, ref QuickList&lt;int&gt; subtrees, ref QuickList&lt;int&gt; internalNodes, out float treeletCost)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>nodeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>maximumSubtrees</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>entries</code> <a class="xref" href="BepuPhysics.Trees.SubtreeHeapEntry.html">SubtreeHeapEntry</a>*</dt>
+    <dd></dd>
+    <dt><code>subtrees</code> <span class="xref">QuickList</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>internalNodes</code> <span class="xref">QuickList</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>treeletCost</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_ComputeCacheOptimalLocation_" data-uid="BepuPhysics.Trees.Tree.ComputeCacheOptimalLocation*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_ComputeCacheOptimalLocation_System_Int32_" data-uid="BepuPhysics.Trees.Tree.ComputeCacheOptimalLocation(System.Int32)">
+  ComputeCacheOptimalLocation(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_CacheOptimizer.cs/#L71"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the index where the given node would be located if the tree were in depth first traversal order.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int ComputeCacheOptimalLocation(int nodeIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>nodeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Node index to find the location for in a depth first traversal order.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Target index of the node if the tree were in depth first traversal order.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_ComputeMaximumDepth_" data-uid="BepuPhysics.Trees.Tree.ComputeMaximumDepth*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_ComputeMaximumDepth" data-uid="BepuPhysics.Trees.Tree.ComputeMaximumDepth">
+  ComputeMaximumDepth()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Diagnostics.cs/#L204"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly int ComputeMaximumDepth()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_ConvertBoxToCentroidWithExtent_" data-uid="BepuPhysics.Trees.Tree.ConvertBoxToCentroidWithExtent*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_ConvertBoxToCentroidWithExtent_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3__System_Numerics_Vector3__" data-uid="BepuPhysics.Trees.Tree.ConvertBoxToCentroidWithExtent(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3@,System.Numerics.Vector3@)">
+  ConvertBoxToCentroidWithExtent(Vector3, Vector3, out Vector3, out Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Sweep.cs/#L103"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ConvertBoxToCentroidWithExtent(Vector3 min, Vector3 max, out Vector3 origin, out Vector3 expansion)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>min</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>max</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>origin</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>expansion</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_CreateBinnedResources_" data-uid="BepuPhysics.Trees.Tree.CreateBinnedResources*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_CreateBinnedResources_BepuUtilities_Memory_BufferPool_System_Int32_BepuUtilities_Memory_Buffer_System_Byte___BepuPhysics_Trees_BinnedResources__" data-uid="BepuPhysics.Trees.Tree.CreateBinnedResources(BepuUtilities.Memory.BufferPool,System.Int32,BepuUtilities.Memory.Buffer{System.Byte}@,BepuPhysics.Trees.BinnedResources@)">
+  CreateBinnedResources(BufferPool, int, out Buffer&lt;byte&gt;, out BinnedResources)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_BinnedRefine.cs/#L81"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void CreateBinnedResources(BufferPool bufferPool, int maximumSubtreeCount, out Buffer&lt;byte&gt; buffer, out BinnedResources resources)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bufferPool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>maximumSubtreeCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>buffer</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>resources</code> <a class="xref" href="BepuPhysics.Trees.BinnedResources.html">BinnedResources</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Dispose_" data-uid="BepuPhysics.Trees.Tree.Dispose*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Dispose_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Trees.Tree.Dispose(BepuUtilities.Memory.BufferPool)">
+  Dispose(BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L227"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Disposes the tree's backing resources, returning them to the Pool currently associated with the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose(BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool to return resources to.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Trees_Tree_Dispose_BepuUtilities_Memory_BufferPool__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Disposed trees can be reused if EnsureCapacity or Resize is used to rehydrate them.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Encode_" data-uid="BepuPhysics.Trees.Tree.Encode*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Encode_System_Int32_" data-uid="BepuPhysics.Trees.Tree.Encode(System.Int32)">
+  Encode(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L160"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int Encode(int index)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Equals_" data-uid="BepuPhysics.Trees.Tree.Equals*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Equals_BepuPhysics_Trees_Tree__BepuPhysics_Trees_Tree__" data-uid="BepuPhysics.Trees.Tree.Equals(BepuPhysics.Trees.Tree@,BepuPhysics.Trees.Tree@)">
+  Equals(in Tree, in Tree)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L244"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Tests if two tree references point to the same data.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool Equals(in Tree a, in Tree b)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>a</code> <a class="xref" href="BepuPhysics.Trees.Tree.html">Tree</a></dt>
+    <dd><p>First tree to compare.</p>
+</dd>
+    <dt><code>b</code> <a class="xref" href="BepuPhysics.Trees.Tree.html">Tree</a></dt>
+    <dd><p>Second tree to compare.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the two trees have the same nodes and node count, false otherwise.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetBoundsPointers_" data-uid="BepuPhysics.Trees.Tree.GetBoundsPointers*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetBoundsPointers_System_Int32_System_Numerics_Vector3___System_Numerics_Vector3___" data-uid="BepuPhysics.Trees.Tree.GetBoundsPointers(System.Int32,System.Numerics.Vector3*@,System.Numerics.Vector3*@)">
+  GetBoundsPointers(int, out Vector3*, out Vector3*)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L64"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets bounds pointerse for a leaf in the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void GetBoundsPointers(int leafIndex, out Vector3* minPointer, out Vector3* maxPointer)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>leafIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the leaf in the tree.</p>
+</dd>
+    <dt><code>minPointer</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a>*</dt>
+    <dd><p>Pointer to the minimum bounds vector in the tree.</p>
+</dd>
+    <dt><code>maxPointer</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a>*</dt>
+    <dd><p>Pointer to the maximum bounds vector in the tree.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetLeftPackMask_" data-uid="BepuPhysics.Trees.Tree.GetLeftPackMask*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetLeftPackMask_System_Runtime_Intrinsics_Vector128_System_Int32__System_Int32__" data-uid="BepuPhysics.Trees.Tree.GetLeftPackMask(System.Runtime.Intrinsics.Vector128{System.Int32},System.Int32@)">
+  GetLeftPackMask(Vector128&lt;int&gt;, out int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_SelfQueries.cs/#L298"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Vector128&lt;int&gt; GetLeftPackMask(Vector128&lt;int&gt; mask, out int count)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>mask</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.runtime.intrinsics.vector128-1">Vector128</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>count</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.runtime.intrinsics.vector128-1">Vector128</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetNodeChildForLeaf_" data-uid="BepuPhysics.Trees.Tree.GetNodeChildForLeaf*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetNodeChildForLeaf_BepuPhysics_Trees_Leaf_" data-uid="BepuPhysics.Trees.Tree.GetNodeChildForLeaf(BepuPhysics.Trees.Leaf)">
+  GetNodeChildForLeaf(Leaf)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_SelfQueries.cs/#L254"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a reference to the node child representing the leaf within the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly ref NodeChild GetNodeChildForLeaf(Leaf leaf)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>leaf</code> <a class="xref" href="BepuPhysics.Trees.Leaf.html">Leaf</a></dt>
+    <dd><p>Leaf to look up in the tree.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Trees.NodeChild.html">NodeChild</a></dt>
+    <dd><p>A reference to the node child within the tree.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetNodeChildForLeaf_" data-uid="BepuPhysics.Trees.Tree.GetNodeChildForLeaf*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetNodeChildForLeaf_System_Int32_" data-uid="BepuPhysics.Trees.Tree.GetNodeChildForLeaf(System.Int32)">
+  GetNodeChildForLeaf(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_SelfQueries.cs/#L265"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a reference to the node child representing the leaf within the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly ref NodeChild GetNodeChildForLeaf(int leafIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>leafIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the leaf to look up in the tree.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Trees.NodeChild.html">NodeChild</a></dt>
+    <dd><p>A reference to the node child within the tree.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetOverlaps_" data-uid="BepuPhysics.Trees.Tree.GetOverlaps*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetOverlaps__1_BepuPhysics_Trees_Tree____0__" data-uid="BepuPhysics.Trees.Tree.GetOverlaps``1(BepuPhysics.Trees.Tree@,``0@)">
+  GetOverlaps&lt;TOverlapHandler&gt;(ref Tree, ref TOverlapHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_IntertreeQueries.cs/#L138"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets pairs of leaf indices with bounding boxes which overlap.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void GetOverlaps&lt;TOverlapHandler&gt;(ref Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>treeB</code> <a class="xref" href="BepuPhysics.Trees.Tree.html">Tree</a></dt>
+    <dd><p>Tree to test this tree against.</p>
+</dd>
+    <dt><code>overlapHandler</code> <span class="xref">TOverlapHandler</span></dt>
+    <dd><p>Handler to report pairs to.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TOverlapHandler</code></dt>
+    <dd><p>Type of the <a class="xref" href="BepuPhysics.Trees.IOverlapHandler.html">IOverlapHandler</a> implementation to report pairs to.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetOverlaps_" data-uid="BepuPhysics.Trees.Tree.GetOverlaps*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetOverlaps__1_BepuUtilities_BoundingBox___0__" data-uid="BepuPhysics.Trees.Tree.GetOverlaps``1(BepuUtilities.BoundingBox,``0@)">
+  GetOverlaps&lt;TEnumerator&gt;(BoundingBox, ref TEnumerator)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_VolumeQuery.cs/#L60"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void GetOverlaps&lt;TEnumerator&gt;(BoundingBox boundingBox, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach&lt;int&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>boundingBox</code> <span class="xref">BoundingBox</span></dt>
+    <dd></dd>
+    <dt><code>leafEnumerator</code> <span class="xref">TEnumerator</span></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TEnumerator</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetOverlaps_" data-uid="BepuPhysics.Trees.Tree.GetOverlaps*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3___0__" data-uid="BepuPhysics.Trees.Tree.GetOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,``0@)">
+  GetOverlaps&lt;TEnumerator&gt;(Vector3, Vector3, ref TEnumerator)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_VolumeQuery.cs/#L82"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void GetOverlaps&lt;TEnumerator&gt;(Vector3 min, Vector3 max, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach&lt;int&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>min</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>max</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>leafEnumerator</code> <span class="xref">TEnumerator</span></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TEnumerator</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetSelfOverlaps2_" data-uid="BepuPhysics.Trees.Tree.GetSelfOverlaps2*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetSelfOverlaps2__1___0__" data-uid="BepuPhysics.Trees.Tree.GetSelfOverlaps2``1(``0@)">
+  GetSelfOverlaps2&lt;TOverlapHandler&gt;(ref TOverlapHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_SelfQueries.cs/#L507"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reports all bounding box overlaps between leaves in the tree to the given <code class="typeparamref">TOverlapHandler</code>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void GetSelfOverlaps2&lt;TOverlapHandler&gt;(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>results</code> <span class="xref">TOverlapHandler</span></dt>
+    <dd><p>Handler to report results to.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TOverlapHandler</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetSelfOverlaps2_" data-uid="BepuPhysics.Trees.Tree.GetSelfOverlaps2*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetSelfOverlaps2__1___0__BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_BepuUtilities_TaskScheduling_TaskStack__System_Int32_System_Int32_" data-uid="BepuPhysics.Trees.Tree.GetSelfOverlaps2``1(``0@,BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,BepuUtilities.TaskScheduling.TaskStack*,System.Int32,System.Int32)">
+  GetSelfOverlaps2&lt;TOverlapHandler&gt;(ref TOverlapHandler, BufferPool, IThreadDispatcher, TaskStack*, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_SelfQueries.cs/#L643"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reports all bounding box overlaps between leaves in the tree to the given <code class="typeparamref">TOverlapHandler</code>.</p>
+<p></p>Pushes tasks into the provided <span class="xref">BepuUtilities.TaskScheduling.TaskStack</span>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void GetSelfOverlaps2&lt;TOverlapHandler&gt;(ref TOverlapHandler results, BufferPool pool, IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1) where TOverlapHandler : unmanaged, IThreadedOverlapHandler</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>results</code> <span class="xref">TOverlapHandler</span></dt>
+    <dd><p>Handler to report results to.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for ephemeral allocations.</p>
+</dd>
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Thread dispatcher used during the overlap test.</p>
+</dd>
+    <dt><code>taskStack</code> <span class="xref">TaskStack</span>*</dt>
+    <dd><p><span class="xref">BepuUtilities.TaskScheduling.TaskStack</span> that the overlap test will push tasks onto as needed.</p>
+</dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the worker calling the function.</p>
+</dd>
+    <dt><code>targetTaskCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of tasks the overlap testing should try to create during execution. If negative, uses <span class="xref">BepuUtilities.IThreadDispatcher.ThreadCount</span>.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TOverlapHandler</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Trees_Tree_GetSelfOverlaps2__1___0__BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_BepuUtilities_TaskScheduling_TaskStack__System_Int32_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This does not dispatch workers on the <span class="xref">BepuUtilities.IThreadDispatcher</span> directly. If the overlap handler requires managed context, that should be provided by whatever dispatched the workers.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetSelfOverlaps2_" data-uid="BepuPhysics.Trees.Tree.GetSelfOverlaps2*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetSelfOverlaps2__1___0__BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_System_Object_" data-uid="BepuPhysics.Trees.Tree.GetSelfOverlaps2``1(``0@,BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,System.Object)">
+  GetSelfOverlaps2&lt;TOverlapHandler&gt;(ref TOverlapHandler, BufferPool, IThreadDispatcher, object)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_SelfQueries.cs/#L625"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reports all bounding box overlaps between leaves in the tree to the given <code class="typeparamref">TOverlapHandler</code>. Uses the thread dispatcher to parallelize overlap testing.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void GetSelfOverlaps2&lt;TOverlapHandler&gt;(ref TOverlapHandler results, BufferPool pool, IThreadDispatcher threadDispatcher, object managedContext = null) where TOverlapHandler : unmanaged, IThreadedOverlapHandler</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>results</code> <span class="xref">TOverlapHandler</span></dt>
+    <dd><p>Handler to report results to.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for ephemeral allocations.</p>
+</dd>
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Thread dispatcher used during the overlap testing.</p>
+</dd>
+    <dt><code>managedContext</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></dt>
+    <dd><p>Managed context to provide to the overlap handler, if any.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TOverlapHandler</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetSelfOverlapsBatched_" data-uid="BepuPhysics.Trees.Tree.GetSelfOverlapsBatched*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetSelfOverlapsBatched__1___0__BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Trees.Tree.GetSelfOverlapsBatched``1(``0@,BepuUtilities.Memory.BufferPool)">
+  GetSelfOverlapsBatched&lt;TOverlapHandler&gt;(ref TOverlapHandler, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_SelfQueries.cs/#L438"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void GetSelfOverlapsBatched&lt;TOverlapHandler&gt;(ref TOverlapHandler results, BufferPool pool) where TOverlapHandler : IOverlapHandler</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>results</code> <span class="xref">TOverlapHandler</span></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TOverlapHandler</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetSelfOverlaps_" data-uid="BepuPhysics.Trees.Tree.GetSelfOverlaps*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetSelfOverlaps__1___0__" data-uid="BepuPhysics.Trees.Tree.GetSelfOverlaps``1(``0@)">
+  GetSelfOverlaps&lt;TOverlapHandler&gt;(ref TOverlapHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_SelfQueries.cs/#L159"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void GetSelfOverlaps&lt;TOverlapHandler&gt;(ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>results</code> <span class="xref">TOverlapHandler</span></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TOverlapHandler</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_GetSerializedByteCount_" data-uid="BepuPhysics.Trees.Tree.GetSerializedByteCount*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_GetSerializedByteCount" data-uid="BepuPhysics.Trees.Tree.GetSerializedByteCount">
+  GetSerializedByteCount()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L133"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the number of bytes required to store the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly int GetSerializedByteCount()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of bytes required to store the tree.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Intersects_" data-uid="BepuPhysics.Trees.Tree.Intersects*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Intersects_System_Numerics_Vector3_System_Numerics_Vector3_BepuPhysics_Trees_TreeRay__System_Single__" data-uid="BepuPhysics.Trees.Tree.Intersects(System.Numerics.Vector3,System.Numerics.Vector3,BepuPhysics.Trees.TreeRay*,System.Single@)">
+  Intersects(Vector3, Vector3, TreeRay*, out float)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_RayCast.cs/#L13"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool Intersects(Vector3 min, Vector3 max, TreeRay* ray, out float t)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>min</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>max</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>ray</code> <a class="xref" href="BepuPhysics.Trees.TreeRay.html">TreeRay</a>*</dt>
+    <dd></dd>
+    <dt><code>t</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_MeasureCacheQuality_" data-uid="BepuPhysics.Trees.Tree.MeasureCacheQuality*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_MeasureCacheQuality" data-uid="BepuPhysics.Trees.Tree.MeasureCacheQuality">
+  MeasureCacheQuality()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Diagnostics.cs/#L247"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly float MeasureCacheQuality()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_MeasureCacheQuality_" data-uid="BepuPhysics.Trees.Tree.MeasureCacheQuality*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_MeasureCacheQuality_System_Int32_" data-uid="BepuPhysics.Trees.Tree.MeasureCacheQuality(System.Int32)">
+  MeasureCacheQuality(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Diagnostics.cs/#L254"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly float MeasureCacheQuality(int nodeIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>nodeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_MeasureCostMetric_" data-uid="BepuPhysics.Trees.Tree.MeasureCostMetric*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_MeasureCostMetric" data-uid="BepuPhysics.Trees.Tree.MeasureCostMetric">
+  MeasureCostMetric()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Diagnostics.cs/#L16"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public float MeasureCostMetric()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_RayCast_" data-uid="BepuPhysics.Trees.Tree.RayCast*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_RayCast__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Single____0__System_Int32_" data-uid="BepuPhysics.Trees.Tree.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single@,``0@,System.Int32)">
+  RayCast&lt;TLeafTester&gt;(Vector3, Vector3, ref float, ref TLeafTester, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_RayCast.cs/#L114"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void RayCast&lt;TLeafTester&gt;(Vector3 origin, Vector3 direction, ref float maximumT, ref TLeafTester leafTester, int id = 0) where TLeafTester : IRayLeafTester</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>origin</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>direction</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>leafTester</code> <span class="xref">TLeafTester</span></dt>
+    <dd></dd>
+    <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TLeafTester</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refine2_" data-uid="BepuPhysics.Trees.Tree.Refine2*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refine2_System_Int32_System_Int32__System_Int32_System_Int32_BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_BepuUtilities_TaskScheduling_TaskStack__System_Int32_System_Int32_System_Boolean_System_Boolean_" data-uid="BepuPhysics.Trees.Tree.Refine2(System.Int32,System.Int32@,System.Int32,System.Int32,BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,BepuUtilities.TaskScheduling.TaskStack*,System.Int32,System.Int32,System.Boolean,System.Boolean)">
+  Refine2(int, ref int, int, int, BufferPool, IThreadDispatcher, TaskStack*, int, int, bool, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refine2.cs/#L813"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Incrementally refines a subset of the tree by running a binned builder over subtrees.</p>
+<p></p>Pushes tasks into the provided <span class="xref">BepuUtilities.TaskScheduling.TaskStack</span>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, IThreadDispatcher threadDispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1, bool deterministic = false, bool usePriorityQueue = true)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>rootRefinementSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Size of the refinement run on nodes near the root. Nonpositive values will cause the root refinement to be skipped.</p>
+</dd>
+    <dt><code>subtreeRefinementStartIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index used to distribute subtree refinements over multiple executions.</p>
+</dd>
+    <dt><code>subtreeRefinementCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of subtree refinements to execute.</p>
+</dd>
+    <dt><code>subtreeRefinementSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for ephemeral allocations during the refinement.</p>
+</dd>
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Thread dispatcher used during the refinement.</p>
+</dd>
+    <dt><code>taskStack</code> <span class="xref">TaskStack</span>*</dt>
+    <dd><p><span class="xref">BepuUtilities.TaskScheduling.TaskStack</span> that the refine operation will push tasks onto as needed.</p>
+</dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the worker calling the function.</p>
+</dd>
+    <dt><code>targetTaskCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of tasks the refinement should try to create during execution. If negative, uses <span class="xref">BepuUtilities.IThreadDispatcher.ThreadCount</span>.</p>
+</dd>
+    <dt><code>deterministic</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether to force determinism at a slightly higher cost when using internally multithreaded execution for an individual refinement operation.<p></p>
+If the refine is single threaded, it is already deterministic and this flag has no effect.
+</dd>
+    <dt><code>usePriorityQueue</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the root refinement should use a priority queue during subtree collection to find larger nodes, false if it should try to collect a more balanced tree.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Trees_Tree_Refine2_System_Int32_System_Int32__System_Int32_System_Int32_BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_BepuUtilities_TaskScheduling_TaskStack__System_Int32_System_Int32_System_Boolean_System_Boolean__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Nodes will not be refit.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refine2_" data-uid="BepuPhysics.Trees.Tree.Refine2*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refine2_System_Int32_System_Int32__System_Int32_System_Int32_BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_System_Boolean_System_Boolean_" data-uid="BepuPhysics.Trees.Tree.Refine2(System.Int32,System.Int32@,System.Int32,System.Int32,BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,System.Boolean,System.Boolean)">
+  Refine2(int, ref int, int, int, BufferPool, IThreadDispatcher, bool, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refine2.cs/#L788"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Incrementally refines a subset of the tree by running a binned builder over subtrees.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, IThreadDispatcher threadDispatcher, bool deterministic = false, bool usePriorityQueue = true)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>rootRefinementSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Size of the refinement run on nodes near the root. Nonpositive values will cause the root refinement to be skipped.</p>
+</dd>
+    <dt><code>subtreeRefinementStartIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index used to distribute subtree refinements over multiple executions.</p>
+</dd>
+    <dt><code>subtreeRefinementCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of subtree refinements to execute.</p>
+</dd>
+    <dt><code>subtreeRefinementSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for ephemeral allocations during the refinement.</p>
+</dd>
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Thread dispatcher used during the refinement.</p>
+</dd>
+    <dt><code>deterministic</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether to force determinism at a slightly higher cost when using internally multithreaded execution for an individual refinement operation.<p></p>
+If the refine is single threaded, it is already deterministic and this flag has no effect.
+</dd>
+    <dt><code>usePriorityQueue</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the root refinement should use a priority queue during subtree collection to find larger nodes, false if it should try to collect a more balanced tree.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Trees_Tree_Refine2_System_Int32_System_Int32__System_Int32_System_Int32_BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_System_Boolean_System_Boolean__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Nodes will not be refit.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refine2_" data-uid="BepuPhysics.Trees.Tree.Refine2*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refine2_System_Int32_System_Int32__System_Int32_System_Int32_BepuUtilities_Memory_BufferPool_System_Boolean_" data-uid="BepuPhysics.Trees.Tree.Refine2(System.Int32,System.Int32@,System.Int32,System.Int32,BepuUtilities.Memory.BufferPool,System.Boolean)">
+  Refine2(int, ref int, int, int, BufferPool, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refine2.cs/#L546"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Incrementally refines a subset of the tree by running a binned builder over subtrees.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Refine2(int rootRefinementSize, ref int subtreeRefinementStartIndex, int subtreeRefinementCount, int subtreeRefinementSize, BufferPool pool, bool usePriorityQueue = true)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>rootRefinementSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Size of the refinement run on nodes near the root. Nonpositive values will cause the root refinement to be skipped.</p>
+</dd>
+    <dt><code>subtreeRefinementStartIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index used to distribute subtree refinements over multiple executions.</p>
+</dd>
+    <dt><code>subtreeRefinementCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of subtree refinements to execute.</p>
+</dd>
+    <dt><code>subtreeRefinementSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Target size of subtree refinements. The actual size of refinement will usually be larger or smaller.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for ephemeral allocations during the refinement.</p>
+</dd>
+    <dt><code>usePriorityQueue</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the root refinement should use a priority queue during subtree collection to find larger nodes, false if it should try to collect a more balanced tree.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Trees_Tree_Refine2_System_Int32_System_Int32__System_Int32_System_Int32_BepuUtilities_Memory_BufferPool_System_Boolean__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Nodes will not be refit.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refit_" data-uid="BepuPhysics.Trees.Tree.Refit*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refit" data-uid="BepuPhysics.Trees.Tree.Refit">
+  Refit()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refit.cs/#L51"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Updates the bounding boxes of all internal nodes in the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void Refit()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refit2_" data-uid="BepuPhysics.Trees.Tree.Refit2*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refit2" data-uid="BepuPhysics.Trees.Tree.Refit2">
+  Refit2()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refit2.cs/#L30"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Updates the bounding boxes of all internal nodes in the tree.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void Refit2()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refit2_" data-uid="BepuPhysics.Trees.Tree.Refit2*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refit2_BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_" data-uid="BepuPhysics.Trees.Tree.Refit2(BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher)">
+  Refit2(BufferPool, IThreadDispatcher)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refit2.cs/#L125"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Refits all bounding boxes in the tree using multiple threads.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void Refit2(BufferPool pool, IThreadDispatcher dispatcher)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for main thread temporary allocations during execution.</p>
+</dd>
+    <dt><code>dispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Dispatcher used during execution.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refit2_" data-uid="BepuPhysics.Trees.Tree.Refit2*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refit2_BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_BepuUtilities_TaskScheduling_TaskStack__System_Int32_System_Int32_" data-uid="BepuPhysics.Trees.Tree.Refit2(BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,BepuUtilities.TaskScheduling.TaskStack*,System.Int32,System.Int32)">
+  Refit2(BufferPool, IThreadDispatcher, TaskStack*, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refit2.cs/#L140"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Refits all bounding boxes in the tree using multiple threads.<p></p>Pushes tasks into the provided <span class="xref">BepuUtilities.TaskScheduling.TaskStack</span>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void Refit2(BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for allocations during execution.</p>
+</dd>
+    <dt><code>dispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Dispatcher used during execution.</p>
+</dd>
+    <dt><code>taskStack</code> <span class="xref">TaskStack</span>*</dt>
+    <dd><p><span class="xref">BepuUtilities.TaskScheduling.TaskStack</span> that the refit operation will push tasks onto as needed.</p>
+</dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the worker calling the function.</p>
+</dd>
+    <dt><code>targetTaskCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of tasks the refit should try to create during execution.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refit2WithCacheOptimization_" data-uid="BepuPhysics.Trees.Tree.Refit2WithCacheOptimization*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refit2WithCacheOptimization_BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_BepuUtilities_TaskScheduling_TaskStack__System_Int32_System_Int32_System_Boolean_" data-uid="BepuPhysics.Trees.Tree.Refit2WithCacheOptimization(BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,BepuUtilities.TaskScheduling.TaskStack*,System.Int32,System.Int32,System.Boolean)">
+  Refit2WithCacheOptimization(BufferPool, IThreadDispatcher, TaskStack*, int, int, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refit2.cs/#L383"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Refits all bounding boxes in the tree using multiple threads. Reallocates the nodes and writes the refit tree into them in depth first traversal order.
+The tree instance is modified to point to the new nodes.</p>
+<p></p>Pushes tasks into the provided <span class="xref">BepuUtilities.TaskScheduling.TaskStack</span>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1, bool disposeOriginalNodes = true)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for allocations during execution.</p>
+</dd>
+    <dt><code>dispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Dispatcher used during execution.</p>
+</dd>
+    <dt><code>taskStack</code> <span class="xref">TaskStack</span>*</dt>
+    <dd><p><span class="xref">BepuUtilities.TaskScheduling.TaskStack</span> that the refit operation will push tasks onto as needed.</p>
+</dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the worker calling the function.</p>
+</dd>
+    <dt><code>targetTaskCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of tasks the refit should try to create during execution. If negative, uses <span class="xref">BepuUtilities.IThreadDispatcher.ThreadCount</span>.</p>
+</dd>
+    <dt><code>disposeOriginalNodes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether to dispose of the original nodes buffer. If false, it's up to the caller to dispose of it appropriately.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refit2WithCacheOptimization_" data-uid="BepuPhysics.Trees.Tree.Refit2WithCacheOptimization*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refit2WithCacheOptimization_BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_System_Boolean_" data-uid="BepuPhysics.Trees.Tree.Refit2WithCacheOptimization(BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,System.Boolean)">
+  Refit2WithCacheOptimization(BufferPool, IThreadDispatcher, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refit2.cs/#L359"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Refits all bounding boxes in the tree using multiple threads. Reallocates the nodes and metanodes and writes the refit tree into them in depth first traversal order.
+The tree instance is modified to point to the new nodes and metanodes.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Refit2WithCacheOptimization(BufferPool pool, IThreadDispatcher dispatcher, bool disposeOriginalNodes = true)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for main thread temporary allocations during execution.</p>
+</dd>
+    <dt><code>dispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Dispatcher used during execution.</p>
+</dd>
+    <dt><code>disposeOriginalNodes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether to dispose of the original nodes buffer. If false, it's up to the caller to dispose of it appropriately.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refit2WithCacheOptimization_" data-uid="BepuPhysics.Trees.Tree.Refit2WithCacheOptimization*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refit2WithCacheOptimization_BepuUtilities_Memory_BufferPool_System_Boolean_" data-uid="BepuPhysics.Trees.Tree.Refit2WithCacheOptimization(BepuUtilities.Memory.BufferPool,System.Boolean)">
+  Refit2WithCacheOptimization(BufferPool, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refit2.cs/#L225"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Updates the bounding boxes of all internal nodes in the tree. Reallocates the nodes and metanodes and writes the refit tree into them in depth first traversal order.
+The tree instance is modified to point to the new nodes and metanodes.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Refit2WithCacheOptimization(BufferPool pool, bool disposeOriginalNodes = true)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool to allocate from. If disposeOriginals is true, this must be the same pool from which the <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Nodes">Nodes</a> buffer was allocated from.</p>
+</dd>
+    <dt><code>disposeOriginalNodes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether to dispose of the original nodes buffer. If false, it's up to the caller to dispose of it appropriately.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refit2WithCacheOptimization_" data-uid="BepuPhysics.Trees.Tree.Refit2WithCacheOptimization*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refit2WithCacheOptimization_BepuUtilities_Memory_Buffer_BepuPhysics_Trees_Node__" data-uid="BepuPhysics.Trees.Tree.Refit2WithCacheOptimization(BepuUtilities.Memory.Buffer{BepuPhysics.Trees.Node})">
+  Refit2WithCacheOptimization(Buffer&lt;Node&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refit2.cs/#L204"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Updates the bounding boxes of all internal nodes in the tree. The refit is based on the provided sourceNodes, and
+the results are written into the tree's current <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Nodes">Nodes</a>, <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Metanodes">Metanodes</a>, and <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Leaves">Leaves</a> buffers.
+The nodes and metanodes will be in depth traversal order.
+The input source buffer is not modified.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Refit2WithCacheOptimization(Buffer&lt;Node&gt; sourceNodes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>sourceNodes</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Trees.Node.html">Node</a>&gt;</dt>
+    <dd><p>Nodes to base the refit on.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Refit2WithCacheOptimization_" data-uid="BepuPhysics.Trees.Tree.Refit2WithCacheOptimization*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Refit2WithCacheOptimization_BepuUtilities_Memory_Buffer_BepuPhysics_Trees_Node__BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_BepuUtilities_TaskScheduling_TaskStack__System_Int32_System_Int32_" data-uid="BepuPhysics.Trees.Tree.Refit2WithCacheOptimization(BepuUtilities.Memory.Buffer{BepuPhysics.Trees.Node},BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,BepuUtilities.TaskScheduling.TaskStack*,System.Int32,System.Int32)">
+  Refit2WithCacheOptimization(Buffer&lt;Node&gt;, BufferPool, IThreadDispatcher, TaskStack*, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refit2.cs/#L407"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Updates the bounding boxes of all internal nodes in the tree using multiple threads. The refit is based on the provided sourceNodes, and
+the results are written into the tree's current <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Nodes">Nodes</a>, <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Metanodes">Metanodes</a>, and <a class="xref" href="BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Leaves">Leaves</a> buffers.
+The nodes and metanodes will be in depth traversal order.
+The input source buffer is not modified.</p>
+<p></p>Pushes tasks into the provided <span class="xref">BepuUtilities.TaskScheduling.TaskStack</span>. Does not dispatch threads internally; this is intended to be used as a part of a caller-managed dispatch.
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Refit2WithCacheOptimization(Buffer&lt;Node&gt; sourceNodes, BufferPool pool, IThreadDispatcher dispatcher, TaskStack* taskStack, int workerIndex, int targetTaskCount = -1)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>sourceNodes</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Trees.Node.html">Node</a>&gt;</dt>
+    <dd><p>Nodes to base the refit on.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for allocations during execution.</p>
+</dd>
+    <dt><code>dispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Dispatcher used during execution.</p>
+</dd>
+    <dt><code>taskStack</code> <span class="xref">TaskStack</span>*</dt>
+    <dd><p><span class="xref">BepuUtilities.TaskScheduling.TaskStack</span> that the refit operation will push tasks onto as needed.</p>
+</dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the worker calling the function.</p>
+</dd>
+    <dt><code>targetTaskCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of tasks the refit should try to create during execution. If negative, uses <span class="xref">BepuUtilities.IThreadDispatcher.ThreadCount</span>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_RefitAndRefine_" data-uid="BepuPhysics.Trees.Tree.RefitAndRefine*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_RefitAndRefine_BepuUtilities_Memory_BufferPool_System_Int32_System_Single_" data-uid="BepuPhysics.Trees.Tree.RefitAndRefine(BepuUtilities.Memory.BufferPool,System.Int32,System.Single)">
+  RefitAndRefine(BufferPool, int, float)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_RefinementScheduling.cs/#L178"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void RefitAndRefine(BufferPool pool, int frameIndex, float refineAggressivenessScale = 1)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>frameIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>refineAggressivenessScale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_RefitForNodeBoundsChange_" data-uid="BepuPhysics.Trees.Tree.RefitForNodeBoundsChange*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_RefitForNodeBoundsChange_System_Int32_" data-uid="BepuPhysics.Trees.Tree.RefitForNodeBoundsChange(System.Int32)">
+  RefitForNodeBoundsChange(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Refit.cs/#L14"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Refits the bounding box of every parent of the node recursively to the root.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void RefitForNodeBoundsChange(int nodeIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>nodeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Node to propagate a node change for.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_RemoveAt_" data-uid="BepuPhysics.Trees.Tree.RemoveAt*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_RemoveAt_System_Int32_" data-uid="BepuPhysics.Trees.Tree.RemoveAt(System.Int32)">
+  RemoveAt(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Remove.cs/#L74"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Removes a leaf at an index. If the index is not at the end of the leaf list, the last leaf is swapped into the removed location.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int RemoveAt(int leafIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>leafIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the leaf to remove.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Former index of the leaf that was moved into the removed leaf's slot, if any.
+If leafIndex pointed at the last slot in the list, then this returns -1 since no leaf was moved.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Resize_" data-uid="BepuPhysics.Trees.Tree.Resize*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Resize_BepuUtilities_Memory_BufferPool_System_Int32_" data-uid="BepuPhysics.Trees.Tree.Resize(BepuUtilities.Memory.BufferPool,System.Int32)">
+  Resize(BufferPool, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L181"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Resizes the buffers backing the tree's nodes and leaves. Will not shrink the buffers below the size needed by the currently resident nodes and leaves.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Resize(BufferPool pool, int targetLeafSlotCount)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool from which to take and return resources.</p>
+</dd>
+    <dt><code>targetLeafSlotCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The desired number of available leaf slots.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Serialize_" data-uid="BepuPhysics.Trees.Tree.Serialize*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Serialize_System_Span_System_Byte__" data-uid="BepuPhysics.Trees.Tree.Serialize(System.Span{System.Byte})">
+  Serialize(Span&lt;byte&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L142"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Writes a tree into a byte buffer.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void Serialize(Span&lt;byte&gt; bytes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>Buffer to hold the tree's data.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_SweepBuild_" data-uid="BepuPhysics.Trees.Tree.SweepBuild*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_SweepBuild_BepuUtilities_Memory_BufferPool_BepuUtilities_Memory_Buffer_BepuUtilities_BoundingBox__" data-uid="BepuPhysics.Trees.Tree.SweepBuild(BepuUtilities.Memory.BufferPool,BepuUtilities.Memory.Buffer{BepuUtilities.BoundingBox})">
+  SweepBuild(BufferPool, Buffer&lt;BoundingBox&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_SweepBuilder.cs/#L247"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void SweepBuild(BufferPool pool, Buffer&lt;BoundingBox&gt; leafBounds)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>leafBounds</code> <span class="xref">Buffer</span>&lt;<span class="xref">BoundingBox</span>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Sweep_" data-uid="BepuPhysics.Trees.Tree.Sweep*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Sweep__1_BepuUtilities_BoundingBox__System_Numerics_Vector3_System_Single___0__" data-uid="BepuPhysics.Trees.Tree.Sweep``1(BepuUtilities.BoundingBox@,System.Numerics.Vector3,System.Single,``0@)">
+  Sweep&lt;TLeafTester&gt;(in BoundingBox, Vector3, float, ref TLeafTester)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Sweep.cs/#L118"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void Sweep&lt;TLeafTester&gt;(in BoundingBox boundingBox, Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>boundingBox</code> <span class="xref">BoundingBox</span></dt>
+    <dd></dd>
+    <dt><code>direction</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>sweepTester</code> <span class="xref">TLeafTester</span></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TLeafTester</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Sweep_" data-uid="BepuPhysics.Trees.Tree.Sweep*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Sweep__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single___0__" data-uid="BepuPhysics.Trees.Tree.Sweep``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,``0@)">
+  Sweep&lt;TLeafTester&gt;(Vector3, Vector3, Vector3, float, ref TLeafTester)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Sweep.cs/#L112"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void Sweep&lt;TLeafTester&gt;(Vector3 min, Vector3 max, Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>min</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>max</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>direction</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>sweepTester</code> <span class="xref">TLeafTester</span></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TLeafTester</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_UpdateBounds_" data-uid="BepuPhysics.Trees.Tree.UpdateBounds*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_UpdateBounds_System_Int32_System_Numerics_Vector3_System_Numerics_Vector3_" data-uid="BepuPhysics.Trees.Tree.UpdateBounds(System.Int32,System.Numerics.Vector3,System.Numerics.Vector3)">
+  UpdateBounds(int, Vector3, Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree.cs/#L79"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Applies updated bounds to the given leaf index in the tree, refitting the tree to match.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void UpdateBounds(int leafIndex, Vector3 min, Vector3 max)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>leafIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the leaf in the tree to update.</p>
+</dd>
+    <dt><code>min</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>New minimum bounds for the leaf.</p>
+</dd>
+    <dt><code>max</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>New maximum bounds for the leaf.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Trees_Tree_Validate_" data-uid="BepuPhysics.Trees.Tree.Validate*"></a>
+
+  <h3 id="BepuPhysics_Trees_Tree_Validate" data-uid="BepuPhysics.Trees.Tree.Validate">
+  Validate()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_Diagnostics.cs/#L156"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void Validate()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/Tree_VolumeQuery.cs/#L8" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

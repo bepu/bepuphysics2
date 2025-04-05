@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct TriangleWide | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct TriangleWide | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Collidables_TriangleWide.md&amp;value=---%0Auid%3A%20BepuPhysics.Collidables.TriangleWide%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Collidables.TriangleWide">
+
+
+
+  <h1 id="BepuPhysics_Collidables_TriangleWide" data-uid="BepuPhysics.Collidables.TriangleWide" class="text-break">
+Struct TriangleWide  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L134"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Collidables.html">Collidables</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public struct TriangleWide : IShapeWide&lt;Triangle&gt;</code></pre>
+  </div>
+
+
+
+
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="BepuPhysics.Collidables.IShapeWide-1.html">IShapeWide</a>&lt;<a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a>&gt;</div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_A" data-uid="BepuPhysics.Collidables.TriangleWide.A">
+  A
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L136"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3Wide A</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_B" data-uid="BepuPhysics.Collidables.TriangleWide.B">
+  B
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L137"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3Wide B</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_BackfaceNormalDotRejectionThreshold" data-uid="BepuPhysics.Collidables.TriangleWide.BackfaceNormalDotRejectionThreshold">
+  BackfaceNormalDotRejectionThreshold
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L170"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Minimum dot product between the detected local normal and the face normal of a triangle necessary to create contacts.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public const float BackfaceNormalDotRejectionThreshold = -0.01</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_C" data-uid="BepuPhysics.Collidables.TriangleWide.C">
+  C
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L138"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3Wide C</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_DegenerateTriangleEpsilon" data-uid="BepuPhysics.Collidables.TriangleWide.DegenerateTriangleEpsilon">
+  DegenerateTriangleEpsilon
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L174"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Epsilon to apply to testing triangles for degeneracy (which will be scaled by a pair-determined epsilon scale). Degenerate triangles do not have well defined normals and should not contribute</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public const float DegenerateTriangleEpsilon = 1E-06</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_AllowOffsetMemoryAccess_" data-uid="BepuPhysics.Collidables.TriangleWide.AllowOffsetMemoryAccess*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_AllowOffsetMemoryAccess" data-uid="BepuPhysics.Collidables.TriangleWide.AllowOffsetMemoryAccess">
+  AllowOffsetMemoryAccess
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L156"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether this type supports accessing its memory by lane offsets. If false, WriteSlot must be used instead of WriteFirst.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool AllowOffsetMemoryAccess { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_InternalAllocationSize_" data-uid="BepuPhysics.Collidables.TriangleWide.InternalAllocationSize*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_InternalAllocationSize" data-uid="BepuPhysics.Collidables.TriangleWide.InternalAllocationSize">
+  InternalAllocationSize
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L157"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the number of bytes required for allocations within the wide shape.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int InternalAllocationSize { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_MinimumWideRayCount_" data-uid="BepuPhysics.Collidables.TriangleWide.MinimumWideRayCount*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_MinimumWideRayCount" data-uid="BepuPhysics.Collidables.TriangleWide.MinimumWideRayCount">
+  MinimumWideRayCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L223"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the lower bound on the number of rays to execute in a wide fashion. Ray bundles with fewer rays will fall back to the single ray code path.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int MinimumWideRayCount { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_Broadcast_" data-uid="BepuPhysics.Collidables.TriangleWide.Broadcast*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_Broadcast_BepuPhysics_Collidables_Triangle__" data-uid="BepuPhysics.Collidables.TriangleWide.Broadcast(BepuPhysics.Collidables.Triangle@)">
+  Broadcast(in Triangle)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L140"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Broadcasts a scalar shape into a bundle containing the same shape in every lane.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Broadcast(in Triangle shape)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shape</code> <a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a></dt>
+    <dd><p>Scalar shape to broadcast.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_ComputeDegenerateTriangleEpsilon_" data-uid="BepuPhysics.Collidables.TriangleWide.ComputeDegenerateTriangleEpsilon*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_ComputeDegenerateTriangleEpsilon_System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Single___" data-uid="BepuPhysics.Collidables.TriangleWide.ComputeDegenerateTriangleEpsilon(System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Single}@)">
+  ComputeDegenerateTriangleEpsilon(in Vector&lt;float&gt;, in Vector&lt;float&gt;, out Vector&lt;float&gt;, out Vector&lt;float&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L180"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeDegenerateTriangleEpsilon(in Vector&lt;float&gt; abLengthSquared, in Vector&lt;float&gt; caLengthSquared, out Vector&lt;float&gt; epsilonScale, out Vector&lt;float&gt; epsilon)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>abLengthSquared</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>caLengthSquared</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>epsilonScale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>epsilon</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_ComputeNondegenerateTriangleMask_" data-uid="BepuPhysics.Collidables.TriangleWide.ComputeNondegenerateTriangleMask*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_ComputeNondegenerateTriangleMask_BepuUtilities_Vector3Wide__BepuUtilities_Vector3Wide__System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Int32___" data-uid="BepuPhysics.Collidables.TriangleWide.ComputeNondegenerateTriangleMask(BepuUtilities.Vector3Wide@,BepuUtilities.Vector3Wide@,System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Int32}@)">
+  ComputeNondegenerateTriangleMask(in Vector3Wide, in Vector3Wide, in Vector&lt;float&gt;, out Vector&lt;float&gt;, out Vector&lt;int&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L186"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeNondegenerateTriangleMask(in Vector3Wide ab, in Vector3Wide ca, in Vector&lt;float&gt; triangleNormalLength, out Vector&lt;float&gt; epsilonScale, out Vector&lt;int&gt; nondegenerateMask)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>ab</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>ca</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>triangleNormalLength</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>epsilonScale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>nondegenerateMask</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_ComputeNondegenerateTriangleMask_" data-uid="BepuPhysics.Collidables.TriangleWide.ComputeNondegenerateTriangleMask*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_ComputeNondegenerateTriangleMask_System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Int32___" data-uid="BepuPhysics.Collidables.TriangleWide.ComputeNondegenerateTriangleMask(System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Int32}@)">
+  ComputeNondegenerateTriangleMask(in Vector&lt;float&gt;, in Vector&lt;float&gt;, in Vector&lt;float&gt;, out Vector&lt;float&gt;, out Vector&lt;int&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L194"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeNondegenerateTriangleMask(in Vector&lt;float&gt; abLengthSquared, in Vector&lt;float&gt; caLengthSquared, in Vector&lt;float&gt; triangleNormalLength, out Vector&lt;float&gt; epsilonScale, out Vector&lt;int&gt; nondegenerateMask)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>abLengthSquared</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>caLengthSquared</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>triangleNormalLength</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>epsilonScale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>nondegenerateMask</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_ComputeTriangleEpsilonScale_" data-uid="BepuPhysics.Collidables.TriangleWide.ComputeTriangleEpsilonScale*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_ComputeTriangleEpsilonScale_System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Single___" data-uid="BepuPhysics.Collidables.TriangleWide.ComputeTriangleEpsilonScale(System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Single}@)">
+  ComputeTriangleEpsilonScale(in Vector&lt;float&gt;, in Vector&lt;float&gt;, out Vector&lt;float&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L175"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeTriangleEpsilonScale(in Vector&lt;float&gt; abLengthSquared, in Vector&lt;float&gt; caLengthSquared, out Vector&lt;float&gt; epsilonScale)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>abLengthSquared</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>caLengthSquared</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>epsilonScale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_GetBounds_" data-uid="BepuPhysics.Collidables.TriangleWide.GetBounds*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_GetBounds_BepuUtilities_QuaternionWide__System_Int32_System_Numerics_Vector_System_Single___System_Numerics_Vector_System_Single___BepuUtilities_Vector3Wide__BepuUtilities_Vector3Wide__" data-uid="BepuPhysics.Collidables.TriangleWide.GetBounds(BepuUtilities.QuaternionWide@,System.Int32,System.Numerics.Vector{System.Single}@,System.Numerics.Vector{System.Single}@,BepuUtilities.Vector3Wide@,BepuUtilities.Vector3Wide@)">
+  GetBounds(ref QuaternionWide, int, out Vector&lt;float&gt;, out Vector&lt;float&gt;, out Vector3Wide, out Vector3Wide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L202"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the bounds of all shapes in the bundle.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector&lt;float&gt; maximumRadius, out Vector&lt;float&gt; maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>orientations</code> <span class="xref">QuaternionWide</span></dt>
+    <dd><p>Orientations of the shapes in the bundle.</p>
+</dd>
+    <dt><code>countInBundle</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of lanes filled in the bundle.</p>
+</dd>
+    <dt><code>maximumRadius</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd><p>Computed maximum radius of the shapes in the bundle.</p>
+</dd>
+    <dt><code>maximumAngularExpansion</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd><p>Computed maximum bounds expansion that can be caused by angular motion.</p>
+</dd>
+    <dt><code>min</code> <span class="xref">Vector3Wide</span></dt>
+    <dd><p>Minimum bounds of the shapes.</p>
+</dd>
+    <dt><code>max</code> <span class="xref">Vector3Wide</span></dt>
+    <dd><p>Maximum bounds of the shapes.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_Initialize_" data-uid="BepuPhysics.Collidables.TriangleWide.Initialize*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_Initialize_BepuUtilities_Memory_Buffer_System_Byte___" data-uid="BepuPhysics.Collidables.TriangleWide.Initialize(BepuUtilities.Memory.Buffer{System.Byte}@)">
+  Initialize(in Buffer&lt;byte&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L158"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>For types with a nonzero internal allocation size, provides memory to the shape for internal allocations.
+Memory should be assumed to be stack allocated.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Initialize(in Buffer&lt;byte&gt; memory)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>memory</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>Memory to use for internal allocations in the wide shape.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_RayTest_" data-uid="BepuPhysics.Collidables.TriangleWide.RayTest*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_RayTest_BepuPhysics_RigidPoseWide__BepuPhysics_Collidables_RayWide__System_Numerics_Vector_System_Int32___System_Numerics_Vector_System_Single___BepuUtilities_Vector3Wide__" data-uid="BepuPhysics.Collidables.TriangleWide.RayTest(BepuPhysics.RigidPoseWide@,BepuPhysics.Collidables.RayWide@,System.Numerics.Vector{System.Int32}@,System.Numerics.Vector{System.Single}@,BepuUtilities.Vector3Wide@)">
+  RayTest(ref RigidPoseWide, ref RayWide, out Vector&lt;int&gt;, out Vector&lt;float&gt;, out Vector3Wide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L258"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Tests a ray against the shape.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector&lt;int&gt; intersected, out Vector&lt;float&gt; t, out Vector3Wide normal)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pose</code> <a class="xref" href="BepuPhysics.RigidPoseWide.html">RigidPoseWide</a></dt>
+    <dd></dd>
+    <dt><code>ray</code> <a class="xref" href="BepuPhysics.Collidables.RayWide.html">RayWide</a></dt>
+    <dd></dd>
+    <dt><code>intersected</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd><p>Mask representing hit state in each lane. -1 means the ray in that lane hit, 0 means a miss.</p>
+</dd>
+    <dt><code>t</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd><p>Distance along the ray direction to the hit point, if any, in units of the ray direction's length. In other words, hitLocation = origin + direction * t.</p>
+</dd>
+    <dt><code>normal</code> <span class="xref">Vector3Wide</span></dt>
+    <dd><p>Normal of the impact surface, if any.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_RayTest_" data-uid="BepuPhysics.Collidables.TriangleWide.RayTest*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_RayTest_BepuUtilities_Vector3Wide__BepuUtilities_Vector3Wide__BepuUtilities_Vector3Wide__BepuUtilities_Vector3Wide__BepuUtilities_Vector3Wide__System_Numerics_Vector_System_Int32___System_Numerics_Vector_System_Single___BepuUtilities_Vector3Wide__" data-uid="BepuPhysics.Collidables.TriangleWide.RayTest(BepuUtilities.Vector3Wide@,BepuUtilities.Vector3Wide@,BepuUtilities.Vector3Wide@,BepuUtilities.Vector3Wide@,BepuUtilities.Vector3Wide@,System.Numerics.Vector{System.Int32}@,System.Numerics.Vector{System.Single}@,BepuUtilities.Vector3Wide@)">
+  RayTest(ref Vector3Wide, ref Vector3Wide, ref Vector3Wide, ref Vector3Wide, ref Vector3Wide, out Vector&lt;int&gt;, out Vector&lt;float&gt;, out Vector3Wide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L231"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void RayTest(ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide c, ref Vector3Wide origin, ref Vector3Wide direction, out Vector&lt;int&gt; intersected, out Vector&lt;float&gt; t, out Vector3Wide normal)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>a</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>b</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>c</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>origin</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>direction</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>intersected</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>t</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>normal</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_WriteFirst_" data-uid="BepuPhysics.Collidables.TriangleWide.WriteFirst*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_WriteFirst_BepuPhysics_Collidables_Triangle__" data-uid="BepuPhysics.Collidables.TriangleWide.WriteFirst(BepuPhysics.Collidables.Triangle@)">
+  WriteFirst(in Triangle)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L148"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Places the specified AOS-formatted shape into the first lane of the wide 'this' reference.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void WriteFirst(in Triangle source)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>source</code> <a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a></dt>
+    <dd><p>AOS-formatted shape to gather from.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Collidables_TriangleWide_WriteFirst_BepuPhysics_Collidables_Triangle___remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Note that we are effectively using the TShapeWide as a stride.
+The base address is offset by the user of this function, so the implementation only ever considers the first slot.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Collidables_TriangleWide_WriteSlot_" data-uid="BepuPhysics.Collidables.TriangleWide.WriteSlot*"></a>
+
+  <h3 id="BepuPhysics_Collidables_TriangleWide_WriteSlot_System_Int32_BepuPhysics_Collidables_Triangle__" data-uid="BepuPhysics.Collidables.TriangleWide.WriteSlot(System.Int32,BepuPhysics.Collidables.Triangle@)">
+  WriteSlot(int, in Triangle)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L160"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Places the specified AOS-formatted shape into the selected slot of the wide 'this' reference.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void WriteSlot(int index, in Triangle source)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the slot to put the data into.</p>
+</dd>
+    <dt><code>source</code> <a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a></dt>
+    <dd><p>Source of the data to insert.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Triangle.cs/#L134" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

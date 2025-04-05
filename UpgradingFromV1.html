@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Upgrading from v1 | Bepu Docs </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Upgrading from v1 | Bepu Docs ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/blob/master/Documentation/UpgradingFromV1.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="upgrading-from-v1">Upgrading from v1</h1>
+
+<p>v2 is a complete rewrite and is about as different from v1 as any unrelated physics engine. Reading the <a href="GettingStarted.html">Getting Started documentation</a> to get an overview is recommended. The following maps concepts and features in v1 to their equivalents in v2.</p>
+<p>Some of this might look way more complicated, and it might seem like features were removed for no reason, but trust me it's great! For some definitions of great! The API just avoids hiding performance-related things and punts responsibility for application-specific convenience features to the user. Stuff that looks the same as the v1 version can be created pretty easily, it's just not in the core library.</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>v1</th>
+<th>v2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top level type containing all execution stages and all existing objects</td>
+<td><code>Space</code></td>
+<td><code>Simulation</code></td>
+</tr>
+<tr>
+<td>Mobile dynamic and kinematic objects</td>
+<td><code>Entity</code></td>
+<td>Body, but there is no <code>Body</code> type- see <code>Simulation.Bodies</code> to allocate, access, and delete bodies. Creating a body using <code>Simulation.Bodies.Add</code> returns a handle that uniquely identifies the body for the duration of its existence, and <code>Simulation.Bodies.HandleToLocation</code> finds the current memory location of a body. <code>BodyReference</code> can be used to handle lookups for you.</td>
+</tr>
+<tr>
+<td>Mobile object properties</td>
+<td><code>Entity</code> properties, like <code>Position</code> and <code>LinearVelocity</code></td>
+<td>Create a <code>BodyReference</code> from the body handle, then access properties like <code>Pose</code> and <code>Velocity</code>. Can also manually perform the lookup into the <code>Simulation.Bodies</code> sets and their raw property buffers.</td>
+</tr>
+<tr>
+<td>Collision events</td>
+<td><code>entity.CollisionInformation.Events</code></td>
+<td>No out of the box events; <a href="../Demos/Demos/ContactEventsDemo.cs"><code>ContactEventsDemo</code></a> shows how to use narrow phase callbacks to create events.</td>
+</tr>
+<tr>
+<td>Enumerating existing collisions</td>
+<td><code>entity.CollisionInformation.Pairs</code></td>
+<td>Collision data is not explicitly cached anywhere. Narrow phase callbacks can be used to collect collision information. Collision-created contact constraints (and all other connected constraints) can be enumerated using the Constraints body property. See the <a href="../Demos/Demos/SolverContactEnumerationDemo.cs"><code>SolverContactEnumerationDemo</code></a> for an example of enumerating contact constraints.</td>
+</tr>
+<tr>
+<td>Collision filtering</td>
+<td><code>e.CollisionInformation.CollisionRules</code> and <code>CollisionRules</code> static functions</td>
+<td><code>INarrowPhaseCallbacks</code> has <code>AllowContactGeneration</code> and <code>ConfigureContactManifold</code> which return a boolean that controls whether narrow phase testing and constraint generation should proceed. See <a href="../Demos/Demos/RagdollDemo.cs"><code>RagdollDemo</code></a> for an example of collision filtering.</td>
+</tr>
+<tr>
+<td>Custom gravity</td>
+<td><code>entity.Gravity</code></td>
+<td><code>IPoseIntegratorCallbacks</code> can be used to implement any form of gravity or other per-body velocity influence. See <a href="../Demos/Demos/PlanetDemo.cs">PlanetDemo</a> for an example.</td>
+</tr>
+<tr>
+<td>Object velocity damping</td>
+<td><code>entity.LinearDamping</code> and <code>entity.AngularDamping</code></td>
+<td><code>IPoseIntegratorCallbacks</code> again- damping is just a velocity influence. See <a href="../Demos/DemoCallbacks.cs">DemoCallbacks</a> for an example.</td>
+</tr>
+<tr>
+<td>Scene-wide ray casts</td>
+<td><code>Space.RayCast</code> or <code>s.BroadPhase.QueryAccelerator.RayCast</code> for AABB-only testing</td>
+<td><code>Simulation.RayCast</code> or <code>Simulation.BroadPhase.RayCast</code> for AABB-only testing</td>
+</tr>
+<tr>
+<td>Scene-wide sweep tests</td>
+<td><code>Space.ConvexCast</code></td>
+<td><code>Simulation.Sweep</code>, which supports angular motion in the sweep as well, or <code>Simulation.BroadPhase.Sweep</code> for AABB-only testing</td>
+</tr>
+<tr>
+<td>Bounding box queries</td>
+<td><code>s.BroadPhase.QueryAccelerator.GetEntries</code></td>
+<td><code>Simulation.BroadPhase.GetOverlaps</code></td>
+</tr>
+<tr>
+<td>Collidable composed of a bunch of triangles</td>
+<td><code>StaticMesh</code> or <code>InstancedMesh</code></td>
+<td><code>Mesh</code></td>
+</tr>
+<tr>
+<td>Triangulated heightmap collidable</td>
+<td><code>Terrain</code></td>
+<td>There is no dedicated heightmap type at the moment, so just <code>Mesh</code></td>
+</tr>
+<tr>
+<td>Sphere collision shape</td>
+<td><code>SphereShape</code></td>
+<td><code>Sphere</code></td>
+</tr>
+<tr>
+<td>Capsule collision shape</td>
+<td><code>CapsuleShape</code></td>
+<td><code>Capsule</code></td>
+</tr>
+<tr>
+<td>Box collision shape</td>
+<td><code>BoxShape</code></td>
+<td><code>Box</code></td>
+</tr>
+<tr>
+<td>Triangle collision shape</td>
+<td><code>TriangleShape</code></td>
+<td>You can probably guess, <code>Triangle</code></td>
+</tr>
+<tr>
+<td>Cylinder collision shape</td>
+<td><code>CylinderShape</code></td>
+<td><code>Cylinder</code></td>
+</tr>
+<tr>
+<td>Convex hull collision shape</td>
+<td><code>ConvexHullShape</code></td>
+<td><code>ConvexHull</code></td>
+</tr>
+<tr>
+<td>Cone collision shape</td>
+<td><code>ConeShape</code></td>
+<td>N/A- consider a <code>ConvexHull</code> approximation</td>
+</tr>
+<tr>
+<td>Weird combination shape in minkowski space that no one ever used</td>
+<td><code>MinkowskiSumShape</code></td>
+<td>N/A- I'd say &quot;consider a <code>ConvexHull</code> approximation,&quot; but I'm pretty sure no one will ever want to do this</td>
+</tr>
+<tr>
+<td>Combination shape that acts like a convex hull around arbitrary subshapes</td>
+<td><code>WrappedShape</code></td>
+<td>N/A- consider a <code>ConvexHull</code> approximation. Not sure if anyone ever used this one either.</td>
+</tr>
+<tr>
+<td>Affinely transformable wrapper around any other convex shape</td>
+<td><code>TransformableShape</code></td>
+<td>N/A- consider a <code>ConvexHull</code> approximation</td>
+</tr>
+<tr>
+<td>Multiple convex shapes bundled into one shape supporting concavity</td>
+<td><code>CompoundShape</code></td>
+<td><code>Compound</code> for shapes with only a few pieces; <code>BigCompound</code> for ones that have enough children to benefit from an acceleration structure</td>
+</tr>
+<tr>
+<td>Static-only optimization for a bunch of other convex shapes</td>
+<td><code>StaticGroup</code></td>
+<td>Doesn't exist because it's not necessary; just use <code>Simulation.Statics.Add</code> to toss them directly into the simulation. The broad phase can handle it just fine.</td>
+</tr>
+<tr>
+<td>Should you use really detailed concave triangle soup meshes for mobile objects?</td>
+<td>No</td>
+<td>Still no! v2 might be way faster than v1, but that doesn't mean you should just throw all those spare cycles right into the garbage can!</td>
+</tr>
+<tr>
+<td>Constraints</td>
+<td><a href="https://github.com/bepu/bepuphysics1/tree/master/BEPUphysics/Constraints">Oof there's a lot of them</a></td>
+<td><a href="../BepuPhysics/Constraints">Here's another bunch</a>; main differences are the addition of a couple of simultaneously solved combos like <code>Hinge</code> and <code>SwivelHinge</code> which will be more stable than their old <code>SolverGroup</code> v1 versions, a couple of new cloth/deformable-helpful constraints, and the removal of questionable constraints like the <code>EllipseSwingLimit</code>.</td>
+</tr>
+<tr>
+<td>Constraint springiness (for those with position goals)</td>
+<td><code>constraint.SpringSettings.Stiffness</code> and <code>constraint.SpringSettings.Damping</code></td>
+<td><code>SpringSettings</code> set in the constraint description, which contains <code>Frequency</code> and <code>DampingRatio</code> properties. <code>Frequency</code> is the undamped frequency of oscillation of the constraint, and <code>DampingRatio</code> is the ratio of the damping to critical damping, 0 being undamped, 1 being critically damped, and higher values being overdamped. Try to avoid using <code>Frequency</code> values higher than around half the update rate. That is, if you're updating at 60hz, 30 is a generally stable upper bound for <code>Frequency</code>. Higher frequencies in complex constraint configurations may require faster update rates or using the <code>SubsteppingTimestepper</code>. Note that, given a mass, frequency, and damping ratio, an equivalent stiffness constant and damping constant can be computed (and vice versa). I should probably add a helper for that at some point.</td>
+</tr>
+<tr>
+<td>Buoyancy zone</td>
+<td><code>FluidVolume</code></td>
+<td>N/A, may show up later in a less bad form</td>
+</tr>
+<tr>
+<td>Mesh-based collision detector with containment testing</td>
+<td><code>DetectorVolume</code></td>
+<td>No support for out of the box containment events, but a <code>Mesh</code> and narrow phase callbacks can perform a pretty similar job.</td>
+</tr>
+</tbody>
+</table>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/Documentation/UpgradingFromV1.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

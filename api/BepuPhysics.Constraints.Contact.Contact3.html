@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct Contact3 | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct Contact3 | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Constraints_Contact_Contact3.md&amp;value=---%0Auid%3A%20BepuPhysics.Constraints.Contact.Contact3%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Constraints.Contact.Contact3">
+
+
+
+  <h1 id="BepuPhysics_Constraints_Contact_Contact3" data-uid="BepuPhysics.Constraints.Contact.Contact3" class="text-break">
+Struct Contact3  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1161"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Constraints.html">Constraints</a>.<a class="xref" href="BepuPhysics.Constraints.Contact.html">Contact</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public struct Contact3 : IConvexTwoBodyContactConstraintDescription&lt;Contact3&gt;, ITwoBodyConstraintDescription&lt;Contact3&gt;, IConstraintDescription&lt;Contact3&gt;</code></pre>
+  </div>
+
+
+
+
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="BepuPhysics.Constraints.Contact.IConvexTwoBodyContactConstraintDescription-1.html">IConvexTwoBodyContactConstraintDescription</a>&lt;<a class="xref" href="BepuPhysics.Constraints.Contact.Contact3.html">Contact3</a>&gt;</div>
+      <div><a class="xref" href="BepuPhysics.Constraints.ITwoBodyConstraintDescription-1.html">ITwoBodyConstraintDescription</a>&lt;<a class="xref" href="BepuPhysics.Constraints.Contact.Contact3.html">Contact3</a>&gt;</div>
+      <div><a class="xref" href="BepuPhysics.Constraints.IConstraintDescription-1.html">IConstraintDescription</a>&lt;<a class="xref" href="BepuPhysics.Constraints.Contact.Contact3.html">Contact3</a>&gt;</div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_Contact0" data-uid="BepuPhysics.Constraints.Contact.Contact3.Contact0">
+  Contact0
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1163"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConstraintContactData Contact0</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Constraints.Contact.ConstraintContactData.html">ConstraintContactData</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_Contact1" data-uid="BepuPhysics.Constraints.Contact.Contact3.Contact1">
+  Contact1
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1164"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConstraintContactData Contact1</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Constraints.Contact.ConstraintContactData.html">ConstraintContactData</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_Contact2" data-uid="BepuPhysics.Constraints.Contact.Contact3.Contact2">
+  Contact2
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1165"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConstraintContactData Contact2</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Constraints.Contact.ConstraintContactData.html">ConstraintContactData</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_FrictionCoefficient" data-uid="BepuPhysics.Constraints.Contact.Contact3.FrictionCoefficient">
+  FrictionCoefficient
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1168"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public float FrictionCoefficient</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_MaximumRecoveryVelocity" data-uid="BepuPhysics.Constraints.Contact.Contact3.MaximumRecoveryVelocity">
+  MaximumRecoveryVelocity
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1170"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public float MaximumRecoveryVelocity</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_Normal" data-uid="BepuPhysics.Constraints.Contact.Contact3.Normal">
+  Normal
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1167"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3 Normal</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_OffsetB" data-uid="BepuPhysics.Constraints.Contact.Contact3.OffsetB">
+  OffsetB
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1166"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3 OffsetB</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_SpringSettings" data-uid="BepuPhysics.Constraints.Contact.Contact3.SpringSettings">
+  SpringSettings
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1169"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public SpringSettings SpringSettings</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Constraints.SpringSettings.html">SpringSettings</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="BepuPhysics_Constraints_Contact_Contact3_ConstraintTypeId_" data-uid="BepuPhysics.Constraints.Contact.Contact3.ConstraintTypeId*"></a>
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_ConstraintTypeId" data-uid="BepuPhysics.Constraints.Contact.Contact3.ConstraintTypeId">
+  ConstraintTypeId
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1224"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the type id of the constraint that this is a description of.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int ConstraintTypeId { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_Contact_Contact3_TypeProcessorType_" data-uid="BepuPhysics.Constraints.Contact.Contact3.TypeProcessorType*"></a>
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_TypeProcessorType" data-uid="BepuPhysics.Constraints.Contact.Contact3.TypeProcessorType">
+  TypeProcessorType
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1230"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the type of the type batch which contains described constraints.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Type TypeProcessorType { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.type">Type</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Constraints_Contact_Contact3_ApplyDescription_" data-uid="BepuPhysics.Constraints.Contact.Contact3.ApplyDescription*"></a>
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_ApplyDescription_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_" data-uid="BepuPhysics.Constraints.Contact.Contact3.ApplyDescription(BepuPhysics.Constraints.TypeBatch@,System.Int32,System.Int32)">
+  ApplyDescription(ref TypeBatch, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1172"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Changes the batch-held memory at a given location to match the given description.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>batch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd><p>Batch to modify.</p>
+</dd>
+    <dt><code>bundleIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the target constraint's bundle.</p>
+</dd>
+    <dt><code>innerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the target constraint within its bundle.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_Contact_Contact3_BuildDescription_" data-uid="BepuPhysics.Constraints.Contact.Contact3.BuildDescription*"></a>
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_BuildDescription_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_BepuPhysics_Constraints_Contact_Contact3__" data-uid="BepuPhysics.Constraints.Contact.Contact3.BuildDescription(BepuPhysics.Constraints.TypeBatch@,System.Int32,System.Int32,BepuPhysics.Constraints.Contact.Contact3@)">
+  BuildDescription(ref TypeBatch, int, int, out Contact3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1190"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a description from the batch-held memory at a given location.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact3 description)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>batch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd><p>Batch to read.</p>
+</dd>
+    <dt><code>bundleIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the source constraint's bundle.</p>
+</dd>
+    <dt><code>innerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the source constraint within its bundle.</p>
+</dd>
+    <dt><code>description</code> <a class="xref" href="BepuPhysics.Constraints.Contact.Contact3.html">Contact3</a></dt>
+    <dd><p>Description of the constraint.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_Contact_Contact3_CopyManifoldWideProperties_" data-uid="BepuPhysics.Constraints.Contact.Contact3.CopyManifoldWideProperties*"></a>
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_CopyManifoldWideProperties_System_Numerics_Vector3__System_Numerics_Vector3__BepuPhysics_CollisionDetection_PairMaterialProperties__" data-uid="BepuPhysics.Constraints.Contact.Contact3.CopyManifoldWideProperties(System.Numerics.Vector3@,System.Numerics.Vector3@,BepuPhysics.CollisionDetection.PairMaterialProperties@)">
+  CopyManifoldWideProperties(ref Vector3, ref Vector3, ref PairMaterialProperties)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1208"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void CopyManifoldWideProperties(ref Vector3 offsetB, ref Vector3 normal, ref PairMaterialProperties material)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>offsetB</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>normal</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>material</code> <a class="xref" href="BepuPhysics.CollisionDetection.PairMaterialProperties.html">PairMaterialProperties</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_Contact_Contact3_CreateTypeProcessor_" data-uid="BepuPhysics.Constraints.Contact.Contact3.CreateTypeProcessor*"></a>
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_CreateTypeProcessor" data-uid="BepuPhysics.Constraints.Contact.Contact3.CreateTypeProcessor">
+  CreateTypeProcessor()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1231"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a type processor for this constraint type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static TypeProcessor CreateTypeProcessor()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html">TypeProcessor</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_Contact_Contact3_GetFirstContact_" data-uid="BepuPhysics.Constraints.Contact.Contact3.GetFirstContact*"></a>
+
+  <h3 id="BepuPhysics_Constraints_Contact_Contact3_GetFirstContact_BepuPhysics_Constraints_Contact_Contact3__" data-uid="BepuPhysics.Constraints.Contact.Contact3.GetFirstContact(BepuPhysics.Constraints.Contact.Contact3@)">
+  GetFirstContact(ref Contact3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1218"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ref ConstraintContactData GetFirstContact(ref Contact3 description)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>description</code> <a class="xref" href="BepuPhysics.Constraints.Contact.Contact3.html">Contact3</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Constraints.Contact.ConstraintContactData.html">ConstraintContactData</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/Contact/ContactConvexTypes.cs/#L1161" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class MeshInertiaHelper | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class MeshInertiaHelper | Bepu API ">
+      
+      <meta name="description" content="Provides helpers for computing the inertia of objects with triangular surfaces.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Collidables_MeshInertiaHelper.md&amp;value=---%0Auid%3A%20BepuPhysics.Collidables.MeshInertiaHelper%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Collidables.MeshInertiaHelper">
+
+
+
+  <h1 id="BepuPhysics_Collidables_MeshInertiaHelper" data-uid="BepuPhysics.Collidables.MeshInertiaHelper" class="text-break">
+Class MeshInertiaHelper  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L25"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Collidables.html">Collidables</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Provides helpers for computing the inertia of objects with triangular surfaces.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static class MeshInertiaHelper</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">MeshInertiaHelper</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeClosedCenterOfMass_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeClosedCenterOfMass*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeClosedCenterOfMass__1___0__System_Single__System_Numerics_Vector3__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeClosedCenterOfMass``1(``0@,System.Single@,System.Numerics.Vector3@)">
+  ComputeClosedCenterOfMass&lt;TTriangleSource&gt;(ref TTriangleSource, out float, out Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L184"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the center of mass of a closed mesh.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeClosedCenterOfMass&lt;TTriangleSource&gt;(ref TTriangleSource triangleSource, out float volume, out Vector3 center) where TTriangleSource : ITriangleSource</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangleSource</code> <span class="xref">TTriangleSource</span></dt>
+    <dd><p>Source from which to retrieve a sequence of triangles.</p>
+</dd>
+    <dt><code>volume</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Volume of the mesh.</p>
+</dd>
+    <dt><code>center</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Center of mass of the mesh.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TTriangleSource</code></dt>
+    <dd><p>Type of the triangle source.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeClosedInertia_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeClosedInertia*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeClosedInertia__1___0__System_Single_System_Single__BepuUtilities_Symmetric3x3__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeClosedInertia``1(``0@,System.Single,System.Single@,BepuUtilities.Symmetric3x3@)">
+  ComputeClosedInertia&lt;TTriangleSource&gt;(ref TTriangleSource, float, out float, out Symmetric3x3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L137"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the inertia of a closed mesh.
+Triangles visible from outside the shape are assumed to have clockwise winding in right handed coordinates or counterclockwise winding in left handed coordinates.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeClosedInertia&lt;TTriangleSource&gt;(ref TTriangleSource triangleSource, float mass, out float volume, out Symmetric3x3 inertia) where TTriangleSource : ITriangleSource</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangleSource</code> <span class="xref">TTriangleSource</span></dt>
+    <dd><p>Source from which to retrieve a sequence of triangles.</p>
+</dd>
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Mass of the mesh to scale the inertia tensor with.</p>
+</dd>
+    <dt><code>volume</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Volume of the mesh.</p>
+</dd>
+    <dt><code>inertia</code> <span class="xref">Symmetric3x3</span></dt>
+    <dd><p>Inertia tensor of the mesh.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TTriangleSource</code></dt>
+    <dd><p>Type of the triangle source.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeClosedInertia_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeClosedInertia*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeClosedInertia__1___0__System_Single_System_Single__BepuUtilities_Symmetric3x3__System_Numerics_Vector3__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeClosedInertia``1(``0@,System.Single,System.Single@,BepuUtilities.Symmetric3x3@,System.Numerics.Vector3@)">
+  ComputeClosedInertia&lt;TTriangleSource&gt;(ref TTriangleSource, float, out float, out Symmetric3x3, out Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L160"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the inertia of a closed mesh.
+Triangles visible from outside the shape are assumed to have clockwise winding in right handed coordinates or counterclockwise winding in left handed coordinates.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeClosedInertia&lt;TTriangleSource&gt;(ref TTriangleSource triangleSource, float mass, out float volume, out Symmetric3x3 inertia, out Vector3 center) where TTriangleSource : ITriangleSource</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangleSource</code> <span class="xref">TTriangleSource</span></dt>
+    <dd><p>Source from which to retrieve a sequence of triangles.</p>
+</dd>
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Mass of the mesh to scale the inertia tensor with.</p>
+</dd>
+    <dt><code>volume</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Volume of the mesh.</p>
+</dd>
+    <dt><code>inertia</code> <span class="xref">Symmetric3x3</span></dt>
+    <dd><p>Inertia tensor of the mesh.</p>
+</dd>
+    <dt><code>center</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Center of mass of the mesh.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TTriangleSource</code></dt>
+    <dd><p>Type of the triangle source.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeOpenCenterOfMass_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeOpenCenterOfMass*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeOpenCenterOfMass__1___0__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeOpenCenterOfMass``1(``0@)">
+  ComputeOpenCenterOfMass&lt;TTriangleSource&gt;(ref TTriangleSource)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L324"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the center of mass of an open mesh, treating it as a triangle soup.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Vector3 ComputeOpenCenterOfMass&lt;TTriangleSource&gt;(ref TTriangleSource triangleSource) where TTriangleSource : ITriangleSource</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangleSource</code> <span class="xref">TTriangleSource</span></dt>
+    <dd><p>Source from which to retrieve a sequence of triangles.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Center of mass of the mesh.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TTriangleSource</code></dt>
+    <dd><p>Type of the triangle source.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeOpenInertia_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeOpenInertia*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeOpenInertia__1___0__System_Single_BepuUtilities_Symmetric3x3__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeOpenInertia``1(``0@,System.Single,BepuUtilities.Symmetric3x3@)">
+  ComputeOpenInertia&lt;TTriangleSource&gt;(ref TTriangleSource, float, out Symmetric3x3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L280"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the inertia of an open mesh, treating it as a triangle soup.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeOpenInertia&lt;TTriangleSource&gt;(ref TTriangleSource triangleSource, float mass, out Symmetric3x3 inertia) where TTriangleSource : ITriangleSource</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangleSource</code> <span class="xref">TTriangleSource</span></dt>
+    <dd><p>Source from which to retrieve a sequence of triangles.</p>
+</dd>
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Mass of the mesh to scale the inertia tensor with.</p>
+</dd>
+    <dt><code>inertia</code> <span class="xref">Symmetric3x3</span></dt>
+    <dd><p>Inertia tensor of the mesh.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TTriangleSource</code></dt>
+    <dd><p>Type of the triangle source.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeOpenInertia_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeOpenInertia*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeOpenInertia__1___0__System_Single_BepuUtilities_Symmetric3x3__System_Numerics_Vector3__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeOpenInertia``1(``0@,System.Single,BepuUtilities.Symmetric3x3@,System.Numerics.Vector3@)">
+  ComputeOpenInertia&lt;TTriangleSource&gt;(ref TTriangleSource, float, out Symmetric3x3, out Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L301"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the inertia of an open mesh, treating it as a triangle soup.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeOpenInertia&lt;TTriangleSource&gt;(ref TTriangleSource triangleSource, float mass, out Symmetric3x3 inertia, out Vector3 center) where TTriangleSource : ITriangleSource</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangleSource</code> <span class="xref">TTriangleSource</span></dt>
+    <dd><p>Source from which to retrieve a sequence of triangles.</p>
+</dd>
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Mass of the mesh to scale the inertia tensor with.</p>
+</dd>
+    <dt><code>inertia</code> <span class="xref">Symmetric3x3</span></dt>
+    <dd><p>Inertia tensor of the mesh.</p>
+</dd>
+    <dt><code>center</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Center of mass of the mesh.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TTriangleSource</code></dt>
+    <dd><p>Type of the triangle source.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTetrahedronContribution_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTetrahedronContribution*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTetrahedronContribution_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Symmetric3x3__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTetrahedronContribution(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Symmetric3x3@)">
+  ComputeTetrahedronContribution(Vector3, Vector3, Vector3, float, out Symmetric3x3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L27"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeTetrahedronContribution(Vector3 a, Vector3 b, Vector3 c, float mass, out Symmetric3x3 inertiaTensor)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>a</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>b</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>c</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>inertiaTensor</code> <span class="xref">Symmetric3x3</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTetrahedronContribution_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTetrahedronContribution*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTetrahedronContribution_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single__BepuUtilities_Symmetric3x3__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTetrahedronContribution(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single@,BepuUtilities.Symmetric3x3@)">
+  ComputeTetrahedronContribution(Vector3, Vector3, Vector3, out float, out Symmetric3x3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L122"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Integrates the inertia contribution of a tetrahedron with vertices at a, b, c, and (0,0,0) assuming a density of 1.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeTetrahedronContribution(Vector3 a, Vector3 b, Vector3 c, out float volume, out Symmetric3x3 inertiaTensor)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>a</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>First vertex of the tetrahedron.</p>
+</dd>
+    <dt><code>b</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Second vertex of the tetrahedron.</p>
+</dd>
+    <dt><code>c</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Third vertex of the tetrahedron.</p>
+</dd>
+    <dt><code>volume</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Volume of the tetrahedron.</p>
+</dd>
+    <dt><code>inertiaTensor</code> <span class="xref">Symmetric3x3</span></dt>
+    <dd><p>Inertia tensor of this tetrahedron assuming a density of 1.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTetrahedronVolume_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTetrahedronVolume*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTetrahedronVolume_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTetrahedronVolume(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3)">
+  ComputeTetrahedronVolume(Vector3, Vector3, Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L108"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the signed volume of a tetrahedron where the fourth vertex is at the origin.
+Triangles visible from outside the shape are assumed to have clockwise winding in right handed coordinates or counterclockwise winding in left handed coordinates.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static float ComputeTetrahedronVolume(Vector3 a, Vector3 b, Vector3 c)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>a</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>First vertex of the tetrahedron.</p>
+</dd>
+    <dt><code>b</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Second vertex of the tetrahedron.</p>
+</dd>
+    <dt><code>c</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Third vertex of the tetrahedron.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Volume of the tetrahedron.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTriangleArea_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTriangleArea*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTriangleArea_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTriangleArea(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3)">
+  ComputeTriangleArea(Vector3, Vector3, Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L254"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the area of a triangle.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static float ComputeTriangleArea(Vector3 a, Vector3 b, Vector3 c)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>a</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>First vertex in the triangle.</p>
+</dd>
+    <dt><code>b</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Second vertex in the triangle.</p>
+</dd>
+    <dt><code>c</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Third vertex in the triangle.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Area of the triangle.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTriangleContribution_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTriangleContribution*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTriangleContribution_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Symmetric3x3__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTriangleContribution(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Symmetric3x3@)">
+  ComputeTriangleContribution(Vector3, Vector3, Vector3, float, out Symmetric3x3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L205"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Integrates the inertia contribution from a single triangle.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeTriangleContribution(Vector3 a, Vector3 b, Vector3 c, float mass, out Symmetric3x3 inertiaTensor)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>a</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>First vertex in the triangle.</p>
+</dd>
+    <dt><code>b</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Second vertex in the triangle.</p>
+</dd>
+    <dt><code>c</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Third vertex in the triangle.</p>
+</dd>
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Mass of the triangle.</p>
+</dd>
+    <dt><code>inertiaTensor</code> <span class="xref">Symmetric3x3</span></dt>
+    <dd><p>Inertia tensor of the triangle.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTriangleContribution_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTriangleContribution*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_ComputeTriangleContribution_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single__BepuUtilities_Symmetric3x3__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.ComputeTriangleContribution(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single@,BepuUtilities.Symmetric3x3@)">
+  ComputeTriangleContribution(Vector3, Vector3, Vector3, out float, out Symmetric3x3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L267"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Integrates the inertia contribution from a single triangle assuming a density of 1.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeTriangleContribution(Vector3 a, Vector3 b, Vector3 c, out float area, out Symmetric3x3 inertiaTensor)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>a</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>First vertex in the triangle.</p>
+</dd>
+    <dt><code>b</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Second vertex in the triangle.</p>
+</dd>
+    <dt><code>c</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Third vertex in the triangle.</p>
+</dd>
+    <dt><code>area</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Area of the triangle.</p>
+</dd>
+    <dt><code>inertiaTensor</code> <span class="xref">Symmetric3x3</span></dt>
+    <dd><p>Inertia tensor of the triangle assuming that the density is 1.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_MeshInertiaHelper_GetInertiaOffset_" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.GetInertiaOffset*"></a>
+
+  <h3 id="BepuPhysics_Collidables_MeshInertiaHelper_GetInertiaOffset_System_Single_System_Numerics_Vector3_BepuUtilities_Symmetric3x3__" data-uid="BepuPhysics.Collidables.MeshInertiaHelper.GetInertiaOffset(System.Single,System.Numerics.Vector3,BepuUtilities.Symmetric3x3@)">
+  GetInertiaOffset(float, Vector3, out Symmetric3x3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L344"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes an offset for an inertia tensor based on an offset frame of reference.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void GetInertiaOffset(float mass, Vector3 offset, out Symmetric3x3 inertiaOffset)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Mass associated with the inertia tensor being moved.</p>
+</dd>
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Offset from the current inertia frame of reference to the new frame of reference.</p>
+</dd>
+    <dt><code>inertiaOffset</code> <span class="xref">Symmetric3x3</span></dt>
+    <dd><p>Modification to add to the inertia tensor to move it into the new reference frame.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/MeshInertiaHelper.cs/#L25" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

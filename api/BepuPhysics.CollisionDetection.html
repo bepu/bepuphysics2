@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Namespace BepuPhysics.CollisionDetection | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Namespace BepuPhysics.CollisionDetection | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.CollisionDetection">
+
+  <h1 id="BepuPhysics_CollisionDetection" data-uid="BepuPhysics.CollisionDetection" class="text-break">Namespace BepuPhysics.CollisionDetection</h1>
+  <div class="markdown level0 summary"></div>
+  <div class="markdown level0 conceptual"></div>
+  <div class="markdown level0 remarks"></div>
+
+    <h3 id="classes">
+Classes
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.BroadPhase.html">BroadPhase</a></dt>
+      <dd><p>Manages scene acceleration structures for collision detection and queries.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CollidableOverlapFinder.html">CollidableOverlapFinder</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CollidableOverlapFinder-1.html">CollidableOverlapFinder&lt;TCallbacks&gt;</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CollisionTask.html">CollisionTask</a></dt>
+      <dd><p>Parent type of tasks which handle collision tests between batches of shapes of a particular type.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CollisionTaskRegistry.html">CollisionTaskRegistry</a></dt>
+      <dd><p>Registry of collision tasks used to handle various shape pair types.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConstraintRemover.html">ConstraintRemover</a></dt>
+      <dd><p>Accumulates constraints to remove from multiple threads, and efficiently removes them all as a batch.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html">ContactConstraintAccessor</a></dt>
+      <dd><p>Provides indirection for reading from and updating constraints in the narrow phase.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.html">ContactConstraintAccessor&lt;TConstraintDescription, TBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConvexOneBodyAccessor-4.html">ConvexOneBodyAccessor&lt;TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConvexTwoBodyAccessor-4.html">ConvexTwoBodyAccessor&lt;TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.DepthRefiner-6.html">DepthRefiner&lt;TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB&gt;</a></dt>
+      <dd><p>Incrementally refines a sample direction to approach a local minimum depth between two convex bodies.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html">NarrowPhase</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase-1.html">NarrowPhase&lt;TCallbacks&gt;</a></dt>
+      <dd><p>Turns broad phase overlaps into contact manifolds and uses them to manage constraints in the solver.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NonconvexOneBodyAccessor-4.html">NonconvexOneBodyAccessor&lt;TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NonconvexTwoBodyAccessor-4.html">NonconvexTwoBodyAccessor&lt;TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.PairCache.html">PairCache</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.SweepTask.html">SweepTask</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.SweepTaskRegistry.html">SweepTaskRegistry</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.WideRayTester.html">WideRayTester</a></dt>
+      <dd><p>Helper class for creating runtime specialized vectorized ray intersection tests with shapes that support broadcasting.</p>
+</dd>
+    </dl>
+    <h3 id="structs">
+Structs
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.BatcherContinuations-1.html">BatcherContinuations&lt;T&gt;</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.BroadPhaseRayBatcher-1.html">BroadPhaseRayBatcher&lt;TRayTester&gt;</a></dt>
+      <dd><p>Helps test the broad phase's active and static trees with a custom leaf tester.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CCDContinuationIndex.html">CCDContinuationIndex</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CollidablePair.html">CollidablePair</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CollidablePairComparer.html">CollidablePairComparer</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CollisionBatcher-1.html">CollisionBatcher&lt;TCallbacks&gt;</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CollisionTaskReference.html">CollisionTaskReference</a></dt>
+      <dd><p>Metadata about a collision task.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CompoundMeshReduction.html">CompoundMeshReduction</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConstraintCache.html">ConstraintCache</a></dt>
+      <dd><p>Stores information about a contact constraint from the previous timestep.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.Contact.html">Contact</a></dt>
+      <dd><p>Information about a single contact.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ContactImpulses1.html">ContactImpulses1</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ContactImpulses2.html">ContactImpulses2</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ContactImpulses3.html">ContactImpulses3</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ContactImpulses4.html">ContactImpulses4</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ContactImpulses5.html">ContactImpulses5</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ContactImpulses6.html">ContactImpulses6</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ContactImpulses7.html">ContactImpulses7</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ContactImpulses8.html">ContactImpulses8</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.Convex1ContactManifoldWide.html">Convex1ContactManifoldWide</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.Convex2ContactManifoldWide.html">Convex2ContactManifoldWide</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.Convex4ContactManifoldWide.html">Convex4ContactManifoldWide</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConvexContact.html">ConvexContact</a></dt>
+      <dd><p>Information about a single contact in a convex collidable pair. Convex collidable pairs share one surface basis across the manifold, since the contact surface is guaranteed to be a plane.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a></dt>
+      <dd><p>Contains the data associated with a convex contact manifold.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.DepthRefiner-6.Simplex.html">DepthRefiner&lt;TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB&gt;.Simplex</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.DepthRefiner-6.SimplexWithWitness.html">DepthRefiner&lt;TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB&gt;.SimplexWithWitness</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.DepthRefiner-6.Vertex.html">DepthRefiner&lt;TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB&gt;.Vertex</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.DepthRefiner-6.VertexWithWitness.html">DepthRefiner&lt;TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB&gt;.VertexWithWitness</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.MeshReduction.html">MeshReduction</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhaseFlushJob.html">NarrowPhaseFlushJob</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase-1.CollisionCallbacks.html">NarrowPhase&lt;TCallbacks&gt;.CollisionCallbacks</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase-1.OverlapWorker.html">NarrowPhase&lt;TCallbacks&gt;.OverlapWorker</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase-1.PendingConstraintAddCache.html">NarrowPhase&lt;TCallbacks&gt;.PendingConstraintAddCache</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase-1.SortConstraintTarget.html">NarrowPhase&lt;TCallbacks&gt;.SortConstraintTarget</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NonconvexContactManifold.html">NonconvexContactManifold</a></dt>
+      <dd><p>Contains the data associated with a nonconvex contact manifold.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NonconvexReduction.html">NonconvexReduction</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NonconvexReductionChild.html">NonconvexReductionChild</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.PairCacheChangeIndex.html">PairCacheChangeIndex</a></dt>
+      <dd><p>Refers to a change in a <a class="xref" href="BepuPhysics.CollisionDetection.PairCache.html">PairCache</a>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.PairContinuation.html">PairContinuation</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.PairMaterialProperties.html">PairMaterialProperties</a></dt>
+      <dd><p>Material properties governing the interaction between colliding bodies. Used by the narrow phase to create constraints of the appropriate configuration.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.SimulationRayBatcher-1.html">SimulationRayBatcher&lt;TRayHitHandler&gt;</a></dt>
+      <dd><p>Tests batches of rays against the simulation.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.TwoBodyHandles.html">TwoBodyHandles</a></dt>
+      <dd><p>Associated with a pair of two collidables that each are controlled by bodies.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.UntypedList.html">UntypedList</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.WorkerPendingPairChanges.html">WorkerPendingPairChanges</a></dt>
+      <dd><p>Contains the pending pair cache changes created by a single worker during the last execution of narrow phase pair processing.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.WorkerPendingPairChanges.PendingAdd.html">WorkerPendingPairChanges.PendingAdd</a></dt>
+      <dd></dd>
+    </dl>
+    <h3 id="interfaces">
+Interfaces
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.html">IBroadPhaseBatchedRayTester</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.IBroadPhaseRayTester.html">IBroadPhaseRayTester</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.IBroadPhaseSweepTester.html">IBroadPhaseSweepTester</a></dt>
+      <dd><p>Defines a type that can act as a callback for broad phase sweep tests.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ICollisionCallbacks.html">ICollisionCallbacks</a></dt>
+      <dd><p>Callbacks invoked by a <a class="xref" href="BepuPhysics.CollisionDetection.CollisionBatcher-1.html">CollisionBatcher&lt;TCallbacks&gt;</a>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ICollisionTestContinuation.html">ICollisionTestContinuation</a></dt>
+      <dd><p>Defines a type which includes information necessary to apply some form of post processing to a collision test result.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.IContactManifold-1.html">IContactManifold&lt;TManifold&gt;</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.INarrowPhaseCallbacks.html">INarrowPhaseCallbacks</a></dt>
+      <dd><p>Defines handlers for narrow phase events.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ISupportFinder-2.html">ISupportFinder&lt;TShape, TShapeWide&gt;</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.ISweepFilter.html">ISweepFilter</a></dt>
+      <dd></dd>
+    </dl>
+    <h3 id="enums">
+Enums
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CollisionContinuationType.html">CollisionContinuationType</a></dt>
+      <dd><p>Describes the flow control to apply to a convex-convex pair report.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.CollisionTaskPairType.html">CollisionTaskPairType</a></dt>
+      <dd><p>Describes the data requirements for a collision pair type in a <a class="xref" href="BepuPhysics.CollisionDetection.CollisionBatcher-1.html">CollisionBatcher&lt;TCallbacks&gt;</a>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhaseFlushJobType.html">NarrowPhaseFlushJobType</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase-1.ConstraintGeneratorType.html">NarrowPhase&lt;TCallbacks&gt;.ConstraintGeneratorType</a></dt>
+      <dd></dd>
+    </dl>
+    <h3 id="delegates">
+Delegates
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.BroadPhase.RefinementScheduler.html">BroadPhase.RefinementScheduler</a></dt>
+      <dd><p>Returns the size and number of refinements to execute during the broad phase.</p>
+</dd>
+    </dl>
+
+
+</article>
+
+        <div class="contribution d-print-none">
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

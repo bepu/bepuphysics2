@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>What&#39;s substepping? | Bepu Docs </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="What&#39;s substepping? | Bepu Docs ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/blob/master/Documentation/Substepping.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="whats-substepping">What's substepping?</h1>
+
+<p>Substepping integrates body velocities and positions and solves constraints more than once per call to <code>Simulation.Timestep</code>. For some simulations with complex constraint configurations, high stiffness, or high mass ratios, substepping is the fastest way to find a stable solution.</p>
+<p>You can configure a simulation to use substepping by passing a <code>SolveDescription</code> to <code>Simulation.Create</code> that has more than one substep. For example, to create a simulation that uses 8 substeps and 1 velocity iteration per substep:</p>
+<pre><code class="lang-cs">var simulation = Simulation.Create(
+    BufferPool, new YourNarrowPhaseCallbacks(), new YourPoseIntegratorCallbacks(), 
+    new SolveDescription(velocityIterationCount: 1, substepCount: 8));
+</code></pre>
+<p>See the <a href="../Demos/Demos/SubsteppingDemo.cs">SubsteppingDemo</a> for an interactive example. The <a href="../Demos/Demos/RopeTwistDemo.cs">RopeTwistDemo</a>, <a href="../Demos/Demos/ChainFountainDemo.cs">ChainFountainDemo</a> and <a href="../Demos/Demos/BouncinessDemo.cs">BouncinessDemo</a> also all use substepping. The <a href="StabilityTips.html">stability tips documentation</a> contains some more information about tuning.</p>
+<h1 id="why-use-it">Why use it?</h1>
+<p>It makes difficult constraint configurations easy for the solver. The easier things are for the solver, the faster it can go.</p>
+<p>If you have a really complex constraint graph, especially one containing high mass ratios (heavy objects depending on light objects, like a wrecking ball hanging from a rope or a tank smashing a small box) and high constraint stiffnesses, a non-substepping solver can struggle to converge to an equilibrium in a low number of velocity iterations.</p>
+<p>Further, for constraints with high stiffness (<code>SpringSettings</code> with <code>Frequency</code> values approaching or exceeding the simulation timestep frequency), even a stable equilibrium will result in damping out unrepresentable motion. A constraint that wants to oscillate at 120 hertz simply can't in a 60 hertz simulation.</p>
+<p>Substepping means running the solver and integrator multiple times for each call to <code>Simulation.Timestep</code>. If you take 8 substeps and call <code>Simulation.Timestep(1f / 60f)</code>, the solver sees 8 substeps each of length <code>1f / 480f</code>. Since the solver and integrator are running at 480 hertz, that 120 hertz constraint would be able to wiggle to its heart's content.</p>
+<p>In the above example, you could get similar solver stability out of simply calling <code>Simulation.Timestep(1f / 480f)</code> 8 times for each frame, but that would re-run collision detection 8 times too. Further, by tightly bundling execution together, the substepping solver can avoid a large amount of synchronization and memory bandwidth overhead. Overall, when it is an appropriate solution, substepping will tend to be the fastest option.</p>
+<h1 id="how-substepping-fits-into-a-timestep">How substepping fits into a timestep</h1>
+<p>Each call to <code>Simulation.Timestep(dt, ...)</code> simulates one frame with duration equal to <code>dt</code>. In the <a href="../BepuPhysics/DefaultTimestepper.cs"><code>DefaultTimestepper</code></a> (which, as the name implies, is the <code>ITimestepper</code> implementation used if no other is specified) executes a frame like so:</p>
+<pre><code class="lang-cs">simulation.Sleep();
+simulation.PredictBoundingBoxes(dt, threadDispatcher);
+simulation.CollisionDetection(dt, threadDispatcher);
+simulation.Solve(dt, threadDispatcher);
+simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
+</code></pre>
+<p>There's only one execution of collision each stage per call to <code>Timestep</code>, each responsible for covering the specified <code>dt</code>.</p>
+<p>When configured to use more than one substep, <code>Simulation.Solve</code> will integrate bodies and solve constraints as if <code>Simulation.Timestep</code> was called <code>Simulation.Solver.SubstepCount</code> times, each time with a duration equal to <code>dt / Simulation.Solver.SubstepCount</code>.</p>
+<p>The difference between using substepping and explicitly calling <code>Timestep</code> more frequently is that none of the other stages run during substeps. For example, contact constraints are incrementally updated in an approximate way, but full collision detection is not run. This allows substeps to be much faster than full timesteps.</p>
+<h1 id="velocity-iteration-scheduling">Velocity iteration scheduling</h1>
+<p>While the simplest approach is to use the same number of velocity iterations for all substeps, they are allowed to vary. You can provide a <code>VelocityIterationScheduler</code> callback in the <code>SolveDescription</code> to define how many velocity iterations each substep should take. There's also a helper that takes a span of integers defining the velocity iteration counts to use for each substep.</p>
+<pre><code class="lang-cs">var simulation = Simulation.Create(BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(), new SolveDescription(new[] {2, 1, 1}));
+</code></pre>
+<p>The above snippet would use 3 substeps with 2 velocity iterations on the first substep, then 1 velocity iteration on the second and third substeps.</p>
+<p>This can be helpful when trying to find the absolute cheapest configuration that is still stable for a particular simulation. For example, a simulation with 1 velocity iteration per substep could be observed to be stable at 4 substeps but not at 3 substeps, and adding an extra velocity iteration to the first substep could make 3 substeps stable at a lower cost than 4 substeps. In other words, variable velocity iterations let you manage the simulation budget in a finer grained way.</p>
+<p>There are some cases where intentionally frontloading iterations could be useful as well. If you know the simulation has changed significantly since the last timestep- perhaps you've moved a bunch of bodies around such that the previous frame's guess at a constraint solution will be very wrong- then running a few more velocity iterations on the first timestep can avoid accumulating error.</p>
+<h1 id="dynamic-changes-to-substep-and-velocity-iteration-counts">Dynamic changes to substep and velocity iteration counts</h1>
+<p>The solver is sensitive to the effective timestep duration. It caches a best guess of the constraint solution which is sensitive to the amount of time passing between solves, so large changes can ruin the guess and harm stability. It's best to use the same timestep duration (<code>dt</code> passed into <code>Simulation.Timestep</code>) and the same number of substeps if possible, since the effective timestep duration seen by the solver is <code>dt / substepCount</code>.</p>
+<p>Incremental changes to the <code>dt</code> value can still work if they're reasonably small. 'Reasonably small' here has no precise definition; it will vary depending on the stability requirements of the simulation and how much error the application can tolerate. Changing <code>dt</code> by 1% per frame is probably okay for most simulations. Changing it by 50% per frame probably isn't.</p>
+<p>Changing the number of substeps is harder to do in a continuous way. Going from 4 to 3 substeps with a 60hz outer timestep rate means going from 240hz to 180hz effective solve rate instantly. That could be enough to cause problems for some simulations. You'd likely want to increase the number of velocity iterations in the first substep of the next frame to try to correct some of the induced error.</p>
+<p>It's also possible to update the cached guess in response to a timestep change using <code>Solver.ScaleAccumulatedImpulses</code>. The scale should be <code>newEffectiveTimestepDuration / oldEffectiveTimestepDuration</code>, or in other words <code>(newDt / newSubstepCount) / (oldDt / oldSubstepCount)</code>. This operation is not very cheap: it touches all accumulated impulses memory.</p>
+<p>Changing the number of <em>velocity iterations</em> from frame to frame is safe. The more velocity iterations there are, the closer the solution will converge to an optimum during the substep.</p>
+<h1 id="callbacks">Callbacks</h1>
+<p>The solver exposes events that fire at the beginning and end of each substep: <code>SubstepStarted</code> and <code>SubstepEnded</code>. These events are called from worker thread 0 in the solver's thread dispatch; the dispatch does not end in between substeps to keep overhead low.</p>
+<p>(Note that attempting to dispatch multithreaded work from the same <code>IThreadDispatcher</code> instance that dispatched the solver's workers requires that the <code>IThreadDispatcher</code> implementation is reentrant. The <code>BepuUtilities.ThreadDispatcher</code> is not.)</p>
+<h1 id="limitations">Limitations</h1>
+<p>Unfortunately, substepping isn't magic. The entire point is to avoid running other parts of the engine at the same rate as the solver, so contacts do not get fully updated for each substep. They <em>do</em> undergo an incremental update process that tries to fix up the most obvious issues (like penetration depth changes over time), but without a full collision test the contact manifolds can go out of date.</p>
+<p>This incremental update is usually fine, but out of date contacts can sometimes introduce energy. For example, an out of date contact lever arm can let a body 'fall' into another body ever so slightly, which over many substeps ends up sustaining oscillation.</p>
+<p>You can see an example of this behavior <a href="https://youtu.be/qMX1ZLmfrEo">here</a>.</p>
+<p>To mitigate this issue, you can try:</p>
+<ol>
+<li>damping the relevant bodies more heavily in the integrator,</li>
+<li>increasing the damping of contacts associated with the relevant bodies,</li>
+<li>increasing the sleeping velocity threshold (<code>BodyActivityDescription.SleepThreshold</code> passed into the <code>BodyDescription</code>) for the relevant bodies such that they take a nap instead of wiggling,</li>
+<li>increasing the inertia of the problematic bodies to increase the period of oscillation (possibly making it easier to mitigate with sleeping/damping)</li>
+<li>avoiding shapes or situations that are likely to cause the problem,</li>
+<li>or just don't use solver substepping. You can always resort to calling <code>Simulation.Timestep</code> more frequently. It'll cost more than solver-only substepping, but it'll keep all your contact data up to date, and the library's pretty dang fast anyway.</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/Documentation/Substepping.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

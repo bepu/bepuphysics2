@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class NarrowPhase&lt;TCallbacks&gt; | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class NarrowPhase&lt;TCallbacks&gt; | Bepu API ">
+      
+      <meta name="description" content="Turns broad phase overlaps into contact manifolds and uses them to manage constraints in the solver.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_CollisionDetection_NarrowPhase_1.md&amp;value=---%0Auid%3A%20BepuPhysics.CollisionDetection.NarrowPhase%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1">
+
+
+
+  <h1 id="BepuPhysics_CollisionDetection_NarrowPhase_1" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1" class="text-break">
+Class NarrowPhase&lt;TCallbacks&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhasePreflush.cs/#L92"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.CollisionDetection.html">CollisionDetection</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Turns broad phase overlaps into contact manifolds and uses them to manage constraints in the solver.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public class NarrowPhase&lt;TCallbacks&gt; : NarrowPhase where TCallbacks : struct, INarrowPhaseCallbacks</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TCallbacks</code></dt>
+    <dd><p>Type of the callbacks to use.</p>
+</dd>
+  </dl>
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html">NarrowPhase</a></div>
+      <div><span class="xref">NarrowPhase&lt;TCallbacks&gt;</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_Simulation">NarrowPhase.Simulation</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_Pool">NarrowPhase.Pool</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_Bodies">NarrowPhase.Bodies</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_Statics">NarrowPhase.Statics</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_Solver">NarrowPhase.Solver</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_Shapes">NarrowPhase.Shapes</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_SweepTaskRegistry">NarrowPhase.SweepTaskRegistry</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_CollisionTaskRegistry">NarrowPhase.CollisionTaskRegistry</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_ConstraintRemover">NarrowPhase.ConstraintRemover</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_PairCache">NarrowPhase.PairCache</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_RegisterContactConstraintAccessor_BepuPhysics_CollisionDetection_ContactConstraintAccessor_">NarrowPhase.RegisterContactConstraintAccessor(ContactConstraintAccessor)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_TryGetContactConstraintAccessor_System_Int32_BepuPhysics_CollisionDetection_ContactConstraintAccessor__">NarrowPhase.TryGetContactConstraintAccessor(int, out ContactConstraintAccessor)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_TryExtractSolverContactData__1_BepuPhysics_ConstraintHandle___0__">NarrowPhase.TryExtractSolverContactData&lt;TExtractor&gt;(ConstraintHandle, ref TExtractor)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_TryExtractSolverContactPrestepAndImpulses__1_BepuPhysics_ConstraintHandle___0__">NarrowPhase.TryExtractSolverContactPrestepAndImpulses&lt;TExtractor&gt;(ConstraintHandle, ref TExtractor)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_IsContactConstraintType_System_Int32_">NarrowPhase.IsContactConstraintType(int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_Prepare_System_Single_BepuUtilities_IThreadDispatcher_">NarrowPhase.Prepare(float, IThreadDispatcher)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_Flush_BepuUtilities_IThreadDispatcher_">NarrowPhase.Flush(IThreadDispatcher)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_Clear">NarrowPhase.Clear()</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_Dispose">NarrowPhase.Dispose()</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html#BepuPhysics_CollisionDetection_NarrowPhase_SortCollidableReferencesForPair_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Collidables_CollidableMobility__BepuPhysics_Collidables_CollidableMobility__BepuPhysics_Collidables_CollidableReference__BepuPhysics_Collidables_CollidableReference__">NarrowPhase.SortCollidableReferencesForPair(CollidableReference, CollidableReference, out CollidableMobility, out CollidableMobility, out CollidableReference, out CollidableReference)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_NarrowPhase_1__ctor_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.#ctor*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_NarrowPhase_1__ctor_BepuPhysics_Simulation_BepuPhysics_CollisionDetection_CollisionTaskRegistry_BepuPhysics_CollisionDetection_SweepTaskRegistry__0_System_Int32_System_Int32_System_Int32_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.#ctor(BepuPhysics.Simulation,BepuPhysics.CollisionDetection.CollisionTaskRegistry,BepuPhysics.CollisionDetection.SweepTaskRegistry,`0,System.Int32,System.Int32,System.Int32)">
+  NarrowPhase(Simulation, CollisionTaskRegistry, SweepTaskRegistry, TCallbacks, int, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhase.cs/#L350"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public NarrowPhase(Simulation simulation, CollisionTaskRegistry collisionTaskRegistry, SweepTaskRegistry sweepTaskRegistry, TCallbacks callbacks, int initialSetCapacity, int minimumMappingSize = 2048, int minimumPendingSize = 128)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>simulation</code> <a class="xref" href="BepuPhysics.Simulation.html">Simulation</a></dt>
+    <dd></dd>
+    <dt><code>collisionTaskRegistry</code> <a class="xref" href="BepuPhysics.CollisionDetection.CollisionTaskRegistry.html">CollisionTaskRegistry</a></dt>
+    <dd></dd>
+    <dt><code>sweepTaskRegistry</code> <a class="xref" href="BepuPhysics.CollisionDetection.SweepTaskRegistry.html">SweepTaskRegistry</a></dt>
+    <dd></dd>
+    <dt><code>callbacks</code> <span class="xref">TCallbacks</span></dt>
+    <dd></dd>
+    <dt><code>initialSetCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>minimumMappingSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>minimumPendingSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="BepuPhysics_CollisionDetection_NarrowPhase_1_Callbacks" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.Callbacks">
+  Callbacks
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhase.cs/#L332"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TCallbacks Callbacks</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">TCallbacks</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_NarrowPhase_1_ExtractContactConstraintBodyCount_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.ExtractContactConstraintBodyCount*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_NarrowPhase_1_ExtractContactConstraintBodyCount_System_Int32_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.ExtractContactConstraintBodyCount(System.Int32)">
+  ExtractContactConstraintBodyCount(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhaseConstraintUpdate.cs/#L225"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int ExtractContactConstraintBodyCount(int contactConstraintTypeId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>contactConstraintTypeId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_NarrowPhase_1_HandleOverlap_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.HandleOverlap*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_NarrowPhase_1_HandleOverlap_System_Int32_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Collidables_CollidableReference_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.HandleOverlap(System.Int32,BepuPhysics.Collidables.CollidableReference,BepuPhysics.Collidables.CollidableReference)">
+  HandleOverlap(int, CollidableReference, CollidableReference)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhase.cs/#L399"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void HandleOverlap(int workerIndex, CollidableReference a, CollidableReference b)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>a</code> <a class="xref" href="BepuPhysics.Collidables.CollidableReference.html">CollidableReference</a></dt>
+    <dd></dd>
+    <dt><code>b</code> <a class="xref" href="BepuPhysics.Collidables.CollidableReference.html">CollidableReference</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_NarrowPhase_1_OnDispose_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.OnDispose*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_NarrowPhase_1_OnDispose" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.OnDispose">
+  OnDispose()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhase.cs/#L394"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected override void OnDispose()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_NarrowPhase_1_OnPostflush_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.OnPostflush*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_NarrowPhase_1_OnPostflush_BepuUtilities_IThreadDispatcher_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.OnPostflush(BepuUtilities.IThreadDispatcher)">
+  OnPostflush(IThreadDispatcher)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhase.cs/#L382"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected override void OnPostflush(IThreadDispatcher threadDispatcher)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_NarrowPhase_1_OnPreflush_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.OnPreflush*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_NarrowPhase_1_OnPreflush_BepuUtilities_IThreadDispatcher_System_Boolean_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.OnPreflush(BepuUtilities.IThreadDispatcher,System.Boolean)">
+  OnPreflush(IThreadDispatcher, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhasePreflush.cs/#L207"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected override void OnPreflush(IThreadDispatcher threadDispatcher, bool deterministic)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd></dd>
+    <dt><code>deterministic</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_NarrowPhase_1_OnPrepare_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.OnPrepare*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_NarrowPhase_1_OnPrepare_BepuUtilities_IThreadDispatcher_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.OnPrepare(BepuUtilities.IThreadDispatcher)">
+  OnPrepare(IThreadDispatcher)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhase.cs/#L369"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected override void OnPrepare(IThreadDispatcher threadDispatcher)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_NarrowPhase_1_UpdateConstraint_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.UpdateConstraint*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_NarrowPhase_1_UpdateConstraint__3_System_Int32_BepuPhysics_CollisionDetection_CollidablePair_System_Int32_BepuPhysics_CollisionDetection_ConstraintCache__System_Int32___1____0_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.UpdateConstraint``3(System.Int32,BepuPhysics.CollisionDetection.CollidablePair,System.Int32,BepuPhysics.CollisionDetection.ConstraintCache@,System.Int32,``1@,``0)">
+  UpdateConstraint&lt;TBodyHandles, TDescription, TContactImpulses&gt;(int, CollidablePair, int, ref ConstraintCache, int, ref TDescription, TBodyHandles)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhaseConstraintUpdate.cs/#L147"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void UpdateConstraint&lt;TBodyHandles, TDescription, TContactImpulses&gt;(int workerIndex, CollidablePair pair, int manifoldTypeAsConstraintType, ref ConstraintCache newConstraintCache, int newContactCount, ref TDescription description, TBodyHandles bodyHandles) where TBodyHandles : unmanaged where TDescription : unmanaged, IConstraintDescription&lt;TDescription&gt; where TContactImpulses : unmanaged</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>pair</code> <a class="xref" href="BepuPhysics.CollisionDetection.CollidablePair.html">CollidablePair</a></dt>
+    <dd></dd>
+    <dt><code>manifoldTypeAsConstraintType</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>newConstraintCache</code> <a class="xref" href="BepuPhysics.CollisionDetection.ConstraintCache.html">ConstraintCache</a></dt>
+    <dd></dd>
+    <dt><code>newContactCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>description</code> <span class="xref">TDescription</span></dt>
+    <dd></dd>
+    <dt><code>bodyHandles</code> <span class="xref">TBodyHandles</span></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TBodyHandles</code></dt>
+    <dd></dd>
+    <dt><code>TDescription</code></dt>
+    <dd></dd>
+    <dt><code>TContactImpulses</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_NarrowPhase_1_UpdateConstraintsForPair_" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.UpdateConstraintsForPair*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_NarrowPhase_1_UpdateConstraintsForPair__1_System_Int32_BepuPhysics_CollisionDetection_CollidablePair___0__" data-uid="BepuPhysics.CollisionDetection.NarrowPhase`1.UpdateConstraintsForPair``1(System.Int32,BepuPhysics.CollisionDetection.CollidablePair,``0@)">
+  UpdateConstraintsForPair&lt;TContactManifold&gt;(int, CollidablePair, ref TContactManifold)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhaseConstraintUpdate.cs/#L291"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void UpdateConstraintsForPair&lt;TContactManifold&gt;(int workerIndex, CollidablePair pair, ref TContactManifold manifold) where TContactManifold : unmanaged, IContactManifold&lt;TContactManifold&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>pair</code> <a class="xref" href="BepuPhysics.CollisionDetection.CollidablePair.html">CollidablePair</a></dt>
+    <dd></dd>
+    <dt><code>manifold</code> <span class="xref">TContactManifold</span></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TContactManifold</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/NarrowPhasePreflush.cs/#L92" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

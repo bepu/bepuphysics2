@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct Mesh | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct Mesh | Bepu API ">
+      
+      <meta name="description" content="Shape designed to contain a whole bunch of triangles. Triangle collisions and ray tests are one-sided; only tests which see the triangle as wound clockwise in right handed coordinates or counterclockwise in left handed coordinates will generate contacts.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Collidables_Mesh.md&amp;value=---%0Auid%3A%20BepuPhysics.Collidables.Mesh%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Collidables.Mesh">
+
+
+
+  <h1 id="BepuPhysics_Collidables_Mesh" data-uid="BepuPhysics.Collidables.Mesh" class="text-break">
+Struct Mesh  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L36"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Collidables.html">Collidables</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Shape designed to contain a whole bunch of triangles. Triangle collisions and ray tests are one-sided; only tests which see the triangle as wound clockwise in right handed coordinates or counterclockwise in left handed coordinates will generate contacts.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public struct Mesh : IHomogeneousCompoundShape&lt;Triangle, TriangleWide&gt;, IDisposableShape, IShape, IBoundsQueryableCompound</code></pre>
+  </div>
+
+
+
+
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="BepuPhysics.Collidables.IHomogeneousCompoundShape-2.html">IHomogeneousCompoundShape</a>&lt;<a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a>, <a class="xref" href="BepuPhysics.Collidables.TriangleWide.html">TriangleWide</a>&gt;</div>
+      <div><a class="xref" href="BepuPhysics.Collidables.IDisposableShape.html">IDisposableShape</a></div>
+      <div><a class="xref" href="BepuPhysics.Collidables.IShape.html">IShape</a></div>
+      <div><a class="xref" href="BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.html">IBoundsQueryableCompound</a></div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="BepuPhysics_Collidables_Mesh__ctor_" data-uid="BepuPhysics.Collidables.Mesh.#ctor*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh__ctor_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_Triangle__System_Numerics_Vector3_BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_" data-uid="BepuPhysics.Collidables.Mesh.#ctor(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.Triangle},System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher)">
+  Mesh(Buffer&lt;Triangle&gt;, Vector3, BufferPool, IThreadDispatcher)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L147"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a mesh shape.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Mesh(Buffer&lt;Triangle&gt; triangles, Vector3 scale, BufferPool pool, IThreadDispatcher dispatcher = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangles</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a>&gt;</dt>
+    <dd><p>Triangles to use in the mesh.</p>
+</dd>
+    <dt><code>scale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Scale to apply to all vertices at runtime.
+Note that the scale is not baked into the triangles or acceleration structure; the same set of triangles and acceleration structure can be used across multiple Mesh instances with different scales.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used to allocate acceleration structures.</p>
+</dd>
+    <dt><code>dispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd><p>Dispatcher to use to multithread the execution of the mesh build process. If null, the build will be single threaded.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh__ctor_" data-uid="BepuPhysics.Collidables.Mesh.#ctor*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh__ctor_System_Span_System_Byte__BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Collidables.Mesh.#ctor(System.Span{System.Byte},BepuUtilities.Memory.BufferPool)">
+  Mesh(Span&lt;byte&gt;, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L161"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Loads a mesh from data stored in a byte buffer previously stored by the Serialize function.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Mesh(Span&lt;byte&gt; data, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>data</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>Data to load the mesh from.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool to create the mesh with.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="BepuPhysics_Collidables_Mesh_Id" data-uid="BepuPhysics.Collidables.Mesh.Id">
+  Id
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L545"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Type id of mesh shapes.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public const int Id = 8</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Collidables_Mesh_Tree" data-uid="BepuPhysics.Collidables.Mesh.Tree">
+  Tree
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L41"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Acceleration structure of the mesh.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Tree Tree</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Trees.Tree.html">Tree</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Collidables_Mesh_Triangles" data-uid="BepuPhysics.Collidables.Mesh.Triangles">
+  Triangles
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L45"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Buffer of triangles composing the mesh. Triangles will only collide with tests which see the triangle as wound clockwise in right handed coordinates or counterclockwise in left handed coordinates.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Buffer&lt;Triangle&gt; Triangles</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="BepuPhysics_Collidables_Mesh_ChildCount_" data-uid="BepuPhysics.Collidables.Mesh.ChildCount*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_ChildCount" data-uid="BepuPhysics.Collidables.Mesh.ChildCount">
+  ChildCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L201"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the number of children in the compound shape.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly int ChildCount { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_Scale_" data-uid="BepuPhysics.Collidables.Mesh.Scale*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_Scale" data-uid="BepuPhysics.Collidables.Mesh.Scale">
+  Scale
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L51"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the scale of the mesh.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3 Scale { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_TypeId_" data-uid="BepuPhysics.Collidables.Mesh.TypeId*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_TypeId" data-uid="BepuPhysics.Collidables.Mesh.TypeId">
+  TypeId
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L546"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Unique type id for this shape type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int TypeId { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Collidables_Mesh_ComputeBounds_" data-uid="BepuPhysics.Collidables.Mesh.ComputeBounds*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_ComputeBounds_System_Numerics_Quaternion_System_Numerics_Vector3__System_Numerics_Vector3__" data-uid="BepuPhysics.Collidables.Mesh.ComputeBounds(System.Numerics.Quaternion,System.Numerics.Vector3@,System.Numerics.Vector3@)">
+  ComputeBounds(Quaternion, out Vector3, out Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L232"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the bounding box of a compound shape.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>orientation</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.quaternion">Quaternion</a></dt>
+    <dd><p>Orientation of the compound.</p>
+</dd>
+    <dt><code>min</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Minimum of the compound's bounding box.</p>
+</dd>
+    <dt><code>max</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Maximum of the compound's bounding box.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_ComputeClosedCenterOfMass_" data-uid="BepuPhysics.Collidables.Mesh.ComputeClosedCenterOfMass*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_ComputeClosedCenterOfMass" data-uid="BepuPhysics.Collidables.Mesh.ComputeClosedCenterOfMass">
+  ComputeClosedCenterOfMass()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L477"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the center of mass of the mesh.
+Assumes the mesh is closed and should be treated as solid.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly Vector3 ComputeClosedCenterOfMass()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Center of mass of the closed mesh.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_ComputeClosedCenterOfMass_" data-uid="BepuPhysics.Collidables.Mesh.ComputeClosedCenterOfMass*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_ComputeClosedCenterOfMass_System_Single__System_Numerics_Vector3__" data-uid="BepuPhysics.Collidables.Mesh.ComputeClosedCenterOfMass(System.Single@,System.Numerics.Vector3@)">
+  ComputeClosedCenterOfMass(out float, out Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L466"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the volume and center of mass of the mesh. Assumes the mesh is closed and should be treated as solid.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void ComputeClosedCenterOfMass(out float volume, out Vector3 center)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>volume</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Volume of the closed mesh.</p>
+</dd>
+    <dt><code>center</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Center of mass of the closed mesh.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_ComputeClosedInertia_" data-uid="BepuPhysics.Collidables.Mesh.ComputeClosedInertia*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_ComputeClosedInertia_System_Single_" data-uid="BepuPhysics.Collidables.Mesh.ComputeClosedInertia(System.Single)">
+  ComputeClosedInertia(float)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L451"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the inertia of the mesh.
+Assumes the mesh is closed and should be treated as solid.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly BodyInertia ComputeClosedInertia(float mass)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Mass to scale the inertia tensor with.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.BodyInertia.html">BodyInertia</a></dt>
+    <dd><p>Inertia tensor of the closed mesh.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_ComputeClosedInertia_" data-uid="BepuPhysics.Collidables.Mesh.ComputeClosedInertia*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_ComputeClosedInertia_System_Single_System_Numerics_Vector3__" data-uid="BepuPhysics.Collidables.Mesh.ComputeClosedInertia(System.Single,System.Numerics.Vector3@)">
+  ComputeClosedInertia(float, out Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L432"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the inertia of the mesh around its volumetric center and recenters the points of the mesh around it.
+Assumes the mesh is closed and should be treated as solid.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public BodyInertia ComputeClosedInertia(float mass, out Vector3 center)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Mass to scale the inertia tensor with.</p>
+</dd>
+    <dt><code>center</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Center of the closed mesh.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.BodyInertia.html">BodyInertia</a></dt>
+    <dd><p>Inertia tensor of the closed mesh.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_ComputeOpenCenterOfMass_" data-uid="BepuPhysics.Collidables.Mesh.ComputeOpenCenterOfMass*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_ComputeOpenCenterOfMass" data-uid="BepuPhysics.Collidables.Mesh.ComputeOpenCenterOfMass">
+  ComputeOpenCenterOfMass()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L525"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the center of mass of the mesh.
+Assumes the mesh is open and should be treated as a triangle soup.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly Vector3 ComputeOpenCenterOfMass()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Center of mass of the open mesh.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_ComputeOpenInertia_" data-uid="BepuPhysics.Collidables.Mesh.ComputeOpenInertia*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_ComputeOpenInertia_System_Single_" data-uid="BepuPhysics.Collidables.Mesh.ComputeOpenInertia(System.Single)">
+  ComputeOpenInertia(float)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L510"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the inertia of the mesh.
+Assumes the mesh is open and should be treated as a triangle soup.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly BodyInertia ComputeOpenInertia(float mass)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Mass to scale the inertia tensor with.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.BodyInertia.html">BodyInertia</a></dt>
+    <dd><p>Inertia of the open mesh.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_ComputeOpenInertia_" data-uid="BepuPhysics.Collidables.Mesh.ComputeOpenInertia*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_ComputeOpenInertia_System_Single_System_Numerics_Vector3__" data-uid="BepuPhysics.Collidables.Mesh.ComputeOpenInertia(System.Single,System.Numerics.Vector3@)">
+  ComputeOpenInertia(float, out Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L491"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the inertia of the mesh around its volumetric center and recenters the points of the mesh around it.
+Assumes the mesh is open and should be treated as a triangle soup.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public BodyInertia ComputeOpenInertia(float mass, out Vector3 center)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>mass</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Mass to scale the inertia tensor with.</p>
+</dd>
+    <dt><code>center</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Center of the open mesh.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.BodyInertia.html">BodyInertia</a></dt>
+    <dd><p>Inertia tensor of the closed mesh.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_CreateShapeBatch_" data-uid="BepuPhysics.Collidables.Mesh.CreateShapeBatch*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_CreateShapeBatch_BepuUtilities_Memory_BufferPool_System_Int32_BepuPhysics_Collidables_Shapes_" data-uid="BepuPhysics.Collidables.Mesh.CreateShapeBatch(BepuUtilities.Memory.BufferPool,System.Int32,BepuPhysics.Collidables.Shapes)">
+  CreateShapeBatch(BufferPool, int, Shapes)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L257"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a shape batch for this type of shape.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool used to create the batch.</p>
+</dd>
+    <dt><code>initialCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Initial capacity to allocate within the batch.</p>
+</dd>
+    <dt><code>shapeBatches</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
+    <dd><p>The set of shapes to contain this batch.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Collidables.ShapeBatch.html">ShapeBatch</a></dt>
+    <dd><p>Shape batch for the shape type.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Collidables_Mesh_CreateShapeBatch_BepuUtilities_Memory_BufferPool_System_Int32_BepuPhysics_Collidables_Shapes__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This is typically used internally to initialize new shape collections in response to shapes being added. It is not likely to be useful outside of the engine.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_CreateWithSweepBuild_" data-uid="BepuPhysics.Collidables.Mesh.CreateWithSweepBuild*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_CreateWithSweepBuild_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_Triangle__System_Numerics_Vector3_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Collidables.Mesh.CreateWithSweepBuild(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.Triangle},System.Numerics.Vector3,BepuUtilities.Memory.BufferPool)">
+  CreateWithSweepBuild(Buffer&lt;Triangle&gt;, Vector3, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L125"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a mesh shape instance and builds an acceleration structure using a sweep builder.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Mesh CreateWithSweepBuild(Buffer&lt;Triangle&gt; triangles, Vector3 scale, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangles</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a>&gt;</dt>
+    <dd><p>Triangles to use in the mesh.</p>
+</dd>
+    <dt><code>scale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Scale to apply to all vertices at runtime.
+Note that the scale is not baked into the triangles or acceleration structure; the same set of triangles and acceleration structure can be used across multiple Mesh instances with different scales.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used to allocate acceleration structures.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Collidables.Mesh.html">Mesh</a></dt>
+    <dd><p>Created mesh shape.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Collidables_Mesh_CreateWithSweepBuild_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_Triangle__System_Numerics_Vector3_BepuUtilities_Memory_BufferPool__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>The sweep builder is significantly slower than the binned builder, but can sometimes create higher quality trees.
+<p>Note that the binned builder can be tuned to create higher quality trees. That is usually a better choice than trying to use the sweep builder; this is here primarily for legacy reasons.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_CreateWithoutTreeBuild_" data-uid="BepuPhysics.Collidables.Mesh.CreateWithoutTreeBuild*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_CreateWithoutTreeBuild_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_Triangle__System_Numerics_Vector3_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Collidables.Mesh.CreateWithoutTreeBuild(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.Triangle},System.Numerics.Vector3,BepuUtilities.Memory.BufferPool)">
+  CreateWithoutTreeBuild(Buffer&lt;Triangle&gt;, Vector3, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L98"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a mesh shape instance, but leaves the Tree in an unbuilt state. The tree must be built before the mesh can be used.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Mesh CreateWithoutTreeBuild(Buffer&lt;Triangle&gt; triangles, Vector3 scale, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangles</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a>&gt;</dt>
+    <dd><p>Triangles to use in the mesh.</p>
+</dd>
+    <dt><code>scale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Scale to apply to all vertices at runtime.
+Note that the scale is not baked into the triangles or acceleration structure; the same set of triangles and acceleration structure can be used across multiple Mesh instances with different scales.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used to allocate acceleration structures.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Collidables.Mesh.html">Mesh</a></dt>
+    <dd><p>Created mesh shape.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Collidables_Mesh_CreateWithoutTreeBuild_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_Triangle__System_Numerics_Vector3_BepuUtilities_Memory_BufferPool__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>In some cases, the default binned build may not be the ideal builder. This function does everything needed to set up a tree without the expense of figuring out the details of the acceleration structure.
+The user can then run whatever build/refinement process is appropriate.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_Dispose_" data-uid="BepuPhysics.Collidables.Mesh.Dispose*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_Dispose_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Collidables.Mesh.Dispose(BepuUtilities.Memory.BufferPool)">
+  Dispose(BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L535"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Returns the mesh's resources to a buffer pool.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose(BufferPool bufferPool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bufferPool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool to return the mesh's resources to.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_FillSubtreesForTriangles_" data-uid="BepuPhysics.Collidables.Mesh.FillSubtreesForTriangles*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_FillSubtreesForTriangles_System_Span_BepuPhysics_Collidables_Triangle__System_Span_BepuPhysics_Trees_NodeChild__" data-uid="BepuPhysics.Collidables.Mesh.FillSubtreesForTriangles(System.Span{BepuPhysics.Collidables.Triangle},System.Span{BepuPhysics.Trees.NodeChild})">
+  FillSubtreesForTriangles(Span&lt;Triangle&gt;, Span&lt;NodeChild&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L73"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Fills a buffer of subtrees according to a buffer of triangles.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void FillSubtreesForTriangles(Span&lt;Triangle&gt; triangles, Span&lt;NodeChild&gt; subtrees)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangles</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a>&gt;</dt>
+    <dd><p>Triangles to build subtrees from.</p>
+</dd>
+    <dt><code>subtrees</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="BepuPhysics.Trees.NodeChild.html">NodeChild</a>&gt;</dt>
+    <dd><p>Subtrees created for the triangles.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Collidables_Mesh_FillSubtreesForTriangles_System_Span_BepuPhysics_Collidables_Triangle__System_Span_BepuPhysics_Trees_NodeChild___remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>The term &quot;subtree&quot; is used because the binned builder does not care whether the input came from leaf nodes or a refinement process's internal nodes.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_FindLocalOverlaps_" data-uid="BepuPhysics.Collidables.Mesh.FindLocalOverlaps*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes_System_Void__" data-uid="BepuPhysics.Collidables.Mesh.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,System.Void*)">
+  FindLocalOverlaps&lt;TOverlaps&gt;(Vector3, Vector3, Vector3, float, BufferPool, Shapes, void*)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L359"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void FindLocalOverlaps&lt;TOverlaps&gt;(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>min</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>max</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>sweep</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+    <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>shapes</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
+    <dd></dd>
+    <dt><code>overlaps</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>*</dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TOverlaps</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_FindLocalOverlaps_" data-uid="BepuPhysics.Collidables.Mesh.FindLocalOverlaps*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_FindLocalOverlaps__2_BepuUtilities_Memory_Buffer_BepuPhysics_CollisionDetection_CollisionTasks_OverlapQueryForPair___BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes___0__" data-uid="BepuPhysics.Collidables.Mesh.FindLocalOverlaps``2(BepuUtilities.Memory.Buffer{BepuPhysics.CollisionDetection.CollisionTasks.OverlapQueryForPair}@,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,``0@)">
+  FindLocalOverlaps&lt;TOverlaps, TSubpairOverlaps&gt;(ref Buffer&lt;OverlapQueryForPair&gt;, BufferPool, Shapes, ref TOverlaps)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L338"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void FindLocalOverlaps&lt;TOverlaps, TSubpairOverlaps&gt;(ref Buffer&lt;OverlapQueryForPair&gt; pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps) where TOverlaps : struct, ICollisionTaskOverlaps&lt;TSubpairOverlaps&gt; where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pairs</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.CollisionDetection.CollisionTasks.OverlapQueryForPair.html">OverlapQueryForPair</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>shapes</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
+    <dd></dd>
+    <dt><code>overlaps</code> <span class="xref">TOverlaps</span></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TOverlaps</code></dt>
+    <dd></dd>
+    <dt><code>TSubpairOverlaps</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_GetLocalChild_" data-uid="BepuPhysics.Collidables.Mesh.GetLocalChild*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_GetLocalChild_System_Int32_BepuPhysics_Collidables_Triangle__" data-uid="BepuPhysics.Collidables.Mesh.GetLocalChild(System.Int32,BepuPhysics.Collidables.Triangle@)">
+  GetLocalChild(int, out Triangle)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L203"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a child shape as it appears in the compound's local space.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void GetLocalChild(int triangleIndex, out Triangle target)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangleIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>target</code> <a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_GetLocalChild_" data-uid="BepuPhysics.Collidables.Mesh.GetLocalChild*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_GetLocalChild_System_Int32_BepuPhysics_Collidables_TriangleWide__" data-uid="BepuPhysics.Collidables.Mesh.GetLocalChild(System.Int32,BepuPhysics.Collidables.TriangleWide@)">
+  GetLocalChild(int, ref TriangleWide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L222"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a child shape as it appears in the compound's local space.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void GetLocalChild(int triangleIndex, ref TriangleWide target)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangleIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>target</code> <a class="xref" href="BepuPhysics.Collidables.TriangleWide.html">TriangleWide</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_GetPosedLocalChild_" data-uid="BepuPhysics.Collidables.Mesh.GetPosedLocalChild*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_GetPosedLocalChild_System_Int32_BepuPhysics_Collidables_Triangle__BepuPhysics_RigidPose__" data-uid="BepuPhysics.Collidables.Mesh.GetPosedLocalChild(System.Int32,BepuPhysics.Collidables.Triangle@,BepuPhysics.RigidPose@)">
+  GetPosedLocalChild(int, out Triangle, out RigidPose)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L212"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a child shape from the compound and compounds a pose for it in the local space of the compound parent.
+Useful for processes which require a child shape (like a triangle in a mesh) to have their center of mass at zero in the child's own local space.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void GetPosedLocalChild(int triangleIndex, out Triangle target, out RigidPose childPose)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>triangleIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>target</code> <a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a></dt>
+    <dd></dd>
+    <dt><code>childPose</code> <a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
+    <dd><p>Pose in the compound's local space that brings the child shape as described to the proper location in the parent compound's local space.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_GetSerializedByteCount_" data-uid="BepuPhysics.Collidables.Mesh.GetSerializedByteCount*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_GetSerializedByteCount" data-uid="BepuPhysics.Collidables.Mesh.GetSerializedByteCount">
+  GetSerializedByteCount()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L180"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the number of bytes it would take to store the given mesh in a byte buffer.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly int GetSerializedByteCount()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of bytes it would take to store the mesh.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_RayTest_" data-uid="BepuPhysics.Collidables.Mesh.RayTest*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single____0__" data-uid="BepuPhysics.Collidables.Mesh.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)">
+  RayTest&lt;TRayHitHandler&gt;(in RigidPose, in RayData, ref float, ref TRayHitHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L292"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Casts a ray against the mesh. Executes a callback for every test candidate and every hit.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void RayTest&lt;TRayHitHandler&gt;(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pose</code> <a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
+    <dd><p>Pose of the mesh during the ray test.</p>
+</dd>
+    <dt><code>ray</code> <a class="xref" href="BepuPhysics.Trees.RayData.html">RayData</a></dt>
+    <dd><p>Ray to test against the mesh.</p>
+</dd>
+    <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Maximum length of the ray in units of the ray direction length.</p>
+</dd>
+    <dt><code>hitHandler</code> <span class="xref">TRayHitHandler</span></dt>
+    <dd><p>Callback to execute for every hit.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TRayHitHandler</code></dt>
+    <dd><p>Type of the callback to execute for every test candidate and hit.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_RayTest_" data-uid="BepuPhysics.Collidables.Mesh.RayTest*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource____0__" data-uid="BepuPhysics.Collidables.Mesh.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)">
+  RayTest&lt;TRayHitHandler&gt;(in RigidPose, ref RaySource, ref TRayHitHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L316"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Casts a bunch of rays against the mesh at the same time, executing a callback for every test candidate and every hit.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void RayTest&lt;TRayHitHandler&gt;(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pose</code> <a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
+    <dd><p>Pose of the mesh during the ray test.</p>
+</dd>
+    <dt><code>rays</code> <a class="xref" href="BepuPhysics.Trees.RaySource.html">RaySource</a></dt>
+    <dd><p>Set of rays to cast against the mesh.</p>
+</dd>
+    <dt><code>hitHandler</code> <span class="xref">TRayHitHandler</span></dt>
+    <dd><p>Callbacks to execute.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TRayHitHandler</code></dt>
+    <dd><p>Type of the callback to execute for every ray test candidate and every hit.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_Recenter_" data-uid="BepuPhysics.Collidables.Mesh.Recenter*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_Recenter_System_Numerics_Vector3_" data-uid="BepuPhysics.Collidables.Mesh.Recenter(System.Numerics.Vector3)">
+  Recenter(Vector3)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L405"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Subtracts the newCenter from all points in the mesh hull.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Recenter(Vector3 newCenter)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>newCenter</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>New center that all points will be made relative to.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Mesh_Serialize_" data-uid="BepuPhysics.Collidables.Mesh.Serialize*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Mesh_Serialize_System_Span_System_Byte__" data-uid="BepuPhysics.Collidables.Mesh.Serialize(System.Span{System.Byte})">
+  Serialize(Span&lt;byte&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L189"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Writes a mesh's data to a byte buffer.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void Serialize(Span&lt;byte&gt; data)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>data</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>Byte buffer to store the mesh in.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Mesh.cs/#L36" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class Shapes | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class Shapes | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Collidables_Shapes.md&amp;value=---%0Auid%3A%20BepuPhysics.Collidables.Shapes%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Collidables.Shapes">
+
+
+
+  <h1 id="BepuPhysics_Collidables_Shapes" data-uid="BepuPhysics.Collidables.Shapes" class="text-break">
+Class Shapes  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L383"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Collidables.html">Collidables</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public class Shapes</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">Shapes</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="BepuPhysics_Collidables_Shapes__ctor_" data-uid="BepuPhysics.Collidables.Shapes.#ctor*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes__ctor_BepuUtilities_Memory_BufferPool_System_Int32_" data-uid="BepuPhysics.Collidables.Shapes.#ctor(BepuUtilities.Memory.BufferPool,System.Int32)">
+  Shapes(BufferPool, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L398"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Shapes(BufferPool pool, int initialCapacityPerTypeBatch)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>initialCapacityPerTypeBatch</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="BepuPhysics_Collidables_Shapes_InitialCapacityPerTypeBatch_" data-uid="BepuPhysics.Collidables.Shapes.InitialCapacityPerTypeBatch*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_InitialCapacityPerTypeBatch" data-uid="BepuPhysics.Collidables.Shapes.InitialCapacityPerTypeBatch">
+  InitialCapacityPerTypeBatch
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L393"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int InitialCapacityPerTypeBatch { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_Item_" data-uid="BepuPhysics.Collidables.Shapes.Item*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_Item_System_Int32_" data-uid="BepuPhysics.Collidables.Shapes.Item(System.Int32)">
+  this[int]
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L394"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ShapeBatch this[int typeIndex] { get; }</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Collidables.ShapeBatch.html">ShapeBatch</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_RegisteredTypeSpan_" data-uid="BepuPhysics.Collidables.Shapes.RegisteredTypeSpan*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_RegisteredTypeSpan" data-uid="BepuPhysics.Collidables.Shapes.RegisteredTypeSpan">
+  RegisteredTypeSpan
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L391"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int RegisteredTypeSpan { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Collidables_Shapes_Add_" data-uid="BepuPhysics.Collidables.Shapes.Add*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_Add__1___0__" data-uid="BepuPhysics.Collidables.Shapes.Add``1(``0@)">
+  Add&lt;TShape&gt;(in TShape)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L440"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TypedIndex Add&lt;TShape&gt;(in TShape shape) where TShape : unmanaged, IShape</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shape</code> <span class="xref">TShape</span></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Collidables.TypedIndex.html">TypedIndex</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TShape</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_Clear_" data-uid="BepuPhysics.Collidables.Shapes.Clear*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_Clear" data-uid="BepuPhysics.Collidables.Shapes.Clear">
+  Clear()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L508"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Clears all shapes from existing batches. Does not release any memory.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Clear()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_Dispose_" data-uid="BepuPhysics.Collidables.Shapes.Dispose*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_Dispose" data-uid="BepuPhysics.Collidables.Shapes.Dispose">
+  Dispose()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L550"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Releases all memory from existing batches. Leaves shapes set in an unusable state.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_EnsureBatchCapacities_" data-uid="BepuPhysics.Collidables.Shapes.EnsureBatchCapacities*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_EnsureBatchCapacities_System_Int32_" data-uid="BepuPhysics.Collidables.Shapes.EnsureBatchCapacities(System.Int32)">
+  EnsureBatchCapacities(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L525"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Ensures a minimum capacity for all existing shape batches.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EnsureBatchCapacities(int shapeCapacity)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shapeCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Capacity to ensure for all existing shape batches.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_GetShape_" data-uid="BepuPhysics.Collidables.Shapes.GetShape*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_GetShape__1_System_Int32_" data-uid="BepuPhysics.Collidables.Shapes.GetShape``1(System.Int32)">
+  GetShape&lt;TShape&gt;(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L432"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref TShape GetShape&lt;TShape&gt;(int shapeIndex) where TShape : unmanaged, IShape</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shapeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><span class="xref">TShape</span></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TShape</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_RecursivelyRemoveAndDispose_" data-uid="BepuPhysics.Collidables.Shapes.RecursivelyRemoveAndDispose*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_RecursivelyRemoveAndDispose_BepuPhysics_Collidables_TypedIndex_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Collidables.Shapes.RecursivelyRemoveAndDispose(BepuPhysics.Collidables.TypedIndex,BepuUtilities.Memory.BufferPool)">
+  RecursivelyRemoveAndDispose(TypedIndex, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L469"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Removes a shape and any existing children from the shapes collection and returns their resources to the given pool.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void RecursivelyRemoveAndDispose(TypedIndex shapeIndex, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shapeIndex</code> <a class="xref" href="BepuPhysics.Collidables.TypedIndex.html">TypedIndex</a></dt>
+    <dd><p>Index of the shape to remove.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool to return all shape resources to.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_Remove_" data-uid="BepuPhysics.Collidables.Shapes.Remove*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_Remove_BepuPhysics_Collidables_TypedIndex_" data-uid="BepuPhysics.Collidables.Shapes.Remove(BepuPhysics.Collidables.TypedIndex)">
+  Remove(TypedIndex)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L496"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Removes a shape without removing its children or disposing any resources.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Remove(TypedIndex shapeIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shapeIndex</code> <a class="xref" href="BepuPhysics.Collidables.TypedIndex.html">TypedIndex</a></dt>
+    <dd><p>Index of the shape to remove.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_RemoveAndDispose_" data-uid="BepuPhysics.Collidables.Shapes.RemoveAndDispose*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_RemoveAndDispose_BepuPhysics_Collidables_TypedIndex_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Collidables.Shapes.RemoveAndDispose(BepuPhysics.Collidables.TypedIndex,BepuUtilities.Memory.BufferPool)">
+  RemoveAndDispose(TypedIndex, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L483"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Removes a shape from the shapes collection and returns its resources to the given pool. Does not remove or dispose any children.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void RemoveAndDispose(TypedIndex shapeIndex, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shapeIndex</code> <a class="xref" href="BepuPhysics.Collidables.TypedIndex.html">TypedIndex</a></dt>
+    <dd><p>Index of the shape to remove.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool to return all shape resources to.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_ResizeBatches_" data-uid="BepuPhysics.Collidables.Shapes.ResizeBatches*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_ResizeBatches_System_Int32_" data-uid="BepuPhysics.Collidables.Shapes.ResizeBatches(System.Int32)">
+  ResizeBatches(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L538"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Resizes all existing batches for a target capacity. Note that this is conservative; it will never orphan an existing shape.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ResizeBatches(int shapeCapacity)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shapeCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Capacity to target for all existing shape batches.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_UpdateBounds_" data-uid="BepuPhysics.Collidables.Shapes.UpdateBounds*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_UpdateBounds_BepuPhysics_RigidPose_BepuPhysics_Collidables_TypedIndex_BepuUtilities_BoundingBox__" data-uid="BepuPhysics.Collidables.Shapes.UpdateBounds(BepuPhysics.RigidPose,BepuPhysics.Collidables.TypedIndex,BepuUtilities.BoundingBox@)">
+  UpdateBounds(RigidPose, TypedIndex, out BoundingBox)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L412"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes a bounding box for a single shape.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void UpdateBounds(RigidPose pose, TypedIndex shapeIndex, out BoundingBox bounds)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pose</code> <a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
+    <dd><p>Pose to calculate the bounding box of.</p>
+</dd>
+    <dt><code>shapeIndex</code> <a class="xref" href="BepuPhysics.Collidables.TypedIndex.html">TypedIndex</a></dt>
+    <dd><p>Index of the shape.</p>
+</dd>
+    <dt><code>bounds</code> <span class="xref">BoundingBox</span></dt>
+    <dd><p>Bounding box of the specified shape with the specified pose.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Shapes_UpdateBounds_" data-uid="BepuPhysics.Collidables.Shapes.UpdateBounds*"></a>
+
+  <h3 id="BepuPhysics_Collidables_Shapes_UpdateBounds_System_Numerics_Vector3_System_Numerics_Quaternion_BepuPhysics_Collidables_TypedIndex_BepuUtilities_BoundingBox__" data-uid="BepuPhysics.Collidables.Shapes.UpdateBounds(System.Numerics.Vector3,System.Numerics.Quaternion,BepuPhysics.Collidables.TypedIndex,BepuUtilities.BoundingBox@)">
+  UpdateBounds(Vector3, Quaternion, TypedIndex, out BoundingBox)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L425"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes a bounding box for a single shape.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void UpdateBounds(Vector3 position, Quaternion orientation, TypedIndex shapeIndex, out BoundingBox bounds)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>position</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Position of the shape.</p>
+</dd>
+    <dt><code>orientation</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.quaternion">Quaternion</a></dt>
+    <dd><p>Orientation of the shape.</p>
+</dd>
+    <dt><code>shapeIndex</code> <a class="xref" href="BepuPhysics.Collidables.TypedIndex.html">TypedIndex</a></dt>
+    <dd><p>Index of the shape.</p>
+</dd>
+    <dt><code>bounds</code> <span class="xref">BoundingBox</span></dt>
+    <dd><p>Bounding box of the specified shape with the specified pose.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L383" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

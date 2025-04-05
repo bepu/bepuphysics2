@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Namespace BepuPhysics | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Namespace BepuPhysics | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics">
+
+  <h1 id="BepuPhysics" data-uid="BepuPhysics" class="text-break">Namespace BepuPhysics</h1>
+  <div class="markdown level0 summary"></div>
+  <div class="markdown level0 conceptual"></div>
+  <div class="markdown level0 remarks"></div>
+
+    <h3 id="classes">
+Classes
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BatchCompressor.html">BatchCompressor</a></dt>
+      <dd><p>Handles the movement of constraints from higher indexed batches into lower indexed batches to avoid accumulating a bunch of unnecessary ConstraintBatches.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Bodies.html">Bodies</a></dt>
+      <dd><p>Collection of all allocated bodies.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BoundingBoxHelpers.html">BoundingBoxHelpers</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollidableProperty-1.html">CollidableProperty&lt;T&gt;</a></dt>
+      <dd><p>Convenience collection that stores extra properties about bodies and statics, indexed by the body or static handle.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.DefaultTimestepper.html">DefaultTimestepper</a></dt>
+      <dd><p>Updates the simulation in the order of: sleeper -&gt; predict body bounding boxes -&gt; collision detection -&gt; substepping solve -&gt; data structure optimization.
+Each substep of the solve simulates and integrates a sub-timestep of length dt/substepCount.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.DefaultTypes.html">DefaultTypes</a></dt>
+      <dd><p>Helper class to register the default types within a simulation instance.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Helpers.html">Helpers</a></dt>
+      <dd><p>Shared miscellaneous helper functions.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.InvasiveHashDiagnostics.html">InvasiveHashDiagnostics</a></dt>
+      <dd><p>Helper diagnostics class for monitoring internal state determinism across runs.
+Typically used by inserting tests into engine internals.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.IslandAwakener.html">IslandAwakener</a></dt>
+      <dd><p>Provides functionality for efficiently waking up sleeping bodies.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.IslandSleeper.html">IslandSleeper</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.PoseIntegration.html">PoseIntegration</a></dt>
+      <dd><p>Provides helper functions for integrating body poses.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.PoseIntegrator-1.html">PoseIntegrator&lt;TCallbacks&gt;</a></dt>
+      <dd><p>Handles body integration work that isn't bundled into the solver's execution. Predicts bounding boxes, integrates velocity and poses for unconstrained bodies, and does final post-substepping pose integration for constrained bodies.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Simulation.html">Simulation</a></dt>
+      <dd><p>Orchestrates the bookkeeping and execution of a full dynamic simulation.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver.html">Solver</a></dt>
+      <dd><p>Holds and solves constraints between bodies in a simulation.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver-1.html">Solver&lt;TIntegrationCallbacks&gt;</a></dt>
+      <dd><p>Handles integration-aware substepped solving.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Statics.html">Statics</a></dt>
+      <dd><p>Collection of allocated statics.</p>
+</dd>
+    </dl>
+    <h3 id="structs">
+Structs
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.ActiveConstraintBodyHandleCollector.html">ActiveConstraintBodyHandleCollector</a></dt>
+      <dd><p>Collects body handles associated with an active constraint as integers.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.ActiveConstraintBodyIndexCollector.html">ActiveConstraintBodyIndexCollector</a></dt>
+      <dd><p>Collects body indices associated with an active constraint. Encoded metadata is stripped.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.ActiveConstraintDynamicBodyHandleCollector.html">ActiveConstraintDynamicBodyHandleCollector</a></dt>
+      <dd><p>Collects body handles associated with an active constraint as integers.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyActivity.html">BodyActivity</a></dt>
+      <dd><p>Describes how a body sleeps, and its current state with respect to sleeping.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyActivityDescription.html">BodyActivityDescription</a></dt>
+      <dd><p>Describes the thresholds for a body going to sleep.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyConstraintReference.html">BodyConstraintReference</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyDescription.html">BodyDescription</a></dt>
+      <dd><p>Describes a body's state.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyDynamics.html">BodyDynamics</a></dt>
+      <dd><p>Stores all body information needed by the solver together.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+      <dd><p>Unique identifier of a body belonging to a simulation's Bodies collection.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyInertia.html">BodyInertia</a></dt>
+      <dd><p>Stores the inertia for a body.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyInertiaWide.html">BodyInertiaWide</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyInertias.html">BodyInertias</a></dt>
+      <dd><p>Stores the local and world views of a body's inertia, packed together for efficient access.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyMemoryLocation.html">BodyMemoryLocation</a></dt>
+      <dd><p>Location of a body in memory.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyReference.html">BodyReference</a></dt>
+      <dd><p>Convenience structure for directly referring to a body's properties.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodySet.html">BodySet</a></dt>
+      <dd><p>Stores a group of bodies- either the set of active bodies, or the bodies involved in an inactive simulation island.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyVelocity.html">BodyVelocity</a></dt>
+      <dd><p>Linear and angular velocity for a body.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BodyVelocityWide.html">BodyVelocityWide</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BoundingBoxBatch.html">BoundingBoxBatch</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BoundingBoxBatcher.html">BoundingBoxBatcher</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BoundingBoxInstance.html">BoundingBoxInstance</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.BoundsContinuation.html">BoundsContinuation</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.ConstraintBatch.html">ConstraintBatch</a></dt>
+      <dd><p>Contains a set of type batches whose constraints share no body references.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+      <dd><p>Unique identifier of a constraint belonging to a simulation's Solver.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.ConstraintLocation.html">ConstraintLocation</a></dt>
+      <dd><p>Location in memory where a constraint is stored.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.ConstraintReference.html">ConstraintReference</a></dt>
+      <dd><p>Reference to a constraint's memory location in the solver.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.ConstraintSet.html">ConstraintSet</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.FloatCollector.html">FloatCollector</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.MotionState.html">MotionState</a></dt>
+      <dd><p>Describes the pose and velocity of a body.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.PassthroughReferenceCollector.html">PassthroughReferenceCollector</a></dt>
+      <dd><p>Directly reports references as provided by whatever is being enumerated.
+For example, when used directly with the TypeProcessor's EnumerateConnectedRawBodyReferences, if the constraint is active, this will report encoded body indices. If the constraint is sleeping, this will report body handles.
+If used with an enumerator that does filtering, the filtered results will be reported unmodified.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
+      <dd><p>Represents a rigid transformation.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.RigidPoseWide.html">RigidPoseWide</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.SequentialFallbackBatch.html">SequentialFallbackBatch</a></dt>
+      <dd><p>Contains constraints that could not belong to any lower constraint batch due to their involved bodies. All of the contained constraints will be solved using a fallback solver that
+trades rigidity for parallelism.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.SimulationAllocationSizes.html">SimulationAllocationSizes</a></dt>
+      <dd><p>The common set of allocation sizes for a simulation.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.SimulationProfiler.html">SimulationProfiler</a></dt>
+      <dd><p>Stores profiling information for the previous simulation execution.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.SolveDescription.html">SolveDescription</a></dt>
+      <dd><p>Describes how the solver should schedule substeps and velocity iterations.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver.IntegrationWorkBlock.html">Solver.IntegrationWorkBlock</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver.SolverSyncStage.html">Solver.SolverSyncStage</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver.SubstepMultithreadingContext.html">Solver.SubstepMultithreadingContext</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver.WorkBlock.html">Solver.WorkBlock</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver-1.IncrementalUpdateForSubstepFilter.html">Solver&lt;TIntegrationCallbacks&gt;.IncrementalUpdateForSubstepFilter</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver-1.MainSolveFilter.html">Solver&lt;TIntegrationCallbacks&gt;.MainSolveFilter</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Static.html">Static</a></dt>
+      <dd><p>Stores data for a static collidable in the simulation. Statics can be posed and collide, but have no velocity and no dynamic behavior.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.StaticDescription.html">StaticDescription</a></dt>
+      <dd><p>Describes the properties of a static object. When added to a simulation, static objects can collide but have no velocity and will not move in response to forces.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.StaticHandle.html">StaticHandle</a></dt>
+      <dd><p>Unique identifier of a static belonging to a simulation's Statics collection.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.StaticReference.html">StaticReference</a></dt>
+      <dd><p>Convenience structure for directly referring to a static's properties.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.StaticsShouldntAwakenKinematics.html">StaticsShouldntAwakenKinematics</a></dt>
+      <dd><p>Default awakening filter that only wakes up dynamic bodies. Kinematic bodies do not respond to any kind of dynamic simulation, so they won't respond to the change in statics.</p>
+</dd>
+    </dl>
+    <h3 id="interfaces">
+Interfaces
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.IPoseIntegrator.html">IPoseIntegrator</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.IPoseIntegratorCallbacks.html">IPoseIntegratorCallbacks</a></dt>
+      <dd><p>Defines a type that handles callbacks for body pose integration.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.IRayHitHandler.html">IRayHitHandler</a></dt>
+      <dd><p>Defines a type capable of filtering ray test candidates and handling ray hit results.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.IShapeRayHitHandler.html">IShapeRayHitHandler</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.IStaticChangeAwakeningFilter.html">IStaticChangeAwakeningFilter</a></dt>
+      <dd><p>Defines a type that determines which bodies should be awoken in the bounding box of a static when the static's state changes.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.ISweepHitHandler.html">ISweepHitHandler</a></dt>
+      <dd><p>Defines a type capable of filtering sweep candidates and handling sweep results.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.ITimestepper.html">ITimestepper</a></dt>
+      <dd><p>Defines a type capable of updating the simulation state for a given elapsed time.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver-1.IStageFunction.html">Solver&lt;TIntegrationCallbacks&gt;.IStageFunction</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver-1.ITypeBatchSolveFilter.html">Solver&lt;TIntegrationCallbacks&gt;.ITypeBatchSolveFilter</a></dt>
+      <dd></dd>
+    </dl>
+    <h3 id="enums">
+Enums
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.AngularIntegrationMode.html">AngularIntegrationMode</a></dt>
+      <dd><p>Defines how a pose integrator should handle angular velocity integration.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.HashDiagnosticType.html">HashDiagnosticType</a></dt>
+      <dd><p>Hardcoded hash types used by invasive hash diagnostics.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver.SolverStageType.html">Solver.SolverStageType</a></dt>
+      <dd></dd>
+    </dl>
+    <h3 id="delegates">
+Delegates
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.Solver.SubstepEvent.html">Solver.SubstepEvent</a></dt>
+      <dd><p>Delegate type of solver substep begin/end events.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.SubstepVelocityIterationScheduler.html">SubstepVelocityIterationScheduler</a></dt>
+      <dd><p>Callback executed to determine how many velocity iterations should be used for a given substep.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.TimestepperStageHandler.html">TimestepperStageHandler</a></dt>
+      <dd><p>Delegate used by ITimesteppers for their stage callbacks.</p>
+</dd>
+    </dl>
+
+
+</article>
+
+        <div class="contribution d-print-none">
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>2.4 | Bepu Docs </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="2.4 | Bepu Docs ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/blob/master/Documentation/changelog.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="24">2.4</h1>
+
+<p>At a high level, 2.4 was a solver revamp. Data layout and access patterns were significantly changed and dispatch logic was reworked. Substepping is massively cheaper now, and even simulations without any need of substepping will still benefit significantly. Whole frame speedups in excess of 2x were not uncommon in benchmarks. Scenes that were especially difficult for the solver in 2.3 were observed to be over 3.5x faster in 2.4.</p>
+<h2 id="api-breaking-changes">API Breaking Changes</h2>
+<ol>
+<li>The library now depends on .NET 6.</li>
+<li><code>Simulation.Create</code> no longer requires an <code>ITimestepper</code>, though one can still be provided. <code>PositionFirstTimestepper</code> and <code>PositionLastTimestepper</code> no longer exist; the only built-in <code>ITimestepper</code> implementation is the <code>DefaultTimestepper</code>. This is a result of 2.4 moving entirely to an embedded substepping solver.</li>
+<li><code>Simulation.Create</code> now takes a <code>SolveDescription</code>. It can be used to configure the number of substeps, velocity iterations, and synchronized batches. There exist helper implicit casts; for example, passing an integer will simply use the value as the number of substeps, with the velocity iteration count set to 1 and <code>FallbackBatchThreshold</code> set to the default. <code>Solver.IterationCount</code> property renamed to <code>Solver.VelocityIterationCount</code>. See the <a href="Substepping.html">substepping documentation</a> for more information.</li>
+<li><code>IPoseIntegratorCallbacks.IntegrateVelocity</code> now exposes multiple lanes of bodies in SIMD vectors, rather than a single body at a time. It also exposes two new properties, <code>IntegrateVelocityForKinematics</code> and <code>AllowSubstepsForUnconstrainedBodies</code>. If <code>IntegrateVelocityForKinematics</code> is false, then <code>IntegrateVelocity</code> will not include any kinematic bodies in active lanes. This is convenient when applying gravity; if only dynamics are ever invoked, then there's no need to check kinematicity prior to applying gravity. If <code>AllowSubstepsForUnconstrainedBodies</code> is true, then bodies with no constraints will have their velocities and poses integrated for every substep; if false, they will only be integrated a single time for the full frame duration. All constrained bodies are substepped if the solver is substepped. The vectorized nature of this callback is probably going to be annoying (and/or confusing) for a lot of people; sorry about that. Maintaining a scalar callback added too much overhead. You can build one on top, though!</li>
+<li>When constructing a collidable description, the overload that takes a speculative margin now means the <em>maximum</em> speculative margin. 2.4 uses adaptive speculative margins that can shrink or expand according to velocity. You will usually see the same behavior, just cheaper. If you want to match the old behavior as much as possible, set both the minimum and maximum bounds to the same value. Leaving speculative margins bounds at [0, float.MaxValue] is a good default now. Note that there are some new implicit casts relevant to <code>BodyDescription</code> creation that can make things shorter, including just passing a shape index directly which defaults to passive continuity with [0, float.MaxValue] adaptive speculative margin. See <a href="ContinuousCollisionDetection.html">continuous collision detection documentation</a> for more information.</li>
+<li>Statics no longer have any configurable speculative margin settings and do not take a <code>CollidableDescription</code> in their constructor. They still have a <code>Continuity</code> field if a static should a static need continuous collision detection to be enabled. All information related to a static is now in one spot, stored in the <code>Statics.StaticsBuffer</code>.</li>
+<li><code>ContinuousDetectionSettings</code> renamed to <code>ContinuousDetection</code>.</li>
+<li><code>INarrowPhaseCallbacks.AllowContactGeneration</code> now exposes <code>ref float speculativeMargin</code>. Most use cases can safely ignore this completely, but if you find yourself wanting fine grained control over the speculative margin, that's now exposed.</li>
+<li><code>IConvexShape.ComputeInertia</code> now returns instead of using an out parameter. Similar changes applied to things like <code>Mesh.ComputeClosedInertia</code> and <code>Mesh.ComputeOpenInertia</code>.</li>
+<li>Some callbacks that previously had <code>struct</code> generic constraints now require <code>unmanaged</code>, like <code>INarrowPhaseCallbacks.ConfigureContactManifold</code>.</li>
+<li><code>BodyOptimizer</code>/<code>ConstraintOptimizer</code> stages no longer exist, and their profiler entries have been removed.</li>
+<li><code>Solver.ApplyDescription</code> no longer requires a ref parameter.</li>
+<li><code>BodyInertias</code> and <code>BodyVelocities</code> renamed to <code>BodyInertiaWide</code> and <code>BodyVelocityWide</code> to match naming convention of other wide types.</li>
+<li><code>IThreadDispatcher</code> now takes an additional <code>maximumWorkerCount</code> parameter. Specifying a maximum worker count lower than the <code>IThreadDispatcher.ThreadCount</code> may allow the implementation to do less work. In practice, the <code>BepuUtilities.ThreadDispatcher</code> uses this to significantly reduce dispatch overhead for low job count use cases.</li>
+<li>All body state used by the solver now bundled together into <code>BodySet.SolverStates</code>. Includes pose, velocity, and inertia.</li>
+<li>Constraint type batches no longer have a 'projection' buffer; anything loaded from it is now recalculated on the fly.</li>
+<li><code>RawBuffer</code> removed. Usages replaced with <code>Buffer&lt;byte&gt;</code>.</li>
+</ol>
+<h2 id="other-changes">Other Changes</h2>
+<ol>
+<li>Added <code>CenterDistanceLimit</code>! Useful for clothy stuff.</li>
+<li>Added <code>AngularAxisGearMotor</code>; transforms angular motion with a multiplier, somewhat like a gear ratio.</li>
+<li><code>RigidPose</code>, <code>BodyVelocity</code>, <code>CollidableDescription</code>, and <code>BodyActivityDescription</code> all now have helper implicit casts to optionally make configuration a little less syntax-noisy.</li>
+<li>You can now get a <code>BodyReference</code> or <code>StaticReference</code> from their respective collections by using <code>Simulation.Bodies[BodyHandle]</code> and <code>Simulation.Statics[StaticHandle]</code>.</li>
+<li>The presence of a kinematic body in a constraint batch will no longer block another constraint attached to that kinematic body from being added to the constraint batch. The velocity of kinematics in constraint batches are treated as read-only. This will improve performance on simulations where a kinematic body has a ton of constraints associated with it.</li>
+<li>Broad phase dispatches combined. The long-waiting broad phase revamp is still waiting; this just reduces dispatch related overhead slightly.</li>
+<li>Code paths dependent on trigonometric approximations have had their accuracy improved by a few orders of magnitude. <code>AngularHinge</code>, <code>TwistServo</code>, <code>QuaternionWide.GetAxisAngleFromQuaternion</code>, and orientation integration are all improved. The improvement in orientation integration in particular helps avoid contact drift and helps integration with angular momentum conservation.</li>
+<li>Constraints in the fallback batch now have sequentialized execution, rather than using a jacobi solver. This improves simulation quality in pathological cases where a single dynamic body is associated with tons of constraints, but that situation is still best avoided. Anything that ends up in the fallback batch will cost more by virtue of being executed sequentially. More information and potential future improvements here: <a href="https://github.com/bepu/bepuphysics2/issues/162">Fallback batch improvements · Issue #162 · bepu/bepuphysics2 (github.com)</a>.</li>
+<li>Contact constraints now solve friction last. In simulations that don't let the solver reach an equilibrium solution, you might notice that an unstable stack of bodies exhibits more tangential jitter and less penetration jitter than it used to. In a simulation that allows enough time to solve the constraints, there should be no visible difference. (This change was motivated by the fact that penetration has a corrective feedback loop via depth, while friction is open ended. Giving friction the final word slightly reduces drift.)</li>
+<li><code>VolumeConstraint</code> had a warmstarting jacobian bug; it's fixed. Should be higher quality (and stiffer, if configured to be stiff).</li>
+<li><code>Hinge</code> and <code>SwivelHinge</code> never made use of accumulated impulses, oops. Should be higher quality (and stiffer, if configured to be stiff).</li>
+<li><code>SwivelHinge</code> no longer has a unguarded NaNsplode codepath.</li>
+<li>Fixed a bug in <code>AngularMotor</code> that used the wrong inertia.</li>
+<li>Guarded against a sphere-cylinder division by zero.</li>
+<li>Fixed a capsule-cylinder determinism bug.</li>
+<li>Fixed a triangle-cylinder determinism bug.</li>
+<li>Fixed capsule-cylinder contact generation bug.</li>
+<li>Fixed cylinder-cylinder contact generation bug.</li>
+<li>Box-box now has a bundle early out.</li>
+<li>All triangle-involving collision pairs now consistent in triangle degeneracy testing.</li>
+<li>All triangle-involving collision pairs now handle collisions with normals pointing nearly perpendicular to the triangle plane much more gracefully.</li>
+<li>Fixed a bunch of other tiny weird triangle collision bugs too.</li>
+<li><code>MeshReduction</code> revamped a bit. It should catch more boundary bumps, and it no longer tries to do a quadratically catastrophic operation when the number of triangles being considered is large. At a certain (extreme) point, it now simply doesn't bother with boundary smoothing at all.</li>
+<li><code>BufferPool</code> now allocates blocks from native memory pools rather than the managed heap.</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/Documentation/changelog.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

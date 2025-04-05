@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class ConvexOneBodyAccessor&lt;TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt; | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class ConvexOneBodyAccessor&lt;TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt; | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_CollisionDetection_ConvexOneBodyAccessor_4.md&amp;value=---%0Auid%3A%20BepuPhysics.CollisionDetection.ConvexOneBodyAccessor%604%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.CollisionDetection.ConvexOneBodyAccessor`4">
+
+
+
+  <h1 id="BepuPhysics_CollisionDetection_ConvexOneBodyAccessor_4" data-uid="BepuPhysics.CollisionDetection.ConvexOneBodyAccessor`4" class="text-break">
+Class ConvexOneBodyAccessor&lt;TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactConstraintAccessor.cs/#L264"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.CollisionDetection.html">CollisionDetection</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public class ConvexOneBodyAccessor&lt;TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt; : ContactConstraintAccessor&lt;TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt; where TConstraintDescription : unmanaged, IConvexOneBodyContactConstraintDescription&lt;TConstraintDescription&gt; where TPrestepData : unmanaged, IConvexContactPrestep&lt;TPrestepData&gt; where TAccumulatedImpulses : unmanaged, IConvexContactAccumulatedImpulses&lt;TAccumulatedImpulses&gt; where TContactImpulses : unmanaged</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TConstraintDescription</code></dt>
+    <dd></dd>
+    <dt><code>TPrestepData</code></dt>
+    <dd></dd>
+    <dt><code>TAccumulatedImpulses</code></dt>
+    <dd></dd>
+    <dt><code>TContactImpulses</code></dt>
+    <dd></dd>
+  </dl>
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html">ContactConstraintAccessor</a></div>
+      <div><a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.html">ContactConstraintAccessor</a>&lt;TConstraintDescription, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;</div>
+      <div><span class="xref">ConvexOneBodyAccessor&lt;TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_5_DeterministicallyAdd__1_System_Int32_BepuPhysics_CollisionDetection_NarrowPhase___0__OverlapWorker___BepuUtilities_Collections_QuickList_BepuPhysics_CollisionDetection_NarrowPhase___0__SortConstraintTarget___BepuPhysics_Simulation_BepuPhysics_CollisionDetection_PairCache_">ContactConstraintAccessor&lt;TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;.DeterministicallyAdd&lt;TCallbacks&gt;(int, NarrowPhase&lt;TCallbacks&gt;.OverlapWorker[], ref QuickList&lt;NarrowPhase&lt;TCallbacks&gt;.SortConstraintTarget&gt;, Simulation, PairCache)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_5_FlushSequentially__1_BepuPhysics_CollisionDetection_UntypedList__System_Int32_BepuPhysics_Simulation_BepuPhysics_CollisionDetection_PairCache_">ContactConstraintAccessor&lt;TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;.FlushSequentially&lt;TCallbacks&gt;(ref UntypedList, int, Simulation, PairCache)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_5_FlushWithSpeculativeBatches__1_BepuPhysics_CollisionDetection_UntypedList__System_Int32_BepuUtilities_Memory_Buffer_BepuUtilities_Memory_Buffer_System_UInt16____BepuPhysics_Simulation_BepuPhysics_CollisionDetection_PairCache_">ContactConstraintAccessor&lt;TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;.FlushWithSpeculativeBatches&lt;TCallbacks&gt;(ref UntypedList, int, ref Buffer&lt;Buffer&lt;ushort&gt;&gt;, Simulation, PairCache)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_5_UpdateConstraint__2_BepuPhysics_CollisionDetection_NarrowPhase___0__System_Int32_System_Int32_BepuPhysics_CollisionDetection_CollidablePair__BepuPhysics_CollisionDetection_ConstraintCache__System_Int32__0____1_">ContactConstraintAccessor&lt;TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;.UpdateConstraint&lt;TCallbacks, TCallBodyHandles&gt;(NarrowPhase&lt;TCallbacks&gt;, int, int, ref CollidablePair, ref ConstraintCache, int, ref TConstraintDescription, TCallBodyHandles)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_5_CopyContactData_BepuPhysics_CollisionDetection_ConvexContactManifold__BepuPhysics_CollisionDetection_ConstraintCache___0__">ContactConstraintAccessor&lt;TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;.CopyContactData(ref ConvexContactManifold, out ConstraintCache, out TConstraintDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_5_CopyContactData_BepuPhysics_CollisionDetection_NonconvexContactManifold__BepuPhysics_CollisionDetection_ConstraintCache__BepuPhysics_Constraints_Contact_NonconvexConstraintContactData__">ContactConstraintAccessor&lt;TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;.CopyContactData(ref NonconvexContactManifold, ref ConstraintCache, ref NonconvexConstraintContactData)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_5_CopyContactData_BepuPhysics_CollisionDetection_NonconvexContactManifold__BepuPhysics_CollisionDetection_ConstraintCache__BepuPhysics_Constraints_Contact_ConstraintContactData__">ContactConstraintAccessor&lt;TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses&gt;.CopyContactData(ref NonconvexContactManifold, ref ConstraintCache, ref ConstraintContactData)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_ConstraintTypeId">ContactConstraintAccessor.ConstraintTypeId</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_AccumulatedImpulseBundleStrideInBytes">ContactConstraintAccessor.AccumulatedImpulseBundleStrideInBytes</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_ContactCount">ContactConstraintAccessor.ContactCount</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_Convex">ContactConstraintAccessor.Convex</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_GatherOldImpulses_BepuPhysics_ConstraintReference__System_Single__">ContactConstraintAccessor.GatherOldImpulses(ref ConstraintReference, float*)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_ScatterNewImpulses__1_BepuPhysics_ConstraintReference____0__">ContactConstraintAccessor.ScatterNewImpulses&lt;TContactImpulses&gt;(ref ConstraintReference, ref TContactImpulses)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_DeterministicallyAdd__1_System_Int32_BepuPhysics_CollisionDetection_NarrowPhase___0__OverlapWorker___BepuUtilities_Collections_QuickList_BepuPhysics_CollisionDetection_NarrowPhase___0__SortConstraintTarget___BepuPhysics_Simulation_BepuPhysics_CollisionDetection_PairCache_">ContactConstraintAccessor.DeterministicallyAdd&lt;TCallbacks&gt;(int, NarrowPhase&lt;TCallbacks&gt;.OverlapWorker[], ref QuickList&lt;NarrowPhase&lt;TCallbacks&gt;.SortConstraintTarget&gt;, Simulation, PairCache)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_FlushWithSpeculativeBatches__1_BepuPhysics_CollisionDetection_UntypedList__System_Int32_BepuUtilities_Memory_Buffer_BepuUtilities_Memory_Buffer_System_UInt16____BepuPhysics_Simulation_BepuPhysics_CollisionDetection_PairCache_">ContactConstraintAccessor.FlushWithSpeculativeBatches&lt;TCallbacks&gt;(ref UntypedList, int, ref Buffer&lt;Buffer&lt;ushort&gt;&gt;, Simulation, PairCache)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_FlushSequentially__1_BepuPhysics_CollisionDetection_UntypedList__System_Int32_BepuPhysics_Simulation_BepuPhysics_CollisionDetection_PairCache_">ContactConstraintAccessor.FlushSequentially&lt;TCallbacks&gt;(ref UntypedList, int, Simulation, PairCache)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_ExtractContactData__1_BepuPhysics_ConstraintHandle_BepuPhysics_Solver___0__">ContactConstraintAccessor.ExtractContactData&lt;TExtractor&gt;(ConstraintHandle, Solver, ref TExtractor)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.ContactConstraintAccessor.html#BepuPhysics_CollisionDetection_ContactConstraintAccessor_ExtractContactPrestepAndImpulses__1_BepuPhysics_ConstraintHandle_BepuPhysics_Solver___0__">ContactConstraintAccessor.ExtractContactPrestepAndImpulses&lt;TExtractor&gt;(ConstraintHandle, Solver, ref TExtractor)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexOneBodyAccessor_4_ExtractContactData_" data-uid="BepuPhysics.CollisionDetection.ConvexOneBodyAccessor`4.ExtractContactData*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexOneBodyAccessor_4_ExtractContactData__1_BepuPhysics_ConstraintLocation__BepuPhysics_Solver___0__" data-uid="BepuPhysics.CollisionDetection.ConvexOneBodyAccessor`4.ExtractContactData``1(BepuPhysics.ConstraintLocation@,BepuPhysics.Solver,``0@)">
+  ExtractContactData&lt;TExtractor&gt;(in ConstraintLocation, Solver, ref TExtractor)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactConstraintAccessor.cs/#L296"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Extracts references to data from a contact constraint of the accessor's type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override void ExtractContactData&lt;TExtractor&gt;(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor) where TExtractor : struct, ISolverContactDataExtractor</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintLocation</code> <a class="xref" href="BepuPhysics.ConstraintLocation.html">ConstraintLocation</a></dt>
+    <dd><p>Location of the constraint in the solver.</p>
+</dd>
+    <dt><code>solver</code> <a class="xref" href="BepuPhysics.Solver.html">Solver</a></dt>
+    <dd><p>Solver in which the constraint lives.</p>
+</dd>
+    <dt><code>extractor</code> <span class="xref">TExtractor</span></dt>
+    <dd><p>Extractor to handle the extracted references.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TExtractor</code></dt>
+    <dd><p>Type of the extractor to handle the extracted references.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexOneBodyAccessor_4_ExtractContactPrestepAndImpulses_" data-uid="BepuPhysics.CollisionDetection.ConvexOneBodyAccessor`4.ExtractContactPrestepAndImpulses*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexOneBodyAccessor_4_ExtractContactPrestepAndImpulses__1_BepuPhysics_ConstraintLocation__BepuPhysics_Solver___0__" data-uid="BepuPhysics.CollisionDetection.ConvexOneBodyAccessor`4.ExtractContactPrestepAndImpulses``1(BepuPhysics.ConstraintLocation@,BepuPhysics.Solver,``0@)">
+  ExtractContactPrestepAndImpulses&lt;TExtractor&gt;(in ConstraintLocation, Solver, ref TExtractor)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactConstraintAccessor.cs/#L310"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Extracts references to data from a contact constraint of the accessor's type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override void ExtractContactPrestepAndImpulses&lt;TExtractor&gt;(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor) where TExtractor : struct, ISolverContactPrestepAndImpulsesExtractor</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintLocation</code> <a class="xref" href="BepuPhysics.ConstraintLocation.html">ConstraintLocation</a></dt>
+    <dd><p>Location of the constraint in the solver.</p>
+</dd>
+    <dt><code>solver</code> <a class="xref" href="BepuPhysics.Solver.html">Solver</a></dt>
+    <dd><p>Solver in which the constraint lives.</p>
+</dd>
+    <dt><code>extractor</code> <span class="xref">TExtractor</span></dt>
+    <dd><p>Extractor to handle the extracted references.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TExtractor</code></dt>
+    <dd><p>Type of the extractor to handle the extracted references.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexOneBodyAccessor_4_UpdateConstraintForManifold_" data-uid="BepuPhysics.CollisionDetection.ConvexOneBodyAccessor`4.UpdateConstraintForManifold*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexOneBodyAccessor_4_UpdateConstraintForManifold__3_BepuPhysics_CollisionDetection_NarrowPhase___2__System_Int32_System_Int32_BepuPhysics_CollisionDetection_CollidablePair____0__BepuPhysics_CollisionDetection_PairMaterialProperties____1_" data-uid="BepuPhysics.CollisionDetection.ConvexOneBodyAccessor`4.UpdateConstraintForManifold``3(BepuPhysics.CollisionDetection.NarrowPhase{``2},System.Int32,System.Int32,BepuPhysics.CollisionDetection.CollidablePair@,``0@,BepuPhysics.CollisionDetection.PairMaterialProperties@,``1)">
+  UpdateConstraintForManifold&lt;TContactManifold, TCallBodyHandles, TCallbacks&gt;(NarrowPhase&lt;TCallbacks&gt;, int, int, ref CollidablePair, ref TContactManifold, ref PairMaterialProperties, TCallBodyHandles)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactConstraintAccessor.cs/#L271"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override void UpdateConstraintForManifold&lt;TContactManifold, TCallBodyHandles, TCallbacks&gt;(NarrowPhase&lt;TCallbacks&gt; narrowPhase, int manifoldTypeAsConstraintType, int workerIndex, ref CollidablePair pair, ref TContactManifold manifoldPointer, ref PairMaterialProperties material, TCallBodyHandles bodyHandles) where TCallbacks : struct, INarrowPhaseCallbacks</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>narrowPhase</code> <a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase-1.html">NarrowPhase</a>&lt;TCallbacks&gt;</dt>
+    <dd></dd>
+    <dt><code>manifoldTypeAsConstraintType</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>pair</code> <a class="xref" href="BepuPhysics.CollisionDetection.CollidablePair.html">CollidablePair</a></dt>
+    <dd></dd>
+    <dt><code>manifoldPointer</code> <span class="xref">TContactManifold</span></dt>
+    <dd></dd>
+    <dt><code>material</code> <a class="xref" href="BepuPhysics.CollisionDetection.PairMaterialProperties.html">PairMaterialProperties</a></dt>
+    <dd></dd>
+    <dt><code>bodyHandles</code> <span class="xref">TCallBodyHandles</span></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TContactManifold</code></dt>
+    <dd></dd>
+    <dt><code>TCallBodyHandles</code></dt>
+    <dd></dd>
+    <dt><code>TCallbacks</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactConstraintAccessor.cs/#L264" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

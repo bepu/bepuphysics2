@@ -1,0 +1,6168 @@
+{
+  "source_base_path": "D:/a/bepuphysics2/bepuphysics2/Documentation",
+  "xrefmap": "xrefmap.yml",
+  "files": [
+    {
+      "type": "Resource",
+      "output": {
+        "resource": {
+          "relative_path": "index.json"
+        }
+      }
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "Building.md",
+      "output": {
+        ".html": {
+          "relative_path": "Building.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "ContinuousCollisionDetection.md",
+      "output": {
+        ".html": {
+          "relative_path": "ContinuousCollisionDetection.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "GettingStarted.md",
+      "output": {
+        ".html": {
+          "relative_path": "GettingStarted.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "PackagingAndVersioning.md",
+      "output": {
+        ".html": {
+          "relative_path": "PackagingAndVersioning.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "PerformanceTips.md",
+      "output": {
+        ".html": {
+          "relative_path": "PerformanceTips.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "QuestionsAndAnswers.md",
+      "output": {
+        ".html": {
+          "relative_path": "QuestionsAndAnswers.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "StabilityTips.md",
+      "output": {
+        ".html": {
+          "relative_path": "StabilityTips.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "Substepping.md",
+      "output": {
+        ".html": {
+          "relative_path": "Substepping.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "UpgradingFromV1.md",
+      "output": {
+        ".html": {
+          "relative_path": "UpgradingFromV1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.ActiveConstraintBodyHandleCollector.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.ActiveConstraintBodyHandleCollector.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.ActiveConstraintBodyIndexCollector.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.ActiveConstraintBodyIndexCollector.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.ActiveConstraintDynamicBodyHandleCollector.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.ActiveConstraintDynamicBodyHandleCollector.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.AngularIntegrationMode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.AngularIntegrationMode.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BatchCompressor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BatchCompressor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Bodies.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Bodies.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyActivity.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyActivity.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyActivityDescription.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyActivityDescription.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyConstraintReference.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyConstraintReference.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyDescription.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyDescription.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyDynamics.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyDynamics.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyHandle.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyHandle.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyInertia.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyInertia.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyInertiaWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyInertiaWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyInertias.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyInertias.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyMemoryLocation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyMemoryLocation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyReference.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyReference.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodySet.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodySet.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyVelocity.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyVelocity.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BodyVelocityWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BodyVelocityWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BoundingBoxBatch.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BoundingBoxBatch.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BoundingBoxBatcher.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BoundingBoxBatcher.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BoundingBoxHelpers.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BoundingBoxHelpers.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BoundingBoxInstance.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BoundingBoxInstance.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.BoundsContinuation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.BoundsContinuation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollidableProperty-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollidableProperty-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.BigCompound.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.BigCompound.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.Box.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.Box.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.BoxSupportFinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.BoxSupportFinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.BoxWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.BoxWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.Capsule.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.Capsule.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CapsuleSupportFinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CapsuleSupportFinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CapsuleWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CapsuleWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.Collidable.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.Collidable.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CollidableDescription.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CollidableDescription.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CollidableMobility.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CollidableMobility.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CollidableReference.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CollidableReference.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CollidableReferenceComparer.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CollidableReferenceComparer.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.Compound.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.Compound.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CompoundBuilder.Child.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CompoundBuilder.Child.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CompoundBuilder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CompoundBuilder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CompoundChild.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CompoundChild.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CompoundShapeBatch-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CompoundShapeBatch-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ContinuousDetection.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ContinuousDetection.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ContinuousDetectionMode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ContinuousDetectionMode.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ConvexHull.ConvexHullTriangleSource.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ConvexHull.ConvexHullTriangleSource.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ConvexHull.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ConvexHull.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ConvexHullHelper.EdgeEndpoints.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ConvexHullHelper.EdgeEndpoints.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ConvexHullHelper.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ConvexHullHelper.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ConvexHullShapeBatch.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ConvexHullShapeBatch.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ConvexHullSupportFinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ConvexHullSupportFinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ConvexHullWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ConvexHullWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ConvexShapeBatch-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ConvexShapeBatch-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.Cylinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.Cylinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CylinderSupportFinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CylinderSupportFinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.CylinderWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.CylinderWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.HomogeneousCompoundShapeBatch-3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.HomogeneousCompoundShapeBatch-3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.HullBoundingPlanes.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.HullBoundingPlanes.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.HullData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.HullData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.HullFace.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.HullFace.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.HullVertexIndex.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.HullVertexIndex.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ICompoundShape.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ICompoundShape.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.IConvexShape.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.IConvexShape.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.IConvexShapeBatch.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.IConvexShapeBatch.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.IDisposableShape.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.IDisposableShape.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.IHomogeneousCompoundShape-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.IHomogeneousCompoundShape-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.IShape.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.IShape.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.IShapeWide-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.IShapeWide-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ITriangleSource.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ITriangleSource.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.Mesh.MeshTriangleSource.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.Mesh.MeshTriangleSource.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.Mesh.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.Mesh.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.MeshInertiaHelper.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.MeshInertiaHelper.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.RayWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.RayWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ShapeBatch-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ShapeBatch-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ShapeBatch.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ShapeBatch.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ShapeTreeOverlapEnumerator-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ShapeTreeOverlapEnumerator-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.ShapeTreeSweepLeafTester-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.ShapeTreeSweepLeafTester-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.Shapes.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.Shapes.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.Sphere.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.Sphere.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.SphereSupportFinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.SphereSupportFinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.SphereWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.SphereWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.Triangle.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.Triangle.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.TriangleSupportFinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.TriangleSupportFinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.TriangleWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.TriangleWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.TypedIndex.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.TypedIndex.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Collidables.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Collidables.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.BatcherContinuations-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.BatcherContinuations-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.BroadPhase.RefinementScheduler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.BroadPhase.RefinementScheduler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.BroadPhase.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.BroadPhase.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.BroadPhaseRayBatcher-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.BroadPhaseRayBatcher-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CCDContinuationIndex.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CCDContinuationIndex.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollidableOverlapFinder-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollidableOverlapFinder-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollidableOverlapFinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollidableOverlapFinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollidablePair.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollidablePair.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollidablePairComparer.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollidablePairComparer.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionBatcher-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionBatcher-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionContinuationType.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionContinuationType.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTask.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTask.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTaskPairType.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTaskPairType.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTaskReference.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTaskReference.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTaskRegistry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTaskRegistry.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.BoundsTestedPair.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.BoundsTestedPair.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.BoxConvexHullTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.BoxConvexHullTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.BoxCylinderTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.BoxCylinderTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.BoxPairTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.BoxPairTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.BoxTriangleTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.BoxTriangleTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CapsuleBoxTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CapsuleBoxTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CapsuleConvexHullTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CapsuleConvexHullTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CapsuleCylinderTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CapsuleCylinderTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CapsulePairTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CapsulePairTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CapsuleTriangleTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CapsuleTriangleTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ChildOverlapsCollection.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ChildOverlapsCollection.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CollisionPair.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CollisionPair.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CompoundMeshContinuations-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CompoundMeshContinuations-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CompoundPairCollisionTask-5.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CompoundPairCollisionTask-5.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CompoundPairContinuations-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CompoundPairContinuations-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CompoundPairOverlapFinder-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CompoundPairOverlapFinder-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CompoundPairOverlaps.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CompoundPairOverlaps.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCollisionTask-8.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCollisionTask-8.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundCollisionTask-5.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundCollisionTask-5.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundContinuations-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundContinuations-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundOverlapFinder-3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundOverlapFinder-3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundOverlaps.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundOverlaps.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundTaskOverlaps.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundTaskOverlaps.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexHullPairTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexHullPairTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexHullTestHelper.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexHullTestHelper.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexMeshContinuations-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexMeshContinuations-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexPairWide-4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ConvexPairWide-4.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CylinderConvexHullTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CylinderConvexHullTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CylinderPairTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.CylinderPairTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.FliplessPair.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.FliplessPair.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.FliplessPairWide-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.FliplessPairWide-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICollisionPair-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICollisionPair-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICollisionPairWide-6.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICollisionPairWide-6.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICollisionTaskOverlaps-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICollisionTaskOverlaps-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICollisionTaskSubpairOverlaps.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICollisionTaskSubpairOverlaps.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICompoundPairContinuationHandler-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICompoundPairContinuationHandler-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICompoundPairOverlapFinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ICompoundPairOverlapFinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.IContactManifoldWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.IContactManifoldWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.IConvexCompoundContinuationHandler-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.IConvexCompoundContinuationHandler-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.IConvexCompoundOverlapFinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.IConvexCompoundOverlapFinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.IPairTester-3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.IPairTester-3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ManifoldCandidate.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ManifoldCandidate.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ManifoldCandidateHelper.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ManifoldCandidateHelper.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ManifoldCandidateScalar.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.ManifoldCandidateScalar.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.MeshPairContinuations-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.MeshPairContinuations-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.MeshPairOverlapFinder-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.MeshPairOverlapFinder-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.OverlapQueryForPair.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.OverlapQueryForPair.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.PretransformedTriangleSupportFinder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.PretransformedTriangleSupportFinder.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereBoxTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereBoxTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereCapsuleTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereCapsuleTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereConvexHullTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereConvexHullTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereCylinderTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereCylinderTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereIncludingPair.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereIncludingPair.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereIncludingPairWide-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereIncludingPairWide-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SpherePair.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SpherePair.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SpherePairTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SpherePairTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SpherePairWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SpherePairWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereTriangleTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.SphereTriangleTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.TriangleConvexHullTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.TriangleConvexHullTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.TriangleCylinderTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.TriangleCylinderTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.TrianglePairTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.TrianglePairTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CollisionTasks.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.CompoundMeshReduction.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.CompoundMeshReduction.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ConstraintCache.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ConstraintCache.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ConstraintRemover.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ConstraintRemover.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.Contact.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.Contact.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ContactConstraintAccessor-5.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ContactConstraintAccessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ContactConstraintAccessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses4.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses5.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses5.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses6.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses6.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses7.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses7.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses8.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ContactImpulses8.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.Convex1ContactManifoldWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.Convex1ContactManifoldWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.Convex2ContactManifoldWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.Convex2ContactManifoldWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.Convex4ContactManifoldWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.Convex4ContactManifoldWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ConvexContact.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ConvexContact.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ConvexContactManifold.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ConvexContactManifold.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ConvexOneBodyAccessor-4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ConvexOneBodyAccessor-4.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ConvexTwoBodyAccessor-4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ConvexTwoBodyAccessor-4.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.DepthRefiner-6.Simplex.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.DepthRefiner-6.Simplex.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.DepthRefiner-6.SimplexWithWitness.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.DepthRefiner-6.SimplexWithWitness.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.DepthRefiner-6.Vertex.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.DepthRefiner-6.Vertex.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.DepthRefiner-6.VertexWithWitness.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.DepthRefiner-6.VertexWithWitness.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.DepthRefiner-6.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.DepthRefiner-6.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.IBroadPhaseRayTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.IBroadPhaseRayTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.IBroadPhaseSweepTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.IBroadPhaseSweepTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ICollisionCallbacks.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ICollisionCallbacks.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ICollisionTestContinuation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ICollisionTestContinuation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.IContactManifold-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.IContactManifold-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.INarrowPhaseCallbacks.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.INarrowPhaseCallbacks.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ISupportFinder-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ISupportFinder-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.ISweepFilter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.ISweepFilter.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.MeshReduction.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.MeshReduction.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.CollisionCallbacks.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.CollisionCallbacks.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.ConstraintGeneratorType.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.ConstraintGeneratorType.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.OverlapWorker.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.OverlapWorker.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.PendingConstraintAddCache.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.PendingConstraintAddCache.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.SortConstraintTarget.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.SortConstraintTarget.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhase.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhaseFlushJob.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhaseFlushJob.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhaseFlushJobType.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NarrowPhaseFlushJobType.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NonconvexContactManifold.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NonconvexContactManifold.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NonconvexOneBodyAccessor-4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NonconvexOneBodyAccessor-4.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NonconvexReduction.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NonconvexReduction.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NonconvexReductionChild.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NonconvexReductionChild.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.NonconvexTwoBodyAccessor-4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.NonconvexTwoBodyAccessor-4.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.PairCache.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.PairCache.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.PairCacheChangeIndex.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.PairCacheChangeIndex.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.PairContinuation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.PairContinuation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.PairMaterialProperties.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.PairMaterialProperties.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SimulationRayBatcher-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SimulationRayBatcher-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTask.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTask.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTaskRegistry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTaskRegistry.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CapsuleBoxDistanceTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CapsuleBoxDistanceTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CapsulePairDistanceTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CapsulePairDistanceTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CompoundHomogeneousCompoundSweepTask-5.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CompoundHomogeneousCompoundSweepTask-5.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CompoundPairSweepOverlapFinder-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CompoundPairSweepOverlapFinder-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CompoundPairSweepOverlaps.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CompoundPairSweepOverlaps.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CompoundPairSweepTask-3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.CompoundPairSweepTask-3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.ConvexCompoundSweepOverlapFinder-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.ConvexCompoundSweepOverlapFinder-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.ConvexCompoundSweepTask-4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.ConvexCompoundSweepTask-4.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.ConvexHomogeneousCompoundSweepTask-6.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.ConvexHomogeneousCompoundSweepTask-6.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask-5.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.ConvexPairSweepTask-5.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.GJKDistanceTester-6.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.GJKDistanceTester-6.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.ICompoundPairSweepOverlapFinder-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.ICompoundPairSweepOverlapFinder-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.IConvexCompoundSweepOverlapFinder-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.IConvexCompoundSweepOverlapFinder-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.IPairDistanceTester-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.IPairDistanceTester-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.SphereBoxDistanceTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.SphereBoxDistanceTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.SphereCapsuleDistanceTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.SphereCapsuleDistanceTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.SphereCylinderDistanceTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.SphereCylinderDistanceTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.SpherePairDistanceTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.SpherePairDistanceTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.SphereTriangleDistanceTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.SphereTriangleDistanceTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.SweepTasks.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.TwoBodyHandles.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.TwoBodyHandles.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.UntypedList.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.UntypedList.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.WideRayTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.WideRayTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.WorkerPendingPairChanges.PendingAdd.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.WorkerPendingPairChanges.PendingAdd.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.WorkerPendingPairChanges.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.WorkerPendingPairChanges.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.ConstraintBatch.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.ConstraintBatch.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.ConstraintHandle.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.ConstraintHandle.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.ConstraintLocation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.ConstraintLocation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.ConstraintReference.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.ConstraintReference.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.ConstraintSet.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.ConstraintSet.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AccessAll.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AccessAll.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AccessNoInertia.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AccessNoInertia.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AccessNoOrientation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AccessNoOrientation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AccessNoPose.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AccessNoPose.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AccessNoPosition.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AccessNoPosition.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AccessOnlyAngular.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AccessOnlyAngular.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AccessOnlyAngularWithoutPose.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AccessOnlyAngularWithoutPose.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AccessOnlyLinear.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AccessOnlyLinear.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AccessOnlyVelocity.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AccessOnlyVelocity.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AllowPoseIntegration.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AllowPoseIntegration.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularAxisGearMotor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularAxisGearMotor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularAxisGearMotorFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularAxisGearMotorFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularAxisGearMotorPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularAxisGearMotorPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularAxisGearMotorTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularAxisGearMotorTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularAxisMotor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularAxisMotor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularAxisMotorFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularAxisMotorFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularAxisMotorPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularAxisMotorPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularAxisMotorTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularAxisMotorTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularHinge.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularHinge.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularHingeFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularHingeFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularHingePrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularHingePrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularHingeTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularHingeTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularMotor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularMotor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularMotorFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularMotorFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularMotorPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularMotorPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularMotorTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularMotorTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularServo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularServo.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularServoFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularServoFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularServoPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularServoPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularServoTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularServoTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularSwivelHinge.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularSwivelHinge.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularSwivelHingeFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularSwivelHingeFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularSwivelHingePrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularSwivelHingePrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AngularSwivelHingeTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AngularSwivelHingeTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AreaConstraint.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AreaConstraint.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AreaConstraintFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AreaConstraintFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AreaConstraintPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AreaConstraintPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.AreaConstraintTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.AreaConstraintTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocket.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocket.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketMotor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketMotor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketMotorFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketMotorFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketMotorPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketMotorPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketMotorTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketMotorTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketServo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketServo.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketServoFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketServoFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketServoPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketServoPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketServoTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketServoTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketShared.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketShared.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BallSocketTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BallSocketTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BatchShouldAlwaysIntegrate.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BatchShouldAlwaysIntegrate.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BatchShouldConditionallyIntegrate.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BatchShouldConditionallyIntegrate.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.BatchShouldNeverIntegrate.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.BatchShouldNeverIntegrate.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.CenterDistanceConstraint.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.CenterDistanceConstraint.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.CenterDistanceConstraintFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.CenterDistanceConstraintFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.CenterDistanceLimit.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.CenterDistanceLimit.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.CenterDistanceLimitFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.CenterDistanceLimitFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.CenterDistanceLimitPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.CenterDistanceLimitPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.CenterDistanceLimitTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.CenterDistanceLimitTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.CenterDistancePrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.CenterDistancePrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.CenterDistanceTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.CenterDistanceTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.ConstraintChecker.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.ConstraintChecker.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.ConstraintContactData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.ConstraintContactData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact1AccumulatedImpulses.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact1AccumulatedImpulses.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact1Functions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact1Functions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact1OneBody.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact1OneBody.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact1OneBodyFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact1OneBodyFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact1OneBodyPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact1OneBodyPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact1OneBodyTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact1OneBodyTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact1PrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact1PrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact1TypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact1TypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2AccumulatedImpulses.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2AccumulatedImpulses.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2Functions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2Functions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2Nonconvex.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2Nonconvex.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexAccumulatedImpulses.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexAccumulatedImpulses.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexOneBody.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexOneBody.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexOneBodyPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexOneBodyPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexOneBodyTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexOneBodyTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2NonconvexTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2OneBody.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2OneBody.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2OneBodyFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2OneBodyFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2OneBodyPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2OneBodyPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2OneBodyTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2OneBodyTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2PrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2PrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact2TypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact2TypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3AccumulatedImpulses.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3AccumulatedImpulses.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3Functions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3Functions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3Nonconvex.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3Nonconvex.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexAccumulatedImpulses.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexAccumulatedImpulses.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexOneBody.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexOneBody.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexOneBodyPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexOneBodyPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexOneBodyTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexOneBodyTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3NonconvexTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3OneBody.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3OneBody.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3OneBodyFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3OneBodyFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3OneBodyPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3OneBodyPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3OneBodyTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3OneBodyTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3PrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3PrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact3TypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact3TypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4AccumulatedImpulses.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4AccumulatedImpulses.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4Functions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4Functions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4Nonconvex.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4Nonconvex.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexAccumulatedImpulses.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexAccumulatedImpulses.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexOneBody.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexOneBody.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexOneBodyPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexOneBodyPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexOneBodyTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexOneBodyTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4NonconvexTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4OneBody.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4OneBody.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4OneBodyFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4OneBodyFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4OneBodyPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4OneBodyPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4OneBodyTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4OneBodyTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4PrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4PrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.Contact4TypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.Contact4TypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.ContactNonconvexOneBodyFunctions-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.ContactNonconvexOneBodyFunctions-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.ContactNonconvexTwoBodyFunctions-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.ContactNonconvexTwoBodyFunctions-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.ConvexContactWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.ConvexContactWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.IContactAccumulatedImpulses-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.IContactAccumulatedImpulses-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.IContactPrestep-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.IContactPrestep-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.IConvexContactAccumulatedImpulses-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.IConvexContactAccumulatedImpulses-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.IConvexContactPrestep-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.IConvexContactPrestep-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.IConvexOneBodyContactConstraintDescription-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.IConvexOneBodyContactConstraintDescription-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.IConvexTwoBodyContactConstraintDescription-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.IConvexTwoBodyContactConstraintDescription-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.INonconvexContactAccumulatedImpulses-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.INonconvexContactAccumulatedImpulses-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.INonconvexContactPrestep-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.INonconvexContactPrestep-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.INonconvexOneBodyContactConstraintDescription-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.INonconvexOneBodyContactConstraintDescription-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.INonconvexTwoBodyContactConstraintDescription-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.INonconvexTwoBodyContactConstraintDescription-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.ISolverContactDataExtractor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.ISolverContactDataExtractor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.ISolverContactPrestepAndImpulsesExtractor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.ISolverContactPrestepAndImpulsesExtractor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.ITwoBodyConvexContactPrestep-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.ITwoBodyConvexContactPrestep-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.ITwoBodyNonconvexContactPrestep-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.ITwoBodyNonconvexContactPrestep-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.MaterialPropertiesWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.MaterialPropertiesWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.NonconvexAccumulatedImpulses.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.NonconvexAccumulatedImpulses.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.NonconvexConstraintContactData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.NonconvexConstraintContactData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.NonconvexContactPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.NonconvexContactPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.NonconvexOneBodyManifoldConstraintProperties.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.NonconvexOneBodyManifoldConstraintProperties.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.NonconvexTwoBodyManifoldConstraintProperties.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.NonconvexTwoBodyManifoldConstraintProperties.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.PenetrationLimit.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.PenetrationLimit.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.PenetrationLimitOneBody.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.PenetrationLimitOneBody.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.TangentFriction.Jacobians.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.TangentFriction.Jacobians.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.TangentFriction.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.TangentFriction.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.TangentFrictionOneBody.Jacobians.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.TangentFrictionOneBody.Jacobians.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.TangentFrictionOneBody.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.TangentFrictionOneBody.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.TwistFriction.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.TwistFriction.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.TwistFrictionOneBody.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.TwistFrictionOneBody.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Contact.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Contact.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.DisallowPoseIntegration.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.DisallowPoseIntegration.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.DistanceLimit.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.DistanceLimit.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.DistanceLimitFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.DistanceLimitFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.DistanceLimitPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.DistanceLimitPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.DistanceLimitTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.DistanceLimitTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.DistanceServo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.DistanceServo.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.DistanceServoFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.DistanceServoFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.DistanceServoPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.DistanceServoPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.DistanceServoTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.DistanceServoTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.FourBodyReferences.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.FourBodyReferences.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.FourBodyTypeProcessor-11.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.FourBodyTypeProcessor-11.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Hinge.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Hinge.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.HingeAccumulatedImpulses.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.HingeAccumulatedImpulses.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.HingeFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.HingeFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.HingePrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.HingePrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.HingeTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.HingeTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.IBatchIntegrationMode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.IBatchIntegrationMode.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.IBatchPoseIntegrationAllowed.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.IBatchPoseIntegrationAllowed.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.IBodyAccessFilter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.IBodyAccessFilter.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.IConstraintDescription-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.IConstraintDescription-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.IFourBodyConstraintDescription-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.IFourBodyConstraintDescription-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.IFourBodyConstraintFunctions-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.IFourBodyConstraintFunctions-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.IOneBodyConstraintDescription-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.IOneBodyConstraintDescription-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.IOneBodyConstraintFunctions-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.IOneBodyConstraintFunctions-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.ISortKeyGenerator-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.ISortKeyGenerator-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.IThreeBodyConstraintDescription-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.IThreeBodyConstraintDescription-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.IThreeBodyConstraintFunctions-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.IThreeBodyConstraintFunctions-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.ITwoBodyConstraintDescription-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.ITwoBodyConstraintDescription-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.ITwoBodyConstraintFunctions-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.ITwoBodyConstraintFunctions-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.InequalityHelpers.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.InequalityHelpers.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisLimit.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisLimit.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisLimitFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisLimitFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisLimitPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisLimitPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisLimitTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisLimitTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisMotor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisMotor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisMotorFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisMotorFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisMotorPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisMotorPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisMotorTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisMotorTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisServo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisServo.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisServoFunctions.IJacobianModifier.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisServoFunctions.IJacobianModifier.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisServoFunctions.NoChangeModifier.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisServoFunctions.NoChangeModifier.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisServoFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisServoFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisServoPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisServoPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.LinearAxisServoTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.LinearAxisServoTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.MotorSettings.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.MotorSettings.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.MotorSettingsWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.MotorSettingsWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyAngularMotor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyAngularMotor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyAngularMotorFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyAngularMotorFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyAngularMotorPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyAngularMotorPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyAngularMotorTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyAngularMotorTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyAngularServo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyAngularServo.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyAngularServoFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyAngularServoFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyAngularServoPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyAngularServoPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyAngularServoTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyAngularServoTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyContactTypeProcessor-3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyContactTypeProcessor-3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyLinearMotor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyLinearMotor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyLinearMotorFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyLinearMotorFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyLinearMotorPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyLinearMotorPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyLinearMotorTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyLinearMotorTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyLinearServo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyLinearServo.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyLinearServoFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyLinearServoFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyLinearServoPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyLinearServoPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyLinearServoTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyLinearServoTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.OneBodyTypeProcessor-5.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.OneBodyTypeProcessor-5.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.PointOnLineServo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.PointOnLineServo.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.PointOnLineServoFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.PointOnLineServoFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.PointOnLineServoPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.PointOnLineServoPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.PointOnLineServoTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.PointOnLineServoTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.ServoSettings.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.ServoSettings.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.ServoSettingsWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.ServoSettingsWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.SpringSettings.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.SpringSettings.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.SpringSettingsWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.SpringSettingsWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.SwingLimit.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.SwingLimit.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.SwingLimitFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.SwingLimitFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.SwingLimitPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.SwingLimitPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.SwingLimitTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.SwingLimitTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.SwivelHinge.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.SwivelHinge.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.SwivelHingeFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.SwivelHingeFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.SwivelHingePrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.SwivelHingePrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.SwivelHingeTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.SwivelHingeTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.ThreeBodyReferences.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.ThreeBodyReferences.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.ThreeBodyTypeProcessor-9.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.ThreeBodyTypeProcessor-9.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistLimit.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistLimit.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistLimitFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistLimitFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistLimitPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistLimitPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistLimitTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistLimitTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistMotor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistMotor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistMotorFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistMotorFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistMotorPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistMotorPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistMotorTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistMotorTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistServo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistServo.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistServoFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistServoFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistServoPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistServoPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwistServoTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwistServoTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwoBodyContactTypeProcessor-3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwoBodyContactTypeProcessor-3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwoBodyReferences.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwoBodyReferences.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TwoBodyTypeProcessor-7.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TwoBodyTypeProcessor-7.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TypeBatch.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TypeBatch.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TypeProcessor-3.BundleIntegrationMode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TypeProcessor-3.BundleIntegrationMode.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TypeProcessor-3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TypeProcessor-3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.TypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.TypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.VolumeConstraint.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.VolumeConstraint.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.VolumeConstraintFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.VolumeConstraintFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.VolumeConstraintPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.VolumeConstraintPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.VolumeConstraintTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.VolumeConstraintTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.Weld.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.Weld.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.WeldAccumulatedImpulses.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.WeldAccumulatedImpulses.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.WeldFunctions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.WeldFunctions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.WeldPrestepData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.WeldPrestepData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.WeldTypeProcessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.WeldTypeProcessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Constraints.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Constraints.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.DefaultTimestepper.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.DefaultTimestepper.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.DefaultTypes.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.DefaultTypes.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.FloatCollector.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.FloatCollector.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.HashDiagnosticType.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.HashDiagnosticType.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Helpers.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Helpers.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.IPoseIntegrator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.IPoseIntegrator.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.IPoseIntegratorCallbacks.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.IPoseIntegratorCallbacks.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.IRayHitHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.IRayHitHandler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.IShapeRayHitHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.IShapeRayHitHandler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.IStaticChangeAwakeningFilter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.IStaticChangeAwakeningFilter.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.ISweepHitHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.ISweepHitHandler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.ITimestepper.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.ITimestepper.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.InvasiveHashDiagnostics.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.InvasiveHashDiagnostics.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.IslandAwakener.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.IslandAwakener.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.IslandSleeper.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.IslandSleeper.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.MotionState.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.MotionState.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.PassthroughReferenceCollector.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.PassthroughReferenceCollector.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.PoseIntegration.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.PoseIntegration.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.PoseIntegrator-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.PoseIntegrator-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.RigidPose.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.RigidPose.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.RigidPoseWide.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.RigidPoseWide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.SequentialFallbackBatch.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.SequentialFallbackBatch.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Simulation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Simulation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.SimulationAllocationSizes.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.SimulationAllocationSizes.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.SimulationProfiler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.SimulationProfiler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.SolveDescription.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.SolveDescription.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver-1.IStageFunction.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver-1.IStageFunction.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver-1.ITypeBatchSolveFilter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver-1.ITypeBatchSolveFilter.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver-1.IncrementalUpdateForSubstepFilter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver-1.IncrementalUpdateForSubstepFilter.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver-1.MainSolveFilter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver-1.MainSolveFilter.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver.IntegrationWorkBlock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver.IntegrationWorkBlock.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver.SolverStageType.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver.SolverStageType.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver.SolverSyncStage.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver.SolverSyncStage.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver.SubstepEvent.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver.SubstepEvent.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver.SubstepMultithreadingContext.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver.SubstepMultithreadingContext.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver.WorkBlock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver.WorkBlock.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Solver.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Solver.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Static.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Static.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.StaticDescription.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.StaticDescription.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.StaticHandle.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.StaticHandle.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.StaticReference.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.StaticReference.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Statics.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Statics.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.StaticsShouldntAwakenKinematics.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.StaticsShouldntAwakenKinematics.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.SubstepVelocityIterationScheduler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.SubstepVelocityIterationScheduler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.TimestepperStageHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.TimestepperStageHandler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.BinnedResources.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.BinnedResources.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.IBatchedRayLeafTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.IBatchedRayLeafTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.IOverlapHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.IOverlapHandler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.IRayLeafTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.IRayLeafTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.IRaySource.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.IRaySource.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.ISweepLeafTester.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.ISweepLeafTester.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.IThreadedOverlapHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.IThreadedOverlapHandler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.Leaf.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.Leaf.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.Metanode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.Metanode.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.Node.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.Node.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.NodeChild.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.NodeChild.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.RayBatcher.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.RayBatcher.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.RayData.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.RayData.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.RaySource.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.RaySource.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.SubtreeHeapEntry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.SubtreeHeapEntry.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.Tree.MultithreadedIntertreeTest-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.Tree.MultithreadedIntertreeTest-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.Tree.MultithreadedSelfTest-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.Tree.MultithreadedSelfTest-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.Tree.NodeTimes.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.Tree.NodeTimes.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.Tree.RefitAndRefineMultithreadedContext.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.Tree.RefitAndRefineMultithreadedContext.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.Tree.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.Tree.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.TreeRay.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.TreeRay.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.Trees.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.Trees.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "api/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/toc.html"
+        },
+        ".json": {
+          "relative_path": "api/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "changelog.md",
+      "output": {
+        ".html": {
+          "relative_path": "changelog.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "docs/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "docs/toc.html"
+        },
+        ".json": {
+          "relative_path": "docs/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "favicon.ico",
+      "output": {
+        "resource": {
+          "relative_path": "favicon.ico"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/ContinuousCollisionDetection/ccd.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/ContinuousCollisionDetection/ccd.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/ContinuousCollisionDetection/ghostCollision.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/ContinuousCollisionDetection/ghostCollision.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/ContinuousCollisionDetection/smallMarginNoCollision.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/ContinuousCollisionDetection/smallMarginNoCollision.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/ContinuousCollisionDetection/smallMarginNoGhostCollision.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/ContinuousCollisionDetection/smallMarginNoGhostCollision.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/ContinuousCollisionDetection/smallMarginSweepCollision.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/ContinuousCollisionDetection/smallMarginSweepCollision.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/ContinuousCollisionDetection/speculativeContact.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/ContinuousCollisionDetection/speculativeContact.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/bepuphysicslogo256.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/bepuphysicslogo256.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/collisionPairRelativePerformance.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/collisionPairRelativePerformance.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/hullComplexityCost.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/hullComplexityCost.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/lowiterationcount.gif",
+      "output": {
+        "resource": {
+          "relative_path": "images/lowiterationcount.gif"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/massratiosubstepping.gif",
+      "output": {
+        "resource": {
+          "relative_path": "images/massratiosubstepping.gif"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/youtubeLink.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/youtubeLink.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/youtubeLink24.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/youtubeLink24.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "index.md",
+      "output": {
+        ".html": {
+          "relative_path": "index.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "roadmap.md",
+      "output": {
+        ".html": {
+          "relative_path": "roadmap.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "toc.html"
+        },
+        ".json": {
+          "relative_path": "toc.json"
+        }
+      },
+      "version": ""
+    }
+  ],
+  "groups": [
+    {
+      "xrefmap": "xrefmap.yml"
+    }
+  ]
+}

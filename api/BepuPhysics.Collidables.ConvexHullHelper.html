@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class ConvexHullHelper | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class ConvexHullHelper | Bepu API ">
+      
+      <meta name="description" content="Helper methods to create and process convex hulls from point clouds.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Collidables_ConvexHullHelper.md&amp;value=---%0Auid%3A%20BepuPhysics.Collidables.ConvexHullHelper%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Collidables.ConvexHullHelper">
+
+
+
+  <h1 id="BepuPhysics_Collidables_ConvexHullHelper" data-uid="BepuPhysics.Collidables.ConvexHullHelper" class="text-break">
+Class ConvexHullHelper  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHullHelper.cs/#L87"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Collidables.html">Collidables</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Helper methods to create and process convex hulls from point clouds.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static class ConvexHullHelper</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">ConvexHullHelper</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Collidables_ConvexHullHelper_ComputeHull_" data-uid="BepuPhysics.Collidables.ConvexHullHelper.ComputeHull*"></a>
+
+  <h3 id="BepuPhysics_Collidables_ConvexHullHelper_ComputeHull_System_Span_System_Numerics_Vector3__BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_HullData__" data-uid="BepuPhysics.Collidables.ConvexHullHelper.ComputeHull(System.Span{System.Numerics.Vector3},BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.HullData@)">
+  ComputeHull(Span&lt;Vector3&gt;, BufferPool, out HullData)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHullHelper.cs/#L613"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Computes the convex hull of a set of points.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void ComputeHull(Span&lt;Vector3&gt; points, BufferPool pool, out HullData hullData)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>points</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a>&gt;</dt>
+    <dd><p>Point set to compute the convex hull of.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool to pull memory from when creating the hull.</p>
+</dd>
+    <dt><code>hullData</code> <a class="xref" href="BepuPhysics.Collidables.HullData.html">HullData</a></dt>
+    <dd><p>Convex hull of the input point set.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_ConvexHullHelper_CreateShape_" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateShape*"></a>
+
+  <h3 id="BepuPhysics_Collidables_ConvexHullHelper_CreateShape_System_Span_System_Numerics_Vector3__BepuPhysics_Collidables_HullData_BepuUtilities_Memory_BufferPool_System_Numerics_Vector3__BepuPhysics_Collidables_ConvexHull__" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateShape(System.Span{System.Numerics.Vector3},BepuPhysics.Collidables.HullData,BepuUtilities.Memory.BufferPool,System.Numerics.Vector3@,BepuPhysics.Collidables.ConvexHull@)">
+  CreateShape(Span&lt;Vector3&gt;, HullData, BufferPool, out Vector3, out ConvexHull)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHullHelper.cs/#L1011"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Processes hull data into a runtime usable convex hull shape. Recenters the convex hull's points around its center of mass.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool CreateShape(Span&lt;Vector3&gt; points, HullData hullData, BufferPool pool, out Vector3 center, out ConvexHull hullShape)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>points</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a>&gt;</dt>
+    <dd><p>Point array into which the hull data indexes.</p>
+</dd>
+    <dt><code>hullData</code> <a class="xref" href="BepuPhysics.Collidables.HullData.html">HullData</a></dt>
+    <dd><p>Raw input data to process.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used to allocate resources for the hullShape.</p>
+</dd>
+    <dt><code>center</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Computed center of mass of the convex hull before its points were recentered onto the origin.</p>
+</dd>
+    <dt><code>hullShape</code> <a class="xref" href="BepuPhysics.Collidables.ConvexHull.html">ConvexHull</a></dt>
+    <dd><p>Convex hull shape created from the input data.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the shape was created successfully, false otherwise. If false, the hull probably had no volume and would not have worked properly as a shape.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_ConvexHullHelper_CreateShape_" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateShape*"></a>
+
+  <h3 id="BepuPhysics_Collidables_ConvexHullHelper_CreateShape_System_Span_System_Numerics_Vector3__BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_HullData__System_Numerics_Vector3__BepuPhysics_Collidables_ConvexHull__" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateShape(System.Span{System.Numerics.Vector3},BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.HullData@,System.Numerics.Vector3@,BepuPhysics.Collidables.ConvexHull@)">
+  CreateShape(Span&lt;Vector3&gt;, BufferPool, out HullData, out Vector3, out ConvexHull)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHullHelper.cs/#L1130"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a convex hull shape out of an input point set. Recenters the convex hull's points around its center of mass.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool CreateShape(Span&lt;Vector3&gt; points, BufferPool pool, out HullData hullData, out Vector3 center, out ConvexHull convexHull)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>points</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a>&gt;</dt>
+    <dd><p>Points to use to create the hull.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool used for temporary allocations and the output data structures.</p>
+</dd>
+    <dt><code>hullData</code> <a class="xref" href="BepuPhysics.Collidables.HullData.html">HullData</a></dt>
+    <dd><p>Intermediate hull data that got processed into the convex hull.</p>
+</dd>
+    <dt><code>center</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Computed center of mass of the convex hull before its points were recentered onto the origin.</p>
+</dd>
+    <dt><code>convexHull</code> <a class="xref" href="BepuPhysics.Collidables.ConvexHull.html">ConvexHull</a></dt>
+    <dd><p>Convex hull shape of the input point set.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the shape was created successfully, false otherwise. If false, the hull probably had no volume and would not have worked properly as a shape.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_ConvexHullHelper_CreateShape_" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateShape*"></a>
+
+  <h3 id="BepuPhysics_Collidables_ConvexHullHelper_CreateShape_System_Span_System_Numerics_Vector3__BepuUtilities_Memory_BufferPool_System_Numerics_Vector3__BepuPhysics_Collidables_ConvexHull__" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateShape(System.Span{System.Numerics.Vector3},BepuUtilities.Memory.BufferPool,System.Numerics.Vector3@,BepuPhysics.Collidables.ConvexHull@)">
+  CreateShape(Span&lt;Vector3&gt;, BufferPool, out Vector3, out ConvexHull)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHullHelper.cs/#L1144"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a convex hull shape out of an input point set. Recenters the convex hull's points around its center of mass.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool CreateShape(Span&lt;Vector3&gt; points, BufferPool pool, out Vector3 center, out ConvexHull convexHull)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>points</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a>&gt;</dt>
+    <dd><p>Points to use to create the hull.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool used for temporary allocations and the output data structures.</p>
+</dd>
+    <dt><code>center</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Computed center of mass of the convex hull before its points were recentered onto the origin.</p>
+</dd>
+    <dt><code>convexHull</code> <a class="xref" href="BepuPhysics.Collidables.ConvexHull.html">ConvexHull</a></dt>
+    <dd><p>Convex hull shape of the input point set.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the shape was created successfully, false otherwise. If false, the hull probably had no volume and would not have worked properly as a shape.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_ConvexHullHelper_CreateTransformedCopy_" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateTransformedCopy*"></a>
+
+  <h3 id="BepuPhysics_Collidables_ConvexHullHelper_CreateTransformedCopy_BepuPhysics_Collidables_ConvexHull__BepuUtilities_Matrix3x3__BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_ConvexHull__" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateTransformedCopy(BepuPhysics.Collidables.ConvexHull@,BepuUtilities.Matrix3x3@,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.ConvexHull@)">
+  CreateTransformedCopy(in ConvexHull, in Matrix3x3, BufferPool, out ConvexHull)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHullHelper.cs/#L1226"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a transformed copy of a convex hull. Unique FaceVertexIndices and FaceToVertexIndicesStart buffers are allocated for the copy target.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void CreateTransformedCopy(in ConvexHull source, in Matrix3x3 transform, BufferPool pool, out ConvexHull target)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>source</code> <a class="xref" href="BepuPhysics.Collidables.ConvexHull.html">ConvexHull</a></dt>
+    <dd><p>Source convex hull to copy.</p>
+</dd>
+    <dt><code>transform</code> <span class="xref">Matrix3x3</span></dt>
+    <dd><p>Transform to apply to the hull points.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool from which to allocate the new hull's buffers.</p>
+</dd>
+    <dt><code>target</code> <a class="xref" href="BepuPhysics.Collidables.ConvexHull.html">ConvexHull</a></dt>
+    <dd><p>Target convex hull to copy into.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_ConvexHullHelper_CreateTransformedCopy_" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateTransformedCopy*"></a>
+
+  <h3 id="BepuPhysics_Collidables_ConvexHullHelper_CreateTransformedCopy_BepuPhysics_Collidables_ConvexHull__BepuUtilities_Matrix3x3__BepuUtilities_Memory_Buffer_BepuUtilities_Vector3Wide__BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_HullBoundingPlanes__" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateTransformedCopy(BepuPhysics.Collidables.ConvexHull@,BepuUtilities.Matrix3x3@,BepuUtilities.Memory.Buffer{BepuUtilities.Vector3Wide},BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.HullBoundingPlanes})">
+  CreateTransformedCopy(in ConvexHull, in Matrix3x3, Buffer&lt;Vector3Wide&gt;, Buffer&lt;HullBoundingPlanes&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHullHelper.cs/#L1162"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a transformed copy of a convex hull.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void CreateTransformedCopy(in ConvexHull source, in Matrix3x3 transform, Buffer&lt;Vector3Wide&gt; targetPoints, Buffer&lt;HullBoundingPlanes&gt; targetBoundingPlanes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>source</code> <a class="xref" href="BepuPhysics.Collidables.ConvexHull.html">ConvexHull</a></dt>
+    <dd><p>Source convex hull to copy.</p>
+</dd>
+    <dt><code>transform</code> <span class="xref">Matrix3x3</span></dt>
+    <dd><p>Transform to apply to the hull points.</p>
+</dd>
+    <dt><code>targetPoints</code> <span class="xref">Buffer</span>&lt;<span class="xref">Vector3Wide</span>&gt;</dt>
+    <dd><p>Transformed points in the copy target hull.</p>
+</dd>
+    <dt><code>targetBoundingPlanes</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.Collidables.HullBoundingPlanes.html">HullBoundingPlanes</a>&gt;</dt>
+    <dd><p>Transformed bounding planes in the copy target hull.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_ConvexHullHelper_CreateTransformedShallowCopy_" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateTransformedShallowCopy*"></a>
+
+  <h3 id="BepuPhysics_Collidables_ConvexHullHelper_CreateTransformedShallowCopy_BepuPhysics_Collidables_ConvexHull__BepuUtilities_Matrix3x3__BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_ConvexHull__" data-uid="BepuPhysics.Collidables.ConvexHullHelper.CreateTransformedShallowCopy(BepuPhysics.Collidables.ConvexHull@,BepuUtilities.Matrix3x3@,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.ConvexHull@)">
+  CreateTransformedShallowCopy(in ConvexHull, in Matrix3x3, BufferPool, out ConvexHull)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHullHelper.cs/#L1210"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a transformed copy of a convex hull. FaceVertexIndices and FaceToVertexIndicesStart buffers from the source are reused in the copy target.
+Note that disposing two convex hulls with the same buffers will cause errors; disposal must be handled carefully to avoid double freeing the shared buffers.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void CreateTransformedShallowCopy(in ConvexHull source, in Matrix3x3 transform, BufferPool pool, out ConvexHull target)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>source</code> <a class="xref" href="BepuPhysics.Collidables.ConvexHull.html">ConvexHull</a></dt>
+    <dd><p>Source convex hull to copy.</p>
+</dd>
+    <dt><code>transform</code> <span class="xref">Matrix3x3</span></dt>
+    <dd><p>Transform to apply to the hull points.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool from which to allocate the new hull's points and bounding planes buffers.</p>
+</dd>
+    <dt><code>target</code> <a class="xref" href="BepuPhysics.Collidables.ConvexHull.html">ConvexHull</a></dt>
+    <dd><p>Target convex hull to copy into. FaceVertexIndices and FaceToVertexIndicesStart buffers are reused from the source.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHullHelper.cs/#L87" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

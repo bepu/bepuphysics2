@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Building | Bepu Docs </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Building | Bepu Docs ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="docs/toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/blob/master/Documentation/Building.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="building">Building</h1>
+
+<h2 id="library">Library</h2>
+<p>The easiest way to build the library is using the latest version of Visual Studio with the .NET desktop development workload installed to open and build the <code>Library.sln</code>.</p>
+<p>The library tends to use the latest C# language features. At the time of writing, it requires C# 9.0.</p>
+<p><code>BepuPhysics.csproj</code> uses T4 templates for code generation in a few places. If changes are made to the templates, you'll need a build pipeline that can process them (like Visual Studio). The repository contains the original generated .cs files, so if no changes are made, the templates do not need to be evaluated.</p>
+<p>The libraries target .NET 6.</p>
+<h2 id="demos">Demos</h2>
+<p><code>Demos.sln</code> contains all the projects necessary to build and run the demos application. The default demo renderer uses DX11, and the content pipeline's shader compiler requires the Windows SDK. There is also a Demos.GL.sln that uses OpenGL and should run on other platforms. The demos can be run from the command line (in the repo root directory) with <code>dotnet run --project Demos/Demos.csproj -c Release</code> or <code>dotnet run --project Demos.GL/Demos.csproj -c Release</code>.</p>
+<p>The demos content pipeline uses <a href="https://freetype.org/">freetype</a>. On windows, the freetype.dll is included. When built elsewhere, the build will attempt to pull the dependency out of <code>/usr/lib</code>. If you try to build on windows and see an error that says:</p>
+<p><code>Content build failed: Unable to load DLL 'freetype6' or one of its dependencies: The specified module could not be found. (0x8007007E)</code></p>
+<p>then it's likely that freetype version used by the content builder needs the <a href="https://www.microsoft.com/en-us/download/details.aspx?id=40784">VC++ 2013 redistributable</a> to be installed.</p>
+<p>The demos applications target .NET 6.</p>
+<h2 id="build-configurations">Build Configurations</h2>
+<p>The library has the usual <code>Debug</code> and <code>Release</code> build configurations, but also has <code>ReleaseNoProfiling</code>.</p>
+<p><code>ReleaseNoProfiling</code> removes the library's profiling functionality; any attempt to request profiling data will just return zeroes.</p>
+<p>For production use, <code>Release</code> or <code>ReleaseNoProfiling</code> is recommended.</p>
+<h2 id="compilation-symbols">Compilation Symbols</h2>
+<p>Profiling features are enabled by including the <code>PROFILE</code> compilation symbol for BepuPhysics.csproj.</p>
+<p>Some extra checks for data validity can be enabled with the <code>CHECKMATH</code> compilation symbol for BepuPhysics.csproj and BepuUtilities.csproj.</p>
+<p><code>LEAKDEBUG</code> forces the <code>BufferPool</code> to track extra data about allocations. It comes with extremely high overhead, but can be useful for narrowing down the source of memory leaks and other similar bugs. <code>LEAKDEBUG</code> will only work if <code>DEBUG</code> is also defined.</p>
+<h2 id="runtime">Runtime</h2>
+<p>The library makes heavy use of SIMD intrinsics through <code>System.Numerics.Vectors</code> and <code>System.Runtime.Intrinsics</code>. Good performance requires a IL to native assembly compiler which is aware of these intrinsics. Right now, that means something like CoreCLR's RyuJIT. Other runtimes may not support the intrinsics and may suffer massive slowdowns- sometimes 10 to 100 times slower, if they run at all.</p>
+<p>Performance scales up with higher SIMD machine widths. Machines with full rate AVX2 will tend to significantly outperform SSE-limited machines.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/Documentation/Building.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

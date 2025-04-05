@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class DistanceLimitTypeProcessor | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class DistanceLimitTypeProcessor | Bepu API ">
+      
+      <meta name="description" content="Handles the solve iterations of a bunch of distance servos.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Constraints_DistanceLimitTypeProcessor.md&amp;value=---%0Auid%3A%20BepuPhysics.Constraints.DistanceLimitTypeProcessor%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Constraints.DistanceLimitTypeProcessor">
+
+
+
+  <h1 id="BepuPhysics_Constraints_DistanceLimitTypeProcessor" data-uid="BepuPhysics.Constraints.DistanceLimitTypeProcessor" class="text-break">
+Class DistanceLimitTypeProcessor  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/DistanceLimit.cs/#L183"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Constraints.html">Constraints</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Handles the solve iterations of a bunch of distance servos.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public class DistanceLimitTypeProcessor : TwoBodyTypeProcessor&lt;DistanceLimitPrestepData, Vector&lt;float&gt;, DistanceLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll&gt;</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html">TypeProcessor</a></div>
+      <div><a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html">TypeProcessor</a>&lt;<a class="xref" href="BepuPhysics.Constraints.TwoBodyReferences.html">TwoBodyReferences</a>, <a class="xref" href="BepuPhysics.Constraints.DistanceLimitPrestepData.html">DistanceLimitPrestepData</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;&gt;</div>
+      <div><a class="xref" href="BepuPhysics.Constraints.TwoBodyTypeProcessor-7.html">TwoBodyTypeProcessor</a>&lt;<a class="xref" href="BepuPhysics.Constraints.DistanceLimitPrestepData.html">DistanceLimitPrestepData</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;, <a class="xref" href="BepuPhysics.Constraints.DistanceLimitFunctions.html">DistanceLimitFunctions</a>, <a class="xref" href="BepuPhysics.Constraints.AccessAll.html">AccessAll</a>, <a class="xref" href="BepuPhysics.Constraints.AccessAll.html">AccessAll</a>, <a class="xref" href="BepuPhysics.Constraints.AccessAll.html">AccessAll</a>, <a class="xref" href="BepuPhysics.Constraints.AccessAll.html">AccessAll</a>&gt;</div>
+      <div><span class="xref">DistanceLimitTypeProcessor</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TwoBodyTypeProcessor-7.html#BepuPhysics_Constraints_TwoBodyTypeProcessor_7_InternalBodiesPerConstraint">TwoBodyTypeProcessor&lt;DistanceLimitPrestepData, Vector&lt;float&gt;, DistanceLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll&gt;.InternalBodiesPerConstraint</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TwoBodyTypeProcessor-7.html#BepuPhysics_Constraints_TwoBodyTypeProcessor_7_WarmStart__3_BepuPhysics_Constraints_TypeBatch__BepuUtilities_Memory_Buffer_BepuUtilities_Collections_IndexSet___BepuPhysics_Bodies___0__System_Single_System_Single_System_Int32_System_Int32_System_Int32_">TwoBodyTypeProcessor&lt;DistanceLimitPrestepData, Vector&lt;float&gt;, DistanceLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll&gt;.WarmStart&lt;TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration&gt;(ref TypeBatch, ref Buffer&lt;IndexSet&gt;, Bodies, ref TIntegratorCallbacks, float, float, int, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TwoBodyTypeProcessor-7.html#BepuPhysics_Constraints_TwoBodyTypeProcessor_7_Solve_BepuPhysics_Constraints_TypeBatch__BepuPhysics_Bodies_System_Single_System_Single_System_Int32_System_Int32_">TwoBodyTypeProcessor&lt;DistanceLimitPrestepData, Vector&lt;float&gt;, DistanceLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll&gt;.Solve(ref TypeBatch, Bodies, float, float, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TwoBodyTypeProcessor-7.html#BepuPhysics_Constraints_TwoBodyTypeProcessor_7_RequiresIncrementalSubstepUpdates">TwoBodyTypeProcessor&lt;DistanceLimitPrestepData, Vector&lt;float&gt;, DistanceLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll&gt;.RequiresIncrementalSubstepUpdates</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TwoBodyTypeProcessor-7.html#BepuPhysics_Constraints_TwoBodyTypeProcessor_7_IncrementallyUpdateForSubstep_BepuPhysics_Constraints_TypeBatch__BepuPhysics_Bodies_System_Single_System_Single_System_Int32_System_Int32_">TwoBodyTypeProcessor&lt;DistanceLimitPrestepData, Vector&lt;float&gt;, DistanceLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll&gt;.IncrementallyUpdateForSubstep(ref TypeBatch, Bodies, float, float, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_InternalConstrainedDegreesOfFreedom">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.InternalConstrainedDegreesOfFreedom</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_ValidateAccumulatedImpulsesSizeInBytes_System_Int32_">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.ValidateAccumulatedImpulsesSizeInBytes(int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_ScaleAccumulatedImpulses_BepuPhysics_Constraints_TypeBatch__System_Single_">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.ScaleAccumulatedImpulses(ref TypeBatch, float)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_SetBodyReferencesLane__0__System_Int32_System_Span_System_Int32__">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.SetBodyReferencesLane(ref TwoBodyReferences, int, Span&lt;int&gt;)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_AddBodyReferencesLane__0__System_Int32_System_Span_System_Int32__">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.AddBodyReferencesLane(ref TwoBodyReferences, int, Span&lt;int&gt;)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_RemoveBodyReferencesLane__0__System_Int32_">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.RemoveBodyReferencesLane(ref TwoBodyReferences, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_AllocateInTypeBatch_BepuPhysics_Constraints_TypeBatch__BepuPhysics_ConstraintHandle_System_Span_System_Int32__BepuUtilities_Memory_BufferPool_">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.AllocateInTypeBatch(ref TypeBatch, ConstraintHandle, Span&lt;int&gt;, BufferPool)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_AllocateInTypeBatchForFallback_BepuPhysics_Constraints_TypeBatch__BepuPhysics_ConstraintHandle_System_Span_System_Int32__BepuUtilities_Memory_BufferPool_">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.AllocateInTypeBatchForFallback(ref TypeBatch, ConstraintHandle, Span&lt;int&gt;, BufferPool)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_Move__0___1___2__BepuPhysics_ConstraintHandle_System_Int32__0___1___2__BepuPhysics_ConstraintHandle__System_Int32_System_Int32_BepuUtilities_Memory_Buffer_BepuPhysics_ConstraintLocation___">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.Move(ref TwoBodyReferences, ref DistanceLimitPrestepData, ref Vector&lt;float&gt;, ConstraintHandle, int, ref TwoBodyReferences, ref DistanceLimitPrestepData, ref Vector&lt;float&gt;, ref ConstraintHandle, int, int, ref Buffer&lt;ConstraintLocation&gt;)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_Scramble_BepuPhysics_Constraints_TypeBatch__System_Random_BepuUtilities_Memory_Buffer_BepuPhysics_ConstraintLocation___">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.Scramble(ref TypeBatch, Random, ref Buffer&lt;ConstraintLocation&gt;)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_Remove_BepuPhysics_Constraints_TypeBatch__System_Int32_BepuUtilities_Memory_Buffer_BepuPhysics_ConstraintLocation___System_Boolean_">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.Remove(ref TypeBatch, int, ref Buffer&lt;ConstraintLocation&gt;, bool)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_TransferConstraint_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_BepuPhysics_Solver_BepuPhysics_Bodies_System_Int32_System_Span_BepuPhysics_BodyHandle__System_Span_System_Int32__">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.TransferConstraint(ref TypeBatch, int, int, Solver, Bodies, int, Span&lt;BodyHandle&gt;, Span&lt;int&gt;)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_Initialize_BepuPhysics_Constraints_TypeBatch__System_Int32_BepuUtilities_Memory_BufferPool_">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.Initialize(ref TypeBatch, int, BufferPool)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_Resize_BepuPhysics_Constraints_TypeBatch__System_Int32_BepuUtilities_Memory_BufferPool_">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.Resize(ref TypeBatch, int, BufferPool)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_UpdateForBodyMemoryMove_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_System_Int32_">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.UpdateForBodyMemoryMove(ref TypeBatch, int, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_GenerateSortKeysAndCopyReferences__1_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_System_Int32_System_Int32_System_Int32_System_Int32_System_Int32__System_Int32__BepuUtilities_Memory_Buffer_System_Byte___">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.GenerateSortKeysAndCopyReferences&lt;TSortKeyGenerator&gt;(ref TypeBatch, int, int, int, int, int, int, ref int, ref int, ref Buffer&lt;byte&gt;)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_VerifySortRegion__1_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_BepuUtilities_Memory_Buffer_System_Int32___BepuUtilities_Memory_Buffer_System_Int32___">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.VerifySortRegion&lt;TSortKeyGenerator&gt;(ref TypeBatch, int, int, ref Buffer&lt;int&gt;, ref Buffer&lt;int&gt;)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_BundleShouldIntegrate_System_Int32_BepuUtilities_Collections_IndexSet__System_Numerics_Vector_System_Int32___">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.BundleShouldIntegrate(int, in IndexSet, out Vector&lt;int&gt;)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_IntegratePoseAndVelocity__1___0__System_Numerics_Vector_System_Int32___BepuPhysics_BodyInertiaWide__System_Single_System_Numerics_Vector_System_Int32___BepuUtilities_Vector3Wide__BepuUtilities_QuaternionWide__BepuPhysics_BodyVelocityWide__System_Int32_BepuPhysics_BodyInertiaWide__">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.IntegratePoseAndVelocity&lt;TIntegratorCallbacks&gt;(ref TIntegratorCallbacks, ref Vector&lt;int&gt;, in BodyInertiaWide, float, in Vector&lt;int&gt;, ref Vector3Wide, ref QuaternionWide, ref BodyVelocityWide, int, out BodyInertiaWide)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_IntegrateVelocity__2___0__System_Numerics_Vector_System_Int32___BepuPhysics_BodyInertiaWide__System_Single_System_Numerics_Vector_System_Int32___BepuUtilities_Vector3Wide__BepuUtilities_QuaternionWide__BepuPhysics_BodyVelocityWide__System_Int32_BepuPhysics_BodyInertiaWide__">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.IntegrateVelocity&lt;TIntegratorCallbacks, TBatchIntegrationMode&gt;(ref TIntegratorCallbacks, ref Vector&lt;int&gt;, in BodyInertiaWide, float, in Vector&lt;int&gt;, in Vector3Wide, in QuaternionWide, ref BodyVelocityWide, int, out BodyInertiaWide)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html#BepuPhysics_Constraints_TypeProcessor_3_GatherAndIntegrate__4_BepuPhysics_Bodies___0__BepuUtilities_Memory_Buffer_BepuUtilities_Collections_IndexSet___System_Int32_System_Single_System_Int32_System_Int32_System_Numerics_Vector_System_Int32___BepuUtilities_Vector3Wide__BepuUtilities_QuaternionWide__BepuPhysics_BodyVelocityWide__BepuPhysics_BodyInertiaWide__">TypeProcessor&lt;TwoBodyReferences, DistanceLimitPrestepData, Vector&lt;float&gt;&gt;.GatherAndIntegrate&lt;TIntegratorCallbacks, TBatchIntegrationMode, TAccessFilter, TShouldIntegratePoses&gt;(Bodies, ref TIntegratorCallbacks, ref Buffer&lt;IndexSet&gt;, int, float, int, int, ref Vector&lt;int&gt;, out Vector3Wide, out QuaternionWide, out BodyVelocityWide, out BodyInertiaWide)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_typeId">TypeProcessor.typeId</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_bodiesPerConstraint">TypeProcessor.bodiesPerConstraint</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_TypeId">TypeProcessor.TypeId</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_BodiesPerConstraint">TypeProcessor.BodiesPerConstraint</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_ConstrainedDegreesOfFreedom">TypeProcessor.ConstrainedDegreesOfFreedom</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_InternalBodiesPerConstraint">TypeProcessor.InternalBodiesPerConstraint</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_InternalConstrainedDegreesOfFreedom">TypeProcessor.InternalConstrainedDegreesOfFreedom</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_Initialize_System_Int32_">TypeProcessor.Initialize(int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_AllocateInTypeBatch_BepuPhysics_Constraints_TypeBatch__BepuPhysics_ConstraintHandle_System_Span_System_Int32__BepuUtilities_Memory_BufferPool_">TypeProcessor.AllocateInTypeBatch(ref TypeBatch, ConstraintHandle, Span&lt;int&gt;, BufferPool)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_AllocateInTypeBatchForFallback_BepuPhysics_Constraints_TypeBatch__BepuPhysics_ConstraintHandle_System_Span_System_Int32__BepuUtilities_Memory_BufferPool_">TypeProcessor.AllocateInTypeBatchForFallback(ref TypeBatch, ConstraintHandle, Span&lt;int&gt;, BufferPool)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_Remove_BepuPhysics_Constraints_TypeBatch__System_Int32_BepuUtilities_Memory_Buffer_BepuPhysics_ConstraintLocation___System_Boolean_">TypeProcessor.Remove(ref TypeBatch, int, ref Buffer&lt;ConstraintLocation&gt;, bool)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_TransferConstraint_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_BepuPhysics_Solver_BepuPhysics_Bodies_System_Int32_">TypeProcessor.TransferConstraint(ref TypeBatch, int, int, Solver, Bodies, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_TransferConstraint_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_BepuPhysics_Solver_BepuPhysics_Bodies_System_Int32_System_Span_BepuPhysics_BodyHandle__System_Span_System_Int32__">TypeProcessor.TransferConstraint(ref TypeBatch, int, int, Solver, Bodies, int, Span&lt;BodyHandle&gt;, Span&lt;int&gt;)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_ValidateAccumulatedImpulsesSizeInBytes_System_Int32_">TypeProcessor.ValidateAccumulatedImpulsesSizeInBytes(int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_EnumerateAccumulatedImpulses__1_BepuPhysics_Constraints_TypeBatch__System_Int32___0__">TypeProcessor.EnumerateAccumulatedImpulses&lt;TEnumerator&gt;(ref TypeBatch, int, ref TEnumerator)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_ScaleAccumulatedImpulses_BepuPhysics_Constraints_TypeBatch__System_Single_">TypeProcessor.ScaleAccumulatedImpulses(ref TypeBatch, float)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_UpdateForBodyMemoryMove_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_System_Int32_">TypeProcessor.UpdateForBodyMemoryMove(ref TypeBatch, int, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_Scramble_BepuPhysics_Constraints_TypeBatch__System_Random_BepuUtilities_Memory_Buffer_BepuPhysics_ConstraintLocation___">TypeProcessor.Scramble(ref TypeBatch, Random, ref Buffer&lt;ConstraintLocation&gt;)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_Initialize_BepuPhysics_Constraints_TypeBatch__System_Int32_BepuUtilities_Memory_BufferPool_">TypeProcessor.Initialize(ref TypeBatch, int, BufferPool)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_Resize_BepuPhysics_Constraints_TypeBatch__System_Int32_BepuUtilities_Memory_BufferPool_">TypeProcessor.Resize(ref TypeBatch, int, BufferPool)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_WarmStart__3_BepuPhysics_Constraints_TypeBatch__BepuUtilities_Memory_Buffer_BepuUtilities_Collections_IndexSet___BepuPhysics_Bodies___0__System_Single_System_Single_System_Int32_System_Int32_System_Int32_">TypeProcessor.WarmStart&lt;TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration&gt;(ref TypeBatch, ref Buffer&lt;IndexSet&gt;, Bodies, ref TIntegratorCallbacks, float, float, int, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_Solve_BepuPhysics_Constraints_TypeBatch__BepuPhysics_Bodies_System_Single_System_Single_System_Int32_System_Int32_">TypeProcessor.Solve(ref TypeBatch, Bodies, float, float, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_RequiresIncrementalSubstepUpdates">TypeProcessor.RequiresIncrementalSubstepUpdates</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_IncrementallyUpdateForSubstep_BepuPhysics_Constraints_TypeBatch__BepuPhysics_Bodies_System_Single_System_Single_System_Int32_System_Int32_">TypeProcessor.IncrementallyUpdateForSubstep(ref TypeBatch, Bodies, float, float, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="BepuPhysics_Constraints_DistanceLimitTypeProcessor_BatchTypeId" data-uid="BepuPhysics.Constraints.DistanceLimitTypeProcessor.BatchTypeId">
+  BatchTypeId
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/DistanceLimit.cs/#L185"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public const int BatchTypeId = 34</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/DistanceLimit.cs/#L183" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

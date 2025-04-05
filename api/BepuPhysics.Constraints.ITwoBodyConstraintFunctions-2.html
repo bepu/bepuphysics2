@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Interface ITwoBodyConstraintFunctions&lt;TPrestepData, TAccumulatedImpulse&gt; | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Interface ITwoBodyConstraintFunctions&lt;TPrestepData, TAccumulatedImpulse&gt; | Bepu API ">
+      
+      <meta name="description" content="Prestep, warm start and solve iteration functions for a two body constraint type.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Constraints_ITwoBodyConstraintFunctions_2.md&amp;value=---%0Auid%3A%20BepuPhysics.Constraints.ITwoBodyConstraintFunctions%602%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Constraints.ITwoBodyConstraintFunctions`2">
+
+
+
+  <h1 id="BepuPhysics_Constraints_ITwoBodyConstraintFunctions_2" data-uid="BepuPhysics.Constraints.ITwoBodyConstraintFunctions`2" class="text-break">
+Interface ITwoBodyConstraintFunctions&lt;TPrestepData, TAccumulatedImpulse&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TwoBodyTypeProcessor.cs/#L24"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Constraints.html">Constraints</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Prestep, warm start and solve iteration functions for a two body constraint type.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public interface ITwoBodyConstraintFunctions&lt;TPrestepData, TAccumulatedImpulse&gt;</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TPrestepData</code></dt>
+    <dd><p>Type of the prestep data used by the constraint.</p>
+</dd>
+    <dt><code>TAccumulatedImpulse</code></dt>
+    <dd><p>Type of the accumulated impulses used by the constraint.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="BepuPhysics_Constraints_ITwoBodyConstraintFunctions_2_RequiresIncrementalSubstepUpdates_" data-uid="BepuPhysics.Constraints.ITwoBodyConstraintFunctions`2.RequiresIncrementalSubstepUpdates*"></a>
+
+  <h3 id="BepuPhysics_Constraints_ITwoBodyConstraintFunctions_2_RequiresIncrementalSubstepUpdates" data-uid="BepuPhysics.Constraints.ITwoBodyConstraintFunctions`2.RequiresIncrementalSubstepUpdates">
+  RequiresIncrementalSubstepUpdates
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TwoBodyTypeProcessor.cs/#L34"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether this constraint type requires incremental updates for each substep taken beyond the first.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static abstract bool RequiresIncrementalSubstepUpdates { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Constraints_ITwoBodyConstraintFunctions_2_IncrementallyUpdateForSubstep_" data-uid="BepuPhysics.Constraints.ITwoBodyConstraintFunctions`2.IncrementallyUpdateForSubstep*"></a>
+
+  <h3 id="BepuPhysics_Constraints_ITwoBodyConstraintFunctions_2_IncrementallyUpdateForSubstep_System_Numerics_Vector_System_Single___BepuPhysics_BodyVelocityWide__BepuPhysics_BodyVelocityWide___0__" data-uid="BepuPhysics.Constraints.ITwoBodyConstraintFunctions`2.IncrementallyUpdateForSubstep(System.Numerics.Vector{System.Single}@,BepuPhysics.BodyVelocityWide@,BepuPhysics.BodyVelocityWide@,`0@)">
+  IncrementallyUpdateForSubstep(in Vector&lt;float&gt;, in BodyVelocityWide, in BodyVelocityWide, ref TPrestepData)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TwoBodyTypeProcessor.cs/#L35"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static abstract void IncrementallyUpdateForSubstep(in Vector&lt;float&gt; dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TPrestepData prestepData)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>dt</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>wsvA</code> <a class="xref" href="BepuPhysics.BodyVelocityWide.html">BodyVelocityWide</a></dt>
+    <dd></dd>
+    <dt><code>wsvB</code> <a class="xref" href="BepuPhysics.BodyVelocityWide.html">BodyVelocityWide</a></dt>
+    <dd></dd>
+    <dt><code>prestepData</code> <span class="xref">TPrestepData</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_ITwoBodyConstraintFunctions_2_Solve_" data-uid="BepuPhysics.Constraints.ITwoBodyConstraintFunctions`2.Solve*"></a>
+
+  <h3 id="BepuPhysics_Constraints_ITwoBodyConstraintFunctions_2_Solve_BepuUtilities_Vector3Wide__BepuUtilities_QuaternionWide__BepuPhysics_BodyInertiaWide__BepuUtilities_Vector3Wide__BepuUtilities_QuaternionWide__BepuPhysics_BodyInertiaWide__System_Single_System_Single__0___1__BepuPhysics_BodyVelocityWide__BepuPhysics_BodyVelocityWide__" data-uid="BepuPhysics.Constraints.ITwoBodyConstraintFunctions`2.Solve(BepuUtilities.Vector3Wide@,BepuUtilities.QuaternionWide@,BepuPhysics.BodyInertiaWide@,BepuUtilities.Vector3Wide@,BepuUtilities.QuaternionWide@,BepuPhysics.BodyInertiaWide@,System.Single,System.Single,`0@,`1@,BepuPhysics.BodyVelocityWide@,BepuPhysics.BodyVelocityWide@)">
+  Solve(in Vector3Wide, in QuaternionWide, in BodyInertiaWide, in Vector3Wide, in QuaternionWide, in BodyInertiaWide, float, float, ref TPrestepData, ref TAccumulatedImpulse, ref BodyVelocityWide, ref BodyVelocityWide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TwoBodyTypeProcessor.cs/#L28"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static abstract void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>positionA</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>orientationA</code> <span class="xref">QuaternionWide</span></dt>
+    <dd></dd>
+    <dt><code>inertiaA</code> <a class="xref" href="BepuPhysics.BodyInertiaWide.html">BodyInertiaWide</a></dt>
+    <dd></dd>
+    <dt><code>positionB</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>orientationB</code> <span class="xref">QuaternionWide</span></dt>
+    <dd></dd>
+    <dt><code>inertiaB</code> <a class="xref" href="BepuPhysics.BodyInertiaWide.html">BodyInertiaWide</a></dt>
+    <dd></dd>
+    <dt><code>dt</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>inverseDt</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>prestep</code> <span class="xref">TPrestepData</span></dt>
+    <dd></dd>
+    <dt><code>accumulatedImpulses</code> <span class="xref">TAccumulatedImpulse</span></dt>
+    <dd></dd>
+    <dt><code>wsvA</code> <a class="xref" href="BepuPhysics.BodyVelocityWide.html">BodyVelocityWide</a></dt>
+    <dd></dd>
+    <dt><code>wsvB</code> <a class="xref" href="BepuPhysics.BodyVelocityWide.html">BodyVelocityWide</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_ITwoBodyConstraintFunctions_2_WarmStart_" data-uid="BepuPhysics.Constraints.ITwoBodyConstraintFunctions`2.WarmStart*"></a>
+
+  <h3 id="BepuPhysics_Constraints_ITwoBodyConstraintFunctions_2_WarmStart_BepuUtilities_Vector3Wide__BepuUtilities_QuaternionWide__BepuPhysics_BodyInertiaWide__BepuUtilities_Vector3Wide__BepuUtilities_QuaternionWide__BepuPhysics_BodyInertiaWide___0___1__BepuPhysics_BodyVelocityWide__BepuPhysics_BodyVelocityWide__" data-uid="BepuPhysics.Constraints.ITwoBodyConstraintFunctions`2.WarmStart(BepuUtilities.Vector3Wide@,BepuUtilities.QuaternionWide@,BepuPhysics.BodyInertiaWide@,BepuUtilities.Vector3Wide@,BepuUtilities.QuaternionWide@,BepuPhysics.BodyInertiaWide@,`0@,`1@,BepuPhysics.BodyVelocityWide@,BepuPhysics.BodyVelocityWide@)">
+  WarmStart(in Vector3Wide, in QuaternionWide, in BodyInertiaWide, in Vector3Wide, in QuaternionWide, in BodyInertiaWide, ref TPrestepData, ref TAccumulatedImpulse, ref BodyVelocityWide, ref BodyVelocityWide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TwoBodyTypeProcessor.cs/#L26"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static abstract void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>positionA</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>orientationA</code> <span class="xref">QuaternionWide</span></dt>
+    <dd></dd>
+    <dt><code>inertiaA</code> <a class="xref" href="BepuPhysics.BodyInertiaWide.html">BodyInertiaWide</a></dt>
+    <dd></dd>
+    <dt><code>positionB</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>orientationB</code> <span class="xref">QuaternionWide</span></dt>
+    <dd></dd>
+    <dt><code>inertiaB</code> <a class="xref" href="BepuPhysics.BodyInertiaWide.html">BodyInertiaWide</a></dt>
+    <dd></dd>
+    <dt><code>prestep</code> <span class="xref">TPrestepData</span></dt>
+    <dd></dd>
+    <dt><code>accumulatedImpulses</code> <span class="xref">TAccumulatedImpulse</span></dt>
+    <dd></dd>
+    <dt><code>wsvA</code> <a class="xref" href="BepuPhysics.BodyVelocityWide.html">BodyVelocityWide</a></dt>
+    <dd></dd>
+    <dt><code>wsvB</code> <a class="xref" href="BepuPhysics.BodyVelocityWide.html">BodyVelocityWide</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TwoBodyTypeProcessor.cs/#L24" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

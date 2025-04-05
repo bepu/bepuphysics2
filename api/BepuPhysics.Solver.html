@@ -1,0 +1,2334 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class Solver | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class Solver | Bepu API ">
+      
+      <meta name="description" content="Holds and solves constraints between bodies in a simulation.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Solver.md&amp;value=---%0Auid%3A%20BepuPhysics.Solver%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Solver">
+
+
+
+  <h1 id="BepuPhysics_Solver" data-uid="BepuPhysics.Solver" class="text-break">
+Class Solver  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L16"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Holds and solves constraints between bodies in a simulation.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public abstract class Solver</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">Solver</span></div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist derived">
+    <dt>Derived</dt>
+    <dd>
+      <div><a class="xref" href="BepuPhysics.Solver-1.html">Solver&lt;TIntegrationCallbacks&gt;</a></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="BepuPhysics_Solver__ctor_" data-uid="BepuPhysics.Solver.#ctor*"></a>
+
+  <h3 id="BepuPhysics_Solver__ctor_BepuPhysics_Bodies_BepuUtilities_Memory_BufferPool_BepuPhysics_SolveDescription_System_Int32_System_Int32_System_Int32_" data-uid="BepuPhysics.Solver.#ctor(BepuPhysics.Bodies,BepuUtilities.Memory.BufferPool,BepuPhysics.SolveDescription,System.Int32,System.Int32,System.Int32)">
+  Solver(Bodies, BufferPool, SolveDescription, int, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L269"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected Solver(Bodies bodies, BufferPool pool, SolveDescription solveDescription, int initialCapacity, int initialIslandCapacity, int minimumCapacityPerTypeBatch)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bodies</code> <a class="xref" href="BepuPhysics.Bodies.html">Bodies</a></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>solveDescription</code> <a class="xref" href="BepuPhysics.SolveDescription.html">SolveDescription</a></dt>
+    <dd></dd>
+    <dt><code>initialCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>initialIslandCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>minimumCapacityPerTypeBatch</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="BepuPhysics_Solver_ConstrainedKinematicHandles" data-uid="BepuPhysics.Solver.ConstrainedKinematicHandles">
+  ConstrainedKinematicHandles
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L68"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Set of body handles associated with constrained kinematic bodies. These will be integrated during substepping.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public QuickSet&lt;int, PrimitiveComparer&lt;int&gt;&gt; ConstrainedKinematicHandles</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">QuickSet</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>, <span class="xref">PrimitiveComparer</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Solver_HandlePool" data-uid="BepuPhysics.Solver.HandlePool">
+  HandlePool
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L47"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Pool to retrieve constraint handles from when creating new constraints.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IdPool HandlePool</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">IdPool</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Solver_HandleToConstraint" data-uid="BepuPhysics.Solver.HandleToConstraint">
+  HandleToConstraint
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L52"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Mapping from constraint handle (via its internal integer value) to the location of a constraint in memory.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Buffer&lt;ConstraintLocation&gt; HandleToConstraint</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.ConstraintLocation.html">ConstraintLocation</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Solver_Sets" data-uid="BepuPhysics.Solver.Sets">
+  Sets
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L24"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Buffer containing all constraint sets. The first slot is dedicated to the active set; subsequent slots may be occupied by the constraints associated with inactive islands.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Buffer&lt;ConstraintSet&gt; Sets</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.ConstraintSet.html">ConstraintSet</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Solver_TypeProcessors" data-uid="BepuPhysics.Solver.TypeProcessors">
+  TypeProcessors
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L38"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Set of processors applied to batches of constraints of particular types, indexed by the constraint type id.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TypeProcessor[] TypeProcessors</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html">TypeProcessor</a>[]</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_Solver_substepCount" data-uid="BepuPhysics.Solver.substepCount">
+  substepCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L70"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected int substepCount</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="BepuPhysics_Solver_ActiveSet_" data-uid="BepuPhysics.Solver.ActiveSet*"></a>
+
+  <h3 id="BepuPhysics_Solver_ActiveSet" data-uid="BepuPhysics.Solver.ActiveSet">
+  ActiveSet
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L29"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a reference to the active set of constraints, stored in the first set slot.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref ConstraintSet ActiveSet { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.ConstraintSet.html">ConstraintSet</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_FallbackBatchThreshold_" data-uid="BepuPhysics.Solver.FallbackBatchThreshold*"></a>
+
+  <h3 id="BepuPhysics_Solver_FallbackBatchThreshold" data-uid="BepuPhysics.Solver.FallbackBatchThreshold">
+  FallbackBatchThreshold
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L59"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the maximum number of solver batches to allow before resorting to a fallback solver.
+If a single body is constrained by more than FallbackBatchThreshold constraints, all constraints beyond FallbackBatchThreshold are placed into a fallback batch.
+The fallback batch uses a different solver that can handle multiple constraints affecting a single body in a single batch, allowing greater parallelism at the cost of convergence speed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int FallbackBatchThreshold { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_MinimumCapacityPerTypeBatch_" data-uid="BepuPhysics.Solver.MinimumCapacityPerTypeBatch*"></a>
+
+  <h3 id="BepuPhysics_Solver_MinimumCapacityPerTypeBatch" data-uid="BepuPhysics.Solver.MinimumCapacityPerTypeBatch">
+  MinimumCapacityPerTypeBatch
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L111"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the minimum amount of space, in constraints, initially allocated in any new type batch.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int MinimumCapacityPerTypeBatch { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_SubstepCount_" data-uid="BepuPhysics.Solver.SubstepCount*"></a>
+
+  <h3 id="BepuPhysics_Solver_SubstepCount" data-uid="BepuPhysics.Solver.SubstepCount">
+  SubstepCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L74"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the number of substeps the solver will simulate per call to Solve.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int SubstepCount { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_VelocityIterationCount_" data-uid="BepuPhysics.Solver.VelocityIterationCount*"></a>
+
+  <h3 id="BepuPhysics_Solver_VelocityIterationCount" data-uid="BepuPhysics.Solver.VelocityIterationCount">
+  VelocityIterationCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L89"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the number of solver velocity iterations to compute per substep.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int VelocityIterationCount { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_VelocityIterationScheduler_" data-uid="BepuPhysics.Solver.VelocityIterationScheduler*"></a>
+
+  <h3 id="BepuPhysics_Solver_VelocityIterationScheduler" data-uid="BepuPhysics.Solver.VelocityIterationScheduler">
+  VelocityIterationScheduler
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L105"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Callback executed to determine how many velocity iterations should be used for a given substep. If null, or if it returns a non-positive value, the <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_VelocityIterationCount">VelocityIterationCount</a> will be used instead.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public SubstepVelocityIterationScheduler VelocityIterationScheduler { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.SubstepVelocityIterationScheduler.html">SubstepVelocityIterationScheduler</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Solver_Add_" data-uid="BepuPhysics.Solver.Add*"></a>
+
+  <h3 id="BepuPhysics_Solver_Add__1_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle___0__" data-uid="BepuPhysics.Solver.Add``1(BepuPhysics.BodyHandle,BepuPhysics.BodyHandle,BepuPhysics.BodyHandle,BepuPhysics.BodyHandle,``0@)">
+  Add&lt;TDescription&gt;(BodyHandle, BodyHandle, BodyHandle, BodyHandle, in TDescription)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1286"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Allocates a four-body constraint slot and sets up a constraint with the specified description.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConstraintHandle Add&lt;TDescription&gt;(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, BodyHandle bodyHandleD, in TDescription description) where TDescription : unmanaged, IFourBodyConstraintDescription&lt;TDescription&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bodyHandleA</code> <a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+    <dd><p>First body of the constraint.</p>
+</dd>
+    <dt><code>bodyHandleB</code> <a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+    <dd><p>Second body of the constraint.</p>
+</dd>
+    <dt><code>bodyHandleC</code> <a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+    <dd><p>Third body of the constraint.</p>
+</dd>
+    <dt><code>bodyHandleD</code> <a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+    <dd><p>Fourth body of the constraint.</p>
+</dd>
+    <dt><code>description</code> <span class="xref">TDescription</span></dt>
+    <dd><p>Description of the constraint to add.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Allocated constraint handle.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TDescription</code></dt>
+    <dd><p>Type of the constraint description to add.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_Add_" data-uid="BepuPhysics.Solver.Add*"></a>
+
+  <h3 id="BepuPhysics_Solver_Add__1_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle___0__" data-uid="BepuPhysics.Solver.Add``1(BepuPhysics.BodyHandle,BepuPhysics.BodyHandle,BepuPhysics.BodyHandle,``0@)">
+  Add&lt;TDescription&gt;(BodyHandle, BodyHandle, BodyHandle, in TDescription)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1269"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Allocates a three-body constraint slot and sets up a constraint with the specified description.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConstraintHandle Add&lt;TDescription&gt;(BodyHandle bodyHandleA, BodyHandle bodyHandleB, BodyHandle bodyHandleC, in TDescription description) where TDescription : unmanaged, IThreeBodyConstraintDescription&lt;TDescription&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bodyHandleA</code> <a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+    <dd><p>First body of the constraint.</p>
+</dd>
+    <dt><code>bodyHandleB</code> <a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+    <dd><p>Second body of the constraint.</p>
+</dd>
+    <dt><code>bodyHandleC</code> <a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+    <dd><p>Third body of the constraint.</p>
+</dd>
+    <dt><code>description</code> <span class="xref">TDescription</span></dt>
+    <dd><p>Description of the constraint to add.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Allocated constraint handle.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TDescription</code></dt>
+    <dd><p>Type of the constraint description to add.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_Add_" data-uid="BepuPhysics.Solver.Add*"></a>
+
+  <h3 id="BepuPhysics_Solver_Add__1_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle___0__" data-uid="BepuPhysics.Solver.Add``1(BepuPhysics.BodyHandle,BepuPhysics.BodyHandle,``0@)">
+  Add&lt;TDescription&gt;(BodyHandle, BodyHandle, in TDescription)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1253"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Allocates a two-body constraint slot and sets up a constraint with the specified description.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConstraintHandle Add&lt;TDescription&gt;(BodyHandle bodyHandleA, BodyHandle bodyHandleB, in TDescription description) where TDescription : unmanaged, ITwoBodyConstraintDescription&lt;TDescription&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bodyHandleA</code> <a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+    <dd><p>First body of the constraint.</p>
+</dd>
+    <dt><code>bodyHandleB</code> <a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+    <dd><p>Second body of the constraint.</p>
+</dd>
+    <dt><code>description</code> <span class="xref">TDescription</span></dt>
+    <dd><p>Description of the constraint to add.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Allocated constraint handle.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TDescription</code></dt>
+    <dd><p>Type of the constraint description to add.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_Add_" data-uid="BepuPhysics.Solver.Add*"></a>
+
+  <h3 id="BepuPhysics_Solver_Add__1_BepuPhysics_BodyHandle___0__" data-uid="BepuPhysics.Solver.Add``1(BepuPhysics.BodyHandle,``0@)">
+  Add&lt;TDescription&gt;(BodyHandle, in TDescription)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1238"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Allocates a one-body constraint slot and sets up a constraint with the specified description.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConstraintHandle Add&lt;TDescription&gt;(BodyHandle bodyHandle, in TDescription description) where TDescription : unmanaged, IOneBodyConstraintDescription&lt;TDescription&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bodyHandle</code> <a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a></dt>
+    <dd><p>Body connected to the constraint.</p>
+</dd>
+    <dt><code>description</code> <span class="xref">TDescription</span></dt>
+    <dd><p>Description of the constraint to add.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Allocated constraint handle.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TDescription</code></dt>
+    <dd><p>Type of the constraint description to add.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_Add_" data-uid="BepuPhysics.Solver.Add*"></a>
+
+  <h3 id="BepuPhysics_Solver_Add__1_System_Span_BepuPhysics_BodyHandle____0__" data-uid="BepuPhysics.Solver.Add``1(System.Span{BepuPhysics.BodyHandle},``0@)">
+  Add&lt;TDescription&gt;(Span&lt;BodyHandle&gt;, in TDescription)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1208"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Allocates a constraint slot and sets up a constraint with the specified description.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConstraintHandle Add&lt;TDescription&gt;(Span&lt;BodyHandle&gt; bodyHandles, in TDescription description) where TDescription : unmanaged, IConstraintDescription&lt;TDescription&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bodyHandles</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a>&gt;</dt>
+    <dd><p>Body handles used by the constraint.</p>
+</dd>
+    <dt><code>description</code> <span class="xref">TDescription</span></dt>
+    <dd><p>Description of the constraint to add.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Allocated constraint handle.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TDescription</code></dt>
+    <dd><p>Type of the constraint description to add.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_ApplyDescriptionWithoutWaking_" data-uid="BepuPhysics.Solver.ApplyDescriptionWithoutWaking*"></a>
+
+  <h3 id="BepuPhysics_Solver_ApplyDescriptionWithoutWaking__1_BepuPhysics_ConstraintHandle___0__" data-uid="BepuPhysics.Solver.ApplyDescriptionWithoutWaking``1(BepuPhysics.ConstraintHandle,``0@)">
+  ApplyDescriptionWithoutWaking&lt;TDescription&gt;(ConstraintHandle, in TDescription)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1162"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Applies a description to a constraint slot without waking up the associated island.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ApplyDescriptionWithoutWaking&lt;TDescription&gt;(ConstraintHandle constraintHandle, in TDescription description) where TDescription : unmanaged, IConstraintDescription&lt;TDescription&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Handle of the constraint being updated.</p>
+</dd>
+    <dt><code>description</code> <span class="xref">TDescription</span></dt>
+    <dd><p>Description to apply to the slot.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TDescription</code></dt>
+    <dd><p>Type of the description to apply.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_ApplyDescriptionWithoutWaking_" data-uid="BepuPhysics.Solver.ApplyDescriptionWithoutWaking*"></a>
+
+  <h3 id="BepuPhysics_Solver_ApplyDescriptionWithoutWaking__1_BepuPhysics_ConstraintReference____0__" data-uid="BepuPhysics.Solver.ApplyDescriptionWithoutWaking``1(BepuPhysics.ConstraintReference@,``0@)">
+  ApplyDescriptionWithoutWaking&lt;TDescription&gt;(in ConstraintReference, in TDescription)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1149"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Applies a description to a constraint slot without waking up the associated island.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ApplyDescriptionWithoutWaking&lt;TDescription&gt;(in ConstraintReference constraintReference, in TDescription description) where TDescription : unmanaged, IConstraintDescription&lt;TDescription&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintReference</code> <a class="xref" href="BepuPhysics.ConstraintReference.html">ConstraintReference</a></dt>
+    <dd><p>Reference of the constraint being updated.</p>
+</dd>
+    <dt><code>description</code> <span class="xref">TDescription</span></dt>
+    <dd><p>Description to apply to the slot.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TDescription</code></dt>
+    <dd><p>Type of the description to apply.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_ApplyDescription_" data-uid="BepuPhysics.Solver.ApplyDescription*"></a>
+
+  <h3 id="BepuPhysics_Solver_ApplyDescription__1_BepuPhysics_ConstraintHandle___0__" data-uid="BepuPhysics.Solver.ApplyDescription``1(BepuPhysics.ConstraintHandle,``0@)">
+  ApplyDescription&lt;TDescription&gt;(ConstraintHandle, in TDescription)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1175"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Applies a description to a constraint slot, waking up the connected bodies if necessary.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ApplyDescription&lt;TDescription&gt;(ConstraintHandle constraintHandle, in TDescription description) where TDescription : unmanaged, IConstraintDescription&lt;TDescription&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Handle of the constraint being updated.</p>
+</dd>
+    <dt><code>description</code> <span class="xref">TDescription</span></dt>
+    <dd><p>Description to apply to the slot.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TDescription</code></dt>
+    <dd><p>Type of the description to apply.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_Clear_" data-uid="BepuPhysics.Solver.Clear*"></a>
+
+  <h3 id="BepuPhysics_Solver_Clear" data-uid="BepuPhysics.Solver.Clear">
+  Clear()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1896"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Removes all objects from the solver. This is meant as a fast path to empty a simulation's constraints. It makes no attempt to retain synchronization with other systems
+which may depend on the existence of constraints, like the per-body constraint lists.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Clear()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_ConstraintExists_" data-uid="BepuPhysics.Solver.ConstraintExists*"></a>
+
+  <h3 id="BepuPhysics_Solver_ConstraintExists_BepuPhysics_ConstraintHandle_" data-uid="BepuPhysics.Solver.ConstraintExists(BepuPhysics.ConstraintHandle)">
+  ConstraintExists(ConstraintHandle)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L325"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the given constraint handle refers to a constraint in the solver.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool ConstraintExists(ConstraintHandle constraintHandle)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Constraint handle to check for existence in the solver.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the constraint handle exists in the solver, false otherwise.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_CountConstraints_" data-uid="BepuPhysics.Solver.CountConstraints*"></a>
+
+  <h3 id="BepuPhysics_Solver_CountConstraints" data-uid="BepuPhysics.Solver.CountConstraints">
+  CountConstraints()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L228"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the total number of constraints across all sets, batches, and types. Requires enumerating
+all type batches; this can be expensive.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int CountConstraints()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_CountConstraintsInTypeBatch_" data-uid="BepuPhysics.Solver.CountConstraintsInTypeBatch*"></a>
+
+  <h3 id="BepuPhysics_Solver_CountConstraintsInTypeBatch_System_Int32_System_Int32_System_Int32_" data-uid="BepuPhysics.Solver.CountConstraintsInTypeBatch(System.Int32,System.Int32,System.Int32)">
+  CountConstraintsInTypeBatch(int, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L195"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Counts the number of constraints in a particular type batch.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int CountConstraintsInTypeBatch(int setIndex, int batchIndex, int typeBatchIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>setIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the set containing the type batch.</p>
+</dd>
+    <dt><code>batchIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the batch containing the type batch.</p>
+</dd>
+    <dt><code>typeBatchIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the type batch within the batch.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of constraints in the type batch.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Solver_CountConstraintsInTypeBatch_System_Int32_System_Int32_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This handles whether the type batch is in the fallback batch or not. Active fallback batches are not guaranteed to have contiguous constraints, so the <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html#BepuPhysics_Constraints_TypeBatch_ConstraintCount">ConstraintCount</a> value is an upper bound and there may be gaps.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Solver_Dispose_" data-uid="BepuPhysics.Solver.Dispose*"></a>
+
+  <h3 id="BepuPhysics_Solver_Dispose" data-uid="BepuPhysics.Solver.Dispose">
+  Dispose()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L2018"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Returns all pool-retrieved resources to the pool.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Solver_Dispose_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>The solver cannot be 'rehydrated' for reuse after a disposal. If you want to return bulk data to the pool while leaving the solver in a usable state, consider using Clear instead.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_Solver_DisposeConstraintIntegrationResponsibilities_" data-uid="BepuPhysics.Solver.DisposeConstraintIntegrationResponsibilities*"></a>
+
+  <h3 id="BepuPhysics_Solver_DisposeConstraintIntegrationResponsibilities" data-uid="BepuPhysics.Solver.DisposeConstraintIntegrationResponsibilities">
+  DisposeConstraintIntegrationResponsibilities()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L105"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public abstract void DisposeConstraintIntegrationResponsibilities()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_EnsureSolverCapacities_" data-uid="BepuPhysics.Solver.EnsureSolverCapacities*"></a>
+
+  <h3 id="BepuPhysics_Solver_EnsureSolverCapacities_System_Int32_System_Int32_" data-uid="BepuPhysics.Solver.EnsureSolverCapacities(System.Int32,System.Int32)">
+  EnsureSolverCapacities(int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1923"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Adjusts the size of the the solvers non-typebatch data structures. An allocation will grow if the given capacity exceeds the currently allocated capacity.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EnsureSolverCapacities(int bodyHandleCapacity, int constraintHandleCapacity)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bodyHandleCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Size of the span of body handles to allocate space for. Applies to batch referenced handle sets.</p>
+</dd>
+    <dt><code>constraintHandleCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of constraint handles to allocate space for. Applies to the handle-&gt;constraint mapping table.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_EnsureTypeBatchCapacities_" data-uid="BepuPhysics.Solver.EnsureTypeBatchCapacities*"></a>
+
+  <h3 id="BepuPhysics_Solver_EnsureTypeBatchCapacities" data-uid="BepuPhysics.Solver.EnsureTypeBatchCapacities">
+  EnsureTypeBatchCapacities()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1991"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Ensures all existing active type batches meet or exceed the current solver-defined minimum capacities. Type batches with capacities smaller than the minimums will be enlarged.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EnsureTypeBatchCapacities()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_EnumerateAccumulatedImpulses_" data-uid="BepuPhysics.Solver.EnumerateAccumulatedImpulses*"></a>
+
+  <h3 id="BepuPhysics_Solver_EnumerateAccumulatedImpulses__1_BepuPhysics_ConstraintHandle___0__" data-uid="BepuPhysics.Solver.EnumerateAccumulatedImpulses``1(BepuPhysics.ConstraintHandle,``0@)">
+  EnumerateAccumulatedImpulses&lt;TEnumerator&gt;(ConstraintHandle, ref TEnumerator)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1535"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Enumerates the accumulated impulses associated with a constraint.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EnumerateAccumulatedImpulses&lt;TEnumerator&gt;(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach&lt;float&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Constraint to enumerate.</p>
+</dd>
+    <dt><code>enumerator</code> <span class="xref">TEnumerator</span></dt>
+    <dd><p>Enumerator to use.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TEnumerator</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_EnumerateConnectedBodyReferences_" data-uid="BepuPhysics.Solver.EnumerateConnectedBodyReferences*"></a>
+
+  <h3 id="BepuPhysics_Solver_EnumerateConnectedBodyReferences__1_BepuPhysics_ConstraintHandle___0__" data-uid="BepuPhysics.Solver.EnumerateConnectedBodyReferences``1(BepuPhysics.ConstraintHandle,``0@)">
+  EnumerateConnectedBodyReferences&lt;TEnumerator&gt;(ConstraintHandle, ref TEnumerator)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1840"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Enumerates the set of body references associated with an active constraint in order of their references within the constraint.
+This will report the body reference (body index if awake, handle if asleep) without any encoded kinematicity metadata.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EnumerateConnectedBodyReferences&lt;TEnumerator&gt;(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach&lt;int&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Constraint to enumerate.</p>
+</dd>
+    <dt><code>enumerator</code> <span class="xref">TEnumerator</span></dt>
+    <dd><p>Enumerator to call for each connected body reference.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TEnumerator</code></dt>
+    <dd><p>Type of the enumerator to call on each connected body reference.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_EnumerateConnectedBodyReferences_" data-uid="BepuPhysics.Solver.EnumerateConnectedBodyReferences*"></a>
+
+  <h3 id="BepuPhysics_Solver_EnumerateConnectedBodyReferences__1_BepuPhysics_Constraints_TypeBatch__System_Int32___0__" data-uid="BepuPhysics.Solver.EnumerateConnectedBodyReferences``1(BepuPhysics.Constraints.TypeBatch@,System.Int32,``0@)">
+  EnumerateConnectedBodyReferences&lt;TEnumerator&gt;(ref TypeBatch, int, ref TEnumerator)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1828"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Enumerates the set of body references associated with an active constraint in order of their references within the constraint.
+This will report the body reference (body index if awake, handle if asleep) without any encoded kinematicity metadata.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EnumerateConnectedBodyReferences&lt;TEnumerator&gt;(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach&lt;int&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd><p>Type batch containing the constraint to enumerate.</p>
+</dd>
+    <dt><code>indexInTypeBatch</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the constraint to enumerate in the type batch.</p>
+</dd>
+    <dt><code>enumerator</code> <span class="xref">TEnumerator</span></dt>
+    <dd><p>Enumerator to call for each connected body reference.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TEnumerator</code></dt>
+    <dd><p>Type of the enumerator to call on each connected body reference.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_EnumerateConnectedDynamicBodies_" data-uid="BepuPhysics.Solver.EnumerateConnectedDynamicBodies*"></a>
+
+  <h3 id="BepuPhysics_Solver_EnumerateConnectedDynamicBodies__1_BepuPhysics_ConstraintHandle___0__" data-uid="BepuPhysics.Solver.EnumerateConnectedDynamicBodies``1(BepuPhysics.ConstraintHandle,``0@)">
+  EnumerateConnectedDynamicBodies&lt;TEnumerator&gt;(ConstraintHandle, ref TEnumerator)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1870"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Enumerates the set of dynamic body references associated with a constraint in order of their references within the constraint.
+This will report the body reference (body index if awake, handle if asleep) without any encoded kinematicity metadata.
+Kinematic references are skipped.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EnumerateConnectedDynamicBodies&lt;TEnumerator&gt;(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach&lt;int&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Constraint to enumerate.</p>
+</dd>
+    <dt><code>enumerator</code> <span class="xref">TEnumerator</span></dt>
+    <dd><p>Enumerator to call for each connected dynamic body reference.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TEnumerator</code></dt>
+    <dd><p>Type of the enumerator to call on each connected dynamic body reference.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_EnumerateConnectedDynamicBodies_" data-uid="BepuPhysics.Solver.EnumerateConnectedDynamicBodies*"></a>
+
+  <h3 id="BepuPhysics_Solver_EnumerateConnectedDynamicBodies__1_BepuPhysics_Constraints_TypeBatch__System_Int32___0__" data-uid="BepuPhysics.Solver.EnumerateConnectedDynamicBodies``1(BepuPhysics.Constraints.TypeBatch@,System.Int32,``0@)">
+  EnumerateConnectedDynamicBodies&lt;TEnumerator&gt;(ref TypeBatch, int, ref TEnumerator)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1857"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Enumerates the set of dynamic body references associated with a constraint in order of their references within the constraint.
+This will report the body reference (body index if awake, handle if asleep) without any encoded kinematicity metadata.
+Kinematic references are skipped.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EnumerateConnectedDynamicBodies&lt;TEnumerator&gt;(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach&lt;int&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd><p>Type batch containing the constraint to enumerate.</p>
+</dd>
+    <dt><code>indexInTypeBatch</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the constraint to enumerate in the type batch.</p>
+</dd>
+    <dt><code>enumerator</code> <span class="xref">TEnumerator</span></dt>
+    <dd><p>Enumerator to call for each connected dynamic body reference.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TEnumerator</code></dt>
+    <dd><p>Type of the enumerator to call on each connected dynamic body reference.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_EnumerateConnectedRawBodyReferences_" data-uid="BepuPhysics.Solver.EnumerateConnectedRawBodyReferences*"></a>
+
+  <h3 id="BepuPhysics_Solver_EnumerateConnectedRawBodyReferences__1_BepuPhysics_ConstraintHandle___0__" data-uid="BepuPhysics.Solver.EnumerateConnectedRawBodyReferences``1(BepuPhysics.ConstraintHandle,``0@)">
+  EnumerateConnectedRawBodyReferences&lt;TEnumerator&gt;(ConstraintHandle, ref TEnumerator)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1812"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Enumerates the set of body references associated with a constraint in order of their references within the constraint.
+This will report the raw body reference (body index if awake, handle if asleep) and any encoded metadata, like whether the body is kinematic.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EnumerateConnectedRawBodyReferences&lt;TEnumerator&gt;(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach&lt;int&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Constraint to enumerate.</p>
+</dd>
+    <dt><code>enumerator</code> <span class="xref">TEnumerator</span></dt>
+    <dd><p>Enumerator to call for each connected body reference.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TEnumerator</code></dt>
+    <dd><p>Type of the enumerator to call on each connected body reference.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_EnumerateConnectedRawBodyReferences_" data-uid="BepuPhysics.Solver.EnumerateConnectedRawBodyReferences*"></a>
+
+  <h3 id="BepuPhysics_Solver_EnumerateConnectedRawBodyReferences__1_BepuPhysics_Constraints_TypeBatch__System_Int32___0__" data-uid="BepuPhysics.Solver.EnumerateConnectedRawBodyReferences``1(BepuPhysics.Constraints.TypeBatch@,System.Int32,``0@)">
+  EnumerateConnectedRawBodyReferences&lt;TEnumerator&gt;(ref TypeBatch, int, ref TEnumerator)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1800"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Enumerates the set of body references associated with a constraint in order of their references within the constraint.
+This will report the raw body reference (body index if awake, handle if asleep) and any encoded metadata, like whether the body is kinematic.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EnumerateConnectedRawBodyReferences&lt;TEnumerator&gt;(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach&lt;int&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd><p>Type batch containing the constraint to enumerate.</p>
+</dd>
+    <dt><code>indexInTypeBatch</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the constraint to enumerate in the type batch.</p>
+</dd>
+    <dt><code>enumerator</code> <span class="xref">TEnumerator</span></dt>
+    <dd><p>Enumerator to call for each connected body reference.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TEnumerator</code></dt>
+    <dd><p>Type of the enumerator to call on each connected body reference.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_GetAccumulatedImpulseMagnitude_" data-uid="BepuPhysics.Solver.GetAccumulatedImpulseMagnitude*"></a>
+
+  <h3 id="BepuPhysics_Solver_GetAccumulatedImpulseMagnitude_BepuPhysics_ConstraintHandle_" data-uid="BepuPhysics.Solver.GetAccumulatedImpulseMagnitude(BepuPhysics.ConstraintHandle)">
+  GetAccumulatedImpulseMagnitude(ConstraintHandle)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1571"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gathers the magnitude of the accumulated impulse for a given constraint.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public float GetAccumulatedImpulseMagnitude(ConstraintHandle constraintHandle)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Constraint to look up the accumulated impulses of.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Magnitude of the accumulated impulses associated with the given constraint.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_GetAccumulatedImpulseMagnitudeSquared_" data-uid="BepuPhysics.Solver.GetAccumulatedImpulseMagnitudeSquared*"></a>
+
+  <h3 id="BepuPhysics_Solver_GetAccumulatedImpulseMagnitudeSquared_BepuPhysics_ConstraintHandle_" data-uid="BepuPhysics.Solver.GetAccumulatedImpulseMagnitudeSquared(BepuPhysics.ConstraintHandle)">
+  GetAccumulatedImpulseMagnitudeSquared(ConstraintHandle)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1548"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gathers the squared magnitude of the accumulated impulse for a given constraint.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public float GetAccumulatedImpulseMagnitudeSquared(ConstraintHandle constraintHandle)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Constraint to look up the accumulated impulses of.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Squared magnitude of the accumulated impulses associated with the given constraint.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_GetConstraintReference_" data-uid="BepuPhysics.Solver.GetConstraintReference*"></a>
+
+  <h3 id="BepuPhysics_Solver_GetConstraintReference_BepuPhysics_ConstraintHandle_" data-uid="BepuPhysics.Solver.GetConstraintReference(BepuPhysics.ConstraintHandle)">
+  GetConstraintReference(ConstraintHandle)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L339"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a direct reference to the constraint associated with a handle.
+The reference is temporary; any constraint removals that affect the referenced type batch may invalidate the index.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConstraintReference GetConstraintReference(ConstraintHandle handle)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>handle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Handle index of the constraint.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.ConstraintReference.html">ConstraintReference</a></dt>
+    <dd><p>Temporary direct reference to the type batch and index in the type batch associated with the constraint handle.
+May be invalidated by constraint removals.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_GetDescription_" data-uid="BepuPhysics.Solver.GetDescription*"></a>
+
+  <h3 id="BepuPhysics_Solver_GetDescription__1_BepuPhysics_ConstraintHandle___0__" data-uid="BepuPhysics.Solver.GetDescription``1(BepuPhysics.ConstraintHandle,``0@)">
+  GetDescription&lt;TConstraintDescription&gt;(ConstraintHandle, out TConstraintDescription)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1430"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the constraint description associated with a constraint handle.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void GetDescription&lt;TConstraintDescription&gt;(ConstraintHandle handle, out TConstraintDescription description) where TConstraintDescription : unmanaged, IConstraintDescription&lt;TConstraintDescription&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>handle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Handle of the constraint to retrieve.</p>
+</dd>
+    <dt><code>description</code> <span class="xref">TConstraintDescription</span></dt>
+    <dd><p>Retrieved description of the constraint.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TConstraintDescription</code></dt>
+    <dd><p>Type of the constraint description to retrieve.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_GetDescription_" data-uid="BepuPhysics.Solver.GetDescription*"></a>
+
+  <h3 id="BepuPhysics_Solver_GetDescription__1_BepuPhysics_ConstraintReference___0__" data-uid="BepuPhysics.Solver.GetDescription``1(BepuPhysics.ConstraintReference,``0@)">
+  GetDescription&lt;TConstraintDescription&gt;(ConstraintReference, out TConstraintDescription)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1413"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the constraint description associated with a constraint reference.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void GetDescription&lt;TConstraintDescription&gt;(ConstraintReference constraintReference, out TConstraintDescription description) where TConstraintDescription : unmanaged, IConstraintDescription&lt;TConstraintDescription&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>constraintReference</code> <a class="xref" href="BepuPhysics.ConstraintReference.html">ConstraintReference</a></dt>
+    <dd><p>Reference to the constraint to retrieve.</p>
+</dd>
+    <dt><code>description</code> <span class="xref">TConstraintDescription</span></dt>
+    <dd><p>Retrieved description of the constraint.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TConstraintDescription</code></dt>
+    <dd><p>Type of the constraint description to retrieve.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_GetMinimumCapacityForType_" data-uid="BepuPhysics.Solver.GetMinimumCapacityForType*"></a>
+
+  <h3 id="BepuPhysics_Solver_GetMinimumCapacityForType_System_Int32_" data-uid="BepuPhysics.Solver.GetMinimumCapacityForType(System.Int32)">
+  GetMinimumCapacityForType(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L170"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the minimum initial capacity for a given type.
+The returned value is the larger of MinimumCapacityPerTypeBatch and the value set by SetMinimumCapacityForType for the given type id.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int GetMinimumCapacityForType(int typeId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Type id to retrieve the minm</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Larger of MinimumCapacityPerTypeBatch and the given type's minimum set by SetMinimumCapacityForType.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_OnSubstepEnded_" data-uid="BepuPhysics.Solver.OnSubstepEnded*"></a>
+
+  <h3 id="BepuPhysics_Solver_OnSubstepEnded_System_Int32_" data-uid="BepuPhysics.Solver.OnSubstepEnded(System.Int32)">
+  OnSubstepEnded(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L143"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected void OnSubstepEnded(int substepIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>substepIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_OnSubstepStarted_" data-uid="BepuPhysics.Solver.OnSubstepStarted*"></a>
+
+  <h3 id="BepuPhysics_Solver_OnSubstepStarted_System_Int32_" data-uid="BepuPhysics.Solver.OnSubstepStarted(System.Int32)">
+  OnSubstepStarted(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L139"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected void OnSubstepStarted(int substepIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>substepIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_PrepareConstraintIntegrationResponsibilities_" data-uid="BepuPhysics.Solver.PrepareConstraintIntegrationResponsibilities*"></a>
+
+  <h3 id="BepuPhysics_Solver_PrepareConstraintIntegrationResponsibilities_BepuUtilities_IThreadDispatcher_" data-uid="BepuPhysics.Solver.PrepareConstraintIntegrationResponsibilities(BepuUtilities.IThreadDispatcher)">
+  PrepareConstraintIntegrationResponsibilities(IThreadDispatcher)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L104"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public abstract IndexSet PrepareConstraintIntegrationResponsibilities(IThreadDispatcher threadDispatcher = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><span class="xref">IndexSet</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_Register_" data-uid="BepuPhysics.Solver.Register*"></a>
+
+  <h3 id="BepuPhysics_Solver_Register__1" data-uid="BepuPhysics.Solver.Register``1">
+  Register&lt;TDescription&gt;()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L295"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Registers a constraint type with the solver, creating a type processor for the type internally and allowing constraints of that type to be added to the solver.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Register&lt;TDescription&gt;() where TDescription : unmanaged, IConstraintDescription&lt;TDescription&gt;</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TDescription</code></dt>
+    <dd><p>Type of the constraint to register with the solver.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_Solver_Register__1_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p><a class="xref" href="BepuPhysics.DefaultTypes.html#BepuPhysics_DefaultTypes_RegisterDefaults_BepuPhysics_Solver_BepuPhysics_CollisionDetection_NarrowPhase_">RegisterDefaults(Solver, NarrowPhase)</a> is called during simuation creation and registers all the built in types. Calling <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Register__1">Register&lt;TDescription&gt;()</a> manually is only necessary if custom types are used.</p>
+</div>
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>Fired when another constraint type of the same id has already been registered.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="BepuPhysics_Solver_Remove_" data-uid="BepuPhysics.Solver.Remove*"></a>
+
+  <h3 id="BepuPhysics_Solver_Remove_BepuPhysics_ConstraintHandle_" data-uid="BepuPhysics.Solver.Remove(BepuPhysics.ConstraintHandle)">
+  Remove(ConstraintHandle)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1385"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Removes the constraint associated with the given handle. Note that this may invalidate any outstanding direct constraint references
+by reordering the constraints within the TypeBatch subject to removal.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Remove(ConstraintHandle handle)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>handle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Handle of the constraint to remove from the solver.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_ResetPerTypeInitialCapacities_" data-uid="BepuPhysics.Solver.ResetPerTypeInitialCapacities*"></a>
+
+  <h3 id="BepuPhysics_Solver_ResetPerTypeInitialCapacities" data-uid="BepuPhysics.Solver.ResetPerTypeInitialCapacities">
+  ResetPerTypeInitialCapacities()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L182"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Resets all per-type initial capacities to zero. Leaves the minimum capacity across all constraints unchanged.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ResetPerTypeInitialCapacities()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_ResizeSolverCapacities_" data-uid="BepuPhysics.Solver.ResizeSolverCapacities*"></a>
+
+  <h3 id="BepuPhysics_Solver_ResizeSolverCapacities_System_Int32_System_Int32_" data-uid="BepuPhysics.Solver.ResizeSolverCapacities(System.Int32,System.Int32)">
+  ResizeSolverCapacities(int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1955"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Adjusts the size of the the solvers non-typebatch data structures. An allocation is allowed to shrink if it fits both all existing entries and the given capacity.
+An allocation will grow if the given capacity exceeds the currently allocated capacity.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ResizeSolverCapacities(int bodyHandleCapacity, int constraintHandleCapacity)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bodyHandleCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Size of the span of body handles to allocate space for. Applies to batch referenced handle sets.</p>
+</dd>
+    <dt><code>constraintHandleCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Number of constraint handles to allocate space for. Applies to the handle-&gt;constraint mapping table.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_ResizeTypeBatchCapacities_" data-uid="BepuPhysics.Solver.ResizeTypeBatchCapacities*"></a>
+
+  <h3 id="BepuPhysics_Solver_ResizeTypeBatchCapacities" data-uid="BepuPhysics.Solver.ResizeTypeBatchCapacities">
+  ResizeTypeBatchCapacities()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L2003"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Applies the current solver-defined minimum capacities to existing type batches. Type batches with capacities larger than the minimums and counts less than the minimums may be shrunk.
+Type batches with capacities smaller than the minimums will be enlarged.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ResizeTypeBatchCapacities()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_ScaleAccumulatedImpulses_" data-uid="BepuPhysics.Solver.ScaleAccumulatedImpulses*"></a>
+
+  <h3 id="BepuPhysics_Solver_ScaleAccumulatedImpulses_BepuPhysics_ConstraintSet__System_Single_" data-uid="BepuPhysics.Solver.ScaleAccumulatedImpulses(BepuPhysics.ConstraintSet@,System.Single)">
+  ScaleAccumulatedImpulses(ref ConstraintSet, float)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1494"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Scales the accumulated impulses associated with a constraint set by a given scale.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ScaleAccumulatedImpulses(ref ConstraintSet set, float scale)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>set</code> <a class="xref" href="BepuPhysics.ConstraintSet.html">ConstraintSet</a></dt>
+    <dd><p>Set to scale.</p>
+</dd>
+    <dt><code>scale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Scale to apply to accumulated impulses.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_ScaleAccumulatedImpulses_" data-uid="BepuPhysics.Solver.ScaleAccumulatedImpulses*"></a>
+
+  <h3 id="BepuPhysics_Solver_ScaleAccumulatedImpulses_System_Single_" data-uid="BepuPhysics.Solver.ScaleAccumulatedImpulses(System.Single)">
+  ScaleAccumulatedImpulses(float)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1520"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Scales all accumulated impulses in all constraint sets.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ScaleAccumulatedImpulses(float scale)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>scale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Scale to apply to accumulated impulses.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_ScaleActiveAccumulatedImpulses_" data-uid="BepuPhysics.Solver.ScaleActiveAccumulatedImpulses*"></a>
+
+  <h3 id="BepuPhysics_Solver_ScaleActiveAccumulatedImpulses_System_Single_" data-uid="BepuPhysics.Solver.ScaleActiveAccumulatedImpulses(System.Single)">
+  ScaleActiveAccumulatedImpulses(float)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L1511"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Scales all accumulated impulses in the active set.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ScaleActiveAccumulatedImpulses(float scale)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>scale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Scale to apply to accumulated impulses.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_SetMinimumCapacityForType_" data-uid="BepuPhysics.Solver.SetMinimumCapacityForType*"></a>
+
+  <h3 id="BepuPhysics_Solver_SetMinimumCapacityForType_System_Int32_System_Int32_" data-uid="BepuPhysics.Solver.SetMinimumCapacityForType(System.Int32,System.Int32)">
+  SetMinimumCapacityForType(int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L153"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Sets the minimum capacity initially allocated to a new type batch of the given type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void SetMinimumCapacityForType(int typeId, int minimumInitialCapacityForType)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Id of the constraint type to check the initial capacity of.</p>
+</dd>
+    <dt><code>minimumInitialCapacityForType</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Minimum capacity to use for the type.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_Solve_" data-uid="BepuPhysics.Solver.Solve*"></a>
+
+  <h3 id="BepuPhysics_Solver_Solve_System_Single_BepuUtilities_IThreadDispatcher_" data-uid="BepuPhysics.Solver.Solve(System.Single,BepuUtilities.IThreadDispatcher)">
+  Solve(float, IThreadDispatcher)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L106"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public abstract void Solve(float dt, IThreadDispatcher threadDispatcher = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>dt</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="events">Events
+</h2>
+
+
+
+  <h3 id="BepuPhysics_Solver_SubstepEnded" data-uid="BepuPhysics.Solver.SubstepEnded">
+  SubstepEnded
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L137"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Event invoked when the solver completes a substep. If the solver is executing on multiple threads, this will be invoked within the multithreaded dispatch on worker thread 0.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public event Solver.SubstepEvent SubstepEnded</code></pre>
+  </div>
+
+
+
+
+
+
+  <h4 class="section">Event Type</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Solver.html">Solver</a>.<a class="xref" href="BepuPhysics.Solver.SubstepEvent.html">SubstepEvent</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+  <h4 class="section" id="BepuPhysics_Solver_SubstepEnded_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Take care when attempting to dispatch multithreaded operations from within this event.
+If using the same <span class="xref">BepuUtilities.IThreadDispatcher</span> instance as the solver, the dispatcher implementation must be reentrant. The demos implementation is not.</p>
+</div>
+
+
+
+
+
+  <h3 id="BepuPhysics_Solver_SubstepStarted" data-uid="BepuPhysics.Solver.SubstepStarted">
+  SubstepStarted
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver.cs/#L131"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Event invoked when the solver begins a substep. If the solver is executing on multiple threads, this will be invoked within the multithreaded dispatch on worker thread 0.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public event Solver.SubstepEvent SubstepStarted</code></pre>
+  </div>
+
+
+
+
+
+
+  <h4 class="section">Event Type</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Solver.html">Solver</a>.<a class="xref" href="BepuPhysics.Solver.SubstepEvent.html">SubstepEvent</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+  <h4 class="section" id="BepuPhysics_Solver_SubstepStarted_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Take care when attempting to dispatch multithreaded operations from within this event.
+If using the same <span class="xref">BepuUtilities.IThreadDispatcher</span> instance as the solver, the dispatcher implementation must be reentrant. The demos implementation is not.</p>
+</div>
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L16" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

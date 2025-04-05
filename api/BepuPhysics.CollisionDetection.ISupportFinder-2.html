@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Interface ISupportFinder&lt;TShape, TShapeWide&gt; | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Interface ISupportFinder&lt;TShape, TShapeWide&gt; | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_CollisionDetection_ISupportFinder_2.md&amp;value=---%0Auid%3A%20BepuPhysics.CollisionDetection.ISupportFinder%602%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.CollisionDetection.ISupportFinder`2">
+
+
+
+  <h1 id="BepuPhysics_CollisionDetection_ISupportFinder_2" data-uid="BepuPhysics.CollisionDetection.ISupportFinder`2" class="text-break">
+Interface ISupportFinder&lt;TShape, TShapeWide&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ISupportFinder.cs/#L6"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.CollisionDetection.html">CollisionDetection</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public interface ISupportFinder&lt;TShape, TShapeWide&gt; where TShape : IConvexShape where TShapeWide : IShapeWide&lt;TShape&gt;</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TShape</code></dt>
+    <dd></dd>
+    <dt><code>TShapeWide</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_ISupportFinder_2_HasMargin_" data-uid="BepuPhysics.CollisionDetection.ISupportFinder`2.HasMargin*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ISupportFinder_2_HasMargin" data-uid="BepuPhysics.CollisionDetection.ISupportFinder`2.HasMargin">
+  HasMargin
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ISupportFinder.cs/#L11"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the support finder is sampling a shape with a spherical margin that should be applied after a solution is found for the core shape.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">bool HasMargin { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_ISupportFinder_2_ComputeLocalSupport_" data-uid="BepuPhysics.CollisionDetection.ISupportFinder`2.ComputeLocalSupport*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ISupportFinder_2_ComputeLocalSupport__1__BepuUtilities_Vector3Wide__System_Numerics_Vector_System_Int32___BepuUtilities_Vector3Wide__" data-uid="BepuPhysics.CollisionDetection.ISupportFinder`2.ComputeLocalSupport(`1@,BepuUtilities.Vector3Wide@,System.Numerics.Vector{System.Int32}@,BepuUtilities.Vector3Wide@)">
+  ComputeLocalSupport(in TShapeWide, in Vector3Wide, in Vector&lt;int&gt;, out Vector3Wide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ISupportFinder.cs/#L18"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void ComputeLocalSupport(in TShapeWide shape, in Vector3Wide direction, in Vector&lt;int&gt; terminatedLanes, out Vector3Wide support)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shape</code> <span class="xref">TShapeWide</span></dt>
+    <dd></dd>
+    <dt><code>direction</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>terminatedLanes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>support</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ISupportFinder_2_ComputeSupport_" data-uid="BepuPhysics.CollisionDetection.ISupportFinder`2.ComputeSupport*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ISupportFinder_2_ComputeSupport__1__BepuUtilities_Matrix3x3Wide__BepuUtilities_Vector3Wide__System_Numerics_Vector_System_Int32___BepuUtilities_Vector3Wide__" data-uid="BepuPhysics.CollisionDetection.ISupportFinder`2.ComputeSupport(`1@,BepuUtilities.Matrix3x3Wide@,BepuUtilities.Vector3Wide@,System.Numerics.Vector{System.Int32}@,BepuUtilities.Vector3Wide@)">
+  ComputeSupport(in TShapeWide, in Matrix3x3Wide, in Vector3Wide, in Vector&lt;int&gt;, out Vector3Wide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ISupportFinder.cs/#L19"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void ComputeSupport(in TShapeWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, in Vector&lt;int&gt; terminatedLanes, out Vector3Wide support)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shape</code> <span class="xref">TShapeWide</span></dt>
+    <dd></dd>
+    <dt><code>orientation</code> <span class="xref">Matrix3x3Wide</span></dt>
+    <dd></dd>
+    <dt><code>direction</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>terminatedLanes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>support</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ISupportFinder_2_GetMargin_" data-uid="BepuPhysics.CollisionDetection.ISupportFinder`2.GetMargin*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ISupportFinder_2_GetMargin__1__System_Numerics_Vector_System_Single___" data-uid="BepuPhysics.CollisionDetection.ISupportFinder`2.GetMargin(`1@,System.Numerics.Vector{System.Single}@)">
+  GetMargin(in TShapeWide, out Vector&lt;float&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ISupportFinder.cs/#L17"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Margin associated with the shape according to this support finder.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void GetMargin(in TShapeWide shape, out Vector&lt;float&gt; margin)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>shape</code> <span class="xref">TShapeWide</span></dt>
+    <dd><p>Shape to find the margin of.</p>
+</dd>
+    <dt><code>margin</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
+    <dd><p>Margin of the shape.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ISupportFinder.cs/#L6" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class Solver&lt;TIntegrationCallbacks&gt; | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class Solver&lt;TIntegrationCallbacks&gt; | Bepu API ">
+      
+      <meta name="description" content="Handles integration-aware substepped solving.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Solver_1.md&amp;value=---%0Auid%3A%20BepuPhysics.Solver%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Solver`1">
+
+
+
+  <h1 id="BepuPhysics_Solver_1" data-uid="BepuPhysics.Solver`1" class="text-break">
+Class Solver&lt;TIntegrationCallbacks&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L114"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Handles integration-aware substepped solving.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public class Solver&lt;TIntegrationCallbacks&gt; : Solver where TIntegrationCallbacks : struct, IPoseIntegratorCallbacks</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TIntegrationCallbacks</code></dt>
+    <dd><p>Type of integration callbacks being used during the substepped solve.</p>
+</dd>
+  </dl>
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><a class="xref" href="BepuPhysics.Solver.html">Solver</a></div>
+      <div><span class="xref">Solver&lt;TIntegrationCallbacks&gt;</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Sets">Solver.Sets</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ActiveSet">Solver.ActiveSet</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_TypeProcessors">Solver.TypeProcessors</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_HandlePool">Solver.HandlePool</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_HandleToConstraint">Solver.HandleToConstraint</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_FallbackBatchThreshold">Solver.FallbackBatchThreshold</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ConstrainedKinematicHandles">Solver.ConstrainedKinematicHandles</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_substepCount">Solver.substepCount</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_SubstepCount">Solver.SubstepCount</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_VelocityIterationCount">Solver.VelocityIterationCount</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_VelocityIterationScheduler">Solver.VelocityIterationScheduler</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_MinimumCapacityPerTypeBatch">Solver.MinimumCapacityPerTypeBatch</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_SubstepStarted">Solver.SubstepStarted</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_SubstepEnded">Solver.SubstepEnded</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_OnSubstepStarted_System_Int32_">Solver.OnSubstepStarted(int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_OnSubstepEnded_System_Int32_">Solver.OnSubstepEnded(int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_SetMinimumCapacityForType_System_Int32_System_Int32_">Solver.SetMinimumCapacityForType(int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_GetMinimumCapacityForType_System_Int32_">Solver.GetMinimumCapacityForType(int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ResetPerTypeInitialCapacities">Solver.ResetPerTypeInitialCapacities()</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_CountConstraintsInTypeBatch_System_Int32_System_Int32_System_Int32_">Solver.CountConstraintsInTypeBatch(int, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_CountConstraints">Solver.CountConstraints()</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Register__1">Solver.Register&lt;TDescription&gt;()</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ConstraintExists_BepuPhysics_ConstraintHandle_">Solver.ConstraintExists(ConstraintHandle)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_GetConstraintReference_BepuPhysics_ConstraintHandle_">Solver.GetConstraintReference(ConstraintHandle)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ApplyDescriptionWithoutWaking__1_BepuPhysics_ConstraintReference____0__">Solver.ApplyDescriptionWithoutWaking&lt;TDescription&gt;(in ConstraintReference, in TDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ApplyDescriptionWithoutWaking__1_BepuPhysics_ConstraintHandle___0__">Solver.ApplyDescriptionWithoutWaking&lt;TDescription&gt;(ConstraintHandle, in TDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ApplyDescription__1_BepuPhysics_ConstraintHandle___0__">Solver.ApplyDescription&lt;TDescription&gt;(ConstraintHandle, in TDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Add__1_System_Span_BepuPhysics_BodyHandle____0__">Solver.Add&lt;TDescription&gt;(Span&lt;BodyHandle&gt;, in TDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Add__1_BepuPhysics_BodyHandle___0__">Solver.Add&lt;TDescription&gt;(BodyHandle, in TDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Add__1_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle___0__">Solver.Add&lt;TDescription&gt;(BodyHandle, BodyHandle, in TDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Add__1_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle___0__">Solver.Add&lt;TDescription&gt;(BodyHandle, BodyHandle, BodyHandle, in TDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Add__1_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle_BepuPhysics_BodyHandle___0__">Solver.Add&lt;TDescription&gt;(BodyHandle, BodyHandle, BodyHandle, BodyHandle, in TDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Remove_BepuPhysics_ConstraintHandle_">Solver.Remove(ConstraintHandle)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_GetDescription__1_BepuPhysics_ConstraintReference___0__">Solver.GetDescription&lt;TConstraintDescription&gt;(ConstraintReference, out TConstraintDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_GetDescription__1_BepuPhysics_ConstraintHandle___0__">Solver.GetDescription&lt;TConstraintDescription&gt;(ConstraintHandle, out TConstraintDescription)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ScaleAccumulatedImpulses_BepuPhysics_ConstraintSet__System_Single_">Solver.ScaleAccumulatedImpulses(ref ConstraintSet, float)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ScaleActiveAccumulatedImpulses_System_Single_">Solver.ScaleActiveAccumulatedImpulses(float)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ScaleAccumulatedImpulses_System_Single_">Solver.ScaleAccumulatedImpulses(float)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_EnumerateAccumulatedImpulses__1_BepuPhysics_ConstraintHandle___0__">Solver.EnumerateAccumulatedImpulses&lt;TEnumerator&gt;(ConstraintHandle, ref TEnumerator)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_GetAccumulatedImpulseMagnitudeSquared_BepuPhysics_ConstraintHandle_">Solver.GetAccumulatedImpulseMagnitudeSquared(ConstraintHandle)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_GetAccumulatedImpulseMagnitude_BepuPhysics_ConstraintHandle_">Solver.GetAccumulatedImpulseMagnitude(ConstraintHandle)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_EnumerateConnectedRawBodyReferences__1_BepuPhysics_Constraints_TypeBatch__System_Int32___0__">Solver.EnumerateConnectedRawBodyReferences&lt;TEnumerator&gt;(ref TypeBatch, int, ref TEnumerator)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_EnumerateConnectedRawBodyReferences__1_BepuPhysics_ConstraintHandle___0__">Solver.EnumerateConnectedRawBodyReferences&lt;TEnumerator&gt;(ConstraintHandle, ref TEnumerator)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_EnumerateConnectedBodyReferences__1_BepuPhysics_Constraints_TypeBatch__System_Int32___0__">Solver.EnumerateConnectedBodyReferences&lt;TEnumerator&gt;(ref TypeBatch, int, ref TEnumerator)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_EnumerateConnectedBodyReferences__1_BepuPhysics_ConstraintHandle___0__">Solver.EnumerateConnectedBodyReferences&lt;TEnumerator&gt;(ConstraintHandle, ref TEnumerator)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_EnumerateConnectedDynamicBodies__1_BepuPhysics_Constraints_TypeBatch__System_Int32___0__">Solver.EnumerateConnectedDynamicBodies&lt;TEnumerator&gt;(ref TypeBatch, int, ref TEnumerator)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_EnumerateConnectedDynamicBodies__1_BepuPhysics_ConstraintHandle___0__">Solver.EnumerateConnectedDynamicBodies&lt;TEnumerator&gt;(ConstraintHandle, ref TEnumerator)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Clear">Solver.Clear()</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_EnsureSolverCapacities_System_Int32_System_Int32_">Solver.EnsureSolverCapacities(int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ResizeSolverCapacities_System_Int32_System_Int32_">Solver.ResizeSolverCapacities(int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_EnsureTypeBatchCapacities">Solver.EnsureTypeBatchCapacities()</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_ResizeTypeBatchCapacities">Solver.ResizeTypeBatchCapacities()</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Solver.html#BepuPhysics_Solver_Dispose">Solver.Dispose()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="BepuPhysics_Solver_1__ctor_" data-uid="BepuPhysics.Solver`1.#ctor*"></a>
+
+  <h3 id="BepuPhysics_Solver_1__ctor_BepuPhysics_Bodies_BepuUtilities_Memory_BufferPool_BepuPhysics_SolveDescription_System_Int32_System_Int32_System_Int32_BepuPhysics_PoseIntegrator__0__" data-uid="BepuPhysics.Solver`1.#ctor(BepuPhysics.Bodies,BepuUtilities.Memory.BufferPool,BepuPhysics.SolveDescription,System.Int32,System.Int32,System.Int32,BepuPhysics.PoseIntegrator{`0})">
+  Solver(Bodies, BufferPool, SolveDescription, int, int, int, PoseIntegrator&lt;TIntegrationCallbacks&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L134"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Solver(Bodies bodies, BufferPool pool, SolveDescription solveDescription, int initialCapacity, int initialIslandCapacity, int minimumCapacityPerTypeBatch, PoseIntegrator&lt;TIntegrationCallbacks&gt; poseIntegrator)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bodies</code> <a class="xref" href="BepuPhysics.Bodies.html">Bodies</a></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>solveDescription</code> <a class="xref" href="BepuPhysics.SolveDescription.html">SolveDescription</a></dt>
+    <dd></dd>
+    <dt><code>initialCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>initialIslandCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>minimumCapacityPerTypeBatch</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>poseIntegrator</code> <a class="xref" href="BepuPhysics.PoseIntegrator-1.html">PoseIntegrator</a>&lt;TIntegrationCallbacks&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="BepuPhysics_Solver_1_substepContext" data-uid="BepuPhysics.Solver`1.substepContext">
+  substepContext
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L404"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected Solver.SubstepMultithreadingContext substepContext</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Solver.html">Solver</a>.<a class="xref" href="BepuPhysics.Solver.SubstepMultithreadingContext.html">SubstepMultithreadingContext</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="BepuPhysics_Solver_1_PoseIntegrator_" data-uid="BepuPhysics.Solver`1.PoseIntegrator*"></a>
+
+  <h3 id="BepuPhysics_Solver_1_PoseIntegrator" data-uid="BepuPhysics.Solver`1.PoseIntegrator">
+  PoseIntegrator
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L148"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Pose integrator used by the simulation.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public PoseIntegrator&lt;TIntegrationCallbacks&gt; PoseIntegrator { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.PoseIntegrator-1.html">PoseIntegrator</a>&lt;TIntegrationCallbacks&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Solver_1_BuildWorkBlocks_" data-uid="BepuPhysics.Solver`1.BuildWorkBlocks*"></a>
+
+  <h3 id="BepuPhysics_Solver_1_BuildWorkBlocks__1_BepuUtilities_Memory_BufferPool_System_Int32_System_Int32_System_Int32___0__BepuUtilities_Collections_QuickList_BepuPhysics_Solver_WorkBlock___BepuUtilities_Memory_Buffer_System_Int32___" data-uid="BepuPhysics.Solver`1.BuildWorkBlocks``1(BepuUtilities.Memory.BufferPool,System.Int32,System.Int32,System.Int32,``0@,BepuUtilities.Collections.QuickList{BepuPhysics.Solver.WorkBlock}@,BepuUtilities.Memory.Buffer{System.Int32}@)">
+  BuildWorkBlocks&lt;TTypeBatchFilter&gt;(BufferPool, int, int, int, ref TTypeBatchFilter, out QuickList&lt;WorkBlock&gt;, out Buffer&lt;int&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L683"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected void BuildWorkBlocks&lt;TTypeBatchFilter&gt;(BufferPool pool, int minimumBlockSizeInBundles, int maximumBlockSizeInBundles, int targetBlocksPerBatch, ref TTypeBatchFilter typeBatchFilter, out QuickList&lt;Solver.WorkBlock&gt; workBlocks, out Buffer&lt;int&gt; batchBoundaries) where TTypeBatchFilter : Solver&lt;TIntegrationCallbacks&gt;.ITypeBatchSolveFilter</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+    <dt><code>minimumBlockSizeInBundles</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>maximumBlockSizeInBundles</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>targetBlocksPerBatch</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>typeBatchFilter</code> <span class="xref">TTypeBatchFilter</span></dt>
+    <dd></dd>
+    <dt><code>workBlocks</code> <span class="xref">QuickList</span>&lt;<a class="xref" href="BepuPhysics.Solver.html">Solver</a>.<a class="xref" href="BepuPhysics.Solver.WorkBlock.html">WorkBlock</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>batchBoundaries</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TTypeBatchFilter</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_1_DisposeConstraintIntegrationResponsibilities_" data-uid="BepuPhysics.Solver`1.DisposeConstraintIntegrationResponsibilities*"></a>
+
+  <h3 id="BepuPhysics_Solver_1_DisposeConstraintIntegrationResponsibilities" data-uid="BepuPhysics.Solver`1.DisposeConstraintIntegrationResponsibilities">
+  DisposeConstraintIntegrationResponsibilities()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L1389"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override void DisposeConstraintIntegrationResponsibilities()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_1_ExecuteMultithreaded_" data-uid="BepuPhysics.Solver`1.ExecuteMultithreaded*"></a>
+
+  <h3 id="BepuPhysics_Solver_1_ExecuteMultithreaded_System_Single_BepuUtilities_IThreadDispatcher_System_Action_System_Int32__" data-uid="BepuPhysics.Solver`1.ExecuteMultithreaded(System.Single,BepuUtilities.IThreadDispatcher,System.Action{System.Int32})">
+  ExecuteMultithreaded(float, IThreadDispatcher, Action&lt;int&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L753"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected void ExecuteMultithreaded(float dt, IThreadDispatcher threadDispatcher, Action&lt;int&gt; workDelegate)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>dt</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd></dd>
+    <dt><code>workDelegate</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.action-1">Action</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_1_GetUniformlyDistributedStart_" data-uid="BepuPhysics.Solver`1.GetUniformlyDistributedStart*"></a>
+
+  <h3 id="BepuPhysics_Solver_1_GetUniformlyDistributedStart_System_Int32_System_Int32_System_Int32_System_Int32_" data-uid="BepuPhysics.Solver`1.GetUniformlyDistributedStart(System.Int32,System.Int32,System.Int32,System.Int32)">
+  GetUniformlyDistributedStart(int, int, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L445"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected static int GetUniformlyDistributedStart(int workerIndex, int blockCount, int workerCount, int offset)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>blockCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>workerCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_1_PrepareConstraintIntegrationResponsibilities_" data-uid="BepuPhysics.Solver`1.PrepareConstraintIntegrationResponsibilities*"></a>
+
+  <h3 id="BepuPhysics_Solver_1_PrepareConstraintIntegrationResponsibilities_BepuUtilities_IThreadDispatcher_" data-uid="BepuPhysics.Solver`1.PrepareConstraintIntegrationResponsibilities(BepuUtilities.IThreadDispatcher)">
+  PrepareConstraintIntegrationResponsibilities(IThreadDispatcher)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L1072"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override IndexSet PrepareConstraintIntegrationResponsibilities(IThreadDispatcher threadDispatcher = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><span class="xref">IndexSet</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Solver_1_Solve_" data-uid="BepuPhysics.Solver`1.Solve*"></a>
+
+  <h3 id="BepuPhysics_Solver_1_Solve_System_Single_BepuUtilities_IThreadDispatcher_" data-uid="BepuPhysics.Solver`1.Solve(System.Single,BepuUtilities.IThreadDispatcher)">
+  Solve(float, IThreadDispatcher)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L1415"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override void Solve(float totalDt, IThreadDispatcher threadDispatcher = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>totalDt</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>threadDispatcher</code> <span class="xref">IThreadDispatcher</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Solver_Solve.cs/#L114" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

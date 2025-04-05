@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct ConvexContactManifold | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct ConvexContactManifold | Bepu API ">
+      
+      <meta name="description" content="Contains the data associated with a convex contact manifold.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_CollisionDetection_ConvexContactManifold.md&amp;value=---%0Auid%3A%20BepuPhysics.CollisionDetection.ConvexContactManifold%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold">
+
+
+
+  <h1 id="BepuPhysics_CollisionDetection_ConvexContactManifold" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold" class="text-break">
+Struct ConvexContactManifold  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L340"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.CollisionDetection.html">CollisionDetection</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Contains the data associated with a convex contact manifold.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public struct ConvexContactManifold : IContactManifold&lt;ConvexContactManifold&gt;</code></pre>
+  </div>
+
+
+
+
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="BepuPhysics.CollisionDetection.IContactManifold-1.html">IContactManifold</a>&lt;<a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a>&gt;</div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_Contact0" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.Contact0">
+  Contact0
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L358"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConvexContact Contact0</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConvexContact.html">ConvexContact</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_Contact1" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.Contact1">
+  Contact1
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L360"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConvexContact Contact1</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConvexContact.html">ConvexContact</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_Contact2" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.Contact2">
+  Contact2
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L362"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConvexContact Contact2</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConvexContact.html">ConvexContact</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_Contact3" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.Contact3">
+  Contact3
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L364"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConvexContact Contact3</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConvexContact.html">ConvexContact</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_Count" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.Count">
+  Count
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L349"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Count</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_Normal" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.Normal">
+  Normal
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L355"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Surface normal shared by all contacts. Points from collidable B to collidable A.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3 Normal</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_OffsetB" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.OffsetB">
+  OffsetB
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L347"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Offset from collidable A to collidable B.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3 OffsetB</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_Item_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.Item*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_Item_System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.Item(System.Int32)">
+  this[int]
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L370"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets or sets the contact at the given index in the manifold.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Contact this[int contactIndex] { get; set; }</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the contact to get or set.</p>
+</dd>
+  </dl>
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.CollisionDetection.Contact.html">Contact</a></dt>
+    <dd><p>Contact at the specified index.</p>
+</dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="BepuPhysics_CollisionDetection_ConvexContactManifold_Item_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Note that contact normals are shared across a <a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a>. Setting one contact in a convex manifold will change the entire convex manifold's normal.</p>
+</div>
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_FastRemoveAt_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.FastRemoveAt*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_FastRemoveAt_BepuPhysics_CollisionDetection_ConvexContactManifold__System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.FastRemoveAt(BepuPhysics.CollisionDetection.ConvexContactManifold@,System.Int32)">
+  FastRemoveAt(ref ConvexContactManifold, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L444"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void FastRemoveAt(ref ConvexContactManifold manifold, int index)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>manifold</code> <a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a></dt>
+    <dd></dd>
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetContact_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetContact*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetContact_System_Int32_BepuPhysics_CollisionDetection_Contact__" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetContact(System.Int32,BepuPhysics.CollisionDetection.Contact@)">
+  GetContact(int, out Contact)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L412"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a copy of a contact's data.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void GetContact(int contactIndex, out Contact contactData)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the contact to copy data from.</p>
+</dd>
+    <dt><code>contactData</code> <a class="xref" href="BepuPhysics.CollisionDetection.Contact.html">Contact</a></dt>
+    <dd><p>Data associated with the contact.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetContact_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetContact*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetContact_System_Int32_System_Numerics_Vector3__System_Numerics_Vector3__System_Single__System_Int32__" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetContact(System.Int32,System.Numerics.Vector3@,System.Numerics.Vector3@,System.Single@,System.Int32@)">
+  GetContact(int, out Vector3, out Vector3, out float, out int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L403"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Retrieves a copy of a contact's data.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the contact to copy data from.</p>
+</dd>
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Offset from the first collidable's position to the contact position.</p>
+</dd>
+    <dt><code>normal</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Normal of the contact surface at the requested contact. Points from collidable B to collidable A.</p>
+</dd>
+    <dt><code>depth</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Penetration depth at the requested contact.</p>
+</dd>
+    <dt><code>featureId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Feature id of the requested contact.
+Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetConvexContactReference_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetConvexContactReference*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetConvexContactReference_BepuPhysics_CollisionDetection_ConvexContactManifold__System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetConvexContactReference(BepuPhysics.CollisionDetection.ConvexContactManifold@,System.Int32)">
+  GetConvexContactReference(ref ConvexContactManifold, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L482"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a reference to a convex manifold's contact.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ref ConvexContact GetConvexContactReference(ref ConvexContactManifold manifold, int contactIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>manifold</code> <a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a></dt>
+    <dd><p>Manifold to pull a reference from.</p>
+</dd>
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Contact to pull data from.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.CollisionDetection.ConvexContact.html">ConvexContact</a></dt>
+    <dd><p>Reference to the requested contact.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetConvexContactReference_BepuPhysics_CollisionDetection_ConvexContactManifold__System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This is a helper that avoids manual casting. If the manifold is not a <a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a>, the function will throw an <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.notsupportedexception">NotSupportedException</a>.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetDepth_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetDepth*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetDepth_System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetDepth(System.Int32)">
+  GetDepth(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L422"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the depth associated with a requested contact.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public float GetDepth(int contactIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the contact to grab the depth of.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Depth of the requested contact.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetDepthReference_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetDepthReference*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetDepthReference_BepuPhysics_CollisionDetection_ConvexContactManifold__System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetDepthReference(BepuPhysics.CollisionDetection.ConvexContactManifold@,System.Int32)">
+  GetDepthReference(ref ConvexContactManifold, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L453"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a reference to a contact's depth.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ref float GetDepthReference(ref ConvexContactManifold manifold, int contactIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>manifold</code> <a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a></dt>
+    <dd><p>Manifold to pull a reference from.</p>
+</dd>
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Contact to pull data from.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Reference to a contact's depth.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetFeatureId_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetFeatureId*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetFeatureId_System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetFeatureId(System.Int32)">
+  GetFeatureId(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L439"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the feature id associated with a requested contact.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int GetFeatureId(int contactIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the contact to grab the feature id of.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Feature id of the requested contact.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetFeatureIdReference_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetFeatureIdReference*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetFeatureIdReference_BepuPhysics_CollisionDetection_ConvexContactManifold__System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetFeatureIdReference(BepuPhysics.CollisionDetection.ConvexContactManifold@,System.Int32)">
+  GetFeatureIdReference(ref ConvexContactManifold, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L471"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a reference to a contact's feature id.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ref int GetFeatureIdReference(ref ConvexContactManifold manifold, int contactIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>manifold</code> <a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a></dt>
+    <dd><p>Manifold to pull a reference from.</p>
+</dd>
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Contact to pull data from.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Reference to a contact's feature id.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetNonconvexContactReference_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetNonconvexContactReference*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetNonconvexContactReference_BepuPhysics_CollisionDetection_ConvexContactManifold__System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetNonconvexContactReference(BepuPhysics.CollisionDetection.ConvexContactManifold@,System.Int32)">
+  GetNonconvexContactReference(ref ConvexContactManifold, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L477"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a reference to a nonconvex manifold's contact.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ref Contact GetNonconvexContactReference(ref ConvexContactManifold manifold, int contactIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>manifold</code> <a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a></dt>
+    <dd><p>Manifold to pull a reference from.</p>
+</dd>
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Contact to pull data from.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.CollisionDetection.Contact.html">Contact</a></dt>
+    <dd><p>Reference to the requested contact.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetNonconvexContactReference_BepuPhysics_CollisionDetection_ConvexContactManifold__System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This is a helper that avoids manual casting. If the manifold is not a <a class="xref" href="BepuPhysics.CollisionDetection.NonconvexContactManifold.html">NonconvexContactManifold</a>, the function will throw an <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.notsupportedexception">NotSupportedException</a>.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetNormal_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetNormal*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetNormal_System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetNormal(System.Int32)">
+  GetNormal(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L428"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a contact's normal.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3 GetNormal(int contactIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the contact to grab the normal of.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Normal of the requested contact.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetNormal_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Points from collidable B to collidable A. In convex manifolds, all contacts share a normal and will return the same value.</p>
+</div>
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetNormalReference_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetNormalReference*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetNormalReference_BepuPhysics_CollisionDetection_ConvexContactManifold__System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetNormalReference(BepuPhysics.CollisionDetection.ConvexContactManifold@,System.Int32)">
+  GetNormalReference(ref ConvexContactManifold, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L459"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a reference to a contact's normal. Points from collidable B to collidable A. For convex manifolds that share a normal, all contact indices will simply return a reference to the manifold-wide normal.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ref Vector3 GetNormalReference(ref ConvexContactManifold manifold, int contactIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>manifold</code> <a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a></dt>
+    <dd><p>Manifold to pull a reference from.</p>
+</dd>
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Contact to pull data from.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Reference to a contact's normal (or the manifold-wide normal in a convex manifold).</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetOffset_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetOffset*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetOffset_System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetOffset(System.Int32)">
+  GetOffset(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L434"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the offset from collidable A to the requested contact.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3 GetOffset(int contactIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the contact to grab the offset of.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Offset to a contact's offset.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetOffsetReference_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetOffsetReference*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_ConvexContactManifold_GetOffsetReference_BepuPhysics_CollisionDetection_ConvexContactManifold__System_Int32_" data-uid="BepuPhysics.CollisionDetection.ConvexContactManifold.GetOffsetReference(BepuPhysics.CollisionDetection.ConvexContactManifold@,System.Int32)">
+  GetOffsetReference(ref ConvexContactManifold, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L465"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets a reference to the offset from collidable A to the requested contact.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ref Vector3 GetOffsetReference(ref ConvexContactManifold manifold, int contactIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>manifold</code> <a class="xref" href="BepuPhysics.CollisionDetection.ConvexContactManifold.html">ConvexContactManifold</a></dt>
+    <dd><p>Manifold to pull a reference from.</p>
+</dd>
+    <dt><code>contactIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Contact to pull data from.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Reference to a contact's offset.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/ContactManifold.cs/#L340" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

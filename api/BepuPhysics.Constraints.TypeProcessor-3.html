@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class TypeProcessor&lt;TBodyReferences, TPrestepData, TAccumulatedImpulse&gt; | Bepu API </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class TypeProcessor&lt;TBodyReferences, TPrestepData, TAccumulatedImpulse&gt; | Bepu API ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Constraints_TypeProcessor_3.md&amp;value=---%0Auid%3A%20BepuPhysics.Constraints.TypeProcessor%603%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
+            
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="BepuPhysics.Constraints.TypeProcessor`3">
+
+
+
+  <h1 id="BepuPhysics_Constraints_TypeProcessor_3" data-uid="BepuPhysics.Constraints.TypeProcessor`3" class="text-break">
+Class TypeProcessor&lt;TBodyReferences, TPrestepData, TAccumulatedImpulse&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L240"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Constraints.html">Constraints</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public abstract class TypeProcessor&lt;TBodyReferences, TPrestepData, TAccumulatedImpulse&gt; : TypeProcessor where TBodyReferences : unmanaged where TPrestepData : unmanaged where TAccumulatedImpulse : unmanaged</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TBodyReferences</code></dt>
+    <dd></dd>
+    <dt><code>TPrestepData</code></dt>
+    <dd></dd>
+    <dt><code>TAccumulatedImpulse</code></dt>
+    <dd></dd>
+  </dl>
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html">TypeProcessor</a></div>
+      <div><span class="xref">TypeProcessor&lt;TBodyReferences, TPrestepData, TAccumulatedImpulse&gt;</span></div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist derived">
+    <dt>Derived</dt>
+    <dd>
+      <div><a class="xref" href="BepuPhysics.Constraints.FourBodyTypeProcessor-11.html">FourBodyTypeProcessor&lt;TPrestepData, TAccumulatedImpulse, TConstraintFunctions, TWarmStartAccessFilterA, TWarmStartAccessFilterB, TWarmStartAccessFilterC, TWarmStartAccessFilterD, TSolveAccessFilterA, TSolveAccessFilterB, TSolveAccessFilterC, TSolveAccessFilterD&gt;</a></div>
+      <div><a class="xref" href="BepuPhysics.Constraints.OneBodyTypeProcessor-5.html">OneBodyTypeProcessor&lt;TPrestepData, TAccumulatedImpulse, TConstraintFunctions, TWarmStartAccessFilterA, TSolveAccessFilterA&gt;</a></div>
+      <div><a class="xref" href="BepuPhysics.Constraints.ThreeBodyTypeProcessor-9.html">ThreeBodyTypeProcessor&lt;TPrestepData, TAccumulatedImpulse, TConstraintFunctions, TWarmStartAccessFilterA, TWarmStartAccessFilterB, TWarmStartAccessFilterC, TSolveAccessFilterA, TSolveAccessFilterB, TSolveAccessFilterC&gt;</a></div>
+      <div><a class="xref" href="BepuPhysics.Constraints.TwoBodyTypeProcessor-7.html">TwoBodyTypeProcessor&lt;TPrestepData, TAccumulatedImpulse, TConstraintFunctions, TWarmStartAccessFilterA, TWarmStartAccessFilterB, TSolveAccessFilterA, TSolveAccessFilterB&gt;</a></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_typeId">TypeProcessor.typeId</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_bodiesPerConstraint">TypeProcessor.bodiesPerConstraint</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_TypeId">TypeProcessor.TypeId</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_BodiesPerConstraint">TypeProcessor.BodiesPerConstraint</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_ConstrainedDegreesOfFreedom">TypeProcessor.ConstrainedDegreesOfFreedom</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_InternalBodiesPerConstraint">TypeProcessor.InternalBodiesPerConstraint</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_Initialize_System_Int32_">TypeProcessor.Initialize(int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_TransferConstraint_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_BepuPhysics_Solver_BepuPhysics_Bodies_System_Int32_">TypeProcessor.TransferConstraint(ref TypeBatch, int, int, Solver, Bodies, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_EnumerateAccumulatedImpulses__1_BepuPhysics_Constraints_TypeBatch__System_Int32___0__">TypeProcessor.EnumerateAccumulatedImpulses&lt;TEnumerator&gt;(ref TypeBatch, int, ref TEnumerator)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_WarmStart__3_BepuPhysics_Constraints_TypeBatch__BepuUtilities_Memory_Buffer_BepuUtilities_Collections_IndexSet___BepuPhysics_Bodies___0__System_Single_System_Single_System_Int32_System_Int32_System_Int32_">TypeProcessor.WarmStart&lt;TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration&gt;(ref TypeBatch, ref Buffer&lt;IndexSet&gt;, Bodies, ref TIntegratorCallbacks, float, float, int, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_Solve_BepuPhysics_Constraints_TypeBatch__BepuPhysics_Bodies_System_Single_System_Single_System_Int32_System_Int32_">TypeProcessor.Solve(ref TypeBatch, Bodies, float, float, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_RequiresIncrementalSubstepUpdates">TypeProcessor.RequiresIncrementalSubstepUpdates</a>
+    </div>
+    <div>
+      <a class="xref" href="BepuPhysics.Constraints.TypeProcessor.html#BepuPhysics_Constraints_TypeProcessor_IncrementallyUpdateForSubstep_BepuPhysics_Constraints_TypeBatch__BepuPhysics_Bodies_System_Single_System_Single_System_Int32_System_Int32_">TypeProcessor.IncrementallyUpdateForSubstep(ref TypeBatch, Bodies, float, float, int, int)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_InternalConstrainedDegreesOfFreedom_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.InternalConstrainedDegreesOfFreedom*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_InternalConstrainedDegreesOfFreedom" data-uid="BepuPhysics.Constraints.TypeProcessor`3.InternalConstrainedDegreesOfFreedom">
+  InternalConstrainedDegreesOfFreedom
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L242"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected override int InternalConstrainedDegreesOfFreedom { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_AddBodyReferencesLane_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.AddBodyReferencesLane*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_AddBodyReferencesLane__0__System_Int32_System_Span_System_Int32__" data-uid="BepuPhysics.Constraints.TypeProcessor`3.AddBodyReferencesLane(`0@,System.Int32,System.Span{System.Int32})">
+  AddBodyReferencesLane(ref TBodyReferences, int, Span&lt;int&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L282"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void AddBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, Span&lt;int&gt; bodyIndices)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bundle</code> <span class="xref">TBodyReferences</span></dt>
+    <dd></dd>
+    <dt><code>innerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>bodyIndices</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_AllocateInTypeBatch_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.AllocateInTypeBatch*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_AllocateInTypeBatch_BepuPhysics_Constraints_TypeBatch__BepuPhysics_ConstraintHandle_System_Span_System_Int32__BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.AllocateInTypeBatch(BepuPhysics.Constraints.TypeBatch@,BepuPhysics.ConstraintHandle,System.Span{System.Int32},BepuUtilities.Memory.BufferPool)">
+  AllocateInTypeBatch(ref TypeBatch, ConstraintHandle, Span&lt;int&gt;, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L314"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Allocates a slot in the batch, assuming the batch is not a fallback batch.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override sealed int AllocateInTypeBatch(ref TypeBatch typeBatch, ConstraintHandle handle, Span&lt;int&gt; bodyIndices, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd><p>Type batch to allocate in.</p>
+</dd>
+    <dt><code>handle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Handle of the constraint to allocate. Establishes a link from the allocated constraint to its handle.</p>
+</dd>
+    <dt><code>bodyIndices</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Allocation provider to use if the type batch has to be resized.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the slot in the batch.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_AllocateInTypeBatchForFallback_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.AllocateInTypeBatchForFallback*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_AllocateInTypeBatchForFallback_BepuPhysics_Constraints_TypeBatch__BepuPhysics_ConstraintHandle_System_Span_System_Int32__BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.AllocateInTypeBatchForFallback(BepuPhysics.Constraints.TypeBatch@,BepuPhysics.ConstraintHandle,System.Span{System.Int32},BepuUtilities.Memory.BufferPool)">
+  AllocateInTypeBatchForFallback(ref TypeBatch, ConstraintHandle, Span&lt;int&gt;, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L451"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Allocates a slot in the batch, assuming the batch is a fallback batch.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override sealed int AllocateInTypeBatchForFallback(ref TypeBatch typeBatch, ConstraintHandle handle, Span&lt;int&gt; encodedBodyIndices, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd><p>Type batch to allocate in.</p>
+</dd>
+    <dt><code>handle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd><p>Handle of the constraint to allocate. Establishes a link from the allocated constraint to its handle.</p>
+</dd>
+    <dt><code>encodedBodyIndices</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd><p>List of body indices (not handles!) with count equal to the type batch's expected number of involved bodies.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Allocation provider to use if the type batch has to be resized.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the slot in the batch.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_BundleShouldIntegrate_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.BundleShouldIntegrate*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_BundleShouldIntegrate_System_Int32_BepuUtilities_Collections_IndexSet__System_Numerics_Vector_System_Int32___" data-uid="BepuPhysics.Constraints.TypeProcessor`3.BundleShouldIntegrate(System.Int32,BepuUtilities.Collections.IndexSet@,System.Numerics.Vector{System.Int32}@)">
+  BundleShouldIntegrate(int, in IndexSet, out Vector&lt;int&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L1154"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static TypeProcessor&lt;TBodyReferences, TPrestepData, TAccumulatedImpulse&gt;.BundleIntegrationMode BundleShouldIntegrate(int bundleIndex, in IndexSet integrationFlags, out Vector&lt;int&gt; integrationMask)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bundleIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>integrationFlags</code> <span class="xref">IndexSet</span></dt>
+    <dd></dd>
+    <dt><code>integrationMask</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.html">TypeProcessor</a>&lt;TBodyReferences, TPrestepData, TAccumulatedImpulse&gt;.<a class="xref" href="BepuPhysics.Constraints.TypeProcessor-3.BundleIntegrationMode.html">BundleIntegrationMode</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_GatherAndIntegrate_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.GatherAndIntegrate*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_GatherAndIntegrate__4_BepuPhysics_Bodies___0__BepuUtilities_Memory_Buffer_BepuUtilities_Collections_IndexSet___System_Int32_System_Single_System_Int32_System_Int32_System_Numerics_Vector_System_Int32___BepuUtilities_Vector3Wide__BepuUtilities_QuaternionWide__BepuPhysics_BodyVelocityWide__BepuPhysics_BodyInertiaWide__" data-uid="BepuPhysics.Constraints.TypeProcessor`3.GatherAndIntegrate``4(BepuPhysics.Bodies,``0@,BepuUtilities.Memory.Buffer{BepuUtilities.Collections.IndexSet}@,System.Int32,System.Single,System.Int32,System.Int32,System.Numerics.Vector{System.Int32}@,BepuUtilities.Vector3Wide@,BepuUtilities.QuaternionWide@,BepuPhysics.BodyVelocityWide@,BepuPhysics.BodyInertiaWide@)">
+  GatherAndIntegrate&lt;TIntegratorCallbacks, TBatchIntegrationMode, TAccessFilter, TShouldIntegratePoses&gt;(Bodies, ref TIntegratorCallbacks, ref Buffer&lt;IndexSet&gt;, int, float, int, int, ref Vector&lt;int&gt;, out Vector3Wide, out QuaternionWide, out BodyVelocityWide, out BodyInertiaWide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L1298"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void GatherAndIntegrate&lt;TIntegratorCallbacks, TBatchIntegrationMode, TAccessFilter, TShouldIntegratePoses&gt;(Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref Buffer&lt;IndexSet&gt; integrationFlags, int bodyIndexInConstraint, float dt, int workerIndex, int bundleIndex, ref Vector&lt;int&gt; encodedBodyIndices, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia) where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode where TAccessFilter : unmanaged, IBodyAccessFilter where TShouldIntegratePoses : unmanaged, IBatchPoseIntegrationAllowed</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bodies</code> <a class="xref" href="BepuPhysics.Bodies.html">Bodies</a></dt>
+    <dd></dd>
+    <dt><code>integratorCallbacks</code> <span class="xref">TIntegratorCallbacks</span></dt>
+    <dd></dd>
+    <dt><code>integrationFlags</code> <span class="xref">Buffer</span>&lt;<span class="xref">IndexSet</span>&gt;</dt>
+    <dd></dd>
+    <dt><code>bodyIndexInConstraint</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>dt</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>bundleIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>encodedBodyIndices</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>position</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>orientation</code> <span class="xref">QuaternionWide</span></dt>
+    <dd></dd>
+    <dt><code>velocity</code> <a class="xref" href="BepuPhysics.BodyVelocityWide.html">BodyVelocityWide</a></dt>
+    <dd></dd>
+    <dt><code>inertia</code> <a class="xref" href="BepuPhysics.BodyInertiaWide.html">BodyInertiaWide</a></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TIntegratorCallbacks</code></dt>
+    <dd></dd>
+    <dt><code>TBatchIntegrationMode</code></dt>
+    <dd></dd>
+    <dt><code>TAccessFilter</code></dt>
+    <dd></dd>
+    <dt><code>TShouldIntegratePoses</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_GenerateSortKeysAndCopyReferences_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.GenerateSortKeysAndCopyReferences*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_GenerateSortKeysAndCopyReferences__1_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_System_Int32_System_Int32_System_Int32_System_Int32_System_Int32__System_Int32__BepuUtilities_Memory_Buffer_System_Byte___" data-uid="BepuPhysics.Constraints.TypeProcessor`3.GenerateSortKeysAndCopyReferences``1(BepuPhysics.Constraints.TypeBatch@,System.Int32,System.Int32,System.Int32,System.Int32,System.Int32,System.Int32,System.Int32@,System.Int32@,BepuUtilities.Memory.Buffer{System.Byte}@)">
+  GenerateSortKeysAndCopyReferences&lt;TSortKeyGenerator&gt;(ref TypeBatch, int, int, int, int, int, int, ref int, ref int, ref Buffer&lt;byte&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L821"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected void GenerateSortKeysAndCopyReferences&lt;TSortKeyGenerator&gt;(ref TypeBatch typeBatch, int bundleStart, int localBundleStart, int bundleCount, int constraintStart, int localConstraintStart, int constraintCount, ref int firstSortKey, ref int firstSourceIndex, ref Buffer&lt;byte&gt; bodyReferencesCache) where TSortKeyGenerator : struct, ISortKeyGenerator&lt;TBodyReferences&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd></dd>
+    <dt><code>bundleStart</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>localBundleStart</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>bundleCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>constraintStart</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>localConstraintStart</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>constraintCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>firstSortKey</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>firstSourceIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>bodyReferencesCache</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TSortKeyGenerator</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_Initialize_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.Initialize*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_Initialize_BepuPhysics_Constraints_TypeBatch__System_Int32_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.Initialize(BepuPhysics.Constraints.TypeBatch@,System.Int32,BepuUtilities.Memory.BufferPool)">
+  Initialize(ref TypeBatch, int, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L780"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override void Initialize(ref TypeBatch typeBatch, int initialCapacity, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd></dd>
+    <dt><code>initialCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_IntegratePoseAndVelocity_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.IntegratePoseAndVelocity*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_IntegratePoseAndVelocity__1___0__System_Numerics_Vector_System_Int32___BepuPhysics_BodyInertiaWide__System_Single_System_Numerics_Vector_System_Int32___BepuUtilities_Vector3Wide__BepuUtilities_QuaternionWide__BepuPhysics_BodyVelocityWide__System_Int32_BepuPhysics_BodyInertiaWide__" data-uid="BepuPhysics.Constraints.TypeProcessor`3.IntegratePoseAndVelocity``1(``0@,System.Numerics.Vector{System.Int32}@,BepuPhysics.BodyInertiaWide@,System.Single,System.Numerics.Vector{System.Int32}@,BepuUtilities.Vector3Wide@,BepuUtilities.QuaternionWide@,BepuPhysics.BodyVelocityWide@,System.Int32,BepuPhysics.BodyInertiaWide@)">
+  IntegratePoseAndVelocity&lt;TIntegratorCallbacks&gt;(ref TIntegratorCallbacks, ref Vector&lt;int&gt;, in BodyInertiaWide, float, in Vector&lt;int&gt;, ref Vector3Wide, ref QuaternionWide, ref BodyVelocityWide, int, out BodyInertiaWide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L1203"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void IntegratePoseAndVelocity&lt;TIntegratorCallbacks&gt;(ref TIntegratorCallbacks integratorCallbacks, ref Vector&lt;int&gt; bodyIndices, in BodyInertiaWide localInertia, float dt, in Vector&lt;int&gt; integrationMask, ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity, int workerIndex, out BodyInertiaWide inertia) where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>integratorCallbacks</code> <span class="xref">TIntegratorCallbacks</span></dt>
+    <dd></dd>
+    <dt><code>bodyIndices</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>localInertia</code> <a class="xref" href="BepuPhysics.BodyInertiaWide.html">BodyInertiaWide</a></dt>
+    <dd></dd>
+    <dt><code>dt</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>integrationMask</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>position</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>orientation</code> <span class="xref">QuaternionWide</span></dt>
+    <dd></dd>
+    <dt><code>velocity</code> <a class="xref" href="BepuPhysics.BodyVelocityWide.html">BodyVelocityWide</a></dt>
+    <dd></dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>inertia</code> <a class="xref" href="BepuPhysics.BodyInertiaWide.html">BodyInertiaWide</a></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TIntegratorCallbacks</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_IntegrateVelocity_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.IntegrateVelocity*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_IntegrateVelocity__2___0__System_Numerics_Vector_System_Int32___BepuPhysics_BodyInertiaWide__System_Single_System_Numerics_Vector_System_Int32___BepuUtilities_Vector3Wide__BepuUtilities_QuaternionWide__BepuPhysics_BodyVelocityWide__System_Int32_BepuPhysics_BodyInertiaWide__" data-uid="BepuPhysics.Constraints.TypeProcessor`3.IntegrateVelocity``2(``0@,System.Numerics.Vector{System.Int32}@,BepuPhysics.BodyInertiaWide@,System.Single,System.Numerics.Vector{System.Int32}@,BepuUtilities.Vector3Wide@,BepuUtilities.QuaternionWide@,BepuPhysics.BodyVelocityWide@,System.Int32,BepuPhysics.BodyInertiaWide@)">
+  IntegrateVelocity&lt;TIntegratorCallbacks, TBatchIntegrationMode&gt;(ref TIntegratorCallbacks, ref Vector&lt;int&gt;, in BodyInertiaWide, float, in Vector&lt;int&gt;, in Vector3Wide, in QuaternionWide, ref BodyVelocityWide, int, out BodyInertiaWide)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L1250"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void IntegrateVelocity&lt;TIntegratorCallbacks, TBatchIntegrationMode&gt;(ref TIntegratorCallbacks integratorCallbacks, ref Vector&lt;int&gt; bodyIndices, in BodyInertiaWide localInertia, float dt, in Vector&lt;int&gt; integrationMask, in Vector3Wide position, in QuaternionWide orientation, ref BodyVelocityWide velocity, int workerIndex, out BodyInertiaWide inertia) where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>integratorCallbacks</code> <span class="xref">TIntegratorCallbacks</span></dt>
+    <dd></dd>
+    <dt><code>bodyIndices</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>localInertia</code> <a class="xref" href="BepuPhysics.BodyInertiaWide.html">BodyInertiaWide</a></dt>
+    <dd></dd>
+    <dt><code>dt</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+    <dt><code>integrationMask</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>position</code> <span class="xref">Vector3Wide</span></dt>
+    <dd></dd>
+    <dt><code>orientation</code> <span class="xref">QuaternionWide</span></dt>
+    <dd></dd>
+    <dt><code>velocity</code> <a class="xref" href="BepuPhysics.BodyVelocityWide.html">BodyVelocityWide</a></dt>
+    <dd></dd>
+    <dt><code>workerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>inertia</code> <a class="xref" href="BepuPhysics.BodyInertiaWide.html">BodyInertiaWide</a></dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TIntegratorCallbacks</code></dt>
+    <dd></dd>
+    <dt><code>TBatchIntegrationMode</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_Move_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.Move*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_Move__0___1___2__BepuPhysics_ConstraintHandle_System_Int32__0___1___2__BepuPhysics_ConstraintHandle__System_Int32_System_Int32_BepuUtilities_Memory_Buffer_BepuPhysics_ConstraintLocation___" data-uid="BepuPhysics.Constraints.TypeProcessor`3.Move(`0@,`1@,`2@,BepuPhysics.ConstraintHandle,System.Int32,`0@,`1@,`2@,BepuPhysics.ConstraintHandle@,System.Int32,System.Int32,BepuUtilities.Memory.Buffer{BepuPhysics.ConstraintLocation}@)">
+  Move(ref TBodyReferences, ref TPrestepData, ref TAccumulatedImpulse, ConstraintHandle, int, ref TBodyReferences, ref TPrestepData, ref TAccumulatedImpulse, ref ConstraintHandle, int, int, ref Buffer&lt;ConstraintLocation&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L577"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Overwrites all the data in the target constraint slot with source data.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected static void Move(ref TBodyReferences sourceReferencesBundle, ref TPrestepData sourcePrestepBundle, ref TAccumulatedImpulse sourceAccumulatedBundle, ConstraintHandle sourceHandle, int sourceInner, ref TBodyReferences targetReferencesBundle, ref TPrestepData targetPrestepBundle, ref TAccumulatedImpulse targetAccumulatedBundle, ref ConstraintHandle targetIndexToHandle, int targetInner, int targetIndex, ref Buffer&lt;ConstraintLocation&gt; handlesToConstraints)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>sourceReferencesBundle</code> <span class="xref">TBodyReferences</span></dt>
+    <dd></dd>
+    <dt><code>sourcePrestepBundle</code> <span class="xref">TPrestepData</span></dt>
+    <dd></dd>
+    <dt><code>sourceAccumulatedBundle</code> <span class="xref">TAccumulatedImpulse</span></dt>
+    <dd></dd>
+    <dt><code>sourceHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd></dd>
+    <dt><code>sourceInner</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>targetReferencesBundle</code> <span class="xref">TBodyReferences</span></dt>
+    <dd></dd>
+    <dt><code>targetPrestepBundle</code> <span class="xref">TPrestepData</span></dt>
+    <dd></dd>
+    <dt><code>targetAccumulatedBundle</code> <span class="xref">TAccumulatedImpulse</span></dt>
+    <dd></dd>
+    <dt><code>targetIndexToHandle</code> <a class="xref" href="BepuPhysics.ConstraintHandle.html">ConstraintHandle</a></dt>
+    <dd></dd>
+    <dt><code>targetInner</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>targetIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>handlesToConstraints</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.ConstraintLocation.html">ConstraintLocation</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_Remove_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.Remove*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_Remove_BepuPhysics_Constraints_TypeBatch__System_Int32_BepuUtilities_Memory_Buffer_BepuPhysics_ConstraintLocation___System_Boolean_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.Remove(BepuPhysics.Constraints.TypeBatch@,System.Int32,BepuUtilities.Memory.Buffer{BepuPhysics.ConstraintLocation}@,System.Boolean)">
+  Remove(ref TypeBatch, int, ref Buffer&lt;ConstraintLocation&gt;, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L634"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Removes a constraint from the batch.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override void Remove(ref TypeBatch typeBatch, int index, ref Buffer&lt;ConstraintLocation&gt; handlesToConstraints, bool isFallback)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd><p>Type batch to remove a constraint from.</p>
+</dd>
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the constraint to remove.</p>
+</dd>
+    <dt><code>handlesToConstraints</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.ConstraintLocation.html">ConstraintLocation</a>&gt;</dt>
+    <dd><p>The handle to constraint mapping used by the solver that could be modified by a swap on removal.</p>
+</dd>
+    <dt><code>isFallback</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the type batch being removed from belongs to the fallback batch, false otherwise.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_RemoveBodyReferencesLane_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.RemoveBodyReferencesLane*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_RemoveBodyReferencesLane__0__System_Int32_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.RemoveBodyReferencesLane(`0@,System.Int32)">
+  RemoveBodyReferencesLane(ref TBodyReferences, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L300"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void RemoveBodyReferencesLane(ref TBodyReferences bundle, int innerIndex)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bundle</code> <span class="xref">TBodyReferences</span></dt>
+    <dd></dd>
+    <dt><code>innerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_Resize_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.Resize*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_Resize_BepuPhysics_Constraints_TypeBatch__System_Int32_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.Resize(BepuPhysics.Constraints.TypeBatch@,System.Int32,BepuUtilities.Memory.BufferPool)">
+  Resize(ref TypeBatch, int, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L789"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override void Resize(ref TypeBatch typeBatch, int desiredCapacity, BufferPool pool)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd></dd>
+    <dt><code>desiredCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_ScaleAccumulatedImpulses_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.ScaleAccumulatedImpulses*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_ScaleAccumulatedImpulses_BepuPhysics_Constraints_TypeBatch__System_Single_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.ScaleAccumulatedImpulses(BepuPhysics.Constraints.TypeBatch@,System.Single)">
+  ScaleAccumulatedImpulses(ref TypeBatch, float)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L257"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override void ScaleAccumulatedImpulses(ref TypeBatch typeBatch, float scale)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd></dd>
+    <dt><code>scale</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_Scramble_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.Scramble*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_Scramble_BepuPhysics_Constraints_TypeBatch__System_Random_BepuUtilities_Memory_Buffer_BepuPhysics_ConstraintLocation___" data-uid="BepuPhysics.Constraints.TypeProcessor`3.Scramble(BepuPhysics.Constraints.TypeBatch@,System.Random,BepuUtilities.Memory.Buffer{BepuPhysics.ConstraintLocation}@)">
+  Scramble(ref TypeBatch, Random, ref Buffer&lt;ConstraintLocation&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L594"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override sealed void Scramble(ref TypeBatch typeBatch, Random random, ref Buffer&lt;ConstraintLocation&gt; handlesToConstraints)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd></dd>
+    <dt><code>random</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.random">Random</a></dt>
+    <dd></dd>
+    <dt><code>handlesToConstraints</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.ConstraintLocation.html">ConstraintLocation</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_SetBodyReferencesLane_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.SetBodyReferencesLane*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_SetBodyReferencesLane__0__System_Int32_System_Span_System_Int32__" data-uid="BepuPhysics.Constraints.TypeProcessor`3.SetBodyReferencesLane(`0@,System.Int32,System.Span{System.Int32})">
+  SetBodyReferencesLane(ref TBodyReferences, int, Span&lt;int&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L268"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static void SetBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, Span&lt;int&gt; bodyIndices)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bundle</code> <span class="xref">TBodyReferences</span></dt>
+    <dd></dd>
+    <dt><code>innerIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>bodyIndices</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_TransferConstraint_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.TransferConstraint*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_TransferConstraint_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_BepuPhysics_Solver_BepuPhysics_Bodies_System_Int32_System_Span_BepuPhysics_BodyHandle__System_Span_System_Int32__" data-uid="BepuPhysics.Constraints.TypeProcessor`3.TransferConstraint(BepuPhysics.Constraints.TypeBatch@,System.Int32,System.Int32,BepuPhysics.Solver,BepuPhysics.Bodies,System.Int32,System.Span{BepuPhysics.BodyHandle},System.Span{System.Int32})">
+  TransferConstraint(ref TypeBatch, int, int, Solver, Bodies, int, Span&lt;BodyHandle&gt;, Span&lt;int&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L733"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Moves a constraint from one ConstraintBatch's TypeBatch to another ConstraintBatch's TypeBatch of the same type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override sealed void TransferConstraint(ref TypeBatch sourceTypeBatch, int sourceBatchIndex, int indexInTypeBatch, Solver solver, Bodies bodies, int targetBatchIndex, Span&lt;BodyHandle&gt; dynamicBodyHandles, Span&lt;int&gt; encodedBodyIndices)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>sourceTypeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd><p>Source type batch to transfer the constraint out of.</p>
+</dd>
+    <dt><code>sourceBatchIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the batch that owns the type batch that is the source of the constraint transfer.</p>
+</dd>
+    <dt><code>indexInTypeBatch</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the constraint to move in the current type batch.</p>
+</dd>
+    <dt><code>solver</code> <a class="xref" href="BepuPhysics.Solver.html">Solver</a></dt>
+    <dd><p>Solver that owns the batches.</p>
+</dd>
+    <dt><code>bodies</code> <a class="xref" href="BepuPhysics.Bodies.html">Bodies</a></dt>
+    <dd><p>Bodies set that owns all the constraint's bodies.</p>
+</dd>
+    <dt><code>targetBatchIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the ConstraintBatch in the solver to copy the constraint into.</p>
+</dd>
+    <dt><code>dynamicBodyHandles</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="BepuPhysics.BodyHandle.html">BodyHandle</a>&gt;</dt>
+    <dd><p>Set of body handles in the constraint referring to dynamic bodies.</p>
+</dd>
+    <dt><code>encodedBodyIndices</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd><p>Set of encoded body indices to use in the new constraint allocation.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_UpdateForBodyMemoryMove_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.UpdateForBodyMemoryMove*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_UpdateForBodyMemoryMove_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_System_Int32_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.UpdateForBodyMemoryMove(BepuPhysics.Constraints.TypeBatch@,System.Int32,System.Int32,System.Int32)">
+  UpdateForBodyMemoryMove(ref TypeBatch, int, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L807"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Updates a type batch's body index references for the movement of a body in memory.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override sealed bool UpdateForBodyMemoryMove(ref TypeBatch typeBatch, int indexInTypeBatch, int bodyIndexInConstraint, int newBodyLocation)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd><p>Type batch containing a constraint that references the body.</p>
+</dd>
+    <dt><code>indexInTypeBatch</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the constraint in the type batch.</p>
+</dd>
+    <dt><code>bodyIndexInConstraint</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index within the constraint of the body.</p>
+</dd>
+    <dt><code>newBodyLocation</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>New index of the body in the bodies active set.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the body being moved was kinematic according to the constraint's reference.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_ValidateAccumulatedImpulsesSizeInBytes_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.ValidateAccumulatedImpulsesSizeInBytes*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_ValidateAccumulatedImpulsesSizeInBytes_System_Int32_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.ValidateAccumulatedImpulsesSizeInBytes(System.Int32)">
+  ValidateAccumulatedImpulsesSizeInBytes(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L252"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected override void ValidateAccumulatedImpulsesSizeInBytes(int sizeInBytes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>sizeInBytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Constraints_TypeProcessor_3_VerifySortRegion_" data-uid="BepuPhysics.Constraints.TypeProcessor`3.VerifySortRegion*"></a>
+
+  <h3 id="BepuPhysics_Constraints_TypeProcessor_3_VerifySortRegion__1_BepuPhysics_Constraints_TypeBatch__System_Int32_System_Int32_BepuUtilities_Memory_Buffer_System_Int32___BepuUtilities_Memory_Buffer_System_Int32___" data-uid="BepuPhysics.Constraints.TypeProcessor`3.VerifySortRegion``1(BepuPhysics.Constraints.TypeBatch@,System.Int32,System.Int32,BepuUtilities.Memory.Buffer{System.Int32}@,BepuUtilities.Memory.Buffer{System.Int32}@)">
+  VerifySortRegion&lt;TSortKeyGenerator&gt;(ref TypeBatch, int, int, ref Buffer&lt;int&gt;, ref Buffer&lt;int&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L839"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected void VerifySortRegion&lt;TSortKeyGenerator&gt;(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, ref Buffer&lt;int&gt; sortedKeys, ref Buffer&lt;int&gt; sortedSourceIndices) where TSortKeyGenerator : struct, ISortKeyGenerator&lt;TBodyReferences&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeBatch</code> <a class="xref" href="BepuPhysics.Constraints.TypeBatch.html">TypeBatch</a></dt>
+    <dd></dd>
+    <dt><code>bundleStartIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>constraintCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>sortedKeys</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>sortedSourceIndices</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TSortKeyGenerator</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/TypeProcessor.cs/#L240" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
