@@ -44,7 +44,6 @@ public class DemoSet
 
     public DemoSet()
     {
-        AddOption<ConvexHullTestDemo>();
         AddOption<CarDemo>();
         AddOption<TankDemo>();
         AddOption<CharacterDemo>();
