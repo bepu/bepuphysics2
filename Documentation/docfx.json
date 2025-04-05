@@ -56,7 +56,14 @@
         "repo": "https://github.com/bepu/bepuphysics2",
         "branch": "master"
       },
-      "_gitUrlPattern": "github"
+      "_gitUrlPattern": "github",
+      "_gitRepo": "https://github.com/bepu/bepuphysics2",
+      "_enableNewTab": true
+    },
+    "markdownEngineProperties": {
+      "markdigExtensions": [
+        "urlResolve"
+      ]
     }
   }
 }
