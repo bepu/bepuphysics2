@@ -1,4 +1,20 @@
 - name: Getting Started
   href: ../GettingStarted.md
+- name: Questions and Answers
+  href: ../QuestionsAndAnswers.md  
+- name: Substepping
+  href: ../Substepping.md
+- name: Continuous Collision Detection
+  href: ../ContinuousCollisionDetection.md
+- name: Stability Tips
+  href: ../StabilityTips.md
+- name: Performance Tips
+  href: ../PerformanceTips.md
+- name: Packaging and Versioning
+  href: ../PackagingAndVersioning.md
 - name: Building
   href: ../Building.md
+- name: Upgrading from v1
+  href: ../UpgradingFromV1.md
+- name: Roadmap
+  href: ../roadmap.md
