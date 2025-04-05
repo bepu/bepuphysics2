@@ -68,7 +68,7 @@ Bodies may move around in memory during execution or when other bodies are added
 
 Statics are similar to bodies but don't have velocity, inertia, or activity states. They're just immobile collidable shapes, ideal for level geometry.
 
-Statics are computationally cheap ([and will get even cheaper](https://github.com/bepu/bepuphysics2/issues/7)). Feel free to have thousands of them.
+Statics are computationally cheap. Feel free to have thousands of them.
 
 To create a static object, pass a `StaticDescription` to `Simulation.Statics.Add`.
 
