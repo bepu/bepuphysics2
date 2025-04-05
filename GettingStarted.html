@@ -125,7 +125,7 @@
 <p>Bodies may move around in memory during execution or when other bodies are added, removed, awoken, or slept. Holding onto the raw memory location through one of these changes may result in the pointer pointing to undefined data. The <code>BodyReference</code> type performs lookups on demand, and remains valid so long as the wrapped <code>BodyHandle</code> does.</p>
 <h2 id="statics">Statics</h2>
 <p>Statics are similar to bodies but don't have velocity, inertia, or activity states. They're just immobile collidable shapes, ideal for level geometry.</p>
-<p>Statics are computationally cheap (<a href="https://github.com/bepu/bepuphysics2/issues/7">and will get even cheaper</a>). Feel free to have thousands of them.</p>
+<p>Statics are computationally cheap. Feel free to have thousands of them.</p>
 <p>To create a static object, pass a <code>StaticDescription</code> to <code>Simulation.Statics.Add</code>.</p>
 <h2 id="constraints">Constraints</h2>
 <p>Constraints can be used to control the relative motion of bodies. There are a <a href="../BepuPhysics/Constraints">whole bunch of them</a>. Like bodies and statics, constraints are created by building a description and passing it to <code>Simulation.Solver.Add</code>.</p>

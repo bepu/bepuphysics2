@@ -89,7 +89,7 @@
 
 
   <h1 id="BepuPhysics_IShapeRayHitHandler" data-uid="BepuPhysics.IShapeRayHitHandler" class="text-break">
-Interface IShapeRayHitHandler  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L11"><i class="bi bi-code-slash"></i></a>
+Interface IShapeRayHitHandler  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Simulation_Queries.cs/#L11"><i class="bi bi-code-slash"></i></a>
   </h1>
 
   <div class="facts text-secondary">
@@ -124,7 +124,7 @@ Interface IShapeRayHitHandler  <a class="header-action link-secondary" title="Vi
 
   <h3 id="BepuPhysics_IShapeRayHitHandler_AllowTest_System_Int32_" data-uid="BepuPhysics.IShapeRayHitHandler.AllowTest(System.Int32)">
   AllowTest(int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L18"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Simulation_Queries.cs/#L19"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Checks whether the child of a collidable should be tested against a ray. Only called by shape types that can have more than one child.</p>
@@ -138,7 +138,8 @@ Interface IShapeRayHitHandler  <a class="header-action link-secondary" title="Vi
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>childIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>Index of the candidate in the parent collidable.</p>
+    <dd><p>Index of the candidate in the parent collidable.
+<p>For compounds, this is the index of the child in the child array. For meshes, this is the triangle index. For convex shapes or other types that don't have multiple children, this is always zero.</p>
 </dd>
   </dl>
 
@@ -163,7 +164,7 @@ Interface IShapeRayHitHandler  <a class="header-action link-secondary" title="Vi
 
   <h3 id="BepuPhysics_IShapeRayHitHandler_OnRayHit_BepuPhysics_Trees_RayData__System_Single__System_Single_System_Numerics_Vector3_System_Int32_" data-uid="BepuPhysics.IShapeRayHitHandler.OnRayHit(BepuPhysics.Trees.RayData@,System.Single@,System.Single,System.Numerics.Vector3,System.Int32)">
   OnRayHit(in RayData, ref float, float, Vector3, int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L27"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Simulation_Queries.cs/#L29"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Called when a ray impact has been found.</p>
@@ -189,7 +190,8 @@ Interface IShapeRayHitHandler  <a class="header-action link-secondary" title="Vi
     <dd><p>Surface normal at the hit location.</p>
 </dd>
     <dt><code>childIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>Index of the hit child. For convex shapes or other types that don't have multiple children, this is always zero.</p>
+    <dd><p>Index of the hit child.
+<p>For compounds, this is the index of the child in the child array. For meshes, this is the triangle index. For convex shapes or other types that don't have multiple children, this is always zero.</p>
 </dd>
   </dl>
 
@@ -208,7 +210,7 @@ Interface IShapeRayHitHandler  <a class="header-action link-secondary" title="Vi
 </article>
 
         <div class="contribution d-print-none">
-          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L11" class="edit-link">Edit this page</a>
+          <a href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Simulation_Queries.cs/#L11" class="edit-link">Edit this page</a>
         </div>
 
 

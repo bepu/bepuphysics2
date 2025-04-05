@@ -11,7 +11,7 @@
       <link rel="stylesheet" href="public/docfx.min.css">
       <link rel="stylesheet" href="public/main.css">
       <meta name="docfx:navrel" content="toc.html">
-      <meta name="docfx:tocrel" content="toc.html">
+      <meta name="docfx:tocrel" content="docs/toc.html">
       
       <meta name="docfx:rel" content="">
       
@@ -63,9 +63,23 @@
     </header>
 
     <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
 
       <div class="content">
         <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
 
           <nav id="breadcrumb"></nav>
         </div>
@@ -75,7 +89,7 @@
 
 <p>This project does not use semantic versioning. When upgrading to a newer version, expect breaking changes.</p>
 <p>Breaking changes should be obvious and appear as compile errors. &quot;Sneaky&quot; breaking changes that significantly change behavior without a compile error will be avoided if at all possible. One notable exception to this is determinism- do not expect different versions of the library to produce identical simulation results.</p>
-<p>NuGet packages will be made available, but they will not cover all possible features. Prerelease packages are published automatically on <a href="https://github.com/orgs/bepu/packages?repo_name=bepuphysics2">github</a> and <a href="https://www.nuget.org/packages/BepuPhysics">nuget</a>. The main branch should be kept in a relatively stable state; cloning the source is often a good choice.</p>
+<p>NuGet packages will be made available, but they will not cover all possible features. <a href="https://github.com/bepu/bepuphysics2/releases">Releases</a> are published automatically on <a href="https://github.com/orgs/bepu/packages?repo_name=bepuphysics2">github</a> and <a href="https://www.nuget.org/packages/BepuPhysics">nuget</a>. The main branch should be kept in a relatively stable state; cloning the source is often a good choice.</p>
 <p>The library has a variety of conditional compilation symbols. Rather than publishing a combinatorial mess to NuGet, the expectation is that users of any conditional logic will clone the source.</p>
 <p>Given the above and the general nature of the library's API, cloning the source and referencing the project is often the best way to include the library.</p>
 

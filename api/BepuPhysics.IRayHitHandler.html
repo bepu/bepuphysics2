@@ -89,7 +89,7 @@
 
 
   <h1 id="BepuPhysics_IRayHitHandler" data-uid="BepuPhysics.IRayHitHandler" class="text-break">
-Interface IRayHitHandler  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L33"><i class="bi bi-code-slash"></i></a>
+Interface IRayHitHandler  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Simulation_Queries.cs/#L35"><i class="bi bi-code-slash"></i></a>
   </h1>
 
   <div class="facts text-secondary">
@@ -125,7 +125,7 @@ Interface IRayHitHandler  <a class="header-action link-secondary" title="View so
 
   <h3 id="BepuPhysics_IRayHitHandler_AllowTest_BepuPhysics_Collidables_CollidableReference_" data-uid="BepuPhysics.IRayHitHandler.AllowTest(BepuPhysics.Collidables.CollidableReference)">
   AllowTest(CollidableReference)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L40"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Simulation_Queries.cs/#L42"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Checks whether a collidable identified by the acceleration structure should be tested against a ray.</p>
@@ -164,7 +164,7 @@ Interface IRayHitHandler  <a class="header-action link-secondary" title="View so
 
   <h3 id="BepuPhysics_IRayHitHandler_AllowTest_BepuPhysics_Collidables_CollidableReference_System_Int32_" data-uid="BepuPhysics.IRayHitHandler.AllowTest(BepuPhysics.Collidables.CollidableReference,System.Int32)">
   AllowTest(CollidableReference, int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L47"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Simulation_Queries.cs/#L50"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Checks whether the child of a collidable should be tested against a ray. Only called by shape types that can have more than one child.</p>
@@ -181,7 +181,8 @@ Interface IRayHitHandler  <a class="header-action link-secondary" title="View so
     <dd><p>Parent of the candidate.</p>
 </dd>
     <dt><code>childIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>Index of the candidate in the parent collidable.</p>
+    <dd><p>Index of the candidate child in its parent collidable.
+<p>For compounds, this is the index of the child in the child array. For meshes, this is the triangle index. For convex shapes or other types that don't have multiple children, this is always zero.</p>
 </dd>
   </dl>
 
@@ -206,7 +207,7 @@ Interface IRayHitHandler  <a class="header-action link-secondary" title="View so
 
   <h3 id="BepuPhysics_IRayHitHandler_OnRayHit_BepuPhysics_Trees_RayData__System_Single__System_Single_System_Numerics_Vector3_BepuPhysics_Collidables_CollidableReference_System_Int32_" data-uid="BepuPhysics.IRayHitHandler.OnRayHit(BepuPhysics.Trees.RayData@,System.Single@,System.Single,System.Numerics.Vector3,BepuPhysics.Collidables.CollidableReference,System.Int32)">
   OnRayHit(in RayData, ref float, float, Vector3, CollidableReference, int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L57"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Simulation_Queries.cs/#L61"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Called when a ray impact has been found.</p>
@@ -235,7 +236,8 @@ Interface IRayHitHandler  <a class="header-action link-secondary" title="View so
     <dd><p>Collidable hit by the ray.</p>
 </dd>
     <dt><code>childIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd><p>Index of the hit child. For convex shapes or other types that don't have multiple children, this is always zero.</p>
+    <dd><p>Index of the hit child in its parent collidable.
+<p>For compounds, this is the index of the child in the child array. For meshes, this is the triangle index. For convex shapes or other types that don't have multiple children, this is always zero.</p>
 </dd>
   </dl>
 
@@ -254,7 +256,7 @@ Interface IRayHitHandler  <a class="header-action link-secondary" title="View so
 </article>
 
         <div class="contribution d-print-none">
-          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L33" class="edit-link">Edit this page</a>
+          <a href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Simulation_Queries.cs/#L35" class="edit-link">Edit this page</a>
         </div>
 
 

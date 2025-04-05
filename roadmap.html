@@ -11,7 +11,7 @@
       <link rel="stylesheet" href="public/docfx.min.css">
       <link rel="stylesheet" href="public/main.css">
       <meta name="docfx:navrel" content="toc.html">
-      <meta name="docfx:tocrel" content="toc.html">
+      <meta name="docfx:tocrel" content="docs/toc.html">
       
       <meta name="docfx:rel" content="">
       
@@ -63,9 +63,23 @@
     </header>
 
     <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
 
       <div class="content">
         <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
 
           <nav id="breadcrumb"></nav>
         </div>
@@ -74,15 +88,21 @@
 <h1 id="roadmap">Roadmap</h1>
 
 <p>This is a high level plan for future development. All dates and features are <em>extremely</em> speculative, and any specific detail on this roadmap is almost certainly wrong. Treat it as a snapshot of vibes unless noted otherwise. For a more detailed breakdown, check the <a href="https://github.com/bepu/bepuphysics2/issues">issues</a> page.</p>
-<h2 id="near-term-q1-2024">Near term (Q1 2024)</h2>
+<p>Notably, I now have a &quot;full time job&quot; doing &quot;important things&quot; like some kind of weirdo, so I've given up on trying to guess when these things will actually be done. Think of this roughly as a priority queue.</p>
+<h2 id="near-term">Near term</h2>
 <p>2.5 should be releasing relatively soon. It already includes a bunch of miscellaneous improvements, plus notable transformative improvements to tree building and refinement. The broad phase is a lot faster.</p>
+<p>The only significant work remaining in 2.5 is to improve thread load balancing in the broad phase for smaller simulations.</p>
 <h2 id="medium-term">Medium term</h2>
 <p>The timing on these features are uncertain, but they're relatively low hanging fruit and I would like to get to them eventually.</p>
 <ol>
+<li>Super secret special sauce solver changes that may or may not actually work at all. But if they <em>do</em> work, they'll be great!</li>
+<li>Look into simplifying layouts with the latest generation of solver for usability and sleeper efficiency reasons.</li>
+<li>More bandwidth optimizations in the solver for broad simulations: <a href="https://github.com/bepu/bepuphysics2/issues/193">https://github.com/bepu/bepuphysics2/issues/193</a></li>
+<li>Catch up with 512 bit instructions and improvements to vectorization.</li>
+<li>Low hanging fruit in the API; e.g. allow normal delegates or function pointers on functions which currently require reified generics. (This would be a strictly opt-in cost; they'd be implemented through the reified generics API.)</li>
 <li>Mesh/compound intersection optimization, especially in pairs with higher angular velocity.</li>
 <li>Narrow phase flush improvements: <a href="https://github.com/bepu/bepuphysics2/issues/205">https://github.com/bepu/bepuphysics2/issues/205</a></li>
 <li>Sleeper improvements. Applies to actual sleep/wake and candidacy analysis. One exemplar: island management scales poorly in the limit (<a href="https://github.com/bepu/bepuphysics2/issues/284">https://github.com/bepu/bepuphysics2/issues/284</a>)</li>
-<li>More bandwidth optimizations in the solver for broad simulations: <a href="https://github.com/bepu/bepuphysics2/issues/193">https://github.com/bepu/bepuphysics2/issues/193</a></li>
 <li>ARM specialized paths: <a href="https://github.com/bepu/bepuphysics2/issues/184">https://github.com/bepu/bepuphysics2/issues/184</a></li>
 <li>Convex hull test performance improvements.</li>
 <li>Scalar-style API for lower pain contact and boolean queries.</li>
