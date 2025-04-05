@@ -51,7 +51,12 @@
       "_appTitle": "Bepu Docs",
       "_appLogoPath": "images/bepuphysicslogo256.png",
       "_enableSearch": true,
-      "pdf": false
+      "pdf": false,
+      "_gitContribute": {
+        "repo": "https://github.com/bepu/bepuphysics2",
+        "branch": "master"
+      },
+      "_gitUrlPattern": "github"
     }
   }
 }
