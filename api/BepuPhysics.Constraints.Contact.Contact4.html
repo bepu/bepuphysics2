@@ -7,9 +7,27 @@
       <meta name="title" content="Struct Contact4 | Bepu API ">
       
       
-      <link rel="icon" href="../favicon.ico">
-      <link rel="stylesheet" href="../public/docfx.min.css">
-      <link rel="stylesheet" href="../public/main.css">
+      <link rel="icon" 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >
+      <link rel="stylesheet" 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >
+      <link rel="stylesheet" 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >
       <meta name="docfx:navrel" content="../toc.html">
       <meta name="docfx:tocrel" content="toc.html">
       
@@ -43,7 +61,13 @@
     <header class="bg-body border-bottom">
       <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
         <div class="container-xxl flex-nowrap">
-          <a class="navbar-brand" href="../index.html">
+          <a class="navbar-brand" 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >
             <img id="logo" class="svg" src="../images/bepuphysicslogo256.png" alt="">
             
           </a>
@@ -702,3 +726,4 @@ Struct Contact4  <a class="header-action link-secondary" title="View source" hre
     </footer>
   </body>
 </html>
+

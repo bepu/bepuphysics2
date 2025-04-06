@@ -90,7 +90,13 @@
 <p>Continuous collision detection is a family of techniques that try to stop bodies from tunneling into (or through) each other at high velocities. Generating normal contact constraints at discrete points in time will tend to miss such fast moving collisions or respond to them too late.</p>
 <p align="center"><img src="images/ContinuousCollisionDetection/ccd.png"></p>
 <p>In bepuphysics2, continuous collision detection is handled mostly through speculative contacts. When those aren't sufficient, the library offers a mode that performs sweep testing to find a time of impact.</p>
-<p>See the <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/ContinuousCollisionDetectionDemo.cs">ContinuousCollisionDetectionDemo</a> for more information about the topics covered here.</p>
+<p>See the <a 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >ContinuousCollisionDetectionDemo</a> for more information about the topics covered here.</p>
 <h1 id="whats-a-speculative-contact">What's a speculative contact?</h1>
 <p>Speculative contacts are contacts with negative depth. They're still solved, but they don't apply any forces unless the velocity is high enough that the involved collidables are expected to come into contact within the next frame.</p>
 <p>The speculative <em>margin</em> is the maximum distance at which a collision pair will generate speculative contacts. Bodies have configurable minimum and maximum speculative margins. The speculative margin for a body is determined from the body's velocity magnitude clamped by the specified minimum and maximum bounds. The <em>effective</em> speculative margin for a pair of bodies is the sum of both bodies' margins. Statics do not contribute anything to a pair's effective margin; they cannot move.</p>
@@ -146,7 +152,13 @@ Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(10, 5, 0), dynam
 <h1 id="do-speculative-margins-have-any-other-surprising-side-effects">Do speculative margins have any other surprising side effects?</h1>
 <p>Speculative contacts are mostly incompatible with the traditional approach to bounciness- a coefficient of restitution which sets an opposing velocity goal along a contact normal proportional to the incoming velocity. That's why you won't find a 0 to 1 <code>CoefficientOfRestitution</code> anywhere in the library.</p>
 <p>Instead, all contacts are springs. In <code>INarrowPhaseCallbacks.ConfigureContactManifold</code> you can customize a pair's  <code>PairMaterialProperties</code> which include a <code>SpringSettings</code> and <code>MaximumRecoveryVelocity</code>. Using a sufficiently high <code>MaximumRecoveryVelocity</code> and reducing the <code>SpringSettings.DampingRatio</code> to 0 will minimize the amount of energy damped out during a bounce. There is a bit complexity here- the <code>Frequency</code> must be low enough that the simulation can actually represent it. If the contact is trying to make a bounce happen at 240hz, but the integrator timestep is only 60hz, the unrepresentable motion will get damped out and the body won't bounce as much.</p>
-<p>For more information, see the <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/BouncinessDemo.cs">BouncinessDemo</a>.</p>
+<p>For more information, see the <a 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >BouncinessDemo</a>.</p>
 
 </article>
 

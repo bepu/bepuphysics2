@@ -93,7 +93,31 @@
     BufferPool, new YourNarrowPhaseCallbacks(), new YourPoseIntegratorCallbacks(), 
     new SolveDescription(velocityIterationCount: 1, substepCount: 8));
 </code></pre>
-<p>See the <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/SubsteppingDemo.cs">SubsteppingDemo</a> for an interactive example. The <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/RopeTwistDemo.cs">RopeTwistDemo</a>, <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/ChainFountainDemo.cs">ChainFountainDemo</a> and <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/BouncinessDemo.cs">BouncinessDemo</a> also all use substepping. The <a href="StabilityTips.html">stability tips documentation</a> contains some more information about tuning.</p>
+<p>See the <a 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >SubsteppingDemo</a> for an interactive example. The <a 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >RopeTwistDemo</a>, <a 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >ChainFountainDemo</a> and <a 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >BouncinessDemo</a> also all use substepping. The <a href="StabilityTips.html">stability tips documentation</a> contains some more information about tuning.</p>
 <h1 id="why-use-it">Why use it?</h1>
 <p>It makes difficult constraint configurations easy for the solver. The easier things are for the solver, the faster it can go.</p>
 <p>If you have a really complex constraint graph, especially one containing high mass ratios (heavy objects depending on light objects, like a wrecking ball hanging from a rope or a tank smashing a small box) and high constraint stiffnesses, a non-substepping solver can struggle to converge to an equilibrium in a low number of velocity iterations.</p>
@@ -101,7 +125,13 @@
 <p>Substepping means running the solver and integrator multiple times for each call to <code>Simulation.Timestep</code>. If you take 8 substeps and call <code>Simulation.Timestep(1f / 60f)</code>, the solver sees 8 substeps each of length <code>1f / 480f</code>. Since the solver and integrator are running at 480 hertz, that 120 hertz constraint would be able to wiggle to its heart's content.</p>
 <p>In the above example, you could get similar solver stability out of simply calling <code>Simulation.Timestep(1f / 480f)</code> 8 times for each frame, but that would re-run collision detection 8 times too. Further, by tightly bundling execution together, the substepping solver can avoid a large amount of synchronization and memory bandwidth overhead. Overall, when it is an appropriate solution, substepping will tend to be the fastest option.</p>
 <h1 id="how-substepping-fits-into-a-timestep">How substepping fits into a timestep</h1>
-<p>Each call to <code>Simulation.Timestep(dt, ...)</code> simulates one frame with duration equal to <code>dt</code>. In the <a href="https://github.com/bepu/bepuphysics2/blob/master/../BepuPhysics/DefaultTimestepper.cs"><code>DefaultTimestepper</code></a> (which, as the name implies, is the <code>ITimestepper</code> implementation used if no other is specified) executes a frame like so:</p>
+<p>Each call to <code>Simulation.Timestep(dt, ...)</code> simulates one frame with duration equal to <code>dt</code>. In the <a 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    ><code>DefaultTimestepper</code></a> (which, as the name implies, is the <code>ITimestepper</code> implementation used if no other is specified) executes a frame like so:</p>
 <pre><code class="lang-cs">simulation.Sleep();
 simulation.PredictBoundingBoxes(dt, threadDispatcher);
 simulation.CollisionDetection(dt, threadDispatcher);

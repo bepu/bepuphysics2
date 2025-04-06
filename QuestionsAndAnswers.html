@@ -134,7 +134,13 @@
 <p>This list will probably change over time.</p>
 <h2 id="where-is-the-bouncinessrestitution-material-property">...Where is the bounciness/restitution material property?</h2>
 <p>You're not crazy- it doesn't exist! Instead, at the time of writing, there is friction, frequency, damping ratio, and maximum recovery velocity.</p>
-<p>Frequency and damping ratio can achieve some of the same effects as restitution with a bit of configuration. Check out the <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/BouncinessDemo.cs">BouncinessDemo</a> for an example.</p>
+<p>Frequency and damping ratio can achieve some of the same effects as restitution with a bit of configuration. Check out the <a 
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    >BouncinessDemo</a> for an example.</p>
 <p>The reason for the lack of a traditional coefficient of restitution is speculative contacts. v1 used them too, but v2 pushes their usage much further and uses them as the primary form of continuous collision detection. Most of the problems caused by speculative contacts (like ghost contacts) have been smoothed over, but the naive implementation of velocity-flip restitution simply doesn't work with speculative contacts.</p>
 <h2 id="swept-shape-tests-against-the-backfaces-of-meshes-dont-go-through-but-collisions-do-whats-going-on">Swept shape tests against the backfaces of meshes don't go through, but collisions do. What's going on?</h2>
 <p>While ray and collision testing against triangles is always one sided, swept shape tests are double sided. This is pretty strange, and there isn't a secret good reason for it.</p>
