@@ -10,10 +10,17 @@ $linkCount = 0
 foreach ($file in $htmlFiles) {
     $content = Get-Content -Path $file.FullName -Raw
     
-    # Find links like "../Folder/File.cs" and transform them to GitHub URLs
-    $pattern = 'href=["\''](\.\./[^"\'']*(\.cs|\.csproj))(#L\d+)?["\'']'
+    # Find links that start with "../" and transform them to GitHub URLs
+    $pattern = 'href=["\''](\.\./[^"\'']*)["\'']'
     
-    $newContent = $content -replace $pattern, "href=`"$repoUrl/`$1`$3`""
+    # Use a scriptblock for the replacement to remove the "../" prefix
+    $newContent = $content -replace $pattern, {
+        $match = $args[0]
+        $originalLink = $args[0].Groups[1].Value
+        # Remove the "../" prefix for the GitHub URL
+        $relativePath = $originalLink -replace '^\.\.\/', ''
+        "href=`"$repoUrl/$relativePath`""
+    }
     
     # Only write the file if changes were made
     if ($newContent -ne $content) {
