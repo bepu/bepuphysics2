@@ -98,13 +98,7 @@
 <p>An example of what it looks like when the solver needs more iterations:</p>
 <p><img src="images/lowiterationcount.gif" alt="bounceybounce"></p>
 <p>One notable pathological case for the solver is high mass ratios. Very heavy objects rigidly depending on very light objects can make it nearly impossible for the solver to converge in a reasonable number of velocity iterations. One common example of this is a wrecking ball at the end of a rope composed of a bunch of linked bodies. With constraint stiffness configured high enough to hold the wrecking ball, it's unlikely that a 60hz solver update rate and 8 velocity iterations will be sufficient to keep things stable at a 100:1 mass ratio.</p>
-<p>There are ways around this issue, though. Reducing lever arms, adjusting inertias, and adding more paths for the solver to propagate impulses through are useful tricks that can stabilize even some fairly extreme cases. Check out the <a 
-        $match = $args[0]
-        $originalLink = $args[0].Groups[1].Value
-        # Remove the "../" prefix for the GitHub URL
-        $relativePath = $originalLink -replace '^\.\.\/', ''
-        "href=`"$repoUrl/$relativePath`""
-    >RopeStabilityDemo</a> for details.</p>
+<p>There are ways around this issue, though. Reducing lever arms, adjusting inertias, and adding more paths for the solver to propagate impulses through are useful tricks that can stabilize even some fairly extreme cases. Check out the <a href="https://github.com/bepu/bepuphysics2/blob/master/Demos/Demos/RopeStabilityDemo.cs">RopeStabilityDemo</a> for details.</p>
 <p>The second class of failure, excessive stiffness, is more difficult to hack away. If you configure a constraint with a frequency of 120hz and your simulation is running at 60hz, the integrator is going to have trouble representing the resulting motion. It won't <em>always</em> explode, but if you throw a bunch of 240hz constraints together at a 60hz solver rate, bad things are likely.</p>
 <p>If you can, avoid using a constraint frequency greater than half of your solver update rate. That is, if the solver is running at 60hz, stick to 30hz or below for your constraints' spring settings. If using very low velocity iteration counts (like 1), you may need to be more conservative with the constraint frequencies relative to the solver rate.</p>
 <p>Sometimes, though, you can't use tricks or hacks to stabilize a simulation, or you just want very stiff and stable response. Sometimes you don't have enough control over the simulation to add specific countermeasures- user generated content is rarely simulation friendly. At this point, the solver just needs to run more frequently to compensate.</p>
@@ -112,13 +106,7 @@
 <p>If you're only concerned about solver stability, then you can instead use the solver's substepping feature. When calling <code>Simulation.Create</code>, pass a <code>SolveDescription</code> with the desired number of substeps. For example, if the solver uses 4 substeps and Simulation.Timestep is called at a rate of 60hz, then the solver and integrator will actually run at 240hz. Notably, because increasing the update rate is such a powerful stabilizer, you can usually drop the number of solver velocity iterations to save some simulation time.</p>
 <p>Using higher update rates can enable the simulation of otherwise impossible mass ratios, like 1000:1, even with fairly low velocity iterations. Here's a rope connected by 240hz frequency constraints with a 1000:1 mass ratio wrecking ball at the end, showing how the number of substeps affects quality:</p>
 <p><img src="images/massratiosubstepping.gif" alt=""></p>
-<p>For more examples of substepping, check out the <a 
-        $match = $args[0]
-        $originalLink = $args[0].Groups[1].Value
-        # Remove the "../" prefix for the GitHub URL
-        $relativePath = $originalLink -replace '^\.\.\/', ''
-        "href=`"$repoUrl/$relativePath`""
-    >SubsteppingDemo</a>. For more information about substepping, see the <a href="Substepping.html">substepping documentation</a>.</p>
+<p>For more examples of substepping, check out the <a href="https://github.com/bepu/bepuphysics2/blob/master/Demos/Demos/SubsteppingDemo.cs">SubsteppingDemo</a>. For more information about substepping, see the <a href="Substepping.html">substepping documentation</a>.</p>
 <p>So, if you're encountering constraint instability, here are some general guidelines for debugging:</p>
 <ol>
 <li>First, try increasing the <code>Simulation.Timestep</code> update rate to a really high value (600hz or more). If the problem goes away, then it's probably related to the difficulty of the simulation and a lack of convergence and not to a configuration error.</li>
