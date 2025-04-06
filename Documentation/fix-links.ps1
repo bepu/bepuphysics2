@@ -3,8 +3,8 @@ param (
     [string]$repoUrl = "https://github.com/bepu/bepuphysics2/blob/master"
 )
 
-# Get all HTML files in the site
-$htmlFiles = Get-ChildItem -Path $sitePath -Filter "*.html" -Recurse
+# Get all HTML files in the site, excluding those in the api/ directory
+$htmlFiles = Get-ChildItem -Path $sitePath -Filter "*.html" -Recurse | Where-Object { $_.FullName -notmatch "\\api\\" }
 
 $linkCount = 0
 foreach ($file in $htmlFiles) {
