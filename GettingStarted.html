@@ -88,30 +88,30 @@
 <h1 id="getting-started">Getting Started</h1>
 
 <p>The best place to start is the demos in the <code>Demos.sln</code> solution. Jump into one in the <a href="../Demos/Demos/"><code>Demos/Demos/</code></a> folder and start playing around.</p>
-<p>The <a href="../Demos/Demo.cs"><code>Demo</code></a> type is a very simple helper class that contains a few properties and functions used across all demos. It creates a <code>BufferPool</code> and <code>ThreadDispatcher</code> and provides a basic <code>Update</code> implementation that just calls <code>Simulation.Timestep</code> once with a fixed duration. A couple of alternative timestep examples are also provided in the comments.</p>
+<p>The <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demo.cs"><code>Demo</code></a> type is a very simple helper class that contains a few properties and functions used across all demos. It creates a <code>BufferPool</code> and <code>ThreadDispatcher</code> and provides a basic <code>Update</code> implementation that just calls <code>Simulation.Timestep</code> once with a fixed duration. A couple of alternative timestep examples are also provided in the comments.</p>
 <p>Each <code>Demo</code> implementation creates its own <code>Simulation</code>. Some <code>Demo</code> types have extra input or rendering logic; input and rendering are fully separate from the actual physics library.</p>
-<p>The <a href="../Demos/Demos/SimpleSelfContainedDemo.cs"><code>SimpleSelfContainedDemo</code></a> shows how to set up a simple simulation without relying on any of the Demos-provided infrastructure.</p>
+<p>The <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/SimpleSelfContainedDemo.cs"><code>SimpleSelfContainedDemo</code></a> shows how to set up a simple simulation without relying on any of the Demos-provided infrastructure.</p>
 <h2 id="building-a-simulation">Building a Simulation</h2>
 <p><code>Simulation.Create</code> builds a <code>Simulation</code> instance, but has some unusual callback parameters- they take the form of interface-implementing structs.</p>
 <p>The <code>TNarrowPhaseCallbacks</code> parameter handles collision-related callbacks, giving the user a way to control collision filtering, contact manifolds, materials, and a path to implementing things like collision events.</p>
 <p><code>TPoseIntegratorCallbacks</code> provides control over per-body velocity integration behavior. It's typically used for implementing gravity or damping.</p>
 <p>Examples:</p>
 <ol>
-<li><a href="../Demos/DemoCallbacks.cs"><code>DemoCallbacks</code></a> shows the frequently used callbacks, including damping and unidirectional gravity and a basic passthrough <code>INarrowPhaseCallbacks</code>.</li>
-<li><a href="../Demos/Demos/PlanetDemo.cs"><code>PlanetDemo</code></a> shows how to create a planet-like gravity source.</li>
-<li><a href="../Demos/Demos/RagdollDemo.cs"><code>RagdollDemo</code></a> contains a slightly more advanced <code>INarrowPhaseCallbacks</code> collision filtering approach based on bitfields. Used to stop connected pieces of the ragdolls from colliding.</li>
-<li><a href="../Demos/Demos/ContactEventsDemo.cs"><code>ContactEventsDemo</code></a> shows one possible way to collect contact data from the <code>INarrowPhaseCallbacks</code> and use it to generate contact events.</li>
+<li><a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/DemoCallbacks.cs"><code>DemoCallbacks</code></a> shows the frequently used callbacks, including damping and unidirectional gravity and a basic passthrough <code>INarrowPhaseCallbacks</code>.</li>
+<li><a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/PlanetDemo.cs"><code>PlanetDemo</code></a> shows how to create a planet-like gravity source.</li>
+<li><a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/RagdollDemo.cs"><code>RagdollDemo</code></a> contains a slightly more advanced <code>INarrowPhaseCallbacks</code> collision filtering approach based on bitfields. Used to stop connected pieces of the ragdolls from colliding.</li>
+<li><a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/ContactEventsDemo.cs"><code>ContactEventsDemo</code></a> shows one possible way to collect contact data from the <code>INarrowPhaseCallbacks</code> and use it to generate contact events.</li>
 </ol>
 <p>Note that <code>TNarrowPhaseCallbacks</code> and <code>TPoseIntegratorCallbacks</code> are required to be structs and are provided with generic parameters rather than directly as interfaces. This is because the compiler has enough knowledge (and is forced) to avoid virtual dispatch and, when appropriate, inline the callbacks. Given that many of the callbacks are called with extremely high frequency, this can add up.</p>
 <p>A similar pattern is used in many places across the engine. You can think about these as compile time delegates or closures, just with nastier syntax.</p>
 <p><code>SolveDescription</code> describes how the simulation should schedule updates. You can set the number of velocity iterations and substeps that occur in each simulation timestep. For simulations with difficult constraint configurations, using more substeps can help stabilize the simulation far more cheaply than increasing velocity iterations can. For advanced use cases, you can schedule the number of velocity iterations for each substep individually.</p>
 <p>There's also a fallback batch threshold, which you can safely leave at the default value almost always- it's the number of synchronized constraint batches that the simulation will create before falling back to a special case solve when individual bodies have excessive numbers of constraints connected to them.</p>
 <p><code>Simulation.Create</code> also has a couple of optional parameters: initial allocation sizes to pull from the resource pool (to avoid unnecessary resizing later), and the <code>ITimestepper</code> which defines the order of stage execution within the engine.</p>
-<p>The engine includes only one <code>ITimeStepper</code> type out of the box, which gets used if no other <code>ITimestepper</code> is provided: the <a href="../BepuPhysics/DefaultTimestepper.cs"><code>DefaultTimestepper</code></a>. It checks candidates for sleeping, computes bounding boxes, performs collision detection, solves constraints (which includes any necessary body velocity/pose integration), then does some incremental optimization work on internal data structures. There are callbacks between stages that can be hooked into. A custom <code>ITimestepper</code> could be provided that changes what stages execute or their order.</p>
+<p>The engine includes only one <code>ITimeStepper</code> type out of the box, which gets used if no other <code>ITimestepper</code> is provided: the <a href="https://github.com/bepu/bepuphysics2/blob/master/../BepuPhysics/DefaultTimestepper.cs"><code>DefaultTimestepper</code></a>. It checks candidates for sleeping, computes bounding boxes, performs collision detection, solves constraints (which includes any necessary body velocity/pose integration), then does some incremental optimization work on internal data structures. There are callbacks between stages that can be hooked into. A custom <code>ITimestepper</code> could be provided that changes what stages execute or their order.</p>
 <h2 id="timesteppingupdating">Timestepping/updating</h2>
 <p><code>Simulation.Timestep</code> pushes the simulation forward by the given amount of time. If a <code>IThreadDispatcher</code> is provided, it is used to multithread the simulation.</p>
 <p>The <code>Simulation</code> does not do anything fancy internally with temporal accumulation or anything else. Each <code>Timestep</code> simulates exactly the amount of time specified.</p>
-<p>Examples of other timestepping strategies, like accumulating time and simulating as many timesteps of a fixed duration as necessary, are shown in <a href="../Demos/Demo.cs#L40"><code>Demo.Update</code></a>.</p>
+<p>Examples of other timestepping strategies, like accumulating time and simulating as many timesteps of a fixed duration as necessary, are shown in <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demo.cs#L40"><code>Demo.Update</code></a>.</p>
 <p>It is recommended that the time step duration provided to <code>Simulation.Timestep</code> is always the same. Wildly varying timesteps can introduce instability. One-off changes or gradual changes can work well enough, but try to avoid jumping around constantly.</p>
 <p>For varying timestep durations, <code>Solver.ScaleAccumulatedImpulses</code> can be used to scale the cached constraint solution by the ratio of the previous duration to the current duration. It's not free and it won't guarantee stability, but it can help.</p>
 <h2 id="bodies">Bodies</h2>
@@ -131,17 +131,17 @@
 <p>Constraints can be used to control the relative motion of bodies. There are a <a href="../BepuPhysics/Constraints">whole bunch of them</a>. Like bodies and statics, constraints are created by building a description and passing it to <code>Simulation.Solver.Add</code>.</p>
 <p>Some examples of constraints in the demos include:</p>
 <ol>
-<li><a href="../Demos/Demos/RagdollDemo.cs"><code>RagdollDemo</code></a> is a... demo of ragdolls.</li>
-<li><a href="../Demos/Demos/CarDemo.cs"><code>CarDemo</code></a> shows how to build a simple constraint based car (and bad AI drivers).</li>
-<li><a href="../Demos/Demos/RopeStabilityDemo.cs"><code>RopeStabilityDemo</code></a> shows some constraint configuration failure modes and how to fix them.</li>
-<li><a href="../Demos/Demos/NewtDemo.cs"><code>NewtDemo</code></a> shows how to make a squishy newt.</li>
-<li><a href="../Demos/Demos/ClothDemo.cs"><code>ClothDemo</code></a> shows how to make sheets of cloth with different properties.</li>
+<li><a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/RagdollDemo.cs"><code>RagdollDemo</code></a> is a... demo of ragdolls.</li>
+<li><a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/CarDemo.cs"><code>CarDemo</code></a> shows how to build a simple constraint based car (and bad AI drivers).</li>
+<li><a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/RopeStabilityDemo.cs"><code>RopeStabilityDemo</code></a> shows some constraint configuration failure modes and how to fix them.</li>
+<li><a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/NewtDemo.cs"><code>NewtDemo</code></a> shows how to make a squishy newt.</li>
+<li><a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/ClothDemo.cs"><code>ClothDemo</code></a> shows how to make sheets of cloth with different properties.</li>
 </ol>
 <p>Existing raw constraint data is more difficult to access than body data. There is a similar handle-&gt;memory location lookup, but the data itself is stored a few layers deep in array-of-structures-of-arrays format for performance. Pulling data out of this representation is not very convenient, so the <code>Solver</code> has <code>ApplyDescription</code> and <code>GetDescription</code> for accessing constraint data. Custom descriptions can be created to access only subsets of a constraint's full data.</p>
 <h2 id="queries">Queries</h2>
 <p>The engine supports scene-wide queries through <code>Simulation.RayCast</code> and <code>Simulation.Sweep</code>. Sweeps support both linear and angular motion for convex shapes. Both functions make use of hit handlers- <code>IRayHitHandler</code> and <code>ISweepHitHandler</code>. The handlers can filter out objects and respond to found impacts.</p>
-<p>The <a href="../Demos/Grabber.cs"><code>Grabber</code></a>, <a href="../Demos/Demos/RayCastingDemo.cs"><code>RayCastingDemo</code></a> and <a href="../Demos/Demos/SweepDemo.cs"><code>SweepDemo</code></a> have some examples of these queries, plus some other more advanced cases.</p>
-<p>The broad phase acceleration structures can be <a href="../BepuPhysics/CollisionDetection/BroadPhase_Queries.cs">directly queried</a> by ray casts, bounding boxes, and swept bounding boxes.</p>
+<p>The <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Grabber.cs"><code>Grabber</code></a>, <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/RayCastingDemo.cs"><code>RayCastingDemo</code></a> and <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/SweepDemo.cs"><code>SweepDemo</code></a> have some examples of these queries, plus some other more advanced cases.</p>
+<p>The broad phase acceleration structures can be <a href="https://github.com/bepu/bepuphysics2/blob/master/../BepuPhysics/CollisionDetection/BroadPhase_Queries.cs">directly queried</a> by ray casts, bounding boxes, and swept bounding boxes.</p>
 <h2 id="memory">Memory</h2>
 <p>Almost all of the internally used memory is pulled from a custom allocator working with pinned memory. Almost all stages have some form of memory management API for preallocating, compacting, or disposing resources.</p>
 <p>The <code>Simulation</code> has a few top-level functions to help orchestrate all the different stage allocations, including <code>Clear</code>, <code>EnsureCapacity</code>, <code>Resize</code>, and <code>Dispose</code>. Most use cases get by with the default initial allocation sizes and then Disposing upon completion.</p>
@@ -181,3 +181,4 @@
     </footer>
   </body>
 </html>
+

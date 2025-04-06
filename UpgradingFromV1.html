@@ -116,27 +116,27 @@
 <tr>
 <td>Collision events</td>
 <td><code>entity.CollisionInformation.Events</code></td>
-<td>No out of the box events; <a href="../Demos/Demos/ContactEventsDemo.cs"><code>ContactEventsDemo</code></a> shows how to use narrow phase callbacks to create events.</td>
+<td>No out of the box events; <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/ContactEventsDemo.cs"><code>ContactEventsDemo</code></a> shows how to use narrow phase callbacks to create events.</td>
 </tr>
 <tr>
 <td>Enumerating existing collisions</td>
 <td><code>entity.CollisionInformation.Pairs</code></td>
-<td>Collision data is not explicitly cached anywhere. Narrow phase callbacks can be used to collect collision information. Collision-created contact constraints (and all other connected constraints) can be enumerated using the Constraints body property. See the <a href="../Demos/Demos/SolverContactEnumerationDemo.cs"><code>SolverContactEnumerationDemo</code></a> for an example of enumerating contact constraints.</td>
+<td>Collision data is not explicitly cached anywhere. Narrow phase callbacks can be used to collect collision information. Collision-created contact constraints (and all other connected constraints) can be enumerated using the Constraints body property. See the <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/SolverContactEnumerationDemo.cs"><code>SolverContactEnumerationDemo</code></a> for an example of enumerating contact constraints.</td>
 </tr>
 <tr>
 <td>Collision filtering</td>
 <td><code>e.CollisionInformation.CollisionRules</code> and <code>CollisionRules</code> static functions</td>
-<td><code>INarrowPhaseCallbacks</code> has <code>AllowContactGeneration</code> and <code>ConfigureContactManifold</code> which return a boolean that controls whether narrow phase testing and constraint generation should proceed. See <a href="../Demos/Demos/RagdollDemo.cs"><code>RagdollDemo</code></a> for an example of collision filtering.</td>
+<td><code>INarrowPhaseCallbacks</code> has <code>AllowContactGeneration</code> and <code>ConfigureContactManifold</code> which return a boolean that controls whether narrow phase testing and constraint generation should proceed. See <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/RagdollDemo.cs"><code>RagdollDemo</code></a> for an example of collision filtering.</td>
 </tr>
 <tr>
 <td>Custom gravity</td>
 <td><code>entity.Gravity</code></td>
-<td><code>IPoseIntegratorCallbacks</code> can be used to implement any form of gravity or other per-body velocity influence. See <a href="../Demos/Demos/PlanetDemo.cs">PlanetDemo</a> for an example.</td>
+<td><code>IPoseIntegratorCallbacks</code> can be used to implement any form of gravity or other per-body velocity influence. See <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/Demos/PlanetDemo.cs">PlanetDemo</a> for an example.</td>
 </tr>
 <tr>
 <td>Object velocity damping</td>
 <td><code>entity.LinearDamping</code> and <code>entity.AngularDamping</code></td>
-<td><code>IPoseIntegratorCallbacks</code> again- damping is just a velocity influence. See <a href="../Demos/DemoCallbacks.cs">DemoCallbacks</a> for an example.</td>
+<td><code>IPoseIntegratorCallbacks</code> again- damping is just a velocity influence. See <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/DemoCallbacks.cs">DemoCallbacks</a> for an example.</td>
 </tr>
 <tr>
 <td>Scene-wide ray casts</td>
@@ -277,3 +277,4 @@
     </footer>
   </body>
 </html>
+

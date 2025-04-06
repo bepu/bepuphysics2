@@ -106,7 +106,7 @@
 <p>-Prefer using the same shape types when convenient. The narrow phase works on batches of same-type collision pairs at a time. By using a lot of the same types, the narrow phase can get better SIMD efficiency. (This is a fairly minor effect. If you kinda want to use a cylinder for something even though you haven't used them anywhere else, don't feel too bad about it.)</p>
 <h2 id="solver-optimization">Solver Optimization</h2>
 <p>-Try using the minimum number of iterations sufficient to retain stability. The cost of the solver stage is linear with the number of iterations, and some simulations can get by with very few.</p>
-<p>-For some simulations with very complex constraint configurations, there may be no practical number of solver iterations that can stabilize the simulation. In these cases, you may need to instead use substepping or a shorter time step duration for the entire simulation. More frequent solver execution can massively improve simulation quality, allowing you to drop velocity iteration counts massively (even to just 1 per substep). See the <a href="../Demos/SubsteppingDemo.cs"><code>SubsteppingDemo</code></a> for an example of substepping in action, and the <a href="Substepping.html">Substepping documentation</a> for more details.</p>
+<p>-For some simulations with very complex constraint configurations, there may be no practical number of solver iterations that can stabilize the simulation. In these cases, you may need to instead use substepping or a shorter time step duration for the entire simulation. More frequent solver execution can massively improve simulation quality, allowing you to drop velocity iteration counts massively (even to just 1 per substep). See the <a href="https://github.com/bepu/bepuphysics2/blob/master/../Demos/SubsteppingDemo.cs"><code>SubsteppingDemo</code></a> for an example of substepping in action, and the <a href="Substepping.html">Substepping documentation</a> for more details.</p>
 
 </article>
 
@@ -134,3 +134,4 @@
     </footer>
   </body>
 </html>
+
