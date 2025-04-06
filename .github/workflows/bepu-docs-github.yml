@@ -33,6 +33,9 @@ jobs:
     - name: Build Bepu Docs
       run: docfx build ${{ env.COMMON_SETTINGS_PATH }}
 
+    - name: Fix Documentation Links
+      run: powershell -File Documentation/fix-links.ps1 -sitePath "Documentation/_site" -repoUrl "https://github.com/bepu/bepuphysics2/blob/master"
+
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v4.0.0
       with:
