@@ -12,8 +12,7 @@ foreach ($file in $htmlFiles) {
     $originalContent = $content
     
     # Find links that start with "../" and transform them to GitHub URLs
-    # Important: We need to capture the entire href attribute and only change the value
-    $pattern = '(href=["\'])(\.\./[^"\']*)(["\'])'
+    $pattern = '(href=["''])(\.\.\/[^"'']*)(["''])'
     
     # Use a scriptblock for the replacement to keep the original quote style and only modify the URL
     $newContent = [regex]::Replace($content, $pattern, {
