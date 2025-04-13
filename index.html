@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Quick Start | Bepu Docs </title>
+      <title>bepuphysics docs! | Bepu Docs </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Quick Start | Bepu Docs ">
+      <meta name="title" content="bepuphysics docs! | Bepu Docs ">
       
       
       <link rel="icon" href="favicon.ico">
@@ -85,26 +85,14 @@
         </div>
 
         <article data-uid="">
-<h1 id="quick-start">Quick Start</h1>
+<h1 id="bepuphysics-docs">bepuphysics docs!</h1>
 
+<p>There are <a href="https://docs.bepuphysics.com/GettingStarted.html">conceptual</a> <em>and</em> <a href="https://docs.bepuphysics.com/api/BepuPhysics.html">API</a> docs!</p>
+<p>See <a href="GettingStarted.html">Getting Started</a> for an introduction to the library.</p>
 <p>The BepuPhysics and BepuUtilities libraries target .NET 8 and should work on any supported platform.</p>
 <p>The physics engine heavily uses <code>System.Numerics.Vectors</code> types, so to get good performance, you'll need a compiler which can consume those types (like RyuJIT).</p>
-<h2 id="features">Features</h2>
-<ul>
-<li>Spheres, capsules, boxes, triangles, cylinders, and convex hulls</li>
-<li>Compounds of the above</li>
-<li>Meshes</li>
-<li>A <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints">whole bunch of constraint types</a></li>
-<li><a href="https://github.com/bepu/bepuphysics2/blob/master/Demos/Demos/NewtDemo.cs">Newts</a></li>
-<li>Linear and angular continuous collision detection</li>
-<li>Extremely low cost sleep states for resting bodies</li>
-<li>Efficient scene-wide ray and sweep queries</li>
-<li><a href="https://github.com/bepu/bepuphysics2/blob/master/Demos/Demos/Characters/CharacterDemo.cs">Character controller example</a></li>
-<li>At least somewhat extensible collision pipeline, with <a href="https://github.com/bepu/bepuphysics2/blob/master/Demos/Demos/CustomVoxelCollidableDemo.cs">example custom voxel collidable</a></li>
-<li>Highly nonidiomatic APIs</li>
-<li>Super speediness</li>
-<li>And a bunch of other miscellaneous stuff!</li>
-</ul>
+<p>The demos application, Demos.sln, uses DX11 by default. There is also a Demos.GL.sln that uses OpenGL and should run on other platforms. The demos can be run from the command line (in the repo root directory) with <code>dotnet run --project Demos/Demos.csproj -c Release</code> or <code>dotnet run --project Demos.GL/Demos.csproj -c Release</code>.</p>
+<p>To build the source, the easiest option is a recent version of Visual Studio with the .NET desktop development workload installed. Demos.sln references all relevant projects. For more information, see <a href="Building.html">Building</a>.</p>
 
 </article>
 
@@ -132,4 +120,3 @@
     </footer>
   </body>
 </html>
-
