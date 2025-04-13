@@ -87,7 +87,7 @@
         <article data-uid="">
 <h1 id="getting-started">Getting Started</h1>
 
-<p>The best place to start is the demos in the <code>Demos.sln</code> solution. Jump into one in the <a href="../Demos/Demos/"><code>Demos/Demos/</code></a> folder and start playing around.</p>
+<p>The best place to start is the demos in the <code>Demos.sln</code> solution. Jump into one in the <a href="https://github.com/bepu/bepuphysics2/blob/master/Demos/Demos/"><code>Demos/Demos/</code></a> folder and start playing around.</p>
 <p>The <a href="https://github.com/bepu/bepuphysics2/blob/master/Demos/Demo.cs"><code>Demo</code></a> type is a very simple helper class that contains a few properties and functions used across all demos. It creates a <code>BufferPool</code> and <code>ThreadDispatcher</code> and provides a basic <code>Update</code> implementation that just calls <code>Simulation.Timestep</code> once with a fixed duration. A couple of alternative timestep examples are also provided in the comments.</p>
 <p>Each <code>Demo</code> implementation creates its own <code>Simulation</code>. Some <code>Demo</code> types have extra input or rendering logic; input and rendering are fully separate from the actual physics library.</p>
 <p>The <a href="https://github.com/bepu/bepuphysics2/blob/master/Demos/Demos/SimpleSelfContainedDemo.cs"><code>SimpleSelfContainedDemo</code></a> shows how to set up a simple simulation without relying on any of the Demos-provided infrastructure.</p>
@@ -111,7 +111,7 @@
 <h2 id="timesteppingupdating">Timestepping/updating</h2>
 <p><code>Simulation.Timestep</code> pushes the simulation forward by the given amount of time. If a <code>IThreadDispatcher</code> is provided, it is used to multithread the simulation.</p>
 <p>The <code>Simulation</code> does not do anything fancy internally with temporal accumulation or anything else. Each <code>Timestep</code> simulates exactly the amount of time specified.</p>
-<p>Examples of other timestepping strategies, like accumulating time and simulating as many timesteps of a fixed duration as necessary, are shown in <a href="../Demos/Demo.cs#L40"><code>Demo.Update</code></a>.</p>
+<p>Examples of other timestepping strategies, like accumulating time and simulating as many timesteps of a fixed duration as necessary, are shown in <a href="https://github.com/bepu/bepuphysics2/blob/master/Demos/Demo.cs#L40"><code>Demo.Update</code></a>.</p>
 <p>It is recommended that the time step duration provided to <code>Simulation.Timestep</code> is always the same. Wildly varying timesteps can introduce instability. One-off changes or gradual changes can work well enough, but try to avoid jumping around constantly.</p>
 <p>For varying timestep durations, <code>Solver.ScaleAccumulatedImpulses</code> can be used to scale the cached constraint solution by the ratio of the previous duration to the current duration. It's not free and it won't guarantee stability, but it can help.</p>
 <h2 id="bodies">Bodies</h2>
@@ -128,7 +128,7 @@
 <p>Statics are computationally cheap. Feel free to have thousands of them.</p>
 <p>To create a static object, pass a <code>StaticDescription</code> to <code>Simulation.Statics.Add</code>.</p>
 <h2 id="constraints">Constraints</h2>
-<p>Constraints can be used to control the relative motion of bodies. There are a <a href="../BepuPhysics/Constraints">whole bunch of them</a>. Like bodies and statics, constraints are created by building a description and passing it to <code>Simulation.Solver.Add</code>.</p>
+<p>Constraints can be used to control the relative motion of bodies. There are a <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints">whole bunch of them</a>. Like bodies and statics, constraints are created by building a description and passing it to <code>Simulation.Solver.Add</code>.</p>
 <p>Some examples of constraints in the demos include:</p>
 <ol>
 <li><a href="https://github.com/bepu/bepuphysics2/blob/master/Demos/Demos/RagdollDemo.cs"><code>RagdollDemo</code></a> is a... demo of ragdolls.</li>

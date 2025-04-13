@@ -89,7 +89,7 @@
 
 <h2 id="im-seeing-spikes-in-the-time-it-takes-to-simulate-a-timestep-whats-going-on">I'm seeing spikes in the time it takes to simulate a timestep, what's going on?</h2>
 <p>If it quits happening a little while after application startup, it's probably JIT compilation. You could consider warming up the simulation so all the relevant codepaths are seen by the JIT ahead of time. You may also want to look into ahead of time compilation like NativeAOT.</p>
-<p>If it keeps happening, and the spikes are in the range of a handful of milliseconds, the operating system might be struggling with a bunch of threads competing for timeslices, resulting in stalls. In that case, try using fewer threads for the physics- leaving one free might be all it takes. See the <a href="PerformanceTips.html#general">Performance Tips</a> for more.</p>
+<p>If it keeps happening, and the spikes are in the range of a handful of milliseconds, the operating system might be struggling with a bunch of threads competing for timeslices, resulting in stalls. In that case, try using fewer threads for the physics- leaving one free might be all it takes. See the <a href="https://github.com/bepu/bepuphysics2/blob/master/PerformanceTips.html#general">Performance Tips</a> for more.</p>
 <h2 id="how-can-i-make-a-convex-shape-rotate-around-a-point-other-than-its-volumetric-center">How can I make a convex shape rotate around a point other than its volumetric center?</h2>
 <p>Other than triangles, all convex shapes are centered on their volumetric center, and there is no property in the <code>CollidableDescription</code> to offset a body's shape.</p>
 <p>However, you can create a <code>Compound</code> with just one child and give that child an offset local pose. The overhead is pretty tiny.</p>
