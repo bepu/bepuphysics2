@@ -9,7 +9,7 @@ The BepuPhysics and BepuUtilities libraries target .NET 8 and should work on any
 
 The physics engine heavily uses `System.Numerics.Vectors` types, so to get good performance, you'll need a compiler which can consume those types (like RyuJIT).
 
-To build the source, you'll need a recent version of Visual Studio with the .NET desktop development workload installed. Demos.sln references all relevant projects. For more information, see [Building](Documentation/Building.md).
+To build the source, the easiest option is a recent version of Visual Studio with the .NET desktop development workload installed. Demos.sln references all relevant projects. For more information, see [Building](Documentation/Building.md).
 
 ## Features
 
@@ -33,32 +33,10 @@ Report bugs [on the issues tab](../../issues).
 
 Use the [discussions tab](../../discussions) for... discussions. And questions.
 
-By user request, there's a [discord server](https://discord.gg/ssa2XpY). I'll be focusing on github for long-form content, but if you like discord, now you can discord. 
+There's a [discord server](https://discord.gg/ssa2XpY). I'll be focusing on github for long-form content, but if you like discord, you can discord. 
 
-[Getting Started](Documentation/GettingStarted.md)
+[Documentation pages](https://docs.bepuphysics.com/) in a conventional form factor exist! (If I've broken the docs page, see the [raw repo versions](https://github.com/bepu/bepuphysics2/tree/master/Documentation) as a backup or [github pages](https://bepu.github.io/bepuphysics2/) if I just broke the domain redirect.) 
 
-[Building](Documentation/Building.md)
-
-[Q&A](Documentation/QuestionsAndAnswers.md)
-
-[Stability Tips](Documentation/StabilityTips.md)
-
-[Performance Tips](Documentation/PerformanceTips.md)
-
-[Substepping](Documentation/Substepping.md)
-
-[Continuous Collision Detection](Documentation/ContinuousCollisionDetection.md)
-
-[Contributing](CONTRIBUTING.md)
-
-[Change log](Documentation/changelog.md)
-
-[Upgrading from v1, concept mapping](Documentation/UpgradingFromV1.md)
-
-[Packaging and Versioning](Documentation/PackagingAndVersioning.md)
-
-Check the [roadmap](Documentation/roadmap.md) for a high level look at where things are going.
-
-If you have too many dollars, we are willing to consume them through [github sponsors](https://www.github.com/sponsors/RossNordby).
+If you have too many dollars, I'm willing to consume them through [github sponsors](https://www.github.com/sponsors/RossNordby). Please do not give me any amount of money that feels even slightly painful. Development is not conditional on sponsorships, and I already have a goodly number of dollars.
 
 ![](https://raw.githubusercontent.com/bepu/bepuphysics1/master/Documentation/images/readme/angelduck.png)
