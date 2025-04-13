@@ -11,21 +11,34 @@ foreach ($file in $htmlFiles) {
     $content = Get-Content -Path $file.FullName -Raw
     $originalContent = $content
     
-    # Find links that start with "../" and transform them to GitHub URLs
-    $pattern = '(href=["''])(\.\.\/[^"'']*\.cs)(["''])'
+    Write-Host "Considering file: $($file.FullName)"
+    
+    # Find all links that end with .cs
+    $pattern = '(href=["''])([^"'']*\.cs)(["''])'
     
     # Use a scriptblock for the replacement to keep the original quote style and only modify the URL
     $newContent = [regex]::Replace($content, $pattern, {
         param($match)
         $prefix = $match.Groups[1].Value  # href=" or href='
-        $path = $match.Groups[2].Value    # ../path
+        $path = $match.Groups[2].Value    # path
         $suffix = $match.Groups[3].Value  # " or '
         
-        # Remove the "../" prefix for the GitHub URL
-        $relativePath = $path -replace '^\.\.\/', ''
+        # Skip if it's already a full URL
+        if ($path -match '^https?:\/\/') {
+            Write-Host "  Skipping already absolute URL: $path"
+            return $match.Value
+        }
         
-        # Return the full replacement with the same quote style
-        return "$prefix$repoUrl/$relativePath$suffix"
+        # If the path starts with "../", remove that prefix for the GitHub URL
+        if ($path -match '^\.\.\/')  {
+            $relativePath = $path -replace '^\.\.\/', ''
+            Write-Host "  Rewriting link with ../ prefix: $path -> $repoUrl/$relativePath"
+            return "$prefix$repoUrl/$relativePath$suffix"
+        }
+        
+        # Otherwise, just prepend the GitHub URL to the relative path
+        Write-Host "  Rewriting link ending with .cs: $path -> $repoUrl/$path"
+        return "$prefix$repoUrl/$path$suffix"
     })
     
     # Only write the file if changes were made
