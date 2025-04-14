@@ -45,6 +45,15 @@ namespace BepuPhysics
     }
 
     /// <summary>
+    /// Awakening filter that prevents any bodies from being awoken by the static's state change.
+    /// </summary>
+    public struct StaticsShouldntAwakenBodies : IStaticChangeAwakeningFilter
+    {
+        public bool AllowAwakening => false;
+        public bool ShouldAwaken(BodyReference body) => false;
+    }
+
+    /// <summary>
     /// Stores data for a static collidable in the simulation. Statics can be posed and collide, but have no velocity and no dynamic behavior.
     /// </summary>
     /// <remarks>Unlike bodies, statics have a very simple access pattern. Most data is referenced together and there are no extreme high frequency data accesses like there are in the solver.
@@ -416,6 +425,29 @@ namespace BepuPhysics
         {
             var defaultFilter = default(StaticsShouldntAwakenKinematics);
             return Add(description, ref defaultFilter);
+        }
+
+        /// <summary>
+        /// Adds a new static body to the simulation. No attempt is made to awaken sleeping bodies near the static.
+        /// </summary>
+        /// <param name="description">Description of the static to add.</param>
+        /// <returns>Handle of the new static.</returns>
+        /// <remarks>
+        /// For most use cases, defaulting to the <see cref="Add"/> function is recommended;
+        /// it can help avoid surprising behavior by waking up sleeping bodies near the new static.
+        /// The query does, however, carry a nonzero cost.
+        /// <para>
+        /// If many statics are being added at once, particularly if the new statics overlap with a lot of existing statics,
+        /// and there's no need to awaken sleeping bodies, this function can be used to avoid the cost of the query.
+        /// </para>
+        /// <para>
+        /// Other custom filters can be used to control which bodies are awoken; see <see cref="Add{TAwakeningFilter}(in StaticDescription, ref TAwakeningFilter)"/> and the <see cref="IStaticChangeAwakeningFilter"/> interface.
+        /// </para>
+        /// </remarks>
+        public StaticHandle AddWithoutAwakeningBodies(in StaticDescription description)
+        {
+            var filter = default(StaticsShouldntAwakenBodies);
+            return Add(description, ref filter);
         }
 
         /// <summary>
