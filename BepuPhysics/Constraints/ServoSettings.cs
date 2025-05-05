@@ -11,6 +11,9 @@ namespace BepuPhysics.Constraints;
 /// <remarks>
 /// The constraint will attempt to reach a speed between <see cref="BaseSpeed"/> and <see cref="MaximumSpeed"/> using a force no greater than <see cref="MaximumForce"/>.
 /// The speed that the constraint will attempt to use before clamping is based on its spring settings.
+/// <para>
+/// Note that a 'position' target for the purposes of this type could also be an orientation target. For those constraints, speeds/forces are in terms of angular speed and torque.
+/// </para>
 /// </remarks>
 public struct ServoSettings
 {
