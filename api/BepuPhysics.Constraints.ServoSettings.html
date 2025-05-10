@@ -6,7 +6,7 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <meta name="title" content="Struct ServoSettings | Bepu API ">
       
-      
+      <meta name="description" content="Describes how a quickly and strongly a servo constraint should move towards a position target.">
       <link rel="icon" href="../favicon.ico">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -89,7 +89,7 @@
 
 
   <h1 id="BepuPhysics_Constraints_ServoSettings" data-uid="BepuPhysics.Constraints.ServoSettings" class="text-break">
-Struct ServoSettings  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Constraints/ServoSettings.cs/#L8"><i class="bi bi-code-slash"></i></a>
+Struct ServoSettings  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/ServoSettings.cs/#L18"><i class="bi bi-code-slash"></i></a>
   </h1>
 
   <div class="facts text-secondary">
@@ -97,7 +97,8 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
   <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"></div>
+  <div class="markdown summary"><p>Describes how a quickly and strongly a servo constraint should move towards a position target.</p>
+</div>
   <div class="markdown conceptual"></div>
 
   <div class="codewrapper">
@@ -136,6 +137,13 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
 
 
 
+  <h2 id="BepuPhysics_Constraints_ServoSettings_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>The constraint will attempt to reach a speed between <a class="xref" href="BepuPhysics.Constraints.ServoSettings.html#BepuPhysics_Constraints_ServoSettings_BaseSpeed">BaseSpeed</a> and <a class="xref" href="BepuPhysics.Constraints.ServoSettings.html#BepuPhysics_Constraints_ServoSettings_MaximumSpeed">MaximumSpeed</a> using a force no greater than <a class="xref" href="BepuPhysics.Constraints.ServoSettings.html#BepuPhysics_Constraints_ServoSettings_MaximumForce">MaximumForce</a>.
+The speed that the constraint will attempt to use before clamping is based on its spring settings.</p>
+<p>
+Note that a 'position' target for the purposes of this type could also be an orientation target. For those constraints, speeds/forces are in terms of angular speed and torque.
+</p>
+</div>
 
 
   <h2 class="section" id="constructors">Constructors
@@ -146,10 +154,11 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_Constraints_ServoSettings__ctor_System_Single_System_Single_System_Single_" data-uid="BepuPhysics.Constraints.ServoSettings.#ctor(System.Single,System.Single,System.Single)">
   ServoSettings(float, float, float)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Constraints/ServoSettings.cs/#L29"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/ServoSettings.cs/#L60"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 summary"><p>Creates a new servo settings instance with the specified properties.</p>
+</div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
@@ -159,11 +168,14 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>maximumSpeed</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
-    <dd></dd>
+    <dd><p>Sets the <a class="xref" href="BepuPhysics.Constraints.ServoSettings.html#BepuPhysics_Constraints_ServoSettings_MaximumSpeed">MaximumSpeed</a> property.</p>
+</dd>
     <dt><code>baseSpeed</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
-    <dd></dd>
+    <dd><p>Sets the <a class="xref" href="BepuPhysics.Constraints.ServoSettings.html#BepuPhysics_Constraints_ServoSettings_BaseSpeed">BaseSpeed</a> property.</p>
+</dd>
     <dt><code>maximumForce</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
-    <dd></dd>
+    <dd><p>Sets the <a class="xref" href="BepuPhysics.Constraints.ServoSettings.html#BepuPhysics_Constraints_ServoSettings_MaximumForce">MaximumForce</a> property.</p>
+</dd>
   </dl>
 
 
@@ -184,10 +196,13 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_Constraints_ServoSettings_BaseSpeed" data-uid="BepuPhysics.Constraints.ServoSettings.BaseSpeed">
   BaseSpeed
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Constraints/ServoSettings.cs/#L11"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/ServoSettings.cs/#L29"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 summary"><p>Minimum speed that the constraint will try to use to move towards the target.
+If the speed implied by the spring configuration is higher than this, the servo will attempt to use the higher speed.
+Will be clamped by the MaximumSpeed.</p>
+</div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
@@ -214,10 +229,11 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_Constraints_ServoSettings_MaximumForce" data-uid="BepuPhysics.Constraints.ServoSettings.MaximumForce">
   MaximumForce
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Constraints/ServoSettings.cs/#L12"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/ServoSettings.cs/#L36"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 summary"><p>The maximum force that the constraint can apply to move towards the target.</p>
+</div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
@@ -237,6 +253,9 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
 
 
 
+  <h4 class="section" id="BepuPhysics_Constraints_ServoSettings_MaximumForce_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This value is specified in terms of force: a change in momentum over time. It is approximated as a maximum impulse (an instantaneous change in momentum) on a per-substep basis. In other words, for a given velocity iteration, the constraint's impulse can be no larger than <a class="xref" href="BepuPhysics.Constraints.ServoSettings.html#BepuPhysics_Constraints_ServoSettings_MaximumForce">MaximumForce</a> * dt where dt is the substep duration.</p>
+</div>
 
 
 
@@ -244,10 +263,11 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_Constraints_ServoSettings_MaximumSpeed" data-uid="BepuPhysics.Constraints.ServoSettings.MaximumSpeed">
   MaximumSpeed
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Constraints/ServoSettings.cs/#L10"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/ServoSettings.cs/#L23"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 summary"><p>Maximum speed that the constraint can try to use to move towards the target.</p>
+</div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
@@ -279,10 +299,11 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_Constraints_ServoSettings_Default" data-uid="BepuPhysics.Constraints.ServoSettings.Default">
   Default
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Constraints/ServoSettings.cs/#L17"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/ServoSettings.cs/#L42"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets settings representing a servo with unlimited force, speed, and no base speed.</p>
+  <div class="markdown level1 summary"><p>Gets settings representing a servo with unlimited force, speed, and no base speed.
+A servo with these settings will behave like a conventional position-level constraint.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -315,7 +336,7 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_Constraints_ServoSettings_Validate_BepuPhysics_Constraints_ServoSettings__" data-uid="BepuPhysics.Constraints.ServoSettings.Validate(BepuPhysics.Constraints.ServoSettings@)">
   Validate(in ServoSettings)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Constraints/ServoSettings.cs/#L24"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/ServoSettings.cs/#L49"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Checks servo settings to ensure valid values.</p>
@@ -354,7 +375,7 @@ Struct ServoSettings  <a class="header-action link-secondary" title="View source
 </article>
 
         <div class="contribution d-print-none">
-          <a href="https://github.com/bepu/bepuphysics2/blob/updocs/BepuPhysics/Constraints/ServoSettings.cs/#L8" class="edit-link">Edit this page</a>
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Constraints/ServoSettings.cs/#L18" class="edit-link">Edit this page</a>
         </div>
 
 

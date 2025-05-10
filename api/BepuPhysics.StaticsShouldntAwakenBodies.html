@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct HullBoundingPlanes | Bepu API </title>
+      <title>Struct StaticsShouldntAwakenBodies | Bepu API </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct HullBoundingPlanes | Bepu API ">
+      <meta name="title" content="Struct StaticsShouldntAwakenBodies | Bepu API ">
       
-      
+      <meta name="description" content="Awakening filter that prevents any bodies from being awoken by the static&#39;s state change.">
       <link rel="icon" href="../favicon.ico">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -16,7 +16,7 @@
       <meta name="docfx:rel" content="../">
       
       
-      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_Collidables_HullBoundingPlanes.md&amp;value=---%0Auid%3A%20BepuPhysics.Collidables.HullBoundingPlanes%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_StaticsShouldntAwakenBodies.md&amp;value=---%0Auid%3A%20BepuPhysics.StaticsShouldntAwakenBodies%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
       <meta name="loc:inThisArticle" content="In this article">
       <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
       <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
@@ -84,30 +84,37 @@
           <nav id="breadcrumb"></nav>
         </div>
 
-        <article data-uid="BepuPhysics.Collidables.HullBoundingPlanes">
+        <article data-uid="BepuPhysics.StaticsShouldntAwakenBodies">
 
 
 
-  <h1 id="BepuPhysics_Collidables_HullBoundingPlanes" data-uid="BepuPhysics.Collidables.HullBoundingPlanes" class="text-break">
-Struct HullBoundingPlanes  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHull.cs/#L11"><i class="bi bi-code-slash"></i></a>
+  <h1 id="BepuPhysics_StaticsShouldntAwakenBodies" data-uid="BepuPhysics.StaticsShouldntAwakenBodies" class="text-break">
+Struct StaticsShouldntAwakenBodies  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Statics.cs/#L50"><i class="bi bi-code-slash"></i></a>
   </h1>
 
   <div class="facts text-secondary">
-    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.Collidables.html">Collidables</a></dd></dl>
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a></dd></dl>
   <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"></div>
+  <div class="markdown summary"><p>Awakening filter that prevents any bodies from being awoken by the static's state change.</p>
+</div>
   <div class="markdown conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public struct HullBoundingPlanes</code></pre>
+    <pre><code class="lang-csharp hljs">public struct StaticsShouldntAwakenBodies : IStaticChangeAwakeningFilter</code></pre>
   </div>
 
 
 
 
 
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="BepuPhysics.IStaticChangeAwakeningFilter.html">IStaticChangeAwakeningFilter</a></div>
+    </dd>
+  </dl>
 
 
   <dl class="typelist inheritedMembers">
@@ -138,30 +145,33 @@ Struct HullBoundingPlanes  <a class="header-action link-secondary" title="View s
 
 
 
-  <h2 class="section" id="fields">Fields
+  <h2 class="section" id="properties">Properties
 </h2>
 
 
+  <a id="BepuPhysics_StaticsShouldntAwakenBodies_AllowAwakening_" data-uid="BepuPhysics.StaticsShouldntAwakenBodies.AllowAwakening*"></a>
 
-  <h3 id="BepuPhysics_Collidables_HullBoundingPlanes_Normal" data-uid="BepuPhysics.Collidables.HullBoundingPlanes.Normal">
-  Normal
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHull.cs/#L16"><i class="bi bi-code-slash"></i></a>
+  <h3 id="BepuPhysics_StaticsShouldntAwakenBodies_AllowAwakening" data-uid="BepuPhysics.StaticsShouldntAwakenBodies.AllowAwakening">
+  AllowAwakening
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Statics.cs/#L52"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"><p>Normal of the bounding plane.</p>
+  <div class="markdown level1 summary"><p>Gets whether to allow awakening for any body. If true, candidates will have the ShouldAwaken function called for them.
+If false, ShouldAwaken will not be called, and no bodies will be awoken.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public Vector3Wide Normal</code></pre>
+    <pre><code class="lang-csharp hljs">public bool AllowAwakening { get; }</code></pre>
   </div>
 
 
 
 
-  <h4 class="section">Field Value</h4>
+
+  <h4 class="section">Property Value</h4>
   <dl class="parameters">
-    <dt><span class="xref">Vector3Wide</span></dt>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
     <dd></dd>
   </dl>
 
@@ -172,29 +182,40 @@ Struct HullBoundingPlanes  <a class="header-action link-secondary" title="View s
 
 
 
+  <h2 class="section" id="methods">Methods
+</h2>
 
 
-  <h3 id="BepuPhysics_Collidables_HullBoundingPlanes_Offset" data-uid="BepuPhysics.Collidables.HullBoundingPlanes.Offset">
-  Offset
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHull.cs/#L20"><i class="bi bi-code-slash"></i></a>
+  <a id="BepuPhysics_StaticsShouldntAwakenBodies_ShouldAwaken_" data-uid="BepuPhysics.StaticsShouldntAwakenBodies.ShouldAwaken*"></a>
+
+  <h3 id="BepuPhysics_StaticsShouldntAwakenBodies_ShouldAwaken_BepuPhysics_BodyReference_" data-uid="BepuPhysics.StaticsShouldntAwakenBodies.ShouldAwaken(BepuPhysics.BodyReference)">
+  ShouldAwaken(BodyReference)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Statics.cs/#L53"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"><p>Offset from the origin to a point on the plane along the normal.</p>
+  <div class="markdown level1 summary"><p>Determines whether a body should be forced awake by the state change of a static.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public Vector&lt;float&gt; Offset</code></pre>
+    <pre><code class="lang-csharp hljs">public bool ShouldAwaken(BodyReference body)</code></pre>
   </div>
 
-
-
-
-  <h4 class="section">Field Value</h4>
+  <h4 class="section">Parameters</h4>
   <dl class="parameters">
-    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector-1">Vector</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>&gt;</dt>
-    <dd></dd>
+    <dt><code>body</code> <a class="xref" href="BepuPhysics.BodyReference.html">BodyReference</a></dt>
+    <dd><p>Sleeping body under consideration for awakening.</p>
+</dd>
   </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the body should be forced awake, false otherwise.</p>
+</dd>
+  </dl>
+
+
 
 
 
@@ -208,7 +229,7 @@ Struct HullBoundingPlanes  <a class="header-action link-secondary" title="View s
 </article>
 
         <div class="contribution d-print-none">
-          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/ConvexHull.cs/#L11" class="edit-link">Edit this page</a>
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Statics.cs/#L50" class="edit-link">Edit this page</a>
         </div>
 
 

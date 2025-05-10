@@ -5692,6 +5692,16 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.StaticsShouldntAwakenBodies.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.StaticsShouldntAwakenBodies.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/BepuPhysics.StaticsShouldntAwakenKinematics.yml",
       "output": {
         ".html": {
