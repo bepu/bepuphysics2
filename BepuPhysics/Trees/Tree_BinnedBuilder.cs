@@ -1159,11 +1159,14 @@ namespace BepuPhysics.Trees
             bestCentroidBoundingBoxB = accumulatedCentroidBoundingBoxB;
             int accumulatedLeafCountB = binLeafCounts[lastBinIndex];
             int bestLeafCountB = 0;
+            float minCandidate = float.MaxValue;
+            float maxCandidate = float.MinValue;
             for (int splitIndexCandidate = lastBinIndex; splitIndexCandidate >= 1; --splitIndexCandidate)
             {
                 var previousIndex = splitIndexCandidate - 1;
                 var sahCandidate = ComputeBoundsMetric(binBoundingBoxesScan[previousIndex]) * (totalLeafCount - accumulatedLeafCountB) + ComputeBoundsMetric(accumulatedBoundingBoxB) * accumulatedLeafCountB;
-
+                minCandidate = float.Min(minCandidate, sahCandidate);
+                maxCandidate = float.Max(maxCandidate, sahCandidate);
                 if (sahCandidate < bestSAH)
                 {
                     bestSAH = sahCandidate;
@@ -1180,6 +1183,10 @@ namespace BepuPhysics.Trees
                 accumulatedCentroidBoundingBoxB.Max = Vector4.Max(centroidBoundsForBin.Max, accumulatedCentroidBoundingBoxB.Max);
                 accumulatedLeafCountB += binLeafCounts[previousIndex];
             }
+            //if (minCandidate == maxCandidate)
+            //{
+            //    Console.WriteLine("asdfh");
+            //}
             if (bestLeafCountB == 0 || bestLeafCountB == totalLeafCount || bestSAH == float.MaxValue || float.IsNaN(bestSAH) || float.IsInfinity(bestSAH))
             {
                 //Some form of major problem detected! Fall back to a degenerate split.

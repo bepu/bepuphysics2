@@ -65,9 +65,9 @@ public class BroadPhaseStressTestDemo : Demo
         var shape = new Sphere(0.5f);
         var sphereInertia = shape.ComputeInertia(1);
         var shapeIndex = Simulation.Shapes.Add(shape);
-        const int width = 2048;
+        const int width = 128;
         const int height = 2;
-        const int length = 2048;
+        const int length = 128;
         var spacing = new Vector3(16.01f);
         float randomization = 0.9f;
         var randomizationSpan = (spacing - new Vector3(1)) * randomization;
@@ -81,18 +81,19 @@ public class BroadPhaseStressTestDemo : Demo
                 {
                     var r = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                     //var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, 1, -length)) + randomizationBase + r * randomizationSpan;
-                    var location = (r - new Vector3(0.5f)) * (r - new Vector3(0.5f)) * spacing * new Vector3(width, height, length);
+                    //var location = (r - new Vector3(0.5f)) * (r - new Vector3(0.5f)) * spacing * new Vector3(width, height, length);
                     //var location = (r - new Vector3(0.5f)) * spacing * new Vector3(width, height, length);
+                    var location = new Vector3(15, 15, 15);
                     //var hash = HashHelper.Rehash(HashHelper.Rehash(HashHelper.Rehash(i) + HashHelper.Rehash(j)) + HashHelper.Rehash(k));
                     var hash = i + j + k;
-                    if (hash % 64 == 0)
-                    {
-                        if (i == 7 && j == 1 && k == 0)
-                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(100, 0, 100), sphereInertia, Simulation.Shapes.Add(new Sphere(100)), -1));
-                        else
-                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(location, sphereInertia, shapeIndex, -1));
-                    }
-                    else
+                    //if (hash % 64 == 0)
+                    //{
+                    //    if (i == 7 && j == 1 && k == 0)
+                    //        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(100, 0, 100), sphereInertia, Simulation.Shapes.Add(new Sphere(100)), -1));
+                    //    else
+                    //        Simulation.Bodies.Add(BodyDescription.CreateDynamic(location, sphereInertia, shapeIndex, -1));
+                    //}
+                    //else
                     {
                         Simulation.Statics.Add(new StaticDescription(location, shapeIndex));
                     }
@@ -101,7 +102,7 @@ public class BroadPhaseStressTestDemo : Demo
         }
         Console.WriteLine($"Body count: {Simulation.Bodies.ActiveSet.Count}");
         Console.WriteLine($"Static count: {Simulation.Statics.Count}");
-        Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), Simulation.Shapes.Add(new Box(5000, 1, 5000))));
+        //groundStatic = Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), Simulation.Shapes.Add(new Box(5000, 1, 5000))));
         startingLocations = new Vector3[Simulation.Bodies.ActiveSet.Count];
         for (int i = 0; i < startingLocations.Length; ++i)
         {
@@ -112,6 +113,7 @@ public class BroadPhaseStressTestDemo : Demo
         test2Times = new TimingsRingBuffer(sampleCount, BufferPool);
         intertreeTest2Times = new TimingsRingBuffer(sampleCount, BufferPool);
     }
+    StaticHandle groundStatic;
 
     const int sampleCount = 128;
     TimingsRingBuffer updateTimes;
@@ -119,6 +121,30 @@ public class BroadPhaseStressTestDemo : Demo
     TimingsRingBuffer test2Times;
     TimingsRingBuffer intertreeTest2Times;
     long frameCount;
+
+    void PrintPathToRoot(StaticHandle handle)
+    {
+        var index = Simulation.Statics[handle].Static.BroadPhaseIndex;
+        var leaf = Simulation.BroadPhase.StaticTree.Leaves[index];
+        int depth = 0;
+        var nodeIndex = leaf.NodeIndex;
+        Console.Write($"Starting from {leaf.NodeIndex}:{leaf.ChildIndex}, path: ");
+        while (true)
+        {
+            ref var node = ref Simulation.BroadPhase.StaticTree.Metanodes[nodeIndex];
+            Console.Write($"{nodeIndex}, ");
+            if (node.Parent >= 0)
+            {
+                nodeIndex = node.Parent;
+                depth++;
+            }
+            else
+                break;
+        }
+        Console.WriteLine($"; depth {depth}.");
+
+    }
+
     public override void Update(Window window, Camera camera, Input input, float dt)
     {
         var rotationAngle = frameCount * 1e-3f;
@@ -131,6 +157,9 @@ public class BroadPhaseStressTestDemo : Demo
         //    var offset = targetLocation - motion.Pose.Position;
         //    motion.Velocity.Linear = offset;
         //}
+
+        //if (frameCount % 32 == 0)
+            //PrintPathToRoot(groundStatic);
 
         //Simulation.BroadPhase.ActiveTree.CacheOptimize(0);
         //Simulation.BroadPhase.StaticTree.CacheOptimize(0);
@@ -154,9 +183,10 @@ public class BroadPhaseStressTestDemo : Demo
         //test2Times.Add((b - a) / (double)Stopwatch.Frequency);
         //intertreeTest2Times.Add((c - b) / (double)Stopwatch.Frequency);
 
-
         if (frameCount++ % sampleCount == 0)
         {
+            Console.WriteLine($"Active Depth {frameCount}: {Simulation.BroadPhase.ActiveTree.ComputeMaximumDepth()}");
+            Console.WriteLine($"Static Depth {frameCount}: {Simulation.BroadPhase.StaticTree.ComputeMaximumDepth()}");
             var updateStats = updateTimes.ComputeStats();
             var testStats = testTimes.ComputeStats();
             var test2Stats = test2Times.ComputeStats();
