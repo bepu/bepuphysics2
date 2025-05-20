@@ -62,7 +62,7 @@ public abstract class Demo : IDisposable
         //fully decouple simulation and rendering rates across different threads.
         //(In either case, you'd also want to interpolate or extrapolate simulation results during rendering for smoothness.)
         //Note that taking steps of variable length can reduce stability. Gradual or one-off changes can work reasonably well.
-        Simulation.Timestep(TimestepDuration, ThreadDispatcher);
+        Simulation.Timestep(TimestepDuration);//, ThreadDispatcher);
 
         ////Here's an example of how it would look to use more frequent updates, but still with a fixed amount of time simulated per update call:
         //const float timeToSimulate = 1 / 60f;
