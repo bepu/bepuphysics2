@@ -19,8 +19,9 @@ public class DegenerateTreeDemo : Demo
             new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
         var tree = LoadTree("C:\\Temp\\tree.bin");
-        for (var i = 0; i < 1000; i++) Insert(ref tree);
+        for (var i = 0; i < 3000; i++) Insert(ref tree);
         for (var i = 0; i < 100; i++) tree.RefitAndRefine(BufferPool, i, 10000000);
+
         Console.WriteLine(AlexDebug.Print(tree));
 
         var tree2 = RebuildTree(tree);
@@ -32,7 +33,7 @@ public class DegenerateTreeDemo : Demo
 
     private unsafe Tree RebuildTree(Tree tree)
     {
-        var tree2 = new Tree(BufferPool)
+        var tree2 = new Tree(BufferPool, tree.LeafCount)
         {
             NodeCount = tree.LeafCount - 1,
             LeafCount = tree.LeafCount
