@@ -168,6 +168,14 @@ namespace BepuPhysics.Trees
                 return;
             }
             var centroidSpan = centroidMax - centroidMin;
+            var axisIsDegenerate = Vector128.LessThanOrEqual(centroidSpan.AsVector128(), Vector128.Create(1e-12f));
+            if ((Vector128.ExtractMostSignificantBits(axisIsDegenerate) & 0b111) == 0b111)
+            {
+                //Looks like all the centroids are in the same spot; there's no meaningful way to split this.
+                HandleMicrosweepDegeneracy(ref leaves, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, centroidMin, centroidMax, context, workerIndex);
+                return;
+            }
+
             context->Threading.GetBins(workerIndex, out var binBoundingBoxes, out var binCentroidBoundingBoxes, out var binBoundingBoxesScan, out var binCentroidBoundingBoxesScan, out var binLeafCounts);
 
             if (Vector256.IsHardwareAccelerated || Vector128.IsHardwareAccelerated)
@@ -288,7 +296,7 @@ namespace BepuPhysics.Trees
             if (bestLeafCountB == 0 || bestLeafCountB == totalLeafCount || bestSAH == float.MaxValue || float.IsNaN(bestSAH) || float.IsInfinity(bestSAH))
             {
                 //Some form of major problem detected! Fall back to a degenerate split.
-                HandleMicrosweepDegeneracy(ref leaves, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, context, workerIndex);
+                HandleMicrosweepDegeneracy(ref leaves, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, centroidMin, centroidMax, context, workerIndex);
                 return;
             }
 
@@ -960,13 +968,14 @@ namespace BepuPhysics.Trees
 
         private static unsafe void BuildNodeForDegeneracy<TLeaves, TThreading>(
             Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent,
-            Context<TLeaves, TThreading>* context, out int subtreeCountA, out int subtreeCountB, out BoundingBox4 boundsA, out BoundingBox4 boundsB, out int aIndex, out int bIndex)
+            Context<TLeaves, TThreading>* context, out int subtreeCountA, out int subtreeCountB, out int aIndex, out int bIndex)
             where TLeaves : unmanaged
             where TThreading : unmanaged, IBinnedBuilderThreading
         {
             //This shouldn't happen unless something is badly wrong with the input; no point in optimizing it.
             subtreeCountA = subtrees.Length / 2;
             subtreeCountB = subtrees.Length - subtreeCountA;
+            BoundingBox4 boundsA, boundsB;
             boundsA.Min = new Vector4(float.MaxValue);
             boundsA.Max = new Vector4(float.MinValue);
             boundsB.Min = new Vector4(float.MaxValue);
@@ -991,29 +1000,33 @@ namespace BepuPhysics.Trees
             //Note that we just use the bounds as centroid bounds. This is a degenerate situation anyway.
             BuildNode(boundsA, boundsB, leafCountA, leafCountB, subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, subtreeCountA, subtreeCountB, ref context->Leaves, out aIndex, out bIndex);
         }
+
+        // Note that degenerate nodes are those which are assumed to have zero-sized centroid bound spans.
+        // There are other possibilities--NaNs, infinities--which also flow into this, but the usual case is overlapping geometry.
+        // We pass this along recursively to trigger the degeneracy case at each level.
         static unsafe void HandleDegeneracy<TLeaves, TThreading>(Buffer<NodeChild> subtrees, Buffer<BoundingBox4> boundingBoxes, Buffer<Node> nodes, Buffer<Metanode> metanodes,
             bool usePongBuffer, int subtreeRegionStartIndex, int nodeIndex, int subtreeCount, int parentNodeIndex, int childIndexInParent,
             BoundingBox4 centroidBounds, Context<TLeaves, TThreading>* context, int workerIndex, IThreadDispatcher dispatcher)
             where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
         {
 
-            BuildNodeForDegeneracy(subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, context, out var subtreeCountA, out var subtreeCountB, out var boundsA, out var boundsB, out var aIndex, out var bIndex);
+            BuildNodeForDegeneracy(subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, context, out var subtreeCountA, out var subtreeCountB, out var aIndex, out var bIndex);
             if (subtreeCountA > 1)
-                BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex, aIndex, subtreeCountA, nodeIndex, 0, boundsA, context, workerIndex, dispatcher);
+                BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex, aIndex, subtreeCountA, nodeIndex, 0, centroidBounds, context, workerIndex, dispatcher);
             if (subtreeCountB > 1)
-                BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex + subtreeCountA, bIndex, subtreeCountB, nodeIndex, 1, boundsB, context, workerIndex, dispatcher);
+                BinnedBuildNode(usePongBuffer, subtreeRegionStartIndex + subtreeCountA, bIndex, subtreeCountB, nodeIndex, 1, centroidBounds, context, workerIndex, dispatcher);
         }
 
 
         static unsafe void HandleMicrosweepDegeneracy<TLeaves, TThreading>(ref TLeaves leaves,
-            Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Context<TLeaves, TThreading>* context, int workerIndex)
+            Buffer<NodeChild> subtrees, Buffer<Node> nodes, Buffer<Metanode> metanodes, int nodeIndex, int parentNodeIndex, int childIndexInParent, Vector4 centroidMin, Vector4 centroidMax, Context<TLeaves, TThreading>* context, int workerIndex)
             where TLeaves : unmanaged where TThreading : unmanaged, IBinnedBuilderThreading
         {
-            BuildNodeForDegeneracy(subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, context, out var subtreeCountA, out var subtreeCountB, out var boundsA, out var boundsB, out var aIndex, out var bIndex);
+            BuildNodeForDegeneracy(subtrees, nodes, metanodes, nodeIndex, parentNodeIndex, childIndexInParent, context, out var subtreeCountA, out var subtreeCountB, out var aIndex, out var bIndex);
             if (subtreeCountA > 1)
-                MicroSweepForBinnedBuilder(boundsA.Min, boundsA.Max, ref leaves, subtrees.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Allocated ? metanodes.Slice(1, subtreeCountA - 1) : metanodes, aIndex, nodeIndex, 0, context, workerIndex);
+                MicroSweepForBinnedBuilder(centroidMin, centroidMax, ref leaves, subtrees.Slice(subtreeCountA), nodes.Slice(1, subtreeCountA - 1), metanodes.Allocated ? metanodes.Slice(1, subtreeCountA - 1) : metanodes, aIndex, nodeIndex, 0, context, workerIndex);
             if (subtreeCountB > 1)
-                MicroSweepForBinnedBuilder(boundsB.Max, boundsB.Max, ref leaves, subtrees.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Allocated ? metanodes.Slice(subtreeCountA, subtreeCountB - 1) : metanodes, bIndex, nodeIndex, 1, context, workerIndex);
+                MicroSweepForBinnedBuilder(centroidMin, centroidMax, ref leaves, subtrees.Slice(subtreeCountA, subtreeCountB), nodes.Slice(subtreeCountA, subtreeCountB - 1), metanodes.Allocated ? metanodes.Slice(subtreeCountA, subtreeCountB - 1) : metanodes, bIndex, nodeIndex, 1, context, workerIndex);
         }
 
 

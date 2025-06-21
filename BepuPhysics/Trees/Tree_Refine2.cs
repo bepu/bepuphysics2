@@ -461,21 +461,10 @@ public partial struct Tree
             }
             else
             {
-                //A regular internal node; push it.
-                //TODO: The heuristic for cost is pretty simple: the bounds metric of the child in isolation.
-                //The root collection will always visit the *biggest* nodes. That's often a good idea, but not always.
-                //A couple of potential improvements to consider:
-                //1. Use boundsMetric * leafCount. This will tend to push nodes with lots of leaves to the top of the heap.
-                //2. Dive one step deeper and compute the ratio of the bounds metric of the children to the parent. Nodes that do a poor job of splitting the space will tend to have a higher ratio.
-                //#1 is trivial. #2 requires touching a little more memory. Worth investigating.
-                //(Just doing this for now to match the old implementation.)
-                //var childBoundsMetric = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref child));
-                //ref var childNode = ref Nodes[child.Index];
-                //var grandchildABoundsMetric = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref childNode.A));
-                //var grandchildBBoundsMetric = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref childNode.B));
-                //var cost = (grandchildABoundsMetric * childNode.A.LeafCount + grandchildBBoundsMetric * childNode.B.LeafCount);
-                //heap.Insert(child.Index, cost);
-                heap.Insert(child.Index, ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref child)));
+                // A regular internal node; push it.
+                // The heuristic for cost is pretty simple: bigger nodes with more children are more profitable targets for optimization in expectation.
+                // Note that we don't *always* use priority queue driven refinement; that helps avoid pathologies that would otherwise exploit the heuristic.
+                heap.Insert(child.Index, ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref child)) * child.LeafCount);
             }
         }
     }
