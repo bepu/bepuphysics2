@@ -28,6 +28,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DemoTests", "DemoTests\Demo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DemoBenchmarks", "DemoBenchmarks\DemoBenchmarks.csproj", "{EA4ED604-6F12-42E6-8A0C-FC102B7D227B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeadlessTests", "HeadlessTests\HeadlessTests.csproj", "{87105933-F7D0-4041-A0CF-8EC77FD8C38E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -203,6 +205,24 @@ Global
 		{EA4ED604-6F12-42E6-8A0C-FC102B7D227B}.ReleaseNoProfiling|x64.Build.0 = Release|Any CPU
 		{EA4ED604-6F12-42E6-8A0C-FC102B7D227B}.ReleaseNoProfiling|x86.ActiveCfg = Release|Any CPU
 		{EA4ED604-6F12-42E6-8A0C-FC102B7D227B}.ReleaseNoProfiling|x86.Build.0 = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Debug|x64.Build.0 = Debug|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Debug|x86.Build.0 = Debug|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Release|x64.ActiveCfg = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Release|x64.Build.0 = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Release|x86.ActiveCfg = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.Release|x86.Build.0 = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.ReleaseNoProfiling|Any CPU.ActiveCfg = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.ReleaseNoProfiling|Any CPU.Build.0 = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.ReleaseNoProfiling|x64.ActiveCfg = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.ReleaseNoProfiling|x64.Build.0 = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.ReleaseNoProfiling|x86.ActiveCfg = Release|Any CPU
+		{87105933-F7D0-4041-A0CF-8EC77FD8C38E}.ReleaseNoProfiling|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
