@@ -250,7 +250,7 @@ public struct CellComparer : IEqualityComparerRef<Cell>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Hash(ref Cell cell)
     {
-        return (452930477 * cell.X) ^ (122949829 * cell.Z) ^ (654188429 * cell.Z);
+        return (452930477 * cell.X) ^ (122949829 * cell.Y) ^ (654188429 * cell.Z);
     }
 }
 
