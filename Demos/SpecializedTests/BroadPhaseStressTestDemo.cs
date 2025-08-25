@@ -81,10 +81,11 @@ public class BroadPhaseStressTestDemo : Demo
                 for (int k = 0; k < length; ++k)
                 {
                     var r = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
-                    //var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, 1, -length)) + randomizationBase + r * randomizationSpan;
-                    var location = (r - new Vector3(0.5f)) * (r - new Vector3(0.5f)) * spacing * new Vector3(width, height, length);
+                    var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, 1, -length)) + randomizationBase + r * randomizationSpan;
+                    //var location = (r - new Vector3(0.5f)) * (r - new Vector3(0.5f)) * spacing * new Vector3(width, height, length);
                     //var location = (r - new Vector3(0.5f)) * spacing * new Vector3(width, height, length);
                     //var location = new Vector3(15, 15, 15);
+                    //var location = spacing * (new Vector3(i, j, k) + new Vector3(-width / 2f, 1, -length / 2f));
                     //var hash = HashHelper.Rehash(HashHelper.Rehash(HashHelper.Rehash(i) + HashHelper.Rehash(j)) + HashHelper.Rehash(k));
                     var hash = i + j + k;
                     if (hash % 64 == 0)
@@ -221,10 +222,24 @@ public class BroadPhaseStressTestDemo : Demo
     {
         base.Render(renderer, camera, input, text, font);
 
-        //VisualizeTreeTopology(renderer, camera, text, font, ref Simulation.BroadPhase.StaticTree);
+        VisualizeTreeTopology(renderer, camera, text, font, new Vector3(0, 0, 0), ref Simulation.BroadPhase.StaticTree);
+        VisualizeTreeTopology(renderer, camera, text, font, new Vector3(100, 0, 0), ref Simulation.BroadPhase.ActiveTree);
     }
 
-    void VisualizeTreeTopology(Renderer renderer, Camera camera, TextBuilder text, Font font, ref Tree tree)
+    void VisualizeLeafNodeBounds(Renderer renderer, Camera camera, Vector3 position, ref Tree tree)
+    {
+        var color = new Vector3(0, 0.8f, 0.8f);
+        for (int i = 0; i < tree.LeafCount; ++i)
+        {
+            var leaf = tree.Leaves[i];
+            var node = tree.Nodes[leaf.NodeIndex];
+            var bounds = leaf.ChildIndex == 0 ? node.A : node.B;
+            var span = bounds.Max - bounds.Min;
+            renderer.Shapes.AddShape(new Box(span.X, span.Y, span.Z), null, position + 0.5f * (bounds.Min + bounds.Max), color);
+        }
+    }
+
+    void VisualizeTreeTopology(Renderer renderer, Camera camera, TextBuilder text, Font font, Vector3 position, ref Tree tree)
     {
         if (tree.LeafCount > 0)
         {
@@ -232,13 +247,13 @@ public class BroadPhaseStressTestDemo : Demo
             const float nodeSpacing = 20f;
 
             // Start visualization from the root (node 0) at origin
-            RenderNodeRecursive(renderer, camera, text, font, ref tree, 0, 0, 0f, levelHeight, nodeSpacing);
+            RenderNodeRecursive(renderer, camera, text, font, ref tree, 0, 0, 0f, levelHeight, nodeSpacing, position);
         }
     }
 
-    void RenderNodeRecursive(Renderer renderer, Camera camera, TextBuilder text, Font font, ref Tree tree, int nodeIndex, int depth, float horizontalOffset, float levelHeight, float nodeSpacing)
+    void RenderNodeRecursive(Renderer renderer, Camera camera, TextBuilder text, Font font, ref Tree tree, int nodeIndex, int depth, float horizontalOffset, float levelHeight, float nodeSpacing, Vector3 position)
     {
-        var nodePosition = new Vector3(horizontalOffset, depth * levelHeight, 0);
+        var nodePosition = position + new Vector3(horizontalOffset, depth * levelHeight, 0);
 
         var nodeColor = new Vector3(0.8f, 0.2f, 0.2f);
         renderer.Shapes.AddShape(new Sphere(0.3f), null, nodePosition, nodeColor);
@@ -256,12 +271,12 @@ public class BroadPhaseStressTestDemo : Demo
         float rightOffset = horizontalOffset + childSpacing;
 
         // Process child A (left)
-        var childAPosition = new Vector3(leftOffset, (depth + 1) * levelHeight, 0);
+        var childAPosition = position + new Vector3(leftOffset, (depth + 1) * levelHeight, 0);
         if (node.A.Index >= 0)
         {
             // Internal node - recurse
             renderer.Lines.Allocate() = new LineInstance(nodePosition, childAPosition, new Vector3(0.8f, 0.8f, 0.8f), default);
-            RenderNodeRecursive(renderer, camera, text, font, ref tree, node.A.Index, depth + 1, leftOffset, levelHeight, nodeSpacing);
+            RenderNodeRecursive(renderer, camera, text, font, ref tree, node.A.Index, depth + 1, leftOffset, levelHeight, nodeSpacing, position);
         }
         else
         {
@@ -273,12 +288,12 @@ public class BroadPhaseStressTestDemo : Demo
         }
 
         // Process child B (right)
-        var childBPosition = new Vector3(rightOffset, (depth + 1) * levelHeight, 0);
+        var childBPosition = position + new Vector3(rightOffset, (depth + 1) * levelHeight, 0);
         if (node.B.Index >= 0)
         {
             // Internal node - recurse
             renderer.Lines.Allocate() = new LineInstance(nodePosition, childBPosition, new Vector3(0.8f, 0.8f, 0.8f), default);
-            RenderNodeRecursive(renderer, camera, text, font, ref tree, node.B.Index, depth + 1, rightOffset, levelHeight, nodeSpacing);
+            RenderNodeRecursive(renderer, camera, text, font, ref tree, node.B.Index, depth + 1, rightOffset, levelHeight, nodeSpacing, position);
         }
         else
         {

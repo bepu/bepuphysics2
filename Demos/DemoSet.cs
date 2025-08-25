@@ -45,6 +45,7 @@ public class DemoSet
     public DemoSet()
     {
         AddOption<DegenerateTreeDemo>();
+        AddOption<BroadPhaseStressTestDemo>();
         AddOption<CarDemo>();
         AddOption<TankDemo>();
         AddOption<CharacterDemo>();
