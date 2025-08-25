@@ -8,7 +8,6 @@ namespace BepuPhysics.Trees;
 partial struct Tree
 {
     private struct InsertShouldNotRotate { }
-    private struct InsertShouldRotateTopDown { }
     private struct InsertShouldRotateBottomUp { }
 
     /// <summary>
@@ -32,23 +31,10 @@ partial struct Tree
     /// <param name="bounds">Extents of the leaf bounds.</param>
     /// <param name="pool">Resource pool to use if resizing is required.</param>
     /// <returns>Index of the leaf allocated in the tree's leaf array.</returns>
-    /// <remarks>Performs incrementally refining tree rotations down along the insertion path, unlike <see cref="AddWithoutRefinement"/>.<para/>
-    /// For a given tree, this is slightly slower than <see cref="AddWithoutRefinement"/> and slightly faster than <see cref="AddWithBottomUpRefinement"/>.<para/>
-    /// Trees built with repeated insertions of this kind tend to have decent quality, but slightly worse than <see cref="AddWithBottomUpRefinement"/>.</remarks>
+    /// <remarks>Performs incrementally refining tree rotations when returning along the insertion path, unlike <see cref="AddWithoutRefinement"/>.<para/>
+    /// This is about twice the cost of <see cref="AddWithoutRefinement"/> (outside of pathological cases).<para/>
+    /// Trees built with repeated insertions of this kind tend to have better quality and fewer pathological cases compared to <see cref="AddWithoutRefinement"/>.</remarks>
     public int Add(BoundingBox bounds, BufferPool pool)
-    {
-        return Add<InsertShouldRotateTopDown>(bounds, pool);
-    }
-
-    /// <summary>
-    /// Adds a leaf to the tree with the given bounding box and returns the index of the added leaf.
-    /// </summary>
-    /// <param name="bounds">Extents of the leaf bounds.</param>
-    /// <param name="pool">Resource pool to use if resizing is required.</param>
-    /// <returns>Index of the leaf allocated in the tree's leaf array.</returns>
-    /// <remarks>Performs incrementally refining tree rotations up along the insertion path, unlike <see cref="AddWithoutRefinement"/>.<para/>
-    /// Trees built with repeated insertions of this kind tend to have slightly better quality than <see cref="Add"/>, but it is also slightly more expensive.</remarks>
-    public int AddWithBottomUpRefinement(BoundingBox bounds, BufferPool pool)
     {
         return Add<InsertShouldRotateBottomUp>(bounds, pool);
     }
@@ -83,18 +69,13 @@ partial struct Tree
         var newLeafIndex = AddLeaf(newNodeIndex, 0);
         while (true)
         {
-            //Note: rotating from the top down produces a tree that's lower quality that rotating from the bottom up.
-            //In context, that's fine; insertion just needs to produce a tree that isn't megatrash/stackoverflowy, and refinement will take care of the rest.
-            //The advantage is that top down is a little faster.
-            if (typeof(TShouldRotate) == typeof(InsertShouldRotateTopDown))
-                TryRotateNode(nodeIndex);
             ref var node = ref Nodes[nodeIndex];
-            //Choose whichever child requires less bounds expansion. If they're tied, choose the one with the least leaf count.
+            // Choose whichever child increases the lost cost estimate less. If they're tied, choose the one with the least leaf count.
             BoundingBox.CreateMergedUnsafe(bounds4, node.A, out var mergedA);
             BoundingBox.CreateMergedUnsafe(bounds4, node.B, out var mergedB);
-            var boundsIncreaseA = ComputeBoundsMetric(mergedA) - ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref node.A));
-            var boundsIncreaseB = ComputeBoundsMetric(mergedB) - ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref node.B));
-            var useA = boundsIncreaseA == boundsIncreaseB ? node.A.LeafCount < node.B.LeafCount : boundsIncreaseA < boundsIncreaseB;
+            var costIncreaseA = ComputeBoundsMetric(mergedA) * (node.A.LeafCount + 1) - EstimateCost(node.A);
+            var costIncreaseB = ComputeBoundsMetric(mergedB) * (node.B.LeafCount + 1) - EstimateCost(node.B);
+            var useA = costIncreaseA == costIncreaseB ? node.A.LeafCount < node.B.LeafCount : costIncreaseA < costIncreaseB;
             ref var merged = ref Unsafe.As<BoundingBox4, NodeChild>(ref useA ? ref mergedA : ref mergedB);
             ref var chosenChild = ref useA ? ref node.A : ref node.B;
             if (chosenChild.LeafCount == 1)
@@ -146,8 +127,9 @@ partial struct Tree
     private void TryRotateNode(int rotationRootIndex)
     {
         ref var root = ref Nodes[rotationRootIndex];
-        var costA = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref root.A));
-        var costB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref root.B));
+        var costA = EstimateCost(root.A);
+        var costB = EstimateCost(root.B);
+        var originalCost = costA + costB;
         float leftRotationCostChange = 0;
         bool leftUsesA = false;
         float rightRotationCostChange = 0;
@@ -158,21 +140,25 @@ partial struct Tree
             ref var a = ref Nodes[root.A.Index];
             BoundingBox.CreateMergedUnsafe(a.A, root.B, out var aaB);
             BoundingBox.CreateMergedUnsafe(a.B, root.B, out var abB);
-            var costAAB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref aaB));
-            var costABB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref abB));
+            var costAA = EstimateCost(a.A);
+            var costAB = EstimateCost(a.B);
+            var costAAB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref aaB)) * (a.A.LeafCount + root.B.LeafCount) + costAB;
+            var costABB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref abB)) * (a.B.LeafCount + root.B.LeafCount) + costAA;
             rightUsesA = costAAB < costABB;
-            rightRotationCostChange = float.Min(costAAB, costABB) - costA;
+            rightRotationCostChange = float.Min(costAAB, costABB) - originalCost;
         }
         if (root.B.Index >= 0)
         {
             //Try a left rotation. root.A will merge with the better of B's children, while the worse of B's children will take the place of root.B.
             ref var b = ref Nodes[root.B.Index];
-            BoundingBox.CreateMergedUnsafe(root.A, b.A, out var baB);
-            BoundingBox.CreateMergedUnsafe(root.A, b.B, out var bbB);
-            var costBAB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref baB));
-            var costBBB = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref bbB));
-            leftUsesA = costBAB < costBBB;
-            leftRotationCostChange = float.Min(costBAB, costBBB) - costB;
+            BoundingBox.CreateMergedUnsafe(b.A, root.A, out var baA);
+            BoundingBox.CreateMergedUnsafe(b.B, root.A, out var bbA);
+            var costBA = EstimateCost(b.A);
+            var costBB = EstimateCost(b.B);
+            var costBAA = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref baA)) * (b.A.LeafCount + root.A.LeafCount) + costBB;
+            var costBBA = ComputeBoundsMetric(Unsafe.As<NodeChild, BoundingBox4>(ref bbA)) * (b.B.LeafCount + root.A.LeafCount) + costBA;
+            leftUsesA = costBAA < costBBA;
+            leftRotationCostChange = float.Min(costBAA, costBBA) - originalCost;
         }
         if (float.Min(leftRotationCostChange, rightRotationCostChange) < 0)
         {
