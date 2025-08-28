@@ -1,4 +1,5 @@
 ﻿using BepuUtilities;
+using BepuUtilities.Memory;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -7,7 +8,7 @@ namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
-        unsafe readonly void GetOverlaps<TEnumerator>(int nodeIndex, BoundingBox boundingBox, int* stack, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
+        unsafe readonly void GetOverlaps<TEnumerator>(int nodeIndex, BoundingBox boundingBox, Buffer<int> stack, BufferPool pool, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
             Debug.Assert((nodeIndex >= 0 && nodeIndex < NodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < LeafCount));
             Debug.Assert(LeafCount >= 2, "This implementation assumes all nodes are filled.");
@@ -20,10 +21,10 @@ namespace BepuPhysics.Trees
                     //This is actually a leaf node.
                     var leafIndex = Encode(nodeIndex);
                     if (!leafEnumerator.LoopBody(leafIndex))
-                        return;
+                        break;
                     //Leaves have no children; have to pull from the stack to get a new target.
                     if (stackEnd == 0)
-                        return;
+                        break;
                     nodeIndex = stack[--stackEnd];
                 }
                 else
@@ -37,8 +38,18 @@ namespace BepuPhysics.Trees
                         nodeIndex = node.A.Index;
                         if (bIntersected)
                         {
-                            //Visit the earlier AABB intersection first.
-                            Debug.Assert(stackEnd < TraversalStackCapacity - 1, "At the moment, we use a fixed size stack. Until we have explicitly tracked depths, watch out for excessive depth traversals.");
+                            if (stackEnd == stack.Length)
+                            {
+                                if (stack.Length == TraversalStackCapacity)
+                                {
+                                    // First allocation is on the stack.
+                                    pool.TakeAtLeast<int>(TraversalStackCapacity * 2, out var newStack);
+                                    stack.CopyTo(0, newStack, 0, TraversalStackCapacity);
+                                    stack = newStack;
+                                }
+                                else
+                                    pool.Resize(ref stack, stackEnd * 2, stackEnd);
+                            }
                             stack[stackEnd++] = node.B.Index;
 
                         }
@@ -51,21 +62,33 @@ namespace BepuPhysics.Trees
                     {
                         //No intersection. Need to pull from the stack to get a new target.
                         if (stackEnd == 0)
-                            return;
+                            break;
                         nodeIndex = stack[--stackEnd];
                     }
                 }
             }
+            if (stack.Length > TraversalStackCapacity)
+            {
+                // We rented a larger stack at some point. Return it.
+                pool.Return(ref stack);
+            }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly unsafe void GetOverlaps<TEnumerator>(BoundingBox boundingBox, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
+
+        /// <summary>
+        /// Finds and processes all leaves with bounding boxes that overlap the specified axis-aligned bounding box. The <paramref name="leafEnumerator"/> is invoked
+        /// for each overlapping element.
+        /// </summary>
+        /// <typeparam name="TEnumerator">The type of the <see cref="IBreakableForEach{T}"/> enumerator used to process the overlapping elements.</typeparam>
+        /// <param name="boundingBox">Query to test against the bounding volume hierarchy.</param>
+        /// <param name="pool">The buffer pool used for temporary allocations during the operation. Only used if the tree is pathologically deep; stack memory is used preferentially.</param>
+        /// <param name="leafEnumerator">A reference to the enumerator that processes the indices of overlapping elements. The enumerator can
+        /// terminate early by returning <see langword="false"/> from its iteration.</param>
+        public readonly unsafe void GetOverlaps<TEnumerator>(BoundingBox boundingBox, BufferPool pool, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
             if (LeafCount > 1)
             {
-                //TODO: Explicitly tracking depth in the tree during construction/refinement is practically required to guarantee correctness.
-                //While it's exceptionally rare that any tree would have more than 256 levels, the worst case of stomping stack memory is not acceptable in the long run.
                 var stack = stackalloc int[TraversalStackCapacity];
-                GetOverlaps(0, boundingBox, stack, ref leafEnumerator);
+                GetOverlaps(0, boundingBox, new Buffer<int>(stack, TraversalStackCapacity), pool, ref leafEnumerator);
             }
             else if (LeafCount == 1)
             {
@@ -79,10 +102,19 @@ namespace BepuPhysics.Trees
             //If the leaf count is zero, then there's nothing to test against.
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly void GetOverlaps<TEnumerator>(Vector3 min, Vector3 max, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
+        /// <summary>
+        /// Finds and processes all leaves with bounding boxes that overlap the specified axis-aligned bounding box. The <paramref name="leafEnumerator"/> is invoked
+        /// for each overlapping element.
+        /// </summary>
+        /// <typeparam name="TEnumerator">The type of the <see cref="IBreakableForEach{T}"/> enumerator used to process the overlapping elements.</typeparam>
+        /// <param name="min">The minimum corner of the axis-aligned bounding box.</param>
+        /// <param name="max">The maximum corner of the axis-aligned bounding box.</param>
+        /// <param name="pool">The buffer pool used for temporary allocations during the operation. Only used if the tree is pathologically deep; stack memory is used preferentially.</param>
+        /// <param name="leafEnumerator">A reference to the enumerator that processes the indices of overlapping elements. The enumerator can
+        /// terminate early by returning <see langword="false"/> from its iteration.</param>
+        public readonly void GetOverlaps<TEnumerator>(Vector3 min, Vector3 max, BufferPool pool, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
-            GetOverlaps(new BoundingBox(min, max), ref leafEnumerator);
+            GetOverlaps(new BoundingBox(min, max), pool, ref leafEnumerator);
         }
 
 

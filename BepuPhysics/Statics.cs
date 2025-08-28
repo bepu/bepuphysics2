@@ -251,7 +251,7 @@ namespace BepuPhysics
             if (filter.AllowAwakening)
             {
                 var collector = new SleepingBodyCollector<TFilter>(bodies, broadPhase, pool, ref filter);
-                broadPhase.StaticTree.GetOverlaps(bounds, ref collector);
+                broadPhase.StaticTree.GetOverlaps(bounds, pool, ref collector);
                 awakener.AwakenSets(ref collector.SleepingSets);
                 //Just in case the filter did some internal mutation, preserve the changes.
                 filter = collector.Filter;

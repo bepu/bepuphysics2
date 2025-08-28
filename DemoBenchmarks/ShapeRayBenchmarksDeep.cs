@@ -82,7 +82,7 @@ public class ShapeRayBenchmarksDeep
         {
             ref var iteration = ref iterations[i];
             float maximumT = float.MaxValue;
-            shapes[TShape.TypeId].RayTest(0, iteration.Pose, iteration.Ray, ref maximumT, ref hitHandler);
+            shapes[TShape.TypeId].RayTest(0, iteration.Pose, iteration.Ray, ref maximumT, pool, ref hitHandler);
         }
         return hitHandler.ResultSum;
     }

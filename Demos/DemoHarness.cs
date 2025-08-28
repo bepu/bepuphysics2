@@ -268,7 +268,7 @@ public class DemoHarness : IDisposable
                 incrementalGrabRotation = Quaternion.Identity;
                 grabberCachedMousePosition = null;
             }
-            grabber.Update(demo.Simulation, camera, input.MouseLocked, controls.Grab.IsDown(input), incrementalGrabRotation, window.GetNormalizedMousePosition(input.MousePosition));
+            grabber.Update(demo.Simulation, camera, input.MouseLocked, controls.Grab.IsDown(input), incrementalGrabRotation, window.GetNormalizedMousePosition(input.MousePosition), demo.BufferPool);
 
 
 

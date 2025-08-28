@@ -138,7 +138,7 @@ public class CollisionQueryDemo : Demo
     public unsafe void AddQueryToBatch(int queryShapeType, void* queryShapeData, int queryShapeSize, Vector3 queryBoundsMin, Vector3 queryBoundsMax, in RigidPose queryPose, int queryId, ref CollisionBatcher<BatcherCallbacks> batcher)
     {
         var broadPhaseEnumerator = new BroadPhaseOverlapEnumerator { Pool = BufferPool, References = new QuickList<CollidableReference>(16, BufferPool) };
-        Simulation.BroadPhase.GetOverlaps(queryBoundsMin, queryBoundsMax, ref broadPhaseEnumerator);
+        Simulation.BroadPhase.GetOverlaps(queryBoundsMin, queryBoundsMax, BufferPool, ref broadPhaseEnumerator);
         for (int overlapIndex = 0; overlapIndex < broadPhaseEnumerator.References.Count; ++overlapIndex)
         {
             GetPoseAndShape(broadPhaseEnumerator.References[overlapIndex], out var pose, out var shapeIndex);
@@ -188,7 +188,7 @@ public class CollisionQueryDemo : Demo
         shapeBatch.ComputeBounds(queryShapeIndex.Index, queryPose, out var queryBoundsMin, out var queryBoundsMax);
         Simulation.Shapes[queryShapeIndex.Type].GetShapeData(queryShapeIndex.Index, out var queryShapeData, out _);
         var broadPhaseEnumerator = new BroadPhaseOverlapEnumerator { Pool = BufferPool, References = new QuickList<CollidableReference>(16, BufferPool) };
-        Simulation.BroadPhase.GetOverlaps(queryBoundsMin, queryBoundsMax, ref broadPhaseEnumerator);
+        Simulation.BroadPhase.GetOverlaps(queryBoundsMin, queryBoundsMax, BufferPool, ref broadPhaseEnumerator);
         for (int overlapIndex = 0; overlapIndex < broadPhaseEnumerator.References.Count; ++overlapIndex)
         {
             GetPoseAndShape(broadPhaseEnumerator.References[overlapIndex], out var pose, out var shapeIndex);
