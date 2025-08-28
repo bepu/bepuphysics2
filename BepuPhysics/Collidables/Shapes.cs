@@ -72,8 +72,27 @@ namespace BepuPhysics.Collidables
         {
             throw new InvalidOperationException("Nonconvex shapes are not required to have a maximum radius or angular expansion implementation. This should only ever be called on convexes.");
         }
-        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
-        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        /// <summary>
+        /// Tests a ray against a shape in the batch.
+        /// </summary>
+        /// <typeparam name="TRayHitHandler">Type of the hit handler that will have results reported to it.</typeparam>
+        /// <param name="shapeIndex">Index of the shape in the batch to test.</param>
+        /// <param name="pose">Pose of the shape to use for the test.</param>
+        /// <param name="ray">Ray to test against the shape.</param>
+        /// <param name="maximumT">The maximum parametric distance along the line. May be mutated by the hit handler.</param>
+        /// <param name="hitHandler">Hit handler that will process the reported hits.</param>
+        /// <param name="pool">Pool used for temporary allocations required by the test, if any.</param>
+        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        /// <summary>
+        /// Tests a bunch of rays against a shape in the batch.
+        /// </summary>
+        /// <typeparam name="TRayHitHandler">Type of the hit handler that will have results reported to it.</typeparam>
+        /// <param name="shapeIndex">Index of the shape in the batch to test.</param>
+        /// <param name="pose">Pose of the shape to use for the test.</param>
+        /// <param name="rays">Rays to test against the shape.</param>
+        /// <param name="hitHandler">Hit handler that will process the reported hits.</param>
+        /// <param name="pool">Pool used for temporary allocations required by the test, if any.</param>
+        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
         /// <summary>
         /// Gets a raw untyped pointer to a shape's data.
@@ -266,7 +285,7 @@ namespace BepuPhysics.Collidables
             shape.ComputeAngularExpansionData(out maximumRadius, out angularExpansion);
         }
 
-        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, BufferPool pool, ref TRayHitHandler hitHandler)
         {
             if (shapes[shapeIndex].RayTest(pose, ray.Origin, ray.Direction, out var t, out var normal) && t <= maximumT)
             {
@@ -274,7 +293,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public override void RayTest<TRayHitHandler>(int index, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler)
+        public override void RayTest<TRayHitHandler>(int index, in RigidPose pose, ref RaySource rays, BufferPool pool, ref TRayHitHandler hitHandler)
         {
             WideRayTester.Test<RaySource, TShape, TShapeWide, TRayHitHandler>(ref shapes[index], pose, ref rays, ref hitHandler);
         }
@@ -321,14 +340,14 @@ namespace BepuPhysics.Collidables
         {
             shapes[shapeIndex].ComputeBounds(orientation, out min, out max);
         }
-        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, BufferPool pool, ref TRayHitHandler hitHandler)
         {
-            shapes[shapeIndex].RayTest(pose, ray, ref maximumT, ref hitHandler);
+            shapes[shapeIndex].RayTest(pose, ray, ref maximumT, pool, ref hitHandler);
         }
 
-        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, BufferPool pool, ref TRayHitHandler hitHandler)
         {
-            shapes[shapeIndex].RayTest(pose, ref rays, ref hitHandler);
+            shapes[shapeIndex].RayTest(pose, ref rays, pool, ref hitHandler);
         }
     }
 
@@ -367,14 +386,14 @@ namespace BepuPhysics.Collidables
             shapes[shapeIndex].ComputeBounds(orientation, shapeBatches, out min, out max);
         }
 
-        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, BufferPool pool, ref TRayHitHandler hitHandler)
         {
-            shapes[shapeIndex].RayTest(pose, ray, ref maximumT, shapeBatches, ref hitHandler);
+            shapes[shapeIndex].RayTest(pose, ray, ref maximumT, shapeBatches, pool, ref hitHandler);
         }
 
-        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, BufferPool pool, ref TRayHitHandler hitHandler)
         {
-            shapes[shapeIndex].RayTest(pose, ref rays, shapeBatches, ref hitHandler);
+            shapes[shapeIndex].RayTest(pose, ref rays, shapeBatches, pool, ref hitHandler);
         }
     }
 

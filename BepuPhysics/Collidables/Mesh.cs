@@ -268,7 +268,7 @@ namespace BepuPhysics.Collidables
             public RayData OriginalRay;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            public void TestLeaf(int leafIndex, RayData* rayData, float* maximumT, BufferPool pool)
             {
                 ref var triangle = ref Triangles[leafIndex];
                 if (Triangle.RayTest(triangle.A, triangle.B, triangle.C, rayData->Origin, rayData->Direction, out var t, out var normal) && t <= *maximumT)
@@ -289,7 +289,8 @@ namespace BepuPhysics.Collidables
         /// <param name="ray">Ray to test against the mesh.</param>
         /// <param name="maximumT">Maximum length of the ray in units of the ray direction length.</param>
         /// <param name="hitHandler">Callback to execute for every hit.</param>
-        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        /// <param name="pool">Pool to use for any temporary allocations required during the ray test.</param>
+        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             HitLeafTester<TRayHitHandler> leafTester;
             leafTester.Triangles = Triangles.Memory;
@@ -301,7 +302,7 @@ namespace BepuPhysics.Collidables
             Matrix3x3.TransformTranspose(ray.Direction, leafTester.Orientation, out var localDirection);
             localOrigin *= inverseScale;
             localDirection *= inverseScale;
-            Tree.RayCast(localOrigin, localDirection, ref maximumT, ref leafTester);
+            Tree.RayCast(localOrigin, localDirection, ref maximumT, pool, ref leafTester);
             //The leaf tester could have mutated the hit handler; copy it back over.
             hitHandler = leafTester.HitHandler;
         }
@@ -313,7 +314,8 @@ namespace BepuPhysics.Collidables
         /// <param name="pose">Pose of the mesh during the ray test.</param>
         /// <param name="rays">Set of rays to cast against the mesh.</param>
         /// <param name="hitHandler">Callbacks to execute.</param>
-        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        /// <param name="pool">Pool to use for any temporary allocations required during the ray test.</param>
+        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             HitLeafTester<TRayHitHandler> leafTester;
             leafTester.Triangles = Triangles.Memory;
@@ -329,7 +331,7 @@ namespace BepuPhysics.Collidables
                 Matrix3x3.Transform(ray->Direction, inverseOrientation, out var localDirection);
                 localOrigin *= inverseScale;
                 localDirection *= inverseScale;
-                Tree.RayCast(localOrigin, localDirection, ref *maximumT, ref leafTester);
+                Tree.RayCast(localOrigin, localDirection, ref *maximumT, pool, ref leafTester);
             }
             //The leaf tester could have mutated the hit handler; copy it back over.
             hitHandler = leafTester.HitHandler;
@@ -352,7 +354,7 @@ namespace BepuPhysics.Collidables
                 var scaledMax = mesh.inverseScale * pair.Max;
                 enumerator.Overlaps = Unsafe.AsPointer(ref overlaps.GetOverlapsForPair(i));
                 //Take a min/max to compensate for negative scales.
-                mesh.Tree.GetOverlaps(Vector3.Min(scaledMin, scaledMax), Vector3.Max(scaledMin, scaledMax), ref enumerator);
+                mesh.Tree.GetOverlaps(Vector3.Min(scaledMin, scaledMax), Vector3.Max(scaledMin, scaledMax), pool, ref enumerator);
             }
         }
 
@@ -366,7 +368,7 @@ namespace BepuPhysics.Collidables
             enumerator.Pool = pool;
             enumerator.Overlaps = overlaps;
             //Take a min/max to compensate for negative scales.
-            Tree.Sweep(Vector3.Min(scaledMin, scaledMax), Vector3.Max(scaledMin, scaledMax), scaledSweep, maximumT, ref enumerator);
+            Tree.Sweep(Vector3.Min(scaledMin, scaledMax), Vector3.Max(scaledMin, scaledMax), scaledSweep, maximumT, pool, ref enumerator);
         }
 
         public struct MeshTriangleSource : ITriangleSource

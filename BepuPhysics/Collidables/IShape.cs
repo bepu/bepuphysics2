@@ -104,9 +104,6 @@ namespace BepuPhysics.Collidables
         /// <param name="bodyIndex">Index of the body in the active body set; used to accumulate child bounds results.</param>
         void AddChildBoundsToBatcher(ref BoundingBoxBatcher batcher, in RigidPose pose, in BodyVelocity velocity, int bodyIndex);
 
-        //Compound shapes may require indirections into other shape batches. This isn't wonderfully fast, but this scalar path is designed more for convenience than performance anyway.
-        //For performance, a batched and vectorized codepath should be used.
-
         /// <summary>
         /// Tests a ray against the shape.
         /// </summary>
@@ -114,8 +111,9 @@ namespace BepuPhysics.Collidables
         /// <param name="ray">Ray to test against the shape.</param>
         /// <param name="maximumT">Maximum distance along the ray, in units of the ray direction's length, that the ray will test.</param>
         /// <param name="shapeBatches">Shape batches to look up child shapes in if necessary.</param>
+        /// <param name="pool">Buffer pool used for any temporary allocations required by the test.</param>
         /// <param name="hitHandler">Callbacks called when the ray interacts with a test candidate.</param>
-        void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapeBatches, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
         /// <summary>
         /// Tests multiple rays against the shape.
@@ -124,7 +122,8 @@ namespace BepuPhysics.Collidables
         /// <param name="rays">Rays to test against the shape.</param>
         /// <param name="shapeBatches">Shape batches to look up child shapes in if necessary.</param>
         /// <param name="hitHandler">Callbacks called when the ray interacts with a test candidate.</param>
-        void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        /// <param name="pool">Buffer pool used for any temporary allocations required by the test.</param>
+        void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, Shapes shapeBatches, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
         /// <summary>
         /// Gets the number of children in the compound shape.
         /// </summary>
@@ -160,16 +159,18 @@ namespace BepuPhysics.Collidables
         /// <param name="pose">Pose of the shape during the ray test.</param>
         /// <param name="ray">Ray to test against the shape.</param>
         /// <param name="maximumT">Maximum distance along the ray, in units of the ray direction's length, that the ray will test.</param>
+        /// <param name="pool">Buffer pool used for any temporary allocations required by the test.</param>
         /// <param name="hitHandler">Callbacks called when the ray interacts with a test candidate.</param>
-        void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
         /// <summary>
         /// Tests multiple rays against the shape.
         /// </summary>
         /// <param name="pose">Pose of the shape during the ray test.</param>
         /// <param name="rays">Rays to test against the shape.</param>
+        /// <param name="pool">Buffer pool used for any temporary allocations required by the test.</param>
         /// <param name="hitHandler">Callbacks called when the ray interacts with a test candidate.</param>
-        void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
         /// <summary>
         /// Gets the number of children in the compound shape.
         /// </summary>

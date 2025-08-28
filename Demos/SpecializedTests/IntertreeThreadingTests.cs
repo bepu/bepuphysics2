@@ -139,7 +139,7 @@ public static class IntertreeThreadingTests
         {
             GetBoundsForLeaf(smaller, i, out var bounds);
             bruteResultsEnumerator.QuerySourceIndex = i;
-            larger.GetOverlaps(bounds, ref bruteResultsEnumerator);
+            larger.GetOverlaps(bounds, pool, ref bruteResultsEnumerator);
         }
         SortPairs(bruteResultsEnumerator.Pairs);
 

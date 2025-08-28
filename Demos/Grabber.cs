@@ -3,6 +3,7 @@ using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuPhysics.Trees;
 using BepuUtilities;
+using BepuUtilities.Memory;
 using DemoRenderer;
 using DemoRenderer.Constraints;
 using System;
@@ -66,7 +67,7 @@ struct Grabber
         };
     }
 
-    public void Update(Simulation simulation, Camera camera, bool mouseLocked, bool shouldGrab, Quaternion rotation, in Vector2 normalizedMousePosition)
+    public void Update(Simulation simulation, Camera camera, bool mouseLocked, bool shouldGrab, Quaternion rotation, in Vector2 normalizedMousePosition, BufferPool pool)
     {
         //On the off chance some demo modifies the kinematic state, treat that as a grab terminator.
         var bodyExists = body.Exists && !body.Kinematic;
@@ -88,7 +89,7 @@ struct Grabber
             var rayDirection = camera.GetRayDirection(mouseLocked, normalizedMousePosition);
             var hitHandler = default(RayHitHandler);
             hitHandler.T = float.MaxValue;
-            simulation.RayCast(camera.Position, rayDirection, float.MaxValue, ref hitHandler);
+            simulation.RayCast(camera.Position, rayDirection, float.MaxValue, pool, ref hitHandler);
             if (hitHandler.T < float.MaxValue && hitHandler.HitCollidable.Mobility == CollidableMobility.Dynamic)
             {
                 //Found something to grab!
