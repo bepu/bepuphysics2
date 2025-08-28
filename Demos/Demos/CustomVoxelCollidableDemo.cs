@@ -109,7 +109,7 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
         public RayData OriginalRay;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void TestLeaf(int leafIndex, RayData* ray, float* maximumT)
+        public void TestLeaf(int leafIndex, RayData* ray, float* maximumT, BufferPool pool)
         {
             ref var voxelIndex = ref VoxelIndices[leafIndex];
             //Note that you could make use of the voxel grid's regular structure to save some work dealing with orientations.
@@ -131,7 +131,8 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
     /// <param name="ray">Ray to test against the voxels.</param>
     /// <param name="maximumT">Maximum length of the ray in units of the ray direction length.</param>
     /// <param name="hitHandler">Callback to execute for every hit.</param>
-    public readonly void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+    /// <param name="pool">Pool used for temporary allocations required by the test, if any.</param>
+    public readonly void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
     {
         HitLeafTester<TRayHitHandler> leafTester;
         leafTester.VoxelIndices = VoxelIndices;
@@ -142,7 +143,7 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
         leafTester.OriginalRay = ray;
         Matrix3x3.TransformTranspose(ray.Origin - pose.Position, leafTester.Orientation, out var localOrigin);
         Matrix3x3.TransformTranspose(ray.Direction, leafTester.Orientation, out var localDirection);
-        Tree.RayCast(localOrigin, localDirection, ref maximumT, ref leafTester);
+        Tree.RayCast(localOrigin, localDirection, ref maximumT, pool, ref leafTester);
         //The leaf tester could have mutated the hit handler; copy it back over.
         hitHandler = leafTester.HitHandler;
     }
@@ -156,7 +157,8 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
     /// <param name="pose">Pose of the voxels during the ray test.</param>
     /// <param name="rays">Set of rays to cast against the voxels.</param>
     /// <param name="hitHandler">Callbacks to execute.</param>
-    public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+    /// <param name="pool">Pool used for temporary allocations required by the test, if any.</param>
+    public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
     {
         HitLeafTester<TRayHitHandler> leafTester;
         leafTester.VoxelIndices = VoxelIndices;
@@ -171,7 +173,7 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
             leafTester.OriginalRay = *ray;
             Matrix3x3.Transform(ray->Origin - pose.Position, inverseOrientation, out var localOrigin);
             Matrix3x3.Transform(ray->Direction, inverseOrientation, out var localDirection);
-            Tree.RayCast(localOrigin, localDirection, ref *maximumT, ref leafTester);
+            Tree.RayCast(localOrigin, localDirection, ref *maximumT, pool, ref leafTester);
         }
         //The leaf tester could have mutated the hit handler; copy it back over.
         hitHandler = leafTester.HitHandler;
@@ -222,7 +224,7 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
             ref var pair = ref pairs[i];
             ref var voxelsSet = ref Unsafe.AsRef<Voxels>(pair.Container);
             enumerator.Overlaps = Unsafe.AsPointer(ref overlaps.GetOverlapsForPair(i));
-            voxelsSet.Tree.GetOverlaps(pair.Min, pair.Max, ref enumerator);
+            voxelsSet.Tree.GetOverlaps(pair.Min, pair.Max, pool, ref enumerator);
         }
     }
 
@@ -234,7 +236,7 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
         ShapeTreeSweepLeafTester<TOverlaps> enumerator;
         enumerator.Pool = pool;
         enumerator.Overlaps = overlaps;
-        Tree.Sweep(min, max, sweep, maximumT, ref enumerator);
+        Tree.Sweep(min, max, sweep, maximumT, pool, ref enumerator);
     }
 
     public void Dispose(BufferPool pool)

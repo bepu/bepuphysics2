@@ -111,11 +111,11 @@ namespace BepuPhysics.Trees
 
     public interface IRayLeafTester
     {
-        unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT);
+        unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT, BufferPool pool);
     }
     public interface IBatchedRayLeafTester : IRayLeafTester
     {
-        void RayTest(int leafIndex, ref RaySource rays);
+        void RayTest(int leafIndex, ref RaySource rays, BufferPool pool);
     }
 
 
@@ -432,9 +432,7 @@ namespace BepuPhysics.Trees
         {
             Debug.Assert(stackPointerA0 == 0 && stackPointerB == 0 && stackPointerA1 == 0 && stackPointer == 0,
                 "At the beginning of the traversal, there should exist no entries on the traversal stack.");
-            Debug.Assert(tree.ComputeMaximumDepth() < fallbackStack.Length, "At the moment, we assume that no tree will have more than 256 levels. " +
-                "This isn't a hard guarantee; if you hit this, please report it- it probably means there is some goofy pathological case badness in the builder or refiner." +
-                "Would be nice to replace this with a properly tracked tree depth so correctness isn't conditional.");
+
             if (tree.LeafCount == 0)
                 return;
 
@@ -511,7 +509,7 @@ namespace BepuPhysics.Trees
                     {
                         //This is a leaf node.
                         var rayStackSource = new RaySource(batchRays.Memory, batchOriginalRays.Memory, rayStackStart, entry.RayCount);
-                        leafTester.RayTest(Tree.Encode(entry.NodeIndex), ref rayStackSource);
+                        leafTester.RayTest(Tree.Encode(entry.NodeIndex), ref rayStackSource, pool);
                     }
                 }
                 else
@@ -520,7 +518,7 @@ namespace BepuPhysics.Trees
                     for (int i = 0; i < entry.RayCount; ++i)
                     {
                         var rayIndex = rayStackStart[i];
-                        tree.RayCast(entry.NodeIndex, batchRays.Memory + rayIndex, batchOriginalRays.Memory + rayIndex, fallbackStack.Memory, ref leafTester);
+                        tree.RayCast(entry.NodeIndex, batchRays.Memory + rayIndex, batchOriginalRays.Memory + rayIndex, fallbackStack, pool, ref leafTester);
                     }
                 }
             }

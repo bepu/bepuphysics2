@@ -113,7 +113,7 @@ namespace BepuPhysics.Collidables
             pool.Return(ref subtrees);
         }
 
-        public void ComputeBounds(Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
+        public readonly void ComputeBounds(Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
         {
             Compound.ComputeChildBounds(Children[0], orientation, shapeBatches, out min, out max);
             for (int i = 1; i < Children.Length; ++i)
@@ -125,9 +125,9 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AddChildBoundsToBatcher(ref BoundingBoxBatcher batcher, in RigidPose pose, in BodyVelocity velocity, int bodyIndex)
+        public readonly void AddChildBoundsToBatcher(ref BoundingBoxBatcher batcher, in RigidPose pose, in BodyVelocity velocity, int bodyIndex)
         {
-            Compound.AddChildBoundsToBatcher(ref Children, ref batcher, pose, velocity, bodyIndex);
+            Compound.AddChildBoundsToBatcher(Children, ref batcher, pose, velocity, bodyIndex);
         }
 
         unsafe struct LeafTester<TRayHitHandler> : IRayLeafTester where TRayHitHandler : struct, IShapeRayHitHandler
@@ -152,7 +152,7 @@ namespace BepuPhysics.Collidables
 
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            public void TestLeaf(int leafIndex, RayData* rayData, float* maximumT, BufferPool pool)
             {
                 if (Handler.AllowTest(leafIndex))
                 {
@@ -160,7 +160,7 @@ namespace BepuPhysics.Collidables
                     CompoundChildShapeTester tester;
                     tester.T = -1;
                     tester.Normal = default;
-                    Shapes[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, child.AsPose(), *rayData, ref *maximumT, ref tester);
+                    Shapes[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, child.AsPose(), *rayData, ref *maximumT, pool, ref tester);
                     if (tester.T >= 0)
                     {
                         Debug.Assert(*maximumT >= tester.T, "Whatever generated this ray hit should have obeyed the current maximumT value.");
@@ -171,18 +171,18 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapes, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public readonly void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapes, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             Matrix3x3.TransformTranspose(ray.Origin - pose.Position, orientation, out var localOrigin);
             Matrix3x3.TransformTranspose(ray.Direction, orientation, out var localDirection);
             var leafTester = new LeafTester<TRayHitHandler>(Children, shapes, hitHandler, orientation, ray);
-            Tree.RayCast(localOrigin, localDirection, ref maximumT, ref leafTester);
+            Tree.RayCast(localOrigin, localDirection, ref maximumT, pool, ref leafTester);
             //Copy the hitHandler to preserve any mutation.
             hitHandler = leafTester.Handler;
         }
 
-        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, Shapes shapes, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, Shapes shapes, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             //TODO: Note that we dispatch a bunch of scalar tests here. You could be more clever than this- batched tests are possible. 
             //May be worth creating a different traversal designed for low ray counts- might be able to get some benefit out of a semidynamic packet or something.
@@ -195,7 +195,7 @@ namespace BepuPhysics.Collidables
                 leafTester.OriginalRay = *ray;
                 Matrix3x3.Transform(ray->Origin - pose.Position, inverseOrientation, out var localOrigin);
                 Matrix3x3.Transform(ray->Direction, inverseOrientation, out var localDirection);
-                Tree.RayCast(localOrigin, localDirection, ref *maximumT, ref leafTester);
+                Tree.RayCast(localOrigin, localDirection, ref *maximumT, pool, ref leafTester);
             }
             //Preserve any mutations.
             hitHandler = leafTester.Handler;
@@ -207,14 +207,14 @@ namespace BepuPhysics.Collidables
             return new CompoundShapeBatch<BigCompound>(pool, initialCapacity, shapes);
         }
 
-        public int ChildCount
+        public readonly int ChildCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return Children.Length; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref CompoundChild GetChild(int compoundChildIndex)
+        public readonly ref CompoundChild GetChild(int compoundChildIndex)
         {
             return ref Children[compoundChildIndex];
         }
@@ -282,7 +282,7 @@ namespace BepuPhysics.Collidables
             {
                 ref var pair = ref pairs[i];
                 enumerator.Overlaps = Unsafe.AsPointer(ref overlaps.GetOverlapsForPair(i));
-                Unsafe.AsRef<BigCompound>(pair.Container).Tree.GetOverlaps(pair.Min, pair.Max, ref enumerator);
+                Unsafe.AsRef<BigCompound>(pair.Container).Tree.GetOverlaps(pair.Min, pair.Max, pool, ref enumerator);
             }
         }
 
@@ -296,13 +296,13 @@ namespace BepuPhysics.Collidables
                 Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
             }
         }
-        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             SweepLeafTester<TOverlaps> enumerator;
             enumerator.Pool = pool;
             enumerator.Overlaps = overlaps;
-            Tree.Sweep(min, max, sweep, maximumT, ref enumerator);
+            Tree.Sweep(min, max, sweep, maximumT, pool, ref enumerator);
         }
 
         /// <summary>
@@ -311,7 +311,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of the children.</param>
         /// <param name="shapes">Shapes collection containing the data for the compound child shapes.</param>
         /// <returns>Inertia of the compound.</returns>
-        public BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes)
+        public readonly BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes)
         {
             return CompoundBuilder.ComputeInertia(Children, childMasses, shapes);
         }
@@ -323,7 +323,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of the children.</param>
         /// <param name="centerOfMass">Calculated center of mass of the compound. Subtracted from all the compound child poses.</param>
         /// <returns>Inertia of the compound.</returns>
-        public BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes, out Vector3 centerOfMass)
+        public readonly BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes, out Vector3 centerOfMass)
         {
             var bodyInertia = CompoundBuilder.ComputeInertia(Children, childMasses, shapes, out centerOfMass);
             //Recentering moves the children around, so the tree needs to be updated.

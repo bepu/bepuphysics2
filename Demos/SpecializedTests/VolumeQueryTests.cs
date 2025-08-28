@@ -177,13 +177,14 @@ public class VolumeQueryTests : Demo
         int intersectionCount = 0;
         var hitHandler = new HitHandler { IntersectionCount = &intersectionCount };
         int claimedIndex;
+        var pool = ThreadDispatcher.WorkerPools[workerIndex];
         while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
         {
             ref var job = ref jobs[claimedIndex];
             for (int i = job.Start; i < job.End; ++i)
             {
                 ref var box = ref queryBoxes[i];
-                Simulation.BroadPhase.GetOverlaps(box, ref hitHandler);
+                Simulation.BroadPhase.GetOverlaps(box, pool, ref hitHandler);
             }
         }
         return intersectionCount;

@@ -143,13 +143,13 @@ namespace BepuPhysics
             public ShapeRayHitHandler<TRayHitHandler> ShapeHitHandler;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT)
+            public unsafe void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT, BufferPool pool)
             {
                 if (ShapeHitHandler.HitHandler.AllowTest(collidable))
                 {
                     ShapeHitHandler.Collidable = collidable;
                     Simulation.GetPoseAndShape(collidable, out var pose, out var shape);
-                    Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, *rayData, ref *maximumT, ref ShapeHitHandler);
+                    Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, *rayData, ref *maximumT, pool, ref ShapeHitHandler);
                 }
             }
         }
@@ -161,15 +161,16 @@ namespace BepuPhysics
         /// <param name="origin">Origin of the ray to cast.</param>
         /// <param name="direction">Direction of the ray to cast.</param>
         /// <param name="maximumT">Maximum length of the ray traversal in units of the direction's length.</param>
+        /// <param name="pool">Pool used for temporary allocations required by the test, if any.</param>
         /// <param name="hitHandler">callbacks to execute on ray-object intersections.</param>
         /// <param name="id">User specified id of the ray.</param>
-        public void RayCast<THitHandler>(Vector3 origin, Vector3 direction, float maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
+        public void RayCast<THitHandler>(Vector3 origin, Vector3 direction, float maximumT, BufferPool pool, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
         {
             RayHitDispatcher<THitHandler> dispatcher;
             dispatcher.ShapeHitHandler.HitHandler = hitHandler;
             dispatcher.ShapeHitHandler.Collidable = default;
             dispatcher.Simulation = this;
-            BroadPhase.RayCast(origin, direction, maximumT, ref dispatcher, id);
+            BroadPhase.RayCast(origin, direction, maximumT, pool, ref dispatcher, id);
             //The hit handler was copied to pass it into the child processing; since the user may (and probably does) rely on mutations, copy it back to the original reference.
             hitHandler = dispatcher.ShapeHitHandler.HitHandler;
         }
@@ -287,7 +288,7 @@ namespace BepuPhysics
             dispatcher.MinimumProgression = minimumProgression;
             dispatcher.ConvergenceThreshold = convergenceThreshold;
             dispatcher.MaximumIterationCount = maximumIterationCount;
-            BroadPhase.Sweep(min, max, direction, maximumT, ref dispatcher);
+            BroadPhase.Sweep(min, max, direction, maximumT, pool, ref dispatcher);
             //The hit handler was copied to pass it into the child processing; since the user may (and probably does) rely on mutations, copy it back to the original reference.
             hitHandler = dispatcher.HitHandler;
         }

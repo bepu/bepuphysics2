@@ -319,13 +319,14 @@ public class RayCastingDemo : Demo
         int intersectionCount = 0;
         var hitHandler = new HitHandler { Hits = algorithm.Results, IntersectionCount = &intersectionCount };
         int claimedIndex;
+        var pool = ThreadDispatcher.WorkerPools[workerIndex];
         while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
         {
             ref var job = ref jobs[claimedIndex];
             for (int i = job.Start; i < job.End; ++i)
             {
                 ref var ray = ref testRays[i];
-                Simulation.RayCast(ray.Origin, ray.Direction, ray.MaximumT, ref hitHandler, i);
+                Simulation.RayCast(ray.Origin, ray.Direction, ray.MaximumT, pool, ref hitHandler, i);
             }
         }
         return intersectionCount;

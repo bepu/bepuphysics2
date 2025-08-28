@@ -9,11 +9,11 @@ namespace BepuPhysics.CollisionDetection
 {
     public interface IBroadPhaseRayTester
     {
-        unsafe void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT);
+        unsafe void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT, BufferPool pool);
     }
     public interface IBroadPhaseBatchedRayTester : IBroadPhaseRayTester
     {
-        void RayTest(CollidableReference collidable, ref RaySource rays);
+        void RayTest(CollidableReference collidable, ref RaySource rays, BufferPool pool);
     }
 
     /// <summary>
@@ -31,15 +31,15 @@ namespace BepuPhysics.CollisionDetection
             public Buffer<CollidableReference> Leaves;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void RayTest(int leafIndex, ref RaySource rays)
+            public void RayTest(int leafIndex, ref RaySource rays, BufferPool pool)
             {
-                RayTester.RayTest(Leaves[leafIndex], ref rays);
+                RayTester.RayTest(Leaves[leafIndex], ref rays, pool);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT, BufferPool pool)
             {
-                RayTester.RayTest(Leaves[leafIndex], rayData, maximumT);
+                RayTester.RayTest(Leaves[leafIndex], rayData, maximumT, pool);
             }
         }
 
@@ -138,24 +138,24 @@ namespace BepuPhysics.CollisionDetection
 
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void RayTest(CollidableReference reference, ref RaySource rays)
+            public unsafe void RayTest(CollidableReference reference, ref RaySource rays, BufferPool pool)
             {
                 if (HitHandler.HitHandler.AllowTest(reference))
                 {
                     Simulation.GetPoseAndShape(reference, out var pose, out var shape);
                     HitHandler.Reference = reference;
-                    Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, ref rays, ref HitHandler);
+                    Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, ref rays, pool, ref HitHandler);
                 }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void RayTest(CollidableReference reference, RayData* rayData, float* maximumT)
+            public unsafe void RayTest(CollidableReference reference, RayData* rayData, float* maximumT, BufferPool pool)
             {
                 if (HitHandler.HitHandler.AllowTest(reference))
                 {
                     Simulation.GetPoseAndShape(reference, out var pose, out var shape);
                     HitHandler.Reference = reference;
-                    Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, *rayData, ref *maximumT, ref HitHandler);
+                    Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, *rayData, ref *maximumT, pool, ref HitHandler);
                 }
             }
 

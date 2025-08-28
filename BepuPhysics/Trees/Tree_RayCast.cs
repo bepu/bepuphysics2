@@ -1,6 +1,6 @@
-﻿using System.Diagnostics;
+﻿using BepuUtilities.Memory;
+using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees
 {
@@ -24,7 +24,7 @@ namespace BepuPhysics.Trees
         }
 
 
-        internal readonly unsafe void RayCast<TLeafTester>(int nodeIndex, TreeRay* treeRay, RayData* rayData, int* stack, ref TLeafTester leafTester) where TLeafTester : IRayLeafTester
+        internal readonly unsafe void RayCast<TLeafTester>(int nodeIndex, TreeRay* treeRay, RayData* rayData, Buffer<int> stack, BufferPool pool, ref TLeafTester leafTester) where TLeafTester : IRayLeafTester
         {
             Debug.Assert((nodeIndex >= 0 && nodeIndex < NodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < LeafCount));
             Debug.Assert(LeafCount >= 2, "This implementation assumes all nodes are filled.");
@@ -36,10 +36,10 @@ namespace BepuPhysics.Trees
                 {
                     //This is actually a leaf node.
                     var leafIndex = Encode(nodeIndex);
-                    leafTester.TestLeaf(leafIndex, rayData, &treeRay->MaximumT);
+                    leafTester.TestLeaf(leafIndex, rayData, &treeRay->MaximumT, pool);
                     //Leaves have no children; have to pull from the stack to get a new target.
                     if (stackEnd == 0)
-                        return;
+                        break;
                     nodeIndex = stack[--stackEnd];
                 }
                 else
@@ -53,7 +53,18 @@ namespace BepuPhysics.Trees
                         if (bIntersected)
                         {
                             //Visit the earlier AABB intersection first.
-                            Debug.Assert(stackEnd < TraversalStackCapacity - 1, "At the moment, we use a fixed size stack. Until we have explicitly tracked depths, watch out for excessive depth traversals.");
+                            if (stackEnd == stack.Length)
+                            {
+                                if (stack.Length == TraversalStackCapacity)
+                                {
+                                    // First allocation is on the stack.
+                                    pool.TakeAtLeast<int>(TraversalStackCapacity * 2, out var newStack);
+                                    stack.CopyTo(0, newStack, 0, TraversalStackCapacity);
+                                    stack = newStack;
+                                }
+                                else
+                                    pool.Resize(ref stack, stackEnd * 2, stackEnd);
+                            }
                             if (tA < tB)
                             {
                                 nodeIndex = node.A.Index;
@@ -79,17 +90,21 @@ namespace BepuPhysics.Trees
                     {
                         //No intersection. Need to pull from the stack to get a new target.
                         if (stackEnd == 0)
-                            return;
+                            break;
                         nodeIndex = stack[--stackEnd];
                     }
                 }
             }
-
+            if (stack.Length > TraversalStackCapacity)
+            {
+                // We rented a larger stack at some point. Return it.
+                pool.Return(ref stack);
+            }
         }
 
         internal const int TraversalStackCapacity = 256;
 
-        internal readonly unsafe void RayCast<TLeafTester>(TreeRay* treeRay, RayData* rayData, ref TLeafTester leafTester) where TLeafTester : IRayLeafTester
+        internal readonly unsafe void RayCast<TLeafTester>(TreeRay* treeRay, RayData* rayData, BufferPool pool, ref TLeafTester leafTester) where TLeafTester : IRayLeafTester
         {
             if (LeafCount == 0)
                 return;
@@ -99,22 +114,30 @@ namespace BepuPhysics.Trees
                 //If the first node isn't filled, we have to use a special case.
                 if (Intersects(Nodes[0].A.Min, Nodes[0].A.Max, treeRay, out var tA))
                 {
-                    leafTester.TestLeaf(0, rayData, &treeRay->MaximumT);
+                    leafTester.TestLeaf(0, rayData, &treeRay->MaximumT, pool);
                 }
             }
             else
             {
-                //TODO: Explicitly tracking depth in the tree during construction/refinement is practically required to guarantee correctness.
-                //While it's exceptionally rare that any tree would have more than 256 levels, the worst case of stomping stack memory is not acceptable in the long run.
                 var stack = stackalloc int[TraversalStackCapacity];
-                RayCast(0, treeRay, rayData, stack, ref leafTester);
+                RayCast(0, treeRay, rayData, new Buffer<int>(stack, TraversalStackCapacity), pool, ref leafTester);
             }
         }
 
-        public readonly unsafe void RayCast<TLeafTester>(Vector3 origin, Vector3 direction, ref float maximumT, ref TLeafTester leafTester, int id = 0) where TLeafTester : IRayLeafTester
+        /// <summary>
+        /// Tests a ray against the tree and invokes the <paramref name="leafTester"/> for each leaf node that the ray intersects.
+        /// </summary>
+        /// <typeparam name="TLeafTester">The type of the <see cref="IRayLeafTester"/> used to process the intersecting leaves.</typeparam>
+        /// <param name="origin">The origin point of the ray.</param>
+        /// <param name="direction">The direction of the ray.</param>
+        /// <param name="maximumT">The maximum parametric distance along the ray to test. This value may be modified by the leaf tester during traversal.</param>
+        /// <param name="pool">The buffer pool used for temporary allocations during the operation. Only used if the tree is pathologically deep; stack memory is used preferentially.</param>
+        /// <param name="leafTester">A reference to the tester that processes the indices of intersecting leaves.</param>
+        /// <param name="id">An optional identifier for the ray that can be used by the leaf tester.</param>
+        public readonly unsafe void RayCast<TLeafTester>(Vector3 origin, Vector3 direction, ref float maximumT, BufferPool pool, ref TLeafTester leafTester, int id = 0) where TLeafTester : IRayLeafTester
         {
             TreeRay.CreateFrom(origin, direction, maximumT, id, out var rayData, out var treeRay);
-            RayCast(&treeRay, &rayData, ref leafTester);
+            RayCast(&treeRay, &rayData, pool, ref leafTester);
             //The maximumT could have been mutated by the leaf tester. Propagate that change. This is important for when we jump between tree traversals and such.
             maximumT = treeRay.MaximumT;
         }

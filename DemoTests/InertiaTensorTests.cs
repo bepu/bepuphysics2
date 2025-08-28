@@ -311,7 +311,7 @@ namespace DemoTests
                     {
                         var sampleLocation = sampleMin + new Vector3(i, j, k) * sampleSpacing;
                         var previousCount = hitCounter.Counter;
-                        compound.RayTest(pose, new RayData { Origin = sampleLocation, Direction = Vector3.UnitY }, ref maximumT, shapes, ref hitCounter);
+                        compound.RayTest(pose, new RayData { Origin = sampleLocation, Direction = Vector3.UnitY }, ref maximumT, shapes, pool, ref hitCounter);
                         //If the ray hit more than one shape, then we count them all.
                         //This matches how the analytic inertia is calculated- every shape provides its own tensor, and they're summed.
                         //(Notably, if you wanted non-overlapping inertia, this is counterproductive!)
