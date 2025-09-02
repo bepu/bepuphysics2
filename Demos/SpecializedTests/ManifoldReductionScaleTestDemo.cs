@@ -59,7 +59,6 @@ public class ManifoldReductionScaleTestDemo : Demo
                     Simulation.Statics.Add(new StaticDescription(
                         new RigidPose(new Vector3(pairX, scaleGroupY, offsetGroupZ), Quaternion.CreateFromAxisAngle(Vector3.UnitY, rotationAngleBottom)), shapeIndex));
 
-                    // Create top box (dynamic) - will be rotated around Y axis
                     var bodyHandle = Simulation.Bodies.Add(BodyDescription.CreateDynamic(
                         new RigidPose(new Vector3(pairX, size.Y + scaleGroupY, offsetGroupZ) + offset, Quaternion.CreateFromAxisAngle(Vector3.UnitY, rotationAngleTop)),
                         boxInertia, shapeIndex, -0.01f));
