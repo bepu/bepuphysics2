@@ -17,7 +17,7 @@ namespace Demos.Demos;
 /// </summary>
 public class PerBodyGravityDemo : Demo
 {
-    struct PerBodyGravityDemoCallbacks : IPoseIntegratorCallbacks
+    internal struct PerBodyGravityDemoCallbacks : IPoseIntegratorCallbacks
     {
         /// <summary>
         /// Maps body handles to per-body gravity values.
@@ -30,6 +30,11 @@ public class PerBodyGravityDemo : Demo
         /// Used to look up body handles using the callback-provided body indices.
         /// </summary>
         private Bodies bodies;
+
+        public PerBodyGravityDemoCallbacks(CollidableProperty<float> bodyGravities) : this()
+        {
+            BodyGravities = bodyGravities;
+        }
 
         public readonly AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
 
@@ -92,7 +97,7 @@ public class PerBodyGravityDemo : Demo
 
         //The CollidableProperty is a helper that associates body handles to whatever data you'd like to store. You don't have to use it, but it's fairly convenient.
         var bodyGravities = new CollidableProperty<float>(BufferPool);
-        Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new PerBodyGravityDemoCallbacks() { BodyGravities = bodyGravities }, new SolveDescription(4, 1));
+        Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new PerBodyGravityDemoCallbacks(bodyGravities), new SolveDescription(4, 1));
 
         Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(1000, 10, 1000))));
 

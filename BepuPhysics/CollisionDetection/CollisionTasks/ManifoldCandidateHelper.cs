@@ -188,7 +188,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //minor todo: don't really need to waste time initializing to an invalid value.
             var bestScore = new Vector<float>(-float.MaxValue);
             //While depth is the dominant heuristic, extremity is used as a bias to keep initial contact selection a little more consistent in near-equal cases.
-            var extremityScale = epsilonScale * 1e-2f;
+            const float extremityScale = 1e-2f;
             for (int i = 0; i < maxCandidateCount; ++i)
             {
                 ref var candidate = ref Unsafe.Add(ref candidates, i);
