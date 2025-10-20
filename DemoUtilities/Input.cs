@@ -238,11 +238,11 @@ namespace DemoUtilities
                 //This is pretty doofy, but it works reasonably well and we don't have easy access to the windows-provided capture stuff through opentk (that I'm aware of?).
                 //Could change it later if it matters, but realistically it won't matter.
                 MousePosition = WindowCenter;
-                window.CursorVisible = false;
+                if (window.CursorVisible) window.CursorVisible = false;
             }
             else
             {
-                window.CursorVisible = true;
+                if (!window.CursorVisible) window.CursorVisible = true;
             }
 
         }
