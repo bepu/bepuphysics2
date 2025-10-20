@@ -210,6 +210,7 @@ public static class SimpleSelfContainedDemo
     {
         //The buffer pool is a source of raw memory blobs for the engine to use.
         var bufferPool = new BufferPool();
+        //The Simulation class represents a single simulated world containing some number of bodies, statics, and constraints.
         //The following sets up a simulation with the callbacks defined above, and tells it to use 8 velocity iterations per substep and only one substep per solve.
         //It uses the default SubsteppingTimestepper. You could use a custom ITimestepper implementation to customize when stages run relative to each other, or to insert more callbacks.         
         var simulation = Simulation.Create(bufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
