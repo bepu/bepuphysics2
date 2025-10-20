@@ -217,9 +217,9 @@ public static class SimpleSelfContainedDemo
         //Drop a ball on a big static box.
         var sphere = new Sphere(1);
         var sphereInertia = sphere.ComputeInertia(1);
-        simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 5, 0), sphereInertia, simulation.Shapes.Add(sphere), 0.01f));
+        var bodyHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 5, 0), sphereInertia, simulation.Shapes.Add(sphere), 0.01f));
 
-        simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), simulation.Shapes.Add(new Box(500, 1, 500))));
+        var staticHandle = simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), simulation.Shapes.Add(new Box(500, 1, 500))));
 
         //Any IThreadDispatcher implementation can be used for multithreading. Here, we use the BepuUtilities.ThreadDispatcher implementation.
         var threadDispatcher = new ThreadDispatcher(Environment.ProcessorCount);
@@ -233,7 +233,20 @@ public static class SimpleSelfContainedDemo
             //Note that each timestep is 0.01 units in duration, so all 100 time steps will last 1 unit of time.
             //(Usually, units of time are defined to be seconds, but the engine has no preconceived notions about units. All it sees are the numbers.)
             simulation.Timestep(0.01f, threadDispatcher);
+
+            //You can use the body handle to look up information about a body; the bodies collection is indexable:
+            BodyReference bodyReference = simulation.Bodies[bodyHandle];
+            //The BodyReference is a convenience wrapper that handles the memory indirections under the hood.
+            //You can use it to grab things like the current pose:
+            //Note that all the properties that return references are direct references to the body's memory.
+            //You can both read from it and write to it. Be advised: the API will let you break stuff!
+            //In principle, you could do the exact same lookup using the bodyHandle->index mapping and grab a direct pointer.
+            if ((i + 1) % 10 == 0)
+                Console.WriteLine($"Body position at timestep {i}: {bodyReference.Pose.Position}"); 
         }
+
+        //Statics can also be grabbed.
+        Console.WriteLine($"Bounding box of the static floor: {simulation.Statics[staticHandle].BoundingBox}");
 
         //If you intend to reuse the BufferPool, disposing the simulation is a good idea- it returns all the buffers to the pool for reuse.
         //Here, we dispose it, but it's not really required; we immediately thereafter clear the BufferPool of all held memory.
