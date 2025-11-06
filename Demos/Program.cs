@@ -2,6 +2,7 @@
 using DemoContentLoader;
 using DemoUtilities;
 using OpenTK;
+using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -36,16 +37,22 @@ class Program
         var demo = new DemoHarness(loop, content);
         var dt = 0.12f;
         loop.Update(dt);
-
+        DateTime? arrowDownTime = null;
+        var holdDownTimeMs = 500;
         while (true)
         {
             if (IsKeyPressed(0x1B)) break; // escape
-            if (IsKeyPressed(0x27)) // right arrow
+            if (!IsKeyPressed(0x27))
+            {
+                arrowDownTime = null;
+                Thread.Sleep(10);
+                continue;
+            }
+            if (arrowDownTime is null || (DateTime.Now - arrowDownTime.Value).TotalMilliseconds > holdDownTimeMs)
             {
                 loop.SingleFrame(demo, dt);
-                Thread.Sleep((int)(dt * 1000));
+                Thread.Sleep(50);
             }
-            Thread.Sleep(100);
         }
 
         loop.Dispose();

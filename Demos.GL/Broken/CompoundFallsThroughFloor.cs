@@ -21,7 +21,7 @@ internal class CompoundFallsThroughFloor : Demo
 
         var narrowPhaseCallbacks = new SimpleNarrowPhaseCallbacks(
             frictionCoefficient: 0.3f,
-            maximumRecoveryVelocity: 50,
+            maximumRecoveryVelocity: 500,
             impactFrequency: 20,
             impactDampingRatio: 0.5f
             );
@@ -30,14 +30,14 @@ internal class CompoundFallsThroughFloor : Demo
         var timeStepSeconds = .12f;
 
         Simulation = Simulation.Create(BufferPool, narrowPhaseCallbacks, new PoseIntegratorCallbacks(gravity: gravity, timeStepSeconds: timeStepSeconds), new SolveDescription(8, 1));
-        var floor = new Box(1000, 9, 1000);
+        var floor = new Box(1000, 30, 1000);
 
         Simulation.Statics.Add(new StaticDescription(RigidPose.Identity, Simulation.Shapes.Add(floor)));
 
         // Item as a standalone (not compound)
         {
             var rawCollidableBox = new Box(100, 130, 100);
-            var boxPose = new RigidPose(new Vector3(-500, rawCollidableBox.HalfHeight + 18, -500), Quaternion.Identity);
+            var boxPose = new RigidPose(new Vector3(-300, rawCollidableBox.HalfHeight + floor.HalfHeight + 18, 300), Quaternion.Identity);
             var boxInertia = rawCollidableBox.ComputeInertia(1);
             var boxIndex = Simulation.Shapes.Add(rawCollidableBox);
             var collisionDetection = new ContinuousDetection();
