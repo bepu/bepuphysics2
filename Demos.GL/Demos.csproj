@@ -33,6 +33,8 @@
     <ProjectReference Include="../BepuUtilities/BepuUtilities.csproj" />
     <ProjectReference Include="../DemoContentLoader/DemoContentLoader.csproj" />
     <ProjectReference Include="../DemoRenderer.GL/DemoRenderer.csproj" />
+    <ProjectReference Include="..\..\Fulfil.NET\Fulfil.Libs\Fulfil.Libs.csproj" />
+    <ProjectReference Include="..\..\Fulfil.NET\Fulfil.Tests\Fulfil.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
