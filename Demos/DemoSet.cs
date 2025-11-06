@@ -45,8 +45,9 @@ public class DemoSet
 
     public DemoSet()
     {
-        AddOption<FcDemo>();
+
         AddOption<CompoundFallsThroughFloor>();
+        AddOption<FcDemo>();
         AddOption<CarDemo>();
         AddOption<TankDemo>();
         AddOption<CharacterDemo>();
