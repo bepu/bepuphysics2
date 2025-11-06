@@ -56,6 +56,7 @@ public abstract class Demo : IDisposable
     public const float TimestepDuration = 1 / 60f;
     public virtual void Update(Window window, Camera camera, Input input, float dt)
     {
+        if (dt == 0) return;
         //In the demos, we use one time step per frame. We don't bother modifying the physics time step duration for different monitors so different refresh rates
         //change the rate of simulation. This doesn't actually change the result of the simulation, though, and the simplicity is a good fit for the demos.
         //In the context of a 'real' application, you could instead use a time accumulator to take time steps of fixed length as needed, or

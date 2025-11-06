@@ -36,9 +36,9 @@ class Program
         //HeadlessTest.Test<ShapePileTestDemo>(content, 4, 32, 512);
         var demo = new DemoHarness(loop, content);
         var dt = 0.12f;
-        loop.Update(dt);
         DateTime? arrowDownTime = null;
         var holdDownTimeMs = 500;
+        loop.SingleFrame(demo, 0);
         while (true)
         {
             if (IsKeyPressed(0x1B)) break; // escape
