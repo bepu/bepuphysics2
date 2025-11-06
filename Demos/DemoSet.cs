@@ -7,6 +7,7 @@ using Demos.Demos.Characters;
 using Demos.Demos.Dancers;
 using Demos.Demos.Sponsors;
 using Demos.Demos.Tanks;
+using Demos.FC;
 using System;
 using System.Collections.Generic;
 
@@ -44,6 +45,7 @@ public class DemoSet
 
     public DemoSet()
     {
+        AddOption<FcDemo>();
         AddOption<CompoundFallsThroughFloor>();
         AddOption<CarDemo>();
         AddOption<TankDemo>();

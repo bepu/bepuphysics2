@@ -30,7 +30,7 @@ internal class CompoundFallsThroughFloor : Demo
         var timeStepSeconds = .12f;
 
         Simulation = Simulation.Create(BufferPool, narrowPhaseCallbacks, new PoseIntegratorCallbacks(gravity: gravity, timeStepSeconds: timeStepSeconds), new SolveDescription(8, 1));
-        var floor = new Box(1000, 9, 1000);
+        var floor = new Box(1000, 1, 1000);
 
         Simulation.Statics.Add(new StaticDescription(RigidPose.Identity, Simulation.Shapes.Add(floor)));
 
