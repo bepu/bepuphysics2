@@ -30,20 +30,36 @@ internal class CompoundFallsThroughFloor : Demo
         var timeStepSeconds = .12f;
 
         Simulation = Simulation.Create(BufferPool, narrowPhaseCallbacks, new PoseIntegratorCallbacks(gravity: gravity, timeStepSeconds: timeStepSeconds), new SolveDescription(8, 1));
-        var floor = new Box(1000, 30, 1000);
+        var floor = new Box(1000, 9, 1000);
 
         Simulation.Statics.Add(new StaticDescription(RigidPose.Identity, Simulation.Shapes.Add(floor)));
+
+
+        // shared constants
+        const float itemMass = 1;
+        const float startingHeight = 18;
 
         // Item as a standalone (not compound)
         {
             var rawCollidableBox = new Box(100, 130, 100);
-            var boxPose = new RigidPose(new Vector3(-300, rawCollidableBox.HalfHeight + floor.HalfHeight + 18, 300), Quaternion.Identity);
-            var boxInertia = rawCollidableBox.ComputeInertia(1);
+            var boxPose = new RigidPose(new Vector3(-300, rawCollidableBox.HalfHeight + floor.HalfHeight + startingHeight, 300), Quaternion.Identity);
+            var boxInertia = rawCollidableBox.ComputeInertia(itemMass);
             var boxIndex = Simulation.Shapes.Add(rawCollidableBox);
             var collisionDetection = new ContinuousDetection();
             var boxCollidable = new CollidableDescription(boxIndex, collisionDetection);
             var boxDescription = BodyDescription.CreateDynamic(boxPose, boxInertia, boxCollidable, NeverSleep());
             Simulation.Bodies.Add(boxDescription);
+        }
+
+        // Item as compound
+        {
+            var childShape = new Box(100, 130, 100);
+            var compoundPose = new RigidPose(new Vector3(300, childShape.HalfHeight + floor.HalfHeight + startingHeight, -300), Quaternion.Identity);
+            var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 1);
+
+            builder.Add(childShape, RigidPose.Identity, itemMass);
+            builder.BuildDynamicCompound(out var children, out var inertia);
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(compoundPose, inertia, Simulation.Shapes.Add(new Compound(children)), NeverSleep()));
         }
 
     }
