@@ -2,16 +2,27 @@
 using DemoContentLoader;
 using DemoUtilities;
 using OpenTK;
+using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
+
+
 
 namespace Demos;
+
+
 
 class Program
 {
 
+    [DllImport("user32.dll")]
+    static extern short GetAsyncKeyState(int key);
 
-    static async Task Main()
+    static bool IsKeyPressed(int key) => (GetAsyncKeyState(key) & 0x8000) != 0;
+
+
+
+
+    static void Main()
     {
         var window = new Window("pretty cool multicolored window",
             new Int2((int)(DisplayDevice.Default.Width * 0.75f), (int)(DisplayDevice.Default.Height * 0.75f)), WindowMode.Windowed);
@@ -28,8 +39,13 @@ class Program
 
         while (true)
         {
-            loop.SingleFrame(demo, dt);
-            Thread.Sleep(1000);
+            if (IsKeyPressed(0x1B)) break; // escape
+            if (IsKeyPressed(0x27)) // right arrow
+            {
+                loop.SingleFrame(demo, dt);
+                Thread.Sleep((int)(dt * 1000));
+            }
+            Thread.Sleep(100);
         }
 
         loop.Dispose();
