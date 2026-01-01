@@ -324,123 +324,11 @@ public partial struct Tree
         rootStack.Dispose(pool);
     }
 
-    internal struct HeapEntry
-    {
-        public int Index;
-        public float Cost;
-    }
-
-    internal struct BinaryHeap
-    {
-        public Buffer<HeapEntry> Entries;
-        public int Count;
-
-        public BinaryHeap(Buffer<HeapEntry> entries)
-        {
-            Entries = entries;
-            Count = 0;
-        }
-
-        public BinaryHeap(int capacity, BufferPool pool) : this(new Buffer<HeapEntry>(capacity, pool)) { }
-
-        public void Dispose(BufferPool pool)
-        {
-            pool.Return(ref Entries);
-        }
-
-        public void Insert(int indexToInsert, float cost)
-        {
-            int index = Count;
-            ++Count;
-            //Sift up.
-            while (index > 0)
-            {
-                var parentIndex = (index - 1) >> 1;
-                var parent = Entries[parentIndex];
-                if (parent.Cost < cost)
-                {
-                    //Pull the parent down.
-                    Entries[index] = parent;
-                    index = parentIndex;
-                }
-                else
-                {
-                    //Found the insertion spot.
-                    break;
-                }
-            }
-            ref var entry = ref Entries[index];
-            entry.Index = indexToInsert;
-            entry.Cost = cost;
-        }
-
-
-        public HeapEntry Pop()
-        {
-            var entry = Entries[0];
-            --Count;
-            var cost = Entries[Count].Cost;
-
-            //Pull the elements up to fill in the gap.
-            int index = 0;
-            while (true)
-            {
-                var childIndexA = (index << 1) + 1;
-                var childIndexB = (index << 1) + 2;
-                if (childIndexB < Count)
-                {
-                    //Both children are available.
-                    //Try swapping with the largest one.
-                    var childA = Entries[childIndexA];
-                    var childB = Entries[childIndexB];
-                    if (childA.Cost > childB.Cost)
-                    {
-                        if (cost > childA.Cost)
-                        {
-                            break;
-                        }
-                        Entries[index] = Entries[childIndexA];
-                        index = childIndexA;
-                    }
-                    else
-                    {
-                        if (cost > childB.Cost)
-                        {
-                            break;
-                        }
-                        Entries[index] = Entries[childIndexB];
-                        index = childIndexB;
-                    }
-                }
-                else if (childIndexA < Count)
-                {
-                    //Only one child was available.
-                    ref var childA = ref Entries[childIndexA];
-                    if (cost > childA.Cost)
-                    {
-                        break;
-                    }
-                    Entries[index] = Entries[childIndexA];
-                    index = childIndexA;
-                }
-                else
-                {
-                    //The children were beyond the heap.
-                    break;
-                }
-            }
-            //Move the last entry into position.
-            Entries[index] = Entries[Count];
-            return entry;
-        }
-
-    }
-
     /// <summary>
     /// Checks if a child should be a subtree in the root refinement. If so, it's added to the list. Otherwise, it's pushed onto the stack.
     /// </summary>
     private void TryPushChildForRootRefinement2(
-         int subtreeRefinementSize, int nodeTotalLeafCount, Buffer<Vector<int>> subtreeRefinementRootBundles, ref NodeChild child, ref BinaryHeap heap, ref QuickList<NodeChild> rootRefinementSubtrees)
+         int subtreeRefinementSize, int nodeTotalLeafCount, Buffer<Vector<int>> subtreeRefinementRootBundles, ref NodeChild child, ref BinaryHeap<int> heap, ref QuickList<NodeChild> rootRefinementSubtrees)
     {
         if (child.Index < 0)
         {
@@ -472,14 +360,14 @@ public partial struct Tree
     {
         //Instead of using a breadth first search, we greedily expand the root refinement by looking for the next node with the highest cost.
         //This will tend to force the root refinement to find pathologically bad subtrees rapidly.
-        var heap = new BinaryHeap(new Buffer<HeapEntry>(rootRefinementSize, pool));
+        var heap = new BinaryHeap<int>(rootRefinementSize, pool);
         heap.Insert(0, 0); //no need to actually calculate the cost for the root; it's gonna get popped.
         var subtreeRefinementTargetBundles = new Buffer<Vector<int>>(subtreeRefinementTargets.Span.Memory, BundleIndexing.GetBundleCount(subtreeRefinementTargets.Count));
         while (heap.Count > 0 && heap.Count + rootRefinementSubtrees.Count < rootRefinementSize)
         {
             var entry = heap.Pop();
-            rootRefinementNodeIndices.AllocateUnsafely() = entry.Index;
-            ref var node = ref Nodes[entry.Index];
+            rootRefinementNodeIndices.AllocateUnsafely() = entry.Value;
+            ref var node = ref Nodes[entry.Value];
             var nodeTotalLeafCount = node.A.LeafCount + node.B.LeafCount;
 
             TryPushChildForRootRefinement2(subtreeRefinementSize, nodeTotalLeafCount, subtreeRefinementTargetBundles, ref node.B, ref heap, ref rootRefinementSubtrees);
@@ -490,7 +378,7 @@ public partial struct Tree
         for (int i = 0; i < heap.Count; ++i)
         {
             var entry = heap.Entries[i];
-            var metanode = Metanodes[entry.Index];
+            var metanode = Metanodes[entry.Value];
             Debug.Assert(metanode.Parent >= 0, "The root should never show up in the heap post traversal! Something weird has happened.");
             ref var parent = ref Nodes[metanode.Parent];
             ref var childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
