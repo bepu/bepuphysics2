@@ -118,7 +118,8 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
 
     public override void DispatchOverlaps(float dt, IThreadDispatcher threadDispatcher = null)
     {
-        DispatchOverlaps3(dt, threadDispatcher);
+        DispatchOverlaps4(dt, threadDispatcher);
+        //DispatchOverlaps3(dt, threadDispatcher);
         //DispatchOverlaps2(dt, threadDispatcher);
         return;
         if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
@@ -892,6 +893,166 @@ public unsafe class CollidableOverlapFinder<TCallbacks> : CollidableOverlapFinde
             var intertreeHandler = new IntertreeOverlapHandler(broadPhase.ActiveLeaves, broadPhase.StaticLeaves, narrowPhase, 0);
             broadPhase.ActiveTree.GetOverlaps(ref broadPhase.StaticTree, ref intertreeHandler);
             narrowPhase.overlapWorkers[0].Batcher.Flush();
+        }
+
+    }
+
+    int activeVsActiveEarlyPairCount, activeVsStaticEarlyPairCount;
+    unsafe static void PrepareActiveVsActiveJobs4(long id, void* taskStackPointer, int workerIndex, IThreadDispatcher threadDispatcher)
+    {
+        var context = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
+        var taskStack = (TaskStack*)taskStackPointer;
+        PairCollector
+        context.selfTestContext2.PrepareJobs(ref context.broadPhase.ActiveTree, context.selfTestHandlers, threadDispatcher.ThreadCount, 0, threadDispatcher.WorkerPools[workerIndex]);
+
+    }
+    unsafe static void PrepareActiveVsStaticJobs4(long id, void* taskStackPointer, int workerIndex, IThreadDispatcher threadDispatcher)
+    {
+        var context = (CollidableOverlapFinder<TCallbacks>)threadDispatcher.ManagedContext;
+        var taskStack = (TaskStack*)taskStackPointer;
+
+    }
+
+    public void DispatchOverlaps4(float dt, IThreadDispatcher threadDispatcher = null)
+    {
+        if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
+        {
+            narrowPhase.Prepare(dt, threadDispatcher);
+            if (selfHandlers == null || selfHandlers.Length < threadDispatcher.ThreadCount)
+            {
+                //This initialization/resize should occur extremely rarely.
+                selfTestHandlers = new PairCollector[threadDispatcher.ThreadCount];
+                intertreeTestHandlers = new PairCollector[threadDispatcher.ThreadCount];
+            }
+
+            //Push two jobs onto the stack initially:
+            //1. Create active tree vs. active tree jobs, and
+            //2. Create active tree vs. static tree jobs.
+            //These first jobs are sequential and meant primarily to create new jobs.
+            //During their execution, some leaf overlaps may be detected; those are handled on the same thread
+            //*after* jobs have been submitted to minimize the stall on other threads.
+            var taskStack = new TaskStack(narrowPhase.Pool, threadDispatcher, threadDispatcher.ThreadCount);
+            activeVsActiveEarlyPairCount = int.Max(32, (int)(activeVsActiveEarlyPairCount * 0.95f));
+            activeVsStaticEarlyPairCount = int.Max(32, (int)(activeVsStaticEarlyPairCount * 0.95f));
+            Span<Task> initialTasks =
+            [
+                new Task(&PrepareActiveVsActiveJobs4, &taskStack),
+                new Task(&PrepareActiveVsStaticJobs4, &taskStack),
+            ];
+            taskStack.PushUnsafely(initialTasks, 0, threadDispatcher);
+            TaskStack.DispatchWorkers(threadDispatcher, &taskStack, managedContext: this);
+            
+
+            //Decay the initial capacity for chunks slowly over time.
+            targetChunkCapacity = int.Max(128, (int)(targetChunkCapacity * 0.95f));
+            var effectiveInitialChunkCapacity = 1 << SpanHelper.GetContainingPowerOf2(targetChunkCapacity);
+            threadPairs = new Buffer<ChunkedList<CollidablePair>>(threadDispatcher.ThreadCount, narrowPhase.Pool);
+            for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
+            {
+                //The first job executed by each thread is meant to *create* jobs, but it may also encounter some pairs.
+                //We don't want to delay the creation of new tasks to handle those narrow phase pairs, so we stick them into a 
+                var pairs = threadPairs.GetPointer(i);
+                var threadPool = threadDispatcher.WorkerPools[i];
+                *pairs = new ChunkedList<CollidablePair>(threadPool, effectiveInitialChunkCapacity);
+                selfTestHandlers[i] = new PairCollector(threadPool, pairs, broadPhase.ActiveLeaves, broadPhase.ActiveLeaves);
+                intertreeTestHandlers[i] = new PairCollector(threadPool, pairs, broadPhase.ActiveLeaves, broadPhase.StaticLeaves);
+            }
+            Debug.Assert(intertreeTestHandlers.Length >= threadDispatcher.ThreadCount);
+            selfTestContext2.PrepareJobs(ref broadPhase.ActiveTree, selfTestHandlers, threadDispatcher.ThreadCount, 0, narrowPhase.Pool);
+            intertreeTestContext2.PrepareJobs(ref broadPhase.ActiveTree, ref broadPhase.StaticTree, intertreeTestHandlers, threadDispatcher.ThreadCount, 0, narrowPhase.Pool);
+            var testTaskCount = selfTestContext2.JobCount + intertreeTestContext2.JobCount;
+            var effectiveJobCount = int.Max(1, int.Max(previousPairCount, testTaskCount));
+            var taskStack = new TaskStack(narrowPhase.Pool, threadDispatcher, threadDispatcher.ThreadCount);
+
+            //debugPairsExecutedPerThread = new Buffer<int>(threadDispatcher.ThreadCount, narrowPhase.Pool);
+            //debugPairsExecutedPerThread.Clear(0, debugPairsExecutedPerThread.Length);
+            ContinuationHandle broadPhaseCompleteContinuation = default;
+            //The counter is how the narrow phase tests keep track of which pairs have been claimed; we need to reset it each frame.
+            jobCounter.Counter = 0;
+            var pushTask = new Task(&PushNarrowPhaseTests, &taskStack);
+            if (testTaskCount > 0)
+                broadPhaseCompleteContinuation = taskStack.AllocateContinuation(testTaskCount, 0, threadDispatcher, pushTask);
+            if (selfTestContext2.JobCount > 0)
+                taskStack.PushForUnsafely(&SelfTestJob, null, 0, selfTestContext2.JobCount, 0, threadDispatcher, continuation: broadPhaseCompleteContinuation);
+            if (intertreeTestContext2.JobCount > 0)
+                taskStack.PushForUnsafely(&IntertreeTestJob, null, 0, intertreeTestContext2.JobCount, 0, threadDispatcher, continuation: broadPhaseCompleteContinuation);
+            if (!broadPhaseCompleteContinuation.Initialized)
+            {
+                //If there are no broad phase tasks to perform, we still need to push the continuation.
+                taskStack.Push(pushTask, 0, threadDispatcher);
+            }
+            TaskStack.DispatchWorkers(threadDispatcher, &taskStack, effectiveJobCount, this);
+
+            taskStack.Dispose(narrowPhase.Pool, threadDispatcher);
+            //Two paths by which we may need to flush batchers still:
+            //1. We dispatch over parts of the tree are not yet analyzed, but the job creation phase may have put some work into the batcher.
+            //If the total job count is zero, that means there's no further work to be done (implying the tree was very tiny), but we may need to flush additional jobs in worker 0.
+            //2. Any workers that we allocated resources for but did not end up using due to a lack of discovered jobs need to be cleaned up. Flushing disposes those resources.
+            //(this complexity could be removed if the preparation phase was aware of the job count, but that's somewhat more difficult.)
+            for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
+            {
+                ref var batcher = ref narrowPhase.overlapWorkers[i].Batcher;
+                if (batcher.batches.Allocated)
+                    batcher.Flush();
+            }
+            int totalPairCount = 0;
+            for (int i = 0; i < threadPairs.Length; ++i)
+            {
+                ref var pairs = ref threadPairs[i];
+                targetChunkCapacity = int.Max(pairs.Count, targetChunkCapacity);
+                totalPairCount += pairs.Count;
+                pairs.Dispose(threadDispatcher.WorkerPools[i]);
+            }
+            previousPairCount = totalPairCount;
+            threadPairs.Dispose(narrowPhase.Pool);
+
+            //var sum = 0;
+            //for (int i = 0; i < debugPairsExecutedPerThread.Length; ++i)
+            //{
+            //    sum += debugPairsExecutedPerThread[i];
+            //}
+            //var min = 1.0;
+            //var minIndex = 0;
+            //var max = 0.0;
+            //var maxIndex = 0;
+            //for (int i = 0; i < debugPairsExecutedPerThread.Length; ++i)
+            //{
+            //    var threadFraction = (double)debugPairsExecutedPerThread[i] / sum;
+            //    if (threadFraction > max)
+            //    {
+            //        max = threadFraction;
+            //        maxIndex = i;
+            //    }
+            //    if (threadFraction < min)
+            //    {
+            //        min = threadFraction;
+            //        minIndex = i;
+            //    }
+            //}
+            //Console.WriteLine();
+            //Console.WriteLine($"min: {minIndex}, {min}");
+            //Console.WriteLine($"max: {maxIndex}, {max}");
+            //Console.WriteLine($"sum: {sum}");
+            //debugPairsExecutedPerThread.Dispose(narrowPhase.Pool);
+
+#if DEBUG
+            for (int i = 1; i < threadDispatcher.ThreadCount; ++i)
+            {
+                Debug.Assert(!narrowPhase.overlapWorkers[i].Batcher.batches.Allocated, "After execution, there should be no remaining allocated collision batchers.");
+            }
+#endif
+            selfTestContext2.CompleteTest();
+            intertreeTestContext2.CompleteTest();
+        }
+        else
+        {
+            narrowPhase.Prepare(dt);
+            var selfTestHandler = new SelfOverlapHandler(broadPhase.ActiveLeaves, narrowPhase, 0);
+            broadPhase.ActiveTree.GetSelfOverlaps(ref selfTestHandler);
+            var intertreeHandler = new IntertreeOverlapHandler(broadPhase.ActiveLeaves, broadPhase.StaticLeaves, narrowPhase, 0);
+            broadPhase.ActiveTree.GetOverlaps(ref broadPhase.StaticTree, ref intertreeHandler);
+            narrowPhase.overlapWorkers[0].Batcher.Flush();
+
         }
 
     }
