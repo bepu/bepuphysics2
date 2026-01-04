@@ -18,7 +18,8 @@ using System.Diagnostics;
 namespace Demos.Demos.Characters;
 
 // I wanted to see if claude could write a simplified character controller without constraints. 
-// Turns out, yes, it can, entirely by itself. I've glanced through the code and everything seems reasonable, though it
+// Turns out, yes, it can, entirely by itself.
+// I've glanced through the code and everything seems reasonable, though it
 // does import some of the structural complexity of the full CharacterControllers.
 //
 // Critically, this simple approach has a timing problem when using solver substepping.
