@@ -66,9 +66,9 @@ public class BroadPhaseStressTestDemo : Demo
         var shape = new Sphere(0.5f);
         var sphereInertia = shape.ComputeInertia(1);
         var shapeIndex = Simulation.Shapes.Add(shape);
-        const int width = 2048;
+        const int width = 512;
         const int height = 2;
-        const int length = 2048;
+        const int length = 512;
         var spacing = new Vector3(16.01f);
         float randomization = 0.9f;
         var randomizationSpan = (spacing - new Vector3(1)) * randomization;
