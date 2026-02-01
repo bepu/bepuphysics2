@@ -161,7 +161,7 @@ namespace BepuUtilities
             result.X = Vector.Abs(vector.X);
             result.Y = Vector.Abs(vector.Y);
             result.Z = Vector.Abs(vector.Z);
-            result.W = Vector.Abs(vector.Z);
+            result.W = Vector.Abs(vector.W);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
