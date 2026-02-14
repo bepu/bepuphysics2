@@ -154,7 +154,7 @@ namespace BepuPhysics
         {
             if (typeId < 0)
                 throw new ArgumentException("Type id must be nonnegative.");
-            if (MinimumCapacityPerTypeBatch < 0)
+            if (minimumInitialCapacityForType < 0)
                 throw new ArgumentException("Capacity must be nonnegative.");
             if (typeId >= minimumInitialCapacityPerTypeBatch.Length)
                 Array.Resize(ref minimumInitialCapacityPerTypeBatch, typeId + 1);
@@ -1493,9 +1493,9 @@ namespace BepuPhysics
         /// <param name="scale">Scale to apply to accumulated impulses.</param>
         public void ScaleAccumulatedImpulses(ref ConstraintSet set, float scale)
         {
-            for (int batchIndex = 0; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
+            for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
             {
-                ref var batch = ref ActiveSet.Batches[batchIndex];
+                ref var batch = ref set.Batches[batchIndex];
                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {
                     ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
