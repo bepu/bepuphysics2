@@ -259,7 +259,7 @@ namespace BepuPhysics.Constraints
             var dofCount = Unsafe.SizeOf<TAccumulatedImpulse>() / Unsafe.SizeOf<Vector<float>>();
             var broadcastedScale = new Vector<float>(scale);
             ref var impulsesBase = ref Unsafe.AsRef<Vector<float>>(typeBatch.AccumulatedImpulses.Memory);
-            for (int i = 0; i < dofCount; ++i)
+            for (int i = 0; i < typeBatch.BundleCount * dofCount; ++i)
             {
                 Unsafe.Add(ref impulsesBase, i) *= broadcastedScale;
             }

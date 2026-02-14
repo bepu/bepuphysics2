@@ -179,7 +179,7 @@ namespace BepuUtilities
             v.X = -v.X;
             v.Y = -v.Y;
             v.Z = -v.Z;
-            v.Z = -v.W;
+            v.W = -v.W;
             return ref v;
         }
 
