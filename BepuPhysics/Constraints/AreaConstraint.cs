@@ -89,7 +89,11 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ComputeJacobian(in Vector3Wide positionA, in Vector3Wide positionB, in Vector3Wide positionC, out Vector<float> normalLength, out Vector3Wide negatedJacobianA, out Vector3Wide jacobianB, out Vector3Wide jacobianC)
+        static void ComputeJacobian(in Vector3Wide positionA, in Vector3Wide positionB, in Vector3Wide positionC,
+            out Vector<float> normalLength,
+            out Vector3Wide negatedJacobianA, out Vector3Wide jacobianB, out Vector3Wide jacobianC,
+            out Vector<float> contributionA, out Vector<float> contributionB, out Vector<float> contributionC,
+            out Vector<float> inverseJacobianLength)
         {
             //Area of a triangle with vertices a, b, and c is:
             //||ab x ac|| * 0.5
@@ -118,52 +122,69 @@ namespace BepuPhysics.Constraints
             Vector3Wide.CrossWithoutOverlap(normal, ab, out jacobianC);
             //Similar to the volume constraint, we could create a similar expression for jacobianA, but it's cheap to just do a couple of adds.
             Vector3Wide.Add(jacobianB, jacobianC, out negatedJacobianA);
+            //Normalize the jacobian to unit length. The jacobians are cross products of edges with the unit normal,
+            //giving magnitudes proportional to edge lengths (~L). Without normalization, the inverse effective mass
+            //scales with L², causing the accumulated impulse scale to vary with triangle size and making warm starting unstable.
+            //Normalizing gives a unit-length effective jacobian J_eff = inverseJacobianLength * J_raw.
+            //The inverse effective mass becomes a weighted average of inverse masses (always bounded),
+            //and the physical impulse is identical because the scaling factors cancel in the solve.
+            Vector3Wide.Dot(negatedJacobianA, negatedJacobianA, out contributionA);
+            Vector3Wide.Dot(jacobianB, jacobianB, out contributionB);
+            Vector3Wide.Dot(jacobianC, jacobianC, out contributionC);
+            var jacobianLengthSquared = contributionA + contributionB + contributionC;
+            //Guard against the degenerate case where edges are parallel/antiparallel (triangle collapses to a line).
+            jacobianLengthSquared = Vector.Max(new Vector<float>(1e-14f), jacobianLengthSquared);
+            inverseJacobianLength = MathHelper.FastReciprocalSquareRoot(jacobianLengthSquared);
         }
 
         public static void WarmStart(
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
-            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, 
-            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, 
+            in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
+            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC,
             ref AreaConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC)
         {
-            ComputeJacobian(positionA, positionB, positionC, out _, out var negatedJacobianA, out var jacobianB, out var jacobianC);
-            ApplyImpulse(inertiaA.InverseMass, inertiaB.InverseMass, inertiaC.InverseMass, negatedJacobianA, jacobianB, jacobianC, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC);
+            ComputeJacobian(positionA, positionB, positionC, out _, out var negatedJacobianA, out var jacobianB, out var jacobianC, out _, out _, out _, out var inverseJacobianLength);
+            //The accumulated impulse is in unit-jacobian space. Replay through J_eff = inverseJacobianLength * J_raw.
+            //Since |J_eff| = 1, the warm start magnitude is bounded by |accumulated| * max(invMass), same as a distance constraint.
+            ApplyImpulse(inertiaA.InverseMass, inertiaB.InverseMass, inertiaC.InverseMass, negatedJacobianA, jacobianB, jacobianC, inverseJacobianLength * accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC);
         }
 
         public static void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, float dt, float inverseDt, ref AreaConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC)
         {
-            ComputeJacobian(positionA, positionB, positionC, out var normalLength, out var negatedJacobianA, out var jacobianB, out var jacobianC);
+            //The area jacobians (ac x normal, normal x ab) have magnitude ~L (edge lengths).
+            //Without normalization, the inverse effective mass scales with L², making the accumulated impulse
+            //scale vary with triangle size and causing warm start instability.
+            //We normalize to a unit-length effective jacobian: J_eff = J_raw * inverseJacobianLength, where inverseJacobianLength = 1/|J_raw|.
+            //The inverse effective mass becomes a weighted average of inverse masses (always bounded),
+            //keeping the accumulated impulse well-scaled across substeps.
+            //
+            //The position error is scaled to match: error = (targetArea - area) * inverseJacobianLength.
+            //The physical impulse (inverseJacobianLength * csi applied through J_raw) is identical to the raw formulation
+            //because the inverseJacobianLength factors cancel.
+            ComputeJacobian(positionA, positionB, positionC, out var normalLength, out var negatedJacobianA, out var jacobianB, out var jacobianC, out var contributionA, out var contributionB, out var contributionC, out var inverseJacobianLength);
+            var inverseJacobianLengthSquared = inverseJacobianLength * inverseJacobianLength;
 
-            Vector3Wide.Dot(negatedJacobianA, negatedJacobianA, out var contributionA);
-            Vector3Wide.Dot(jacobianB, jacobianB, out var contributionB);
-            Vector3Wide.Dot(jacobianC, jacobianC, out var contributionC);
-
-            //Protect against singularity by padding the jacobian contributions. This is very much a hack, but it's a pretty simple hack.
-            //Less sensitive to tuning than attempting to guard the inverseEffectiveMass itself, since that is sensitive to both scale AND mass.
-
-            //Choose an epsilon based on the target area. Note that area ~= width^2 and our jacobian contributions are things like (ac x N) * (ac x N).
-            //Given that N is perpendicular to AC, ||(ac x N)|| == ||ac||, so the contribution is just ||ac||^2. Given the square, it's proportional to area and the area is a decent epsilon source.
-            var epsilon = 5e-4f * prestep.TargetScaledArea;
-            contributionA = Vector.Max(epsilon, contributionA);
-            contributionB = Vector.Max(epsilon, contributionB);
-            contributionC = Vector.Max(epsilon, contributionC);
-            var inverseEffectiveMass = contributionA * inertiaA.InverseMass + contributionB * inertiaB.InverseMass + contributionC * inertiaC.InverseMass;
+            //With the unit-length jacobian, the inverse effective mass is a weighted average of inverse masses, always bounded.
+            //Guard against degenerate configurations (e.g. triangle collapsed to a line) where all jacobian contributions are zero,
+            //which would cause a division by zero when computing the effective mass.
+            var inverseEffectiveMass = Vector.Max(new Vector<float>(1e-14f),
+                inverseJacobianLengthSquared * (contributionA * inertiaA.InverseMass + contributionB * inertiaB.InverseMass + contributionC * inertiaC.InverseMass));
 
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
 
             var effectiveMass = effectiveMassCFMScale / inverseEffectiveMass;
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            var biasVelocity = (prestep.TargetScaledArea - normalLength) * positionErrorToVelocity;
+            var biasVelocity = (prestep.TargetScaledArea - normalLength) * inverseJacobianLength * positionErrorToVelocity;
 
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             Vector3Wide.Dot(negatedJacobianA, wsvA.Linear, out var negatedVelocityContributionA);
             Vector3Wide.Dot(jacobianB, wsvB.Linear, out var velocityContributionB);
             Vector3Wide.Dot(jacobianC, wsvC.Linear, out var velocityContributionC);
-            var csv = velocityContributionB + velocityContributionC - negatedVelocityContributionA;
+            var csv = inverseJacobianLength * (velocityContributionB + velocityContributionC - negatedVelocityContributionA);
             var csi = (biasVelocity - csv) * effectiveMass - accumulatedImpulses * softnessImpulseScale;
             accumulatedImpulses += csi;
 
-            ApplyImpulse(inertiaA.InverseMass, inertiaB.InverseMass, inertiaC.InverseMass, negatedJacobianA, jacobianB, jacobianC, csi, ref wsvA, ref wsvB, ref wsvC);
+            ApplyImpulse(inertiaA.InverseMass, inertiaB.InverseMass, inertiaC.InverseMass, negatedJacobianA, jacobianB, jacobianC, inverseJacobianLength * csi, ref wsvA, ref wsvB, ref wsvC);
         }
 
         public static bool RequiresIncrementalSubstepUpdates => false;
