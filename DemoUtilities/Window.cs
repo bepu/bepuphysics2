@@ -1,9 +1,9 @@
-﻿using System;
-using System.Diagnostics;
+﻿using BepuUtilities;
 using OpenTK;
-using BepuUtilities;
 using OpenTK.Graphics;
 using OpenTK.Platform;
+using System;
+using System.Diagnostics;
 using System.Threading;
 using Vector2 = System.Numerics.Vector2;
 
@@ -180,6 +180,39 @@ namespace DemoUtilities
                 }
             }
             windowUpdateLoopRunning = false;
+        }
+
+        public void SingleFrame(Action<float> updateHandler, Action<Int2> onResize, float dt)
+        {
+
+            if (disposed)
+                return;
+            if (resized)
+            {
+                //Note that minimizing or resizing the window to invalid sizes don't result in actual resize attempts. Zero width rendering surfaces aren't allowed.
+                if (window.Width > 0 && window.Height > 0)
+                {
+                    onResize(new Int2(window.Width, window.Height));
+                }
+                resized = false;
+            }
+            window.ProcessEvents();
+            if (tryToClose)
+            {
+                window.Close();
+                return;
+            }
+            long time = Stopwatch.GetTimestamp();
+
+            if (window.WindowState != WindowState.Minimized)
+            {
+                updateHandler(dt);
+            }
+            else
+            {
+                //If the window is minimized, take a breather.
+                Thread.Sleep(1);
+            }
         }
 
         private bool disposed;
