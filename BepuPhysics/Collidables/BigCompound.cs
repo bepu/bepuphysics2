@@ -305,6 +305,13 @@ namespace BepuPhysics.Collidables
             Tree.Sweep(min, max, sweep, maximumT, pool, ref enumerator);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly void FindLocalOverlaps<TEnumerator>(Vector3 min, Vector3 max, BufferPool pool, Shapes shapes, ref TEnumerator enumerator)
+            where TEnumerator : IBreakableForEach<int>
+        {
+            Tree.GetOverlaps(min, max, pool, ref enumerator);
+        }
+
         /// <summary>
         /// Computes the inertia of a compound. Does not recenter the child poses.
         /// </summary>

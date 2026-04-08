@@ -29,7 +29,14 @@ namespace BepuPhysics.CollisionDetection
         //This uses all of the nonconvex reduction's logic, so we just nest it.
         public NonconvexReduction Inner;
 
-        public void* Mesh; //TODO: This is not flexible with respect to different mesh types. Not a problem right now, but it will be in the future.
+        //Type-erased pointer to the mesh shape data, plus two function pointers that close over the concrete mesh type.
+        //ConvexMeshContinuations<TMesh> populates these from MeshReductionThunks<TMesh> at continuation creation time.
+        //The thunks are static methods of a generic helper, so they're JIT-specialized per TMesh and any interface
+        //call inside them is devirtualized. This keeps the >=128 path's per-contact calls cheap without requiring
+        //CollisionBatcher to know about TMesh.
+        public void* Mesh;
+        public delegate*<void*, Vector3, Vector3, BufferPool, Shapes, ref ChildEnumerator, void> FindLocalOverlapsThunk;
+        public delegate*<void*, int, out Triangle, void> GetLocalChildThunk;
 
         public void Create(int childManifoldCount, BufferPool pool)
         {
@@ -280,7 +287,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        struct ChildEnumerator : IBreakableForEach<int>
+        public struct ChildEnumerator : IBreakableForEach<int>
         {
             public QuickList<int> List;
             public BufferPool Pool;
@@ -292,7 +299,11 @@ namespace BepuPhysics.CollisionDetection
         }
 
         public static void ReduceManifolds(ref Buffer<Triangle> continuationTriangles, ref Buffer<NonconvexReductionChild> continuationChildren, int start, int count,
-           bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation, Mesh* mesh, BufferPool pool)
+           bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation,
+           void* mesh,
+           delegate*<void*, Vector3, Vector3, BufferPool, Shapes, ref ChildEnumerator, void> findLocalOverlapsThunk,
+           delegate*<void*, int, out Triangle, void> getLocalChildThunk,
+           Shapes shapes, BufferPool pool)
         {
             //Before handing responsibility off to the nonconvex reduction, make sure that no contacts create nasty 'bumps' at the border of triangles.
             //Bumps can occur when an isolated triangle test detects a contact pointing outward, like when a box hits the side. This is fine when the triangle truly is isolated,
@@ -445,12 +456,9 @@ namespace BepuPhysics.CollisionDetection
                         var contactQueryMin = meshSpaceContact - contactExpansion;
                         var contactQueryMax = meshSpaceContact + contactExpansion;
                         enumerator.List.Count = 0;
-                        //The contact and the cached TestTriangle data live in scaled mesh-local space (GetLocalChild applies the mesh's scale),
-                        //but the Tree was built from unscaled source triangles. Bring the query into the tree's space before traversing.
-                        //Take min/max after scaling to compensate for negative scales.
-                        var scaledQueryMin = contactQueryMin * mesh->inverseScale;
-                        var scaledQueryMax = contactQueryMax * mesh->inverseScale;
-                        mesh->Tree.GetOverlaps(Vector3.Min(scaledQueryMin, scaledQueryMax), Vector3.Max(scaledQueryMin, scaledQueryMax), pool, ref enumerator);
+                        //The thunk takes coordinates in the same space as the cached TestTriangle data (i.e. the space GetLocalChild returns),
+                        //and is responsible for any internal coordinate-space conversion (e.g. Mesh applies its inverse scale before traversing the tree).
+                        findLocalOverlapsThunk(mesh, contactQueryMin, contactQueryMax, pool, shapes, ref enumerator);
                         //Note that the test triangles detected by querying may exceed the count in extremely rare cases, so it's not safe to use AllocateUnsafely without some extra work.
                         //Resizing invalidates table indices, so do any that ahead of time.
                         testTriangles.EnsureCapacity(testTriangles.Count + enumerator.List.Count, pool);
@@ -464,7 +472,7 @@ namespace BepuPhysics.CollisionDetection
                                 //1) in the long term, the mesh type will be abstracted away, and we might be dealing with a type that doesn't have a Triangles buffer at all.
                                 //2) the Mesh applies a scale to the stored triangles! That's why we have the continuation triangles explicitly stored rather than just looking them all up in the mesh-
                                 //the convex-triangle tests that preceded this reduction had to have somewhere they could load the 'baked' triangle data from.
-                                mesh->GetLocalChild(triangleIndexInMesh, out var triangle);
+                                getLocalChildThunk(mesh, triangleIndexInMesh, out var triangle);
                                 testTriangles.Values[triangleIndex] = new TestTriangle(triangle, triangleIndex);
                             }
                             ref var targetTriangle = ref testTriangles.Values[triangleIndex];
@@ -519,8 +527,8 @@ namespace BepuPhysics.CollisionDetection
             {
                 Matrix3x3.CreateFromQuaternion(MeshOrientation, out var meshOrientation);
                 Matrix3x3.Transpose(meshOrientation, out var meshInverseOrientation);
-                //TODO: This is not flexible with respect to different mesh types. Not a problem right now, but it will be in the future.
-                ReduceManifolds(ref Triangles, ref Inner.Children, 0, Inner.ChildCount, RequiresFlip, QueryBounds, meshOrientation, meshInverseOrientation, (Mesh*)Mesh, batcher.Pool);
+                ReduceManifolds(ref Triangles, ref Inner.Children, 0, Inner.ChildCount, RequiresFlip, QueryBounds, meshOrientation, meshInverseOrientation,
+                    Mesh, FindLocalOverlapsThunk, GetLocalChildThunk, batcher.Shapes, batcher.Pool);
 
                 //Now that boundary smoothing analysis is done, we no longer need the triangle list.
                 batcher.Pool.Return(ref Triangles);
@@ -530,5 +538,29 @@ namespace BepuPhysics.CollisionDetection
             return false;
         }
 
+    }
+
+    /// <summary>
+    /// Type-specialized thunks that bridge MeshReduction's type-erased function pointer fields back to a concrete mesh shape type.
+    /// The static fields here are populated once per closed TMesh by the runtime, and the JIT specializes the bodies so that
+    /// the calls into <typeparamref name="TMesh"/> are devirtualized.
+    /// </summary>
+    /// <typeparam name="TMesh">Concrete homogeneous triangle compound shape type.</typeparam>
+    public static unsafe class MeshReductionThunks<TMesh> where TMesh : struct, IHomogeneousCompoundShape<Triangle, TriangleWide>
+    {
+        public static readonly delegate*<void*, Vector3, Vector3, BufferPool, Shapes, ref MeshReduction.ChildEnumerator, void> FindLocalOverlaps = &FindLocalOverlapsImpl;
+        public static readonly delegate*<void*, int, out Triangle, void> GetLocalChild = &GetLocalChildImpl;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void FindLocalOverlapsImpl(void* mesh, Vector3 min, Vector3 max, BufferPool pool, Shapes shapes, ref MeshReduction.ChildEnumerator enumerator)
+        {
+            Unsafe.AsRef<TMesh>(mesh).FindLocalOverlaps(min, max, pool, shapes, ref enumerator);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void GetLocalChildImpl(void* mesh, int childIndex, out Triangle triangle)
+        {
+            Unsafe.AsRef<TMesh>(mesh).GetLocalChild(childIndex, out triangle);
+        }
     }
 }

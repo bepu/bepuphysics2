@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public struct ConvexMeshContinuations<TMesh> : IConvexCompoundContinuationHandler<MeshReduction> where TMesh : IHomogeneousCompoundShape<Triangle, TriangleWide>
+    public struct ConvexMeshContinuations<TMesh> : IConvexCompoundContinuationHandler<MeshReduction> where TMesh : struct, IHomogeneousCompoundShape<Triangle, TriangleWide>
     {
         public CollisionContinuationType CollisionContinuationType => CollisionContinuationType.MeshReduction;
 
@@ -20,8 +20,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             continuation.RequiresFlip = pair.FlipMask == 0;
             continuation.QueryBounds.Min = pairQuery.Min;
             continuation.QueryBounds.Max = pairQuery.Max;
-            //TODO: This is not flexible with respect to different mesh types. Not a problem right now, but it will be in the future.
             continuation.Mesh = pairQuery.Container;
+            continuation.FindLocalOverlapsThunk = MeshReductionThunks<TMesh>.FindLocalOverlaps;
+            continuation.GetLocalChildThunk = MeshReductionThunks<TMesh>.GetLocalChild;
             return ref continuation;
         }
 

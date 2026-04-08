@@ -228,6 +228,13 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly void FindLocalOverlaps<TEnumerator>(Vector3 min, Vector3 max, BufferPool pool, Shapes shapes, ref TEnumerator enumerator)
+        where TEnumerator : IBreakableForEach<int>
+    {
+        Tree.GetOverlaps(min, max, pool, ref enumerator);
+    }
+
     public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps
     {
         //Similar to the non-swept FindLocalOverlaps function above, this just adds the overlaps to the provided collection.

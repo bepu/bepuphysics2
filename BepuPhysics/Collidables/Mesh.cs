@@ -371,6 +371,17 @@ namespace BepuPhysics.Collidables
             Tree.Sweep(Vector3.Min(scaledMin, scaledMax), Vector3.Max(scaledMin, scaledMax), scaledSweep, maximumT, pool, ref enumerator);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly void FindLocalOverlaps<TEnumerator>(Vector3 min, Vector3 max, BufferPool pool, Shapes shapes, ref TEnumerator enumerator)
+            where TEnumerator : IBreakableForEach<int>
+        {
+            //The tree is built from unscaled source triangles, so the query AABB has to be brought into unscaled space.
+            //Take a min/max to compensate for negative scales.
+            var scaledMin = min * inverseScale;
+            var scaledMax = max * inverseScale;
+            Tree.GetOverlaps(Vector3.Min(scaledMin, scaledMax), Vector3.Max(scaledMin, scaledMax), pool, ref enumerator);
+        }
+
         public struct MeshTriangleSource : ITriangleSource
         {
             Mesh mesh;

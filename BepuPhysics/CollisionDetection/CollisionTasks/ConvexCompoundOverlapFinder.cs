@@ -21,6 +21,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps;
+
+        /// <summary>
+        /// Finds the indices of all children whose local-space bounding boxes overlap the given local-space AABB.
+        /// </summary>
+        /// <typeparam name="TEnumerator">Type of the enumerator that receives child indices.</typeparam>
+        /// <param name="min">Minimum corner of the query AABB in the compound's local space.</param>
+        /// <param name="max">Maximum corner of the query AABB in the compound's local space.</param>
+        /// <param name="pool">Pool used for any temporary allocations during traversal.</param>
+        /// <param name="shapes">Shape collection used to look up child bounds for compounds with heterogeneous children. May be null for homogeneous compounds that don't require it.</param>
+        /// <param name="enumerator">Enumerator that receives the indices of overlapping children.</param>
+        void FindLocalOverlaps<TEnumerator>(Vector3 min, Vector3 max, BufferPool pool, Shapes shapes, ref TEnumerator enumerator)
+            where TEnumerator : IBreakableForEach<int>;
     }
     public interface IConvexCompoundOverlapFinder
     {

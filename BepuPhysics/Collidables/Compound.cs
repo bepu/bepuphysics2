@@ -336,6 +336,24 @@ public struct Compound : ICompoundShape
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void FindLocalOverlaps<TEnumerator>(Vector3 min, Vector3 max, BufferPool pool, Shapes shapes, ref TEnumerator enumerator)
+        where TEnumerator : IBreakableForEach<int>
+    {
+        for (int i = 0; i < Children.Length; ++i)
+        {
+            ref var child = ref Children[i];
+            shapes[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, child.LocalOrientation, out _, out _, out var childMin, out var childMax);
+            childMin += child.LocalPosition;
+            childMax += child.LocalPosition;
+            if (BoundingBox.Intersects(childMin, childMax, min, max))
+            {
+                if (!enumerator.LoopBody(i))
+                    return;
+            }
+        }
+    }
+
     public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlapsPointer)
         where TOverlaps : ICollisionTaskSubpairOverlaps
     {

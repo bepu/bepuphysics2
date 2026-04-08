@@ -6,8 +6,8 @@ using System.Runtime.CompilerServices;
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public unsafe struct CompoundMeshContinuations<TCompound, TMesh> : ICompoundPairContinuationHandler<CompoundMeshReduction>
-        where TCompound : ICompoundShape
-        where TMesh : IHomogeneousCompoundShape<Triangle, TriangleWide>
+        where TCompound : struct, ICompoundShape
+        where TMesh : struct, IHomogeneousCompoundShape<Triangle, TriangleWide>
     {
         public CollisionContinuationType CollisionContinuationType => CollisionContinuationType.CompoundMeshReduction;
 
@@ -23,8 +23,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             collisionBatcher.Pool.Take(pairOverlaps.Length, out continuation.QueryBounds);
             continuation.RegionCount = pairOverlaps.Length;
             continuation.MeshOrientation = pair.OrientationB;
-            //TODO: This is not flexible with respect to different mesh types. Not a problem right now, but it will be in the future.
-            continuation.Mesh = (Mesh*)pair.B;
+            continuation.Mesh = pair.B;
+            continuation.FindLocalOverlapsThunk = MeshReductionThunks<TMesh>.FindLocalOverlaps;
+            continuation.GetLocalChildThunk = MeshReductionThunks<TMesh>.GetLocalChild;
             //A flip is required in mesh reduction whenever contacts are being generated as if the triangle is in slot B, which is whenever this pair has *not* been flipped.
             continuation.RequiresFlip = pair.FlipMask == 0;
 

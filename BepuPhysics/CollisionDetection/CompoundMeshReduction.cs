@@ -21,7 +21,10 @@ namespace BepuPhysics.CollisionDetection
         //This uses all of the nonconvex reduction's logic, so we just nest it.
         public NonconvexReduction Inner;
 
-        public Mesh* Mesh; //TODO: This is not flexible with respect to different mesh types. Not a problem right now, but it will be in the future.
+        //Type-erased mesh pointer plus the per-TMesh thunks. See MeshReduction for the rationale.
+        public void* Mesh;
+        public delegate*<void*, Vector3, Vector3, BufferPool, Shapes, ref MeshReduction.ChildEnumerator, void> FindLocalOverlapsThunk;
+        public delegate*<void*, int, out Triangle, void> GetLocalChildThunk;
 
         public void Create(int childManifoldCount, BufferPool pool)
         {
@@ -54,7 +57,8 @@ namespace BepuPhysics.CollisionDetection
                     ref var region = ref ChildManifoldRegions[i];
                     if (region.Count > 0)
                     {
-                        MeshReduction.ReduceManifolds(ref Triangles, ref Inner.Children, region.Start, region.Count, RequiresFlip, QueryBounds[i], meshOrientation, meshInverseOrientation, Mesh, batcher.Pool);
+                        MeshReduction.ReduceManifolds(ref Triangles, ref Inner.Children, region.Start, region.Count, RequiresFlip, QueryBounds[i], meshOrientation, meshInverseOrientation,
+                            Mesh, FindLocalOverlapsThunk, GetLocalChildThunk, batcher.Shapes, batcher.Pool);
                     }
                 }
 
