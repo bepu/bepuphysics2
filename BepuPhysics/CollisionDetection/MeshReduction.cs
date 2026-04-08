@@ -445,7 +445,12 @@ namespace BepuPhysics.CollisionDetection
                         var contactQueryMin = meshSpaceContact - contactExpansion;
                         var contactQueryMax = meshSpaceContact + contactExpansion;
                         enumerator.List.Count = 0;
-                        mesh->Tree.GetOverlaps(contactQueryMin, contactQueryMax, pool, ref enumerator);
+                        //The contact and the cached TestTriangle data live in scaled mesh-local space (GetLocalChild applies the mesh's scale),
+                        //but the Tree was built from unscaled source triangles. Bring the query into the tree's space before traversing.
+                        //Take min/max after scaling to compensate for negative scales.
+                        var scaledQueryMin = contactQueryMin * mesh->inverseScale;
+                        var scaledQueryMax = contactQueryMax * mesh->inverseScale;
+                        mesh->Tree.GetOverlaps(Vector3.Min(scaledQueryMin, scaledQueryMax), Vector3.Max(scaledQueryMin, scaledQueryMax), pool, ref enumerator);
                         //Note that the test triangles detected by querying may exceed the count in extremely rare cases, so it's not safe to use AllocateUnsafely without some extra work.
                         //Resizing invalidates table indices, so do any that ahead of time.
                         testTriangles.EnsureCapacity(testTriangles.Count + enumerator.List.Count, pool);
